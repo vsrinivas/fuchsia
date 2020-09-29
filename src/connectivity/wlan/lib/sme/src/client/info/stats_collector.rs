@@ -231,10 +231,10 @@ impl StatsCollector {
         })
     }
 
-    pub fn report_disconnect(&mut self, ssid: Ssid, cause: DisconnectCause) {
+    pub fn report_disconnect(&mut self, ssid: Ssid, source: DisconnectSource) {
         self.previous_disconnect_info.replace(PreviousDisconnectInfo {
             ssid,
-            disconnect_cause: cause,
+            disconnect_source: source,
             disconnect_at: now(),
         });
     }
@@ -551,11 +551,11 @@ mod tests {
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
 
-        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectCause::Manual);
+        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectSource::User);
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => {
             assert_variant!(stats.previous_disconnect_info, Some(info) => {
-                assert_eq!(info.disconnect_cause, DisconnectCause::Manual);
+                assert_eq!(info.disconnect_source, DisconnectSource::User);
             })
         });
     }
@@ -567,7 +567,7 @@ mod tests {
         // Connects then disconnect
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
-        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectCause::Manual);
+        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectSource::User);
 
         // Attempt to connect but fails
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
@@ -583,7 +583,7 @@ mod tests {
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => {
             assert_variant!(stats.previous_disconnect_info, Some(info) => {
-                assert_eq!(info.disconnect_cause, DisconnectCause::Manual);
+                assert_eq!(info.disconnect_source, DisconnectSource::User);
             })
         });
     }

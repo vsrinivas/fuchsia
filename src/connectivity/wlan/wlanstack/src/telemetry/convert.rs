@@ -8,7 +8,7 @@ use {
     wlan_common::bss::Protection,
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
-        info::{ConnectionMilestone, DisconnectCause, ScanResult},
+        info::{ConnectionMilestone, DisconnectSource, ScanResult},
         ConnectFailure, ConnectResult, SelectNetworkFailure,
     },
 };
@@ -185,13 +185,13 @@ pub(super) fn convert_select_network_failure(
     }
 }
 
-pub(super) fn convert_disconnect_cause(
-    disconnect_cause: &DisconnectCause,
+pub(super) fn convert_disconnect_source(
+    disconnect_source: &DisconnectSource,
 ) -> metrics::ConnectionGapTimeBreakdownMetricDimensionPreviousDisconnectCause {
     use metrics::ConnectionGapTimeBreakdownMetricDimensionPreviousDisconnectCause::*;
-    match disconnect_cause {
-        DisconnectCause::Manual => Manual,
-        DisconnectCause::Drop => Drop,
+    match disconnect_source {
+        DisconnectSource::User => Manual,
+        DisconnectSource::Mlme | DisconnectSource::Ap => Drop,
     }
 }
 

@@ -11,6 +11,7 @@ use {
             bss::ClientConfig,
             capabilities::derive_join_channel_and_capabilities,
             event::{self, Event},
+            info::{DisconnectInfo, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished, ConnectFailure, ConnectResult, EstablishRsnaFailure, Status,
@@ -499,16 +500,21 @@ impl Associated {
     ) -> Associating {
         let (mut protection, connected_duration) = self.link_state.disconnect();
 
-        // Only locally initiated disassociations are considered as lost connections.
-        if ind.locally_initiated == true {
-            if let Some(duration) = connected_duration {
-                context.info.report_connection_lost(
-                    duration,
-                    self.last_rssi,
-                    self.bss.bssid,
-                    self.bss.ssid.clone(),
-                );
-            }
+        if let Some(duration) = connected_duration {
+            let disconnect_info = DisconnectInfo {
+                connected_duration: duration,
+                last_rssi: self.last_rssi,
+                last_snr: self.last_snr,
+                bssid: self.bss.bssid,
+                ssid: self.bss.ssid.clone(),
+                reason_code: ind.reason_code,
+                disconnect_source: if ind.locally_initiated {
+                    DisconnectSource::Mlme
+                } else {
+                    DisconnectSource::Ap
+                },
+            };
+            context.info.report_disconnect(disconnect_info);
         }
 
         // Client is disassociating. The ESS-SA must be kept alive but reset.
@@ -548,15 +554,20 @@ impl Associated {
         let (_, connected_duration) = self.link_state.disconnect();
         match connected_duration {
             Some(duration) => {
-                // Only locally initiated deauth is considered as lost connections.
-                if ind.locally_initiated == true {
-                    context.info.report_connection_lost(
-                        duration,
-                        self.last_rssi,
-                        self.bss.bssid,
-                        self.bss.ssid,
-                    );
-                }
+                let disconnect_info = DisconnectInfo {
+                    connected_duration: duration,
+                    last_rssi: self.last_rssi,
+                    last_snr: self.last_snr,
+                    bssid: self.bss.bssid,
+                    ssid: self.bss.ssid.clone(),
+                    reason_code: ind.reason_code.into_primitive(),
+                    disconnect_source: if ind.locally_initiated {
+                        DisconnectSource::Mlme
+                    } else {
+                        DisconnectSource::Ap
+                    },
+                };
+                context.info.report_disconnect(disconnect_info);
             }
             None => {
                 let connect_result = EstablishRsnaFailure::InternalError.into();
@@ -857,16 +868,29 @@ impl ClientState {
     }
 
     pub fn disconnect(self, context: &mut Context) -> Self {
+        let reason_code = fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive();
+        let locally_initiated = true;
         if let Self::Associated(state) = &self {
-            context.info.report_manual_disconnect(state.bss.ssid.clone());
+            if let LinkState::LinkUp(link_up) = &state.link_state {
+                let disconnect_info = DisconnectInfo {
+                    connected_duration: link_up.connected_duration(),
+                    last_rssi: state.last_rssi,
+                    last_snr: state.last_snr,
+                    bssid: state.bss.bssid,
+                    ssid: state.bss.ssid.clone(),
+                    reason_code,
+                    disconnect_source: DisconnectSource::User,
+                };
+                context.info.report_disconnect(disconnect_info);
+            }
         }
         let start_state = self.state_name();
         let new_state = Self::new(self.disconnect_internal(context));
 
         let state_change_ctx = Some(StateChangeContext::Disconnect {
             msg: "disconnect command".to_string(),
-            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
-            locally_initiated: true,
+            reason_code,
+            locally_initiated,
         });
         log_state_change(start_state, &new_state, state_change_ctx, context);
         new_state
@@ -1877,77 +1901,67 @@ mod tests {
     }
 
     #[test]
-    fn lost_connection_reported_on_deauth_ind_sta() {
+    fn disconnect_reported_on_deauth_ind() {
         let mut h = TestHelper::new();
         let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
 
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: [0, 0, 0, 0, 0, 0],
-                reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
                 locally_initiated: true,
             },
         };
 
         let _state = state.on_mlme_event(deauth_ind, &mut h.context);
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionLost(info))) => {
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
+            assert_eq!(info.last_snr, 30);
+            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.reason_code, fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive());
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme);
         });
     }
 
     #[test]
-    fn lost_connection_reported_on_deauth_ind_ap() {
-        let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
-
-        let deauth_ind = MlmeEvent::DeauthenticateInd {
-            ind: fidl_mlme::DeauthenticateIndication {
-                peer_sta_address: [0, 0, 0, 0, 0, 0],
-                reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
-                locally_initiated: false,
-            },
-        };
-
-        // Deauth initiated by AP should not trigger a ConnectionLost event.
-        let _state = state.on_mlme_event(deauth_ind, &mut h.context);
-        assert_variant!(h.info_stream.try_next(), Err(..));
-    }
-
-    #[test]
-    fn lost_connection_reported_on_disassoc_ind_sta() {
+    fn disconnect_reported_on_disassoc_ind() {
         let mut h = TestHelper::new();
         let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
 
         let deauth_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {
                 peer_sta_address: [0, 0, 0, 0, 0, 0],
-                reason_code: 1,
+                reason_code: 4,
                 locally_initiated: true,
             },
         };
 
         let _state = state.on_mlme_event(deauth_ind, &mut h.context);
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionLost(info))) => {
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
+            assert_eq!(info.last_snr, 30);
+            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.reason_code, 4);
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme);
         });
     }
 
     #[test]
-    fn lost_connection_reported_on_disassoc_ind_ap() {
+    fn disconnect_reported_on_manual_disconnect() {
         let mut h = TestHelper::new();
         let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
 
-        let deauth_ind = MlmeEvent::DisassociateInd {
-            ind: fidl_mlme::DisassociateIndication {
-                peer_sta_address: [0, 0, 0, 0, 0, 0],
-                reason_code: 1,
-                locally_initiated: false,
-            },
-        };
-
-        // Disassociation initiated by AP should not trigger a ConnectionLost event.
-        let _state = state.on_mlme_event(deauth_ind, &mut h.context);
-        assert_variant!(h.info_stream.try_next(), Err(..));
+        let _state = state.disconnect(&mut h.context);
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
+            assert_eq!(info.last_rssi, 60);
+            assert_eq!(info.last_snr, 30);
+            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.reason_code, fidl_mlme::ReasonCode::LeavingNetworkDeauth.into_primitive());
+            assert_eq!(info.disconnect_source, DisconnectSource::User);
+        });
     }
 
     #[test]
@@ -2456,7 +2470,7 @@ mod tests {
             responder: None,
             bss,
             last_rssi: 60,
-            last_snr: 0,
+            last_snr: 30,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),
@@ -2486,7 +2500,7 @@ mod tests {
             bss: Box::new(bss),
             responder: None,
             last_rssi: 60,
-            last_snr: 0,
+            last_snr: 30,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),

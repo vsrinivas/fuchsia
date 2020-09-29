@@ -9,7 +9,7 @@ use {
         sink::InfoSink,
         Ssid,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_rsn::rsna::UpdateSink,
 };
@@ -122,23 +122,11 @@ impl InfoReporter {
         self.info_sink.send(InfoEvent::ConnectionPing(info));
     }
 
-    pub fn report_connection_lost(
-        &mut self,
-        connected_duration: zx::Duration,
-        last_rssi: i8,
-        bssid: [u8; 6],
-        ssid: Ssid,
-    ) {
-        self.info_sink.send(InfoEvent::ConnectionLost(ConnectionLostInfo {
-            connected_duration,
-            last_rssi,
-            bssid,
-        }));
-        self.stats_collector.report_disconnect(ssid, DisconnectCause::Drop);
-    }
-
-    pub fn report_manual_disconnect(&mut self, ssid: Ssid) {
-        self.stats_collector.report_disconnect(ssid, DisconnectCause::Manual);
+    pub fn report_disconnect(&mut self, disconnect_info: DisconnectInfo) {
+        let ssid = disconnect_info.ssid.clone();
+        let source = disconnect_info.disconnect_source.clone();
+        self.info_sink.send(InfoEvent::DisconnectInfo(disconnect_info));
+        self.stats_collector.report_disconnect(ssid, source);
     }
 }
 

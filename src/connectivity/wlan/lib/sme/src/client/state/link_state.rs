@@ -130,6 +130,10 @@ impl EstablishingRsna {
 }
 
 impl LinkUp {
+    pub fn connected_duration(&self) -> zx::Duration {
+        now() - self.since
+    }
+
     fn handle_connection_ping(
         &mut self,
         event_id: EventId,

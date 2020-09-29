@@ -26,7 +26,8 @@ use {
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{
-            ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionPingInfo, ScanStats,
+            ConnectStats, ConnectionMilestone, ConnectionPingInfo, DisconnectInfo,
+            DisconnectSource, ScanStats,
         },
         ConnectFailure, ConnectResult,
     },
@@ -513,7 +514,7 @@ pub fn log_connection_gap_time_stats(sender: &mut CobaltSender, connect_stats: &
             metrics::ConnectionGapTimeBreakdownMetricDimensionSsids::DifferentSsids
         };
         let previous_disconnect_cause_dim =
-            convert_disconnect_cause(&previous_disconnect_info.disconnect_cause);
+            convert_disconnect_source(&previous_disconnect_info.disconnect_source);
 
         sender.log_elapsed_time(metrics::CONNECTION_GAP_TIME_METRIC_ID, (), duration.into_micros());
         sender.log_elapsed_time(
@@ -543,27 +544,29 @@ pub fn log_connection_ping(sender: &mut CobaltSender, info: &ConnectionPingInfo)
     }
 }
 
-pub fn log_connection_lost(sender: &mut CobaltSender, info: &ConnectionLostInfo) {
-    use metrics::LostConnectionCountMetricDimensionConnectedTime::*;
+pub fn log_disconnect(sender: &mut CobaltSender, info: &DisconnectInfo) {
+    if let DisconnectSource::Mlme = info.disconnect_source {
+        use metrics::LostConnectionCountMetricDimensionConnectedTime::*;
 
-    let duration_dim = match &info.connected_duration {
-        x if x < &1.minutes() => LessThanOneMinute,
-        x if x < &10.minutes() => LessThanTenMinutes,
-        x if x < &30.minutes() => LessThanThirtyMinutes,
-        x if x < &1.hour() => LessThanOneHour,
-        x if x < &3.hours() => LessThanThreeHours,
-        x if x < &6.hours() => LessThanSixHours,
-        _ => AtLeastSixHours,
-    };
-    let rssi_dim = convert_rssi(info.last_rssi);
+        let duration_dim = match &info.connected_duration {
+            x if x < &1.minutes() => LessThanOneMinute,
+            x if x < &10.minutes() => LessThanTenMinutes,
+            x if x < &30.minutes() => LessThanThirtyMinutes,
+            x if x < &1.hour() => LessThanOneHour,
+            x if x < &3.hours() => LessThanThreeHours,
+            x if x < &6.hours() => LessThanSixHours,
+            _ => AtLeastSixHours,
+        };
+        let rssi_dim = convert_rssi(info.last_rssi);
 
-    sender.with_component().log_event_count(
-        metrics::LOST_CONNECTION_COUNT_METRIC_ID,
-        [duration_dim as u32, rssi_dim as u32],
-        info.bssid.to_oui_uppercase(""),
-        0,
-        1,
-    );
+        sender.with_component().log_event_count(
+            metrics::LOST_CONNECTION_COUNT_METRIC_ID,
+            [duration_dim as u32, rssi_dim as u32],
+            info.bssid.to_oui_uppercase(""),
+            0,
+            1,
+        );
+    }
 }
 
 #[cfg(test)]
@@ -588,7 +591,7 @@ mod tests {
         wlan_common::assert_variant,
         wlan_sme::client::{
             info::{
-                ConnectStats, ConnectionLostInfo, DisconnectCause, PreviousDisconnectInfo,
+                ConnectStats, DisconnectInfo, DisconnectSource, PreviousDisconnectInfo,
                 ScanEndStats, ScanResult, ScanStartStats, SupplicantProgress,
             },
             ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
@@ -876,18 +879,58 @@ mod tests {
     }
 
     #[test]
-    fn test_log_connection_lost_info() {
+    fn test_log_disconnect_initiated_from_mlme() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        let connection_lost_info = ConnectionLostInfo {
+        let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
             last_rssi: -90,
+            last_snr: 1,
+            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            disconnect_source: DisconnectSource::Mlme,
         };
-        log_connection_lost(&mut cobalt_sender, &connection_lost_info);
+        log_disconnect(&mut cobalt_sender, &disconnect_info);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::LOST_CONNECTION_COUNT_METRIC_ID);
         });
+    }
+
+    #[test]
+    fn test_log_disconnect_initiated_from_user_request() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let disconnect_info = DisconnectInfo {
+            connected_duration: 30.seconds(),
+            bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
+            last_rssi: -90,
+            last_snr: 1,
+            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            disconnect_source: DisconnectSource::User,
+        };
+        log_disconnect(&mut cobalt_sender, &disconnect_info);
+
+        // Nothing should be logged
+        assert_variant!(cobalt_receiver.try_next(), Err(_));
+    }
+
+    #[test]
+    fn test_log_disconnect_initiated_from_ap() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let disconnect_info = DisconnectInfo {
+            connected_duration: 30.seconds(),
+            bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
+            last_rssi: -90,
+            last_snr: 1,
+            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            disconnect_source: DisconnectSource::Ap,
+        };
+        log_disconnect(&mut cobalt_sender, &disconnect_info);
+
+        // Nothing should be logged
+        assert_variant!(cobalt_receiver.try_next(), Err(_));
     }
 
     fn test_metric_subset(
@@ -954,7 +997,7 @@ mod tests {
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
                 ssid: fake_bss_description().ssid,
-                disconnect_cause: DisconnectCause::Manual,
+                disconnect_source: DisconnectSource::User,
                 disconnect_at: now - 10.seconds(),
             }),
         }

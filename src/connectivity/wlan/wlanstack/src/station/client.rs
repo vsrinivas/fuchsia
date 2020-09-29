@@ -187,7 +187,7 @@ fn handle_info_event(e: InfoEvent, cobalt_sender: &mut CobaltSender) {
             telemetry::log_connect_stats(cobalt_sender, &connect_stats)
         }
         InfoEvent::ConnectionPing(info) => telemetry::log_connection_ping(cobalt_sender, &info),
-        InfoEvent::ConnectionLost(info) => telemetry::log_connection_lost(cobalt_sender, &info),
+        InfoEvent::DisconnectInfo(info) => telemetry::log_disconnect(cobalt_sender, &info),
     }
 }
 

@@ -30,8 +30,9 @@ pub enum InfoEvent {
     /// Event generated whenever the client first connects or periodically while the client
     /// remains connected
     ConnectionPing(ConnectionPingInfo),
-    /// Event generated whenever SME receives a deauth or disassoc indication while connected
-    ConnectionLost(ConnectionLostInfo),
+    /// Event generated whenever SME receives a deauth indication, disassoc indication, or
+    /// manual disconnect while connected
+    DisconnectInfo(DisconnectInfo),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -328,25 +329,40 @@ impl ConnectionMilestone {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ConnectionLostInfo {
+pub struct DisconnectInfo {
     pub connected_duration: zx::Duration,
     pub last_rssi: i8,
+    pub last_snr: i8,
     pub bssid: [u8; 6],
+    pub ssid: Ssid,
+    pub reason_code: u16,
+    pub disconnect_source: DisconnectSource,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PreviousDisconnectInfo {
     pub ssid: Ssid,
-    pub disconnect_cause: DisconnectCause,
+    pub disconnect_source: DisconnectSource,
     pub disconnect_at: zx::Time,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DisconnectCause {
-    /// Disconnect happens due to manual request.
-    Manual,
-    /// Disconnect happens due to deauth or diassociate indication from MLME.
-    Drop,
+pub enum DisconnectSource {
+    /// Disconnect happens due to manual request from upper layer.
+    User,
+    /// Disconnect is initiated by AP.
+    Ap,
+    /// Disconnect is initiated by MLME.
+    Mlme,
+}
+
+impl DisconnectSource {
+    pub fn is_locally_initiated(&self) -> bool {
+        match self {
+            Self::User | Self::Mlme => true,
+            Self::Ap => false,
+        }
+    }
 }
 
 #[cfg(test)]
