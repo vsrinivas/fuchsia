@@ -319,6 +319,10 @@ if (current_toolchain == dart_toolchain) {
         }
       }
       group_deps += [ ":$source_verification_target_name" ]
+    } else {
+      # Opting out of source listings requires that the package is present
+      # in a global allow-list.
+      group_deps += [ "//build/dart:disable_strict_deps_check_allowlist" ]
     }
 
     ################################

@@ -133,7 +133,6 @@ template("flutter_dart_test_component") {
 
     # speed up compilation times by skipping these checks
     disable_analysis = true
-    sources_required = false
 
     deps = [
       ":$_test_package_target_name",
