@@ -36,3 +36,8 @@ zx_library("digest") {
     "//zircon/public/lib/fbl",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

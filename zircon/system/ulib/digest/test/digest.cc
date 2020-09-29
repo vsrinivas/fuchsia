@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <utility>
@@ -93,8 +94,14 @@ TEST(DigestTestCase, CopyTo) {
   uint8_t buf[kSha256Length * 2];
   memset(buf, 1, sizeof(buf));
   ASSERT_OK(actual.Parse(kZeroDigest));
-  ASSERT_DEATH(([&actual, &buf]() { actual.CopyTo(buf, kSha256Length - 1); }),
-               "Disallow truncation");
+
+  // CopyTo uses ZX_DEBUG_ASSERT and won't crash in release builds.  This test should
+  // only run when ZX_DEBUG_ASSERT is implemented.
+  if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    ASSERT_DEATH(([&actual, &buf]() { actual.CopyTo(buf, kSha256Length - 1); }),
+                 "Disallow truncation");
+  }
+
   for (size_t len = 0; len < sizeof(buf); ++len) {
     actual.CopyTruncatedTo(buf, len);
 

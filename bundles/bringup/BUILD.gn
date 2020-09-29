@@ -81,7 +81,6 @@ group("tests") {
     "//zircon/system/ulib/closure-queue/test:closure-queue-bootfs-test",
     "//zircon/system/ulib/cobalt-client/test:cobalt-client-unit-bootfs-test",
     "//zircon/system/ulib/debugdata/test:debugdata-bootfs-test",
-    "//zircon/system/ulib/digest/test:digest-bootfs-test",
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-bootfs-test",
     "//zircon/system/ulib/driver-unit-test/test:logger-unit-bootfs-test",
     "//zircon/system/ulib/elf-search/test:elf-search-bootfs-test",
