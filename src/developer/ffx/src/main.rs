@@ -84,8 +84,8 @@ async fn run() -> Result<()> {
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
     ffx_config::init_config(&app.config, &app.env)?;
-    let is_daemon = is_daemon(&app.subcommand);
-    ffx_config::logging::init(is_daemon).await?;
+    let log_to_stdio = app.verbose || is_daemon(&app.subcommand);
+    ffx_config::logging::init(log_to_stdio).await?;
     ffx_lib_suite::ffx_plugin_impl(
         get_daemon_proxy,
         get_remote_proxy,

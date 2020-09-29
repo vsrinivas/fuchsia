@@ -20,6 +20,10 @@ pub struct Ffx {
     /// apply operations across single or multiple targets
     pub target: Option<String>,
 
+    #[argh(switch, short = 'v', description = "direct all log output to the launching terminal")]
+    /// verbose output always prints to stdio, both frontend and daemon
+    pub verbose: bool,
+
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }

@@ -80,15 +80,21 @@ pub async fn spawn_daemon() -> Result<()> {
     ffx_path = std::fs::canonicalize(ffx_path)?;
     log::info!("Starting new ffx background daemon from {:?}", &ffx_path);
 
+    let ffx: Ffx = argh::from_env();
     let mut stdout = Stdio::null();
     let mut stderr = Stdio::null();
-    if ffx_config::logging::is_enabled().await {
-        // TODO(raggi): maybe dup instead.
-        stdout = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
-        stderr = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
+
+    if ffx.verbose {
+        stdout = Stdio::inherit();
+        stderr = Stdio::inherit();
+    } else {
+        if ffx_config::logging::is_enabled().await {
+            // TODO(raggi): maybe dup instead.
+            stdout = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
+            stderr = Stdio::from(ffx_config::logging::log_file("ffx.daemon").await?);
+        }
     }
 
-    let ffx: Ffx = argh::from_env();
     let mut cmd = Command::new(ffx_path);
     cmd.stdin(Stdio::null())
         .stdout(stdout)
