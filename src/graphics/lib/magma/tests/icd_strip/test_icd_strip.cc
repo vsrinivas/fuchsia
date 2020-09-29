@@ -36,7 +36,7 @@ TEST(IcdStrip, LoadEntryPoints) {
       "vk_icdGetInstanceProcAddr",
       "vk_icdGetPhysicalDeviceProcAddr",
       "vk_icdNegotiateLoaderICDInterfaceVersion",
-      "vk_icdInitializeConnectToServiceCallback",
+      "vk_icdInitializeOpenInNamespaceCallback",
   };
 
   for (auto& entry_point : entry_points) {

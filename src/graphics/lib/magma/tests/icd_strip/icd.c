@@ -6,7 +6,7 @@
 
 #define __EXPORT __attribute__((__visibility__("default")))
 
-typedef VkResult(VKAPI_PTR* PFN_vkGetServiceAddr)(const char* pName, uint32_t handle);
+typedef VkResult(VKAPI_PTR* PFN_vkOpenInNamespaceAddr)(const char* pName, uint32_t handle);
 
 //
 // These are the four entry points that may be exported by a Vulkan ICD.
@@ -20,4 +20,4 @@ __EXPORT void vk_icdGetInstanceProcAddr(VkInstance instance, const char* name) {
 
 __EXPORT void vk_icdGetPhysicalDeviceProcAddr(VkInstance instance, const char* name) {}
 
-__EXPORT void vk_icdInitializeConnectToServiceCallback(PFN_vkGetServiceAddr callback) {}
+__EXPORT void vk_icdInitializeOpenInNamespaceCallback(PFN_vkOpenInNamespaceAddr callback) {}

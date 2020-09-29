@@ -4,6 +4,7 @@
     vk_icdGetPhysicalDeviceProcAddr;
     vk_icdNegotiateLoaderICDInterfaceVersion;
     vk_icdInitializeConnectToServiceCallback;
+    vk_icdInitializeOpenInNamespaceCallback;
   local:
     *;
 };
