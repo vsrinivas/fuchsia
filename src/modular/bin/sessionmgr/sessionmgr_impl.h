@@ -31,6 +31,7 @@
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/view_host.h"
+#include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace modular {
@@ -39,8 +40,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        fuchsia::modular::SessionShellContext,
                        public fuchsia::modular::SessionRestartController {
  public:
-  SessionmgrImpl(sys::ComponentContext* component_context,
-                 fuchsia::modular::session::SessionmgrConfig config, inspect::Node object);
+  SessionmgrImpl(sys::ComponentContext* component_context, modular::ModularConfigAccessor config,
+                 inspect::Node object);
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
@@ -48,9 +49,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
  private:
   // |Sessionmgr|
-  void Initialize(std::string session_id, fuchsia::modular::session::AppConfig session_shell_config,
-                  fuchsia::modular::session::AppConfig story_shell_config,
-                  bool use_session_shell_for_story_shell_factory,
+  void Initialize(std::string session_id,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::ui::views::ViewToken view_token) override;
 
@@ -131,7 +130,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // resolved in Session Framework (replacing Modular).
   std::unique_ptr<Environment> session_environment_;
 
-  fuchsia::modular::session::SessionmgrConfig config_;
+  modular::ModularConfigAccessor config_accessor_;
 
   inspect::Node inspect_root_node_;
 

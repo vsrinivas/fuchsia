@@ -79,7 +79,8 @@ source_set("sessionmgr_lib") {
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/fidl:json_xdr",
-    "//src/modular/lib/modular_config:modular_config",
+    "//src/modular/lib/modular_config",
+    "//src/modular/lib/modular_config:modular_config_accessor",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

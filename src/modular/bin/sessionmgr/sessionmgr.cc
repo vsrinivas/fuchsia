@@ -46,7 +46,11 @@ int main(int argc, const char** argv) {
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
   auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
-  fuchsia::modular::session::SessionmgrConfig config = config_reader.GetSessionmgrConfig();
+
+  fuchsia::modular::session::ModularConfig modular_config;
+  modular_config.set_basemgr_config(config_reader.GetBasemgrConfig());
+  modular_config.set_sessionmgr_config(config_reader.GetSessionmgrConfig());
+  modular::ModularConfigAccessor config_accessor(std::move(modular_config));
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
@@ -56,13 +60,12 @@ int main(int argc, const char** argv) {
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  bool enable_cobalt = config.has_enable_cobalt() ? config.enable_cobalt() : false;
-  auto cobalt_cleanup =
-      SetupCobalt(enable_cobalt, std::move(loop.dispatcher()), component_context.get());
+  auto cobalt_cleanup = SetupCobalt(config_accessor.enable_cobalt(), std::move(loop.dispatcher()),
+                                    component_context.get());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       component_context->outgoing(),
-      std::make_unique<modular::SessionmgrImpl>(component_context.get(), std::move(config),
+      std::make_unique<modular::SessionmgrImpl>(component_context.get(), std::move(config_accessor),
                                                 std::move(inspect_root)),
       [&loop, cobalt_cleanup = std::move(cobalt_cleanup)]() mutable {
         cobalt_cleanup.call();

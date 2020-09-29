@@ -22,6 +22,7 @@
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
@@ -75,10 +76,10 @@ fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
 }  // namespace
 
 SessionmgrImpl::SessionmgrImpl(sys::ComponentContext* const component_context,
-                               fuchsia::modular::session::SessionmgrConfig config,
+                               modular::ModularConfigAccessor config_accessor,
                                inspect::Node node_object)
     : sessionmgr_context_(component_context),
-      config_(std::move(config)),
+      config_accessor_(std::move(config_accessor)),
       inspect_root_node_(std::move(node_object)),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner"),
@@ -96,9 +97,7 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 // |finitish_initialization_| lambda does initialize some Sessionmgr-scoped resources only once,
 // upon demand.)
 void SessionmgrImpl::Initialize(
-    std::string session_id, fuchsia::modular::session::AppConfig session_shell_config,
-    fuchsia::modular::session::AppConfig story_shell_config,
-    bool use_session_shell_for_story_shell_factory,
+    std::string session_id,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::ui::views::ViewToken view_token) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
@@ -115,17 +114,19 @@ void SessionmgrImpl::Initialize(
   InitializePuppetMaster();
 
   InitializeStartupAgentLauncher();
-  InitializeAgentRunner(session_shell_config.url());
+  InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
   InitializeStartupAgents();
 
-  InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
+  InitializeSessionShell(CloneStruct(config_accessor_.session_shell_app_config()),
+                         std::move(view_token));
 
   // We create |story_provider_impl_| after |agent_runner_| so
   // story_provider_impl_ is terminated before agent_runner_, which will cause
   // all modules to be terminated before agents are terminated. Agents must
   // outlive the stories which contain modules that are connected to those
   // agents.
-  InitializeStoryProvider(std::move(story_shell_config), use_session_shell_for_story_shell_factory);
+  InitializeStoryProvider(CloneStruct(config_accessor_.story_shell_app_config()),
+                          config_accessor_.use_session_shell_for_story_shell_factory());
   ConnectSessionShellToStoryProvider();
 
   InitializeSessionCtl();
@@ -169,7 +170,7 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
 
   // Wrap the launcher and override it with the new |ArgvInjectingLauncher|
   ArgvInjectingLauncher::ArgvMap argv_map;
-  for (auto& component : config_.component_args()) {
+  for (auto& component : config_accessor_.sessionmgr_config().component_args()) {
     argv_map.insert(std::make_pair(component.url(), component.args()));
   }
   session_environment_->OverrideLauncher(
@@ -227,25 +228,26 @@ void SessionmgrImpl::InitializeAgentRunner(std::string session_shell_url) {
   //
   // Create a new launcher that uses sessionmgr's realm launcher.
   std::map<std::string, std::string> agent_service_index;
-  for (auto& entry : config_.agent_service_index()) {
+  for (auto& entry : config_accessor_.sessionmgr_config().agent_service_index()) {
     agent_service_index.emplace(entry.service_name(), entry.agent_url());
   }
 
   ArgvInjectingLauncher::ArgvMap argv_map;
-  for (auto& component : config_.component_args()) {
+  for (auto& component : config_accessor_.sessionmgr_config().component_args()) {
     argv_map.insert(std::make_pair(component.url(), component.args()));
   }
   agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
 
-  auto restart_session_on_agent_crash = config_.restart_session_on_agent_crash();
+  auto restart_session_on_agent_crash =
+      config_accessor_.sessionmgr_config().restart_session_on_agent_crash();
   restart_session_on_agent_crash.push_back(session_shell_url);
 
   agent_runner_.reset(new AgentRunner(
       agent_runner_launcher_.get(), startup_agent_launcher_.get(), &inspect_root_node_,
       /*on_critical_agent_crash=*/[this] { RestartDueToCriticalFailure(); },
-      std::move(agent_service_index), config_.session_agents(), restart_session_on_agent_crash,
-      sessionmgr_context_));
+      std::move(agent_service_index), config_accessor_.sessionmgr_config().session_agents(),
+      restart_session_on_agent_crash, sessionmgr_context_));
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 }
 
@@ -253,8 +255,9 @@ void SessionmgrImpl::InitializeStartupAgents() {
   FX_DCHECK(startup_agent_launcher_);
   FX_DCHECK(agent_runner_.get());
 
-  startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
-                                       config_.startup_agents());
+  startup_agent_launcher_->StartAgents(agent_runner_.get(),
+                                       config_accessor_.sessionmgr_config().session_agents(),
+                                       config_accessor_.sessionmgr_config().startup_agents());
 }
 
 void SessionmgrImpl::InitializeStoryProvider(
@@ -273,7 +276,8 @@ void SessionmgrImpl::InitializeStoryProvider(
     ConnectToSessionShellService(story_shell_factory_ptr.NewRequest());
   }
 
-  ComponentContextInfo component_context_info{agent_runner_.get(), config_.session_agents()};
+  ComponentContextInfo component_context_info{
+      agent_runner_.get(), config_accessor_.sessionmgr_config().session_agents()};
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
       std::move(story_shell_factory_ptr), component_context_info, startup_agent_launcher_.get(),
@@ -325,7 +329,8 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::session::AppConfig sessio
   FX_DCHECK(puppet_master_impl_);
   FX_DCHECK(session_shell_view_host_);
 
-  ComponentContextInfo component_context_info{agent_runner_.get(), config_.session_agents()};
+  ComponentContextInfo component_context_info{
+      agent_runner_.get(), config_accessor_.sessionmgr_config().session_agents()};
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, session_shell_url_, session_shell_url_);
   OnTerminate(Reset(&session_shell_component_context_impl_));

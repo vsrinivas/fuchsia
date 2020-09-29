@@ -48,6 +48,9 @@ class ModularConfigAccessor {
 
   const fuchsia::modular::session::AppConfig& session_shell_app_config() const;
   bool use_random_session_id() const;
+  bool enable_cobalt() const {
+    return sessionmgr_config().has_enable_cobalt() && sessionmgr_config().enable_cobalt();
+  }
 
   // Returns the ModularConfig serialized as a JSON string.
   std::string GetConfigAsJsonString() const;

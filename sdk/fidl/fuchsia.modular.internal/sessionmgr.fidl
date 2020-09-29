@@ -4,7 +4,6 @@
 
 library fuchsia.modular.internal;
 
-using fuchsia.modular.session;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
@@ -22,9 +21,6 @@ protocol Sessionmgr {
     // TODO(fxbug.dev/16221): Address issues around client-generated session_id and
     // initialization pattern of sessionmgr.
     Initialize(string session_id,
-               fuchsia.modular.session.AppConfig session_shell,
-               fuchsia.modular.session.AppConfig story_shell,
-               bool use_session_shell_for_story_shell_factory,
                SessionContext session_context,
                fuchsia.ui.views.ViewToken view_token);
 };

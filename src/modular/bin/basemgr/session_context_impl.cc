@@ -15,7 +15,6 @@
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
-#include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/pseudo_dir/pseudo_dir_utils.h"
@@ -157,10 +156,7 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
   // 3. Initialize the Sessionmgr service.
 
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(session_id, CloneStruct(config_accessor->session_shell_app_config()),
-                          CloneStruct(config_accessor->story_shell_app_config()),
-                          config_accessor->use_session_shell_for_story_shell_factory(),
-                          session_context_binding_.NewBinding(), std::move(view_token));
+  sessionmgr_->Initialize(session_id, session_context_binding_.NewBinding(), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
