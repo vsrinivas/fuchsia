@@ -228,10 +228,29 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   return out;
 }
 
+SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
+  auto cache = new SincFilter::CacheT(CreateSincFilterTable);
+
+  // To avoid lengthy construction time, cache some coefficient tables persistently.
+  // For now we just cache a 1-to-1 table (e.g. 48k -> 48k) as this will be the most common.
+  // Also see fxb/45074.
+  SincFilter::persistent_cache_ = new std::vector<SincFilter::CacheT::SharedPtr>;
+  SincFilter::persistent_cache_->push_back(cache->Get(SincFilter::Inputs{
+      .side_width = SincFilter::GetFilterWidth(48000, 48000),
+      .num_frac_bits = kPtsFractionalBits,
+      .rate_conversion_ratio = 1.0,
+  }));
+
+  return cache;
+}
+
 // static
 PointFilter::CacheT* const PointFilter::cache_ = new PointFilter::CacheT(CreatePointFilterTable);
 LinearFilter::CacheT* const LinearFilter::cache_ =
     new LinearFilter::CacheT(CreateLinearFilterTable);
-SincFilter::CacheT* const SincFilter::cache_ = new SincFilter::CacheT(CreateSincFilterTable);
+
+// Must initialize persistent_cache_ first as it's used by the Create function.
+std::vector<SincFilter::CacheT::SharedPtr>* SincFilter::persistent_cache_ = nullptr;
+SincFilter::CacheT* const SincFilter::cache_ = CreateSincFilterCoefficientTableCache();
 
 }  // namespace media::audio::mixer

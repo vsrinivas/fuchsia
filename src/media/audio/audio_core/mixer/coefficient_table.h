@@ -74,7 +74,7 @@ class CoefficientTableCache {
   class SharedPtr {
    public:
     SharedPtr() : ptr_(nullptr) {}
-    SharedPtr(SharedPtr&& r) : ptr_(r.ptr_), drop_(r.drop_) { r.ptr_ = nullptr; }
+    SharedPtr(SharedPtr&& r) : ptr_(r.ptr_), drop_(std::move(r.drop_)) { r.ptr_ = nullptr; }
 
     ~SharedPtr() {
       if (ptr_) {

@@ -219,10 +219,14 @@ class SincFilter : public Filter {
     }
   };
 
-  friend CoefficientTable* CreateSincFilterTable(Inputs);
   using CacheT = CoefficientTableCache<Inputs>;
 
+  friend CacheT* CreateSincFilterCoefficientTableCache();
+  friend CoefficientTable* CreateSincFilterTable(Inputs);
+
   static CacheT* const cache_;
+  static std::vector<CacheT::SharedPtr>* persistent_cache_;
+
   LazySharedCoefficientTable<Inputs> filter_coefficients_;
 };
 
