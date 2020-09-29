@@ -215,7 +215,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			if fuchsiaTester == nil {
 				var err error
 				if sshKeyFile != "" {
-					fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
+					fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
 				} else {
 					if serialSocketPath == "" {
 						return fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)

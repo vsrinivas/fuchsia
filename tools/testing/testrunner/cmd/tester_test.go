@@ -5,10 +5,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,9 +20,11 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -222,6 +227,27 @@ func TestSSHTester(t *testing.T) {
 				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 			}
+			eg := errgroup.Group{}
+			serialServer := fakeSerialServer{
+				received:       make([]byte, 1024),
+				shutdownString: "shutdown",
+				socketPath:     fmt.Sprintf("%d.sock", rand.Uint32()),
+				listeningChan:  make(chan bool),
+			}
+			if c.wantConnErr {
+				// This is a hack to ensure the shutdown command gets sent to the serial server.
+				// Rather than introduce a new synchronization mechanism, just use the code under test's
+				// existing mechanism for sending commands.
+				serialDiagnosticCmds = append(serialDiagnosticCmds, []string{serialServer.shutdownString})
+				// Ensure we don't waste time sleeping in this test.
+				diagnosticToggleDuration = time.Microsecond
+				tester.serialSocketPath = serialServer.socketPath
+				defer os.Remove(serialServer.socketPath)
+				eg.Go(serialServer.Serve)
+				if !<-serialServer.listeningChan {
+					t.Fatalf("fakeSerialServer.Serve() returned: %v", eg.Wait())
+				}
+			}
 			defer func() {
 				if err := tester.Close(); err != nil {
 					t.Errorf("Close returned error: %v", err)
@@ -284,6 +310,23 @@ func TestSSHTester(t *testing.T) {
 			if wantRunCalls != client.runCalls {
 				t.Errorf("Run() called wrong number of times. Got: %d, Want: %d", client.runCalls, wantRunCalls)
 			}
+
+			if c.wantConnErr {
+				if err = eg.Wait(); err != nil {
+					t.Errorf("serialServer.Serve() failed: %v", err)
+				}
+				// Ignore the shutdown command we appended at the end
+				for _, cmd := range serialDiagnosticCmds[:len(serialDiagnosticCmds)-2] {
+					firstIndex := bytes.Index(serialServer.received, []byte(asSerialCmd(cmd)))
+					if firstIndex == -1 {
+						t.Errorf("SSHTester did not execute command over serial: %v", cmd)
+					}
+					secondIndex := bytes.Index(serialServer.received[firstIndex+1:], []byte(asSerialCmd(cmd)))
+					if secondIndex == -1 {
+						t.Errorf("SSHTester only executed command over serial once, expected twice: %v, all received: %s", cmd, string(serialServer.received))
+					}
+				}
+			}
 		})
 	}
 }
@@ -297,6 +340,79 @@ func serialAndSocket() (io.ReadWriteCloser, io.ReadWriteCloser) {
 	serial := &joinedPipeEnds{rSerial, wSerial}
 	socket := &joinedPipeEnds{rSocket, wSocket}
 	return serial, socket
+}
+
+type fakeSerialServer struct {
+	received       []byte
+	shutdownString string
+	socketPath     string
+	listeningChan  chan bool
+}
+
+func (s *fakeSerialServer) Serve() error {
+	listener, err := net.Listen("unix", s.socketPath)
+	if err != nil {
+		s.listeningChan <- false
+		return fmt.Errorf("Listen(%s) failed: %v", s.socketPath, err)
+	}
+	defer listener.Close()
+	s.listeningChan <- true
+	conn, err := listener.Accept()
+	if err != nil {
+		return fmt.Errorf("Accept() failed: %v", err)
+	}
+	defer conn.Close()
+	// Simulate booting.
+	if _, err := conn.Write([]byte(serialConsoleCursor)); err != nil {
+		return fmt.Errorf("conn.Write() failed: %v", err)
+	}
+	reader := iomisc.NewSequenceMatchingReader(conn, s.shutdownString)
+	for {
+		buf := make([]byte, 1024)
+		bytesRead, err := reader.Read(buf)
+		s.received = append(s.received, buf[:bytesRead]...)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return fmt.Errorf("conn.Read() failed: %v", err)
+		}
+	}
+}
+
+func TestNewSerialSocket(t *testing.T) {
+	socketPath := fmt.Sprintf("%d.sock", rand.Uint32())
+	defer os.Remove(socketPath)
+	server := fakeSerialServer{
+		received:       make([]byte, 1024),
+		shutdownString: "dm shutdown",
+		socketPath:     socketPath,
+		listeningChan:  make(chan bool),
+	}
+	eg := errgroup.Group{}
+	eg.Go(server.Serve)
+
+	if !<-server.listeningChan {
+		t.Fatalf("fakeSerialServer.Serve() returned: %v", eg.Wait())
+	}
+
+	clientSocket, err := newSerialSocket(context.Background(), socketPath)
+	if err != nil {
+		t.Fatalf("newSerialSocket() failed: %v", err)
+	}
+	bytesWritten, err := clientSocket.Write([]byte(server.shutdownString))
+	if err != nil {
+		t.Errorf("clientSocket.Write() failed: %v", err)
+	}
+	if bytesWritten != len(server.shutdownString) {
+		t.Errorf("clientSocket.Write() wrote %d bytes, wanted %d", bytesWritten, len(server.shutdownString))
+	}
+	if err = eg.Wait(); err != nil {
+		t.Errorf("server returned: %v", err)
+	}
+	if err = clientSocket.Close(); err != nil {
+		t.Errorf("clientSocket.Close() returned: %v", err)
+	}
 }
 
 func TestSerialTester(t *testing.T) {
