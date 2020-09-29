@@ -5,7 +5,7 @@
 mod serial;
 
 use crate::serial::run_serial_link_handlers;
-use anyhow::{ensure, format_err, Error};
+use anyhow::{bail, ensure, format_err, Error};
 use argh::FromArgs;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use futures::prelude::*;
@@ -172,10 +172,25 @@ pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Re
     let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
     let serial = serial.unwrap_or("none".to_string());
 
-    log::info!("[log] starting ascendd");
-    let _ = std::fs::remove_file(sockpath);
+    log::info!("starting ascendd on {}", sockpath);
 
-    let incoming = async_std::os::unix::net::UnixListener::bind(sockpath).await?;
+    let incoming = loop {
+        match async_std::os::unix::net::UnixListener::bind(sockpath).await {
+            Ok(listener) => {
+                break listener;
+            }
+            Err(_) => {
+                if async_std::os::unix::net::UnixStream::connect(sockpath).await.is_ok() {
+                    log::error!("another ascendd is already listening at {}", sockpath);
+                    bail!("another ascendd is aleady listening!");
+                } else {
+                    log::info!("cleaning up stale ascendd socket at {}", sockpath);
+                    std::fs::remove_file(sockpath)?;
+                };
+            }
+        }
+    };
+
     log::info!("ascendd listening to socket {}", sockpath);
 
     let node = Router::new(

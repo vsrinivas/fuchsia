@@ -156,18 +156,19 @@ async fn exec_server(daemon: Daemon) -> Result<()> {
 pub async fn is_daemon_running() -> bool {
     // Try to connect directly to the socket. This will fail if nothing is listening on the other side
     // (even if the path exists).
-    let socket = get_socket().await;
-    match std::os::unix::net::UnixStream::connect(socket) {
-        Ok(_) => true,
+    let path = get_socket().await;
+    let sock = match std::os::unix::net::UnixDatagram::unbound() {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+    match sock.connect(path) {
+        Ok(_) => sock.peer_addr().is_ok(),
         Err(_) => false,
     }
 }
 
 pub async fn start() -> Result<()> {
-    if is_daemon_running().await {
-        return Ok(());
-    }
-    futures::try_join!(onet::run_ascendd(), exec_server(Daemon::new().await?))?;
+    future::try_join(onet::run_ascendd(), exec_server(Daemon::new().await?)).await?;
     Ok(())
 }
 
