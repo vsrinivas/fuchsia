@@ -53,6 +53,7 @@ rustc_binary("bin") {
     "src/network.rs",
     "src/rtc.rs",
     "src/time_source.rs",
+    "src/time_source_manager.rs",
   ]
 
   test_deps = [

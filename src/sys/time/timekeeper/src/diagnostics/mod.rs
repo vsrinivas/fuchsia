@@ -15,7 +15,11 @@ pub use self::fake::FakeDiagnostics;
 pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
 use {
-    crate::enums::{InitialClockState, InitializeRtcOutcome, StartClockSource, WriteRtcOutcome},
+    crate::enums::{
+        InitialClockState, InitializeRtcOutcome, Role, SampleValidationError, StartClockSource,
+        TimeSourceError, WriteRtcOutcome,
+    },
+    fidl_fuchsia_time_external::Status,
     fuchsia_zircon as zx,
 };
 
@@ -28,14 +32,18 @@ pub enum Event {
     NetworkAvailable,
     /// An attempt was made to intitialize and read from the real time clock.
     InitializeRtc { outcome: InitializeRtcOutcome, time: Option<zx::Time> },
+    /// A time source failed, relaunch will be attempted.
+    TimeSourceFailed { role: Role, error: TimeSourceError },
+    /// A time source changed its state.
+    TimeSourceStatus { role: Role, status: Status },
+    /// A sample received from a time source was rejected during validation.
+    SampleRejected { role: Role, error: SampleValidationError },
     /// An attempt was made to write to the real time clock.
     WriteRtc { outcome: WriteRtcOutcome },
     /// The userspace clock has been started for the first time.
     StartClock { source: StartClockSource },
     /// The userspace clock has been updated.
     UpdateClock,
-    /// Timekeeper has failed in some permanent fashion.
-    Failure { reason: &'static str },
 }
 
 /// A standard interface for systems record events for diagnostic purposes.

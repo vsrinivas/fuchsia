@@ -31,10 +31,16 @@ impl<L: Diagnostics, R: Diagnostics> Diagnostics for CompositeDiagnostics<L, R> 
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::diagnostics::FakeDiagnostics, std::rc::Rc};
+    use {
+        super::*,
+        crate::diagnostics::FakeDiagnostics,
+        crate::enums::{Role, TimeSourceError},
+        std::rc::Rc,
+    };
 
     const UPDATE_EVENT: Event = Event::UpdateClock;
-    const FAILED_EVENT: Event = Event::Failure { reason: "Threw a boomarang" };
+    const TIME_SOURCE_FAILED_EVENT: Event =
+        Event::TimeSourceFailed { role: Role::Primary, error: TimeSourceError::CallFailed };
 
     #[test]
     fn log_events() {
@@ -48,8 +54,8 @@ mod test {
         left.assert_events(&[UPDATE_EVENT]);
         right.assert_events(&[UPDATE_EVENT]);
 
-        composite.record(FAILED_EVENT);
-        left.assert_events(&[UPDATE_EVENT, FAILED_EVENT]);
-        right.assert_events(&[UPDATE_EVENT, FAILED_EVENT]);
+        composite.record(TIME_SOURCE_FAILED_EVENT);
+        left.assert_events(&[UPDATE_EVENT, TIME_SOURCE_FAILED_EVENT]);
+        right.assert_events(&[UPDATE_EVENT, TIME_SOURCE_FAILED_EVENT]);
     }
 }

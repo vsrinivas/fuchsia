@@ -13,6 +13,15 @@ use {
     std::{pin::Pin, sync::Arc},
 };
 
+/// A time sample received from a source of time.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Sample {
+    /// The UTC time.
+    pub utc: zx::Time,
+    /// The monotonic time at which the UTC was most valid.
+    pub monotonic: zx::Time,
+}
+
 /// An event that may be observed from a source of time.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Event {
@@ -22,12 +31,13 @@ pub enum Event {
         status: Status,
     },
     /// The time source produced a new time sample.
-    TimeSample {
-        /// The UTC time.
-        utc: zx::Time,
-        /// The monotonic time at which the UTC was most valid.
-        monotonic: zx::Time,
-    },
+    Sample(Sample),
+}
+
+impl From<Sample> for Event {
+    fn from(sample: Sample) -> Event {
+        Event::Sample(sample)
+    }
 }
 
 /// A definition of a time source that may subsequently be launched to create a stream of update
@@ -38,7 +48,7 @@ pub trait TimeSource {
 
     /// Attempts to launch the time source and return a stream of its time output and status
     /// change events.
-    fn launch(self) -> Result<Self::EventStream, Error>;
+    fn launch(&self) -> Result<Self::EventStream, Error>;
 }
 
 /// A time source that communicates using the `fuchsia.time.external.PushSource` protocol.
@@ -80,10 +90,10 @@ impl PushTimeSource {
                 Ok(sample) => match (sample.utc, sample.monotonic) {
                     (None, _) => Err(anyhow!("sample missing utc")),
                     (_, None) => Err(anyhow!("sample missing monotonic")),
-                    (Some(utc), Some(monotonic)) => Ok(Event::TimeSample {
+                    (Some(utc), Some(monotonic)) => Ok(Event::Sample(Sample {
                         utc: zx::Time::from_nanos(utc),
                         monotonic: zx::Time::from_nanos(monotonic),
-                    }),
+                    })),
                 },
                 Err(err) => Err(err.into()),
             }))
@@ -96,7 +106,7 @@ impl PushTimeSource {
 impl TimeSource for PushTimeSource {
     type EventStream = PushTimeSourceEventStream;
 
-    fn launch(self) -> Result<Self::EventStream, Error> {
+    fn launch(&self) -> Result<Self::EventStream, Error> {
         let launcher = launcher().context("starting launcher")?;
         let app = launch(&launcher, self.component.clone(), None)
             .context(format!("launching push source {}", self.component))?;
@@ -106,46 +116,51 @@ impl TimeSource for PushTimeSource {
 }
 
 #[cfg(test)]
-use futures::stream;
+use {futures::stream, parking_lot::Mutex};
 
-/// A time source that immediately produces a fixed list of events supplied at construction.
+/// A time source that immediately produces a collections of events supplied at construction.
+/// The time source may be launched multiple times and will return a different collection of events
+/// on each launch. It will return pending after the last event in the last collection, and will
+/// terminate the stream after the last event in all other collections. The time source will return
+/// an error if asked to launch after the last collection of events has been returned.
 #[cfg(test)]
 pub struct FakeTimeSource {
-    /// The error to return on launch, if any.
-    launch_err: Option<Error>,
-    /// The events to return.
-    events: Vec<Result<Event, Error>>,
-    /// Whether to return pending after the last event. If false the stream will end.
-    pending: bool,
+    /// The collections of events to return. The TimeSource will return pending after the last
+    /// event in the last collection, and will terminate the stream after the last event in all
+    /// other collections.
+    collections: Mutex<Vec<Vec<Result<Event, Error>>>>,
 }
 
 #[cfg(test)]
 impl FakeTimeSource {
-    /// Creates a new `FakeTimeSource` that produces the supplied events then returns pending.
-    pub fn events_then_pending(events: Vec<Event>) -> Self {
+    /// Creates a new `FakeTimeSource` that produces the supplied single collection of successful
+    /// events.
+    pub fn events(events: Vec<Event>) -> Self {
         FakeTimeSource {
-            launch_err: None,
-            events: events.into_iter().map(|evt| Ok(evt)).collect(),
-            pending: true,
+            collections: Mutex::new(vec![events.into_iter().map(|evt| Ok(evt)).collect()]),
         }
     }
 
-    /// Creates a new `FakeTimeSource` that produces the supplied events then return EOFs.
-    pub fn events_then_terminate(events: Vec<Event>) -> Self {
+    /// Creates a new `FakeTimeSource` that produces the supplied collections of successful events.
+    pub fn event_collections(event_collections: Vec<Vec<Event>>) -> Self {
         FakeTimeSource {
-            launch_err: None,
-            events: events.into_iter().map(|evt| Ok(evt)).collect(),
-            pending: false,
+            collections: Mutex::new(
+                event_collections
+                    .into_iter()
+                    .map(|collection| collection.into_iter().map(|evt| Ok(evt)).collect())
+                    .collect(),
+            ),
         }
     }
 
-    /// Creates a new `FakeTimeSource` that will return an error when told to launch.
+    /// Creates a new `FakeTimeSource` that produces the supplied collections of results.
+    pub fn result_collections(result_collections: Vec<Vec<Result<Event, Error>>>) -> Self {
+        FakeTimeSource { collections: Mutex::new(result_collections) }
+    }
+
+    /// Creates a new `FakeTimeSource` that always fails to launch.
     pub fn failing() -> Self {
-        FakeTimeSource {
-            launch_err: Some(anyhow!("FakeTimeSource set to fail")),
-            events: vec![],
-            pending: true,
-        }
+        FakeTimeSource { collections: Mutex::new(vec![]) }
     }
 }
 
@@ -153,14 +168,17 @@ impl FakeTimeSource {
 impl TimeSource for FakeTimeSource {
     type EventStream = Pin<Box<dyn Stream<Item = Result<Event, Error>> + Send>>;
 
-    fn launch(self) -> Result<Self::EventStream, Error> {
-        if let Some(err) = self.launch_err {
-            return Err(err);
+    fn launch(&self) -> Result<Self::EventStream, Error> {
+        let mut lock = self.collections.lock();
+        if lock.is_empty() {
+            return Err(anyhow!("FakeTimeSource sent all supplied event collections"));
         }
-        if self.pending {
-            Ok(stream::iter(self.events).chain(stream::pending()).boxed())
+        let events = lock.remove(0);
+        // Return a pending after the last event if this was the last collection.
+        if lock.is_empty() {
+            Ok(stream::iter(events).chain(stream::pending()).boxed())
         } else {
-            Ok(stream::iter(self.events).boxed())
+            Ok(stream::iter(events).boxed())
         }
     }
 }
@@ -175,48 +193,53 @@ mod test {
 
     lazy_static! {
         static ref STATUS_EVENT_1: Event = Event::StatusChange { status: STATUS_1 };
-        static ref SAMPLE_EVENT_1: Event = Event::TimeSample {
+        static ref SAMPLE_EVENT_1: Event = Event::from(Sample {
             utc: zx::Time::from_nanos(SAMPLE_1_UTC_NANOS),
             monotonic: zx::Time::from_nanos(SAMPLE_1_MONO_NANOS)
-        };
-        static ref SAMPLE_EVENT_2: Event = Event::TimeSample {
+        });
+        static ref SAMPLE_EVENT_2: Event = Event::from(Sample {
             utc: zx::Time::from_nanos(12345678),
             monotonic: zx::Time::from_nanos(333)
-        };
+        });
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn fake_events_then_terminate() -> Result<(), Error> {
-        let fake = FakeTimeSource::events_then_terminate(vec![
-            *STATUS_EVENT_1,
-            *SAMPLE_EVENT_1,
-            *SAMPLE_EVENT_2,
-        ]);
+    async fn single_event_set() -> Result<(), Error> {
+        let fake = FakeTimeSource::events(vec![*STATUS_EVENT_1, *SAMPLE_EVENT_1, *SAMPLE_EVENT_2]);
         let mut events = fake.launch().context("Fake should launch without error")?;
         assert_eq!(events.next().await.unwrap().unwrap(), *STATUS_EVENT_1);
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_1);
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_2);
-        assert!(events.next().await.is_none());
+        // Making another call should lead to a stall and hence panic. We don't test this to
+        // avoid a degenerate test, but do in fake_no_events_then_pending.
+        assert!(fake.launch().is_err());
         Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn fake_events_then_pending() -> Result<(), Error> {
-        let fake = FakeTimeSource::events_then_pending(vec![*STATUS_EVENT_1, *SAMPLE_EVENT_2]);
+    async fn double_event_set() -> Result<(), Error> {
+        let fake = FakeTimeSource::event_collections(vec![
+            vec![*STATUS_EVENT_1, *SAMPLE_EVENT_1],
+            vec![*SAMPLE_EVENT_2],
+        ]);
         let mut events = fake.launch().context("Fake should launch without error")?;
         assert_eq!(events.next().await.unwrap().unwrap(), *STATUS_EVENT_1);
+        assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_1);
+        assert!(events.next().await.is_none());
+        let mut events = fake.launch().context("Fake should relaunch without error")?;
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_2);
         // Making another call should lead to a stall and hence panic. We don't test this to
         // avoid a degenerate test, but do in fake_no_events_then_pending.
+        assert!(fake.launch().is_err());
         Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
     #[should_panic]
     async fn fake_no_events_then_pending() {
-        let fake = FakeTimeSource::events_then_pending(vec![]);
+        let fake = FakeTimeSource::events(vec![]);
         let mut events = fake.launch().unwrap();
-        // Getting an event should never complete, leading to a stall.
+        // Getting an event from the last collection should never complete, leading to a stall.
         events.next().await;
     }
 

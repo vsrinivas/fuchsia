@@ -271,15 +271,15 @@ impl Diagnostics for InspectDiagnostics {
                     RealTimeClockNode::new(self.node.create_child("real_time_clock"), outcome, time)
                 });
             }
+            Event::TimeSourceFailed { .. } => { /* TODO(jsankey): Add implementation */ }
+            Event::TimeSourceStatus { .. } => { /* TODO(jsankey): Add implementation */ }
+            Event::SampleRejected { .. } => { /* TODO(jsankey): Add implementation */ }
             Event::WriteRtc { outcome } => {
                 if let Some(ref mut rtc_node) = *self.rtc.lock() {
                     rtc_node.write(outcome);
                 }
             }
             Event::StartClock { .. } | Event::UpdateClock => self.update_clock(),
-            Event::Failure { reason } => {
-                self.health.lock().set_unhealthy(reason);
-            }
         }
     }
 }
@@ -473,25 +473,14 @@ mod tests {
     }
 
     #[test]
-    fn failure() {
+    fn health() {
         let inspector = &Inspector::new();
-        let reason = "slipped on a banana peel";
-        let inspect_diagnostics = InspectDiagnostics::new(inspector.root(), create_clock());
+        let _inspect_diagnostics = InspectDiagnostics::new(inspector.root(), create_clock());
         assert_inspect_tree!(
             inspector,
             root: contains {
                 "fuchsia.inspect.Health": contains {
                     status: "STARTING_UP",
-                },
-            }
-        );
-        inspect_diagnostics.record(Event::Failure { reason });
-        assert_inspect_tree!(
-            inspector,
-            root: contains {
-                "fuchsia.inspect.Health": contains {
-                    status: "UNHEALTHY",
-                    message: reason,
                 },
             }
         );

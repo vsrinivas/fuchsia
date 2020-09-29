@@ -53,6 +53,13 @@ impl Diagnostics for CobaltDiagnostics {
                     Into::<RtcEventType>::into(outcome),
                 );
             }
+            Event::TimeSourceFailed { .. } => {
+                // TODO(jsankey): Define and use a Cobalt metric for time source failures.
+            }
+            Event::TimeSourceStatus { .. } => {}
+            Event::SampleRejected { .. } => {
+                // TODO(jsankey): Define and use a Cobalt metric for time sample rejections.
+            }
             Event::WriteRtc { outcome } => {
                 self.sender.lock().log_event(
                     REAL_TIME_CLOCK_EVENTS_METRIC_ID,
@@ -67,9 +74,6 @@ impl Diagnostics for CobaltDiagnostics {
                 self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
             }
             Event::UpdateClock => {}
-            Event::Failure { .. } => {
-                // TODO(jsankey): Define and use a Cobalt event for failure.
-            }
         }
     }
 }

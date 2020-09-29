@@ -67,9 +67,36 @@ impl Into<CobaltRtcEventType> for WriteRtcOutcome {
     }
 }
 
-/// The sources from which the userspace clock might be started.
+/// The role a time source is playing within time synchronization.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Role {
+    Primary,
+    #[allow(unused)]
+    Monitor,
+}
+
+/// The time sources from which the userspace clock might be started.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StartClockSource {
     Rtc,
     Primary,
+}
+
+/// The reasons a received time sample may not be valid.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum SampleValidationError {
+    StatusNotOk,
+    MonotonicInFuture,
+    MonotonicTooOld,
+    BeforeBackstop,
+    TooCloseToPrevious,
+}
+
+/// The reasons a time source may have failed.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum TimeSourceError {
+    LaunchFailed,
+    StreamFailed,
+    CallFailed,
+    SampleTimeOut,
 }
