@@ -33,6 +33,8 @@ use {
 mod updating_tuf_client;
 use updating_tuf_client::UpdateResult;
 
+mod local_provider;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTargetMetadata {
     merkle: BlobId,
