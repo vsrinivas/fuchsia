@@ -24,7 +24,7 @@ audio::DaiFormat GetDefaultDaiFormat() {
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
       .frame_format = FRAME_FORMAT_STEREO_LEFT,
       .frame_rate = 24'000,
-      .bits_per_channel = 32,
+      .bits_per_slot = 32,
       .bits_per_sample = 16,
   };
 }
@@ -235,8 +235,8 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
       ASSERT_EQ(formats.value()[0].frame_rates.size(), 2);
       ASSERT_EQ(formats.value()[0].frame_rates[0], 48000);
       ASSERT_EQ(formats.value()[0].frame_rates[1], 96000);
-      ASSERT_EQ(formats.value()[0].bits_per_channel.size(), 1);
-      ASSERT_EQ(formats.value()[0].bits_per_channel[0], 32);
+      ASSERT_EQ(formats.value()[0].bits_per_slot.size(), 1);
+      ASSERT_EQ(formats.value()[0].bits_per_slot[0], 32);
       ASSERT_EQ(formats.value()[0].bits_per_sample.size(), 1);
       ASSERT_EQ(formats.value()[0].bits_per_sample[0], 16);
     });

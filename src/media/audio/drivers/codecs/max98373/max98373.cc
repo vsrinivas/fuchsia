@@ -36,7 +36,7 @@ static const uint32_t supported_n_channels[] = {2};
 static const sample_format_t supported_sample_formats[] = {SAMPLE_FORMAT_PCM_SIGNED};
 static const frame_format_t supported_frame_formats[] = {FRAME_FORMAT_I2S};
 static const uint32_t supported_rates[] = {48000};
-static const uint8_t supported_bits_per_channel[] = {32};
+static const uint8_t supported_bits_per_slot[] = {32};
 static const uint8_t supported_bits_per_sample[] = {32};
 static const dai_supported_formats_t kSupportedDaiFormats = {
     .number_of_channels_list = supported_n_channels,
@@ -47,8 +47,8 @@ static const dai_supported_formats_t kSupportedDaiFormats = {
     .frame_formats_count = countof(supported_frame_formats),
     .frame_rates_list = supported_rates,
     .frame_rates_count = countof(supported_rates),
-    .bits_per_channel_list = supported_bits_per_channel,
-    .bits_per_channel_count = countof(supported_bits_per_channel),
+    .bits_per_slot_list = supported_bits_per_slot,
+    .bits_per_slot_count = countof(supported_bits_per_slot),
     .bits_per_sample_list = supported_bits_per_sample,
     .bits_per_sample_count = countof(supported_bits_per_sample),
 };
@@ -241,8 +241,8 @@ void Max98373::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_forma
     return;
   }
 
-  // Allow only 32 bits samples and channel.
-  if (format->bits_per_sample != 32 || format->bits_per_channel != 32) {
+  // Allow only 32 bits samples and slot.
+  if (format->bits_per_sample != 32 || format->bits_per_slot != 32) {
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }

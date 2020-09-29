@@ -162,7 +162,7 @@ void AmlG12TdmStream::InitDaiFormats() {
     dai_formats_[i].sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     dai_formats_[i].frame_rate = frame_rate_;
     dai_formats_[i].bits_per_sample = metadata_.tdm.bits_per_sample;
-    dai_formats_[i].bits_per_channel = metadata_.tdm.bits_per_slot;
+    dai_formats_[i].bits_per_slot = metadata_.tdm.bits_per_slot;
     dai_formats_[i].number_of_channels = metadata_.dai_number_of_channels;
     dai_formats_[i].channels_to_use.clear();
     for (uint32_t j = 0; j < 32; ++j) {

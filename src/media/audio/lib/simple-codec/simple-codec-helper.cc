@@ -23,7 +23,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
   const frame_format_t frame_format = format.frame_format;
   const uint32_t frame_rate = format.frame_rate;
   const uint8_t bits_per_sample = format.bits_per_sample;
-  const uint8_t bits_per_channel = format.bits_per_channel;
+  const uint8_t bits_per_slot = format.bits_per_slot;
   size_t i = 0;
   for (i = 0; i < supported.number_of_channels.size() &&
               supported.number_of_channels[i] != format.number_of_channels;
@@ -67,17 +67,17 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
   }
 
   for (i = 0;
-       i < supported.bits_per_channel.size() && supported.bits_per_channel[i] != bits_per_channel;
+       i < supported.bits_per_slot.size() && supported.bits_per_slot[i] != bits_per_slot;
        ++i) {
   }
-  if (i == supported.bits_per_channel.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find wanted bits per channel %u", bits_per_channel);
+  if (i == supported.bits_per_slot.size()) {
+    zxlogf(ERROR, "SimpleCodec did not find wanted bits per slot %u", bits_per_slot);
     return false;
   }
 
-  if (bits_per_sample > bits_per_channel) {
-    zxlogf(ERROR, "SimpleCodec found bits per sample (%u) too big for the bits per channel (%u)",
-           bits_per_sample, bits_per_channel);
+  if (bits_per_sample > bits_per_slot) {
+    zxlogf(ERROR, "SimpleCodec found bits per sample (%u) too big for the bits per slot (%u)",
+           bits_per_sample, bits_per_slot);
     return false;
   }
 

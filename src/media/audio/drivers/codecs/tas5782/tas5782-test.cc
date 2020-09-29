@@ -57,7 +57,7 @@ TEST(Tas5782Test, GoodSetDai) {
   format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
   format.frame_format = FRAME_FORMAT_I2S;
   format.frame_rate = 48000;
-  format.bits_per_channel = 32;
+  format.bits_per_slot = 32;
   format.bits_per_sample = 32;
   EXPECT_OK(device.CodecSetDaiFormat(&format));
 }
@@ -83,7 +83,7 @@ TEST(Tas5782Test, BadSetDai) {
   format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
   format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail, only I2S supported.
   format.frame_rate = 48000;
-  format.bits_per_channel = 32;
+  format.bits_per_slot = 32;
   format.bits_per_sample = 32;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
 
@@ -123,8 +123,8 @@ TEST(Tas5782Test, GetDai) {
         EXPECT_EQ(formats_list[0].frame_formats_list[0], FRAME_FORMAT_I2S);
         EXPECT_EQ(formats_list[0].frame_rates_count, 1);
         EXPECT_EQ(formats_list[0].frame_rates_list[0], 48000);
-        EXPECT_EQ(formats_list[0].bits_per_channel_count, 1);
-        EXPECT_EQ(formats_list[0].bits_per_channel_list[0], 32);
+        EXPECT_EQ(formats_list[0].bits_per_slot_count, 1);
+        EXPECT_EQ(formats_list[0].bits_per_slot_list[0], 32);
         EXPECT_EQ(formats_list[0].bits_per_sample_count, 1);
         EXPECT_EQ(formats_list[0].bits_per_sample_list[0], 32);
         out->status = status;

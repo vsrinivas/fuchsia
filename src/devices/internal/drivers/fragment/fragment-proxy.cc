@@ -405,8 +405,8 @@ void FragmentProxy::CodecGetDaiFormats(codec_get_dai_formats_callback callback, 
     formats[i].frame_rates_list = reinterpret_cast<uint32_t*>(p);
     p += formats[i].frame_rates_count * sizeof(uint32_t);
 
-    formats[i].bits_per_channel_list = p;
-    p += formats[i].bits_per_channel_count * sizeof(uint8_t);
+    formats[i].bits_per_slot_list = p;
+    p += formats[i].bits_per_slot_count * sizeof(uint8_t);
 
     formats[i].bits_per_sample_list = p;
     p += formats[i].bits_per_sample_count * sizeof(uint8_t);

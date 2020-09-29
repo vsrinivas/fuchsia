@@ -18,7 +18,7 @@ constexpr sample_format_t kWantedSampleFormat = SAMPLE_FORMAT_PCM_SIGNED;
 constexpr frame_format_t kWantedFrameFormat = FRAME_FORMAT_I2S;
 constexpr uint32_t kWantedFrameRate = 48000;
 constexpr uint8_t kWantedBitsPerSample = 32;
-constexpr uint8_t kWantedBitsPerChannel = 32;
+constexpr uint8_t kWantedBitsPerSlot = 32;
 
 struct Codec {
   static constexpr uint32_t kCodecTimeoutSecs = 1;

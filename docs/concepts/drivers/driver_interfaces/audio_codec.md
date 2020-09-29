@@ -112,8 +112,8 @@ To find out what formats are supported by a given codec, the controller uses the
 2.  A vector of sample formats. DAI sample formats, e.g. `PCM_SIGNED`.
 3.  A vector of frame formats, for example `STEREO_LEFT` and `STEREO_RIGHT`.
 4.  A vector of rates. Frame rates, for example 44100, 48000, and 96000.
-5.  A number of bits per channel. Number of bits in each channel in the DAI,
-    e.g. 32 bits per channel.
+5.  A number of bits per slot. Number of bits in each slot in the DAI,
+    e.g. 32 bits per slot.
 6.  A vector of bits per sample. Sample widths, e.g. 24 bits per sample.
 
 When not all combinations supported by the codec can be described with one
@@ -129,14 +129,14 @@ bits samples at either 48 or 96KHz, the codec would reply with 1
 `DaiSupportedFormats`: `<<16bits,32bits>,<48KHz,96KHz>>`.
 
 Additionally, it is assumed that bits per sample is always smaller or equal to
-bits per channel. Hence, a codec can report
-`<<16bits_per_channel,32bits_per_channel>,<16bits_per_sample,32bits_per_sample>>`
+bits per slot. Hence, a codec can report
+`<<16bits_per_slot,32bits_per_slot>,<16bits_per_sample,32bits_per_sample>>`
 and this does not imply that it is reporting that 32 bits per sample on 16 bits
 samples is valid, it specifies only the 3 valid combinations:
 
-1.  16 bits channels with 16 bits samples
-2.  32 bits channels with 32 bits samples
-3.  32 bits channels with 16 bits samples
+1.  16 bits slot with 16 bits samples
+2.  32 bits slot with 32 bits samples
+3.  32 bits slot with 16 bits samples
 
 Using the information provided by the codec in `IsBridgeable` and
 `GetDaiFormat`, what is supported by the controller, and any other requirements,
@@ -157,7 +157,7 @@ function. This functions takes a parameter that specifies:
 3.  A sample format.
 4.  A frame format.
 5.  A frame rate.
-6.  A number of bits per channel.
+6.  A number of bits per slot.
 7.  A number of bits per sample.
 
 Once `SetDaiFormat` is successful, the DAI format configuration is considered

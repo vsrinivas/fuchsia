@@ -48,14 +48,14 @@ static const std::vector<sample_format_t> kSupportedDaiSampleFormats = {SAMPLE_F
 static const std::vector<frame_format_t> kSupportedDaiFrameFormats = {FRAME_FORMAT_I2S,
                                                                       FRAME_FORMAT_TDM1};
 static const std::vector<uint32_t> kSupportedDaiRates = {48'000};
-static const std::vector<uint8_t> kSupportedDaiBitsPerChannel = {16, 32};
+static const std::vector<uint8_t> kSupportedDaiBitsPerSlot = {16, 32};
 static const std::vector<uint8_t> kSupportedDaiBitsPerSample = {16, 32};
 static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
     .number_of_channels = kSupportedDaiNumberOfChannels,
     .sample_formats = kSupportedDaiSampleFormats,
     .frame_formats = kSupportedDaiFrameFormats,
     .frame_rates = kSupportedDaiRates,
-    .bits_per_channel = kSupportedDaiBitsPerChannel,
+    .bits_per_slot = kSupportedDaiBitsPerSlot,
     .bits_per_sample = kSupportedDaiBitsPerSample,
 };
 
@@ -237,7 +237,7 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
     return status;
   }
   return WriteReg(kRegSapCtrl2, (format.number_of_channels == 4 && format.channels_to_use[0] == 2)
-                                    ? 2 * format.bits_per_channel
+                                    ? 2 * format.bits_per_slot
                                     : 0x00);
 }
 

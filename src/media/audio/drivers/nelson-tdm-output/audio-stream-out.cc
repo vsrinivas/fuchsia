@@ -75,7 +75,7 @@ zx_status_t NelsonAudioStreamOut::InitCodec() {
       .sample_format = kWantedSampleFormat,
       .frame_format = kWantedFrameFormat,
       .frame_rate = kWantedFrameRate,
-      .bits_per_channel = kWantedBitsPerChannel,
+      .bits_per_slot = kWantedBitsPerSlot,
       .bits_per_sample = kWantedBitsPerSample,
   };
   status = codec_.SetDaiFormat(format);

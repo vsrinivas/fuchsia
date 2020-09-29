@@ -142,7 +142,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   format.frame_format = wanted_frame_format;
   format.frame_rate = wanted_frame_rate;
   format.bits_per_sample = wanted_bits_per_sample;
-  format.bits_per_channel = wanted_bits_per_channel;
+  format.bits_per_slot = wanted_bits_per_slot;
   status = codec_.SetDaiFormat(format);
   if (status != ZX_OK) {
     return status;

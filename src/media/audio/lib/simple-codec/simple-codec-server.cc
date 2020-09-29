@@ -80,8 +80,8 @@ void SimpleCodecServer::CodecGetDaiFormats(codec_get_dai_formats_callback callba
     formats2[i].frame_formats_count = formats[i].frame_formats.size();
     formats2[i].frame_rates_list = &formats[i].frame_rates[0];
     formats2[i].frame_rates_count = formats[i].frame_rates.size();
-    formats2[i].bits_per_channel_list = &formats[i].bits_per_channel[0];
-    formats2[i].bits_per_channel_count = formats[i].bits_per_channel.size();
+    formats2[i].bits_per_slot_list = &formats[i].bits_per_slot[0];
+    formats2[i].bits_per_slot_count = formats[i].bits_per_slot.size();
     formats2[i].bits_per_sample_list = &formats[i].bits_per_sample[0];
     formats2[i].bits_per_sample_count = formats[i].bits_per_sample.size();
   }
@@ -98,7 +98,7 @@ void SimpleCodecServer::CodecSetDaiFormat(const dai_format_t* format,
   format2.sample_format = format->sample_format;
   format2.frame_format = format->frame_format;
   format2.frame_rate = format->frame_rate;
-  format2.bits_per_channel = format->bits_per_channel;
+  format2.bits_per_slot = format->bits_per_slot;
   format2.bits_per_sample = format->bits_per_sample;
   callback(cookie, SetDaiFormat(std::move(format2)));
 }

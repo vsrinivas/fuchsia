@@ -43,8 +43,8 @@ struct TestCodec : public SimpleCodecServer {
       format.frame_formats.push_back(FRAME_FORMAT_I2S);
       format.frame_rates.push_back(48'000);
       format.frame_rates.push_back(96'000);
-      format.bits_per_channel.push_back(16);
-      format.bits_per_channel.push_back(32);
+      format.bits_per_slot.push_back(16);
+      format.bits_per_slot.push_back(32);
       format.bits_per_sample.push_back(16);
       format.bits_per_sample.push_back(24);
       format.bits_per_sample.push_back(32);
@@ -56,7 +56,7 @@ struct TestCodec : public SimpleCodecServer {
       format.sample_formats.push_back(SAMPLE_FORMAT_PCM_SIGNED);
       format.frame_formats.push_back(FRAME_FORMAT_STEREO_LEFT);
       format.frame_rates.push_back(24'000);
-      format.bits_per_channel.push_back(32);
+      format.bits_per_slot.push_back(32);
       format.bits_per_sample.push_back(32);
       formats.push_back(std::move(format));
     }
@@ -220,7 +220,7 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
       .frame_format = FRAME_FORMAT_I2S,
       .frame_rate = 48'000,
-      .bits_per_channel = 32,
+      .bits_per_slot = 32,
       .bits_per_sample = 0,  // Bad.
   };
   ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
@@ -231,7 +231,7 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
   ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
   format.number_of_channels = 2;  // Good.
   ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-  format.bits_per_channel = 16;  // Bad, bit per sample fo not fit.
+  format.bits_per_slot = 16;  // Bad, bit per sample fo not fit.
   ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
   // Good, matches second supported format list.
@@ -240,7 +240,7 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
       .frame_format = FRAME_FORMAT_STEREO_LEFT,
       .frame_rate = 24'000,
-      .bits_per_channel = 32,
+      .bits_per_slot = 32,
       .bits_per_sample = 32,
   };
   ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));

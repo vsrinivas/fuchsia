@@ -9,7 +9,7 @@
 namespace {
 static bool IsFormatSupported(sample_format_t sample_format, frame_format_t frame_format,
                               uint32_t frame_rate, uint8_t bits_per_sample,
-                              uint8_t bits_per_channel, const dai_supported_formats_t* formats) {
+                              uint8_t bits_per_slot, const dai_supported_formats_t* formats) {
   size_t i = 0;
   for (i = 0; i < formats->sample_formats_count && formats->sample_formats_list[i] != sample_format;
        ++i) {
@@ -44,11 +44,11 @@ static bool IsFormatSupported(sample_format_t sample_format, frame_format_t fram
   }
 
   for (i = 0;
-       i < formats->bits_per_channel_count && formats->bits_per_channel_list[i] != bits_per_channel;
+       i < formats->bits_per_slot_count && formats->bits_per_slot_list[i] != bits_per_slot;
        ++i) {
   }
-  if (i == formats->bits_per_channel_count) {
-    zxlogf(ERROR, "%s did not find wanted bits per channel", __FILE__);
+  if (i == formats->bits_per_slot_count) {
+    zxlogf(ERROR, "%s did not find wanted bits per slot", __FILE__);
     return false;
   }
 
@@ -130,7 +130,7 @@ zx_status_t Codec::CheckExpectedDaiFormat() {
           size_t i = 0;
           for (; i < formats_count; ++i) {
             if (IsFormatSupported(kWantedSampleFormat, kWantedFrameFormat, kWantedFrameRate,
-                                  kWantedBitsPerSample, kWantedBitsPerChannel, &formats_list[i])) {
+                                  kWantedBitsPerSample, kWantedBitsPerSlot, &formats_list[i])) {
               break;
             }
           }

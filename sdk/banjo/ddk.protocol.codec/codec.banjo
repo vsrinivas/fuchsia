@@ -44,8 +44,8 @@ struct DaiFormat {
     FrameFormat frame_format;
     /// The frame rate for all samples in the DAI.
     uint32 frame_rate;
-    /// The bits per channel for all channels in the DAI.
-    uint8 bits_per_channel;
+    /// The bits per slot for all channels in the DAI.
+    uint8 bits_per_slot;
     /// The bits per sample for all samples in the DAI.  Must be smaller than bits per channel for
     /// samples to fit.
     uint8 bits_per_sample;
@@ -60,8 +60,8 @@ struct DaiSupportedFormats {
     vector<FrameFormat> frame_formats;
     /// Rates supported by the codec.
     vector<uint32> frame_rates;
-    /// The bits per channel supported by the codec.
-    vector<uint8> bits_per_channel;
+    /// The bits per slot supported by the codec.
+    vector<uint8> bits_per_slot;
     /// Bits per sample supported by the codec.
     vector<uint8> bits_per_sample;
 };

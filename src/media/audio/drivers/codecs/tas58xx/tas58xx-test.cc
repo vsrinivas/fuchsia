@@ -41,7 +41,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
-    format.bits_per_channel = 32;
+    format.bits_per_slot = 32;
     format.bits_per_sample = 32;
     mock_i2c.ExpectWriteStop({0x33, 0x03});  // 32 bits.
     mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
@@ -60,7 +60,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
-    format.bits_per_channel = 32;
+    format.bits_per_slot = 32;
     mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
     mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
     format.bits_per_sample = 16;
@@ -79,7 +79,7 @@ TEST(Tas58xxTest, GoodSetDai) {
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_TDM1;
     format.frame_rate = 48000;
-    format.bits_per_channel = 16;
+    format.bits_per_slot = 16;
     format.bits_per_sample = 16;
     mock_i2c.ExpectWriteStop({0x33, 0x14});  // TDM/DSP, I2S_LRCLK_PULSE < 8 SCLK, 16 bits.
     mock_i2c.ExpectWriteStop({0x34, 0x20});  // Data start sclk at 32 bits.
@@ -123,7 +123,7 @@ TEST(Tas58xxTest, BadSetDai) {
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail.
     format.frame_rate = 48000;
-    format.bits_per_channel = 32;
+    format.bits_per_slot = 32;
     format.bits_per_sample = 32;
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
@@ -141,7 +141,7 @@ TEST(Tas58xxTest, BadSetDai) {
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
-    format.bits_per_channel = 32;
+    format.bits_per_slot = 32;
     format.bits_per_sample = 32;
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
@@ -159,7 +159,7 @@ TEST(Tas58xxTest, BadSetDai) {
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 1234;
-    format.bits_per_channel = 32;
+    format.bits_per_slot = 32;
     format.bits_per_sample = 32;
     std::thread t([&]() {
       auto formats = client.GetDaiFormats();
@@ -196,9 +196,9 @@ TEST(Tas58xxTest, GetDai) {
       EXPECT_EQ(formats.value()[0].frame_formats[1], FRAME_FORMAT_TDM1);
       EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
       EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
-      EXPECT_EQ(formats.value()[0].bits_per_channel.size(), 2);
-      EXPECT_EQ(formats.value()[0].bits_per_channel[0], 16);
-      EXPECT_EQ(formats.value()[0].bits_per_channel[1], 32);
+      EXPECT_EQ(formats.value()[0].bits_per_slot.size(), 2);
+      EXPECT_EQ(formats.value()[0].bits_per_slot[0], 16);
+      EXPECT_EQ(formats.value()[0].bits_per_slot[1], 32);
       EXPECT_EQ(formats.value()[0].bits_per_sample.size(), 2);
       EXPECT_EQ(formats.value()[0].bits_per_sample[0], 16);
       EXPECT_EQ(formats.value()[0].bits_per_sample[1], 32);
