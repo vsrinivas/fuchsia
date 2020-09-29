@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/usb_updater"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.update.usb.Checker"
+        ]
+    }
+}
