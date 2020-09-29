@@ -132,7 +132,7 @@ void BaseRenderer::CleanupDestLink(const AudioObject& dest) {
   queue->Flush(PendingFlushToken::Create(context_.threading_model().FidlDomain().dispatcher(),
                                          [self = shared_from_this()] {}));
   // If this was our one adjustable clock, mark that a new dest link can use it.
-  if (queue->reference_clock().is_adjustable()) {
+  if (queue->reference_clock().is_flexible()) {
     FX_DCHECK(client_allows_clock_adjustment_);
     adjustable_clock_is_allocated_ = false;
   }

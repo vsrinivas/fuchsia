@@ -542,10 +542,12 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
   auto default_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
-  pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA));
+  pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
+                     Mixer::Resampler::SampleAndHold);
   auto communications_stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
   pipeline->AddInput(communications_stream,
-                     StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION));
+                     StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION), std::nullopt,
+                     Mixer::Resampler::SampleAndHold);
 
   // The pipeline itself (the root, after any MixStages or EffectsStages) requires no lead time.
   EXPECT_EQ(zx::duration(0), pipeline->GetPresentationDelay());

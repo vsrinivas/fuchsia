@@ -76,10 +76,125 @@ class MixStageTest : public testing::ThreadingModelFixture {
   void TestMixStageUniformFormats(ClockMode clock_mode);
   void TestMixStageSingleInput(ClockMode clock_mode);
   void TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm = 0);
+
+  void ValidateIsPointSampler(std::shared_ptr<Mixer> should_be_point) {
+    EXPECT_LT(should_be_point->pos_filter_width(), Fixed(1))
+        << "Mixer pos_filter_width " << should_be_point->pos_filter_width().raw_value()
+        << " too large, should be less than " << Fixed(1).raw_value();
+  }
+
+  void ValidateIsSincSampler(std::shared_ptr<Mixer> should_be_sinc) {
+    EXPECT_GT(should_be_sinc->pos_filter_width(), Fixed(1))
+        << "Mixer pos_filter_width " << should_be_sinc->pos_filter_width().raw_value()
+        << " too small, should be greater than " << Fixed(1).raw_value();
+  }
+
   std::shared_ptr<MixStage> mix_stage_;
 
   AudioClock device_clock_;
 };
+
+TEST_F(MixStageTest, AddInput_MixerSelection) {
+  const Format kSameFrameRate =
+      Format::Create(fuchsia::media::AudioStreamType{
+                         .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+                         .channels = 1,
+                         .frames_per_second = kDefaultFrameRate,
+                     })
+          .take_value();
+
+  const Format kDiffFrameRate =
+      Format::Create(fuchsia::media::AudioStreamType{
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = kDefaultNumChannels,
+                         .frames_per_second = kDefaultFrameRate / 2,
+                     })
+          .take_value();
+
+  auto timeline = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  auto tl_same = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(Fixed(kSameFrameRate.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+  auto tl_different = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(Fixed(kDiffFrameRate.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+
+  auto tuneable_clock = AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(),
+                                                             AudioClock::kMonotonicDomain + 1);
+  auto tuneable_mix_stage =
+      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, tuneable_clock);
+  auto device_static_clock =
+      AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  auto device_static_mix_stage =
+      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, device_static_clock);
+
+  auto flex_same_rate = std::make_shared<PacketQueue>(
+      kSameFrameRate, tl_same, AudioClock::CreateAsOptimal(clock::CloneOfMonotonic()));
+  auto flex_diff_rate = std::make_shared<PacketQueue>(
+      kDiffFrameRate, tl_different, AudioClock::CreateAsOptimal(clock::CloneOfMonotonic()));
+  auto custom_same_rate = std::make_shared<PacketQueue>(
+      kSameFrameRate, tl_same, AudioClock::CreateAsCustom(clock::CloneOfMonotonic()));
+  auto controlling_clock = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+  controlling_clock.set_controls_tuneable_clock(true);
+  auto controlling =
+      std::make_shared<PacketQueue>(kSameFrameRate, tl_same, std::move(controlling_clock));
+
+  // flexible should lead to Point, if same rate
+  ValidateIsPointSampler(tuneable_mix_stage->AddInput(flex_same_rate));
+  ValidateIsPointSampler(device_static_mix_stage->AddInput(flex_same_rate));
+
+  // flexible should lead to Sinc, if not same rate
+  ValidateIsSincSampler(tuneable_mix_stage->AddInput(flex_diff_rate));
+  ValidateIsSincSampler(device_static_mix_stage->AddInput(flex_diff_rate));
+
+  // custom clock should lead to Sinc, even if same rate, regardless of hardware-control
+  ValidateIsSincSampler(tuneable_mix_stage->AddInput(custom_same_rate));
+  ValidateIsSincSampler(device_static_mix_stage->AddInput(custom_same_rate));
+  ValidateIsSincSampler(tuneable_mix_stage->AddInput(controlling));
+  ValidateIsSincSampler(device_static_mix_stage->AddInput(controlling));
+
+  // The default heuristic can still be explicitly indicated, and behaves as above.
+  ValidateIsPointSampler(
+      tuneable_mix_stage->AddInput(flex_same_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsPointSampler(
+      device_static_mix_stage->AddInput(flex_same_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(
+      tuneable_mix_stage->AddInput(flex_diff_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(
+      device_static_mix_stage->AddInput(flex_diff_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(
+      tuneable_mix_stage->AddInput(custom_same_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(
+      device_static_mix_stage->AddInput(custom_same_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(
+      tuneable_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(
+      device_static_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
+
+  //
+  // For all, explicit mixer selection can still countermand our default heuristic
+  //
+  // WindowedSinc can still be explicitly specified in same-rate no-microSRC situations
+  ValidateIsSincSampler(
+      tuneable_mix_stage->AddInput(flex_same_rate, std::nullopt, Mixer::Resampler::WindowedSinc));
+  ValidateIsSincSampler(device_static_mix_stage->AddInput(flex_same_rate, std::nullopt,
+                                                          Mixer::Resampler::WindowedSinc));
+
+  // SampleAndHold can still be explicitly specified, even in different-rate situations
+  ValidateIsPointSampler(
+      tuneable_mix_stage->AddInput(flex_diff_rate, std::nullopt, Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(device_static_mix_stage->AddInput(flex_diff_rate, std::nullopt,
+                                                           Mixer::Resampler::SampleAndHold));
+
+  // SampleAndHold can still be explicitly specified, even in microSRC situations
+  ValidateIsPointSampler(tuneable_mix_stage->AddInput(custom_same_rate, std::nullopt,
+                                                      Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(device_static_mix_stage->AddInput(custom_same_rate, std::nullopt,
+                                                           Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(
+      tuneable_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(device_static_mix_stage->AddInput(controlling, std::nullopt,
+                                                           Mixer::Resampler::SampleAndHold));
+}
 
 // TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned
 // frames.
@@ -198,8 +313,8 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
     ASSERT_TRUE(false) << "Multi-rate testing not yet implemented";
   }
 
-  mix_stage_->AddInput(packet_queue1);
-  mix_stage_->AddInput(packet_queue2);
+  mix_stage_->AddInput(packet_queue1, std::nullopt, Mixer::Resampler::SampleAndHold);
+  mix_stage_->AddInput(packet_queue2, std::nullopt, Mixer::Resampler::SampleAndHold);
 
   // Mix 2 packet queues with the following samples and expected outputs. We'll feed this data
   // through the mix stage in 3 passes of 2ms windows:

@@ -61,6 +61,14 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
     return nullptr;
   }
 
+  if (resampler_hint == Mixer::Resampler::Default) {
+    auto mode = AudioClock::SynchronizationMode(stream->reference_clock(), reference_clock());
+    // If we might need micro-SRC for synchronization, use the higher quality resampler.
+    if (mode == AudioClock::SyncMode::MicroSrc || mode == AudioClock::SyncMode::TuneHardware) {
+      resampler_hint = Mixer::Resampler::WindowedSinc;
+    }
+  }
+
   auto mixer = std::shared_ptr<Mixer>(
       Mixer::Select(stream->format().stream_type(), format().stream_type(), resampler_hint)
           .release());
@@ -74,11 +82,20 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
 
   stream->SetPresentationDelay(GetPresentationDelay() + LeadTimeForMixer(stream->format(), *mixer));
 
-  FX_LOGS(DEBUG) << "AddInput " << (stream->reference_clock().is_adjustable() ? "" : "non-")
-                 << "adjustable "
-                 << (stream->reference_clock().is_device_clock() ? "device" : "client") << ", self "
-                 << (reference_clock().is_adjustable() ? "" : "non-") << "adjustable "
-                 << (reference_clock().is_device_clock() ? "device" : "client");
+  FX_LOGS(DEBUG) << "AddInput "
+                 << (stream->reference_clock().is_flexible()
+                         ? "flexible"
+                         : (stream->reference_clock().is_tuneable()
+                                ? "tuneable"
+                                : (stream->reference_clock().is_device_clock() ? "static device"
+                                                                               : "static client")))
+                 << " (self "
+                 << (reference_clock().is_flexible()
+                         ? "flexible"
+                         : (reference_clock().is_tuneable()
+                                ? "tuneable"
+                                : (reference_clock().is_device_clock() ? "static device)"
+                                                                       : "static client)")));
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     streams_.emplace_back(StreamHolder{std::move(stream), mixer});
@@ -98,11 +115,21 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
     return;
   }
 
-  FX_LOGS(DEBUG) << "RemoveInput " << (it->stream->reference_clock().is_adjustable() ? "" : "non-")
-                 << "adjustable "
-                 << (it->stream->reference_clock().is_device_clock() ? "device" : "client")
-                 << ", self " << (reference_clock().is_adjustable() ? "" : "non-") << "adjustable "
-                 << (reference_clock().is_device_clock() ? "device" : "client");
+  FX_LOGS(DEBUG) << "RemoveInput "
+                 << (it->stream->reference_clock().is_flexible()
+                         ? "flexible"
+                         : (it->stream->reference_clock().is_tuneable()
+                                ? "tuneable"
+                                : (it->stream->reference_clock().is_device_clock()
+                                       ? "static device"
+                                       : "static client")))
+                 << " (self "
+                 << (reference_clock().is_flexible()
+                         ? "flexible"
+                         : (reference_clock().is_tuneable()
+                                ? "tuneable"
+                                : (reference_clock().is_device_clock() ? "static device)"
+                                                                       : "static client)")));
 
   streams_.erase(it);
 }
@@ -623,9 +650,9 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       // No error is too small to worry about; handle them all.
       FX_LOGS(TRACE) << "frac_source_error: tuning reference clock at dest " << curr_dest_frame
                      << " for " << info.frac_source_error.raw_value();
-      if (client_clock.is_adjustable()) {
+      if (client_clock.is_flexible()) {
         // Adjust client_clock, the 'flexible' clock that we have provided to the client
-      } else if (device_clock.is_adjustable() && client_clock.controls_hardware_clock()) {
+      } else if (device_clock.is_tuneable() && client_clock.controls_tuneable_clock()) {
         // Adjust device_clock's hardware clock rate based on the frac_source_error
       } else {
         client_clock.TuneRateForError(curr_dest_frame, info.frac_source_error);

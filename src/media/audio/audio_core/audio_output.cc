@@ -136,8 +136,13 @@ void AudioOutput::Process() {
 
 fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
 AudioOutput::InitializeSourceLink(const AudioObject& source,
-                                  std::shared_ptr<ReadableStream> stream) {
+                                  std::shared_ptr<ReadableStream> source_stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
+
+  // If there's no source, use a Mixer that only trims, and no execution domain.
+  if (!source_stream) {
+    return fit::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
+  }
 
   auto usage = source.usage();
   FX_DCHECK(usage) << "Source has no assigned usage";
@@ -145,26 +150,28 @@ AudioOutput::InitializeSourceLink(const AudioObject& source,
     usage = {StreamUsage::WithRenderUsage(RenderUsage::MEDIA)};
   }
 
-  if (stream) {
-    float gain_db = Gain::kUnityGainDb;
-    if (device_settings()) {
-      auto [flags, cur_gain_state] = device_settings()->SnapshotGainState();
-      gain_db = cur_gain_state.muted
-                    ? fuchsia::media::audio::MUTED_GAIN_DB
-                    : std::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb);
-    }
-    auto mixer = pipeline_->AddInput(std::move(stream), *usage, gain_db);
-    return fit::ok(std::make_pair(std::move(mixer), &mix_domain()));
+  float gain_db = Gain::kUnityGainDb;
+  if (device_settings()) {
+    auto [flags, cur_gain_state] = device_settings()->SnapshotGainState();
+    gain_db = cur_gain_state.muted
+                  ? fuchsia::media::audio::MUTED_GAIN_DB
+                  : std::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb);
   }
 
-  return fit::ok(std::make_pair(std::make_shared<audio::mixer::NoOp>(), nullptr));
+  // In rendering, we expect the source clock to originate from a client.
+  // For now, "loop out" (direct device-to-device) routing is unsupported.
+  FX_CHECK(source_stream->reference_clock().is_client_clock() ||
+           source_stream->reference_clock() == reference_clock());
+
+  auto mixer = pipeline_->AddInput(std::move(source_stream), *usage, gain_db);
+  return fit::ok(std::make_pair(std::move(mixer), &mix_domain()));
 }
 
 void AudioOutput::CleanupSourceLink(const AudioObject& source,
-                                    std::shared_ptr<ReadableStream> stream) {
+                                    std::shared_ptr<ReadableStream> source_stream) {
   TRACE_DURATION("audio", "AudioOutput::CleanupSourceLink");
-  if (stream) {
-    pipeline_->RemoveInput(*stream);
+  if (source_stream) {
+    pipeline_->RemoveInput(*source_stream);
   }
 }
 

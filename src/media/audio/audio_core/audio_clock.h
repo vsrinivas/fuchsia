@@ -99,6 +99,8 @@ class AudioClock {
   //
   // Once we've settled back to steady state, our desync ripple is +/-20nsec (8 fractional frames).
 
+  enum class SyncMode { AdjustClientClock, TuneHardware, MicroSrc, None };
+
   static constexpr uint32_t kMonotonicDomain = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
 
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
@@ -117,14 +119,17 @@ class AudioClock {
   static AudioClock CreateAsDeviceStatic(zx::clock clock, uint32_t domain);
   static AudioClock CreateAsOptimal(zx::clock clock);
   static AudioClock CreateAsCustom(zx::clock clock);
-  bool SetAsHardwareControlling(bool controls_hw_clock);
+
+  static SyncMode SynchronizationMode(AudioClock& clock1, AudioClock& clock2);
 
   explicit operator bool() const { return is_valid(); }
   bool is_valid() const { return (type_ != Type::Invalid); }
-  bool is_adjustable() const { return (type_ == Type::Adjustable); }
   bool is_device_clock() const { return (source_ == Source::Device); }
   bool is_client_clock() const { return !is_device_clock(); }
-  bool controls_hardware_clock() const { return controls_hardware_clock_; }
+  bool is_flexible() const { return is_client_clock() && (type_ == Type::Adjustable); }
+  bool is_tuneable() const { return is_device_clock() && (type_ == Type::Adjustable); }
+  bool controls_tuneable_clock() const { return controls_tuneable_clock_; }
+  bool set_controls_tuneable_clock(bool controls_tuneable_clock);
   uint32_t domain() const {
     FX_CHECK(is_device_clock());
     return domain_;
@@ -186,7 +191,7 @@ class AudioClock {
   uint32_t domain_;  // Only really used for device clocks.
 
   // Only used for non-adjustable client clocks. Consider moving to a subclass structure
-  bool controls_hardware_clock_ = false;
+  bool controls_tuneable_clock_ = false;
 
   TimelineFunction ref_clock_to_clock_mono_;
 

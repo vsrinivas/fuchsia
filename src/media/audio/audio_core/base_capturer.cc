@@ -150,7 +150,7 @@ void BaseCapturer::OnStateChanged(State old_state, State new_state) {
 
 fit::result<std::pair<std::shared_ptr<Mixer>, ExecutionDomain*>, zx_status_t>
 BaseCapturer::InitializeSourceLink(const AudioObject& source,
-                                   std::shared_ptr<ReadableStream> stream) {
+                                   std::shared_ptr<ReadableStream> source_stream) {
   TRACE_DURATION("audio", "BaseCapturer::InitializeSourceLink");
 
   switch (state_.load()) {
@@ -160,7 +160,10 @@ BaseCapturer::InitializeSourceLink(const AudioObject& source,
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
     case State::WaitingForVmo:
-      return fit::ok(std::make_pair(mix_stage_->AddInput(std::move(stream)), &mix_domain()));
+      // In capture, source clocks originate from devices (inputs if live, outputs if loopback).
+      // For now, "loop in" (direct client-to-client) routing is unsupported.
+      FX_CHECK(source_stream->reference_clock().is_device_clock());
+      return fit::ok(std::make_pair(mix_stage_->AddInput(std::move(source_stream)), &mix_domain()));
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.
@@ -170,8 +173,8 @@ BaseCapturer::InitializeSourceLink(const AudioObject& source,
 }
 
 void BaseCapturer::CleanupSourceLink(const AudioObject& source,
-                                     std::shared_ptr<ReadableStream> stream) {
-  mix_stage_->RemoveInput(*stream);
+                                     std::shared_ptr<ReadableStream> source_stream) {
+  mix_stage_->RemoveInput(*source_stream);
 }
 
 void BaseCapturer::GetStreamType(GetStreamTypeCallback cbk) {
