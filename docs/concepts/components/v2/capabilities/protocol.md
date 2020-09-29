@@ -122,7 +122,7 @@ the following layout:
 ```
  A  <- offers protocol "/svc/fidl.example.X" from self to B as "/intermediary"
  |
- B  <- offers protocol "/intermediary" from realm to B as "/intermediary2"
+ B  <- offers protocol "/intermediary" from realm to C as "/intermediary2"
  |
  C  <- uses protocol "/intermediary2" as "/protocol/example"
 ```
