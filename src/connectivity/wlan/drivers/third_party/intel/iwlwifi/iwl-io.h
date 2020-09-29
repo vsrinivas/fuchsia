@@ -32,7 +32,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 
-#include <zircon/system/public/zircon/time.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #if 0  // NEEDS_PORTING

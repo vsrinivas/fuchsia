@@ -38,7 +38,7 @@
 #include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-#include <zircon/system/public/zircon/time.h>
+#include <zircon/time.h>
 
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
