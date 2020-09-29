@@ -55,13 +55,56 @@ type BaseBuild struct {
 }
 
 // This is stubbed out to allow for test code to replace it
-// TODO(fxbug.dev/45383): auto-detect build type?
-var NewBuild = NewLocalFuchsiaBuild
+var NewBuild = NewBuildFromEnvironment
 
-// NewClusterFuzzBuild will create a BaseBuild with path layouts corresponding
-// to builds used by ClusterFuzz
-func NewClusterFuzzBuild() (Build, error) {
-	return nil, fmt.Errorf("unimplemented")
+// This environment variable is set by the ClusterFuzz build manager
+const clusterFuzzBundleDirEnvVar = "FUCHSIA_RESOURCES_DIR"
+
+// Attempt to auto-detect the correct Build type
+func NewBuildFromEnvironment() (Build, error) {
+	if _, found := os.LookupEnv(clusterFuzzBundleDirEnvVar); found {
+		return NewClusterFuzzLegacyBuild()
+	}
+	return NewLocalFuchsiaBuild()
+}
+
+// NewClusterFuzzLegacyBuild will create a BaseBuild with path layouts
+// corresponding to the legacy build bundles used by ClusterFuzz's original
+// Python integration. Note that these build bundles only support x64.
+func NewClusterFuzzLegacyBuild() (Build, error) {
+	bundleDir, found := os.LookupEnv(clusterFuzzBundleDirEnvVar)
+	if !found {
+		return nil, fmt.Errorf("%s not set", clusterFuzzBundleDirEnvVar)
+	}
+
+	buildDir := filepath.Join(bundleDir, "build")
+	targetDir := filepath.Join(bundleDir, "target", "x64")
+	clangDir := filepath.Join(buildDir, "buildtools", "linux-x64", "clang")
+	build := &BaseBuild{
+		Paths: map[string]string{
+			"zbi":             filepath.Join(targetDir, "fuchsia.zbi"),
+			"fvm":             filepath.Join(buildDir, "out", "default.zircon", "tools", "fvm"),
+			"zbitool":         filepath.Join(buildDir, "out", "default.zircon", "tools", "zbi"),
+			"blk":             filepath.Join(targetDir, "fvm.blk"),
+			"qemu":            filepath.Join(bundleDir, "qemu-for-fuchsia", "bin", "qemu-system-x86_64"),
+			"kernel":          filepath.Join(targetDir, "multiboot.bin"),
+			"symbolize":       filepath.Join(buildDir, "zircon", "prebuilt", "downloads", "symbolize", "linux-x64", "symbolize"),
+			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
+			"fuzzers.json":    filepath.Join(buildDir, "out", "default", "fuzzers.json"),
+			"authkeys":        filepath.Join(bundleDir, ".ssh", "authorized_keys"),
+			"sshid":           filepath.Join(bundleDir, ".ssh", "pkey"),
+		},
+		IDs: []string{
+			filepath.Join(clangDir, "lib", "debug", ".build_id"),
+			filepath.Join(buildDir, "out", "default", ".build-id"),
+			filepath.Join(buildDir, "out", "default.zircon", ".build-id"),
+		},
+	}
+	if err := build.LoadFuzzers(); err != nil {
+		return nil, err
+	}
+
+	return build, nil
 }
 
 var Platforms = map[string]string{

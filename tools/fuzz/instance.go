@@ -39,6 +39,11 @@ func NewInstance() (Instance, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error configuring build: %s", err)
 	}
+
+	if err := build.Prepare(); err != nil {
+		return nil, fmt.Errorf("Error preparing build: %s", err)
+	}
+
 	// TODO(fxbug.dev/47479): should the user be able to choose connector/launcher types?
 	launcher := NewQemuLauncher(build)
 
@@ -50,7 +55,7 @@ func loadInstanceFromHandle(handle Handle) (Instance, error) {
 	// TODO(fxbug.dev/47320): Store build info in the handle too
 	build, err := NewBuild()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error configuring build: %s", err)
 	}
 
 	connector, err := loadConnectorFromHandle(handle)

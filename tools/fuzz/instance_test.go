@@ -16,8 +16,9 @@ import (
 
 func TestInstanceHandle(t *testing.T) {
 	// Instance loading automatically loads the build, so we need to stub it out
+	realNewBuild := NewBuild
 	NewBuild = newMockBuild
-	defer func() { NewBuild = NewLocalFuchsiaBuild }()
+	defer func() { NewBuild = realNewBuild }()
 
 	launcher := &QemuLauncher{Pid: 404, TmpDir: "/some/dir"}
 	connector := &SSHConnector{Host: "somehost", Port: 123, Key: "keyfile"}
