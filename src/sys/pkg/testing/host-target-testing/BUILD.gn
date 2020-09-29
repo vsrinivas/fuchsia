@@ -39,6 +39,7 @@ test_packages = [
   "packages",
   "paver",
   "omaha",
+  "util",
   "zbi",
 ]
 foreach(testpkg, test_packages) {

@@ -10,9 +10,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -116,6 +119,57 @@ func ParsePackageList(rd io.Reader) (map[string]string, error) {
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
+	}
+
+	return packages, nil
+}
+
+type PackageJSON struct {
+	Version json.Number `json:"version"`
+	Content []string    `json:"content"`
+}
+
+// ParsePackagesJSON parses an update package's packages.json file for the
+// express purpose of returning a map of package names and variant keys
+// to the package's Merkle root as a value. This mimics the behavior of the
+// function that parsed the legacy "packages" file format.
+func ParsePackagesJSON(rd io.Reader) (map[string]string, error) {
+	var p PackageJSON
+	packages := make(map[string]string)
+
+	if err := json.NewDecoder(rd).Decode(&p); err != nil {
+		return nil, err
+	}
+
+	if p.Version == "" {
+		return nil, errors.New("version is required in packages.json format")
+	}
+
+	if p.Version != "1" {
+		return nil, fmt.Errorf("packages.json version 1 is supported; found version %s", p.Version)
+	}
+
+	for _, pkgURL := range p.Content {
+		u, err := url.Parse(pkgURL)
+		if err != nil {
+			return nil, err
+		}
+
+		if u.Scheme != "fuchsia-pkg" {
+			return nil, fmt.Errorf("%s is not a fuchsia-pkg URL", pkgURL)
+		}
+
+		// Path is optional and if it exists, the variant is also optional.
+		if u.Path != "" {
+			pathComponents := strings.Split(u.Path, "/")
+			if len(pathComponents) >= 1 {
+				if hash, ok := u.Query()["hash"]; ok {
+					packages[u.Path[1:]] = hash[0]
+				} else {
+					packages[u.Path[1:]] = ""
+				}
+			}
+		}
 	}
 
 	return packages, nil
