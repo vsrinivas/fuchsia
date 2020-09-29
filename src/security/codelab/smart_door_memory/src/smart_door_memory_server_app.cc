@@ -15,6 +15,7 @@
 
 #include "dirent.h"
 #include "fcntl.h"
+#include "stdint.h"
 #include "sys/stat.h"
 
 namespace smart_door_memory {
@@ -173,6 +174,10 @@ void SmartDoorMemoryWriter::Write(std::vector<uint8_t> data, WriteCallback callb
     callback(Writer_Write_Result::WithErr(Error::INVALID_INPUT));
     return;
   }
+  if (data.size() > UINT32_MAX) {
+    callback(Writer_Write_Result::WithErr(Error::INVALID_INPUT));
+    return;
+  }
   ssize_t written = write(fd_, data.data(), data.size());
   if (written != static_cast<ssize_t>(data.size())) {
     callback(Writer_Write_Result::WithErr(Error::INVALID_INPUT));
@@ -184,7 +189,10 @@ void SmartDoorMemoryWriter::Write(std::vector<uint8_t> data, WriteCallback callb
     callback(Writer_Write_Result::WithErr(Error::INTERNAL));
     return;
   }
-  callback(Writer_Write_Result::WithResponse(Writer_Write_Response(written)));
+
+  ZX_ASSERT(written <= UINT32_MAX);
+  callback(
+      Writer_Write_Result::WithResponse(Writer_Write_Response(static_cast<uint32_t>(written))));
   return;
 }
 
