@@ -15,8 +15,8 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
-#include "memory_barriers.h"
 #include "pts_manager.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 #include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
 #include "util.h"

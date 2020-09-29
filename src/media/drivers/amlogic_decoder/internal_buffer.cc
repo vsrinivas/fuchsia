@@ -10,7 +10,7 @@
 #include <fbl/algorithm.h>
 
 #include "macros.h"
-#include "memory_barriers.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 
 fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
     const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,

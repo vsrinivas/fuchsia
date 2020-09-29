@@ -6,7 +6,7 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
-#include "memory_barriers.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 
 using MregSeqInfo = AvScratch4;
 using MregPicInfo = AvScratch5;

@@ -11,8 +11,8 @@
 #include <ddk/io-buffer.h>
 
 #include "macros.h"
-#include "memory_barriers.h"
 #include "registers.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "util.h"
 #include "video_decoder.h"
 

@@ -159,6 +159,7 @@ if (target_cpu == "arm64") {
       "//src/devices/lib/mmio",
       "//src/lib/ddk",
       "//src/lib/ddktl",
+      "//src/media/lib/memory_barriers",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fit",

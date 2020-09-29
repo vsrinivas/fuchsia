@@ -12,8 +12,8 @@
 #include <ddk/io-buffer.h>
 
 #include "internal_buffer.h"
-#include "memory_barriers.h"
 #include "registers.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 
 struct MmioRegisters {
   DosRegisterIo* dosbus;

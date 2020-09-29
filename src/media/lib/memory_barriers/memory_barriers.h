@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MEMORY_BARRIERS_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MEMORY_BARRIERS_H_
+#ifndef SRC_MEDIA_LIB_MEMORY_BARRIERS_MEMORY_BARRIERS_H_
+#define SRC_MEDIA_LIB_MEMORY_BARRIERS_MEMORY_BARRIERS_H_
 
 // This barrier should be used after a cache flush of memory before a MMIO is
 // made to access it from the hardware.
@@ -57,4 +57,4 @@ inline void BarrierBeforeRelease() {
 #endif
 }
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MEMORY_BARRIERS_H_
+#endif  // SRC_MEDIA_LIB_MEMORY_BARRIERS_MEMORY_BARRIERS_H_

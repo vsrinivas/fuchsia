@@ -14,8 +14,8 @@
 
 #include "firmware_blob.h"
 #include "macros.h"
-#include "memory_barriers.h"
 #include "pts_manager.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "util.h"
 
 // TODO(fxbug.dev/35200):

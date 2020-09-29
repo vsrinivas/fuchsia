@@ -12,7 +12,7 @@
 #include "device_ctx.h"
 #include "hevcdec.h"
 #include "pts_manager.h"
-#include "src/media/drivers/amlogic_decoder/memory_barriers.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
 
@@ -998,9 +998,9 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
     uint32_t size = paddr_size ? paddr_size : vaddr_size;
     if (size + sizeof(kFlushThroughZeroes) > video_->GetStreamBufferEmptySpace()) {
       // We don't want the parser to hang waiting for output buffer space, since new space will
-      // never be released to it since we need to manually update the read pointer. TODO(fxbug.dev/41825):
-      // Handle copying only as much as can fit and waiting for kVp9InputBufferEmpty to continue
-      // copying the remainder.
+      // never be released to it since we need to manually update the read pointer.
+      // TODO(fxbug.dev/41825): Handle copying only as much as can fit and waiting for
+      // kVp9InputBufferEmpty to continue copying the remainder.
       DECODE_ERROR("Empty space in stream buffer %d too small for video data (%lu)",
                    video_->GetStreamBufferEmptySpace(), size + sizeof(kFlushThroughZeroes));
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);

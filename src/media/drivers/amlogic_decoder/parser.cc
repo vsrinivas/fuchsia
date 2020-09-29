@@ -10,7 +10,7 @@
 
 #include "decoder_core.h"
 #include "decoder_instance.h"
-#include "src/media/drivers/amlogic_decoder/memory_barriers.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 #include "stream_buffer.h"
 #include "util.h"
 
