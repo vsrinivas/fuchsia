@@ -5,6 +5,7 @@
 mod archive;
 mod constants;
 mod repository;
+mod tuf_repo;
 
 use anyhow::{Context, Result};
 use ffx_core::{ffx_error, ffx_plugin};
@@ -17,7 +18,7 @@ use std::path::PathBuf;
 
 #[ffx_plugin()]
 pub async fn cmd_package(cmd: PackageCommand) -> Result<()> {
-    let repo = &Repository::default_repo().await;
+    let repo = &Repository::default_repo().await?;
     match cmd.sub {
         SubCommand::Build(subcmd) => cmd_package_build(subcmd, std::io::stdout(), repo),
         SubCommand::Export(subcmd) => archive::cmd_export(subcmd, repo),
@@ -228,7 +229,7 @@ mod test {
     pub fn make_test_repo() -> Result<(tempfile::TempDir, Repository)> {
         let tmp_dir = tempfile::TempDir::new()?;
         let tmp_path = tmp_dir.path();
-        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
+        let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"))?;
         Ok((tmp_dir, repo))
     }
 

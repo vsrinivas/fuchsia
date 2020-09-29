@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::constants::PACKAGE_REPO;
+use crate::tuf_repo::TufRepo;
 use anyhow::Result;
 use ffx_config::get;
 use std::io::{Read, Seek};
@@ -15,9 +16,7 @@ pub struct BlobsDir {
 
 pub struct Repository {
     blobs: BlobsDir,
-    // This will be used eventually to store published packages
-    #[allow(dead_code)]
-    packages_dir: path::PathBuf,
+    _tuf_repo: TufRepo,
 }
 
 impl BlobsDir {
@@ -43,13 +42,14 @@ impl BlobsDir {
 }
 
 impl Repository {
-    pub fn new(dir: path::PathBuf, blobs: path::PathBuf) -> Repository {
-        let packages_dir = dir.join("packages");
-        fs::create_dir_all(&packages_dir).unwrap();
-        Repository { blobs: BlobsDir::new(blobs), packages_dir }
+    pub fn new(dir: path::PathBuf, blobs: path::PathBuf) -> Result<Repository> {
+        Ok(Repository {
+            blobs: BlobsDir::new(blobs),
+            _tuf_repo: TufRepo::new(dir.join("tuf"), dir.join("keys"))?,
+        })
     }
 
-    pub async fn default_repo() -> Repository {
+    pub async fn default_repo() -> Result<Repository> {
         let default_dir: path::PathBuf = path::PathBuf::from("");
         let repo_dir: path::PathBuf = get(PACKAGE_REPO).await.unwrap_or(default_dir);
         Repository::new(repo_dir.clone(), repo_dir.join("blobs"))
@@ -68,10 +68,11 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     #[cfg(target_os = "linux")]
     async fn test_package_repo_config() -> Result<()> {
-        let default_repo_dir = Repository::default_repo().await.packages_dir;
-        let expected_repo_dir =
-            path::PathBuf::from(std::env::var("HOME")?).join(".local/share/ffx/packages");
-        assert_eq!(default_repo_dir, expected_repo_dir);
+        let repo = Repository::default_repo().await?;
+        let default_blobs_dir = &repo.blobs().dir;
+        let expected_blobs_dir =
+            path::PathBuf::from(std::env::var("HOME")?).join(".local/share/ffx/blobs");
+        assert_eq!(default_blobs_dir, &expected_blobs_dir);
         Ok(())
     }
 }

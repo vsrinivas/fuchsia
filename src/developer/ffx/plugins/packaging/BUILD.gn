@@ -14,8 +14,11 @@ ffx_plugin("ffx_packaging") {
     "//src/sys/pkg/lib/fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
+    "//src/sys/pkg/lib/tuf",
+    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:home",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:ring",
     "//third_party/rust_crates:tempfile",
   ]
 
@@ -25,6 +28,7 @@ ffx_plugin("ffx_packaging") {
     "src/constants.rs",
     "src/lib.rs",
     "src/repository.rs",
+    "src/tuf_repo.rs",
   ]
 
   inputs = [ "data/config.json" ]
