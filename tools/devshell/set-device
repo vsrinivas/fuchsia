@@ -60,7 +60,7 @@ fi
 
 device="$1"
 if [[ -z "$device" ]]; then
-  devices="$(fx-device-finder list -mdns -netboot -ipv4="${FX_ENABLE_IPV4}" -full | cut -d ' ' -f 2)"
+  devices="$(fx-device-finder list -ipv4="${FX_ENABLE_IPV4}" -full | cut -d ' ' -f 2)"
   if [[ -z "${devices}" ]]; then
     fx-error "No devices discovered, please supply a device name"
     exit 1

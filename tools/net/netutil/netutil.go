@@ -15,15 +15,14 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netutil/constants"
 )
 
-// GetNodeAddress returns the UDP address corresponding to a given node, specifically
-// the netsvc or fuchsia address dependending on the value of `fuchsia`.
-func GetNodeAddress(ctx context.Context, nodename string, fuchsia bool) (*net.UDPAddr, error) {
+// GetNodeAddress returns the netsvc address of nodename.
+func GetNodeAddress(ctx context.Context, nodename string) (*net.UDPAddr, error) {
 	// Retry, as the netstack might not yet be up.
 	var addr *net.UDPAddr
 	var err error
 	n := netboot.NewClient(time.Second)
 	err = retry.Retry(ctx, retry.WithMaxDuration(&retry.ZeroBackoff{}, time.Minute), func() error {
-		addr, err = n.Discover(ctx, nodename, fuchsia)
+		addr, err = n.Discover(ctx, nodename)
 		return err
 	}, nil)
 	if err != nil {

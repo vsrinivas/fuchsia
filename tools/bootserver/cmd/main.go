@@ -28,7 +28,7 @@ const (
 	defaultTftpBlockSize          = 1428
 	defaultTftpWindowSize         = 256
 	defaultMicrosecBetweenPackets = 20
-	nodenameEnvVar                = "ZIRCON_NODENAME"
+	nodenameEnvKey                = "ZIRCON_NODENAME"
 	retryDelay                    = time.Second
 )
 
@@ -348,7 +348,7 @@ func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Imag
 
 func resolveNodename() (string, error) {
 	if nodename == "" {
-		envNodename, ok := os.LookupEnv(nodenameEnvVar)
+		envNodename, ok := os.LookupEnv(nodenameEnvKey)
 		if ok && envNodename != "" {
 			return envNodename, nil
 		} else {

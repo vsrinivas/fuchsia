@@ -63,7 +63,7 @@ type mdnsInterface interface {
 type newMDNSFunc func(address string) mdnsInterface
 
 type netbootClientInterface interface {
-	StartDiscover(chan<- *netboot.Target, string, bool) (func() error, error)
+	StartDiscover(chan<- *netboot.Target, string) (func() error, error)
 }
 
 type newNetbootFunc func(timeout time.Duration) netbootClientInterface
@@ -321,27 +321,41 @@ type deviceFinder interface {
 }
 
 func (cmd *devFinderCmd) close() {
-	for _, finder := range cmd.deviceFinders() {
+	for _, finder := range cmd.finders {
 		finder.close()
 	}
 }
 
-func (cmd *devFinderCmd) deviceFinders() []deviceFinder {
+func (cmd *devFinderCmd) deviceFinders() ([]deviceFinder, error) {
 	if len(cmd.finders) == 0 {
-		res := make([]deviceFinder, 0)
-		if cmd.netboot && cmd.ipv6 {
-			res = append(res, &netbootFinder{deviceFinderBase{cmd: cmd}})
+		if !cmd.localResolve {
+			if cmd.useNetsvcAddress {
+				if cmd.mdns {
+					return nil, errors.New("netsvc-address is incompatible with mdns")
+				}
+			} else {
+				if cmd.netboot {
+					return nil, errors.New("netboot must be used with netsvc-address")
+				}
+			}
+		} else {
+			if cmd.useNetsvcAddress {
+				return nil, errors.New("netsvc-address is incompatible with local")
+			}
 		}
 		if cmd.mdns {
 			if runtime.GOOS == "darwin" {
-				res = append(res, newDNSSDFinder(cmd))
+				cmd.finders = append(cmd.finders, newDNSSDFinder(cmd))
 			} else {
-				res = append(res, &mdnsFinder{deviceFinderBase{cmd: cmd}})
+				cmd.finders = append(cmd.finders, &mdnsFinder{deviceFinderBase{cmd: cmd}})
 			}
+		} else if cmd.netboot && cmd.ipv6 {
+			cmd.finders = append(cmd.finders, &netbootFinder{deviceFinderBase{cmd: cmd}})
+		} else {
+			return nil, errors.New("either mdns or netboot and ipv6 must be specified")
 		}
-		cmd.finders = append(cmd.finders, res...)
 	}
-	return cmd.finders
+	return cmd.finders, nil
 }
 
 func (cmd *devFinderCmd) shouldIgnoreIP(addr net.IP) bool {

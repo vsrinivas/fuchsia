@@ -24,7 +24,7 @@ function fx-flash {
       let num_gb_devices=$num_gb_devices+1
       gb_device_ip=${elements[0]}
     fi
-  done < <(fx-device-finder list -netboot -ipv6 -full)
+  done < <(fx-device-finder list -ipv6 -full)
 
   if [[ $num_gb_devices > 1 ]]; then
     echo "More than one device detected, please provide -device <device>"

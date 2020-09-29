@@ -14,4 +14,4 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-standard-switches "$@"
 fx-config-read
 
-fx-device-finder list -netboot -ipv4="${FX_ENABLE_IPV4}" -full
+fx-device-finder list -ipv4="${FX_ENABLE_IPV4}" -full

@@ -37,8 +37,12 @@ func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
+	deviceFinders, err := cmd.deviceFinders()
+	if err != nil {
+		return nil, err
+	}
 	f := make(chan *fuchsiaDevice, 1024)
-	for _, finder := range cmd.deviceFinders() {
+	for _, finder := range deviceFinders {
 		if err := finder.list(ctx, f); err != nil {
 			return nil, err
 		}

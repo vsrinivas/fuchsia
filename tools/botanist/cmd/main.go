@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"os"
 	"syscall"
 
@@ -18,19 +19,25 @@ import (
 )
 
 var (
-	colors color.EnableColor
-	level  logger.LogLevel
+	colors = color.ColorAuto
+	level  = logger.InfoLevel
 )
 
 func init() {
-	colors = color.ColorAuto
-	level = logger.InfoLevel
-
 	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
 	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 }
 
 func main() {
+	const logFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
+
+	// Our mDNS library doesn't use the logger library.
+	log.SetFlags(logFlags)
+
+	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
+	log.SetFlags(logFlags)
+	ctx := logger.WithLogger(context.Background(), log)
+
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
@@ -40,8 +47,6 @@ func main() {
 
 	flag.Parse()
 
-	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
-	ctx := logger.WithLogger(context.Background(), log)
 	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
 	os.Exit(int(subcommands.Execute(ctx)))
 }

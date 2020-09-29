@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -35,11 +38,8 @@ import (
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
 const (
-	nodenameEnvVar     = "FUCHSIA_NODENAME"
-	sshKeyEnvVar       = "FUCHSIA_SSH_KEY"
-	serialSocketEnvVar = "FUCHSIA_SERIAL_SOCKET"
 	// A directory that will be automatically archived on completion of a task.
-	testOutDirEnvVar = "FUCHSIA_TEST_OUTDIR"
+	testOutDirEnvKey = "FUCHSIA_TEST_OUTDIR"
 )
 
 // Command-line flags
@@ -68,10 +68,10 @@ func usage() {
 	fmt.Printf(`testrunner [flags] tests-file
 
 Executes all tests found in the JSON [tests-file]
-Fuchsia tests require both the nodename of the fuchsia instance and a private
+Fuchsia tests require both the node address of the fuchsia instance and a private
 SSH key corresponding to a authorized key to be set in the environment under
 %s and %s respectively.
-`, nodenameEnvVar, sshKeyEnvVar)
+`, constants.DeviceAddrEnvKey, constants.SSHKeyEnvKey)
 }
 
 func main() {
@@ -91,8 +91,14 @@ func main() {
 		return
 	}
 
-	l := logger.NewLogger(logger.DebugLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
-	ctx := logger.WithLogger(context.Background(), l)
+	const logFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
+
+	// Our mDNS library doesn't use the logger library.
+	log.SetFlags(logFlags)
+
+	log := logger.NewLogger(logger.InfoLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
+	log.SetFlags(logFlags)
+	ctx := logger.WithLogger(context.Background(), log)
 
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)
@@ -102,7 +108,7 @@ func main() {
 
 	// Configure a test outputs object, responsible for producing TAP output,
 	// recording data sinks, and archiving other test outputs.
-	testOutDir := filepath.Join(os.Getenv(testOutDirEnvVar), outDir)
+	testOutDir := filepath.Join(os.Getenv(testOutDirEnvKey), outDir)
 	if testOutDir == "" {
 		var err error
 		testOutDir, err = ioutil.TempDir("", "testrunner")
@@ -120,8 +126,15 @@ func main() {
 	}
 	defer outputs.Close()
 
-	nodename := os.Getenv(nodenameEnvVar)
-	sshKeyFile := os.Getenv(sshKeyEnvVar)
+	var addr net.IPAddr
+	if deviceAddr, ok := os.LookupEnv(constants.DeviceAddrEnvKey); ok {
+		addrPtr, err := net.ResolveIPAddr("ip", deviceAddr)
+		if err != nil {
+			logger.Fatalf(ctx, "failed to parse device address %s: %s", deviceAddr, err)
+		}
+		addr = *addrPtr
+	}
+	sshKeyFile := os.Getenv(constants.SSHKeyEnvKey)
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
@@ -129,8 +142,8 @@ func main() {
 	}
 	defer cleanUp()
 
-	serialSocketPath := os.Getenv(serialSocketEnvVar)
-	if err := execute(ctx, tests, outputs, nodename, sshKeyFile, serialSocketPath, testOutDir); err != nil {
+	serialSocketPath := os.Getenv(constants.SerialSocketEnvKey)
+	if err := execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir); err != nil {
 		logger.Fatalf(ctx, err.Error())
 	}
 }
@@ -191,7 +204,7 @@ type tester interface {
 }
 
 // TODO: write tests for this function. Tests were deleted in fxrev.dev/407968 as part of a refactoring.
-func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, nodename, sshKeyFile, serialSocketPath, outDir string) error {
+func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, addr net.IPAddr, sshKeyFile, serialSocketPath, outDir string) error {
 	var sinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
 
@@ -201,14 +214,11 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 		case "fuchsia":
 			if fuchsiaTester == nil {
 				var err error
-				if nodename == "" {
-					return fmt.Errorf("%q must be set", nodenameEnvVar)
-				}
 				if sshKeyFile != "" {
-					fuchsiaTester, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
+					fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, useRuntests, perTestTimeout)
 				} else {
 					if serialSocketPath == "" {
-						return fmt.Errorf("%q must be set if %q and %q are not", serialSocketEnvVar, sshKeyEnvVar, nodenameEnvVar)
+						return fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
 					}
 					fuchsiaTester, err = newFuchsiaSerialTester(ctx, serialSocketPath, perTestTimeout)
 				}
@@ -311,7 +321,7 @@ func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex 
 	//
 	// This is a bit of a hack, but is a lesser evil than extending the
 	// testrunner CLI just to sidecar the information of 'is QEMU'.
-	againstQEMU := os.Getenv(nodenameEnvVar) == target.DefaultQEMUNodename
+	againstQEMU := os.Getenv(constants.NodenameEnvKey) == target.DefaultQEMUNodename
 	if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
 		multistdout = io.MultiWriter(stdio, stdout)
 	}

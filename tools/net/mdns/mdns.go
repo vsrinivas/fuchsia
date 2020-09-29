@@ -566,9 +566,7 @@ func (p *packetReceiver4) JoinGroup(iface *net.Interface, group net.Addr) error 
 }
 
 func (p *packetReceiver4) Close() error {
-	err := p.conn.Close()
-	p.conn = nil
-	return err
+	return p.conn.Close()
 }
 
 type packetReceiver6 struct {
@@ -590,9 +588,7 @@ func (p *packetReceiver6) JoinGroup(iface *net.Interface, group net.Addr) error 
 }
 
 func (p *packetReceiver6) Close() error {
-	err := p.conn.Close()
-	p.conn = nil
-	return err
+	return p.conn.Close()
 }
 
 type mDNSConn interface {
@@ -653,9 +649,7 @@ func (c *mDNSConnBase) SetMCastTTL(ttl int) error {
 
 func (c *mDNSConnBase) Close() error {
 	if c.receiver != nil {
-		err := c.receiver.Close()
-		c.receiver = nil
-		if err != nil {
+		if err := c.receiver.Close(); err != nil {
 			return err
 		}
 	}

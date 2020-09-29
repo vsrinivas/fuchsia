@@ -39,6 +39,7 @@ if (is_host) {
     name = "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/..."
     deps = [
       "//src/sys/pkg/testing/host-target-testing",
+      "//tools/botanist:constants",
       "//tools/lib/color",
       "//tools/lib/logger",
     ]

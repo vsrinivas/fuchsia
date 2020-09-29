@@ -10,8 +10,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/kr/pretty"
+
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/mdns"
 )
 
@@ -22,55 +23,85 @@ func getLocalDomain(nodename string) string {
 	return nodename + ".local"
 }
 
-// ResolveIP returns the IPv4 address of a fuchsia node via mDNS.
+// ResolveIP returns an IP address of a fuchsia node via mDNS.
 //
 // TODO(joshuaseaton): Refactor dev_finder to share 'resolve' logic with botanist.
-func ResolveIPv4(ctx context.Context, nodename string, timeout time.Duration) (net.IP, error) {
+func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error) {
 	m := mdns.NewMDNS()
+	defer m.Close()
 	m.EnableIPv4()
-	out := make(chan net.IP)
+	m.EnableIPv6()
+	out := make(chan net.IPAddr, 1)
 	domain := getLocalDomain(nodename)
 	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
-		for _, a := range packet.Answers {
-			if a.Class == mdns.IN && a.Type == mdns.A && a.Domain == domain {
-				out <- net.IP(a.Data)
-				return
+		logger.Debugf(ctx, "mdns packet on %s from %s: %# v", iface.Name, addr, pretty.Formatter(packet))
+		for _, records := range [][]mdns.Record{
+			packet.Answers,
+			packet.Additional,
+		} {
+			for _, record := range records {
+				if record.Class == mdns.IN && record.Domain == domain {
+					switch record.Type {
+					case mdns.A, mdns.AAAA:
+						out <- net.IPAddr{
+							IP:   net.IP(record.Data),
+							Zone: iface.Name,
+						}
+						return
+					}
+				}
 			}
 		}
 	})
 	m.AddWarningHandler(func(addr net.Addr, err error) {
-		logger.Infof(ctx, "from: %v; warn: %v", addr, err)
+		logger.Infof(ctx, "from: %s; warn: %s", addr, err)
 	})
-	errs := make(chan error)
+	errs := make(chan error, 1)
 	m.AddErrorHandler(func(err error) {
 		errs <- err
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	if err := m.Start(ctx, mdns.DefaultPort); err != nil {
-		return nil, fmt.Errorf("could not start mDNS client: %v", err)
+		return nil, net.IPAddr{}, fmt.Errorf("could not start mDNS client: %w", err)
 	}
 
-	// Send question packets to the mDNS server at intervals of mDNSTimeout for a total of
-	// |timeout|; retry, as it takes time for the netstack and server to be brought up.
-	var ip net.IP
-	var err error
-	err = retry.Retry(ctx, &retry.ZeroBackoff{}, func() error {
+	var ipv4Addr net.IP
+	var ipv6Addr net.IPAddr
+	var earlyStop <-chan time.Time
+	t := time.NewTicker(mDNSTimeout)
+	defer t.Stop()
+	for {
 		m.Send(mdns.QuestionPacket(domain))
-		ctx, cancel := context.WithTimeout(context.Background(), mDNSTimeout)
-		defer cancel()
 
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout")
-		case err = <-errs:
-			return err
-		case ip = <-out:
-			return nil
+		for {
+			select {
+			case <-ctx.Done():
+				return ipv4Addr, ipv6Addr, nil
+			case err := <-errs:
+				return ipv4Addr, ipv6Addr, err
+			case addr := <-out:
+				switch len(addr.IP) {
+				case net.IPv4len:
+					ipv4Addr = addr.IP
+				case net.IPv6len:
+					ipv6Addr = addr
+				}
+				if ipv4Addr != nil && ipv6Addr.IP != nil {
+					return ipv4Addr, ipv6Addr, nil
+				}
+				if earlyStop == nil {
+					earlyStop = time.After(mDNSTimeout / 2)
+				}
+				continue
+			case <-earlyStop:
+				return ipv4Addr, ipv6Addr, nil
+			case <-t.C:
+				// Resend question.
+			}
+			break
 		}
-	}, nil)
-
-	return ip, err
+	}
 }

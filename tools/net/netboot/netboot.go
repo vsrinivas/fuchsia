@@ -117,7 +117,6 @@ func NewClient(timeout time.Duration) *Client {
 
 type netbootQuery struct {
 	message netbootMessage
-	fuchsia bool
 
 	conn6 *ipv6.PacketConn
 	conn  *net.UDPConn
@@ -143,7 +142,7 @@ func bindNetbootPort() (*net.UDPConn, error) {
 	return conn, err
 }
 
-func newNetbootQuery(nodename string, cookie uint32, port int, fuchsia bool) (*netbootQuery, error) {
+func newNetbootQuery(nodename string, cookie uint32, port int) (*netbootQuery, error) {
 	conn, err := bindNetbootPort()
 	if err != nil {
 		return nil, err
@@ -161,7 +160,6 @@ func newNetbootQuery(nodename string, cookie uint32, port int, fuchsia bool) (*n
 	conn6.SetControlMessage(ipv6.FlagDst|ipv6.FlagSrc|ipv6.FlagInterface, true)
 	return &netbootQuery{
 		message: req,
-		fuchsia: fuchsia,
 		conn:    conn,
 		conn6:   conn6,
 		port:    port,
@@ -253,13 +251,6 @@ func (n *netbootQuery) read() (*Target, error) {
 	if len(node) == 0 {
 		return nil, nil
 	}
-	if n.fuchsia {
-		// The netstack link-local address has 11th byte always set to 0xff, set
-		// this byte to transform netsvc address to netstack address if needed.
-		cm.Src[11] = 0xff
-		cm.Dst[11] = 0xff
-	}
-
 	var iface *net.Interface
 	if cm.IfIndex > 0 {
 		iface, err = net.InterfaceByIndex(cm.IfIndex)
@@ -295,13 +286,12 @@ func (n *netbootQuery) close() error {
 	return n.conn.Close()
 }
 
-// Discover resolves the address of host and returns either the netsvc or
-// Fuchsia address dependending on the value of fuchsia.
-func (n *Client) Discover(ctx context.Context, nodename string, fuchsia bool) (*net.UDPAddr, error) {
+// Discover returns the netsvc address of nodename.
+func (n *Client) Discover(ctx context.Context, nodename string) (*net.UDPAddr, error) {
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
 	t := make(chan *Target)
-	cleanup, err := n.StartDiscover(t, nodename, fuchsia)
+	cleanup, err := n.StartDiscover(t, nodename)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +299,7 @@ func (n *Client) Discover(ctx context.Context, nodename string, fuchsia bool) (*
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("timed out waiting for results")
+			return nil, fmt.Errorf("discover waiting for results: %w", ctx.Err())
 		case target := <-t:
 			if err := target.Error; err != nil {
 				return nil, err
@@ -327,16 +317,14 @@ func (n *Client) Discover(ctx context.Context, nodename string, fuchsia bool) (*
 	}
 }
 
-// DiscoverAll attempts to discover all Fuchsia targets on the network. Returns
-// either the netsvc address or the Fuchsia address depending on the |fuchsia|
-// parameter.
+// DiscoverAll returns all netsvc addresses on the local network.
 //
 // If no devices are found, returns a nil array.
-func (n *Client) DiscoverAll(ctx context.Context, fuchsia bool) ([]*Target, error) {
+func (n *Client) DiscoverAll(ctx context.Context) ([]*Target, error) {
 	ctx, cancel := context.WithTimeout(ctx, n.Timeout)
 	defer cancel()
 	t := make(chan *Target)
-	cleanup, err := n.StartDiscover(t, NodenameWildcard, fuchsia)
+	cleanup, err := n.StartDiscover(t, NodenameWildcard)
 	if err != nil {
 		return nil, err
 	}
@@ -389,9 +377,9 @@ func (n *Client) DiscoverAll(ctx context.Context, fuchsia bool) ([]*Target, erro
 //				// completed.
 //		}
 //	}
-func (n *Client) StartDiscover(t chan<- *Target, nodename string, fuchsia bool) (func() error, error) {
+func (n *Client) StartDiscover(t chan<- *Target, nodename string) (func() error, error) {
 	n.Cookie++
-	q, err := newNetbootQuery(nodename, n.Cookie, n.ServerPort, fuchsia)
+	q, err := newNetbootQuery(nodename, n.Cookie, n.ServerPort)
 	if err != nil {
 		return nil, err
 	}
@@ -513,6 +501,7 @@ func (n *Client) BeaconForNodename(ctx context.Context, nodename string, reusabl
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	defer conn.Close()
 
 	type response struct {
 		addr *net.UDPAddr
@@ -527,11 +516,9 @@ func (n *Client) BeaconForNodename(ctx context.Context, nodename string, reusabl
 
 	select {
 	case <-ctx.Done():
-		conn.Close()
-		return nil, nil, nil, fmt.Errorf("timed out waiting for results")
+		return nil, nil, nil, fmt.Errorf("beacon waiting for results: %w", ctx.Err())
 	case resp := <-r:
 		if resp.err != nil {
-			conn.Close()
 			return nil, nil, nil, resp.err
 		}
 		return resp.addr, resp.msg, conn, nil

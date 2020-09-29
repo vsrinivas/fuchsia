@@ -10,6 +10,7 @@ go_library("botanist_lib") {
   deps = [
     ":constants",
     "//src/sys/pkg/lib/repo",
+    "//third_party/golibs:github.com/kr/pretty",
     "//tools/build",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
@@ -25,7 +26,6 @@ go_library("botanist_lib") {
 go_library("target") {
   source_dir = "target"
   deps = [
-    ":botanist_lib",
     ":constants",
     "//third_party/golibs:github.com/creack/pty",
     "//tools/bootserver:bootserver_lib",

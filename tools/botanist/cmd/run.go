@@ -27,7 +27,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
@@ -36,38 +35,6 @@ import (
 	"github.com/google/subcommands"
 	"golang.org/x/sync/errgroup"
 )
-
-const (
-	netstackTimeout    time.Duration = 1 * time.Minute
-	serialSocketEnvKey               = "FUCHSIA_SERIAL_SOCKET"
-)
-
-// Target represents a fuchsia instance.
-type Target interface {
-	// Nodename returns the name of the target node.
-	Nodename() string
-
-	// IPv4Addr returns the IPv4 address of the target.
-	IPv4Addr() (net.IP, error)
-
-	// IPv6Addr returns the global unicast IPv6 address of the target.
-	IPv6Addr() string
-
-	// Serial returns the serial device associated with the target for serial i/o.
-	Serial() io.ReadWriteCloser
-
-	// SSHKey returns the private key corresponding an authorized SSH key of the target.
-	SSHKey() string
-
-	// Start starts the target.
-	Start(context.Context, []bootserver.Image, []string) error
-
-	// Stop stops the target.
-	Stop(context.Context) error
-
-	// Wait waits for the target to finish running.
-	Wait(context.Context) error
-}
 
 // RunCommand is a Command implementation for booting a device and running a
 // given command locally.
@@ -151,7 +118,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("could not unmarshal config file as a JSON list: %v", err)
 	}
 
-	var targets []Target
+	var targets []target.Target
 	for _, obj := range objs {
 		t, err := deriveTarget(ctx, obj, opts)
 		if err != nil {
@@ -183,7 +150,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	r.zirconArgs = append(r.zirconArgs, "driver.usb_xhci.disable")
 
 	eg, ctx := errgroup.WithContext(ctx)
-	socketPath := os.Getenv(serialSocketEnvKey)
+	socketPath := os.Getenv(constants.SerialSocketEnvKey)
 	var conn net.Conn
 	if socketPath != "" && r.serialLogFile != "" {
 		// If a serial server was created earlier in the stack, use
@@ -273,7 +240,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	return eg.Wait()
 }
 
-func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
+func (r *RunCommand) startTargets(ctx context.Context, targets []target.Target) error {
 	bootMode := bootserver.ModePave
 	if r.netboot {
 		bootMode = bootserver.ModeNetboot
@@ -297,7 +264,7 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
 	return eg.Wait()
 }
 
-func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
+func (r *RunCommand) stopTargets(ctx context.Context, targets []target.Target) {
 	// Stop the targets in parallel.
 	eg, ctx := errgroup.WithContext(ctx)
 	for _, t := range targets {
@@ -309,21 +276,83 @@ func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
 	_ = eg.Wait()
 }
 
-func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string, socketPath string) error {
+func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args []string, socketPath string) error {
 	subprocessEnv := map[string]string{
-		"FUCHSIA_NODENAME":      t.Nodename(),
-		"FUCHSIA_SERIAL_SOCKET": socketPath,
-		"FUCHSIA_IPV6_ADDR":     t.IPv6Addr(),
+		constants.NodenameEnvKey:     t.Nodename(),
+		constants.SerialSocketEnvKey: socketPath,
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned
 	// with a netstack; in this case, do not try to establish a connection.
 	if !r.netboot {
-		client, err := r.setupSSHConnection(ctx, t)
+		p, err := ioutil.ReadFile(t.SSHKey())
 		if err != nil {
 			return err
 		}
+		config, err := sshutil.DefaultSSHConfig(p)
+		if err != nil {
+			return err
+		}
+
+		sshAddr := net.TCPAddr{
+			Port: sshutil.SSHPort,
+		}
+		if t, ok := t.(target.ConfiguredTarget); ok {
+			if addr := t.Address(); len(addr) != 0 {
+				sshAddr.IP = addr
+				subprocessEnv[constants.DeviceAddrEnvKey] = addr.String()
+			}
+		}
+		if sshAddr.IP == nil {
+			ipv4Addr, ipv6Addr, err := func() (net.IP, net.IPAddr, error) {
+				ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+				defer cancel()
+				return botanist.ResolveIP(ctx, t.Nodename())
+			}()
+			if err != nil {
+				return fmt.Errorf("could not resolve IP address of %s: %w", t.Nodename(), err)
+			}
+			if ipv4Addr != nil {
+				sshAddr.IP = ipv4Addr
+
+				logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ipv4Addr)
+				subprocessEnv[constants.IPv4AddrEnvKey] = ipv4Addr.String()
+				if _, ok := subprocessEnv[constants.DeviceAddrEnvKey]; !ok {
+					subprocessEnv[constants.DeviceAddrEnvKey] = ipv4Addr.String()
+				}
+			} else {
+				logger.Warningf(ctx, "could not resolve IPv4 address of %s", t.Nodename())
+			}
+			if ipv6Addr.IP != nil {
+				sshAddr.IP = ipv6Addr.IP
+				sshAddr.Zone = ipv6Addr.Zone
+
+				logger.Infof(ctx, "IPv6 address of %s found: %s", t.Nodename(), &ipv6Addr)
+				subprocessEnv[constants.IPv6AddrEnvKey] = ipv6Addr.String()
+				if _, ok := subprocessEnv[constants.DeviceAddrEnvKey]; !ok {
+					subprocessEnv[constants.DeviceAddrEnvKey] = ipv6Addr.String()
+				}
+			} else {
+				logger.Warningf(ctx, "could not resolve IPv6 address of %s", t.Nodename())
+			}
+		}
+
+		if sshAddr.IP == nil {
+			// Reachable when ResolveIP times out because no error is returned.
+			return fmt.Errorf("could not resolve any IP address of %s", t.Nodename())
+		}
+
+		client, err := sshutil.NewClient(ctx, &sshAddr, config, sshutil.DefaultConnectBackoff())
+		if err != nil {
+			return fmt.Errorf("failed to establish SSH connection: %w", err)
+		}
 		defer client.Close()
+
+		if r.repoURL != "" {
+			if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
+				return fmt.Errorf("failed to set up a package repository: %w", err)
+			}
+		}
 
 		if r.syslogFile != "" {
 			stopStreaming, err := r.startSyslogStream(ctx, client)
@@ -334,15 +363,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			defer stopStreaming()
 		}
 
-		subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
-
-		ip, err := t.IPv4Addr()
-		if err != nil {
-			logger.Errorf(ctx, "could not resolve IPv4 address of %s: %v", t.Nodename(), err)
-		} else if ip != nil {
-			logger.Infof(ctx, "IPv4 address of %s found: %s", t.Nodename(), ip)
-			subprocessEnv["FUCHSIA_IPV4_ADDR"] = ip.String()
-		}
+		subprocessEnv[constants.SSHKeyEnvKey] = t.SSHKey()
 	}
 
 	// Run the provided command against t0, adding |subprocessEnv| into
@@ -358,49 +379,10 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	err := runner.Run(ctx, args, os.Stdout, os.Stderr)
-	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("command %v timed out after %v", args, r.timeout)
-	} else if err != nil {
-		return fmt.Errorf("command %v failed: %w", args, err)
+	if err := runner.Run(ctx, args, os.Stdout, os.Stderr); err != nil {
+		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
 	}
 	return nil
-}
-
-// setupSSHConnection creates an SSH connection to the target and sets up a
-// package repository, if necessary.
-func (r *RunCommand) setupSSHConnection(ctx context.Context, t Target) (*sshutil.Client, error) {
-	p, err := ioutil.ReadFile(t.SSHKey())
-	if err != nil {
-		return nil, err
-	}
-	config, err := sshutil.DefaultSSHConfig(p)
-	if err != nil {
-		return nil, err
-	}
-
-	var client *sshutil.Client
-	// TODO(fxbug.dev/52397): Determine whether this is necessary or there is a better
-	// way to address this bug.
-	err = retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(5*time.Second), 2), func() error {
-		client, err = sshutil.ConnectToNode(ctx, t.Nodename(), config)
-		if err != nil {
-			return err
-		}
-
-		if r.repoURL == "" {
-			// No need to set up a package repo.
-			return nil
-		}
-
-		if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
-			logger.Errorf(ctx, "failed to set up a package repository: %v", err)
-			client.Close()
-			return err
-		}
-		return nil
-	}, nil)
-	return client, err
 }
 
 // startSyslogStream uses the SSH client to start streaming syslogs from the
@@ -467,7 +449,7 @@ func createSocketPath() string {
 	return filepath.Join(os.TempDir(), "serial"+hex.EncodeToString(randBytes)+".sock")
 }
 
-func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target, error) {
+func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (target.Target, error) {
 	type typed struct {
 		Type string `json:"type"`
 	}

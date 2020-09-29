@@ -132,7 +132,7 @@ func attemptTftp(t *testing.T, i *qemu.Instance, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	addr, err := netutil.GetNodeAddress(ctx, defaultNodename, false)
+	addr, err := netutil.GetNodeAddress(ctx, defaultNodename)
 	if err != nil {
 		t.Fatal(err)
 		return

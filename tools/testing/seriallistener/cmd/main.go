@@ -17,13 +17,10 @@ import (
 	"os"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-)
-
-const (
-	socketPathEnvVar = "FUCHSIA_SERIAL_SOCKET"
 )
 
 var (
@@ -77,7 +74,7 @@ func main() {
 		os.Stdout, os.Stderr, "seriallistener ")
 	ctx := logger.WithLogger(context.Background(), log)
 
-	socketPath := os.Getenv(socketPathEnvVar)
+	socketPath := os.Getenv(constants.SerialSocketEnvKey)
 
 	stdout := ioutil.Discard
 	if redirectStdout {

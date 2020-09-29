@@ -12,7 +12,6 @@ go_library("sshutil") {
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/lib/logger",
     "//tools/lib/retry",
-    "//tools/net/netutil",
   ]
 }
 

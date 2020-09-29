@@ -12,10 +12,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
-	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -25,9 +23,6 @@ import (
 )
 
 const (
-	// The duration we allow for the netstack to come up when booting.
-	netstackTimeout = 90 * time.Second
-
 	// Command to dump the zircon debug log over serial.
 	dlogCmd = "\ndlog\n"
 )
@@ -68,6 +63,9 @@ func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
 	return configs, nil
 }
 
+var _ Target = (*DeviceTarget)(nil)
+var _ ConfiguredTarget = (*DeviceTarget)(nil)
+
 // DeviceTarget represents a target device.
 type DeviceTarget struct {
 	config  DeviceConfig
@@ -75,7 +73,6 @@ type DeviceTarget struct {
 	signers []ssh.Signer
 	serial  io.ReadWriteCloser
 	tftp    tftp.Client
-	addr    *net.UDPAddr
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
@@ -118,23 +115,14 @@ func (t *DeviceTarget) Nodename() string {
 	return t.config.Network.Nodename
 }
 
-// IPv6Addr returns the global unicast IPv6 address of the device.
-func (t *DeviceTarget) IPv6Addr() string {
-	return fmt.Sprintf("%s%%%s", t.addr.IP, t.addr.Zone)
-}
-
-// IPv4Addr returns the IPv4 address of the node. If not provided in the config, then it
-// will be resolved against the target-side MDNS server.
-func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
-	if t.config.Network.IPv4Addr != "" {
-		return net.ParseIP(t.config.Network.IPv4Addr), nil
-	}
-	return botanist.ResolveIPv4(context.Background(), t.Nodename(), netstackTimeout)
-}
-
 // Serial returns the serial device associated with the target for serial i/o.
 func (t *DeviceTarget) Serial() io.ReadWriteCloser {
 	return t.serial
+}
+
+// Address implements ConfiguredTarget.
+func (t *DeviceTarget) Address() net.IP {
+	return net.ParseIP(t.config.Network.IPv4Addr)
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be paved.
@@ -144,10 +132,10 @@ func (t *DeviceTarget) SSHKey() string {
 
 // Start starts the device target.
 func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
-	if t.addr == nil {
+	if t.tftp == nil {
 		// Discover the node on the network and initialize a tftp client to
 		// talk to it.
-		addr, err := netutil.GetNodeAddress(ctx, t.Nodename(), false)
+		addr, err := netutil.GetNodeAddress(ctx, t.Nodename())
 		if err != nil {
 			return err
 		}
@@ -160,7 +148,6 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 			return err
 		}
 		t.tftp = tftpClient
-		t.addr = addr
 	}
 
 	// Set up log listener and dump kernel output to stdout.

@@ -157,7 +157,7 @@ func (n *netbootFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, node
 	c := n.cmd.newNetbootClient(time.Second)
 	t := make(chan *netboot.Target, 1024)
 	for _, nodename := range nodenames {
-		cleanup, err := c.StartDiscover(t, nodename, !n.cmd.useNetsvcAddress)
+		cleanup, err := c.StartDiscover(t, nodename)
 		if err != nil {
 			return fmt.Errorf("netboot client setup: %v", err)
 		}

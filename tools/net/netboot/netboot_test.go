@@ -265,8 +265,7 @@ func TestDiscover(t *testing.T) {
 	defer cleanup()
 
 	c := newClientWithPorts(port, port+1)
-	_, err := c.Discover(context.Background(), nodename, false)
-	if err != nil {
+	if _, err := c.Discover(context.Background(), nodename); err != nil {
 		t.Errorf("discovery: %v", err)
 	}
 }
@@ -282,8 +281,7 @@ func TestDiscoverNoNodes(t *testing.T) {
 	defer cleanup()
 
 	c := newClientWithPorts(port, port+1)
-	_, err := c.Discover(context.Background(), nodename, false)
-	if err == nil {
+	if _, err := c.Discover(context.Background(), nodename); err == nil {
 		t.Error("expected failure, but succeeded")
 	}
 }
@@ -298,7 +296,7 @@ func TestDiscoverAll(t *testing.T) {
 	defer cleanup()
 
 	c := newClientWithPorts(port, port+1)
-	got, err := c.DiscoverAll(context.Background(), false)
+	got, err := c.DiscoverAll(context.Background())
 	if err != nil {
 		t.Fatalf("discover all: %v", err)
 	}

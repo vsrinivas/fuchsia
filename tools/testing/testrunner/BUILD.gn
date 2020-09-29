@@ -20,6 +20,7 @@ go_library("main") {
     ":constants",
     ":lib",
     "//third_party/golibs:golang.org/x/crypto",
+    "//tools/botanist:constants",
     "//tools/botanist:target",
     "//tools/build",
     "//tools/integration/testsharder:testsharder_lib",

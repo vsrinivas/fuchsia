@@ -123,7 +123,7 @@ function get-device-ip {
     echo "${device_addr}"
     return 0
   else
-    "$(get-fuchsia-sdk-tools-dir)/device-finder" list -netboot -device-limit 1 -ipv4=false
+    "$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -ipv4=false
   fi
 }
 
@@ -137,7 +137,7 @@ function get-device-name {
     echo "${device_name}"
     return 0
   else
-    if device_name="$("$(get-fuchsia-sdk-tools-dir)/device-finder" list -netboot -device-limit 1 -full)"; then
+    if device_name="$("$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -full)"; then
       echo "${device_name}"  | cut -d' '  -f2
     fi
   fi
@@ -155,7 +155,7 @@ function get-device-ip-by-name {
     # There should typically only be one device that matches the nodename
     # but we add a device-limit to speed up resolution by exiting when the first
     # candidate is found.
-    "$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${1}"
+    "$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false "${1}"
   else
     #shellcheck disable=SC2119
     get-device-ip

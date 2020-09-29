@@ -5,7 +5,6 @@
 package sshutil
 
 import (
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -37,13 +35,12 @@ const (
 	sshUser = "fuchsia"
 )
 
-var (
-	// defaultConnectBackoff is the connection backoff for clients returned by
-	// Connect() and ConnectToNode().
+// DefaultConnectBackoff is a sensible default for SSH clients.
+func DefaultConnectBackoff() retry.Backoff {
 	// NOTE: This retry strategy was somewhat arbitrarily chosen and can be
 	// changed if there's a compelling reason to choose a different strategy.
-	defaultConnectBackoff = retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
-)
+	return retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
+}
 
 // ConnectionError is an all-purpose error indicating that a client has become
 // unresponsive.
@@ -87,16 +84,6 @@ func GeneratePrivateKey() ([]byte, error) {
 	buf := pem.EncodeToMemory(privateKey)
 
 	return buf, nil
-}
-
-// ConnectToNode connects to the device with the given nodename.
-func ConnectToNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*Client, error) {
-	addr, err := netutil.GetNodeAddress(ctx, nodename, true)
-	if err != nil {
-		return nil, err
-	}
-	addr.Port = SSHPort
-	return NewClient(ctx, addr, config, defaultConnectBackoff)
 }
 
 // DefaultSSHConfig returns a basic SSH client configuration.

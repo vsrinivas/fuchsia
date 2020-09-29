@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -37,10 +38,6 @@ const (
 
 	// DefaultInterfaceName is the name given to the emulated tap interface.
 	defaultInterfaceName = "qemu"
-
-	// Default networking values.
-	defaultMACAddr       = "52:54:00:63:5e:7a"
-	defaultLinkLocalAddr = "fe80::5054:ff:fe63:5e7a"
 
 	// DefaultQEMUNodename is the default nodename given to a target with the
 	// default QEMU MAC address.
@@ -104,6 +101,8 @@ type QEMUConfig struct {
 	FVMTool string `json:"fvm_tool"`
 }
 
+var _ Target = (*QEMUTarget)(nil)
+
 // QEMUTarget is a QEMU target.
 type QEMUTarget struct {
 	binary  string
@@ -112,6 +111,7 @@ type QEMUTarget struct {
 	opts    Options
 	c       chan error
 	process *os.Process
+	mac     [6]byte
 	serial  io.ReadWriteCloser
 	ptm     *os.File
 }
@@ -135,54 +135,44 @@ type EMUCommandBuilder interface {
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
 func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
-	var serial io.ReadWriteCloser
-	var ptm *os.File
+	qemuTarget, ok := qemuTargetMapping[config.Target]
+	if !ok {
+		return nil, fmt.Errorf("invalid target %q", config.Target)
+	}
+
+	t := &QEMUTarget{
+		binary:  fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget),
+		builder: &qemu.QEMUCommandBuilder{},
+		config:  config,
+		opts:    opts,
+		c:       make(chan error),
+	}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if _, err := r.Read(t.mac[:]); err != nil {
+		return nil, fmt.Errorf("failed to generate random MAC: %w", err)
+	}
+
 	if config.Serial {
 		// We can run QEMU 'in a terminal' by creating a pseudoterminal slave and
 		// attaching it as the process' std(in|out|err) streams. Running it in a
 		// terminal - and redirecting serial to stdio - allows us to use the
 		// associated pseudoterminal master as the 'serial device' for the
 		// instance.
-		var pts *os.File
 		var err error
-		ptm, pts, err = pty.Open()
+		// TODO(joshuaseaton): Figure out how to manage ownership so that this may
+		// be closed.
+		t.ptm, t.serial, err = pty.Open()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ptm/pts pair: %w", err)
 		}
-		serial = pts
 	}
 
-	qemuTarget, ok := qemuTargetMapping[config.Target]
-	if !ok {
-		return nil, fmt.Errorf("invalid target %q", config.Target)
-	}
-
-	// TODO(joshuaseaton): Figure out how to manage ownership of pts so that it
-	// may be closed.
-	return &QEMUTarget{
-		binary:  fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget),
-		builder: &qemu.QEMUCommandBuilder{},
-		config:  config,
-		opts:    opts,
-		c:       make(chan error),
-		serial:  serial,
-		ptm:     ptm,
-	}, nil
+	return t, nil
 }
 
 // Nodename returns the name of the target node.
 func (t *QEMUTarget) Nodename() string {
 	return DefaultQEMUNodename
-}
-
-// IPv6Addr returns the global unicast IPv6 address of the qemu instance.
-func (t *QEMUTarget) IPv6Addr() string {
-	return fmt.Sprintf("%s%%%s", defaultLinkLocalAddr, defaultInterfaceName)
-}
-
-// IPv4Addr returns a nil address, as DHCP is not currently configured.
-func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
-	return nil, nil
 }
 
 // Serial returns the serial device associated with the target for serial i/o.
@@ -289,7 +279,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 
 	netdev := qemu.Netdev{
 		ID:  "net0",
-		MAC: defaultMACAddr,
+		MAC: net.HardwareAddr(t.mac[:]).String(),
 	}
 	if t.config.UserNetworking {
 		netdev.User = &qemu.NetdevUser{}
@@ -313,6 +303,8 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	}
 	qemuCmd.AddSerial(chardev)
 
+	// Manually set nodename, since MAC is randomly generated.
+	qemuCmd.AddKernelArg("zircon.nodename=" + DefaultQEMUNodename)
 	// Disable the virtcon.
 	qemuCmd.AddKernelArg("virtcon.disable=true")
 	// The system will halt on a kernel panic instead of rebooting.

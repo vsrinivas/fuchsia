@@ -53,7 +53,7 @@ expect_args() {
 # ensure that set-device invocations of device-finder use the proper network flags
 TEST_setdevice() {
   ${fx} set-device >/dev/null 2>&1
-  expect_args "${devfinder}.mock_state" "-netboot" "-ipv4=${FX_ENABLE_IPV4}"
+  expect_args "${devfinder}.mock_state" "-ipv4=${FX_ENABLE_IPV4}"
   not_expect_args "${devfinder}.mock_state" "-mdns=false"
 }
 
@@ -115,7 +115,7 @@ TEST_getdeviceaddr_singledevice() {
   local ip="fe80::c0ff:eec0:ffee%coffee"
   echo "${ip}" > "${devfinder}.mock_stdout"
   ${fx} get-device-addr >/dev/null
-  expect_args "${devfinder}.mock_state" "-netboot" "-ipv4=${FX_ENABLE_IPV4}"
+  expect_args "${devfinder}.mock_state" "-ipv4=${FX_ENABLE_IPV4}"
   not_expect_args "${devfinder}.mock_state" "-mdns=false"
 }
 
@@ -129,9 +129,9 @@ TEST_getdeviceaddr_multipledevice() {
   # first device-finder call is for a regular list and
   # second device-finder call is for a -full list. Both require the same network
   # flags.
-  expect_args "${devfinder}.mock_state.1" "-netboot" "-ipv4=${FX_ENABLE_IPV4}"
+  expect_args "${devfinder}.mock_state.1" "-ipv4=${FX_ENABLE_IPV4}"
   not_expect_args "${devfinder}.mock_state.1" "-mdns=false"
-  expect_args "${devfinder}.mock_state.2" "-netboot" "-ipv4=${FX_ENABLE_IPV4}"
+  expect_args "${devfinder}.mock_state.2" "-ipv4=${FX_ENABLE_IPV4}"
   not_expect_args "${devfinder}.mock_state.2" "-mdns=false"
 }
 

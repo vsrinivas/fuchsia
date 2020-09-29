@@ -375,8 +375,7 @@ function get-fuchsia-device-addr {
   local output devices
   case "$device" in
     "")
-        # Note: the arguments below enable netboot, mdns is always enabled as well.
-        output="$(fx-device-finder list -netboot -ipv4="${FX_ENABLE_IPV4}" "$@")" || {
+        output="$(fx-device-finder list -ipv4="${FX_ENABLE_IPV4}" "$@")" || {
           code=$?
           fx-error "Device discovery failed with status: $code"
           exit $code
@@ -384,8 +383,7 @@ function get-fuchsia-device-addr {
         if [[ "$(echo "${output}" | wc -l)" -gt "1" ]]; then
           fx-error "Multiple devices found."
           fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
-          # Note: the arguments below enable netboot, mdns is always enabled as well.
-          devices="$(fx-device-finder list -netboot -ipv4="${FX_ENABLE_IPV4}" -full)" || {
+          devices="$(fx-device-finder list -ipv4="${FX_ENABLE_IPV4}" -full)" || {
             code=$?
             fx-error "Device discovery failed with status: $code"
             exit $code
@@ -396,8 +394,7 @@ function get-fuchsia-device-addr {
           exit 1
         fi
         echo "${output}" ;;
-     # Note: the arguments below enable netboot, mdns is always enabled as well.
-     *) fx-device-finder resolve -netboot -ipv4="${FX_ENABLE_IPV4}" "$@" "$device" ;;
+     *) fx-device-finder resolve -ipv4="${FX_ENABLE_IPV4}" "$@" "$device" ;;
   esac
 }
 

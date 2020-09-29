@@ -27,7 +27,7 @@ func TestConnectAndClose(t *testing.T) {
 	}
 	defer server.stop()
 
-	client, err := NewClient(context.Background(), server.addr, server.clientConfig, defaultConnectBackoff)
+	client, err := NewClient(context.Background(), server.addr, server.clientConfig, DefaultConnectBackoff())
 	if err != nil {
 		t.Errorf("failed to connect: %v", err)
 	}

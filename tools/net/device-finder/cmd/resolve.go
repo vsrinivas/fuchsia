@@ -38,8 +38,12 @@ func (cmd *resolveCmd) resolveDevices(ctx context.Context, domains ...string) ([
 	if len(domains) == 0 {
 		return nil, errors.New("no domains supplied")
 	}
+	deviceFinders, err := cmd.deviceFinders()
+	if err != nil {
+		return nil, err
+	}
 	f := make(chan *fuchsiaDevice, 1024)
-	for _, finder := range cmd.deviceFinders() {
+	for _, finder := range deviceFinders {
 		if err := finder.resolve(ctx, f, domains...); err != nil {
 			return nil, err
 		}

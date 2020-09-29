@@ -46,18 +46,18 @@ const failurePort = 999999
 
 const pollTestTimeout = time.Second
 
-type nbDiscoverFunc func(chan<- *netboot.Target, string, bool) (func() error, error)
+type nbDiscoverFunc func(chan<- *netboot.Target, string) (func() error, error)
 
 type fakeNetbootClient struct {
 	discover nbDiscoverFunc
 }
 
-func nilNBDiscoverFunc(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+func nilNBDiscoverFunc(chan<- *netboot.Target, string) (func() error, error) {
 	return func() error { return nil }, nil
 }
 
-func (m *fakeNetbootClient) StartDiscover(t chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
-	return m.discover(t, nodename, fuchsia)
+func (m *fakeNetbootClient) StartDiscover(t chan<- *netboot.Target, nodename string) (func() error, error) {
+	return m.discover(t, nodename)
 }
 
 // fakeMDNS is a fake implementation of MDNS for testing.
@@ -195,7 +195,8 @@ func newDevFinderCmd(
 	sendEmptyData bool,
 	sendTooShortData bool,
 	st subtest,
-	nbDiscover nbDiscoverFunc) devFinderCmd {
+	nbDiscover nbDiscoverFunc,
+) devFinderCmd {
 	cmd := devFinderCmd{
 		mdnsHandler: handler,
 		mdnsAddrs:   "ff02::fb,224.0.0.251",
@@ -346,9 +347,7 @@ func runSubTests(t *testing.T, node string, f func(*testing.T, subtest)) {
 // doesn't match the desired one while device-limit is set to 1. This should
 // not affect the device-limit (when the first inbound device is the wrong one).
 func TestFilterDevices(t *testing.T) {
-	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-		return func() error { return nil }, nil
-	}
+	nbDiscover := nilNBDiscoverFunc
 	cmd := newDevFinderCmd(
 		resolveMDNSHandler,
 		[]string{},
@@ -380,11 +379,8 @@ func TestFilterDevices(t *testing.T) {
 //// Tests for the `list` command.
 
 func TestListDevices(t *testing.T) {
-	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
+	nbDiscover := func(target chan<- *netboot.Target, nodename string) (func() error, error) {
 		t.Helper()
-		if !fuchsia {
-			t.Fatalf("fuchsia set to false")
-		}
 		nodenameWant := netboot.NodenameWildcard
 		if nodename != nodenameWant {
 			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
@@ -409,7 +405,8 @@ func TestListDevices(t *testing.T) {
 				false,
 				false,
 				s,
-				nbDiscover),
+				nbDiscover,
+			),
 		}
 		got, err := cmd.listDevices(context.Background())
 		if err != nil {
@@ -622,11 +619,8 @@ func TestListDevices_tooShortData(t *testing.T) {
 
 func TestResolveDevices(t *testing.T) {
 	node := fuchsiaMDNSNodename1
-	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
+	nbDiscover := func(target chan<- *netboot.Target, nodename string) (func() error, error) {
 		t.Helper()
-		if !fuchsia {
-			t.Fatalf("fuchsia set to false")
-		}
 		nodenameWant := node
 		if nodename != nodenameWant {
 			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)

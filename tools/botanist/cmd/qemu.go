@@ -108,7 +108,7 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		}
 	}
 
-	var t Target
+	var t target.Target
 	switch cmd.qemuType {
 	case "aemu":
 		if t, err = target.NewAEMUTarget(config, target.Options{}); err != nil {

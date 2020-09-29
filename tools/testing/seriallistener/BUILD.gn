@@ -8,6 +8,7 @@ import("//build/go/go_library.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [
+    "//tools/botanist:constants",
     "//tools/lib/color",
     "//tools/lib/iomisc",
     "//tools/lib/logger",

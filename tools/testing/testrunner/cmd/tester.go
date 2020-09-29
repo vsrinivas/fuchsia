@@ -100,12 +100,12 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	if test.Path == "" {
 		return nil, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
-	// Some tests read testOutDirEnvVar so ensure they get their own output dir.
+	// Some tests read testOutDirEnvKey so ensure they get their own output dir.
 	if err := os.MkdirAll(outDir, 0770); err != nil {
 		return nil, err
 	}
 	r := newRunner(t.dir,
-		append(t.env, fmt.Sprintf("%s=%s", testOutDirEnvVar, outDir)))
+		append(t.env, fmt.Sprintf("%s=%s", testOutDirEnvKey, outDir)))
 	if t.perTestTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout)
@@ -143,18 +143,23 @@ type fuchsiaSSHTester struct {
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputDir string, useRuntests bool, perTestTimeout time.Duration) (*fuchsiaSSHTester, error) {
+func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir string, useRuntests bool, perTestTimeout time.Duration) (*fuchsiaSSHTester, error) {
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read SSH key file: %v", err)
+		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
 	}
 	config, err := sshutil.DefaultSSHConfig(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
+		return nil, fmt.Errorf("failed to create an SSH client config: %w", err)
 	}
-	client, err := sshutil.ConnectToNode(ctx, nodename, config)
+
+	client, err := sshutil.NewClient(ctx, &net.TCPAddr{
+		IP:   addr.IP,
+		Port: sshutil.SSHPort,
+		Zone: addr.Zone,
+	}, config, sshutil.DefaultConnectBackoff())
 	if err != nil {
-		return nil, fmt.Errorf("failed to establish an SSH connection: %v", err)
+		return nil, fmt.Errorf("failed to establish an SSH connection: %w", err)
 	}
 	copier, err := runtests.NewDataSinkCopier(client, dataOutputDir)
 	if err != nil {

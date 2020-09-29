@@ -13,6 +13,8 @@ const (
 	aemuBinaryName = "emulator"
 )
 
+var _ Target = (*AEMUTarget)(nil)
+
 // AEMUTarget is a AEMU target.
 type AEMUTarget struct {
 	QEMUTarget

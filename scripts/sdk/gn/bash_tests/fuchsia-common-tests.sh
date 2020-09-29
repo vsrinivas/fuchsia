@@ -162,7 +162,7 @@ TEST_get-device-ip-by-name() {
     get-device-ip-by-name "${MOCK_DEVICE}"
     # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
-    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "resolve" "-device-limit" "1" "-ipv4=false" "-netboot" "${MOCK_DEVICE}")
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "resolve" "-device-limit" "1" "-ipv4=false" "${MOCK_DEVICE}")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
@@ -171,7 +171,7 @@ TEST_get-device-ip-by-name-no-args() {
     BT_EXPECT get-device-ip-by-name > /dev/null
     # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
-    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
@@ -181,7 +181,7 @@ TEST_get-device-ip() {
     BT_EXPECT get-device-ip
     # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
-    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
@@ -198,7 +198,7 @@ EOF
     HOST_IP="$(get-host-ip)"
     # shellcheck disable=SC1090
     source  "${MOCKED_DEVICE_FINDER}.mock_state.1"
-    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" list -netboot -device-limit 1 -full )
+    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" list -device-limit 1 -full )
     BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
 
     # shellcheck disable=SC1090

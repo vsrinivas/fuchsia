@@ -17,6 +17,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 )
 
 type DeviceConfig struct {
@@ -33,11 +34,11 @@ func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
 
 	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
-	fs.StringVar(&c.sshKeyFile, "ssh-private-key", os.Getenv("FUCHSIA_SSH_KEY"), "SSH private key file that can access the device")
-	fs.StringVar(&c.DeviceName, "device", os.Getenv("FUCHSIA_NODENAME"), "device name")
-	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
+	fs.StringVar(&c.sshKeyFile, "ssh-private-key", os.Getenv(constants.SSHKeyEnvKey), "SSH private key file that can access the device")
+	fs.StringVar(&c.DeviceName, "device", os.Getenv(constants.NodenameEnvKey), "device name")
+	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv(constants.DeviceAddrEnvKey), "device hostname or IPv4/IPv6 address")
 	fs.StringVar(&c.deviceFinderPath, "device-finder-path", filepath.Join(testDataPath, "device-finder"), "device-finder tool path")
-	fs.StringVar(&c.SerialSocketPath, "device-serial", os.Getenv("FUCHSIA_SERIAL_SOCKET"), "device serial path")
+	fs.StringVar(&c.SerialSocketPath, "device-serial", os.Getenv(constants.SerialSocketEnvKey), "device serial path")
 
 	return c
 }
@@ -51,7 +52,7 @@ func (c *DeviceConfig) DeviceHostname(ctx context.Context) (string, error) {
 	if c.DeviceName == "" {
 		var err error
 		var deviceList string
-		deviceList, err = c.DeviceFinder(ctx, "list", "-netboot", "-ipv4=false", "-timeout=1s", "-full")
+		deviceList, err = c.DeviceFinder(ctx, "list", "-ipv4=false", "-timeout=1s", "-full")
 		if err != nil {
 			return "", fmt.Errorf("ERROR: Failed to list devices: %w", err)
 		}
@@ -67,8 +68,7 @@ func (c *DeviceConfig) DeviceHostname(ctx context.Context) (string, error) {
 		c.DeviceName = entry[1]
 	} else {
 		var err error
-		c.deviceHostname, err = c.DeviceFinder(ctx, "resolve", "-netboot", "-ipv4=false", "-timeout=1s",
-			"-device-limit=1", c.DeviceName)
+		c.deviceHostname, err = c.DeviceFinder(ctx, "resolve", "-ipv4=false", "-timeout=1s", "-device-limit=1", c.DeviceName)
 		if err != nil {
 			return "", fmt.Errorf("ERROR: Failed to find device %s: %w", c.DeviceName, err)
 		}
