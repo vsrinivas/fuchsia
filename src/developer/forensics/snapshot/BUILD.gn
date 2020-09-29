@@ -21,16 +21,6 @@ package("pkg") {
 
   binaries = [
     {
-      # TODO(fxbug.dev/50926): remove the "bugreport" alias when all clients have switched
-      # to invoking "snapshot".
-      name = "bugreport"
-      source = "snapshot"
-
-      # This allows us to invoke `bugreport` on the device, but prevents us
-      # from using fuchsia_package().
-      shell = true
-    },
-    {
       name = "snapshot"
 
       # This allows us to invoke `snapshot` on the device, but prevents us
