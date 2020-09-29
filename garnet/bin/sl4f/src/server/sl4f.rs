@@ -458,7 +458,12 @@ pub fn serve(
     router!(request,
         (GET) (/) => {
             // Parse the command request
-            fx_log_info!(tag: "serve", "Received command request.");
+            fx_log_info!(tag: "serve", "Received command request via GET.");
+            client_request(&request, &rouille_sender)
+        },
+        (POST) (/) => {
+            // Parse the command request
+            fx_log_info!(tag: "serve", "Received command request via POST.");
             client_request(&request, &rouille_sender)
         },
         (GET) (/init) => {

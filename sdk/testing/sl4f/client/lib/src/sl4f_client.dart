@@ -240,7 +240,7 @@ class Sl4f {
   /// Throws a [JsonRpcException] if the SL4F server replied with a non-null
   /// error string.
   Future<dynamic> request(String method, [dynamic params]) async {
-    final httpResponse = await _getRequest(method, params);
+    final httpResponse = await _doRequest(method, params);
     final responseBody = await httpResponse.transform(utf8.decoder).join();
     Map<String, dynamic> response = jsonDecode(responseBody);
     final dynamic error = response['error'];
@@ -251,14 +251,13 @@ class Sl4f {
     return response['result'];
   }
 
-  Future<HttpClientResponse> _getRequest(String method,
-      [dynamic params]) async {
+  Future<HttpClientResponse> _doRequest(String method, [dynamic params]) async {
     // Although params is optional, this will pass a null params if it is
     // omitted. This is actually required by our SL4F server (although it is
     // not required in JSON RPC:
     // https://www.jsonrpc.org/specification#request_object).
     final body = jsonEncode({'id': '', 'method': method, 'params': params});
-    final httpRequest = await _client.getUrl(targetUrl);
+    final httpRequest = await _client.postUrl(targetUrl);
     headers.forEach(httpRequest.headers.add);
     cookies.forEach(httpRequest.cookies.add);
     httpRequest
@@ -449,7 +448,7 @@ class Sl4f {
       }
 
       try {
-        await _getRequest('').timeout(timeout);
+        await _doRequest('').timeout(timeout);
       } on IOException {
         continue;
       } on TimeoutException {
