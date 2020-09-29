@@ -11,7 +11,7 @@ use {
     crate::{
         client::{
             event::{self, Event},
-            ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId,
+            ConnectFailure, ConnectResult,
         },
         timer::TimeoutDuration,
         Ssid,
@@ -19,36 +19,11 @@ use {
     derivative::Derivative,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
-    std::collections::HashMap,
-    wlan_common::bss::Standard,
 };
 
 #[derive(Debug, PartialEq)]
 pub enum InfoEvent {
-    /// Sent as soon as a new connection request from the user arrives to SME
-    ConnectStarted,
-    /// Sent when a connection attempt succeeds, fails, or gets canceled because another connection
-    /// attempt comes
-    ConnectFinished { result: ConnectResult },
-    /// Sent when SME forwards a ScanRequest message to MLME. Note that this may happen
-    /// some time after a scan request first arrives at SME as it may be queued. If a scan
-    /// request is canceled before SME sends it to MLME, this event won't be sent out
-    MlmeScanStart { txn_id: ScanTxnId },
-    /// Sent when SME receives a ScanEnd message from MLME (signaling that an existing scan
-    /// attempt finishes)
-    MlmeScanEnd { txn_id: ScanTxnId },
-    /// Sent when SME finishes selecting a network and starts the Join step during a connection
-    /// attempt.
-    JoinStarted { att_id: ConnectionAttemptId },
-    /// Sent when SME finishes the association step during a connection attempt
-    AssociationSuccess { att_id: ConnectionAttemptId },
-    /// Sent when SME starts the step of establishing security during a connection attempt
-    RsnaStarted { att_id: ConnectionAttemptId },
-    /// Sent when SME finishes the step of establishing security during a connection attempt
-    RsnaEstablished { att_id: ConnectionAttemptId },
-    /// Event for the aggregated stats of a discovery scan. Sent when a discovery scan has
-    /// finished, as signaled by a MlmeScanEnd event
-    DiscoveryScanStats(ScanStats, Option<DiscoveryStats>),
+    DiscoveryScanStats(ScanStats),
     /// Event for the aggregated stats of a connection attempt. Sent when a connection attempt
     /// has finished, whether it succeeds, fails, or gets canceled.
     ConnectStats(ConnectStats),
@@ -81,13 +56,6 @@ impl ScanStats {
     pub fn scan_time(&self) -> zx::Duration {
         self.scan_end_at - self.scan_start_at
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct DiscoveryStats {
-    pub ess_count: usize,
-    pub num_bss_by_standard: HashMap<Standard, usize>,
-    pub num_bss_by_channel: HashMap<u8, usize>,
 }
 
 #[derive(Derivative)]

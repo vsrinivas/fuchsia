@@ -38,7 +38,6 @@ impl InfoReporter {
         join_scan: bool,
         is_connected: bool,
     ) {
-        self.info_sink.send(InfoEvent::MlmeScanStart { txn_id: req.txn_id });
         if join_scan {
             warn_if_err!(self.stats_collector.report_join_scan_started(req, is_connected));
         } else {
@@ -48,15 +47,14 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_scan_ended<D, J>(&mut self, txn_id: ScanTxnId, result: &scan::ScanResult<D, J>) {
-        self.info_sink.send(InfoEvent::MlmeScanEnd { txn_id });
+    pub fn report_scan_ended<D, J>(&mut self, _txn_id: ScanTxnId, result: &scan::ScanResult<D, J>) {
         match result {
             scan::ScanResult::DiscoveryFinished { result, .. } => {
                 let (bss_list, scan_result) = convert_scan_result(result);
                 let stats = self.stats_collector.report_discovery_scan_ended(scan_result, bss_list);
                 warn_if_err!(stats);
                 if let Ok(stats) = stats {
-                    self.info_sink.send(InfoEvent::DiscoveryScanStats(stats.0, stats.1));
+                    self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
                 }
             }
             scan::ScanResult::JoinScanFinished { result, .. } => {
@@ -71,7 +69,6 @@ impl InfoReporter {
     }
 
     pub fn report_connect_started(&mut self, ssid: Ssid) {
-        self.info_sink.send(InfoEvent::ConnectStarted);
         if let Some(_prev) = self.stats_collector.report_connect_started(ssid) {
             warn!("[stats] evicting unfinished connect attempt");
         }
@@ -79,10 +76,6 @@ impl InfoReporter {
 
     pub fn report_candidate_network(&mut self, desc: fidl_mlme::BssDescription) {
         warn_if_err!(self.stats_collector.report_candidate_network(desc));
-    }
-
-    pub fn report_join_started(&mut self, att_id: ConnectionAttemptId) {
-        self.info_sink.send(InfoEvent::JoinStarted { att_id });
     }
 
     pub fn report_auth_started(&mut self) {
@@ -93,18 +86,15 @@ impl InfoReporter {
         warn_if_err!(self.stats_collector.report_assoc_started());
     }
 
-    pub fn report_assoc_success(&mut self, att_id: ConnectionAttemptId) {
-        self.info_sink.send(InfoEvent::AssociationSuccess { att_id });
+    pub fn report_assoc_success(&mut self, _att_id: ConnectionAttemptId) {
         warn_if_err!(self.stats_collector.report_assoc_success());
     }
 
-    pub fn report_rsna_started(&mut self, att_id: ConnectionAttemptId) {
-        self.info_sink.send(InfoEvent::RsnaStarted { att_id });
+    pub fn report_rsna_started(&mut self, _att_id: ConnectionAttemptId) {
         warn_if_err!(self.stats_collector.report_rsna_started());
     }
 
-    pub fn report_rsna_established(&mut self, att_id: ConnectionAttemptId) {
-        self.info_sink.send(InfoEvent::RsnaEstablished { att_id });
+    pub fn report_rsna_established(&mut self, _att_id: ConnectionAttemptId) {
         warn_if_err!(self.stats_collector.report_rsna_established());
     }
 
@@ -121,7 +111,6 @@ impl InfoReporter {
     }
 
     pub fn report_connect_finished(&mut self, result: ConnectResult) {
-        self.info_sink.send(InfoEvent::ConnectFinished { result: result.clone() });
         let stats = self.stats_collector.report_connect_finished(result);
         warn_if_err!(stats);
         if let Ok(stats) = stats {

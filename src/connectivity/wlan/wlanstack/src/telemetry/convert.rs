@@ -9,63 +9,9 @@ use {
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{ConnectionMilestone, DisconnectCause, ScanResult},
-        ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
+        ConnectFailure, ConnectResult, SelectNetworkFailure,
     },
 };
-
-pub(super) fn convert_connect_failure(
-    result: &ConnectFailure,
-) -> Option<metrics::ConnectionDelayMetricDimensionConnectionResult> {
-    use fidl_mlme::AssociateResultCodes as AssocCodes;
-    use fidl_mlme::AuthenticateResultCodes as AuthCodes;
-    use metrics::ConnectionDelayMetricDimensionConnectionResult::*;
-
-    let result = match result {
-        ConnectFailure::SelectNetwork(failure) => match failure {
-            SelectNetworkFailure::NoScanResultWithSsid
-            | SelectNetworkFailure::NoCompatibleNetwork => NoMatchingBssFound,
-            _ => Fail,
-        },
-        ConnectFailure::ScanFailure(scan_failure) => match scan_failure {
-            fidl_mlme::ScanResultCodes::Success => return None,
-            fidl_mlme::ScanResultCodes::NotSupported => ScanNotSupported,
-            fidl_mlme::ScanResultCodes::InvalidArgs => ScanInvalidArgs,
-            fidl_mlme::ScanResultCodes::InternalError => ScanInternalError,
-        },
-        ConnectFailure::JoinFailure(join_failure) => match join_failure {
-            fidl_mlme::JoinResultCodes::Success => return None,
-            fidl_mlme::JoinResultCodes::JoinFailureTimeout => JoinFailureTimeout,
-        },
-        ConnectFailure::AuthenticationFailure(auth_failure) => match auth_failure {
-            AuthCodes::Success => return None,
-            AuthCodes::Refused => AuthenticationRefused,
-            AuthCodes::AntiCloggingTokenRequired => AuthenticationAntiCloggingTokenRequired,
-            AuthCodes::FiniteCyclicGroupNotSupported => AuthenticationFiniteCyclicGroupNotSupported,
-            AuthCodes::AuthenticationRejected => AuthenticationRejected,
-            AuthCodes::AuthFailureTimeout => AuthenticationFailureTimeout,
-        },
-        ConnectFailure::AssociationFailure(assoc_failure) => match assoc_failure {
-            AssocCodes::Success => return None,
-            AssocCodes::RefusedReasonUnspecified => AssociationRefusedReasonUnspecified,
-            AssocCodes::RefusedNotAuthenticated => AssociationRefusedNotAuthenticated,
-            AssocCodes::RefusedCapabilitiesMismatch => AssociationRefusedCapabilitiesMismatch,
-            AssocCodes::RefusedExternalReason => AssociationRefusedExternalReason,
-            AssocCodes::RefusedApOutOfMemory => AssociationRefusedApOutOfMemory,
-            AssocCodes::RefusedBasicRatesMismatch => AssociationRefusedBasicRatesMismatch,
-            AssocCodes::RejectedEmergencyServicesNotSupported => {
-                AssociationRejectedEmergencyServicesNotSupported
-            }
-            AssocCodes::RefusedTemporarily => AssociationRefusedTemporarily,
-        },
-        ConnectFailure::EstablishRsna(rsna_failure) => match rsna_failure {
-            EstablishRsnaFailure::OverallTimeout
-            | EstablishRsnaFailure::KeyFrameExchangeTimeout => RsnaTimeout,
-            _ => Fail,
-        },
-    };
-
-    Some(result)
-}
 
 // Multiple metrics' channel band dimensions are the same, so we use the enum from one metric to
 // represent all of them.

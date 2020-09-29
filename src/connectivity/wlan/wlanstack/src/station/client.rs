@@ -7,18 +7,17 @@ use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
-use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
-use log::{error, info};
+use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_inspect;
 use wlan_sme::client::{
-    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, ConnectionAttemptId,
-    EstablishRsnaFailure, InfoEvent, ScanTxnId, SelectNetworkFailure,
+    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, EstablishRsnaFailure, InfoEvent,
+    SelectNetworkFailure,
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
@@ -28,15 +27,6 @@ use fuchsia_cobalt::CobaltSender;
 
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Sme = client_sme::ClientSme;
-
-struct ConnectionTimes {
-    att_id: ConnectionAttemptId,
-    txn_id: ScanTxnId,
-    connect_started_time: Option<zx::Time>,
-    scan_started_time: Option<zx::Time>,
-    assoc_started_time: Option<zx::Time>,
-    rsna_started_time: Option<zx::Time>,
-}
 
 pub async fn serve<S>(
     cfg: sme::Config,
@@ -85,18 +75,10 @@ async fn serve_fidl(
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut info_stream = info_stream.fuse();
     let mut fidl_clients = FuturesUnordered::new();
-    let mut connection_times = ConnectionTimes {
-        att_id: 0,
-        txn_id: 0,
-        connect_started_time: None,
-        scan_started_time: None,
-        assoc_started_time: None,
-        rsna_started_time: None,
-    };
     loop {
         select! {
             info_event = info_stream.next() => match info_event {
-                Some(e) => handle_info_event(e, &mut cobalt_sender, &mut connection_times),
+                Some(e) => handle_info_event(e, &mut cobalt_sender),
                 None => return Err(format_err!("Info Event stream unexpectedly ended")),
             },
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
@@ -195,95 +177,9 @@ fn status(sme: &Mutex<Sme>) -> fidl_sme::ClientStatusResponse {
     }
 }
 
-fn id_mismatch(this: u64, other: u64, id_type: &str) -> bool {
-    if this != other {
-        info!("Found an event with different {} than expected: {}, {}", id_type, this, other);
-        return true;
-    }
-    return false;
-}
-
-fn handle_info_event(
-    e: InfoEvent,
-    cobalt_sender: &mut CobaltSender,
-    connection_times: &mut ConnectionTimes,
-) {
+fn handle_info_event(e: InfoEvent, cobalt_sender: &mut CobaltSender) {
     match e {
-        InfoEvent::ConnectStarted => {
-            connection_times.connect_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
-        }
-        InfoEvent::ConnectFinished { result } => {
-            if let Some(connect_started_time) = connection_times.connect_started_time {
-                let connection_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                telemetry::report_connection_delay(
-                    cobalt_sender,
-                    connect_started_time,
-                    connection_finished_time,
-                    &result,
-                );
-                connection_times.connect_started_time = None;
-            }
-        }
-        InfoEvent::MlmeScanStart { txn_id } => {
-            connection_times.txn_id = txn_id;
-            connection_times.scan_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
-        }
-        InfoEvent::MlmeScanEnd { txn_id } => {
-            if id_mismatch(txn_id, connection_times.txn_id, "ScanTxnId") {
-                return;
-            }
-            if let Some(scan_started_time) = connection_times.scan_started_time {
-                let scan_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                telemetry::report_scan_delay(cobalt_sender, scan_started_time, scan_finished_time);
-                connection_times.scan_started_time = None;
-            }
-        }
-        InfoEvent::JoinStarted { att_id } => {
-            connection_times.att_id = att_id;
-            connection_times.assoc_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
-        }
-        InfoEvent::AssociationSuccess { att_id } => {
-            if id_mismatch(att_id, connection_times.att_id, "ConnectionAttemptId") {
-                return;
-            }
-            if let Some(assoc_started_time) = connection_times.assoc_started_time {
-                let assoc_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                telemetry::report_assoc_success_delay(
-                    cobalt_sender,
-                    assoc_started_time,
-                    assoc_finished_time,
-                );
-                connection_times.assoc_started_time = None;
-            }
-        }
-        InfoEvent::RsnaStarted { att_id } => {
-            connection_times.att_id = att_id;
-            connection_times.rsna_started_time = Some(zx::Time::get(zx::ClockId::Monotonic));
-        }
-        InfoEvent::RsnaEstablished { att_id } => {
-            if id_mismatch(att_id, connection_times.att_id, "ConnectionAttemptId") {
-                return;
-            }
-            match connection_times.rsna_started_time {
-                None => info!("Received UserEvent.RsnaEstablished before UserEvent.RsnaStarted"),
-                Some(rsna_started_time) => {
-                    let rsna_finished_time = zx::Time::get(zx::ClockId::Monotonic);
-                    telemetry::report_rsna_established_delay(
-                        cobalt_sender,
-                        rsna_started_time,
-                        rsna_finished_time,
-                    );
-                    connection_times.rsna_started_time = None;
-                }
-            }
-        }
-        InfoEvent::DiscoveryScanStats(scan_stats, discovery_stats) => {
-            if let Some(s) = discovery_stats {
-                let bss_count = scan_stats.bss_count;
-                telemetry::report_neighbor_networks_count(cobalt_sender, bss_count, s.ess_count);
-                telemetry::report_standards(cobalt_sender, s.num_bss_by_standard);
-                telemetry::report_channels(cobalt_sender, s.num_bss_by_channel);
-            }
+        InfoEvent::DiscoveryScanStats(scan_stats) => {
             let is_join_scan = false;
             telemetry::log_scan_stats(cobalt_sender, &scan_stats, is_join_scan);
         }

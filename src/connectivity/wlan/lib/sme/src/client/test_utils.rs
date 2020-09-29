@@ -7,7 +7,7 @@ use {
         capabilities::{ClientCapabilities, StaCapabilities},
         client::{bss::BssInfo, rsn::Supplicant},
         test_utils::{self, *},
-        InfoEvent, InfoStream, Ssid,
+        Ssid,
     },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     futures::channel::mpsc,
@@ -173,10 +173,6 @@ pub fn fake_wmm_param() -> fidl_mlme::WmmParameter {
         ]
     };
     wmm_param
-}
-
-pub fn expect_info_event(info_stream: &mut InfoStream, expected_event: InfoEvent) {
-    assert_variant!(info_stream.try_next(), Ok(Some(e)) => assert_eq!(e, expected_event));
 }
 
 pub fn create_join_conf(result_code: fidl_mlme::JoinResultCodes) -> fidl_mlme::MlmeEvent {

@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats},
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_zircon as zx,
     fuchsia_zircon::DurationNum,
     futures::prelude::*,
     futures::stream::FuturesUnordered,
@@ -23,14 +22,8 @@ use {
     std::default::Default,
     std::ops::Sub,
     std::sync::Arc,
-    wlan_common::{
-        bss::{BssDescriptionExt, Standard},
-        format::MacFmt,
-    },
-    wlan_metrics_registry::{
-        self as metrics,
-        NeighborNetworksWlanStandardsCountMetricDimensionWlanStandardType as NeighborNetworksMetricStandardLabel,
-    },
+    wlan_common::{bss::BssDescriptionExt, format::MacFmt},
+    wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{
             ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionPingInfo, ScanStats,
@@ -43,15 +36,6 @@ type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
 /// How often to request RSSI stats and dispatcher packet counts from MLME.
 const REPORT_PERIOD_MINUTES: i64 = 1;
-
-/// Mapping of WLAN standard type to the corresponding metric label used for Cobalt.
-const NEIGHBOR_NETWORKS_STANDARD_MAPPING: [(Standard, NeighborNetworksMetricStandardLabel); 5] = [
-    (Standard::Dot11B, NeighborNetworksMetricStandardLabel::_802_11b),
-    (Standard::Dot11G, NeighborNetworksMetricStandardLabel::_802_11g),
-    (Standard::Dot11A, NeighborNetworksMetricStandardLabel::_802_11a),
-    (Standard::Dot11N, NeighborNetworksMetricStandardLabel::_802_11n),
-    (Standard::Dot11Ac, NeighborNetworksMetricStandardLabel::_802_11ac),
-];
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
 pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
@@ -95,43 +79,6 @@ fn report_stats(
     sender: &mut CobaltSender,
 ) {
     report_mlme_stats(&last_stats.mlme_stats, &current_stats.mlme_stats, sender);
-
-    report_dispatcher_stats(&last_stats.dispatcher_stats, &current_stats.dispatcher_stats, sender);
-}
-
-fn report_dispatcher_stats(
-    last_stats: &fidl_stats::DispatcherStats,
-    current_stats: &fidl_stats::DispatcherStats,
-    sender: &mut CobaltSender,
-) {
-    report_dispatcher_packets(
-        metrics::DispatcherPacketCountsMetricDimensionPacketType::In,
-        get_diff(last_stats.any_packet.in_.count, current_stats.any_packet.in_.count),
-        sender,
-    );
-    report_dispatcher_packets(
-        metrics::DispatcherPacketCountsMetricDimensionPacketType::Out,
-        get_diff(last_stats.any_packet.out.count, current_stats.any_packet.out.count),
-        sender,
-    );
-    report_dispatcher_packets(
-        metrics::DispatcherPacketCountsMetricDimensionPacketType::Dropped,
-        get_diff(last_stats.any_packet.drop.count, current_stats.any_packet.drop.count),
-        sender,
-    );
-}
-
-fn report_dispatcher_packets(
-    packet_type: metrics::DispatcherPacketCountsMetricDimensionPacketType,
-    packet_count: u64,
-    sender: &mut CobaltSender,
-) {
-    sender.log_event_count(
-        metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
-        packet_type as u32,
-        0,
-        packet_count as i64,
-    );
 }
 
 fn report_mlme_stats(
@@ -166,41 +113,6 @@ fn report_client_mlme_stats(
         &last_stats.beacon_rssi,
         &current_stats.beacon_rssi,
         sender,
-    );
-
-    report_client_mlme_rx_tx_frames(&last_stats, &current_stats, sender);
-}
-
-fn report_client_mlme_rx_tx_frames(
-    last_stats: &fidl_stats::ClientMlmeStats,
-    current_stats: &fidl_stats::ClientMlmeStats,
-    sender: &mut CobaltSender,
-) {
-    sender.log_event_count(
-        metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
-        metrics::MlmeRxTxFrameCountsMetricDimensionFrameType::Rx as u32,
-        0,
-        get_diff(last_stats.rx_frame.in_.count, current_stats.rx_frame.in_.count) as i64,
-    );
-    sender.log_event_count(
-        metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
-        metrics::MlmeRxTxFrameCountsMetricDimensionFrameType::Tx as u32,
-        0,
-        get_diff(last_stats.tx_frame.out.count, current_stats.tx_frame.out.count) as i64,
-    );
-
-    sender.log_event_count(
-        metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
-        metrics::MlmeRxTxFrameBytesMetricDimensionFrameType::Rx as u32,
-        0,
-        get_diff(last_stats.rx_frame.in_bytes.count, current_stats.rx_frame.in_bytes.count) as i64,
-    );
-    sender.log_event_count(
-        metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
-        metrics::MlmeRxTxFrameBytesMetricDimensionFrameType::Tx as u32,
-        0,
-        get_diff(last_stats.tx_frame.out_bytes.count, current_stats.tx_frame.out_bytes.count)
-            as i64,
     );
 }
 
@@ -238,105 +150,6 @@ fn report_rssi_stats(
     if !histogram.is_empty() {
         sender.log_int_histogram(rssi_metric_id, (), histogram);
     }
-}
-
-pub fn report_scan_delay(
-    sender: &mut CobaltSender,
-    scan_started_time: zx::Time,
-    scan_finished_time: zx::Time,
-) {
-    let delay_micros = (scan_finished_time - scan_started_time).into_micros();
-    sender.log_elapsed_time(metrics::SCAN_DELAY_METRIC_ID, (), delay_micros);
-}
-
-pub fn report_connection_delay(
-    sender: &mut CobaltSender,
-    conn_started_time: zx::Time,
-    conn_finished_time: zx::Time,
-    result: &ConnectResult,
-) {
-    use wlan_metrics_registry::ConnectionDelayMetricDimensionConnectionResult::{Fail, Success};
-
-    let delay_micros = (conn_finished_time - conn_started_time).into_micros();
-    let connection_result_cobalt = match result {
-        ConnectResult::Success => Some(Success),
-        ConnectResult::Canceled => Some(Fail),
-        ConnectResult::Failed(failure) => convert_connect_failure(&failure),
-    };
-
-    if let Some(connection_result_cobalt) = connection_result_cobalt {
-        sender.log_elapsed_time(
-            metrics::CONNECTION_DELAY_METRIC_ID,
-            connection_result_cobalt as u32,
-            delay_micros,
-        );
-    }
-}
-
-pub fn report_assoc_success_delay(
-    sender: &mut CobaltSender,
-    assoc_started_time: zx::Time,
-    assoc_finished_time: zx::Time,
-) {
-    let delay_micros = (assoc_finished_time - assoc_started_time).into_micros();
-    sender.log_elapsed_time(metrics::ASSOCIATION_DELAY_METRIC_ID, 0, delay_micros);
-}
-
-pub fn report_rsna_established_delay(
-    sender: &mut CobaltSender,
-    rsna_started_time: zx::Time,
-    rsna_finished_time: zx::Time,
-) {
-    let delay_micros = (rsna_finished_time - rsna_started_time).into_micros();
-    sender.log_elapsed_time(metrics::RSNA_DELAY_METRIC_ID, 0, delay_micros);
-}
-
-pub fn report_neighbor_networks_count(
-    sender: &mut CobaltSender,
-    bss_count: usize,
-    ess_count: usize,
-) {
-    sender.log_event_count(
-        metrics::NEIGHBOR_NETWORKS_COUNT_METRIC_ID,
-        metrics::NeighborNetworksCountMetricDimensionNetworkType::Bss as u32,
-        0,
-        bss_count as i64,
-    );
-    sender.log_event_count(
-        metrics::NEIGHBOR_NETWORKS_COUNT_METRIC_ID,
-        metrics::NeighborNetworksCountMetricDimensionNetworkType::Ess as u32,
-        0,
-        ess_count as i64,
-    );
-}
-
-pub fn report_standards(
-    sender: &mut CobaltSender,
-    mut num_bss_by_standard: HashMap<Standard, usize>,
-) {
-    NEIGHBOR_NETWORKS_STANDARD_MAPPING.iter().for_each(|(standard, label)| {
-        let count = match num_bss_by_standard.entry(standard.clone()) {
-            Entry::Vacant(_) => 0 as i64,
-            Entry::Occupied(e) => *e.get() as i64,
-        };
-        sender.log_event_count(
-            metrics::NEIGHBOR_NETWORKS_WLAN_STANDARDS_COUNT_METRIC_ID,
-            label.clone() as u32,
-            0,
-            count,
-        )
-    });
-}
-
-pub fn report_channels(sender: &mut CobaltSender, num_bss_by_channel: HashMap<u8, usize>) {
-    num_bss_by_channel.into_iter().for_each(|(channel, count)| {
-        sender.log_event_count(
-            metrics::NEIGHBOR_NETWORKS_PRIMARY_CHANNELS_COUNT_METRIC_ID,
-            channel as u32,
-            0,
-            count as i64,
-        );
-    });
 }
 
 fn get_diff<T>(last_stat: T, current_stat: T) -> T
@@ -767,6 +580,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
+        fuchsia_zircon as zx,
         futures::channel::mpsc,
         maplit::hashset,
         pin_utils::pin_mut,

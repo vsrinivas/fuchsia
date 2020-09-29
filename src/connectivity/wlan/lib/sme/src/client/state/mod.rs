@@ -836,7 +836,6 @@ impl ClientState {
             cbw: cbw_to_use,
         }));
         context.att_id += 1;
-        context.info.report_join_started(context.att_id);
 
         let msg = connect_cmd_inspect_summary(&cmd);
         inspect_log!(context.inspect.state_events.lock(), {
@@ -1139,11 +1138,10 @@ mod tests {
     };
 
     use crate::client::test_utils::{
-        create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        expect_stream_empty, fake_negotiated_channel_and_capabilities,
-        fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
-        fake_wmm_param, fake_wpa1_bss_description, mock_supplicant, MockSupplicant,
-        MockSupplicantController,
+        create_assoc_conf, create_auth_conf, create_join_conf, expect_stream_empty,
+        fake_negotiated_channel_and_capabilities, fake_protected_bss_description,
+        fake_unprotected_bss_description, fake_wep_bss_description, fake_wmm_param,
+        fake_wpa1_bss_description, mock_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -1162,7 +1160,6 @@ mod tests {
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::JoinStarted { att_id: 1 });
         expect_join_request(&mut h.mlme_stream, &bss_ssid);
 
         // (mlme->sme) Send a JoinConf as a response
@@ -1185,12 +1182,7 @@ mod tests {
         // User should be notified that we are connected
         expect_result(receiver, ConnectResult::Success);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success },
-        );
     }
 
     #[test]
@@ -1205,7 +1197,6 @@ mod tests {
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::JoinStarted { att_id: 1 });
         expect_join_request(&mut h.mlme_stream, &bss_ssid);
 
         // (mlme->sme) Send a JoinConf as a response
@@ -1236,12 +1227,7 @@ mod tests {
         // User should be notified that we are connected
         expect_result(receiver, ConnectResult::Success);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success },
-        );
     }
 
     #[test]
@@ -1257,7 +1243,6 @@ mod tests {
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::JoinStarted { att_id: 1 });
         expect_join_request(&mut h.mlme_stream, &bss_ssid);
 
         // (mlme->sme) Send a JoinConf as a response
@@ -1282,8 +1267,6 @@ mod tests {
         );
 
         assert!(suppl_mock.is_supplicant_started());
-        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
-        expect_info_event(&mut h.info_stream, InfoEvent::RsnaStarted { att_id: 1 });
 
         // (mlme->sme) Send an EapolInd, mock supplicant with key frame
         let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
@@ -1306,11 +1289,6 @@ mod tests {
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
         expect_result(receiver, ConnectResult::Success);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
-        expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success },
-        );
     }
 
     #[test]
@@ -1326,7 +1304,6 @@ mod tests {
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_info_event(&mut h.info_stream, InfoEvent::JoinStarted { att_id: 1 });
         expect_join_request(&mut h.mlme_stream, &bss_ssid);
 
         // (mlme->sme) Send a JoinConf as a response
@@ -1351,8 +1328,6 @@ mod tests {
         );
 
         assert!(suppl_mock.is_supplicant_started());
-        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
-        expect_info_event(&mut h.info_stream, InfoEvent::RsnaStarted { att_id: 1 });
 
         // (mlme->sme) Send an EapolInd, mock supplicant with key frame
         let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
@@ -1375,11 +1350,6 @@ mod tests {
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
         expect_result(receiver, ConnectResult::Success);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
-        expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
-        expect_info_event(
-            &mut h.info_stream,
-            InfoEvent::ConnectFinished { result: ConnectResult::Success },
-        );
     }
 
     #[test]
@@ -1410,8 +1380,6 @@ mod tests {
         ));
         // User should be notified that connection attempt failed
         expect_result(receiver, result.clone());
-
-        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1445,8 +1413,6 @@ mod tests {
         ));
         // User should be notified that connection attempt failed
         expect_result(receiver, result.clone());
-
-        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1475,8 +1441,6 @@ mod tests {
         ));
         // User should be notified that connection attempt failed
         expect_result(receiver, result.clone());
-
-        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1599,9 +1563,6 @@ mod tests {
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
         let result: ConnectResult = EstablishRsnaFailure::StartSupplicantFailed.into();
         expect_result(receiver, result.clone());
-        expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 0 });
-        expect_info_event(&mut h.info_stream, InfoEvent::RsnaStarted { att_id: 0 });
-        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1687,7 +1648,6 @@ mod tests {
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
         let result: ConnectResult = EstablishRsnaFailure::InternalError.into();
         expect_result(receiver, result.clone());
-        expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
 
     #[test]
@@ -1889,9 +1849,6 @@ mod tests {
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
-        // Discard AssociationSuccess info event
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::AssociationSuccess { .. })));
-
         // Verify ping timeout is scheduled
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
         let first_ping = assert_variant!(timed_event.event.clone(), Event::ConnectionPing(info) => {
@@ -1904,9 +1861,6 @@ mod tests {
             assert_eq!(info.connected_since, info.now);
             assert!(info.last_reported.is_none());
         });
-
-        // Discard ConnectFinished info event
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectFinished { .. })));
 
         // Trigger the above timeout
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);

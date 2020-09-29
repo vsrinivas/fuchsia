@@ -9,9 +9,8 @@ use {
         Ssid,
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
-    std::collections::{HashSet, VecDeque},
+    std::collections::VecDeque,
     thiserror::Error,
-    wlan_common::bss::{get_channel_map, get_phy_standard_map},
     wlan_rsn::{
         key::exchange::Key,
         rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
@@ -60,7 +59,7 @@ impl StatsCollector {
         &mut self,
         result: ScanResult,
         bss_list: Option<&Vec<fidl_mlme::BssDescription>>,
-    ) -> Result<(ScanStats, Option<DiscoveryStats>), StatsError> {
+    ) -> Result<ScanStats, StatsError> {
         let now = now();
         let pending_stats = self.discovery_scan_stats.take().ok_or(StatsError::NoPendingScan)?;
 
@@ -72,15 +71,7 @@ impl StatsCollector {
             result,
             bss_count: bss_list.map(|bss_list| bss_list.len()).unwrap_or(0),
         };
-        let discovery_stats = bss_list.map(|bss_list| {
-            let ess_count = count_ess(&bss_list);
-            let num_bss_by_standard = get_phy_standard_map(&bss_list);
-            let num_bss_by_channel = get_channel_map(&bss_list);
-
-            DiscoveryStats { ess_count, num_bss_by_standard, num_bss_by_channel }
-        });
-
-        Ok((scan_stats, discovery_stats))
+        Ok(scan_stats)
     }
 
     pub fn report_join_scan_ended(
@@ -249,11 +240,6 @@ impl StatsCollector {
     }
 }
 
-/// Counts unique SSID in a given BSS list
-fn count_ess(bss_set: &[fidl_mlme::BssDescription]) -> usize {
-    bss_set.into_iter().map(|b| b.ssid.clone()).collect::<HashSet<_>>().len()
-}
-
 fn now() -> zx::Time {
     zx::Time::get(zx::ClockId::Monotonic)
 }
@@ -387,14 +373,10 @@ mod tests {
     use {
         super::*,
         crate::client::{
-            test_utils::{
-                fake_bss_with_bssid, fake_bss_with_rates, fake_protected_bss_description,
-                fake_scan_request,
-            },
+            test_utils::{fake_bss_with_rates, fake_protected_bss_description, fake_scan_request},
             EstablishRsnaFailure, SelectNetworkFailure,
         },
         anyhow::format_err,
-        maplit::hashmap,
         wlan_common::assert_variant,
     };
 
@@ -408,17 +390,12 @@ mod tests {
         let bss_desc = fake_bss_with_rates(b"foo".to_vec(), vec![12]);
         let stats =
             stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
-        assert_variant!(stats, Ok((scan_stats, discovery_stats)) => {
+        assert_variant!(stats, Ok(scan_stats) => {
             assert!(scan_stats.scan_time().into_nanos() > 0);
             assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
             assert_eq!(scan_stats.scan_start_while_connected, is_connected);
             assert_eq!(scan_stats.result, ScanResult::Success);
             assert_eq!(scan_stats.bss_count, 1);
-            assert_eq!(discovery_stats, Some(DiscoveryStats {
-                ess_count: 1,
-                num_bss_by_channel: hashmap! { 1 => 1 },
-                num_bss_by_standard: hashmap! { Standard::Dot11Ac => 1 },
-            }));
         })
     }
 
@@ -672,15 +649,5 @@ mod tests {
         assert!(stats_collector.report_rsna_started().is_ok());
         assert!(stats_collector.report_rsna_established().is_ok());
         stats_collector.report_connect_finished(ConnectResult::Success)
-    }
-
-    #[test]
-    fn count_ess_in_bss_list() {
-        let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
-        let bss2 = fake_bss_with_bssid(b"bar".to_vec(), [2, 2, 2, 2, 2, 2]);
-        let bss3 = fake_bss_with_bssid(b"foo".to_vec(), [3, 3, 3, 3, 3, 3]);
-        let num_ssid = count_ess(&vec![bss1, bss2, bss3]);
-
-        assert_eq!(2, num_ssid);
     }
 }
