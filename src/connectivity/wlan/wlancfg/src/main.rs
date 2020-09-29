@@ -9,10 +9,8 @@ mod client;
 mod config_management;
 mod legacy;
 mod mode_management;
-mod util;
-
-#[cfg(test)]
 mod regulatory_manager;
+mod util;
 
 use {
     crate::{
@@ -22,9 +20,11 @@ use {
         mode_management::{
             create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
         },
+        regulatory_manager::RegulatoryManager,
     },
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
+    fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
+    fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
@@ -33,7 +33,7 @@ use {
     futures::{
         self,
         channel::mpsc,
-        future::{try_join, try_join4},
+        future::{try_join, try_join5, BoxFuture},
         lock::Mutex,
         prelude::*,
         select, TryFutureExt,
@@ -150,6 +150,34 @@ async fn serve_metrics(
     try_join(record_metrics_fut.map(|()| Ok(())), cobalt_fut.map(|()| Ok(()))).await.map(|_| ())
 }
 
+// Some builds will not include the RegulatoryRegionWatcher.  In such cases, wlancfg can continue
+// to run, though it will not be able to set its regulatory region and will fallback to world wide.
+fn run_regulatory_manager(
+    wlan_svc: DeviceServiceProxy,
+    phy_manager: Arc<Mutex<PhyManager>>,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+) -> BoxFuture<'static, Result<(), Error>> {
+    match fuchsia_component::client::connect_to_service::<RegulatoryRegionWatcherMarker>() {
+        Ok(regulatory_svc) => {
+            let regulatory_manager =
+                RegulatoryManager::new(regulatory_svc, wlan_svc, phy_manager, iface_manager);
+            let regulatory_fut = async move {
+                regulatory_manager.run().await.unwrap_or_else(|e| {
+                    error!("regulatory manager failed: {:?}", e);
+                });
+                Ok(())
+            };
+
+            Box::pin(regulatory_fut)
+        }
+        Err(e) => {
+            error!("could not connect to regulatory manager: {:?}", e);
+            let regulatory_fut = async move { Ok(()) };
+            Box::pin(regulatory_fut)
+        }
+    }
+}
+
 fn main() -> Result<(), Error> {
     util::logger::init();
 
@@ -208,13 +236,16 @@ fn main() -> Result<(), Error> {
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
+    let regulatory_fut =
+        run_regulatory_manager(wlan_svc.clone(), phy_manager.clone(), iface_manager.clone());
 
     executor
-        .run_singlethreaded(try_join4(
+        .run_singlethreaded(try_join5(
             fidl_fut,
             dev_watcher_fut,
             iface_manager_service,
             metrics_fut,
+            regulatory_fut,
         ))
-        .map(|_: (Void, (), Void, ())| ())
+        .map(|_: (Void, (), Void, (), ())| ())
 }
