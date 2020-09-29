@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
@@ -56,12 +57,21 @@ constexpr zx_bind_inst_t root_match[] = {
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
+const zx_bind_inst_t clk_dos_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS),
+};
 constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
+constexpr device_fragment_part_t clk_dos_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(clk_dos_match), clk_dos_match},
+};
 constexpr device_fragment_t fragments[] = {
     {countof(sysmem_fragment), sysmem_fragment},
+    {countof(clk_dos_fragment), clk_dos_fragment},
 };
 
 static pbus_dev_t hevc_enc_dev = []() {

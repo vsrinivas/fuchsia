@@ -42,6 +42,7 @@ constexpr clock_id_t clock_ids[] = {
 
     // For video decoder
     {sm1_clk::CLK_DOS_GCLK_VDEC},
+    {sm1_clk::CLK_DOS},
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {

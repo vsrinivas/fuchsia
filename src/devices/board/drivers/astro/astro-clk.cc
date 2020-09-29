@@ -39,6 +39,7 @@ constexpr clock_id_t clock_ids[] = {
     {g12a_clk::CLK_SYS_CPU_CLK},
     // For video decoder
     {g12a_clk::CLK_DOS_GCLK_VDEC},
+    {g12a_clk::CLK_DOS},
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {

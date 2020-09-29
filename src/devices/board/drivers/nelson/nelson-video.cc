@@ -90,6 +90,10 @@ const zx_bind_inst_t dos_gclk0_vdec_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_DOS_GCLK_VDEC),
 };
+const zx_bind_inst_t clk_dos_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_DOS),
+};
 constexpr zx_bind_inst_t tee_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEE),
 };
@@ -105,6 +109,10 @@ constexpr device_fragment_part_t dos_gclk0_vdec_fragment[] = {
     {countof(root_match), root_match},
     {countof(dos_gclk0_vdec_match), dos_gclk0_vdec_match},
 };
+constexpr device_fragment_part_t clk_dos_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(clk_dos_match), clk_dos_match},
+};
 constexpr device_fragment_part_t tee_fragment[] = {
     {countof(root_match), root_match},
     {countof(tee_match), tee_match},
@@ -113,6 +121,7 @@ constexpr device_fragment_t fragments[] = {
     {countof(sysmem_fragment), sysmem_fragment},
     {countof(canvas_fragment), canvas_fragment},
     {countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
+    {countof(clk_dos_fragment), clk_dos_fragment},
     {countof(tee_fragment), tee_fragment},
 };
 

@@ -68,9 +68,10 @@ constexpr uint32_t CLK_CML0_EN = AmlClkId(45, aml_clk_common::aml_clk_type::kMes
 
 // Dos clocks.
 constexpr uint32_t CLK_DOS_GCLK_VDEC = AmlClkId(46, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AXG_DOS = AmlClkId(47, aml_clk_common::aml_clk_type::kMesonGate);
 
 // NB: This must be the last entry
-constexpr uint32_t CLK_AXG_COUNT = 47;
+constexpr uint32_t CLK_AXG_COUNT = 48;
 
 }  // namespace axg_clk
 

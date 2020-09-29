@@ -24,9 +24,10 @@ constexpr uint32_t G12B_CLK_SYS_CPUB_CLK_DIV16 = AmlClkId(4, clk_type::kMesonGat
 
 constexpr uint32_t G12B_CLK_DOS_GCLK_VDEC = AmlClkId(5, clk_type::kMesonGate);
 constexpr uint32_t G12B_CLK_DOS_GCLK_HCODEC = AmlClkId(6, clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_DOS = AmlClkId(7, clk_type::kMesonGate);
 
 // NB: This must be the last entry
-constexpr uint32_t CLK_G12B_COUNT = 7;
+constexpr uint32_t CLK_G12B_COUNT = 8;
 
 // kMesonPllClocks
 constexpr uint32_t CLK_GP0_PLL = AmlClkId(GP0_PLL, clk_type::kMesonPll);
@@ -36,7 +37,7 @@ constexpr uint32_t CLK_SYS_PLL = AmlClkId(SYS_PLL, clk_type::kMesonPll);
 constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, clk_type::kMesonPll);
 
 // Cpu Clocks.
-constexpr uint32_t CLK_SYS_CPU_BIG_CLK    = AmlClkId(0, clk_type::kMesonCpuClk);
+constexpr uint32_t CLK_SYS_CPU_BIG_CLK = AmlClkId(0, clk_type::kMesonCpuClk);
 constexpr uint32_t CLK_SYS_CPU_LITTLE_CLK = AmlClkId(1, clk_type::kMesonCpuClk);
 
 }  // namespace g12b_clk

@@ -79,6 +79,8 @@ static constexpr meson_clk_gate_t axg_clk_gates[] = {
      .bit = 0,
      .register_set = kMesonRegisterSetDos,
      .mask = 0x3ff},  // CLK_DOS_GCLK_VDEC
+
+    {.reg = AXG_HHI_GCLK_MPEG0, .bit = 1},  // CLK_AXG_DOS
 };
 
 static_assert(axg_clk::CLK_AXG_COUNT == countof(axg_clk_gates),

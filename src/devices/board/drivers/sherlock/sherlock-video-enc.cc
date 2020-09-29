@@ -60,6 +60,10 @@ const zx_bind_inst_t dos_gclk0_hcodec_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS_GCLK_HCODEC),
 };
+const zx_bind_inst_t clk_dos_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS),
+};
 constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
@@ -72,10 +76,15 @@ constexpr device_fragment_part_t dos_gclk0_hcodec_fragment[] = {
     {countof(root_match), root_match},
     {countof(dos_gclk0_hcodec_match), dos_gclk0_hcodec_match},
 };
+constexpr device_fragment_part_t clk_dos_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(clk_dos_match), clk_dos_match},
+};
 constexpr device_fragment_t fragments[] = {
     {countof(sysmem_fragment), sysmem_fragment},
     {countof(canvas_fragment), canvas_fragment},
     {countof(dos_gclk0_hcodec_fragment), dos_gclk0_hcodec_fragment},
+    {countof(clk_dos_fragment), clk_dos_fragment},
 };
 
 static pbus_dev_t video_enc_dev = []() {

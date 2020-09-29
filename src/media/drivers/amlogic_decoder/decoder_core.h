@@ -40,6 +40,7 @@ enum class DeviceType;
 
 enum class ClockType {
   kGclkVdec,
+  kClkDos,
   kMax,
 };
 

@@ -78,12 +78,13 @@ enum {
   kFragmentSysmem = 1,
   kFragmentCanvas = 2,
   kFragmentDosGclkVdec = 3,
+  kFragmentClkDos = 4,
   // The tee is optional.
-  kFragmentTee = 4,
+  kFragmentTee = 5,
   // with tee
-  kMaxFragmentCount = 5,
+  kMaxFragmentCount = 6,
   // without tee
-  kMinFragmentCount = 4,
+  kMinFragmentCount = 5,
 };
 
 }  // namespace
@@ -129,7 +130,7 @@ void AmlogicVideo::AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instan
 }
 
 void AmlogicVideo::UngateClocks() {
-  HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(true).WriteTo(hiubus_.get());
+  ToggleClock(ClockType::kClkDos, true);
   HhiGclkMpeg1::Get()
       .ReadFrom(hiubus_.get())
       .set_aiu(0xff)
@@ -154,7 +155,7 @@ void AmlogicVideo::GateClocks() {
       .set_demux(false)
       .set_audio_in(false)
       .WriteTo(hiubus_.get());
-  HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(false).WriteTo(hiubus_.get());
+  ToggleClock(ClockType::kClkDos, false);
   GateParserClock();
 }
 
@@ -767,6 +768,13 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
 
   status = device_get_protocol(fragments[kFragmentDosGclkVdec], ZX_PROTOCOL_CLOCK,
                                &clocks_[static_cast<int>(ClockType::kGclkVdec)]);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Could not get CLOCK protocol\n");
+    return status;
+  }
+
+  status = device_get_protocol(fragments[kFragmentClkDos], ZX_PROTOCOL_CLOCK,
+                               &clocks_[static_cast<int>(ClockType::kClkDos)]);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get CLOCK protocol\n");
     return status;
