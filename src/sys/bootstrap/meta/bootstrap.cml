@@ -46,6 +46,11 @@
     ],
     offer: [
         {
+            protocol: [ "/svc/fuchsia.sys.Loader" ],
+            from: "parent",
+            to: [ "#console-launcher" ],
+        },
+        {
             directory: "/boot",
             from: "parent",
             to: [
@@ -61,7 +66,6 @@
                 "/svc/fuchsia.boot.ReadOnlyLog",
                 "/svc/fuchsia.boot.RootJob",
                 "/svc/fuchsia.boot.RootJobForInspect",
-                "/svc/fuchsia.sys.Loader",
             ],
             from: "parent",
             to: [

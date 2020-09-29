@@ -97,6 +97,7 @@
                 "/svc/fuchsia.scheduler.ProfileProvider",
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher",
+                "/svc/fuchsia.sys.Loader",
                 "/svc/fuchsia.sysinfo.SysInfo",
                 "/svc/fuchsia.sysmem.Allocator",
                 "/svc/fuchsia.tracing.controller.Controller",

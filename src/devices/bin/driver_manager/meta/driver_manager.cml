@@ -137,7 +137,6 @@
                 "/svc/fuchsia.process.Resolver",
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher",
-                "/svc/fuchsia.sys.Loader",
 
                 // Services from sysinfo
                 "/svc/fuchsia.sysinfo.SysInfo",
