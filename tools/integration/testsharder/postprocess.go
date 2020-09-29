@@ -323,6 +323,13 @@ func WithTargetDuration(
 			}
 			numNewShards = divRoundUp(total, targetTestCount)
 		}
+		if numNewShards == 0 {
+			// If targetDuration is set but all durations are zero, we'll
+			// determine that we need zero new shards. In this case, we'll be
+			// careful and assume that we need the maximum allowed shards to be
+			// able to fit all tests.
+			numNewShards = maxShardsPerEnvironment
+		}
 		numNewShards = min(numNewShards, maxShardsPerEnvironment)
 
 		newShards := shardByTime(shard, testDurations, numNewShards)
@@ -346,7 +353,14 @@ func (h subshardHeap) Len() int {
 }
 
 func (h subshardHeap) Less(i, j int) bool {
-	return h[i].duration < h[j].duration
+	if h[i].duration != h[j].duration {
+		return h[i].duration < h[j].duration
+	}
+	// All durations being equal, fall back to comparing test counts. This
+	// ensures that even if all expected durations are zero (which generally
+	// shouldn't happen, but is possible), we'll still divide tests evenly by
+	// test count across shards.
+	return len(h[i].tests) < len(h[j].tests)
 }
 
 func (h subshardHeap) Swap(i, j int) {

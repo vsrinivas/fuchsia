@@ -624,6 +624,21 @@ func TestWithTargetDuration(t *testing.T) {
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 
+	t.Run("evenly divides tests even if all durations are zero", func(t *testing.T) {
+		input := []*Shard{
+			namedShard(env1, "env1", 1, 2, 3, 4, 5, 6),
+		}
+		durations := TestDurationsMap{
+			"*": {MedianDuration: 0},
+		}
+		actual := WithTargetDuration(input, 4, 0, 2, durations)
+		expectedTests := [][]string{
+			{"test1", "test3", "test5"},
+			{"test2", "test4", "test6"},
+		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
 	t.Run("adjusts other envs if one env exceeds max shard count", func(t *testing.T) {
 		var env2Tests []int
 		maxShardsPerEnvironment := 8
