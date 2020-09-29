@@ -31,6 +31,7 @@
 #include <ddk/protocol/wlanif.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <wifi/wifi-config.h>
+#include <wlan/common/macaddr.h>
 #include <wlan/common/phy.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
@@ -485,6 +486,30 @@ static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[ET
   return false;
 }
 
+/*For now this function should always be called when adding iface*/
+static zx_status_t brcmf_set_iface_macaddr(bool is_ap, net_device* ndev,
+                                           const wlan::common::MacAddr& mac_addr) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  bcme_status_t fw_err = BCME_OK;
+  zx_status_t err = ZX_OK;
+
+  BRCMF_DBG(TRACE, "Enter");
+  // If the existing mac_addr of this iface is the same as it is, just return success.
+  if (!memcmp(ifp->mac_addr, mac_addr.byte, ETH_ALEN)) {
+    return ZX_OK;
+  }
+
+  err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr.byte, ETH_ALEN, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Setting mac address failed: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  memcpy(ifp->mac_addr, mac_addr.byte, sizeof(ifp->mac_addr));
+  return err;
+}
+
 zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct vif_params* params,
                                      const wlanphy_impl_create_iface_req_t* req,
                                      struct wireless_dev** wdev_out) {
@@ -492,6 +517,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
   net_device* ndev;
   wireless_dev* wdev;
   int32_t bsscfgidx;
+  wlan::common::MacAddr mac_addr(req->init_mac_addr);
 
   BRCMF_DBG(TRACE, "enter: %s type %d", name, req->role);
 
@@ -514,7 +540,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
     case WLAN_INFO_MAC_ROLE_AP:
       iface_role_name = "ap";
 
-      if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, true)) {
+      if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, mac_addr.byte, true)) {
         return ZX_ERR_ALREADY_EXISTS;
       }
       err = brcmf_ap_add_vif(drvr->config, name, &wdev);
@@ -529,11 +555,10 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       ndev->sme_channel = zx::channel(req->sme_channel);
 
       if (req->has_init_mac_addr) {
-        const uint8_t* mac_addr = req->init_mac_addr;
         err = brcmf_set_iface_macaddr(true, ndev, mac_addr);
         if (err != ZX_OK) {
-          BRCMF_ERR("Failed to set custom MAC address " MAC_FMT_STR " for AP iface netdev:%s",
-                    MAC_FMT_ARGS(mac_addr), ndev->name);
+          BRCMF_ERR("Failed to set custom MAC address %s for AP iface netdev:%s", MACSTR(mac_addr),
+                    ndev->name);
           return err;
         }
       }
@@ -542,7 +567,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
     case WLAN_INFO_MAC_ROLE_CLIENT:
       iface_role_name = "client";
 
-      if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, req->init_mac_addr, false)) {
+      if (req->has_init_mac_addr && brcmf_is_existing_macaddr(drvr, mac_addr.byte, false)) {
         return ZX_ERR_ALREADY_EXISTS;
       }
       bsscfgidx = brcmf_get_prealloced_bsscfgidx(drvr);
@@ -594,32 +619,26 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
       // Use req->init_mac_addr if it's provided. Otherwise, fallback to the bootloader
       // MAC address. Note that this fallback MAC address is intended for client ifaces only.
-      const uint8_t* mac_addr;
-      uint8_t bootloader_macaddr[ETH_ALEN];
-      if (req->has_init_mac_addr) {
-        mac_addr = req->init_mac_addr;
-      } else {
-        err = brcmf_bus_get_bootloader_macaddr(drvr->bus_if, bootloader_macaddr);
-        if (err != ZX_OK) {
-          BRCMF_ERR("Bootloader MAC address not available.");
-          err = brcmf_gen_random_mac_addr(bootloader_macaddr);
+      if (!req->has_init_mac_addr) {
+        err = brcmf_bus_get_bootloader_macaddr(drvr->bus_if, mac_addr.byte);
+        if (err != ZX_OK || mac_addr.IsZero() || mac_addr.IsBcast()) {
+          BRCMF_ERR("Failed to get valid mac address from bootloader: %s",
+                    (err != ZX_OK) ? zx_status_get_string(err) : MACSTR(mac_addr));
+          err = brcmf_gen_random_mac_addr(mac_addr.byte);
           if (err != ZX_OK) {
             BRCMF_ERR("Failed to generate random MAC address.");
             return err;
           }
-          BRCMF_ERR("Falling back to random mac address: " MAC_FMT_STR,
-                    MAC_FMT_ARGS(bootloader_macaddr));
+          BRCMF_ERR("Falling back to random mac address: %s", MACSTR(mac_addr));
         } else {
-          BRCMF_DBG(INFO, "Retrieved bootloader wifi MAC addresss: " MAC_FMT_STR,
-                    MAC_FMT_ARGS(bootloader_macaddr));
+          BRCMF_DBG(INFO, "Retrieved bootloader wifi MAC addresss: %s", MACSTR(mac_addr));
         }
-        mac_addr = bootloader_macaddr;
       }
 
       err = brcmf_set_iface_macaddr(false, ndev, mac_addr);
       if (err != ZX_OK) {
-        BRCMF_ERR("Failed to set MAC address " MAC_FMT_STR " for client iface netdev:%s",
-                  MAC_FMT_ARGS(mac_addr), ndev->name);
+        BRCMF_ERR("Failed to set MAC address %s for client iface netdev:%s", MACSTR(mac_addr),
+                  ndev->name);
         return err;
       }
 
@@ -3459,30 +3478,6 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
                                                                             : "unknown");
 
   wlanif_impl_ifc_eapol_conf(&ndev->if_proto, &confirm);
-}
-
-/*For now this function should always be called when adding iface*/
-zx_status_t brcmf_set_iface_macaddr(bool is_ap, net_device* ndev,
-                                    const uint8_t mac_addr[ETH_ALEN]) {
-  struct brcmf_if* ifp = ndev_to_if(ndev);
-  bcme_status_t fw_err = BCME_OK;
-  zx_status_t err = ZX_OK;
-
-  BRCMF_DBG(TRACE, "Enter");
-  // If the existing mac_addr of this iface is the same as it is, just return success.
-  if (!memcmp(ifp->mac_addr, mac_addr, ETH_ALEN)) {
-    return ZX_OK;
-  }
-
-  err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Setting mac address failed: %s, fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    return err;
-  }
-
-  memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
-  return err;
 }
 
 static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {

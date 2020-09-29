@@ -39,4 +39,30 @@ TEST_F(BootloaderMacAddrTest, GetMacAddrFromBootloader) {
   ASSERT_EQ(actual_mac_addr, mac_addr);
 }
 
+// Verify that if the bootloader returns a zeroed-out mac address the driver overrides it with a
+// non-zero mac address
+TEST_F(BootloaderMacAddrTest, ZeroMacAddr) {
+  Init(common::kZeroMac);
+
+  SimInterface client_ifc;
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+
+  common::MacAddr actual_mac_addr;
+  client_ifc.GetMacAddr(&actual_mac_addr);
+  ASSERT_FALSE(actual_mac_addr.IsZero());
+}
+
+// Verify that if the bootloader returns a broadcast (all ones) mac address the driver overrides it
+// with a non-broadcast mac address
+TEST_F(BootloaderMacAddrTest, BroadcastMacAddr) {
+  Init(common::kBcastMac);
+
+  SimInterface client_ifc;
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+
+  common::MacAddr actual_mac_addr;
+  client_ifc.GetMacAddr(&actual_mac_addr);
+  ASSERT_FALSE(actual_mac_addr.IsBcast());
+}
+
 }  // namespace wlan::brcmfmac
