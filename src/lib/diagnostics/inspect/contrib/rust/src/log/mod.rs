@@ -27,17 +27,18 @@ pub trait WriteInspect {
 ///
 /// ```
 /// let bounded_list_node = ...;
+/// inspect_log!(bounded_list_node, {});   // log only a timestamped entry
 /// inspect_log!(bounded_list_node, k1: "1", k2: 2i64, k3: "3");   // non-block form
 /// inspect_log!(bounded_list_node, {   // block form (only difference is syntactic)
 ///     ba: "dum",
 ///     tss: "tss",
-/// })
+/// });
 /// inspect_log!(bounded_list_node, {   // logging nested data structure
 ///     k1: {
 ///        subkey1: "subval1",
 ///        subkey2: 2,
 ///     }
-/// })
+/// });
 /// ```
 #[macro_export]
 macro_rules! inspect_log {
