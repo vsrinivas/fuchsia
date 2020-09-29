@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/pkg/sysmgr_config.gni")
 
 rustc_binary("bin") {
   name = "pkg_local_mirror"
@@ -12,8 +13,10 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -22,6 +25,10 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+sysmgr_config("config") {
+  source = "sysmgr.config"
 }
 
 rustc_library("lib") {
@@ -48,7 +55,11 @@ rustc_library("lib") {
   ]
 }
 
-fuchsia_component("pkg-local-mirror") {
+fuchsia_component("component") {
   deps = [ ":bin" ]
   manifest = "meta/pkg-local-mirror.cml"
+}
+
+fuchsia_package("pkg-local-mirror") {
+  deps = [":component"]
 }

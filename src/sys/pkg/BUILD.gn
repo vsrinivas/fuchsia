@@ -33,6 +33,7 @@ group("core") {
   public_deps = [
     ":core_config",
     "bin/pkg-cache",
+    "bin/pkg-local-mirror",
     "bin/pkg-resolver",
     "bin/pkgfs",
     "bin/system-update-committer",
@@ -81,6 +82,7 @@ group("system-update-checker") {
 merge_sysmgr_config("core_config") {
   output = "pkg.config"
   deps = [
+    "bin/pkg-local-mirror:config",
     "bin/pkg-resolver:config",
     "bin/system-updater:config",
   ]

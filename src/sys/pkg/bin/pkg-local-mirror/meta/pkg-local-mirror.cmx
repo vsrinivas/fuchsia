@@ -4,5 +4,11 @@
     ],
     "program": {
         "binary": "bin/pkg_local_mirror"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fat.Admin",
+            "fuchsia.logger.LogSink"
+        ]
     }
 }
