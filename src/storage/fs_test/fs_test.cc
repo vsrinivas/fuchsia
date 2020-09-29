@@ -12,15 +12,16 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/errors.h>
 
+#include <iostream>
 #include <utility>
 
 #include <fbl/unique_fd.h>
@@ -39,9 +40,25 @@ namespace fio = ::llcpp::fuchsia::io;
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
 static zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
     const TestFilesystemOptions& options) {
+  zx::vmo vmo;
+  fzl::VmoMapper mapper;
+  auto status =
+      zx::make_status(mapper.CreateAndMap(options.device_block_size * options.device_block_count,
+                                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
+  if (status.is_error()) {
+    std::cerr << "Unable to create VMO for ramdisk: " << status.status_string();
+    return status.take_error();
+  }
+
+  // Fill the ram-disk with a non-zero value so that we don't inadvertently depend on it being
+  // zero filled.
+  if (!options.zero_fill) {
+    memset(mapper.start(), 0xaf, mapper.size());
+  }
+
   // Create a ram-disk.
   auto ram_disk_or =
-      isolated_devmgr::RamDisk::Create(options.device_block_size, options.device_block_count);
+      isolated_devmgr::RamDisk::CreateWithVmo(std::move(vmo), options.device_block_size);
   if (ram_disk_or.is_error()) {
     return ram_disk_or.take_error();
   }
@@ -105,7 +122,7 @@ static zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNa
 
   status = zx::make_status(wait_for_device("/dev/misc/nand-ctl", zx::sec(10).get()));
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "Timed out waiting for /dev/misc/nand-ctl to appear";
+    std::cerr << "Timed out waiting for /dev/misc/nand-ctl to appear";
     return status.take_error();
   }
 
@@ -120,14 +137,14 @@ static zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNa
       .nand_info.nand_class = fuchsia_hardware_nand_Class_FTL};
   status = zx::make_status(ramdevice_client::RamNand::Create(&config, &ram_nand));
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "RamNand::Create failed: " << status.status_string();
+    std::cerr << "RamNand::Create failed: " << status.status_string();
     return status.take_error();
   }
 
   std::string ftl_path = std::string(ram_nand->path()) + "/ftl/block";
   status = zx::make_status(wait_for_device(ftl_path.c_str(), zx::sec(10).get()));
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "Timed out waiting for RamNand";
+    std::cerr << "Timed out waiting for RamNand";
     return status.take_error();
   }
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
@@ -139,7 +156,7 @@ static zx::status<> FsMount(const std::string& device_path, const std::string& m
                             zx::channel* outgoing_directory = nullptr) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
-    FX_LOGS(ERROR) << "Could not open device: " << device_path << ": errno=" << errno;
+    std::cerr << "Could not open device: " << device_path << ": errno=" << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
@@ -149,8 +166,7 @@ static zx::status<> FsMount(const std::string& device_path, const std::string& m
     zx::channel server;
     auto status = zx::make_status(zx::channel::create(0, outgoing_directory, &server));
     if (status.is_error()) {
-      FX_LOGS(ERROR) << "Unable to create channel for outgoing directory: "
-                     << status.status_string();
+      std::cerr << "Unable to create channel for outgoing directory: " << status.status_string();
       return status;
     }
     options.outgoing_directory.client = outgoing_directory->get();
@@ -165,8 +181,8 @@ static zx::status<> FsMount(const std::string& device_path, const std::string& m
   auto status = zx::make_status(
       mount(fd.release(), mount_path.c_str(), format, &options, launch_stdio_async));
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "Could not mount " << disk_format_string(format)
-                   << " file system: " << status.status_string();
+    std::cerr << "Could not mount " << disk_format_string(format)
+              << " file system: " << status.status_string();
     return status;
   }
   return zx::ok();
@@ -177,7 +193,7 @@ TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
                                .use_fvm = true,
                                .device_block_size = 512,
                                .device_block_count = 131'072,
-                               .fvm_slice_size = 8 * 1'048'576,
+                               .fvm_slice_size = 32'768,
                                .filesystem = &MinfsFilesystem::SharedInstance()};
 }
 
@@ -198,7 +214,6 @@ TestFilesystemOptions TestFilesystemOptions::DefaultFatfs() {
                                .use_fvm = false,
                                .device_block_size = 512,
                                .device_block_count = 196'608,
-                               .fvm_slice_size = 1'048'576,
                                .filesystem = &FatFilesystem::SharedInstance()};
 }
 
@@ -207,7 +222,7 @@ TestFilesystemOptions TestFilesystemOptions::DefaultBlobfs() {
                                .use_fvm = true,
                                .device_block_size = 512,
                                .device_block_count = 196'608,
-                               .fvm_slice_size = 1'048'576,
+                               .fvm_slice_size = 32'768,
                                .filesystem = &BlobfsFilesystem::SharedInstance()};
 }
 
@@ -248,8 +263,8 @@ zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t fo
   options.sectors_per_cluster = 2;  // 1 KiB cluster size
   auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "Could not format " << disk_format_string(format)
-                   << " file system: " << status.status_string();
+    std::cerr << "Could not format " << disk_format_string(format)
+              << " file system: " << status.status_string();
     return status;
   }
   return zx::ok();
@@ -311,7 +326,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
     auto fvm_partition_or =
         isolated_devmgr::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
     if (fvm_partition_or.is_error()) {
-      FX_LOGS(ERROR) << "Failed to create FVM partition: " << fvm_partition_or.status_string();
+      std::cerr << "Failed to create FVM partition: " << fvm_partition_or.status_string();
       return fvm_partition_or.take_error();
     }
 
@@ -366,7 +381,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
     }
   }
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "Unable to bind FVM: " << status.status_string();
+    std::cerr << "Unable to bind FVM: " << status.status_string();
     return status.take_error();
   }
 
@@ -374,7 +389,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
   const std::string device_path = ftl_device_path + "/fvm/fs-test-partition-p-1/block";
   status = zx::make_status(wait_for_device(device_path.c_str(), zx::sec(10).get()));
   if (status.is_error()) {
-    FX_LOGS(ERROR) << "Timed out waiting for Minfs partition to show up";
+    std::cerr << "Timed out waiting for Minfs partition to show up";
     return status.take_error();
   }
   return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_nand), std::move(device_path)));
@@ -385,13 +400,13 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
 class MemfsInstance : public FilesystemInstance {
  public:
   MemfsInstance() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
-    FX_CHECK(loop_.StartThread() == ZX_OK);
+    ZX_ASSERT(loop_.StartThread() == ZX_OK);
   }
   ~MemfsInstance() override {
     if (fs_) {
       sync_completion_t sync;
       memfs_free_filesystem(fs_, &sync);
-      FX_CHECK(sync_completion_wait(&sync, zx::duration::infinite().get()) == ZX_OK);
+      ZX_ASSERT(sync_completion_wait(&sync, zx::duration::infinite().get()) == ZX_OK);
     }
   }
   zx::status<> Format() {
@@ -406,7 +421,7 @@ class MemfsInstance : public FilesystemInstance {
     }
     auto status = zx::make_status(mount_root_handle(root_.release(), mount_path.c_str()));
     if (status.is_error())
-      FX_LOGS(ERROR) << "Unable to mount: " << status.status_string();
+      std::cerr << "Unable to mount: " << status.status_string();
     return status;
   }
 
@@ -460,7 +475,7 @@ class FatfsInstance : public FilesystemInstance {
     constexpr int kNoRemote = 0x0020'0000;
     auto fd = fbl::unique_fd(open(mount_path.c_str(), O_DIRECTORY | kNoRemote | kAdmin));
     if (!fd) {
-      FX_LOGS(ERROR) << "Unable to open mount point for unmount: " << strerror(errno);
+      std::cerr << "Unable to open mount point for unmount: " << strerror(errno);
       return zx::error(ZX_ERR_IO);
     }
     fdio_cpp::FdioCaller caller(std::move(fd));
@@ -468,12 +483,12 @@ class FatfsInstance : public FilesystemInstance {
     caller.release().release();
     if (!response.ok()) {
       auto status = zx::make_status(response.status());
-      FX_LOGS(ERROR) << "UnmountNode failed with fidl error: " << status.status_string();
+      std::cerr << "UnmountNode failed with fidl error: " << status.status_string();
       return status;
     }
     if (response.value().s != ZX_OK) {
       auto status = zx::make_status(response.value().s);
-      FX_LOGS(ERROR) << "UnmountNode failed: " << status.status_string();
+      std::cerr << "UnmountNode failed: " << status.status_string();
       return status;
     }
 
@@ -483,12 +498,12 @@ class FatfsInstance : public FilesystemInstance {
     auto status = zx::make_status(fdio_service_connect_at(
         outgoing_directory_.get(), service_name.c_str(), admin.NewRequest().TakeChannel().get()));
     if (status.is_error()) {
-      FX_LOGS(ERROR) << "Unable to connect to admin service: " << status.status_string();
+      std::cerr << "Unable to connect to admin service: " << status.status_string();
       return status;
     }
     status = zx::make_status(admin->Shutdown());
     if (status.is_error()) {
-      FX_LOGS(ERROR) << "Shut down failed: " << status.status_string();
+      std::cerr << "Shut down failed: " << status.status_string();
       return status;
     }
     outgoing_directory_.reset();
@@ -583,7 +598,7 @@ zx::status<TestFilesystem> TestFilesystem::FromInstance(
   // Mount the file system.
   char mount_path_c_str[] = "/tmp/fs_test.XXXXXX";
   if (mkdtemp(mount_path_c_str) == nullptr) {
-    FX_LOGS(ERROR) << "Unable to create mount point: " << errno;
+    std::cerr << "Unable to create mount point: " << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
   TestFilesystem filesystem(options, std::move(instance), std::string(mount_path_c_str) + "/");
@@ -615,7 +630,7 @@ TestFilesystem::~TestFilesystem() {
     if (mounted_) {
       auto status = Unmount();
       if (status.is_error()) {
-        FX_LOGS(WARNING) << "Failed to unmount: " << status.status_string();
+        std::cerr << "warning: failed to unmount: " << status.status_string();
       }
     }
     rmdir(mount_path_.c_str());

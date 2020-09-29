@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef RAMDEVICE_CLIENT_RAMDISK_H_
+#define RAMDEVICE_CLIENT_RAMDISK_H_
 
 #include <inttypes.h>
 #include <stdlib.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -52,6 +52,11 @@ zx_status_t ramdisk_create_from_vmo(zx_handle_t vmo, ramdisk_client_t** out);
 // Same as above except that it opens the ramdisk relative to the passed in 'dev_root_fd'.
 // Ownership of 'dev_root_fd' is not transferred.
 zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t vmo, ramdisk_client_t** out);
+// Same as previous two, but with block size. If block_size is zero, a default block size is chosen.
+zx_status_t ramdisk_create_from_vmo_with_block_size(zx_handle_t vmo, uint64_t block_size,
+                                                    ramdisk_client_t** out);
+zx_status_t ramdisk_create_at_from_vmo_with_block_size(int dev_root_fd, zx_handle_t vmo,
+                                                       uint64_t block_size, ramdisk_client_t** out);
 
 // Returns the file descriptor to the block device interface of the client.
 //
@@ -96,3 +101,5 @@ zx_status_t ramdisk_rebind(ramdisk_client_t* client);
 zx_status_t ramdisk_destroy(ramdisk_client_t* client);
 
 __END_CDECLS
+
+#endif  // RAMDEVICE_CLIENT_RAMDISK_H_

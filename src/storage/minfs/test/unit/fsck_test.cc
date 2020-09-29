@@ -228,21 +228,6 @@ TEST_F(ConsistencyCheckerFixtureVerbose, IndirectBlocksShared) {
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
 }
 
-TEST_F(ConsistencyCheckerFixtureVerbose, PurgedFileWithBadMagic) {
-  std::unique_ptr<Bcache> bcache;
-  destroy_fs(&bcache);
-
-  Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
-
-  Inode inodes[kMinfsInodesPerBlock];
-  EXPECT_OK(bcache->Readblk(sb.ino_block, &inodes));
-  inodes[31].magic = kMinfsMagicFile;
-  EXPECT_OK(bcache->Writeblk(sb.ino_block, inodes));
-
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache));
-}
-
 void ConsistencyCheckerFixtureVerbose::MarkDirectoryEntryMissing(size_t offset,
                                                                  std::unique_ptr<Bcache>* bcache) {
   blk_t root_dir_block;

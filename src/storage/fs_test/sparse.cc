@@ -100,6 +100,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystemsWithCustomDisk() {
     options.device_block_count = 1LLU << 24;
     options.device_block_size = 1LLU << 9;
     options.fvm_slice_size = 1LLU << 23;
+    options.zero_fill = true;
     filesystems.push_back(options);
   }
   return filesystems;

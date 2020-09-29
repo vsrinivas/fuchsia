@@ -71,6 +71,15 @@ TEST_P(BasicTest, UncleanClose) {
   ASSERT_EQ(unlink(GetPath("foobar").c_str()), 0);
 }
 
+TEST_P(BasicTest, GrowingVolumeWithFileCount) {
+  // Minfs will start with 1 slice worth of inodes.  Write enough files to cause that to grow and
+  // make sure fsck (which runs automatically at the end as part of the test fixture) passes.
+  for (unsigned i = 0; i < fs().options().fvm_slice_size / minfs::kMinfsInodeSize + 1; ++i) {
+    fbl::unique_fd fd(open(GetPath(std::to_string(i)).c_str(), O_CREAT, 0666));
+    EXPECT_TRUE(fd);
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 

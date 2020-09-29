@@ -378,6 +378,42 @@ TEST(RamdiskTests, RamdiskTestVmo) {
   EXPECT_GE(ramdisk_destroy(ramdisk), 0, "Could not unlink ramdisk device");
 }
 
+TEST(RamdiskTests, RamdiskTestVmoWithBlockSize) {
+  constexpr int kBlockSize = 512;
+  constexpr int kBlockCount = 256;
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(kBlockCount * kBlockSize, 0, &vmo), ZX_OK);
+
+  ramdisk_client_t* ramdisk = nullptr;
+  ASSERT_EQ(ramdisk_create_from_vmo_with_block_size(vmo.release(), kBlockSize, &ramdisk), ZX_OK);
+  int block_fd = ramdisk_get_block_fd(ramdisk);
+
+  fuchsia_hardware_block_BlockInfo info;
+  fdio_cpp::UnownedFdioCaller ramdisk_connection(block_fd);
+  zx_status_t status;
+  ASSERT_EQ(
+      fuchsia_hardware_block_BlockGetInfo(ramdisk_connection.borrow_channel(), &status, &info),
+      ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(info.block_count, kBlockCount);
+  ASSERT_EQ(info.block_size, kBlockSize);
+
+  uint8_t buf[kBlockSize * 2];
+  uint8_t out[kBlockSize * 2];
+  memset(buf, 'a', sizeof(buf));
+  memset(out, 0, sizeof(out));
+
+  EXPECT_EQ(write(block_fd, buf, sizeof(buf)), (ssize_t)sizeof(buf));
+  EXPECT_EQ(write(block_fd, buf, sizeof(buf) / 2), (ssize_t)(sizeof(buf) / 2));
+
+  // Seek to the start of the device and read the contents
+  EXPECT_EQ(lseek(block_fd, 0, SEEK_SET), 0);
+  EXPECT_EQ(read(block_fd, out, sizeof(out)), (ssize_t)sizeof(out));
+  EXPECT_EQ(memcmp(out, buf, sizeof(out)), 0);
+
+  EXPECT_GE(ramdisk_destroy(ramdisk), 0, "Could not unlink ramdisk device");
+}
+
 // This test creates a ramdisk, verifies it is visible in the filesystem
 // (where we expect it to be!) and verifies that it is removed when we
 // "unplug" the device.

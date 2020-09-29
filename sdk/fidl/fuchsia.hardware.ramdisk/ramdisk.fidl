@@ -71,4 +71,7 @@ protocol RamdiskController {
     /// Initializes a new Ramdisk instance from a VMO. Uses a block size of `PAGE_SIZE`,
     /// and derives the block count from the size of the VMO.
     CreateFromVmo(zx.handle:VMO vmo) -> (zx.status s, string:MAX_NAME_LENGTH? name);
+
+    // Same as previous, but with the given block size.
+    CreateFromVmoWithBlockSize(zx.handle:VMO vmo, uint64 block_size) -> (zx.status s, string:MAX_NAME_LENGTH? name);
 };

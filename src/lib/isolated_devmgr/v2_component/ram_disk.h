@@ -6,6 +6,7 @@
 #define SRC_LIB_ISOLATED_DEVMGR_V2_COMPONENT_RAM_DISK_H_
 
 #include <lib/zx/status.h>
+#include <lib/zx/vmo.h>
 
 #include <string>
 
@@ -19,6 +20,9 @@ class RamDisk {
  public:
   // Creates a ram-disk with |block_count| blocks of |block_size| bytes.
   static zx::status<RamDisk> Create(int block_size, int block_count);
+
+  // Creates a ram-disk with the given VMO.  If block_size is zero, a default block size is used.
+  static zx::status<RamDisk> CreateWithVmo(zx::vmo vmo, uint64_t block_size = 0);
 
   RamDisk(RamDisk&& other) : client_(other.client_) { other.client_ = nullptr; }
   RamDisk& operator=(RamDisk&& other) {

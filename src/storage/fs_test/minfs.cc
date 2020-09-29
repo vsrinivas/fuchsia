@@ -29,6 +29,7 @@
 
 #include "src/storage/fs_test/fs_test_fixture.h"
 #include "src/storage/minfs/format.h"
+#include "src/storage/minfs/transaction_limits.h"
 
 namespace fs_test {
 namespace {
@@ -104,7 +105,8 @@ void FillPartition(const TestFilesystem& fs, int fd, uint32_t max_remaining_bloc
 // Tests using MinfsFvmTest will only run with FVM.
 class MinfsFvmTest : public BaseFilesystemTest {
  public:
-  MinfsFvmTest() : BaseFilesystemTest(TestFilesystemOptions::DefaultMinfs()) {}
+  MinfsFvmTest(const TestFilesystemOptions& options = TestFilesystemOptions::DefaultMinfs())
+      : BaseFilesystemTest(options) {}
 
  protected:
   // A simple structure used to validate the results of QueryInfo.
@@ -152,6 +154,17 @@ class MinfsFvmTest : public BaseFilesystemTest {
   }
 };
 
+class MinfsFvmTestWith8MiBSliceSize : public MinfsFvmTest {
+ public:
+  static TestFilesystemOptions GetOptions() {
+    auto options = TestFilesystemOptions::DefaultMinfs();
+    options.fvm_slice_size = 8'388'608;
+    return options;
+  }
+
+  MinfsFvmTestWith8MiBSliceSize() : MinfsFvmTest(GetOptions()) {}
+};
+
 // Tests using MinfsWithoutFvmTest will only run without FVM.
 class MinfsWithoutFvmTest : public BaseFilesystemTest {
  public:
@@ -183,7 +196,12 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
 TEST_F(MinfsFvmTest, QueryInfo) {
   const uint64_t device_size = fs().options().device_block_size * fs().options().device_block_count;
   const uint64_t total_slices = fvm::UsableSlicesCount(device_size, fs().options().fvm_slice_size);
-  const size_t free_slices = total_slices - minfs::kMinfsMinimumSlices;
+  // kMinfsMinimumSlices assumes a slice size of at least 1 MiB, so adjust for that here.
+  const size_t default_journal_bytes =
+      minfs::TransactionLimits::kDefaultJournalBlocks * minfs::kMinfsBlockSize;
+  const size_t free_slices =
+      total_slices - minfs::kMinfsMinimumSlices + (default_journal_bytes + 1'048'575) / 1'048'576 -
+      (default_journal_bytes + fs().options().fvm_slice_size - 1) / fs().options().fvm_slice_size;
 
   ExpectedQueryInfo expected_info = {};
   expected_info.total_bytes = fs().options().fvm_slice_size;
@@ -313,8 +331,9 @@ void FillDirectory(const TestFilesystem& fs, int dir_fd, uint32_t max_blocks) {
   }
 }
 
-// Test various operations when the Minfs partition is near capacity.
-TEST_F(MinfsFvmTest, FullOperations) {
+// Test various operations when the Minfs partition is near capacity.  This test is sensitive to the
+// FVM slice size and was designed with a 8 MiB slice size in mind.
+TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   // Define file names we will use upfront.
   const char* big_path = "big_file";
   const char* med_path = "med_file";

@@ -370,7 +370,19 @@ zx_status_t ramdisk_create_from_vmo(zx_handle_t raw_vmo, ramdisk_client** out) {
 }
 
 __EXPORT
-zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t raw_vmo, ramdisk_client** out) {
+zx_status_t ramdisk_create_from_vmo_with_block_size(zx_handle_t raw_vmo, uint64_t block_size,
+                                                    ramdisk_client** out) {
+  return ramdisk_create_at_from_vmo_with_block_size(/*dev_root_fd=*/-1, raw_vmo, block_size, out);
+}
+
+__EXPORT
+zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t vmo, ramdisk_client** out) {
+  return ramdisk_create_at_from_vmo_with_block_size(dev_root_fd, vmo, /*block_size=*/0, out);
+}
+
+__EXPORT
+zx_status_t ramdisk_create_at_from_vmo_with_block_size(int dev_root_fd, zx_handle_t raw_vmo,
+                                                       uint64_t block_size, ramdisk_client** out) {
   zx::vmo vmo(raw_vmo);
   zx::channel ramctl;
   zx_status_t status = open_ramctl(dev_root_fd, &ramctl);
@@ -380,8 +392,14 @@ zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t raw_vmo, ram
 
   char name[fuchsia_hardware_ramdisk_MAX_NAME_LENGTH + 1];
   size_t name_len = 0;
-  zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmo(
-      ramctl.get(), vmo.release(), &status, name, sizeof(name) - 1, &name_len);
+  zx_status_t io_status;
+  if (block_size != 0) {
+    io_status = fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmoWithBlockSize(
+        ramctl.get(), vmo.release(), block_size, &status, name, sizeof(name) - 1, &name_len);
+  } else {
+    io_status = fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmo(
+        ramctl.get(), vmo.release(), &status, name, sizeof(name) - 1, &name_len);
+  }
   if (io_status != ZX_OK) {
     return io_status;
   } else if (status != ZX_OK) {

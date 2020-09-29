@@ -4,7 +4,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -12,6 +11,7 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <iostream>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
@@ -65,7 +65,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
   const char* data = data_a;
   for (;;) {
     if (sz >= max_cap) {
-      FX_LOGS(INFO) << "Approaching physical memory capacity: " << sz << " bytes";
+      std::cerr << "Approaching physical memory capacity: " << sz << " bytes";
       r = 0;
       break;
     }
@@ -73,17 +73,17 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
     const int offset = sz % sizeof(data_a);
     const int len = sizeof(data_a) - offset;
     if ((r = write(fd.get(), data + offset, len)) < 0) {
-      FX_LOGS(INFO) << "bigfile received error: " << strerror(errno);
+      std::cerr << "bigfile received error: " << strerror(errno);
       if ((errno == EFBIG) || (errno == ENOSPC)) {
         // Either the file should be too big (EFBIG) or the file should
         // consume the whole volume (ENOSPC).
-        FX_LOGS(INFO) << "(This was an expected error)";
+        std::cerr << "(This was an expected error)";
         r = 0;
       }
       break;
     }
     if ((sz + r) % kPrintSize < (sz % kPrintSize)) {
-      FX_LOGS(INFO) << "wrote " << (sz + r) / kMb << " MB";
+      std::cerr << "wrote " << (sz + r) / kMb << " MB";
     }
     sz += r;
     if (r == len) {
@@ -94,7 +94,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
     }
   }
   ASSERT_EQ(r, 0) << "Saw an unexpected error from write";
-  FX_LOGS(INFO) << "wrote " << sz << " bytes";
+  std::cerr << "wrote " << sz << " bytes";
 
   struct stat buf;
   ASSERT_EQ(fstat(fd.get(), &buf), 0);
@@ -154,7 +154,7 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
   const char* data = data_a;
   for (;;) {
     if (*sz >= max_cap) {
-      FX_LOGS(INFO) << "Approaching physical memory capacity: " << *sz << " bytes";
+      std::cerr << "Approaching physical memory capacity: " << *sz << " bytes";
       r = 0;
       break;
     }
@@ -162,15 +162,15 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
     const int offset = *sz % sizeof(data_a);
     const int len = sizeof(data_a) - offset;
     if ((r = write(fd, data + offset, len)) <= 0) {
-      FX_LOGS(INFO) << "bigfile received error: " << strerror(errno);
+      std::cerr << "bigfile received error: " << strerror(errno);
       // Either the file should be too big (EFBIG) or the file should
       // consume the whole volume (ENOSPC).
       ASSERT_TRUE(errno == EFBIG || errno == ENOSPC);
-      FX_LOGS(INFO) << "(This was an expected error)";
+      std::cerr << "(This was an expected error)";
       break;
     }
     if ((*sz + r) % kPrintSize < (*sz % kPrintSize)) {
-      FX_LOGS(INFO) << "wrote " << (*sz + r) / kMb << " MB";
+      std::cerr << "wrote " << (*sz + r) / kMb << " MB";
     }
     *sz += r;
     if (r == len) {
@@ -181,8 +181,8 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
       ASSERT_LT(r, len);
     }
   }
-  FX_LOGS(INFO) << "wrote " << sz_a << " bytes (to A)";
-  FX_LOGS(INFO) << "wrote " << sz_b << " bytes (to B)";
+  std::cerr << "wrote " << sz_a << " bytes (to A)";
+  std::cerr << "wrote " << sz_b << " bytes (to B)";
 
   struct stat buf;
   ASSERT_EQ(fstat(fda.get(), &buf), 0);

@@ -27,7 +27,6 @@ static_library("fs_test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
     "//src/storage/fuchsia-fatfs:fatfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
@@ -666,7 +665,6 @@ test("max_file_tests") {
   sources = [ "max_file.cc" ]
   deps = [
     ":fs_test",
-    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]

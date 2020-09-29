@@ -44,6 +44,7 @@ test("minfs-unit") {
     "unit/transaction_limits_test.cc",
     "unit/transaction_test.cc",
     "unit/truncate_test.cc",
+    "unit/unlink_test.cc",
     "unit/vnode_mapper_test.cc",
   ]
   deps = [

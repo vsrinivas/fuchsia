@@ -415,7 +415,7 @@ zx_status_t VPartitionManager::Load() {
     device_count++;
   }
 
-  zxlogf(INFO, "Loaded %lu partitions", device_count);
+  zxlogf(INFO, "Loaded %lu partitions, slice size=%zu", device_count, format_info_.slice_size());
 
   return ZX_OK;
 }

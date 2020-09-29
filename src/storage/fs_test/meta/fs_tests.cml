@@ -12,10 +12,7 @@
     use: [
         { runner: "gtest_runner" },
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
+            protocol: [ "/svc/fuchsia.process.Launcher" ],
         },
         {
             protocol: "/svc/fuchsia.sys2.Realm",

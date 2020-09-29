@@ -665,44 +665,19 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
 }
 
 zx_status_t MinfsChecker::CheckForUnusedInodes() const {
-  unsigned missing = 0, bad_magic = 0;
-  Inode inode;
-  // It can slow things down considerably to read and check every unused inode, so only check 1 to 2
-  // blocks worth beyond the maximum.
-  const size_t check_magic_up_to =
-      fbl::round_up(max_inode_ + kMinfsInodesPerBlock, kMinfsInodesPerBlock);
+  unsigned missing = 0;
   for (unsigned n = 0; n < fs_->Info().inode_count; n++) {
     if (fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(n)) {
       if (!checked_inodes_.Get(n, n + 1)) {
         missing++;
       }
-    } else if (n < check_magic_up_to) {
-      zx_status_t status = GetInode(&inode, n, /*check_magic=*/false);
-      if (status != ZX_OK) {
-        FS_TRACE_ERROR("check: ino#%u: not readable: %d\n", n, status);
-        return status;
-      }
-      // Format creates inodes with magic == 0.
-      if (inode.magic != kMinfsMagicPurged && inode.magic != 0) {
-        bad_magic++;
-      }
     }
   }
   // Minfs behaviour was changed in revision 1 so that purged inodes have their magic field changed
   // to kMinfsMagicPurged. Prior to this, the inodes were left intact.
-  if (missing > 0 || (bad_magic > 0 && fs_->Info().oldest_revision >= 1)) {
-    if (bad_magic > 0) {
-      FS_TRACE_ERROR("check: %u free inode%s with bad magic values\n", bad_magic,
-                     bad_magic > 1 ? "s" : "");
-    }
-    if (missing > 0) {
-      FS_TRACE_ERROR("check: %u allocated inode%s not in use\n", missing, missing > 1 ? "s" : "");
-    }
+  if (missing > 0) {
+    FS_TRACE_ERROR("check: %u allocated inode%s not in use\n", missing, missing > 1 ? "s" : "");
     return ZX_ERR_BAD_STATE;
-  }
-  if (bad_magic > 0) {
-    FS_TRACE_WARN("check: %u free inode%s with bad magic values\n", bad_magic,
-                  bad_magic > 1 ? "s" : "");
   }
   return ZX_OK;
 }

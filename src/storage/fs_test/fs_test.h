@@ -49,6 +49,10 @@ struct TestFilesystemOptions {
   uint64_t device_block_count = 0;
   uint64_t fvm_slice_size = 0;
   const Filesystem* filesystem = nullptr;
+  // By default the ram-disk we create is filled with a non-zero value (so that we don't
+  // inadvertently depend on it), but that won't work for very large ram-disks (they will trigger
+  // OOMs), in which case they can be zero filled.
+  bool zero_fill = false;
 };
 
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
