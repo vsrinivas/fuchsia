@@ -10,7 +10,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-// All amlogic-video InternalBuffer(s) are phyiscally contiguous.  All are allocated via sysmem in
+// Helper class to allocate a physically contiguous buffer. Allocated via sysmem in
 // fuchsia::sysmem::HeapType::SYSTEM_RAM or fuchsia::sysmem::HeapType::AMLOGIC_SECURE memory,
 // depending on whether is_secure.
 class InternalBuffer {
@@ -57,6 +57,8 @@ class InternalBuffer {
   zx_paddr_t phys_base();
 
   size_t size();
+
+  const zx::vmo& vmo();
 
   // If is_secure, ignored.  If !is_secure, flushes cache, or panics if the flush doesn't work.
   //

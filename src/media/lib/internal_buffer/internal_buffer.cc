@@ -105,6 +105,11 @@ size_t InternalBuffer::size() {
   return size_;
 }
 
+const zx::vmo& InternalBuffer::vmo() {
+  ZX_DEBUG_ASSERT(vmo_);
+  return vmo_;
+}
+
 void InternalBuffer::CacheFlush(size_t offset, size_t length) {
   CacheFlushPossibleInvalidate(offset, length, false);
 }

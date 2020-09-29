@@ -37,6 +37,12 @@ class TestAmlogicVideo {
     ASSERT_TRUE(internal_buffer2.is_ok());
     EXPECT_EQ(fbl::round_up(internal_buffer2.value().phys_base(), kSecondAlignment),
               internal_buffer2.value().phys_base());
+
+    // While we are here testing InternalBuffer's, verify the duplicate API
+    zx::vmo dup;
+    ASSERT_EQ(ZX_OK, internal_buffer2.value().vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+    ASSERT_TRUE(dup.is_valid());
+
     video.reset();
   }
 
