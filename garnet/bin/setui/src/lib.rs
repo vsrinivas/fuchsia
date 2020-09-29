@@ -70,6 +70,7 @@ mod internal;
 mod intl;
 mod light;
 mod night_mode;
+mod policy;
 mod power;
 mod privacy;
 mod setup;
@@ -322,6 +323,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             }
             _ => (HashSet::new(), HashSet::new(), HashSet::new()),
         };
+
+        // TODO(fxb/59747): use this hub to communicate with policy components.
+        let _policy_messenger_factory = internal::policy::message::create_hub();
 
         let event_messenger_factory = internal::event::message::create_hub();
         let service_context =
