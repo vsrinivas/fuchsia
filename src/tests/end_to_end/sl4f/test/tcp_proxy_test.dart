@@ -8,9 +8,11 @@ import 'package:test/test.dart';
 
 void main() {
   sl4f.Sl4f sl4fDriver;
+  sl4f.TcpProxyController tcpProxyController;
   setUp(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
+    tcpProxyController = sl4f.TcpProxyController(sl4fDriver);
   });
 
   tearDown(() async {
@@ -21,28 +23,27 @@ void main() {
   group('tcp proxy', () {
     test('sl4f reachable through proxy', () async {
       // sl4f itself is an http server, so use it to test our proxy.
-      final proxyPort = await sl4fDriver.request('proxy_facade.OpenProxy', 80);
+      final proxyPort = await tcpProxyController.openProxy(80);
       await http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/'));
       // access through the proxy should fail once it is closed.
-      await sl4fDriver.request('proxy_facade.DropProxy', 80);
+      await tcpProxyController.dropProxy(80);
       expect(http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/')),
           throwsException);
     });
 
     test('proxy supports multiple clients', () async {
-      final proxyPort = await sl4fDriver.request('proxy_facade.OpenProxy', 80);
+      final proxyPort = await tcpProxyController.openProxy(80);
       await http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/'));
       // Attempting to create a proxy to the same port should return the existing port.
-      final dupProxyPort =
-          await sl4fDriver.request('proxy_facade.OpenProxy', 80);
+      final dupProxyPort = await tcpProxyController.openProxy(80);
       expect(dupProxyPort, equals(proxyPort));
       // proxy should remain open after first call to DropProxy because of the two calls to
       // OpenProxy. This allows two parts of a test to use the same proxy without one cancelling
       // it while the other still needs it.
-      await sl4fDriver.request('proxy_facade.DropProxy', 80);
+      await tcpProxyController.dropProxy(80);
       await http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/'));
       // second call closes the proxy
-      await sl4fDriver.request('proxy_facade.DropProxy', 80);
+      await tcpProxyController.dropProxy(80);
       expect(http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/')),
           throwsException);
     });

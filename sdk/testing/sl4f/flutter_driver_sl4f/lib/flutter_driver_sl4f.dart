@@ -34,10 +34,12 @@ import 'package:sl4f/sl4f.dart';
 class FlutterDriverConnector {
   final _logger = Logger('fuchsia_flutter_driver_connector');
   final Sl4f _sl4f;
+  final TcpProxyController _proxyController;
 
   frdp.FuchsiaRemoteConnection _connection;
 
-  FlutterDriverConnector(this._sl4f);
+  FlutterDriverConnector(this._sl4f)
+      : _proxyController = TcpProxyController(_sl4f);
 
   /// Initializes the connection to fuchsia.
   Future<void> initialize() async {
@@ -98,29 +100,22 @@ class FlutterDriverConnector {
     return isolates.first;
   }
 
-  /// Sets up port forwarding using our SSH facilities.
+  /// Sets up port forwarding using our TCP proxy.
   ///
   /// Only [remotePort] is used, the other parameters are not needed when using
   /// [Ssh]. Will throw [PortForwardException] on failure.
   Future<frdp.PortForwarder> _sl4fPortForwardingFunction(
       String addr, int remotePort,
       [String iface, String cfgFile]) async {
-    final localPort = await _sl4f.ssh.forwardPort(remotePort: remotePort);
-    return _Sl4fPortForwarder(localPort, remotePort, _sl4f.ssh);
+    final openPort = await _proxyController.openProxy(remotePort);
+    return _Sl4fPortForwarder(openPort, addr, remotePort, _proxyController);
   }
 }
 
 /// A wrapper around our Ssh class for Flutter's FuchsiaRemoteConnection class.
 class _Sl4fCommandRunner extends frdp.SshCommandRunner {
   final Ssh _ssh;
-  _Sl4fCommandRunner(this._ssh) : super(address: _fixAddress(_ssh.target));
-
-  // Uri.parseIpv6Address doesn't support RFC6874 addresses so they need to be
-  // cleaned to avoid failures. More specifically, it does not parse zone-id.
-  // See: https://howdoesinternetwork.com/2013/ipv6-zone-id
-  static String _fixAddress(String address) {
-    return address.split('%').first;
-  }
+  _Sl4fCommandRunner(this._ssh) : super(address: _ssh.target);
 
   @override
   Future<List<String>> run(String cmd) async {
@@ -139,13 +134,16 @@ class _Sl4fPortForwarder extends frdp.PortForwarder {
   final int port;
 
   @override
-  final int remotePort;
-
-  final Ssh _ssh;
-
-  _Sl4fPortForwarder(this.port, this.remotePort, this._ssh);
+  final String openPortAddress;
 
   @override
-  Future<void> stop() =>
-      _ssh.cancelPortForward(port: port, remotePort: remotePort);
+  final int remotePort;
+
+  final TcpProxyController _proxyController;
+
+  _Sl4fPortForwarder(
+      this.port, this.openPortAddress, this.remotePort, this._proxyController);
+
+  @override
+  Future<void> stop() async => await _proxyController.dropProxy(remotePort);
 }

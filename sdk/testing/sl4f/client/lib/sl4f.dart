@@ -19,6 +19,7 @@ export 'src/inspect.dart';
 export 'src/modular.dart';
 export 'src/performance.dart';
 export 'src/power.dart';
+export 'src/proxy.dart';
 export 'src/repository_manager.dart';
 export 'src/scenic.dart';
 export 'src/setui.dart';

@@ -28,6 +28,7 @@ dart_library("client") {
     "src/modular.dart",
     "src/performance.dart",
     "src/power.dart",
+    "src/proxy.dart",
     "src/repository_manager.dart",
     "src/scenic.dart",
     "src/setui.dart",
