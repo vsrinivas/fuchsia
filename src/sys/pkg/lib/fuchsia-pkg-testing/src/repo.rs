@@ -33,7 +33,7 @@ use {
 };
 
 /// A builder to simplify construction of TUF repositories containing Fuchsia packages.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RepositoryBuilder<'a> {
     packages: Vec<MaybeOwned<'a, Package>>,
     repodir: Option<PathBuf>,
@@ -42,7 +42,7 @@ pub struct RepositoryBuilder<'a> {
 impl<'a> RepositoryBuilder<'a> {
     /// Creates a new `RepositoryBuilder`.
     pub fn new() -> Self {
-        Self { packages: vec![], repodir: None }
+        Self::default()
     }
 
     /// Creates a new `RepositoryBuilder` from a template TUF repository dir.
@@ -72,7 +72,7 @@ impl<'a> RepositoryBuilder<'a> {
         if let Some(templatedir) = self.repodir {
             for entry in WalkDir::new(&templatedir) {
                 let entry = entry?;
-                if entry.path() == &templatedir {
+                if entry.path() == templatedir {
                     continue;
                 }
                 let relative_entry_path = entry.path().strip_prefix(&templatedir)?;

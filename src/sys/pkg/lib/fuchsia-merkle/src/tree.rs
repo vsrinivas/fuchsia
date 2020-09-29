@@ -45,7 +45,7 @@ impl MerkleTree {
     /// - The length of every hash level is the length of the prior hash level divided by
     ///   `HASHES_PER_BLOCK`, rounded up to the nearest integer.
     pub(crate) fn from_levels(levels: Vec<Vec<Hash>>) -> MerkleTree {
-        MerkleTree { levels: levels }
+        MerkleTree { levels }
     }
 
     /// The root hash of the merkle tree.

@@ -125,7 +125,7 @@ pub(crate) mod tests {
 
     pub(crate) fn example_archive() -> Vec<u8> {
         let mut b: Vec<u8> = vec![0; 16384];
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let header = vec![
             /* magic */
             0xc8, 0xbf, 0x0b, 0x48, 0xad, 0xab, 0xc5, 0x11,

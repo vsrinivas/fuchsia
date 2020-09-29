@@ -104,7 +104,7 @@ pub enum ParsePackageError {
 /// and returns a list of parsed PkgUrls.
 pub(crate) fn parse_packages(contents: &str) -> Result<Vec<PkgUrl>, ParsePackageError> {
     let mut out: Vec<PkgUrl> = vec![];
-    for line in contents.split("\n") {
+    for line in contents.split('\n') {
         if line == "" {
             continue;
         }
@@ -116,7 +116,7 @@ pub(crate) fn parse_packages(contents: &str) -> Result<Vec<PkgUrl>, ParsePackage
             .ok_or_else(err)?
             .parse()
             .map_err(|e| ParsePackageError::InvalidHash(line.to_owned(), e))?;
-        if let Some(_) = parts.next() {
+        if parts.next().is_some() {
             return Err(err());
         }
         let url = PkgUrl::new_package("fuchsia.com".to_string(), format!("/{}", path), Some(hash));

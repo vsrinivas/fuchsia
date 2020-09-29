@@ -35,7 +35,7 @@ pub(crate) async fn verify_board(
 
     let contents = io_util::file::read_to_string(&file).await?;
 
-    if expected_contents != &contents {
+    if expected_contents != contents {
         return Err(VerifyBoardError::VerifyContents {
             expected: expected_contents.to_string(),
             found: contents,

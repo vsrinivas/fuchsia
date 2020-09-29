@@ -80,7 +80,7 @@ impl MetaContents {
     /// ```
     pub fn serialize(&self, writer: &mut impl io::Write) -> io::Result<()> {
         for (path, hash) in self.contents.iter() {
-            write!(writer, "{}={}\n", path, hash)?;
+            writeln!(writer, "{}={}", path, hash)?;
         }
         Ok(())
     }

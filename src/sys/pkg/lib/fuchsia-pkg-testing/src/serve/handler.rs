@@ -410,7 +410,7 @@ impl UriPathHandler for OneByteShortThenError {
     fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         async {
             let mut bytes = body_to_bytes(response.into_body()).await;
-            if let None = bytes.pop() {
+            if bytes.pop().is_none() {
                 panic!("can't short 0 bytes");
             }
             Response::builder()
@@ -434,7 +434,7 @@ impl UriPathHandler for OneByteShortThenDisconnect {
     fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         async {
             let mut bytes = body_to_bytes(response.into_body()).await;
-            if let None = bytes.pop() {
+            if bytes.pop().is_none() {
                 panic!("can't short 0 bytes");
             }
             Response::builder()

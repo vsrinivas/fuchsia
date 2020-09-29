@@ -82,7 +82,7 @@ impl<'de> Visitor<'de> for VersionVisitor {
     where
         E: de::Error,
     {
-        Version::from_str(v).map_err(|e| de::Error::custom(e))
+        Version::from_str(v).map_err(de::Error::custom)
     }
 }
 

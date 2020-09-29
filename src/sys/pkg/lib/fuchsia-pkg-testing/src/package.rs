@@ -120,7 +120,7 @@ impl Package {
     pub fn list_blobs(&self) -> Result<BTreeSet<Hash>, Error> {
         let meta_contents = self.meta_contents()?;
 
-        let mut res = btreeset![self.meta_far_merkle.clone()];
+        let mut res = btreeset![self.meta_far_merkle];
         res.extend(meta_contents.contents().iter().map(|(_, merkle)| merkle));
         Ok(res)
     }
@@ -165,7 +165,7 @@ impl Package {
         ) -> Result<(), anyhow::Error> {
             let mut bytes = vec![];
             source.read_to_end(&mut bytes)?;
-            let mut file = match dir.write_file(merkle.to_string(), 0777) {
+            let mut file = match dir.write_file(merkle.to_string(), 0o777) {
                 Ok(file) => file,
                 Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
                     // blobfs already aware of this blob (e.g. blob is written or write is in-flight)

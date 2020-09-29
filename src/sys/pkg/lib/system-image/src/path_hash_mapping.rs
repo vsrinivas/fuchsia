@@ -77,7 +77,7 @@ impl<T> PathHashMapping<T> {
     /// Write a `static_packages` file.
     pub fn serialize(&self, mut writer: impl io::Write) -> Result<(), PathHashMappingError> {
         for entry in self.contents.iter() {
-            write!(&mut writer, "{}={}\n", entry.0, entry.1)?;
+            writeln!(&mut writer, "{}={}", entry.0, entry.1)?;
         }
         Ok(())
     }

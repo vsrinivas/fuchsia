@@ -33,10 +33,16 @@ pub struct MerkleTreeBuilder {
     levels: Vec<Vec<Hash>>,
 }
 
+impl Default for MerkleTreeBuilder {
+    fn default() -> Self {
+        Self { levels: vec![Vec::new()], block: Vec::with_capacity(BLOCK_SIZE) }
+    }
+}
+
 impl MerkleTreeBuilder {
     /// Creates a new, empty `MerkleTreeBuilder`.
     pub fn new() -> Self {
-        MerkleTreeBuilder { levels: vec![Vec::new()], block: Vec::with_capacity(BLOCK_SIZE) }
+        Self::default()
     }
 
     /// Append a buffer of bytes to the merkle tree.

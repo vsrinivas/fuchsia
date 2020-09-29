@@ -60,8 +60,8 @@ prop_compose! {
          inner in Just(inner),
          vec in Just(vec))-> String
     {
-        let mut vec = vec.clone();
-        vec[index] = inner.to_string();
+        let mut vec = vec;
+        vec[index] = inner;
         vec.join("/")
     }
 }

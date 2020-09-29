@@ -11,6 +11,7 @@ use {
 };
 
 /// Builds a system_image package.
+#[derive(Default)]
 pub struct SystemImageBuilder<'a> {
     static_packages: Option<&'a [&'a Package]>,
     cache_packages: Option<&'a [&'a Package]>,
@@ -21,12 +22,7 @@ pub struct SystemImageBuilder<'a> {
 impl<'a> SystemImageBuilder<'a> {
     /// Returns an empty `SystemImageBuilder` configured with no static or cache package.
     pub fn new() -> Self {
-        Self {
-            static_packages: None,
-            cache_packages: None,
-            pkgfs_non_static_packages_allowlist: None,
-            pkgfs_disable_executability_restrictions: false,
-        }
+        Self::default()
     }
 
     /// Use the supplied static_packages with the system image. Call at most once.
@@ -65,7 +61,7 @@ impl<'a> SystemImageBuilder<'a> {
                 .map(|pkg| {
                     (
                         PackagePath::from_name_and_variant(pkg.name(), "0").unwrap(),
-                        pkg.meta_far_merkle_root().clone(),
+                        *pkg.meta_far_merkle_root(),
                     )
                 })
                 .collect()

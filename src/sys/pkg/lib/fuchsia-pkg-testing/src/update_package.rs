@@ -13,6 +13,7 @@ pub struct TestUpdatePackage {
 
 impl TestUpdatePackage {
     /// Creates a new TestUpdatePackage with nothing in it.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let temp_dir = tempfile::tempdir().expect("/tmp to exist");
         let update_pkg_proxy = io_util::directory::open_in_namespace(

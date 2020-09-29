@@ -329,12 +329,12 @@ impl ServedRepository {
             response = handler.handle(uri_path, response).await
         }
 
-        return response;
+        response
     }
 }
 
 async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
-    let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
+    let request = Request::get(url.as_ref()).body(Body::empty()).map_err(Error::from)?;
     let client = fuchsia_hyper::new_client();
     let response = client.request(request).await?;
 

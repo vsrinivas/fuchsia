@@ -41,7 +41,7 @@ pub(crate) fn hash_block(block: &[u8], offset: usize) -> Hash {
     hasher.update(block);
     // Zero fill block up to BLOCK_SIZE. As a special case, if the first data block is completely
     // empty, it is not zero filled.
-    if block.len() != BLOCK_SIZE && !(block.len() == 0 && offset == 0) {
+    if block.len() != BLOCK_SIZE && !(block.is_empty() && offset == 0) {
         hasher.update(&vec![0; BLOCK_SIZE - block.len()]);
     }
 
