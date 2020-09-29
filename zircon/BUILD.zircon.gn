@@ -56,16 +56,25 @@ build_api_module("args") {
 # This describes all the binaries linked by the build.
 #
 # This enumerates each linked binary (executable, shared library, or
-# loadable/"plug-in" module).  This includes host tools, kernels, boot
-# loaders, drivers, as well as normal executables.  It does not yet include
-# any non-native binary formats.  This is meant to reach the entire
-# dependency graph of all binaries that the build would ever produce.  Not
-# every binary described is necessary actually produced by any given Ninja
-# run.  Either the $debug or the $dist file for any individual binary can
-# be passed to Ninja as a specific target argument to ensure it's built and
+# loadable/"plug-in" module) used by the build, or produced by the build.
+#
+# This includes host tools, kernels, boot loaders, drivers, as well as
+# normal executables. This also includes prebuilt toolchain runtime
+# libraries that end up in image files. It does not yet include any
+# non-native binary formats.
+#
+# For non-prebuilts, this is meant to reach the entire dependency graph
+# of all binaries that the build would ever produce.  Not every binary
+# described is necessary actually produced by any given Ninja run.  Either
+# the $debug or the $dist file for any individual binary can be passed to
+# Ninja as a specific target argument to ensure it's built and
 # up to date before making use of that binary.  Like all build_api_module()
 # targets, the top-level "binaries" target serves as a Ninja target to
 # request that every binary described be built.
+#
+# Note that in certain cases, the paths in `debug` and `dist` will
+# point out of the build tree, and thus cannot be used as Ninja targets.
+# This happens for prebuilts or binaries produced by the Zircon build.
 #
 # Type: list(scope)
 #
