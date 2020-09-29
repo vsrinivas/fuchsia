@@ -101,6 +101,22 @@ where
     res: Option<R>,
 }
 
+impl<F, I, E> Generator<F, I, Result<(), E>>
+where
+    F: Future<Output = Result<(), E>>,
+{
+    /// Transforms this stream of `GeneratorState<I, Result<(), E>>` into a stream of `Result<I, E>`.
+    pub fn into_try_stream(self) -> impl Stream<Item = Result<I, E>> {
+        self.filter_map(|state| {
+            future::ready(match state {
+                GeneratorState::Yielded(i) => Some(Ok(i)),
+                GeneratorState::Complete(Ok(())) => None,
+                GeneratorState::Complete(Err(e)) => Some(Err(e)),
+            })
+        })
+    }
+}
+
 impl<F, I, R> Generator<F, I, R>
 where
     F: Future<Output = R>,
@@ -304,6 +320,36 @@ mod tests {
 
             assert!(s.is_terminated());
         });
+    }
+
+    #[test]
+    fn into_try_stream_transposes_generator_states() {
+        let s = generate(|mut co| async move {
+            co.yield_(1u8).await;
+            co.yield_(2u8).await;
+
+            Result::<(), &'static str>::Err("oops")
+        })
+        .into_try_stream();
+
+        let res = block_on(s.collect::<Vec<Result<u8, &'static str>>>());
+
+        assert_eq!(res, vec![Ok(1), Ok(2), Err("oops")]);
+    }
+
+    #[test]
+    fn into_try_stream_eats_unit_success() {
+        let s = generate(|mut co| async move {
+            co.yield_(1u8).await;
+            co.yield_(2u8).await;
+
+            Result::<(), &'static str>::Ok(())
+        })
+        .into_try_stream();
+
+        let res = block_on(s.collect::<Vec<Result<u8, &'static str>>>());
+
+        assert_eq!(res, vec![Ok(1), Ok(2)]);
     }
 
     #[test]
