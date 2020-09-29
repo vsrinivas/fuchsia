@@ -14,7 +14,7 @@ use {
 #[derive(Debug, Eq, FromArgs, PartialEq)]
 /// Arguments for the package resolver.
 pub struct Args {
-    #[argh(option, default = "false")]
+    #[argh(option, default = "true")]
     /// if true, allow resolving packages using `fuchsia.pkg/LocalMirror`.
     pub allow_local_mirror: bool,
 
