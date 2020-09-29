@@ -34,12 +34,14 @@ rustc_library("test_utils_lib") {
   ]
 
   sources = [
+    "descriptor.rs",
     "echo_capability.rs",
     "echo_factory_capability.rs",
     "events.rs",
     "injectors.rs",
     "interposers.rs",
     "lib.rs",
+    "log.rs",
     "matcher.rs",
     "opaque_test.rs",
     "sequence.rs",

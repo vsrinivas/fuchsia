@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::{Event, EventDescriptor, EventStream, ExitStatus},
+    crate::{
+        descriptor::EventDescriptor,
+        events::{Event, EventStream, ExitStatus},
+    },
     anyhow::{format_err, Error},
     fidl_fuchsia_sys2 as fsys,
     regex::RegexSet,

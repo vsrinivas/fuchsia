@@ -6,21 +6,13 @@ use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::{connect_channel_to_service, connect_to_service},
     fuchsia_zircon as zx,
-    futures::{
-        future::{AbortHandle, Abortable, TryFutureExt},
-        lock::Mutex,
-        StreamExt,
-    },
-    std::{
-        convert::TryFrom,
-        sync::{atomic::AtomicBool, Arc},
-    },
+    futures::StreamExt,
+    std::{convert::TryFrom, sync::atomic::AtomicBool},
     thiserror::Error,
 };
-
 
 /// Returns the string name for the given `event_type`
 pub fn event_name(event_type: &fsys::EventType) -> String {
@@ -81,14 +73,6 @@ impl EventSource {
 
         subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
         Ok(EventStream::new(stream))
-    }
-
-    pub async fn record_events(
-        &self,
-        event_names: Vec<impl AsRef<str>>,
-    ) -> Result<EventLog, Error> {
-        let event_stream = self.subscribe(event_names).await?;
-        Ok(EventLog::new(event_stream))
     }
 
     pub async fn start_component_tree(&self) {
@@ -198,15 +182,6 @@ impl From<i32> for ExitStatus {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Debug)]
-pub struct EventDescriptor {
-    pub event_type: Option<fsys::EventType>,
-    pub capability_id: Option<String>,
-    pub target_moniker: Option<String>,
-    pub exit_status: Option<ExitStatus>,
-    pub event_is_ok: Option<bool>,
-}
-
 #[derive(Debug)]
 struct ComponentDescriptor {
     component_url: String,
@@ -220,123 +195,6 @@ impl TryFrom<fsys::ComponentDescriptor> for ComponentDescriptor {
         let component_url = descriptor.component_url.ok_or(format_err!("No component url"))?;
         let moniker = descriptor.moniker.ok_or(format_err!("No moniker"))?;
         Ok(ComponentDescriptor { component_url, moniker })
-    }
-}
-
-impl TryFrom<&fsys::Event> for EventDescriptor {
-    type Error = anyhow::Error;
-
-    fn try_from(event: &fsys::Event) -> Result<Self, Self::Error> {
-        // Construct the EventDescriptor from the Event
-        let event_type = Some(event.event_type.ok_or(format_err!("No event type"))?);
-        let target_moniker =
-            event.descriptor.as_ref().and_then(|descriptor| descriptor.moniker.clone());
-        let capability_id = match &event.event_result {
-            Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                fsys::CapabilityReadyPayload { path, .. },
-            ))) => path.clone(),
-            Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
-                fsys::CapabilityRequestedPayload { path, .. },
-            ))) => path.clone(),
-            Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(
-                fsys::CapabilityRoutedPayload { capability_id, .. },
-            ))) => capability_id.clone(),
-            Some(fsys::EventResult::Error(fsys::EventError {
-                error_payload:
-                    Some(fsys::EventErrorPayload::CapabilityReady(fsys::CapabilityReadyError {
-                        path,
-                        ..
-                    })),
-                ..
-            })) => path.clone(),
-            Some(fsys::EventResult::Error(fsys::EventError {
-                error_payload:
-                    Some(fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
-                        path,
-                        ..
-                    })),
-                ..
-            })) => path.clone(),
-            Some(fsys::EventResult::Error(fsys::EventError {
-                error_payload:
-                    Some(fsys::EventErrorPayload::CapabilityRouted(fsys::CapabilityRoutedError {
-                        capability_id,
-                        ..
-                    })),
-                ..
-            })) => capability_id.clone(),
-            _ => None,
-        };
-        let exit_status = match &event.event_result {
-            Some(fsys::EventResult::Payload(fsys::EventPayload::Stopped(
-                fsys::StoppedPayload { status, .. },
-            ))) => status.map(|val| val.into()),
-            _ => None,
-        };
-        let event_is_ok = match &event.event_result {
-            Some(fsys::EventResult::Payload(_)) => Some(true),
-            Some(fsys::EventResult::Error(_)) => Some(false),
-            _ => None,
-        };
-
-        Ok(EventDescriptor { event_type, target_moniker, capability_id, exit_status, event_is_ok })
-    }
-}
-
-/// Records events from an EventStream, allowing them to be
-/// flushed out into a vector at a later point in time.
-pub struct EventLog {
-    recorded_events: Arc<Mutex<Vec<EventDescriptor>>>,
-    abort_handle: AbortHandle,
-}
-
-impl EventLog {
-    fn new(mut event_stream: EventStream) -> Self {
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let recorded_events = Arc::new(Mutex::new(vec![]));
-        {
-            // Start an async task that records events from the event_stream
-            let recorded_events = recorded_events.clone();
-            fasync::Task::spawn(
-                Abortable::new(
-                    async move {
-                        loop {
-                            // Get the next event from the event_stream
-                            let event = event_stream
-                                .next()
-                                .await
-                                .expect("Failed to get next event from EventStreamSync");
-
-                            // Construct the EventDescriptor from the Event
-                            let recorded_event = EventDescriptor::try_from(&event)
-                                .expect("Failed to convert Event to EventDescriptor");
-
-                            // Insert the event into the list
-                            {
-                                let mut recorded_events = recorded_events.lock().await;
-                                recorded_events.push(recorded_event);
-                            }
-                        }
-                    },
-                    abort_registration,
-                )
-                .unwrap_or_else(|_| ()),
-            )
-            .detach();
-        }
-        Self { recorded_events, abort_handle }
-    }
-
-    pub async fn flush(&self) -> Vec<EventDescriptor> {
-        // Lock and flush out all events from the vector
-        let mut recorded_events = self.recorded_events.lock().await;
-        recorded_events.drain(..).collect()
-    }
-}
-
-impl Drop for EventLog {
-    fn drop(&mut self) {
-        self.abort_handle.abort();
     }
 }
 

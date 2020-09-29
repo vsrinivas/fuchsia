@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        events::{event_name, EventDescriptor, EventSource, EventStream},
+        descriptor::EventDescriptor,
+        events::{event_name, EventSource, EventStream},
         matcher::EventMatcher,
     },
     anyhow::{format_err, Error},
