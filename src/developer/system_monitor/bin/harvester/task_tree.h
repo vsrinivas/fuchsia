@@ -59,20 +59,20 @@ class TaskTree {
                                     zx_handle_t* child_handle);
 
   // Creates and stores handles to all threads belonging to |parent_process|.
-  zx_status_t GatherThreadsForProcess(zx_handle_t parent_process,
-                                      zx_koid_t parent_process_koid);
+  void GatherThreadsForProcess(zx_handle_t parent_process,
+                               zx_koid_t parent_process_koid);
 
   // Creates and stores handles to all processes belonging to |parent_job|.
-  zx_status_t GatherProcessesForJob(zx_handle_t parent_job,
-                                    zx_koid_t parent_job_koid);
+  void GatherProcessesForJob(zx_handle_t parent_job,
+                             zx_koid_t parent_job_koid);
 
   // Creates and stores handles to all processes and jobs belonging to
   // |parent_job|.
-  zx_status_t GatherProcessesAndJobsForJob(zx_handle_t parent_job,
-                                           zx_koid_t parent_job_koid);
+  void GatherProcessesAndJobsForJob(zx_handle_t parent_job,
+                                    zx_koid_t parent_job_koid);
 
   // Update the collection of known tasks (jobs/processes/threads).
-  zx_status_t GatherJobs();
+  void GatherJobs();
 };
 
 }  // namespace harvester
