@@ -32,10 +32,11 @@ happens twice; once before a system update and once after fetching the [update p
 The `pkgfs` garbage collector currently uses set differences to determine which
 packages are live packages. A package is considered live if any of the following
 is true:
-* a package is a base package in the static index
-* a package is in the process of being updated (by tracking the `meta.far` merkle
-root and any missing `BLOB`s until they’ve been fully resolved)
-* a package is the most recently resolved version of an ephemeral package according to its `meta` or `package` in the dynamic index.
+
+* A package is a base package in the static index.
+* A package is in the process of being updated (by tracking the `meta.far` merkle
+  root and any missing `BLOB`s until they’ve been fully resolved).
+* A package is the most recently resolved version of an ephemeral package according to its `meta` or `package` in the dynamic index.
 
 When garbage collection runs, it deletes every `BLOB` in `blobfs` that is not referenced
 by a live package.
