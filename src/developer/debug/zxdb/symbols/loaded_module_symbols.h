@@ -33,6 +33,7 @@ class LoadedModuleSymbols {
   ~LoadedModuleSymbols();
 
   // Returns the underlying ModuleSymbols object.
+  // MAY BE NULL if the symbols could not be loaded.
   const ModuleSymbols* module_symbols() const { return module_.get(); }
   ModuleSymbols* module_symbols() { return module_.get(); }
   fxl::RefPtr<ModuleSymbols> module_symbols_ref() const { return module_; }

@@ -260,9 +260,8 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& build_id, DebugSymbolFi
     mod.symbols = std::make_unique<LoadedModuleSymbols>(std::move(module_symbols), build_id, base,
                                                         mod.symbols->debug_address());
 
-    // If we can have multiple modules with the same build ID in the process
-    // then this logic will be wrong. I don't see how that happens as of today,
-    // though.
+    // If we can have multiple modules with the same build ID in the process then this logic will
+    // be wrong. I don't see how that happens as of today, though.
     DoRefreshTargetSymbols();
     notifications_->DidLoadModuleSymbols(mod.symbols.get());
     return;

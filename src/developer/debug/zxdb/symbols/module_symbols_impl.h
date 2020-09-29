@@ -71,11 +71,12 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   // The input binary must be successfully initialized already.
   //
-  // Normal callers will always want to create the index. The only time this is unnecessary is
-  // from certain tests that want to do it themselves (say to inject some stuff).
-  //
   // The build_dir, if not empty, will be used to override the compilation_dir of FileLine objects,
   // which is useful because in Fuchsia checkout, the compilation_dir will always be ".".
+  //
+  // If create_index is true, an index will be created for fast symbol lookup.
+  // Normal callers will always want to create the index, unless you don't need to query a symbol
+  // from its name, e.g., in some test scenarios or in symbolizer.
   explicit ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, const std::string& build_dir,
                              bool create_index = true);
   ~ModuleSymbolsImpl() override;

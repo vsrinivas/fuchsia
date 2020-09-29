@@ -622,8 +622,7 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
     process->OnModules(std::move(notify.modules), notify.stopped_thread_koids);
   } else {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received modules notification for an "
-                            "unexpected process %" PRIu64 ".",
+                            "Received modules notification for an unexpected process %" PRIu64 ".",
                             notify.process_koid);
   }
 }

@@ -114,10 +114,6 @@ class ProcessSymbols {
     std::string build_id;
     uint64_t base = 0;
 
-    // MAY BE NULL if the symbols could not be loaded.
-    //
-    // If this is ever extended to exist even if DWARF symbols can not be loaded (like we index ELF
-    // exports), be sure to update HaveSymbolsLoadedForModuleAt().
     std::unique_ptr<LoadedModuleSymbols> symbols;
   };
 

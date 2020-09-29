@@ -668,9 +668,8 @@ void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new
       session()->system().settings().GetBool(ClientSettings::System::kPauseOnAttach);
   if (autoattached_to_new_process && pause_on_attach) {
     out.Append(Syntax::kComment,
-               "\n  The process is currently in an initializing state. You can "
-               "set pending\n  breakpoints (symbols haven't been loaded yet) "
-               "and \"continue\".");
+               "\n  The process is currently in an initializing state. You can set pending\n"
+               "  breakpoints (symbols haven't been loaded yet) and \"continue\".");
   }
   Console::get()->Output(out);
 }
