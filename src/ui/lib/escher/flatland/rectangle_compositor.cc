@@ -145,7 +145,8 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   // and height are divided by 2 to pre-optimize the shift that happens in the
   // shader which realigns the NDC coordinates so that (0,0) is in the center
   // instead of in the top-left-hand corner.
-  vec3 bounds(output_image->width() * 0.5f, output_image->height() * 0.5f, rectangles.size());
+  vec3 bounds(static_cast<float>(output_image->width() * 0.5),
+              static_cast<float>(output_image->height() * 0.5), rectangles.size());
 
   // Start the render pass.
   cmd_buf->BeginRenderPass(render_pass);

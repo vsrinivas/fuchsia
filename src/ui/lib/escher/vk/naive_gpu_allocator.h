@@ -35,10 +35,10 @@ class NaiveGpuAllocator : public GpuAllocator {
                          GpuMemPtr* out_ptr) override;
 
   // |GpuAllocator|
-  uint32_t GetTotalBytesAllocated() const override;
+  size_t GetTotalBytesAllocated() const override;
 
   // |GpuAllocator|
-  uint32_t GetUnusedBytesAllocated() const override {
+  size_t GetUnusedBytesAllocated() const override {
     // Only the minimum needed memory size is allocated, though it's possible
     // the driver may round up the allocation size.
     return 0u;

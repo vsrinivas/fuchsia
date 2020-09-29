@@ -14,10 +14,6 @@ source_set("yuv") {
     # Always optimize regardless of --release or debug.
     "-O3",
   ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 test("yuv_unittests") {
@@ -29,9 +25,6 @@ test("yuv_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("test") {

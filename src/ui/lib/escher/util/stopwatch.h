@@ -22,7 +22,9 @@ class Stopwatch {
   void Toggle();
   void Reset();
   uint64_t GetElapsedMicroseconds() const;
-  double GetElapsedSeconds() const { return 0.000001 * GetElapsedMicroseconds(); }
+  double GetElapsedSeconds() const {
+    return 0.000001 * static_cast<double>(GetElapsedMicroseconds());
+  }
 
  private:
   bool is_started_ = false;

@@ -137,7 +137,7 @@ SuitablePhysicalDeviceAndQueueFamilies FindSuitablePhysicalDeviceAndQueueFamilie
     const bool filter_queues_for_present =
         params.surface &&
         !(params.flags & VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent);
-    for (size_t i = 0; i < queues.size(); ++i) {
+    for (uint32_t i = 0; i < queues.size(); ++i) {
       if (kMainQueueFlags == (queues[i].queueFlags & kMainQueueFlags)) {
         if (filter_queues_for_present) {
           // TODO: it is possible that there is no queue family that supports
@@ -160,7 +160,7 @@ SuitablePhysicalDeviceAndQueueFamilies FindSuitablePhysicalDeviceAndQueueFamilie
         result.physical_device = physical_device;
         result.main_queue_family = i;
         result.transfer_queue_family = i;
-        for (size_t j = 0; j < queues.size(); ++j) {
+        for (uint32_t j = 0; j < queues.size(); ++j) {
           if ((queues[i].queueFlags & kTransferQueueFlags) == vk::QueueFlagBits::eTransfer) {
             // We have found a transfer-only queue.  This is the fastest way to
             // upload data to the GPU.
@@ -338,7 +338,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   vk::DeviceCreateInfo device_info;
   device_info.queueCreateInfoCount = 2;
   device_info.pQueueCreateInfos = queue_info;
-  device_info.enabledExtensionCount = extension_names.size();
+  device_info.enabledExtensionCount = static_cast<uint32_t>(extension_names.size());
   device_info.ppEnabledExtensionNames = extension_names.data();
   device_info.pEnabledFeatures = &caps.enabled_features;
   if (caps.allow_protected_memory) {

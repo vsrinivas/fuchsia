@@ -76,18 +76,10 @@ set_defaults("gtest_escher_library") {
 
 gtest_escher_library("gtest_escher_no_runtime_glsl") {
   gtest_escher_library_use_runtime_glsl = false
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 gtest_escher_library("gtest_escher_with_runtime_glsl") {
   gtest_escher_library_use_runtime_glsl = true
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("readback_fixtures") {

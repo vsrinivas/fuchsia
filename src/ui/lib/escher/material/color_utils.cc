@@ -40,8 +40,8 @@ vec3 HsvToLinear(vec3 hsv_color) {
   float r, g, b;
 
   float chroma = s * v;
-  float h_prime = fmod(h / 60.0, 6);
-  float x = chroma * (1 - fabs(fmod(h_prime, 2) - 1));
+  float h_prime = fmodf(h / 60.0f, 6);
+  float x = chroma * (1.f - fabsf(fmodf(h_prime, 2) - 1.f));
   float m = v - chroma;
 
   if (h_prime < 1) {

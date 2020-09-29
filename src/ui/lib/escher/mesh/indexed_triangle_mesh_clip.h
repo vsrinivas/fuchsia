@@ -113,7 +113,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
   // number of vertices in the clipped mesh to be > double that of the input
   // mesh.
   BitmapWithStorage clipped_vertices;
-  clipped_vertices.SetSize(input_mesh.positions.size() * 2);
+  clipped_vertices.SetSize(static_cast<uint32_t>(input_mesh.positions.size() * 2));
   // Keeps track of whether the previous plane clipped any vertices.
   bool plane_clipped_vertices = false;
 
@@ -138,7 +138,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
       plane_clipped_vertices = false;
       clipped_vertices.ClearAll();
       if (input_mesh.positions.size() > clipped_vertices.GetSize()) {
-        clipped_vertices.SetSize(input_mesh.positions.size() * 2);
+        clipped_vertices.SetSize(static_cast<uint32_t>(input_mesh.positions.size() * 2));
       }
       reordered_indices.clear();
       new_edge_vertex_indices.clear();
@@ -148,7 +148,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
     const size_t num_input_vertices = input_mesh.positions.size();
     {
       TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip[clip_verts]");
-      for (size_t i = 0; i < num_input_vertices; ++i) {
+      for (uint32_t i = 0; i < num_input_vertices; ++i) {
         // Don't bother clipping if the point is very close to the plane.
         if (PlaneDistanceToPoint(plane, input_mesh.positions[i]) < -kEpsilon) {
           clipped_vertices.Set(i);
@@ -189,7 +189,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_
       // The input vertex was not previously seen, so we:
       // - copy/append the vertex data to the output mesh
       // - map the input index to the corresponding index of the output mesh
-      Index new_index = output_mesh.positions.size();
+      Index new_index = static_cast<Index>(output_mesh.positions.size());
       FX_DCHECK(original_index < input_mesh.vertex_count());
       IndexedTriangleMeshPushCopiedAttributes(&output_mesh, &input_mesh, original_index);
       reordered_indices.insert(it, {original_index, new_index});

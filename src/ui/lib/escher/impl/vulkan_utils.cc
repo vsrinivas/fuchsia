@@ -180,7 +180,8 @@ vk::BufferImageCopy GetDefaultBufferImageCopy(size_t width, size_t height) {
   result.imageSubresource.baseArrayLayer = 0;
   result.imageSubresource.layerCount = 1;
   result.imageOffset = vk::Offset3D(0U, 0U, 0U);
-  result.imageExtent = vk::Extent3D(width, height, 1U);
+  result.imageExtent =
+      vk::Extent3D(static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1U);
   return result;
 }
 

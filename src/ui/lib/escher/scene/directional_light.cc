@@ -20,9 +20,9 @@ DirectionalLight::DirectionalLight(vec3 direction, float dispersion, vec3 color)
       dispersion_(dispersion),
       color_(color) {
   if (polar_direction_.x < 0.f) {
-    polar_direction_.x += 2 * M_PI;
+    polar_direction_.x += static_cast<float>(2. * M_PI);
   } else if (polar_direction_.x > 2 * M_PI) {
-    polar_direction_.x -= 2 * M_PI;
+    polar_direction_.x -= static_cast<float>(2. * M_PI);
   }
   FX_DCHECK(glm::epsilonEqual(1.f, glm::length(direction), 0.0001f));
 }

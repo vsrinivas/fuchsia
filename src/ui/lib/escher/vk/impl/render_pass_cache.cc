@@ -46,7 +46,7 @@ const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(const RenderPassInf
     // transient, but it seems like we probably should.
   }
 
-  uint32_t num_subpasses = rpi.subpasses.size();
+  uint32_t num_subpasses = static_cast<uint32_t>(rpi.subpasses.size());
   h.u32(num_subpasses);
   for (size_t i = 0; i < num_subpasses; i++) {
     h.u32(rpi.subpasses[i].num_color_attachments);

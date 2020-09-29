@@ -9,10 +9,6 @@ source_set("check_vulkan_support") {
   ]
 
   public_deps = [ "//src/lib/vulkan" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("escher_geometry_utils") {
@@ -24,10 +20,5 @@ source_set("escher_geometry_utils") {
     "bit_ops.h",
     "bitmap.h",
     "debug_print.h",
-  ]
-
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
   ]
 }

@@ -42,10 +42,10 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
 
   // Generate animated rounded rectangles.  Both their position and shape are
   // animated.
-  for (int i = 0; i < 10; ++i) {
+  for (uint16_t i = 0; i < 10; ++i) {
     const float x = 20.f * i;
     const float y = 400.f + 80.f * i;
-    const float z = -(187.5 - 20.f * i);
+    const float z = -(187.5f - 20.f * i);
     const float big_radius = 75.f;
     const float tiny_radius = 25.f;
     rectangles_.push_back(RectState{
@@ -67,8 +67,8 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
                     .inter_cycle_pause_duration = 5},
       .pos1 = vec2(-200, -100),
       .pos2 = vec2(200, 200),
-      .radians1 = -M_PI / 6,
-      .radians2 = M_PI * 7 / 6,
+      .radians1 = static_cast<float>(-M_PI / 6),
+      .radians2 = static_cast<float>(M_PI * 7 / 6),
   });
   world_space_clip_planes_.push_back(ClipPlaneState{
       .animation = {.cycle_duration = 4.f,
@@ -76,8 +76,8 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
                     .inter_cycle_pause_duration = 5},
       .pos1 = vec2(0, 0.9f * scene->bounding_box.height()),
       .pos2 = vec2(0, 0.15f * scene->bounding_box.height()),
-      .radians1 = M_PI * 1.5f,
-      .radians2 = M_PI * 1.5f,
+      .radians1 = static_cast<float>(M_PI * 1.5f),
+      .radians2 = static_cast<float>(M_PI * 1.5f),
   });
 
   // Generate animated translucent rounded rectangle, not clipped by any
@@ -113,7 +113,7 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch, escher::PaperSc
                              escher::PaperRenderer* renderer) {
   UpdateGraphWithExampleData(scene, renderer);
 
-  const float current_time_sec = stopwatch.GetElapsedSeconds();
+  const float current_time_sec = static_cast<float>(stopwatch.GetElapsedSeconds());
   const float screen_width = scene->bounding_box.width();
   const float screen_height = scene->bounding_box.height();
 
@@ -218,12 +218,12 @@ float PaperDemoScene1::AnimatedState::Update(float current_time_sec) {
       paused = false;
       state_start_time = current_time_sec;
     }
-  } else if (time_in_state > cycle_duration * cycle_count_before_pause) {
+  } else if (time_in_state > cycle_duration * static_cast<float>(cycle_count_before_pause)) {
     // Was running, now paused.
     paused = true;
     state_start_time = current_time_sec;
   } else {
-    t = 0.5f - 0.5f * cos(time_in_state / cycle_duration * 2.f * M_PI);
+    t = 0.5f - 0.5f * cos(time_in_state / cycle_duration * 2.f * static_cast<float>(M_PI));
   }
 
   return t;

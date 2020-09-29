@@ -66,7 +66,8 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
     // Avoid precision issues that we would have if we simply multiplied by
     // timestamp_period_.
     results_[i].raw_nanoseconds =
-        1000 * static_cast<uint64_t>(results_[i].raw_nanoseconds * microsecond_multiplier);
+        1000 * static_cast<uint64_t>(static_cast<double>(results_[i].raw_nanoseconds) *
+                                     microsecond_multiplier);
 
     // Microseconds since the beginning of this timing query.
     results_[i].time = (results_[i].raw_nanoseconds - results_[0].raw_nanoseconds) / 1000;
@@ -80,7 +81,7 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
 
 #ifdef OS_FUCHSIA
 static inline uint64_t MicrosToTicks(zx_time_t microseconds) {
-  static const uint64_t ticks_per_microsecond = zx_ticks_per_second() / 1000000.0;
+  static const uint64_t ticks_per_microsecond = zx_ticks_per_second() / 1000000;
   return microseconds * ticks_per_microsecond;
 }
 

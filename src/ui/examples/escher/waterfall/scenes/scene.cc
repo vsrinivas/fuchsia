@@ -39,7 +39,9 @@ void Scene::UpdateGraphWithExampleData(escher::PaperScene* scene, escher::PaperR
     // Draw graph.
     constexpr uint32_t kInset = 20;
     constexpr uint32_t kGraphHeight = 500;
-    graph_->DrawOn(renderer, {vk::Offset2D(kInset, scene->height() - kInset - kGraphHeight),
-                              vk::Extent2D(scene->width() - 2 * kInset, kGraphHeight)});
+    graph_->DrawOn(
+        renderer,
+        {vk::Offset2D(kInset, static_cast<uint32_t>(scene->height() - kInset - kGraphHeight)),
+         vk::Extent2D(static_cast<uint32_t>(scene->width() - 2 * kInset), kGraphHeight)});
   }
 }

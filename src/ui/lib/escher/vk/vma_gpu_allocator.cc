@@ -211,13 +211,13 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
   return retval;
 }
 
-uint32_t VmaGpuAllocator::GetTotalBytesAllocated() const {
+size_t VmaGpuAllocator::GetTotalBytesAllocated() const {
   VmaStats stats;
   vmaCalculateStats(allocator_, &stats);
   return stats.total.usedBytes;
 }
 
-uint32_t VmaGpuAllocator::GetUnusedBytesAllocated() const {
+size_t VmaGpuAllocator::GetUnusedBytesAllocated() const {
   VmaStats stats;
   vmaCalculateStats(allocator_, &stats);
   return stats.total.unusedBytes;

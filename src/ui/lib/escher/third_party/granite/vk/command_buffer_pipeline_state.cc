@@ -109,7 +109,7 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
 
   ForEachBitIndex(active_vertex_bindings_, [&](uint32_t bit) {
     h.u32(EnumCast(vertex_bindings_.input_rates[bit]));
-    h.u32(vertex_bindings_.strides[bit]);
+    h.u32(static_cast<uint32_t>(vertex_bindings_.strides[bit]));
   });
 
   h.u64(render_pass_->uid());
@@ -281,7 +281,7 @@ void CommandBufferPipelineState::InitPipelineVertexInputStateCreateInfo(
     auto& bind = vertex_input_bindings[info->vertexBindingDescriptionCount++];
     bind.binding = bit;
     bind.inputRate = vertex_bindings.input_rates[bit];
-    bind.stride = vertex_bindings.strides[bit];
+    bind.stride = static_cast<uint32_t>(vertex_bindings.strides[bit]);
   });
 }
 
@@ -465,7 +465,7 @@ vk::Pipeline CommandBufferPipelineState::BuildComputePipeline(const PipelineLayo
 }
 
 void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t attrib,
-                                                     vk::Format format, vk::DeviceSize offset) {
+                                                     vk::Format format, uint32_t offset) {
   FX_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
   FX_DCHECK(attrib < VulkanLimits::kNumVertexAttributes);
 

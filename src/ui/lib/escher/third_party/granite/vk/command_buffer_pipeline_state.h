@@ -81,8 +81,7 @@ class CommandBufferPipelineState {
   const PotentialStaticState* potential_static_state() const { return &potential_static_state_; }
 
   // Called by CommandBuffer::SetVertexAttributes().
-  void SetVertexAttributes(uint32_t binding, uint32_t attrib, vk::Format format,
-                           vk::DeviceSize offset);
+  void SetVertexAttributes(uint32_t binding, uint32_t attrib, vk::Format format, uint32_t offset);
 
   // Called by CommandBuffer::BindVertices().  Return true if pipeline change is
   // required.

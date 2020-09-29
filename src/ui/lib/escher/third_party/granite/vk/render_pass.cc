@@ -253,7 +253,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   // where they came from.
   RenderPassInfo::Subpass default_subpass;
   const RenderPassInfo::Subpass* info_subpasses = GetPointerToFirstSubpass(info, &default_subpass);
-  const uint32_t num_info_subpasses = info.subpasses.empty() ? 1 : info.subpasses.size();
+  const uint32_t num_info_subpasses =
+      info.subpasses.empty() ? 1u : static_cast<uint32_t>(info.subpasses.size());
   FX_DCHECK(num_info_subpasses <= 32);
 
   vk::AttachmentDescription attachments[VulkanLimits::kNumColorAttachments + 1];
@@ -724,7 +725,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   render_pass_create_info.pSubpasses = vk_subpass_descriptions.data();
   render_pass_create_info.pAttachments = attachments;
   render_pass_create_info.attachmentCount = num_attachments;
-  render_pass_create_info.dependencyCount = vk_subpass_dependencies.size();
+  render_pass_create_info.dependencyCount = static_cast<uint32_t>(vk_subpass_dependencies.size());
   render_pass_create_info.pDependencies =
       vk_subpass_dependencies.empty() ? nullptr : vk_subpass_dependencies.data();
   render_pass_ = ESCHER_CHECKED_VK_RESULT(vk_device().createRenderPass(render_pass_create_info));

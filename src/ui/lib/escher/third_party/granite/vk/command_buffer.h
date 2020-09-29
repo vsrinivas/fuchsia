@@ -217,8 +217,7 @@ class CommandBuffer : public Reffable {
 
   // Set/dirty the attributes that will be used to interpret the vertex buffer
   // at |binding| (see BindVertices() above) when the next draw call is made.
-  void SetVertexAttributes(uint32_t binding, uint32_t attrib, vk::Format format,
-                           vk::DeviceSize offset) {
+  void SetVertexAttributes(uint32_t binding, uint32_t attrib, vk::Format format, uint32_t offset) {
     FX_DCHECK(IsInRenderPass());
     pipeline_state_.SetVertexAttributes(binding, attrib, format, offset);
     SetDirty(kDirtyStaticVertexBit);

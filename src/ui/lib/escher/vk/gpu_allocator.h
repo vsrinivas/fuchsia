@@ -47,8 +47,8 @@ class GpuAllocator {
   virtual ImagePtr AllocateImage(ResourceManager* manager, const escher::ImageInfo& info,
                                  GpuMemPtr* out_ptr = nullptr) = 0;
 
-  virtual uint32_t GetTotalBytesAllocated() const = 0;
-  virtual uint32_t GetUnusedBytesAllocated() const = 0;
+  virtual size_t GetTotalBytesAllocated() const = 0;
+  virtual size_t GetUnusedBytesAllocated() const = 0;
 
   fxl::WeakPtrFactory<GpuAllocator> weak_factory_;  // must be last
 

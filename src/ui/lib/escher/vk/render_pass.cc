@@ -35,11 +35,11 @@ RenderPass::RenderPass(ResourceManager* manager, uint32_t color_attachment_count
   subpass_descriptions_.resize(subpass_count);
   subpass_dependencies_.resize(subpass_dependency_count);
 
-  create_info_.attachmentCount = attachments_.size();
+  create_info_.attachmentCount = static_cast<uint32_t>(attachments_.size());
   create_info_.pAttachments = attachments_.data();
-  create_info_.subpassCount = subpass_descriptions_.size();
+  create_info_.subpassCount = static_cast<uint32_t>(subpass_descriptions_.size());
   create_info_.pSubpasses = subpass_descriptions_.data();
-  create_info_.dependencyCount = subpass_dependencies_.size();
+  create_info_.dependencyCount = static_cast<uint32_t>(subpass_dependencies_.size());
   create_info_.pDependencies = subpass_dependencies_.data();
 }
 

@@ -19,7 +19,8 @@ template <typename E>
 E EnumCycle(E e, bool reverse = false) {
   size_t count = EnumCount<E>();
   auto underlying_value = EnumCast(e);
-  underlying_value = (underlying_value + (reverse ? count - 1 : 1)) % count;
+  underlying_value = (underlying_value + (reverse ? count - 1 : 1)) %
+                     static_cast<decltype(underlying_value)>(count);
   return static_cast<E>(underlying_value);
 }
 

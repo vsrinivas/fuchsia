@@ -41,7 +41,7 @@ void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::
     auto render_func = item.render_queue_funcs[func_index];
 
     // Determine the number of instances to render.
-    size_t instance_count = 1;
+    uint32_t instance_count = 1;
     for (size_t i = start_index + 1; i < end_index && item.object_data == items_[i].object_data &&
                                      render_func == items_[i].render_queue_funcs[func_index];
          ++i) {

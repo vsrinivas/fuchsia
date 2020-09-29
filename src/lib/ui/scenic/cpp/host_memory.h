@@ -111,7 +111,7 @@ class HostImagePool {
   HostImagePool& operator=(const HostImagePool&) = delete;
 
   // The number of images which this pool can manage.
-  uint32_t num_images() const { return image_ptrs_.size(); }
+  uint32_t num_images() const { return static_cast<uint32_t>(image_ptrs_.size()); }
 
   // Gets information about the images in the pool, or nullptr if the
   // pool is not configured.

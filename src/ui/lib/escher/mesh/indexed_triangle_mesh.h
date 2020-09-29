@@ -45,8 +45,8 @@ struct IndexedTriangleMesh {
     attributes3.clear();
   }
 
-  uint32_t index_count() const { return indices.size(); }
-  uint32_t vertex_count() const { return positions.size(); }
+  uint32_t index_count() const { return static_cast<uint32_t>(indices.size()); }
+  uint32_t vertex_count() const { return static_cast<uint32_t>(positions.size()); }
   uint32_t triangle_count() const { return index_count() / 3; }
 
   void resize_indices(uint32_t num_indices) {

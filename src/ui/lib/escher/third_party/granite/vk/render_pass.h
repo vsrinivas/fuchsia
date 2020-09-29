@@ -75,7 +75,7 @@ class RenderPass : public Resource {
     vk::SampleCountFlagBits samples;
   };
 
-  uint32_t num_subpasses() const { return subpasses_.size(); }
+  uint32_t num_subpasses() const { return static_cast<uint32_t>(subpasses_.size()); }
   uint32_t num_color_attachments() const { return num_color_attachments_; }
 
   vk::RenderPass vk() const { return render_pass_; }

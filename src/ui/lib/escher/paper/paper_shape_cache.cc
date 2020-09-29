@@ -270,10 +270,12 @@ const PaperShapeCacheEntry& PaperShapeCache::GetRoundedRectMesh(const RoundedRec
         mesh.resize_indices(index_count);
         mesh.resize_vertices(vertex_count);
 
-        GenerateRoundedRectIndices(spec, mesh_spec, mesh.indices.data(), mesh.total_index_bytes());
+        GenerateRoundedRectIndices(spec, mesh_spec, mesh.indices.data(),
+                                   static_cast<uint32_t>(mesh.total_index_bytes()));
         GenerateRoundedRectVertices(spec, mesh_spec, mesh.positions.data(),
-                                    mesh.total_position_bytes(), mesh.attributes1.data(),
-                                    mesh.total_attribute1_bytes());
+                                    static_cast<uint32_t>(mesh.total_position_bytes()),
+                                    mesh.attributes1.data(),
+                                    static_cast<uint32_t>(mesh.total_attribute1_bytes()));
 
         return ProcessTriangleMesh2d(std::move(mesh), mesh_spec, unculled_clip_planes,
                                      num_unculled_clip_planes, bounding_box, shadow_type_,

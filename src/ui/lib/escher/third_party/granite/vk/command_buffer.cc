@@ -204,7 +204,8 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
 
   // BeginGraphics() will dirty everything; no need to dirty anything here.
   scissor_ = rect;
-  viewport_ = vk::Viewport(0.0f, 0.0f, framebuffer_->width(), framebuffer_->height(), 0.0f, 1.0f);
+  viewport_ = vk::Viewport(0.0f, 0.0f, static_cast<float>(framebuffer_->width()),
+                           static_cast<float>(framebuffer_->height()), 0.0f, 1.0f);
 
   BeginGraphics();
 }
@@ -563,8 +564,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
     FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
-    h.u32(b->buffer.range);
-    dynamic_offsets[num_dynamic_offsets++] = b->buffer.offset;
+    h.u32(static_cast<uint32_t>(b->buffer.range));
+    dynamic_offsets[num_dynamic_offsets++] = static_cast<uint32_t>(b->buffer.offset);
   });
 
   // SSBOs
@@ -574,8 +575,8 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
     FX_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
-    h.u32(b->buffer.offset);
-    h.u32(b->buffer.range);
+    h.u32(static_cast<uint32_t>(b->buffer.offset));
+    h.u32(static_cast<uint32_t>(b->buffer.range));
   });
 
   // Sampled buffers

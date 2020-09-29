@@ -111,7 +111,7 @@ ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageI
   return escher_image;
 }
 
-uint32_t NaiveGpuAllocator::GetTotalBytesAllocated() const { return total_slab_bytes_; }
+size_t NaiveGpuAllocator::GetTotalBytesAllocated() const { return total_slab_bytes_; }
 
 void NaiveGpuAllocator::OnSlabCreated(vk::DeviceSize slab_size) {
   ++slab_count_;

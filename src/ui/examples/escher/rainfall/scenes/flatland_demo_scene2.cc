@@ -23,10 +23,10 @@ void FlatlandDemoScene2::Init() {
     uint32_t width = rand() % (230 - 100 + 1) + 100;
     uint32_t height = rand() % (150 - 70 + 1) + 70;
 
-    float r = ((double)rand() / (RAND_MAX));
-    float g = ((double)rand() / (RAND_MAX));
-    float b = ((double)rand() / (RAND_MAX));
-    float a = ((double)rand() / (RAND_MAX));
+    float r = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
+    float g = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
+    float b = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
+    float a = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
 
     Rectangle2D renderable(vec2(x_orig, y_orig), vec2(width, height));
     RectangleCompositor::ColorData color_data(vec4(r, g, b, a), true);
@@ -50,15 +50,15 @@ void FlatlandDemoScene2::Update(const escher::Stopwatch& stopwatch) {
     vec2 extent = renderables_[i].extent;
     vec4 color = color_data_[i].color;
     bool transparent = color_data_[i].is_transparent;
-    origin.y += fall_speed_[i];
+    origin.y += static_cast<float>(fall_speed_[i]);
     if (renderables_[i].origin.y >= 1140) {
       int x_orig = rand() % 2160;
       int y_orig = -(rand() % 1000);
 
-      float r = ((double)rand() / (RAND_MAX));
-      float g = ((double)rand() / (RAND_MAX));
-      float b = ((double)rand() / (RAND_MAX));
-      float a = ((double)rand() / (RAND_MAX));
+      float r = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
+      float g = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
+      float b = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
+      float a = static_cast<float>(static_cast<double>(rand()) / (RAND_MAX));
 
       origin = vec2(x_orig, y_orig);
       color = vec4(r, g, b, a);

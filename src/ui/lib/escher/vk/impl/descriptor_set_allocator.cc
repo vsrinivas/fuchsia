@@ -81,7 +81,7 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device, DescriptorSetL
 
   vk::DescriptorSetLayoutCreateInfo info;
   if (num_bindings) {
-    info.bindingCount = num_bindings;
+    info.bindingCount = static_cast<uint32_t>(num_bindings);
     info.pBindings = bindings.data();
   }
 
@@ -104,13 +104,13 @@ vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(size_t block_i
                                                                   size_t num_objects) {
   FX_DCHECK(!pools_[block_index]);
   for (auto& sz : pool_sizes_) {
-    sz.descriptorCount = num_objects;
+    sz.descriptorCount = static_cast<uint32_t>(num_objects);
   }
 
   vk::DescriptorPoolCreateInfo info;
-  info.maxSets = num_objects;
+  info.maxSets = static_cast<uint32_t>(num_objects);
   if (!pool_sizes_.empty()) {
-    info.poolSizeCount = pool_sizes_.size();
+    info.poolSizeCount = static_cast<uint32_t>(pool_sizes_.size());
     info.pPoolSizes = pool_sizes_.data();
   }
   auto pool = ESCHER_CHECKED_VK_RESULT(vk_device_.createDescriptorPool(info));
@@ -133,7 +133,7 @@ void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(vk::Descript
   alloc_info.descriptorPool = pool;
   alloc_info.pSetLayouts = layouts.data();
   while (remaining) {
-    alloc_info.descriptorSetCount = std::min(remaining, kSetsPerAllocation);
+    alloc_info.descriptorSetCount = static_cast<uint32_t>(std::min(remaining, kSetsPerAllocation));
 
     vk::Result result = vk_device_.allocateDescriptorSets(&alloc_info, allocated_sets.data());
     FX_CHECK(result == vk::Result::eSuccess) << "DescriptorSetAllocator failed to allocate block.";

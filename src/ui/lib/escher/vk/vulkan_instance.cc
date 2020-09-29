@@ -62,9 +62,9 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
 
   vk::InstanceCreateInfo info;
   info.pApplicationInfo = &app_info;
-  info.enabledLayerCount = layer_names.size();
+  info.enabledLayerCount = static_cast<uint32_t>(layer_names.size());
   info.ppEnabledLayerNames = layer_names.data();
-  info.enabledExtensionCount = extension_names.size();
+  info.enabledExtensionCount = static_cast<uint32_t>(extension_names.size());
   info.ppEnabledExtensionNames = extension_names.data();
 
   auto result = vk::createInstance(info);

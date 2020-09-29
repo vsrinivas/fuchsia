@@ -73,8 +73,9 @@ PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
   // Scale the camera viewports to pixel coordinates in the output framebuffer.
   for (auto& cam : cameras_in) {
     vk::Rect2D rect = cam.viewport().vk_rect_2d(output_image->width(), output_image->height());
-    vk::Viewport viewport(rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height, 0,
-                          1);
+    vk::Viewport viewport(static_cast<float>(rect.offset.x), static_cast<float>(rect.offset.y),
+                          static_cast<float>(rect.extent.width),
+                          static_cast<float>(rect.extent.height), 0, 1);
 
     UniformBinding binding;
     CameraEye eye = CameraEye::kLeft;
@@ -594,7 +595,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   // For each point light, emit Vulkan commands first to draw the stencil shadow
   // geometry for that light, and then to add the lighting contribution for that
   // light.
-  const uint32_t num_point_lights = frame_data_->scene->num_point_lights();
+  const uint32_t num_point_lights = static_cast<uint32_t>(frame_data_->scene->num_point_lights());
   for (uint32_t i = 0; i < num_point_lights; ++i) {
     // Some setup doesn't need to be done for the first light.
     if (i != 0) {

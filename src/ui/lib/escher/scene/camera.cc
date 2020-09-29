@@ -137,10 +137,10 @@ Camera Camera::NewPerspective(const ViewingVolume& volume, const mat4& transform
 
 vk::Rect2D Camera::Viewport::vk_rect_2d(uint32_t fb_width, uint32_t fb_height) const {
   vk::Rect2D result;
-  result.offset.x = x * fb_width;
-  result.offset.y = y * fb_height;
-  result.extent.width = width * fb_width;
-  result.extent.height = height * fb_height;
+  result.offset.x = static_cast<int32_t>(x * static_cast<float>(fb_width));
+  result.offset.y = static_cast<int32_t>(y * static_cast<float>(fb_height));
+  result.extent.width = static_cast<uint32_t>(width * static_cast<float>(fb_width));
+  result.extent.height = static_cast<uint32_t>(height * static_cast<float>(fb_height));
   return result;
 }
 

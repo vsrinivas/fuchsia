@@ -42,8 +42,8 @@ inline BoundingBox GetTriangleBoundingBox(glm::vec3 v1, glm::vec3 v2, glm::vec3 
 
 void UniformGrid::Construct(const std::vector<glm::vec3>& positions,
                             const std::vector<uint32_t>& indices, const BoundingBox& bounding_box) {
-  uint32_t num_indices = indices.size();
-  uint32_t num_vertices = positions.size();
+  uint32_t num_indices = static_cast<uint32_t>(indices.size());
+  uint32_t num_vertices = static_cast<uint32_t>(positions.size());
   uint32_t num_triangles = num_indices / 3;
 
   // Set resolution to (roughly) the cube root of (roughly) num_triangles, so that the
@@ -115,9 +115,9 @@ bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
   glm::ivec3 cell_coordinates = (vec3(hit) - min) / cell_extent;
   FX_DCHECK(glm::all(glm::greaterThanEqual(cell_coordinates, glm::ivec3(0))));
 
-  int px = glm::sign(D.x);
-  int py = glm::sign(D.y);
-  int pz = glm::sign(D.z);
+  float px = glm::sign(D.x);
+  float py = glm::sign(D.y);
+  float pz = glm::sign(D.z);
   glm::ivec3 signs = glm::sign(D);
   glm::vec3 delta = glm::vec3(signs) * cell_extent / vec3(D + vec4(kEpsilon));
 
@@ -125,12 +125,12 @@ bool UniformGrid::Intersect(const ray4& ray, float* out_distance) const {
   float y_offset = (py > 0.f) ? py : 0.f;
   float z_offset = (pz > 0.f) ? pz : 0.f;
 
-  float next_x =
-      DistanceToPlane(D.x, hit.x, min.x + (cell_coordinates.x + x_offset) * cell_extent.x);
-  float next_y =
-      DistanceToPlane(D.y, hit.y, min.y + (cell_coordinates.y + y_offset) * cell_extent.y);
-  float next_z =
-      DistanceToPlane(D.z, hit.z, min.z + (cell_coordinates.z + z_offset) * cell_extent.z);
+  float next_x = DistanceToPlane(
+      D.x, hit.x, min.x + (static_cast<float>(cell_coordinates.x) + x_offset) * cell_extent.x);
+  float next_y = DistanceToPlane(
+      D.y, hit.y, min.y + (static_cast<float>(cell_coordinates.y) + y_offset) * cell_extent.y);
+  float next_z = DistanceToPlane(
+      D.z, hit.z, min.z + (static_cast<float>(cell_coordinates.z) + z_offset) * cell_extent.z);
   FX_DCHECK(next_x >= 0.f) << next_x;
   FX_DCHECK(next_y >= 0.f) << next_y;
   FX_DCHECK(next_z >= 0.f) << next_z;

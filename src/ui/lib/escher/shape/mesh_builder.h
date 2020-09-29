@@ -69,8 +69,8 @@ class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {
   const size_t vertex_stride_;
   std::vector<uint8_t> vertex_staging_buffer_;
   std::vector<uint32_t> index_staging_buffer_;
-  size_t vertex_count_ = 0;
-  size_t index_count_ = 0;
+  uint32_t vertex_count_ = 0;
+  uint32_t index_count_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MeshBuilder);
 };

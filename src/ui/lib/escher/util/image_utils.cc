@@ -242,12 +242,12 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pix
   FX_DCHECK(pixels);
 
   size_t bytes_per_pixel = BytesPerPixel(image->info().format);
-  size_t width = image->info().width;
-  size_t height = image->info().height;
+  uint32_t width = image->info().width;
+  uint32_t height = image->info().height;
 
-  std::vector<uint8_t> pixels_to_write(width * height * bytes_per_pixel);
+  std::vector<uint8_t> pixels_to_write(bytes_per_pixel * width * height);
   if (!conversion_func) {
-    std::copy(pixels, pixels + width * height * bytes_per_pixel, pixels_to_write.begin());
+    std::copy(pixels, pixels + pixels_to_write.size(), pixels_to_write.begin());
   } else {
     conversion_func(pixels_to_write.data(), pixels, width, height);
   }
@@ -349,9 +349,9 @@ std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height, si
   }
   RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
 
-  float intensity_step = 255.0001f / (height - 1);
+  double intensity_step = 255.0001 / (height - 1);
   for (uint32_t j = 0; j < height; ++j) {
-    uint32_t intensity = 255.f - j * intensity_step;
+    uint8_t intensity = static_cast<uint8_t>(255. - j * intensity_step);
     for (uint32_t i = 0; i < width; ++i) {
       uint32_t index = j * width + i;
       auto& p = pixels[index];

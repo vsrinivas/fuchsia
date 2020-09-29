@@ -38,10 +38,10 @@ class FakeGpuAllocator : public GpuAllocator {
                          GpuMemPtr* out_ptr) override;
 
   // |GpuAllocator|
-  uint32_t GetTotalBytesAllocated() const override;
+  size_t GetTotalBytesAllocated() const override;
 
   // |GpuAllocator|
-  uint32_t GetUnusedBytesAllocated() const override { return 0u; }
+  size_t GetUnusedBytesAllocated() const override { return 0u; }
 
   // These functions are public because this is a test class, and unit tests may
   // wish to indirectly mock GetTotalBytesAllocated() behavior.

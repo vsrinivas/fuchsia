@@ -34,7 +34,4 @@ executable("pose_buffer_presenter") {
   ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

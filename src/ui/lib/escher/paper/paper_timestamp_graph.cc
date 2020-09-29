@@ -35,15 +35,15 @@ void PaperTimestampGraph::DrawGraphContentOn(PaperRenderer* r, vk::Rect2D bounds
   const uint32_t width = bounds.extent.width;
   const uint32_t height = bounds.extent.height;
 
-  const int16_t x_start = bounds.offset.x + 10;
-  const int16_t y_axis = bounds.offset.y + height;
-  const int16_t x_axis = bounds.offset.x + width;
-  const int16_t h_interval = height / 35;
-  const int16_t w_interval = kSampleLineThickness;
+  const int16_t x_start = static_cast<int16_t>(bounds.offset.x + 10);
+  const int16_t y_axis = static_cast<int16_t>(bounds.offset.y + height);
+  const int16_t x_axis = static_cast<int16_t>(bounds.offset.x + width);
+  const int16_t h_interval = static_cast<int16_t>(height / 35);
+  const int16_t w_interval = static_cast<int16_t>(kSampleLineThickness);
 
   const int16_t middle_bar = y_axis - (h_interval * 16) + 2;
 
-  for (std::size_t i = 0; i < timestamps_.size(); i++) {
+  for (uint32_t i = 0; i < timestamps_.size(); i++) {
     const auto& ts = timestamps_[i];
 
     int16_t render_time = ts.render_done - ts.render_start;
@@ -84,9 +84,9 @@ vk::Rect2D PaperTimestampGraph::DrawGraphAxesOn(PaperRenderer* r, vk::Rect2D bou
   const int32_t origin_x = bounds.offset.x + kWidthPadding;
   const int32_t origin_y = bounds.offset.y + frame_height - kHeightPadding;
 
-  const uint16_t x_axis_length = frame_width - kWidthPadding;
-  const uint16_t y_axis_length = frame_height - kHeightPadding;
-  const uint16_t h_interval = (y_axis_length - kHeightPadding) / 35;
+  const uint16_t x_axis_length = static_cast<uint16_t>(frame_width - kWidthPadding);
+  const uint16_t y_axis_length = static_cast<uint16_t>(frame_height - kHeightPadding);
+  const uint16_t h_interval = static_cast<uint16_t>((y_axis_length - kHeightPadding) / 35);
 
   const vk::Rect2D content_bounds{
       {bounds.offset.x + kWidthPadding, bounds.offset.y},
@@ -103,8 +103,9 @@ vk::Rect2D PaperTimestampGraph::DrawGraphAxesOn(PaperRenderer* r, vk::Rect2D bou
   r->DrawDebugText(y_label, {bounds.offset.x + frame_width / 2, origin_y + 25}, 5);
 
   // Colored bar used to show acceptable vs concerning values (acceptable below bar).
-  constexpr float kAcceptableLine = 0.6;
-  r->DrawHLine(DebugRects::kGreen, origin_y - (kAcceptableLine * content_bounds.extent.height),
+  constexpr auto kAcceptableLine = 0.6;
+  r->DrawHLine(DebugRects::kGreen,
+               origin_y - static_cast<int32_t>(kAcceptableLine * content_bounds.extent.height),
                origin_x + 10, content_bounds.offset.x + content_bounds.extent.width, 5);
 
   return content_bounds;

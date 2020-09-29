@@ -54,9 +54,9 @@ bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_pa
       return false;
     }
 
-    uint32_t num_elements = binary_size / sizeof(uint32_t);
+    size_t num_elements = binary_size / sizeof(uint32_t);
     out_spirv->resize(num_elements);
-    uint32_t num_read = fread(out_spirv->data(), sizeof(uint32_t), num_elements, fp);
+    size_t num_read = fread(out_spirv->data(), sizeof(uint32_t), num_elements, fp);
     return num_read == num_elements;
   }
 

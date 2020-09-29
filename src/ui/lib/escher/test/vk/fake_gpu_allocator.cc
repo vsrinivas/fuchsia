@@ -87,7 +87,7 @@ ImagePtr FakeGpuAllocator::AllocateImage(ResourceManager* manager, const ImageIn
   return fxl::AdoptRef(new FakeImage(manager, info, memory));
 }
 
-uint32_t FakeGpuAllocator::GetTotalBytesAllocated() const { return bytes_allocated_; }
+size_t FakeGpuAllocator::GetTotalBytesAllocated() const { return bytes_allocated_; }
 
 void FakeGpuAllocator::OnAllocation(uint64_t size) { bytes_allocated_ += size; }
 

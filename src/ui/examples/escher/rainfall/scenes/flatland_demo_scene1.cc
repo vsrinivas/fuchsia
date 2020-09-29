@@ -18,20 +18,20 @@ void CreateRing(std::vector<Rectangle2D>& renderables,
   uint32_t center_x = (2160 - 50) / 2;
   uint32_t center_y = (1140 - 50) / 2;
 
-  const uint32_t num = 12;
-  float radians = (360 / num) * 3.14159265 / 180.0;
+  const uint16_t num = 12;
+  float radians = (360.f / num) * 3.1415926f / 180.f;
 
   if (abs(radius) == 300) {
     orientation *= -1;
   }
   radius += orientation * 1;
 
-  float curr_offset = time;
+  double curr_offset = time;
   renderables.clear();
   color_datas.clear();
   for (uint32_t i = 0; i < num; i++) {
-    float x = radius * cos(curr_offset) + center_x;
-    float y = radius * sin(curr_offset) + center_y;
+    float x = static_cast<float>(radius * cos(curr_offset) + center_x);
+    float y = static_cast<float>(radius * sin(curr_offset) + center_y);
 
     Rectangle2D renderable(vec2(x, y), vec2(100, 100));
     RectangleCompositor::ColorData color_data(colors[i % 3], true);
@@ -52,6 +52,6 @@ FlatlandDemoScene1::~FlatlandDemoScene1() {}
 void FlatlandDemoScene1::Init() { CreateRing(renderables_, color_data_, 0.f); }
 
 void FlatlandDemoScene1::Update(const escher::Stopwatch& stopwatch) {
-  const float current_time_sec = stopwatch.GetElapsedSeconds();
+  const float current_time_sec = static_cast<float>(stopwatch.GetElapsedSeconds());
   CreateRing(renderables_, color_data_, current_time_sec);
 }

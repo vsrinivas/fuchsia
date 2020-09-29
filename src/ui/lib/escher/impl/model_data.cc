@@ -44,7 +44,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
 
   std::vector<vk::VertexInputAttributeDescription> attributes;
 
-  vk::DeviceSize stride = 0;
+  uint32_t stride = 0;
   if (spec.has_attribute(0, MeshAttribute::kPosition2D)) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kPositionAttributeLocation;

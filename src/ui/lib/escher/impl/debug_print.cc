@@ -134,7 +134,7 @@ std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
   str << "MeshSpec[";
 
   bool any_attributes = false;
-  for (size_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+  for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
     if (spec.attribute_count(i) > 0) {
       if (any_attributes) {
         str << ", ";

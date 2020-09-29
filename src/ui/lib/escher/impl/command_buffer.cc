@@ -56,10 +56,10 @@ bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callba
   submit_info.commandBufferCount = 1;
   submit_info.pNext = use_protected_memory_ ? &protected_submit_info : nullptr;
   submit_info.pCommandBuffers = &command_buffer_;
-  submit_info.waitSemaphoreCount = wait_semaphores_for_submit_.size();
+  submit_info.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores_for_submit_.size());
   submit_info.pWaitSemaphores = wait_semaphores_for_submit_.data();
   submit_info.pWaitDstStageMask = wait_semaphore_stages_.data();
-  submit_info.signalSemaphoreCount = signal_semaphores_for_submit_.size();
+  submit_info.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores_for_submit_.size());
   submit_info.pSignalSemaphores = signal_semaphores_for_submit_.data();
 
   auto submit_result = queue.submit(1, &submit_info, fence_);

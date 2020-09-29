@@ -65,13 +65,13 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
   IndexedTriangleMesh2d<vec2> mesh;
 
   // Compute the number of vertices in the tessellated circle.
-  size_t outer_vertex_count = 4;
+  uint32_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
   }
 
-  const size_t vertex_count = outer_vertex_count + 1;  // Add 1 for center.
-  const size_t index_count = outer_vertex_count * 3;
+  const uint32_t vertex_count = outer_vertex_count + 1;  // Add 1 for center.
+  const uint32_t index_count = outer_vertex_count * 3;
 
   mesh.resize_indices(index_count);
   mesh.resize_vertices(vertex_count);
@@ -87,10 +87,10 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
   uv += 1;
 
   // Outer vertices.
-  const float radian_step = 2 * M_PI / outer_vertex_count;
-  for (size_t i = 0; i < outer_vertex_count; ++i) {
+  const float radian_step = static_cast<float>(2 * M_PI / outer_vertex_count);
+  for (uint32_t i = 0; i < outer_vertex_count; ++i) {
     // Direction of the current vertex from the center of the circle.
-    float radians = i * radian_step;
+    float radians = static_cast<float>(i) * radian_step;
     vec2 dir(sin(radians), cos(radians));
 
     pos[i] = dir * radius + center;
@@ -104,7 +104,7 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
   current_tri[1] = 1;
   current_tri[2] = triangle_count;
   current_tri += 3;
-  for (size_t i = 1; i < triangle_count; ++i) {
+  for (uint32_t i = 1; i < triangle_count; ++i) {
     current_tri[0] = 0;
     current_tri[1] = i + 1;
     current_tri[2] = i;
@@ -229,13 +229,13 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   // Compute the number of vertices in the tessellated circle.
   FX_DCHECK(subdivisions >= 0);
   FX_DCHECK(spec.IsValidOneBufferMesh());
-  size_t outer_vertex_count = 4;
+  uint32_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
   }
 
-  size_t vertex_count = outer_vertex_count + 1;  // Add 1 for center vertex.
-  size_t index_count = outer_vertex_count * 3;
+  uint32_t vertex_count = outer_vertex_count + 1;  // Add 1 for center vertex.
+  uint32_t index_count = outer_vertex_count * 3;
 
   auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, index_count);
 
@@ -258,10 +258,10 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
   builder->AddVertexData(vertex, builder->vertex_stride());
 
   // Outer vertices.
-  const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
-  const float radian_step = 2 * M_PI / outer_vertex_count;
-  for (size_t i = 0; i < outer_vertex_count; ++i) {
-    float radians = i * radian_step;
+  const float outer_vertex_count_reciprocal = static_cast<float>(1. / outer_vertex_count);
+  const float radian_step = static_cast<float>(2. * M_PI / outer_vertex_count);
+  for (uint32_t i = 0; i < outer_vertex_count; ++i) {
+    float radians = static_cast<float>(i) * radian_step;
 
     // Direction of the current vertex from the center of the circle.
     vec2 dir(sin(radians), cos(radians));
@@ -272,13 +272,13 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
     if (vertex_p.pos_offset)
       (*vertex_p.pos_offset) = dir * offset_magnitude;
     if (vertex_p.perim)
-      (*vertex_p.perim) = i * outer_vertex_count_reciprocal;
+      (*vertex_p.perim) = static_cast<float>(i) * outer_vertex_count_reciprocal;
 
     builder->AddVertexData(vertex, builder->vertex_stride());
   }
 
   // Vertex indices.
-  for (size_t i = 1; i < outer_vertex_count; ++i) {
+  for (uint32_t i = 1; i < outer_vertex_count; ++i) {
     builder->AddIndex(0);
     builder->AddIndex(i + 1);
     builder->AddIndex(i);
@@ -301,13 +301,13 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
   // Compute the number of vertices in the tessellated circle.
   FX_DCHECK(subdivisions >= 0);
   FX_DCHECK(spec.IsValidOneBufferMesh());
-  size_t outer_vertex_count = 4;
+  uint32_t outer_vertex_count = 4;
   while (subdivisions-- > 0) {
     outer_vertex_count *= 2;
   }
 
-  size_t vertex_count = outer_vertex_count * 2;
-  size_t index_count = outer_vertex_count * 6;
+  uint32_t vertex_count = outer_vertex_count * 2;
+  uint32_t index_count = outer_vertex_count * 6;
 
   auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, index_count);
 
@@ -317,10 +317,10 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
   FX_CHECK(vertex_p.pos2);
 
-  const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
-  const float radian_step = 2 * M_PI / outer_vertex_count;
-  for (size_t i = 0; i < outer_vertex_count; ++i) {
-    float radians = i * radian_step;
+  const float outer_vertex_count_reciprocal = static_cast<float>(1. / outer_vertex_count);
+  const float radian_step = static_cast<float>(2. * M_PI / outer_vertex_count);
+  for (uint32_t i = 0; i < outer_vertex_count; ++i) {
+    float radians = static_cast<float>(i) * radian_step;
 
     // Direction of the current vertex from the center of the circle.
     vec2 dir(sin(radians), cos(radians));
@@ -340,7 +340,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
     if (vertex_p.pos_offset)
       (*vertex_p.pos_offset) = dir * outer_offset_magnitude;
     if (vertex_p.perim)
-      (*vertex_p.perim) = i * outer_vertex_count_reciprocal;
+      (*vertex_p.perim) = static_cast<float>(i) * outer_vertex_count_reciprocal;
     builder->AddVertexData(vertex, builder->vertex_stride());
 
     // Build inner-ring vertex.  Only the position and offset may differ from
@@ -354,7 +354,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
   }
 
   // Generate vertex indices.
-  for (size_t i = 2; i < vertex_count; i += 2) {
+  for (uint32_t i = 2; i < vertex_count; i += 2) {
     builder->AddIndex(i - 2);
     builder->AddIndex(i - 1);
     builder->AddIndex(i);
@@ -382,13 +382,13 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
                          float top_offset_magnitude, float bottom_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FX_DCHECK(subdivisions >= 0);
-  size_t vertices_per_side = 2;
+  uint32_t vertices_per_side = 2;
   while (subdivisions-- > 0) {
     vertices_per_side *= 2;
   }
 
-  size_t vertex_count = vertices_per_side * 2;
-  size_t index_count = (vertices_per_side - 1) * 6;
+  uint32_t vertex_count = vertices_per_side * 2;
+  uint32_t index_count = (vertices_per_side - 1) * 6;
 
   auto builder = factory->NewMeshBuilder(gpu_uploader, spec, vertex_count, index_count);
 
@@ -398,31 +398,33 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
   auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
   FX_CHECK(vertex_p.pos2);
 
-  const float vertices_per_side_reciprocal = 1.f / (vertices_per_side - 1);
-  for (size_t i = 0; i < vertices_per_side; ++i) {
+  const float vertices_per_side_reciprocal = 1.f / static_cast<float>(vertices_per_side - 1);
+  for (uint32_t i = 0; i < vertices_per_side; ++i) {
     // Build bottom vertex.
-    (*vertex_p.pos2) = top_left + vec2(extent.x * i * vertices_per_side_reciprocal, extent.y);
+    (*vertex_p.pos2) =
+        top_left + vec2(extent.x * static_cast<float>(i) * vertices_per_side_reciprocal, extent.y);
     if (vertex_p.uv)
-      (*vertex_p.uv) = vec2(i * vertices_per_side_reciprocal, 1.f);
+      (*vertex_p.uv) = vec2(static_cast<float>(i) * vertices_per_side_reciprocal, 1.f);
     if (vertex_p.pos_offset)
       (*vertex_p.pos_offset) = vec2(0, 1.f * bottom_offset_magnitude);
     if (vertex_p.perim)
-      (*vertex_p.perim) = i * vertices_per_side_reciprocal;
+      (*vertex_p.perim) = static_cast<float>(i) * vertices_per_side_reciprocal;
     builder->AddVertexData(vertex, builder->vertex_stride());
 
     // Build top vertex.
-    (*vertex_p.pos2) = top_left + vec2(extent.x * i * vertices_per_side_reciprocal, 0);
+    (*vertex_p.pos2) =
+        top_left + vec2(extent.x * static_cast<float>(i) * vertices_per_side_reciprocal, 0);
     if (vertex_p.uv)
-      (*vertex_p.uv) = vec2(i * vertices_per_side_reciprocal, 0);
+      (*vertex_p.uv) = vec2(static_cast<float>(i) * vertices_per_side_reciprocal, 0);
     if (vertex_p.pos_offset)
       (*vertex_p.pos_offset) = vec2(0, -1.f * top_offset_magnitude);
     if (vertex_p.perim)
-      (*vertex_p.perim) = i * vertices_per_side_reciprocal;
+      (*vertex_p.perim) = static_cast<float>(i) * vertices_per_side_reciprocal;
     builder->AddVertexData(vertex, builder->vertex_stride());
   }
 
   // Generate vertex indices.
-  for (size_t i = 2; i < vertex_count; i += 2) {
+  for (uint32_t i = 2; i < vertex_count; i += 2) {
     builder->AddIndex(i - 2);
     builder->AddIndex(i - 1);
     builder->AddIndex(i);
@@ -543,7 +545,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
       // Replace the current triangle in-place with a new triangle that refers
       // to the new vertex.  Then, add two new triangles that also refer to the
       // new vertex.
-      uint32_t new_ind = builder->vertex_count() - 1;
+      uint32_t new_ind = static_cast<uint32_t>(builder->vertex_count()) - 1;
       tri[2] = new_ind;
       builder->AddTriangle(ind1, ind2, new_ind).AddTriangle(ind2, ind0, new_ind);
     }

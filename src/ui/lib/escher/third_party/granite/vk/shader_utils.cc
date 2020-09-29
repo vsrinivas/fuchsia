@@ -136,9 +136,9 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
     // having to reason about padding).
     uint32_t last = uint32_t(type.member_types.size() - 1);
     uint32_t last_offset = compiler.type_struct_member_offset(type, last);
-    layout->push_constant_range = last_offset +
-                                  compiler.get_declared_struct_member_size(type, last) -
-                                  layout->push_constant_offset;
+    layout->push_constant_range =
+        last_offset + static_cast<uint32_t>(compiler.get_declared_struct_member_size(type, last)) -
+        layout->push_constant_offset;
   }
 }
 
@@ -233,7 +233,7 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
   }
 
   auto push_constant_ranges = ConsolidatePushConstantRanges(raw_ranges);
-  uint32_t num_push_constant_ranges = push_constant_ranges.size();
+  uint32_t num_push_constant_ranges = static_cast<uint32_t>(push_constant_ranges.size());
 
   return PipelineLayoutSpec(attribute_mask, render_target_mask, descriptor_set_layouts,
                             push_constant_ranges, num_push_constant_ranges, immutable_sampler);

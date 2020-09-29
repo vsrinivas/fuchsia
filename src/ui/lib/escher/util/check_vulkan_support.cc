@@ -38,7 +38,7 @@ vk::Device CreateVulkanDevice(vk::Instance instance) {
   for (uint32_t i = 0; i < num_physical_devices; ++i) {
     auto& physical_device = physical_devices[i];
     auto queues = physical_device.getQueueFamilyProperties();
-    for (size_t i = 0; i < queues.size(); ++i) {
+    for (uint32_t i = 0; i < queues.size(); ++i) {
       if (kRequiredQueueFlags == (queues[i].queueFlags & kRequiredQueueFlags)) {
         vk::DeviceQueueCreateInfo queue_info;
         const float kQueuePriority = 0;

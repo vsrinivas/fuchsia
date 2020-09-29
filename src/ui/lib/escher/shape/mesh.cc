@@ -37,7 +37,7 @@ static Mesh::AttributeBufferArray GenerateAttributeBufferArray(
     std::array<vk::DeviceSize, VulkanLimits::kNumVertexBuffers> offsets) {
   Mesh::AttributeBufferArray result;
 
-  for (size_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+  for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
     if (buffers[i]) {
       FX_DCHECK(spec.attribute_count(i) > 0) << "Buffer has no attributes.";
 

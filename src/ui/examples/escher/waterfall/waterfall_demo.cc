@@ -119,7 +119,7 @@ void WaterfallDemo::WarmPipelineCache(vk::Format swapchain_format) const {
   }
 
   for (size_t count : allowed_sample_counts_) {
-    config.msaa_sample_count = count;
+    config.msaa_sample_count = static_cast<uint8_t>(count);
 
     for (auto shadow_type : EnumArray<PaperRendererShadowType>()) {
       if (!renderer_->SupportsShadowType(shadow_type)) {
@@ -293,7 +293,8 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case '8':
       case '9':
       case '0':
-        current_scene_ = (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
+        current_scene_ = static_cast<int>(demo_scenes_.size() + (key_char - '0') - 1) %
+                         static_cast<int>(demo_scenes_.size());
         FX_LOGS(INFO) << "Current scene index: " << current_scene_;
         return true;
       default:

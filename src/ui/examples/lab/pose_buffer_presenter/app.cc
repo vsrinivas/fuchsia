@@ -103,7 +103,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   float fovy = glm::radians(30.f);
   float f = 1.0f / tan(0.5f * fovy);
   float aspect_ratio = (display_width * 0.5f) / display_height;
-  float near = 0.1;
+  float near = 0.1f;
   float far = 10;
   // Use (display_width * 0.5f) / display_height because the stereo camera uses
   // half of the display for each eye, so the aspect ratio for each eye has 1/2
@@ -284,7 +284,8 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 }
 
 void App::Update(uint64_t next_presentation_time) {
-  float secs = zx_clock_get_monotonic() * kSecondsPerNanosecond;
+  float secs =
+      static_cast<float>(static_cast<double>(zx_clock_get_monotonic()) * kSecondsPerNanosecond);
 
   glm::quat quaternion = glm::angleAxis(secs / 2.0f, glm::normalize(glm::vec3(0, 1, 0)));
 

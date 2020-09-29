@@ -73,7 +73,8 @@ bool RainfallDemo::HandleKeyPress(std::string key) {
     case '8':
     case '9':
     case '0':
-      current_scene_ = (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
+      current_scene_ =
+          static_cast<uint32_t>((demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size());
       FX_LOGS(INFO) << "Current scene index: " << current_scene_;
       return true;
     default:

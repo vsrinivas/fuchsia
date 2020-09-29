@@ -86,9 +86,6 @@ source_set("vk_mem_alloc") {
     ":vk_mem_alloc_error_suppression",
     ":vk_mem_alloc_small_heap_max_size",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Allows variants of Escher library to be built, e.g. to toggle
@@ -436,18 +433,10 @@ set_defaults("escher_library") {
 
 escher_library("escher_with_glslang") {
   use_runtime_glsl = true
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 escher_library("escher_no_glslang") {
   use_runtime_glsl = false
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("escher") {

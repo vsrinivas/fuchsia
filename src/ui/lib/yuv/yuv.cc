@@ -20,7 +20,7 @@ float LinearRgbToSrgb(float in) {
 }
 
 uint8_t NormalizedFloatToUnsignedByte(float in) {
-  int32_t out = std::roundf(in * 255.0f);
+  int32_t out = static_cast<int32_t>(std::lround(in * 255.0f));
   return static_cast<uint8_t>(std::clamp(out, 0, 255));
 }
 
@@ -43,7 +43,7 @@ void YuvToBgra(uint8_t y_raw, uint8_t u_raw, uint8_t v_raw, uint8_t* bgra) {
 
   // Convert from YUV to RGB using the coefficients for eYcbcr709.
   float r = fy + 1.5748f * fv;
-  float g = fy - (0.13397432f / 0.7152f) * fu - (0.33480248f / 0.7152) * fv;
+  float g = fy - (0.13397432f / 0.7152f) * fu - (0.33480248f / 0.7152f) * fv;
   float b = fy + 1.8556f * fu;
 
   // Convert to sRGB, then store the value as unsigned bytes.
