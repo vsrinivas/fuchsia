@@ -194,7 +194,7 @@ runtime. A component instance has its own [environment](#environment) and
 A tree structure that represents the runtime state of parent-child relationships
 between [component instances](#component-instance). If instance A launches
 instance B then in the tree A will be the parent of B. The component instance
-tree is used in [static capability routing](#static-capability-routing) such
+tree is used to route capabilities such
 that parents can [offer](#offer) capabilities to their children to [use](#use),
 and children can [expose](#expose) capabilities for their parents to expose to
 their parents or offer to other children.
@@ -227,15 +227,6 @@ Additional metadata that is carried in a
 [component manifest](#component-manifest). This is an extension point to the
 [component framework](#component-framework).
 
-### **Moniker** {#moniker}
-
-A moniker identifies a specific component instance in the component tree using a topological path.
-
-A v1 component's moniker is defined as a tuple of (path to the component's [realm][#realm], component URL).
-
-A v2 component's moniker is defined as a path to the component instance in the [component instance tree](#component-instance-tree).
-
-[moniker]: /docs/concepts/components/v2/monikers.md
 
 ### *Component Instance Identifier** {#component-instance-id}
 
@@ -650,6 +641,16 @@ user experience container (story) within a Modular session.
 Any component that exports a Scenic `ViewProvider` can be be used as a module.
 
 See [Module concept docs](/docs/concepts/modular/module.md) for more.
+
+### **Moniker** {#moniker}
+
+A [moniker][moniker] identifies a specific component instance in the component tree using a topological path.
+
+A v1 component's moniker is defined as a tuple of (path to the component's [realm][#realm], component URL).
+
+A v2 component's moniker is defined as a path to the component instance in the [component instance tree](#component-instance-tree).
+
+[moniker]: /docs/concepts/components/v2/monikers.md
 
 ### **Musl** {#musl}
 
