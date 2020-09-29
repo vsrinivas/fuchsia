@@ -1,0 +1,55 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("disk_extractor_lib") {
+  name = "disk_extractor_lib"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:bincode",
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:crc",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+  sources = [
+    "src/error.rs",
+    "src/extent.rs",
+    "src/format.rs",
+    "src/lib.rs",
+    "src/properties.rs",
+    "src/utils.rs",
+  ]
+}
+
+test_package("disk-extractor-lib-tests") {
+  deps = [ ":disk_extractor_lib_test" ]
+  tests = [
+    {
+      name = "disk_extractor_lib_lib_test"
+      dest = "disk-extractor-lib-unit-tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":disk-extractor-lib-tests",
+    ":disk_extractor_lib",
+    ":disk_extractor_lib_test($host_toolchain)",
+  ]
+}
