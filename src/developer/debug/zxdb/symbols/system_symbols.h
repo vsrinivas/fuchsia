@@ -44,6 +44,9 @@ class SystemSymbols {
 
   BuildIDIndex& build_id_index() { return build_id_index_; }
 
+  // Whether to create index on ModuleSymbols. It should only be false in Symbolizer.
+  void set_create_index(bool val) { create_index_ = val; }
+
   // Injects a ModuleSymbols object for the given build ID. Used for testing. Normally the test
   // would provide a dummy implementation for ModuleSymbols.
   void InjectModuleForTesting(const std::string& build_id, ModuleSymbols* module);
@@ -72,6 +75,8 @@ class SystemSymbols {
   // Index from module build ID to a non-owning ModuleSymbols pointer. The ModuleSymbols will notify
   // us when it's being deleted so the pointers stay up-to-date.
   std::map<std::string, ModuleSymbols*> modules_;
+
+  bool create_index_ = true;
 
   fxl::WeakPtrFactory<SystemSymbols> weak_factory_;
 

@@ -57,7 +57,8 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymb
   if (Err err = binary->Load(); err.has_error())
     return err;  // Symbols corrupt.
 
-  *module = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary), entry.build_dir);
+  *module =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary), entry.build_dir, create_index_);
 
   SaveModule(build_id, module->get());  // Save in cache for future use.
   return Err();
