@@ -101,8 +101,8 @@ if [[ ! -f "${keyfile}" ]]; then
   fi
 fi
 
-if [[ -f "${FUCHSIA_DIR}/.fx-ssh-path" ]]; then
-  { read old_keyfile && read old_authfile; } < "${FUCHSIA_DIR}/.fx-ssh-path"
+if [[ -f "${FUCHSIA_ROOT}/.fx-ssh-path" ]]; then
+  { read old_keyfile && read old_authfile; } < "${FUCHSIA_ROOT}/.fx-ssh-path"
   if [[ "${old_keyfile}" == "${keyfile}" && "${old_authfile}" == "${authfile}" ]]; then
     exit 0
   fi

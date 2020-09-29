@@ -271,4 +271,33 @@ TEST_fx-command-run() {
     "Expected a single argument 'myarg1' to mycmd, got '${BT_MOCK_ARGS[@]:1}'"
 }
 
+TEST_get-ssh-components() {
+  local manifest="${BT_TEMP_DIR}/.fx-ssh-path"
+  # no manifest
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${manifest}"
+  BT_EXPECT_FAIL get-ssh-privkey 2>/dev/null
+
+  # invalid manifest
+  touch "${manifest}"
+  BT_EXPECT_FAIL get-ssh-privkey 2>/dev/null
+
+  local privkey="${BT_TEMP_DIR}/custom_ssh_privkey"
+  local authkey="${BT_TEMP_DIR}/custom_ssh_authkey"
+
+  # manifest points to non-existent file
+  echo -e "${privkey}\n${authkey}" > "${manifest}"
+
+  # should fail
+  BT_EXPECT_FAIL get-ssh-privkey >/dev/null 2>&1
+
+  # but even failing because files don't exist, it should still print the filenames
+  BT_EXPECT_EQ "$(get-ssh-privkey 2>/dev/null)" "${privkey}"
+  BT_EXPECT_EQ "$(get-ssh-authkeys 2>/dev/null)" "${authkey}"
+
+  # should succeed when the files exist (regardless of the content of the files)
+  touch "${privkey}" "${authkey}"
+  BT_EXPECT_EQ "$(get-ssh-privkey)" "${privkey}"
+  BT_EXPECT_EQ "$(get-ssh-authkeys)" "${authkey}"
+}
+
 BT_RUN_TESTS "$@"

@@ -17,6 +17,7 @@ BT_FILE_DEPS=(
 )
 
 BT_MOCKED_TOOLS=(
+  "tools/ssh-keys/gen-ssh-keys.sh"
   "tools/devshell/ssh"
 )
 

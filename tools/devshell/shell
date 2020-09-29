@@ -6,22 +6,23 @@
 #### CATEGORY=Device management
 ### start a remote interactive shell in the target device
 
-## usage: fx shell [-h|--help] [--info | [<ssh flags>] <command>]
+## usage: fx shell [-h|--help] [--check | [<ssh flags>] <command>]
 ##
 ## Creates an SSH connection with a device and executes a command.
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
-##   --info       Show information about SSH keys and the target device and exit.
+##   --check      Diagnose SSH keys and show relevant information about SSH keys
+##                and the target device and exit.
 ##   <ssh flags>  Flags and command are passed to SSH as is. Consult SSH help
 ##                for a list of available flags.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-show_only=false
+check=false
 case $1 in
-  --info)
-    show_only=true
+  --check)
+    check=true
     shift
     ;;
   -h|--help)
@@ -30,22 +31,72 @@ case $1 in
     ;;
 esac
 
-if $show_only; then
-  echo -n "SSH port: "
-  get-device-ssh-port
-  echo -n "SSH device address: "
-  get-fuchsia-device-addr
-  echo -n "SSH private key file: "
-  get-ssh-privkey
-  echo -n "SSH authorized keys file: "
-  get-ssh-authkeys
+${FUCHSIA_DIR}/tools/ssh-keys/gen-ssh-keys.sh || exit $?
+
+if $check; then
+  privkey="$(get-ssh-privkey)"
+
+  has_error=false
+
+  # private key doesn't exist, should not happen because of gen-ssh-keys.sh above
+  if [[ ! -f "${privkey}" ]]; then
+    fx-error "Unexpected error: Private key does not exist: ${privkey}"
+    exit 1
+  fi
+
+  pubkey="$(ssh-keygen -y -f "${privkey}")" || exit $?
+
+  # ignore stderr in case the authkeys file doesn't exist, as we will attempt
+  # to create it below.
+  authkeys="$(get-ssh-authkeys 2>/dev/null)"
+
+  # auth key doesn't exist
+  if [[ ! -f "${authkeys}" ]]; then
+    has_error=true
+    fx-warn "Authorized keys file does not exist, attempting to create it: ${authkeys}"
+    echo "${pubkey}" > "${authkeys}"
+    echo "ok, created ${authkeys}"
+  fi
+
+  if ! grep -q "$pubkey" "$authkeys"; then
+    has_error=true
+    fx-warn "Authorized keys file does not contain your Fuchsia public key, attempting to fix: ${authkeys}"
+    echo "${pubkey}" >> "${authkeys}"
+    echo "ok, fixed ${authkeys}"
+  fi
+
+  fx-config-read
+
+  conffile="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
+  if [[ ! -f "${conffile}" ]] || ! grep -q "IdentityFile\s*$privkey" "$conffile"; then
+    has_error=true
+    fx-warn "ssh_config file doesn't exist or does not contain the correct private key, attempting to fix: ${conffile}"
+    fx build --no-zircon ssh-keys/ssh_config
+    if [[ $? -ne 0 || ! -f "${conffile}" ]] || ! grep -q "IdentityFile\s*$privkey" "$conffile"; then
+      fx-error "Unexpected error, cannot regenerate ssh_config: ${conffile}"
+      exit 1
+    fi
+    echo "ok, created ${conffile}"
+  fi
+
+  # ignore stderr in case device-finder is not built yet
+  deviceaddr="$(get-fuchsia-device-addr 2>/dev/null)"
+  deviceport="$(get-device-ssh-port 2>/dev/null)"
+  echo "Device address: ${deviceaddr:-"unknown"}"
+  echo "Device SSH port: ${deviceport:-"default"}"
+  echo "SSH config: ${conffile}"
+  echo "SSH private key file: ${privkey}"
+  echo "SSH authorized keys file: ${authkeys}"
+  echo
+
+  if $has_error; then
+    fx-warn "Some issues were found and fixed. Please look above for more information"
+  else
+    echo "SSH configuration is in good shape, no issues detected"
+  fi
 
   exit 0
 fi
-
-get-ssh-privkey > /dev/null
-
-# Warns if key is not available. Result is discarded.
 
 args=()
 device_port="$(get-device-ssh-port)" || exit $?
@@ -65,4 +116,9 @@ args+=( "$@" )
 # failures much harder to diagnose when helping people. The control master will
 # mean you only get one per TCP socket, which is once per newly booted host.
 # It's not a huge burden compared to end user support.
-fx-command-exec ssh "${args[@]}"
+fx-command-run ssh "${args[@]}"
+status=$?
+if [[ $status -ne 0 ]]; then
+  echo "Hint: use 'fx shell --check' to diagnose SSH configuration issues."
+  exit $status
+fi

@@ -298,12 +298,14 @@ function _get-ssh-key {
     filepath="${privkey}"
   fi
 
+  echo "${filepath}"
+
   if [[ ! -f "${filepath}" ]]; then
     _print_ssh_warning "File not found: ${filepath}."
     return 1
   fi
 
-  echo "${filepath}"
+  return 0
 }
 
 # Prints path to the default SSH key. These credentials are created by a
