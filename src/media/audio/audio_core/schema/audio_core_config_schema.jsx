@@ -239,6 +239,22 @@
       "type": "array",
       "items": { "$ref": "#/definitions/volume_mapping" }
     },
+    "default_render_usage_volumes": {
+      "type": "object",    
+      "properties":{
+        "background": "number",
+        "communications": "number",
+        "interruption": "number",
+        "media": "number",
+        "system_agent": "number",
+        "render:background": "number",
+        "render:communications": "number",
+        "render:interruption": "number",
+        "render:media": "number",
+        "render:system_agent": "number"
+      }, 
+      "additionalProperties": false
+    },
     "output_devices" : {
       "type": "array",
       "items" : { "$ref" : "#/definitions/output_device_profile" }

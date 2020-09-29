@@ -39,6 +39,38 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOnlyVolumeCurve) {
   EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(1.0), 0.0);
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithDefaultRenderUsageVolumes) {
+  static const std::string kConfigWithDefaultRenderUsageVolumes = R"JSON({
+      "volume_curve": [
+        {
+            "level": 0.0,
+            "db": -160.0
+        },
+        {
+            "level": 1.0,
+            "db": 0.0
+        }
+      ],
+      "default_render_usage_volumes": {
+        "render:media": 0.0,
+        "background": 0.5,
+        "render:system_agent": 0.3
+      }
+    })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename,
+                               kConfigWithDefaultRenderUsageVolumes.data(),
+                               kConfigWithDefaultRenderUsageVolumes.size()));
+
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok());
+
+  auto& default_volumes = result.value().default_render_usage_volumes();
+
+  EXPECT_FLOAT_EQ(default_volumes.at(RenderUsage::MEDIA), 0.0);
+  EXPECT_FLOAT_EQ(default_volumes.at(RenderUsage::BACKGROUND), 0.5);
+  EXPECT_FLOAT_EQ(default_volumes.at(RenderUsage::SYSTEM_AGENT), 0.3);
+}
+
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   static const std::string kConfigWithRoutingPolicy =
       R"JSON({
@@ -888,6 +920,29 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidChannelCount) {
   EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(2, -1)).is_error());
   EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(8, 9)).is_error());
   EXPECT_TRUE(ProcessConfigLoader::ParseProcessConfig(CreateConfig(9, 8)).is_error());
+}
+
+TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidDefaultVolumeRenderUsages) {
+  static const std::string kConfigWithInvalidRenderUsages = R"JSON({
+      "volume_curve": [
+        {
+            "level": 0.0,
+            "db": -160.0
+        },
+        {
+            "level": 1.0,
+            "db": 0.0
+        }
+      ],
+    "default_render_usage_volumes": {
+      "invalid": 0.0
+    }
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithInvalidRenderUsages.data(),
+                               kConfigWithInvalidRenderUsages.size()));
+
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_error());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {

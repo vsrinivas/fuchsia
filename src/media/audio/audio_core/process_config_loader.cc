@@ -23,6 +23,7 @@ namespace media::audio {
 namespace {
 
 static constexpr char kJsonKeyVolumeCurve[] = "volume_curve";
+static constexpr char kJsonKeyDefaultRenderUsageVolumes[] = "default_render_usage_volumes";
 static constexpr char kJsonKeyPipeline[] = "pipeline";
 static constexpr char kJsonKeyLib[] = "lib";
 static constexpr char kJsonKeyName[] = "name";
@@ -132,6 +133,22 @@ std::optional<StreamUsage> StreamUsageFromString(std::string_view string) {
     return StreamUsage::WithCaptureUsage(*capture_usage);
   }
   return std::nullopt;
+}
+
+RenderUsageVolumes ParseDefaultRenderUsageVolumesFromJsonObject(const rapidjson::Value& value) {
+  FX_CHECK(value.IsObject());
+  RenderUsageVolumes default_volumes;
+  for (const auto& vol : value.GetObject()) {
+    FX_CHECK(vol.name.IsString());
+    auto usage = RenderUsageFromString(vol.name.GetString());
+    FX_DCHECK(usage);
+
+    FX_CHECK(vol.value.IsNumber());
+    auto level = vol.value.GetFloat();
+
+    default_volumes[*usage] = level;
+  }
+  return default_volumes;
 }
 
 PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) {
@@ -565,6 +582,13 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
 
   auto config_builder = ProcessConfig::Builder();
   config_builder.SetDefaultVolumeCurve(curve_result.take_value());
+
+  auto default_volume_it = doc.FindMember(kJsonKeyDefaultRenderUsageVolumes);
+  if (default_volume_it != doc.MemberEnd()) {
+    auto default_volume_result =
+        ParseDefaultRenderUsageVolumesFromJsonObject(doc[kJsonKeyDefaultRenderUsageVolumes]);
+    config_builder.SetDefaultRenderUsageVolumes(default_volume_result);
+  }
 
   auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
   if (output_devices_it != doc.MemberEnd()) {

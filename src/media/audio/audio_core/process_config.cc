@@ -14,6 +14,12 @@ ProcessConfigBuilder& ProcessConfigBuilder::SetDefaultVolumeCurve(VolumeCurve cu
   return *this;
 }
 
+ProcessConfigBuilder& ProcessConfigBuilder::SetDefaultRenderUsageVolumes(
+    RenderUsageVolumes volumes) {
+  default_render_usage_volumes_ = {volumes};
+  return *this;
+}
+
 ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
     std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
               DeviceConfig::OutputDeviceProfile>
@@ -57,7 +63,7 @@ ProcessConfig ProcessConfigBuilder::Build() {
   default_volume_curve_.swap(maybe_curve);
   FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
   return ProcessConfig(
-      std::move(*maybe_curve),
+      std::move(*maybe_curve), std::move(default_render_usage_volumes_),
       DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_),
                    std::move(input_device_profiles_), std::move(default_input_device_profile_)),
       ThermalConfig(std::move(thermal_config_entries_)));
