@@ -43,15 +43,6 @@ class VmObjectPaged final : public VmObject {
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                             fbl::RefPtr<VmObjectPaged>* vmo);
 
-  // Gets the raw VmObjectPaged pointer, or null if the VmObject is not paged.
-  static VmObjectPaged* AsVmObjectPaged(const fbl::RefPtr<VmObject>& vmo) {
-    if (vmo->is_paged()) {
-      return static_cast<VmObjectPaged*>(vmo.get());
-    } else {
-      return nullptr;
-    }
-  }
-
   // Create a VMO backed by a contiguous range of physical memory.  The
   // returned vmo has all of its pages committed, and does not allow
   // decommitting them.
