@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl::{client::QueryResponseFut, endpoints::ClientEnd},
-    fidl_fuchsia_io::{FileMarker, FileProxy},
+    fidl::client::QueryResponseFut,
+    fidl_fuchsia_io::FileProxy,
     fuchsia_zircon::Status,
     futures::io::AsyncRead,
     std::{
@@ -32,24 +32,25 @@ enum State {
 }
 
 impl AsyncReader {
-    /// Errors if the provided `ClientEnd` fails to convert to a `FileProxy`.
+    /// Errors if the provided `FileProxy` does not exclusively own the wrapped channel.
     ///
-    /// This function takes a `ClientEnd` instead of a `FileProxy` to guarantee that the channel is
-    /// exclusively owned. Exclusive ownership avoids surprising behavior arising from the mismatch
-    /// between the semantics for `AsyncRead` and `fuchsia.io/File.Read`. On e.g. Linux, if two
-    /// `AsyncRead` objects were wrapping the same file descriptor and a call to `poll_read` on one
-    /// of the `AsyncRead` objects returned `Pending`, a client would generally not expect the
-    /// offset of the underlying file descriptor to advance. Meaning that a client could then call
-    /// `poll_read` on the other `AsyncRead` object and expect not to miss any file
-    /// contents. However, with an `AsyncRead` implementation that wraps `fuchsia.io/File.Read`, a
-    /// `poll_read` call that returns `Pending` would advance the file offset, meaning that
-    /// interleaving usage of `AsyncRead` objects that share a channel would return file contents in
-    /// surprising order.
-    pub fn from_client_end(file: ClientEnd<FileMarker>) -> Result<Self, AsyncReaderError> {
-        Ok(Self {
-            file: file.into_proxy().map_err(AsyncReaderError::ConvertClientEndToProxy)?,
-            state: State::Empty,
-        })
+    /// Exclusive ownership avoids surprising behavior arising from the mismatch between the
+    /// semantics for `AsyncRead` and `fuchsia.io/File.Read`. On e.g. Linux, if two `AsyncRead`
+    /// objects were wrapping the same file descriptor and a call to `poll_read` on one of the
+    /// `AsyncRead` objects returned `Pending`, a client would generally not expect the offset of
+    /// the underlying file descriptor to advance. Meaning that a client could then call `poll_read`
+    /// on the other `AsyncRead` object and expect not to miss any file contents. However, with an
+    /// `AsyncRead` implementation that wraps `fuchsia.io/File.Read`, a `poll_read` call that
+    /// returns `Pending` would advance the file offset, meaning that interleaving usage of
+    /// `AsyncRead` objects that share a channel would return file contents in surprising order.
+    pub fn from_proxy(file: FileProxy) -> Result<Self, AsyncReaderError> {
+        let file = match file.into_channel() {
+            Ok(channel) => FileProxy::new(channel),
+            Err(file) => {
+                return Err(AsyncReaderError::NonExclusiveChannelOwnership(file));
+            }
+        };
+        Ok(Self { file, state: State::Empty })
     }
 }
 
@@ -121,8 +122,8 @@ impl AsyncRead for AsyncReader {
 
 #[derive(Debug, thiserror::Error)]
 pub enum AsyncReaderError {
-    #[error("Failed to convert ClientEnd<FileMarker> to a FileProxy")]
-    ConvertClientEndToProxy(#[source] fidl::Error),
+    #[error("Supplied FileProxy did not have exclusive ownership of the underlying channel")]
+    NonExclusiveChannelOwnership(FileProxy),
 }
 
 #[cfg(test)]
@@ -140,18 +141,12 @@ mod tests {
         tempfile::TempDir,
     };
 
-    fn proxy_to_client_end(proxy: FileProxy) -> ClientEnd<FileMarker> {
-        proxy.into_channel().unwrap().into_zx_channel().into()
-    }
-
     #[fasync::run_singlethreaded(test)]
-    async fn client_end_to_proxy_conversion_failure() {
-        let bad_handle = fuchsia_zircon::Handle::invalid();
+    async fn exclusive_ownership() {
+        let (proxy, _) = endpoints::create_proxy::<FileMarker>().unwrap();
+        let _stream = proxy.take_event_stream();
 
-        assert_matches!(
-            AsyncReader::from_client_end(ClientEnd::new(bad_handle.into())),
-            Err(AsyncReaderError::ConvertClientEndToProxy(_))
-        );
+        assert_matches!(AsyncReader::from_proxy(proxy), Err(_));
     }
 
     async fn read_to_end_file_with_expected_contents(expected_contents: &[u8]) {
@@ -161,7 +156,7 @@ mod tests {
         let () = file::write_in_namespace(&path, expected_contents).await.unwrap();
         let file = file::open_in_namespace(&path, fidl_fuchsia_io::OPEN_RIGHT_READABLE).unwrap();
 
-        let mut reader = AsyncReader::from_client_end(proxy_to_client_end(file)).unwrap();
+        let mut reader = AsyncReader::from_proxy(file).unwrap();
         let mut actual_contents = vec![];
         reader.read_to_end(&mut actual_contents).await.unwrap();
 
@@ -180,9 +175,9 @@ mod tests {
     }
 
     async fn poll_read_with_specific_buf_size(poll_read_size: u64, expected_file_read_size: u64) {
-        let (client, mut stream) = endpoints::create_request_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-        let mut reader = AsyncReader::from_client_end(client).unwrap();
+        let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
         let () = poll_fn(|cx| {
             let mut buf = vec![0u8; poll_read_size.try_into().unwrap()];
@@ -212,9 +207,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_pending_saves_future() {
-        let (client, mut stream) = endpoints::create_request_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-        let mut reader = AsyncReader::from_client_end(client).unwrap();
+        let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
         // This poll_read call will create a File.Read future and poll it. The poll of the File.Read
         // future will return Pending because nothing is handling the FileRequestStream yet. The
@@ -253,9 +248,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_with_smaller_buf_after_pending() {
-        let (client, mut stream) = endpoints::create_request_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-        let mut reader = AsyncReader::from_client_end(client).unwrap();
+        let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
         // Call poll_read with a buf of length 3. This is the first poll_read call, so the reader
         // will create a File.Read future for 3 bytes. poll_read will return Pending because nothing
@@ -318,9 +313,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn transition_to_empty_on_fidl_error() {
-        let (client, _) = endpoints::create_request_stream::<FileMarker>().unwrap();
+        let (proxy, _) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-        let mut reader = AsyncReader::from_client_end(client).unwrap();
+        let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
         // poll_read will fail because the channel is closed because the server end was dropped.
         let () = poll_fn(|cx| {
@@ -341,9 +336,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn recover_from_file_read_error() {
-        let (client, mut stream) = endpoints::create_request_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-        let mut reader = AsyncReader::from_client_end(client).unwrap();
+        let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
         // Call poll_read until failure.
         let mut buf = [0u8; 1];
@@ -384,9 +379,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn poll_read_zero_then_read_nonzero() {
-        let (client, mut stream) = endpoints::create_request_stream::<FileMarker>().unwrap();
+        let (proxy, mut stream) = endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-        let mut reader = AsyncReader::from_client_end(client).unwrap();
+        let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
         // Call poll_read with a zero-length buffer.
         let () = poll_fn(|cx| {
@@ -435,10 +430,10 @@ mod tests {
         for first_poll_read_len in 0..5 {
             for file_size in 0..5 {
                 for second_poll_read_len in 0..5 {
-                    let (client, mut stream) =
-                        endpoints::create_request_stream::<FileMarker>().unwrap();
+                    let (proxy, mut stream) =
+                        endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
 
-                    let mut reader = AsyncReader::from_client_end(client).unwrap();
+                    let mut reader = AsyncReader::from_proxy(proxy).unwrap();
 
                     // poll_read causes the AsyncReader to create a File.Read request.
                     let () = poll_fn(|cx| {
