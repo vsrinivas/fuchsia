@@ -5,11 +5,12 @@ use {
     crate::{events::types::InspectData, inspect::collector::InspectDataCollector},
     diagnostics_data::{self as schema, LifecycleType},
     fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_async::{self as fasync},
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy, Property},
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon::{self as zx, DurationNum},
     inspect_fidl_load as deprecated_inspect,
+    log::error,
     std::convert::TryFrom,
     std::sync::Arc,
 };
@@ -173,8 +174,8 @@ pub struct PopulatedInspectDataContainer {
 }
 
 impl PopulatedInspectDataContainer {
-    pub async fn from(
-        unpopulated: UnpopulatedInspectDataContainer,
+    async fn from(
+        unpopulated: Arc<UnpopulatedInspectDataContainer>,
     ) -> PopulatedInspectDataContainer {
         let mut collector = InspectDataCollector::new();
 
@@ -251,10 +252,10 @@ impl PopulatedInspectDataContainer {
                 }
                 match snapshots_data_opt {
                     Some(snapshots) => PopulatedInspectDataContainer {
-                        relative_moniker: unpopulated.relative_moniker,
-                        component_url: unpopulated.component_url,
-                        snapshots: snapshots,
-                        inspect_matcher: unpopulated.inspect_matcher,
+                        relative_moniker: unpopulated.relative_moniker.clone(),
+                        component_url: unpopulated.component_url.clone(),
+                        inspect_matcher: unpopulated.inspect_matcher.clone(),
+                        snapshots,
                     },
                     None => {
                         let no_success_snapshot_data = vec![SnapshotData::failed(
@@ -267,10 +268,10 @@ impl PopulatedInspectDataContainer {
                             "NO_FILE_SUCCEEDED".to_string(),
                         )];
                         PopulatedInspectDataContainer {
-                            relative_moniker: unpopulated.relative_moniker,
-                            component_url: unpopulated.component_url,
+                            relative_moniker: unpopulated.relative_moniker.clone(),
+                            component_url: unpopulated.component_url.clone(),
                             snapshots: no_success_snapshot_data,
-                            inspect_matcher: unpopulated.inspect_matcher,
+                            inspect_matcher: unpopulated.inspect_matcher.clone(),
                         }
                     }
                 }
@@ -280,16 +281,16 @@ impl PopulatedInspectDataContainer {
                     schema::Error {
                         message: format!(
                             "Encountered error traversing diagnostics dir for {:?}: {:?}",
-                            unpopulated.relative_moniker, e
+                            &unpopulated.relative_moniker, e
                         ),
                     },
                     "NO_FILE_SUCCEEDED".to_string(),
                 )];
                 PopulatedInspectDataContainer {
-                    relative_moniker: unpopulated.relative_moniker,
-                    component_url: unpopulated.component_url,
+                    relative_moniker: unpopulated.relative_moniker.clone(),
+                    component_url: unpopulated.component_url.clone(),
                     snapshots: no_success_snapshot_data,
-                    inspect_matcher: unpopulated.inspect_matcher,
+                    inspect_matcher: unpopulated.inspect_matcher.clone(),
                 }
             }
         }
@@ -311,4 +312,35 @@ pub struct UnpopulatedInspectDataContainer {
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
     pub inspect_matcher: Option<InspectHierarchyMatcher>,
+}
+
+impl UnpopulatedInspectDataContainer {
+    /// Populates this data container with a timeout. On the timeout firing returns a
+    /// container suitable to return to clients, but with timeout error information recorded.
+    pub async fn populate(
+        self,
+        timeout: i64,
+        on_timeout: impl FnOnce(),
+    ) -> PopulatedInspectDataContainer {
+        let this = Arc::new(self);
+        PopulatedInspectDataContainer::from(this.clone())
+            .on_timeout(timeout.seconds().after_now(), move || {
+                on_timeout();
+                let error_string = format!(
+                    "Exceeded per-component time limit for fetching diagnostics data: {:?}",
+                    &this.relative_moniker
+                );
+                error!("{}", error_string);
+                PopulatedInspectDataContainer {
+                    component_url: this.component_url.clone(),
+                    inspect_matcher: this.inspect_matcher.clone(),
+                    relative_moniker: this.relative_moniker.clone(),
+                    snapshots: vec![SnapshotData::failed(
+                        schema::Error { message: error_string },
+                        "NO_FILE_SUCCEEDED".to_string(),
+                    )],
+                }
+            })
+            .await
+    }
 }

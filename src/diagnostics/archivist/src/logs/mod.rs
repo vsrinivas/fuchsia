@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
+use buffer::LazyItem;
 use fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker};
 use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_logger::LogSinkMarker;
@@ -18,7 +19,7 @@ use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc, future::FutureObj, lock::Mutex, FutureExt, StreamExt, TryStreamExt};
+use futures::{channel::mpsc, future::FutureObj, lock::Mutex, prelude::*};
 use log::{error, warn};
 use std::sync::Arc;
 
@@ -28,13 +29,11 @@ mod error;
 mod interest;
 mod listener;
 pub mod message;
-pub mod server;
 mod socket;
 mod stats;
 #[cfg(test)]
 pub mod testing;
 
-pub use buffer::Cursor;
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 pub use message::Message;
 
@@ -409,8 +408,11 @@ impl LogManager {
         Ok(())
     }
 
-    pub async fn snapshot(&self) -> Cursor<Message> {
-        self.inner.lock().await.log_msg_buffer.snapshot()
+    pub async fn snapshot(&self) -> impl Stream<Item = Arc<Message>> {
+        self.inner.lock().await.log_msg_buffer.snapshot().map(|item| match item {
+            LazyItem::Next(m) => m,
+            LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
+        })
     }
 
     /// Handle a new listener, sending it all cached messages and either calling
