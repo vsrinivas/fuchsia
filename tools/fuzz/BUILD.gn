@@ -32,7 +32,6 @@ if (is_host) {
 
   go_test("undercoat_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fuzz" ]
-    args = [ "-test.short" ]  # exclude end-to-end
     deps = [ ":lib" ]
   }
 

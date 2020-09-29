@@ -82,9 +82,10 @@ var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runt
 // NewLocalFuchsiaBuild will create a BaseBuild with path layouts corresponding
 // to a local Fuchsia checkout
 func NewLocalFuchsiaBuild() (Build, error) {
-	fuchsiaDir, found := os.LookupEnv("FUCHSIA_DIR")
-	if !found {
-		return nil, fmt.Errorf("FUCHSIA_DIR not set")
+	fuchsiaDir := os.Getenv("FUCHSIA_DIR")
+	if fuchsiaDir == "" {
+		// Fall back to relative path from this file
+		fuchsiaDir = filepath.Join("..", "..")
 	}
 
 	fxBuildDir := filepath.Join(fuchsiaDir, ".fx-build-dir")
@@ -167,7 +168,7 @@ func NewLocalFuchsiaBuild() (Build, error) {
 	build := &BaseBuild{
 		Paths: map[string]string{
 			"zbi":             filepath.Join(buildDir, "fuchsia.zbi"),
-			"fvm":             filepath.Join(zirconBuildDir, "tools", "fvm"),
+			"fvm":             filepath.Join(buildDir, hostDir, "fvm"),
 			"zbitool":         filepath.Join(zirconBuildDir, "tools", "zbi"),
 			"blk":             filepath.Join(buildDir, "obj", "build", "images", "fvm.blk"),
 			"qemu":            filepath.Join(qemuDir, "bin", binary),

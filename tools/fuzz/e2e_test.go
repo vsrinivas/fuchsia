@@ -32,21 +32,14 @@ func runCommand(t *testing.T, args ...string) string {
 	return buf.String()
 }
 
+// To run this test:
+// - fx set core.x64 --with-base //bundles:tests --with-base //bundles:tools --fuzz-with asan
+// - fx build
+// - cd tools/fuzz
+// - UNDERCOAT_E2E_TESTS=yes go test -v -logtostderr
 func TestEndToEnd(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping e2e test in short mode")
-	}
-
-	if v, ok := os.LookupEnv("FUCHSIA_DIR"); v == "" {
-		// Likely running in "go test" mode.
-		os.Setenv("FUCHSIA_DIR", "../..")
-		if !ok {
-			defer os.Unsetenv("FUCHSIA_DIR")
-		} else {
-			defer os.Setenv("FUCHSIA_DIR", v)
-		}
-		// If "../../out/default.zircon/tools/fvm" is not present, print out an
-		// error message to run fx build.
+	if _, found := os.LookupEnv("UNDERCOAT_E2E_TESTS"); !found {
+		t.Skip("skipping end-to-end test; set UNDERCOAT_E2E_TESTS to enable")
 	}
 
 	out := runCommand(t, "version")
@@ -63,10 +56,10 @@ func TestEndToEnd(t *testing.T) {
 
 	defer runCommand(t, "stop_instance", "-handle", handle)
 
-	fuzzer := "example_fuzzers/trap_fuzzer"
+	fuzzer := "example-fuzzers/crash_fuzzer"
 	out = runCommand(t, "list_fuzzers", "-handle", handle)
 	if !strings.Contains(out, fuzzer) {
-		t.Fatalf("fuzzer missing from output: %s", out)
+		t.Fatalf("%q fuzzer missing from output:\n%s", fuzzer, out)
 	}
 
 	// Make a tempdir for holding local files

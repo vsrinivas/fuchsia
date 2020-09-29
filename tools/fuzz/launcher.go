@@ -112,6 +112,10 @@ func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, 
 	// Necessary to redirect serial to stdout for x86.
 	qemuCmd.AddKernelArg("kernel.serial=legacy")
 
+	qemuCmd.SetFlag("-nographic")
+	qemuCmd.SetFlag("-serial", "stdio")
+	qemuCmd.SetFlag("-monitor", "none")
+
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err == nil {
 		qemuCmd.AddKernelArg("kernel.entropy-mixin=" + hex.EncodeToString(entropy))
