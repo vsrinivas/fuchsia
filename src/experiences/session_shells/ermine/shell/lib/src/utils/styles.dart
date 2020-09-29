@@ -13,7 +13,8 @@ class ErmineStyle {
     brightness: Brightness.dark,
     fontFamily: 'Roboto Mono',
     textTheme: TextTheme(),
-    textSelectionColor: Colors.grey[400],
+    textSelectionTheme:
+        TextSelectionThemeData(selectionColor: Colors.grey[400]),
   );
 
   /// Background color.

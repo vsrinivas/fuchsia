@@ -47,10 +47,12 @@ class App extends StatelessWidget {
                   title: Strings.browser,
                   theme: ThemeData(
                     fontFamily: 'RobotoMono',
-                    textSelectionColor: _kErmineColor200,
-                    textSelectionHandleColor: _kErmineColor400,
+                    textSelectionTheme: TextSelectionThemeData(
+                      selectionColor: _kErmineColor200,
+                      cursorColor: _kErmineColor400,
+                      selectionHandleColor: _kErmineColor400,
+                    ),
                     hintColor: _kErmineColor400,
-                    cursorColor: _kErmineColor400,
                     primaryColor: _kErmineColor100,
                     canvasColor: _kErmineColor100,
                     accentColor: _kErmineColor400,
