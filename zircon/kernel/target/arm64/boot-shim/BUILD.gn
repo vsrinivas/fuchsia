@@ -1,1 +1,143 @@
-BUILD.zircon.gn
+# Copyright 2019 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/images/args.gni")
+import("$zx/public/gn/toolchain/c_utils.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
+
+# The boot shims need to be compiled in the special environment for running
+# in physical memory with the MMU disabled.
+if (toolchain.environment == "physmem") {
+  source_set("common") {
+    visibility = [ ":*" ]
+    sources = [
+      "boot-shim.S",
+      "debug.c",
+      "devicetree.c",
+      "util.c",
+    ]
+    deps = [ "$zx/kernel/lib/libc/string" ]
+  }
+
+  config("boot_shim_config") {
+    visibility = [ ":*" ]
+    defines = [ "KERNEL_ALIGN=0x10000" ]
+    inputs = [ "boot-shim.ld" ]
+    ldflags = [
+      "-Wl,--build-id=none",
+      "-Wl,-T," + rebase_path("boot-shim.ld", root_build_dir),
+      "-Wl,-defsym," + defines[0],
+    ]
+  }
+}
+
+template("boot_shim") {
+  board = target_name
+
+  if (toolchain.environment == "physmem") {
+    shim_name = "${board}-boot-shim"
+
+    executable(shim_name) {
+      output_extension = "elf"
+      output_dir = target_out_dir
+      configs += [ ":boot_shim_config" ]
+      deps = [
+        ":common",
+        "$zx/system/ulib/ddk-platform-defs:headers",
+        "$zx/system/ulib/zbi",
+      ]
+      sources = [
+        "${board}-uart.c",
+        "boot-shim.c",
+      ]
+
+      # TODO(mcgrathr): Move these to ./$board-config.h and use a -D.
+      include_dirs = [ "$zx/kernel/target/arm64/board/$board" ]
+    }
+
+    shim_rspfile = "$target_gen_dir/$shim_name.elf.rsp"
+    link_output_rspfile("$shim_name.elf.rsp") {
+      deps = [ ":$shim_name" ]
+      outputs = [ shim_rspfile ]
+    }
+
+    image_binary(board) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      deps = [ ":$shim_name" ]
+
+      # The shim code should be purely position-independent code.
+      pure = true
+
+      output_dir = root_build_dir
+      output_name = shim_name
+      output_extension = "bin"
+      metadata = {
+        # For the //:images build_api_module().
+        images = [
+          {
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            archive = add_qemu_to_build_archives
+            if (defined(invoker.image_metadata)) {
+              forward_variables_from(invoker.image_metadata, "*")
+            }
+            if (!defined(name)) {
+              name = output_name
+            }
+            if (!defined(type)) {
+              # TODO(mcgrathr): This isn't usefully descriptive but it's not
+              # clear what other generic string to use for these.  They might
+              # be what some boot loader calls the "kernel", or they might be
+              # pasted on the front of the image by some script (perhaps
+              # before more stages of board-specific image packing).  Refine
+              # this part of the "images" build API when consumer needs for
+              # making use of the shims becomes more clear.
+              type = "bin"
+            }
+            path = rebase_path("$output_dir/$output_name.$output_extension",
+                               root_build_dir)
+            cpu = current_cpu
+          },
+        ]
+      }
+
+      # Use the same variant for the extraction that will have built the shim.
+      variant_target = {
+        match = "executable"
+      }
+    }
+  } else {
+    group(board) {
+      public_deps = [ ":$board($zx/kernel/arch/arm64:physmem_arm64)" ]
+    }
+    not_needed(invoker, "*")
+  }
+}
+
+shims = [
+  "as370",
+  "c18",
+  "cleo",
+  "msm8x53-som",
+  "msm8998",
+  "mt8167s_ref",
+  "visalia",
+]
+
+foreach(shim, shims) {
+  boot_shim(shim) {
+  }
+}
+
+boot_shim("qemu") {
+  image_metadata = {
+    name = "qemu-kernel"
+    type = "kernel"
+  }
+}

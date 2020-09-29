@@ -135,14 +135,14 @@ if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
 fi
 
 # boot shim for our board
-BOOT_SHIM="${ZIRCON_BUILD_DIR}/${BOARD}-boot-shim.bin"
+BOOT_SHIM="${ROOT_BUILD_DIR}/${BOARD}-boot-shim.bin"
 
 # zircon ZBI image with prepended boot shim
 SHIMMED_ZIRCON_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.shim"
 
 # Final packaged Android style boot.img
 if [[ -z "${BOOT_IMG}" ]]; then
-    BOOT_IMG="${ZIRCON_BUILD_DIR}/${BOARD}-boot.img"
+    BOOT_IMG="${ROOT_BUILD_DIR}/${BOARD}-boot.img"
 fi
 
 # PACKAGING STEPS BEGIN HERE

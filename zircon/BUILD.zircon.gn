@@ -456,21 +456,10 @@ if (toolchain.environment == "user") {
   }
 }
 
-# This allows arm64 boot shims to be always built and later surfaced by the
-# unification build API.
-environment_redirect("boot-shim-arm64") {
-  cpu = "arm64"
-  environment_label = "$zx/public/gn/toolchain:user"
-  deps = [ "//kernel/target/arm64/boot-shim" ]
-}
-
 build_api_module("legacy_images") {
   testonly = true
   data_keys = [ "images" ]
-  deps = [
-    ":boot-shim-arm64",
-    ":zbi_tests",
-  ]
+  deps = [ ":zbi_tests" ]
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
   }
@@ -483,10 +472,6 @@ foreach(cpu, standard_fuchsia_cpus) {
     testonly = true
     data_keys = [ "zx_manifest" ]
     deps = [ ":legacy-$cpu" ]
-
-    if (cpu == "arm64") {
-      deps += [ ":boot-shim-arm64" ]
-    }
 
     # Add the dependencies of legacy-aux directly, as that target sets a barrier
     # that's not desirable here.

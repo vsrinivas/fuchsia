@@ -393,59 +393,25 @@ pm_build("system_image_prime.meta") {
 ### Zircon Boot Images
 ###
 
-# Used to populate image_paths.sh with the right values to point to the QEMU kernel
-if (target_cpu == "x64") {
-  group("qemu-kernel") {
+# Used to populate image_paths.sh with the right values to point to the QEMU kernel.
+group("qemu-kernel") {
+  if (target_cpu == "x64") {
     _qemu_kernel_target = "//zircon/kernel/target/pc/multiboot"
     _qemu_kernel_file = "$root_build_dir/multiboot.bin"
-    metadata = {
-      images = [
-        {
-          archive = add_qemu_to_build_archives
-          name = "qemu-kernel"
-          path = rebase_path(_qemu_kernel_file, root_build_dir)
-          type = "kernel"
-        },
-      ]
-      image_paths = [ "IMAGE_QEMU_KERNEL_RAW=" +
-                      rebase_path(_qemu_kernel_file, root_build_dir) ]
-    }
-    deps = [ _qemu_kernel_target ]
+  } else if (target_cpu == "arm64") {
+    _qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
+    _qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
+  } else {
+    assert(false, "Unsupported target cpu: $target_cpu")
   }
-} else {
-  # Copy the QEMU kernel from the Zircon build directory to keep invariant that
-  # all image paths are relative to the Fuchsia root_build_dir without the
-  # leading "../".
-  copy("qemu-kernel") {
-    sources = []
-    outputs = []
-    image_metadata = []
-    image_path_metadata = []
-
-    # GN's copy() itself will enforce that there is only one QEMU kernel
-    # found, as else length(outputs) != 1 which is illegal.
-    foreach(image, zircon_images) {
-      if (image.name == "qemu-kernel" && image.cpu == target_cpu) {
-        sources += [ "$zircon_root_build_dir/${image.path}" ]
-        outputs += [ "$root_build_dir/${image.path}" ]
-        image_metadata += [
-          {
-            archive = add_qemu_to_build_archives
-            name = "qemu-kernel"
-            path = image.path
-            type = "kernel"
-          },
-        ]
-        image_path_metadata += [ "IMAGE_QEMU_KERNEL_RAW=${image.path}" ]
-      }
-    }
-    metadata = {
-      images = image_metadata
-      image_paths = image_path_metadata
-    }
+  metadata = {
+    image_paths = [ "IMAGE_QEMU_KERNEL_RAW=" +
+                    rebase_path(_qemu_kernel_file, root_build_dir) ]
   }
-  default_image_deps += [ ":qemu-kernel" ]
+  deps = [ _qemu_kernel_target ]
 }
+
+default_image_deps += [ ":qemu-kernel" ]
 
 # Generate the /boot/config/devmgr file.  This looks like a kernel command
 # line file, but is read by devmgr (in addition to kernel command line

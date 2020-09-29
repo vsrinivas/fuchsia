@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(fxbug.dev/54160): Keep this in sync with BUILD.zircon.gn
+import("//build/images/args.gni")
 import("$zx_build/public/gn/migrated_targets.gni")
 multiboot_toolchain = "zircon_multiboot"
 
@@ -69,6 +69,7 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "multiboot") {
     if (toolchain_variant.name == "") {
       output_dir = root_build_dir
     }
+
     sources = [
       "multiboot-main.c",
       "multiboot-start.S",
@@ -83,6 +84,20 @@ if (zircon_toolchain != false && zircon_toolchain.environment == "multiboot") {
     ]
     ldflags = [ "-Wl,-T," + rebase_path("multiboot.ld", root_build_dir) ]
     inputs = [ "multiboot.ld" ]
+
+    metadata = {
+      # Used to add an entry to the "images.json" build API file.
+      images = [
+        {
+          archive = add_qemu_to_build_archives
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "qemu-kernel"
+          path = "multiboot.bin"
+          type = "kernel"
+          cpu = current_cpu
+        },
+      ]
+    }
   }
 
   not_needed([ "multiboot_toolchain" ])

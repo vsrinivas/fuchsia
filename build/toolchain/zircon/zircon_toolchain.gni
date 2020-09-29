@@ -371,7 +371,8 @@ template("zircon_toolchain") {
       dump_syms += " -n \"<_>\" -o Fuchsia"
     } else {
       # Use what's probably installation name, not the ".debug" name.
-      dump_syms += " -n \"{{target_output_name}}{{output_extension}}\""
+      dump_syms +=
+          " -n \"{{output_dir}}/{{target_output_name}}{{output_extension}}\""
     }
   }
 
@@ -477,7 +478,8 @@ template("zircon_toolchain") {
       assert(use_buildidtool)
       strip_command +=
           " && { " +  # The brace group is superfluous.
-          "test ! -s \"$buildid_stampfile\" || " +
+          "test ! -s \"$buildid_stampfile\" && " +
+          "touch \"$breakpad_outfile\"  || " +
           "$dump_syms \"$unstripped_outfile\" > \"$breakpad_outfile\"" +
           "; }"  # But makes the control flow a little clearer.
     }

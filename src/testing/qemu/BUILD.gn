@@ -36,18 +36,16 @@ if (is_linux) {
     visibility = [ ":*" ]
 
     if (target_cpu == "arm64") {
-      # TODO(fxbug.dev/59918): Move the arm64 boot shim to the Fuchsia build.
-      # Until then, it is ok to assume everything was built by the
-      # Zircon build, so no deps entry is needed.
       kernel_binary = "qemu-boot-shim.bin"
-      sources = [ "$zircon_root_build_dir/$kernel_binary" ]
+      deps = [ "//zircon/kernel/target/arm64/boot-shim:qemu" ]
     } else if (target_cpu == "x64") {
       kernel_binary = "multiboot.bin"
-      sources = [ "$root_build_dir/$kernel_binary" ]
       deps = [ "//zircon/kernel/target/pc/multiboot" ]
     } else {
       assert(false, "CPU not supported")
     }
+
+    sources = [ "$root_build_dir/$kernel_binary" ]
     outputs = [ "$root_out_dir/test_data/qemu/$kernel_binary" ]
   }
 

@@ -14,13 +14,15 @@ PROJECT_ROOT="${ZIRCON_DIR}/.."
 
 # arguments
 BOARD=c18
-BUILD_DIR=
+ZIRCON_BUILD_DIR=
+ROOT_BUILD_DIR=
 BOOT_IMG=
 ZIRCON_BOOTIMAGE=
 
 function HELP {
     echo "help:"
     echo "-B <build-dir>  : path to zircon build directory"
+    echo "-R <build-dir>  : path to root build directory"
     echo "-o              : output boot.img file (defaults to <build-dir>/<board>-boot.img)"
     echo "-z              : input zircon ZBI file (defaults to <build-dir>/<board>-boot.img)"
     exit 1
@@ -28,7 +30,8 @@ function HELP {
 
 while getopts "B:o:z:" FLAG; do
     case $FLAG in
-        B) BUILD_DIR="${OPTARG}";;
+        B) ZIRCON_BUILD_DIR="${OPTARG}";;
+        R) ROOT_BUILD_DIR="${OPTARG}";;
         o) BOOT_IMG="${OPTARG}";;
         z) ZIRCON_BOOTIMAGE="${OPTARG}";;
         \?)
@@ -38,19 +41,27 @@ while getopts "B:o:z:" FLAG; do
     esac
 done
 
-if [[ -z "${BUILD_DIR}" ]]; then
+if [[ -z "${ZIRCON_BUILD_DIR}" ]]; then
     echo must specify a Zircon build directory
     HELP
 fi
 
+if [[ -z "${ROOT_BUILD_DIR}" ]]; then
+  ROOT_BUILD_DIR="${ZIRCON_BUILD_DIR%.zircon}"
+  if [[ ! -d "${ROOT_BUILD_DIR}" ]]; then
+    echo >&2 "Cannot find ROOT_BUILD_DIR (${ROOT_BUILD_DIR}), please use -R <build-dir>."
+    exit 1
+  fi
+fi
+
 # zircon image built by the Zircon build system
 if [[ -z "${ZIRCON_BOOTIMAGE}" ]]; then
-    ZIRCON_BOOTIMAGE="${BUILD_DIR}/arm64.zbi"
+    ZIRCON_BOOTIMAGE="${ZIRCON_BUILD_DIR}/arm64.zbi"
 fi
 
 # Final packaged ChromeOS style boot image
 if [[ -z "${BOOT_IMG}" ]]; then
-    BOOT_IMG="${BUILD_DIR}/${BOARD}-boot.img"
+    BOOT_IMG="${ZIRCON_BUILD_DIR}/${BOARD}-boot.img"
 fi
 
 case "$(uname -s)-$(uname -m)" in
@@ -75,10 +86,10 @@ KEYBLOCK="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel.keybl
 PRIVATEKEY="${PROJECT_ROOT}/third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
 ITSSCRIPT_TEMPLATE="${DIR}/its_script"
 DUMMY_DEVICE_TREE="${ZIRCON_DIR}/kernel/target/arm64/dtb/dummy-device-tree.dtb"
-LZ4="${BUILD_DIR}/tools/lz4"
+LZ4="${ROOT_BUILD_DIR}/host_x64/lz4"
 
 # boot shim for our board
-BOOT_SHIM="${BUILD_DIR}/${BOARD}-boot-shim.bin"
+BOOT_SHIM="${ROOT_BUILD_DIR}/${BOARD}-boot-shim.bin"
 
 # outputs
 SHIMMED_ZIRCON_BOOTIMAGE="${ZIRCON_BOOTIMAGE}.shim"
