@@ -29,8 +29,6 @@ static_library("parser") {
 
   public_deps = [ "//sdk/lib/syslog/cpp" ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("parser_tests_bin") {

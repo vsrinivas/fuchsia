@@ -23,7 +23,7 @@
 namespace shell::mirror {
 
 int Files::AddFile(const std::filesystem::path &path, std::unique_ptr<char[]> &&contents,
-                   int length) {
+                   long length) {
   for (const auto &file : files_) {
     if (file.Name() == path) {
       // already present.  Consider replacing?
@@ -96,7 +96,7 @@ int Files::DumpFiles(std::vector<char> *sink) {
     sink->insert(sink->end(), name.begin(), name.end());
 
     std::string_view data_view = file.View();
-    int data_size = data_view.size();
+    size_t data_size = data_view.size();
     const char *data = data_view.data();
     WriteFixedLength<uint64_t>(sink, data_size);
     sink->reserve(sink->size() + data_size);
@@ -134,8 +134,8 @@ Err DoRead(int fd, void *buf, size_t count, struct timeval *timeout) {
     }
   }
 
-  int ct;
-  int to_be_counted = count;
+  ssize_t ct;
+  size_t to_be_counted = count;
   while (to_be_counted != 0) {
     if ((ct = read(fd, buf, to_be_counted)) == -1) {
       std::string error = "Error reading: " + std::string(strerror(errno));

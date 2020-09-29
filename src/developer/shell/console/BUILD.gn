@@ -30,9 +30,6 @@ source_set("lib") {
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/cmdline",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

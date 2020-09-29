@@ -75,7 +75,7 @@ class SocketServer : public debug_ipc::FDWatcher {
   Err RunInLoop(ConnectionConfig config, debug_ipc::FileLineFunction from_here,
                 fit::closure inited_fn);
 
-  uint16_t GetPort() { return config_.port; }
+  int GetPort() { return config_.port; }
   std::string GetPath() { return *config_.path; }
 
   void RemoveConnection(SocketConnection* connection) {

@@ -28,8 +28,6 @@ static_library("shell_interpreter") {
 
   deps = [ "//sdk/lib/syslog/cpp" ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 static_library("shell_server_lib") {
@@ -49,9 +47,6 @@ static_library("shell_server_lib") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

@@ -77,7 +77,7 @@ class Files {
 
   // Add the file at location |path| to this list of File objects, with the contents from |contents|
   // of length |length|.
-  int AddFile(const std::filesystem::path& path, std::unique_ptr<char[]>&& contents, int length);
+  int AddFile(const std::filesystem::path& path, std::unique_ptr<char[]>&& contents, long length);
 
   // Returns a reference to the list of File objects stored by this object.
   const std::vector<File>& GetFiles() const { return files_; }
