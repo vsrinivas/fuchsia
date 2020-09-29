@@ -578,7 +578,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       ndev = drvr->iflist[bsscfgidx]->ndev;
       if (strncmp(ndev->name, name, sizeof(ndev->name))) {
         BRCMF_INFO("Reusing netdev:%s for new client iface, but changing its name to netdev:%s.",
-                  ndev->name, name);
+                   ndev->name, name);
         brcmf_write_net_device_name(ndev, name);
       }
       ifp = brcmf_get_ifp(drvr, 0);
@@ -681,7 +681,10 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
   wlanif_scan_end_t args;
   args.txn_id = txn_id;
   args.code = scan_result_code;
-  if (ndev->if_proto.ops != NULL) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping signal scan end callback");
+  } else {
     BRCMF_DBG(SCAN, "Signaling on_scan_end with txn_id %ld and code %d", args.txn_id, args.code);
     BRCMF_DBG(WLANIF,
               "Sending scan end event to SME. txn_id: %" PRIu64
@@ -1149,6 +1152,11 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
 static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
                                   bool locally_initiated) {
   struct net_device* ndev = vif->wdev.netdev;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping link down callback");
+    return;
+  }
   wlanif_deauth_indication_t ind;
 
   memcpy(ind.peer_sta_address, vif->profile.bssid, ETH_ALEN);
@@ -1585,6 +1593,12 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
   conf.association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
   set_assoc_conf_wmm_param(cfg, &conf);
 
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping association callback");
+    return;
+  }
+
   BRCMF_DBG(WLANIF, "Sending assoc result to SME. result: %" PRIu8 ", aid: %" PRIu16 "",
             conf.result_code, conf.association_id);
 
@@ -1707,6 +1721,12 @@ static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_
   wlanif_deauth_confirm_t resp;
   memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
 
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth confirm callback");
+    return;
+  }
+
   BRCMF_DBG(WLANIF, "Sending deauth confirm to SME. address: " MAC_FMT_STR "",
             MAC_FMT_ARGS(peer_sta_address));
 
@@ -1716,6 +1736,12 @@ static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_
 static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
   wlanif_disassoc_confirm_t resp;
   resp.status = status;
+
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc confirm callback");
+    return;
+  }
 
   BRCMF_DBG(WLANIF, "Sending disassoc confirm to SME. status: %" PRIu32 "", status);
 
@@ -1779,6 +1805,11 @@ static void cfg80211_signal_ind(net_device* ndev) {
       // Store the value in ndev (dumped out when link goes down)
       ndev->last_known_rssi_dbm = rssi;
       ndev->last_known_snr_db = snr;
+      std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+      if (ndev->if_proto.ops == NULL) {
+        BRCMF_DBG(WLANIF, "interface stopped -- skipping signal report indication callback");
+        return;
+      }
       wlanif_impl_ifc_signal_report(&ndev->if_proto, &signal_ind);
     }
   } else {
@@ -2046,6 +2077,11 @@ done:
 // EAPOL frames are queued up along with event notifications to ensure processing order.
 void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping eapol frame callback");
+    return;
+  }
   const char* const data_bytes = reinterpret_cast<const char*>(data);
   wlanif_eapol_indication_t eapol_ind;
   // IEEE Std. 802.1X-2010, 11.3, Figure 11-1
@@ -2065,6 +2101,11 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), data,
                                   std::min<size_t>(size, 64u),
                                   "Data received (%zu bytes, max 64 shown):", size));
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping data recv");
+    return;
+  }
   // IEEE Std. 802.3-2015, 3.1.1
   const uint16_t eth_type = ((uint16_t*)(data))[6];
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
@@ -2226,7 +2267,11 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
                                      const uint8_t* bssid, uint16_t capability, uint16_t interval,
                                      uint8_t* ie, size_t ie_len, int16_t rssi_dbm) {
   wlanif_scan_result_t result = {};
-
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping scan result callback");
+    return;
+  }
   if (!ndev->scan_busy) {
     return;
   }
@@ -3081,7 +3126,10 @@ zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* i
   }
 
   BRCMF_DBG(WLANIF, "Starting wlanif interface");
-  ndev->if_proto = *ifc;
+  {
+    std::lock_guard<std::shared_mutex> guard(ndev->if_proto_lock);
+    ndev->if_proto = *ifc;
+  }
   brcmf_netdev_open(ndev);
   ndev->is_up = true;
 
@@ -3093,6 +3141,7 @@ zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* i
 void brcmf_if_stop(net_device* ndev) {
   BRCMF_DBG(WLANIF, "Stopping wlanif interface");
 
+  std::lock_guard<std::shared_mutex> guard(ndev->if_proto_lock);
   ndev->if_proto.ops = nullptr;
   ndev->if_proto.ctx = nullptr;
 }
@@ -3145,11 +3194,17 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
     result.result_code = WLAN_JOIN_RESULT_INTERNAL_ERROR;
   }
 
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping join callback");
+    return;
+  }
   BRCMF_DBG(WLANIF, "Sending join confirm to SME. result: %s",
             result.result_code == WLAN_JOIN_RESULT_SUCCESS           ? "success"
             : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout"
             : result.result_code == WLAN_JOIN_RESULT_INTERNAL_ERROR  ? "internal error"
                                                                      : "unknown");
+
   wlanif_impl_ifc_join_conf(&ndev->if_proto, &result);
 }
 
@@ -3186,6 +3241,11 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
     response.result_code = WLAN_AUTH_RESULT_SUCCESS;
   } else {
     response.result_code = WLAN_AUTH_RESULT_REJECTED;
+  }
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping auth callback");
+    return;
   }
   response.auth_type = req->auth_type;
   memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
@@ -3370,6 +3430,11 @@ void brcmf_if_start_conf(net_device* ndev, uint8_t result) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
   cfg->ap_start_timer->Stop();
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping AP start callback");
+    return;
+  }
   BRCMF_DBG(WLANIF, "Sending AP start confirm to SME. result_code: %s",
             result == WLAN_START_RESULT_SUCCESS                         ? "success"
             : result == WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED ? "already started"
@@ -3421,7 +3486,11 @@ void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req) {
   BRCMF_DBG(WLANIF, "Stop AP request from SME. ssid: %.*s", req->ssid.len, req->ssid.data);
 
   uint8_t result_code = brcmf_cfg80211_stop_ap(ndev, req);
-
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping AP stop callback");
+    return;
+  }
   wlanif_stop_confirm_t result = {.result_code = result_code};
 
   BRCMF_DBG(WLANIF, "Sending AP stop confirm to SME. result_code: %s",
@@ -3471,7 +3540,11 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
   brcmf_netdev_start_xmit(ndev, std::move(packet));
   confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping EAPOL xmit callback");
+    return;
+  }
   BRCMF_DBG(WLANIF, "Sending EAPOL xmit confirm to SME. result: %s",
             confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
             : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure"
@@ -3601,7 +3674,8 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
   band->vht_supported = true;
 
   // Set Max MPDU length to 11454
-  // TODO (fxbug.dev/29107): Value hardcoded from firmware behavior of the BCM4356 and BCM4359 chips.
+  // TODO (fxbug.dev/29107): Value hardcoded from firmware behavior of the BCM4356 and BCM4359
+  // chips.
   band->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_MAX_MPDU_LEN_SHIFT);
 
   /* 80MHz is mandatory */
@@ -4139,6 +4213,12 @@ void brcmf_if_stats_query_req(net_device* ndev) {
 
   BRCMF_DBG(TRACE, "Enter");
 
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping stats query response");
+    return;
+  }
+
   // Will hold per-antenna samples for each histogram type.
   std::vector<wlanif_hist_bucket_t> noise_floor_samples, rssi_samples, rx_rate_index_samples,
       snr_samples;
@@ -4474,7 +4554,12 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   info.new_channel = ctl_chan;
 
   // Inform wlanif of the channel switch.
-  wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops != NULL) {
+    wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
+  } else {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping channel switch callback");
+  }
 
   return ZX_OK;
 }
@@ -4557,6 +4642,11 @@ static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct b
 static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                           void* data) {
   struct net_device* ndev = ifp->ndev;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == NULL) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping assoc ind callback");
+    return ZX_OK;
+  }
 
   BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
@@ -4630,6 +4720,11 @@ static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
 
   if (e->reason == BRCMF_E_STATUS_SUCCESS) {
     struct net_device* ndev = ifp->ndev;
+    std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+    if (ndev->if_proto.ops == NULL) {
+      BRCMF_DBG(WLANIF, "interface stopped -- skipping auth ind callback");
+      return ZX_OK;
+    }
     wlanif_auth_ind_t auth_ind_params;
     const char* auth_type;
 
@@ -4746,6 +4841,11 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
     struct net_device* ndev = ifp->ndev;
+    std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+    if (ndev->if_proto.ops == NULL) {
+      BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth indication callback");
+      return ZX_OK;
+    }
     wlanif_deauth_indication_t deauth_ind_params;
 
     memset(&deauth_ind_params, 0, sizeof(deauth_ind_params));
@@ -4780,6 +4880,11 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
     struct net_device* ndev = ifp->ndev;
+    std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+    if (ndev->if_proto.ops == NULL) {
+      BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc indication callback");
+      return ZX_OK;
+    }
     wlanif_disassoc_indication_t disassoc_ind_params;
 
     memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
@@ -4791,6 +4896,7 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
               MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
 
     wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
+
     return ZX_OK;
   } else
     return brcmf_indicate_client_disconnect(ifp, e, data);

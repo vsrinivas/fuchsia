@@ -71,4 +71,21 @@ TEST_F(SimTest, StopAP) {
   dev_mgr_->DeviceAsyncRemove(fake_child);
 }
 
+// Verify that a firmware scan result indication after the interface is stopped does
+// not cause a failure.
+TEST_F(SimTest, ScanResultAfterIfaceStop) {
+  ASSERT_EQ(Init(), ZX_OK);
+
+  SimInterface client_ifc;
+
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc), ZX_OK);
+
+  client_ifc.StartScan(0, true);
+  client_ifc.StopInterface();
+  // The scan result will arrive after the iface is torn down.
+  env_->Run(zx::sec(1));  // This should be a no-op, not a crash.
+
+  DeleteInterface(client_ifc);
+}
+
 }  // namespace wlan::brcmfmac

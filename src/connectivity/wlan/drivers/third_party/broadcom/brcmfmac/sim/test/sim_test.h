@@ -109,6 +109,9 @@ class SimInterface {
   // Query an interface
   void Query(wlanif_query_info_t* out_info);
 
+  // Stop an interface
+  void StopInterface();
+
   // Get the Mac address of an interface
   void GetMacAddr(common::MacAddr* out_macaddr);
 

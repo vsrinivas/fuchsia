@@ -30,6 +30,7 @@
 #include <array>
 #include <atomic>
 #include <mutex>
+#include <shared_mutex>
 
 #include <ddk/protocol/wlanif.h>
 #include <ddk/protocol/wlanphyimpl.h>
@@ -245,6 +246,7 @@ struct net_device {
   bool is_up;
   uint64_t scan_txn_id;
   uint32_t scan_num_results;
+  std::shared_mutex if_proto_lock;  // Used as RW-lock for if_proto.
   wlanif_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
   char name[NET_DEVICE_NAME_MAX_LEN];

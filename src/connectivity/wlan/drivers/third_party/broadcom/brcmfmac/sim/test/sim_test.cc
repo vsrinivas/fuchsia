@@ -219,6 +219,8 @@ void SimInterface::OnStopConf(const wlanif_stop_confirm_t* resp) {
   stats_.stop_confirmations.push_back(*resp);
 }
 
+void SimInterface::StopInterface() { if_impl_ops_->stop(if_impl_ctx_); }
+
 void SimInterface::Query(wlanif_query_info_t* out_info) {
   if_impl_ops_->query(if_impl_ctx_, out_info);
 }
