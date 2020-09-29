@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::push_source::{Update, UpdateAlgorithm};
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_time_external::{Properties, Status, TimeSample};
@@ -12,6 +11,7 @@ use futures::{channel::mpsc::Sender, lock::Mutex, SinkExt, TryFutureExt};
 use httpdate_hyper::{HttpsDateError, NetworkTimeClient};
 use hyper::Uri;
 use log::{error, info, warn};
+use push_source::{Update, UpdateAlgorithm};
 
 /// A definition of how long an algorithm should wait between polls. Defines a fixed wait duration
 /// following successful poll attempts, and a capped exponential backoff following failed poll

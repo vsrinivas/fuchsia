@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The `push_source` mod defines an implementation of the `PushSource` API and traits to hook in
-//! an algorithm that produces time updates. In the future this module may be moved to a common
-//! library.
+//! The `push_source` library defines an implementation of the `PushSource` API and traits to hook
+//! in an algorithm that produces time updates.
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -44,7 +43,6 @@ impl From<TimeSample> for Update {
     }
 }
 
-#[cfg(test)]
 impl Update {
     /// Returns true iff the update contained is a status.
     pub fn is_status(&self) -> bool {

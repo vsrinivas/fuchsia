@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/push_source_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

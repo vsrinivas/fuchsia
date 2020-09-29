@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 mod httpsdate;
-mod push_source;
 
-use crate::{
-    httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy},
-    push_source::PushSource,
-};
+use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
 use anyhow::{Context, Error};
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;
@@ -16,6 +12,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::{future::join, StreamExt, TryFutureExt};
 use log::warn;
+use push_source::PushSource;
 
 /// Retry strategy used while polling for time.
 const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
