@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 source_set("uuid") {
@@ -14,9 +14,7 @@ source_set("uuid") {
   deps = [ "//src/lib/fxl:strings" ]
 }
 
-executable("uuid_unittests") {
-  testonly = true
-
+test("uuid_unittests") {
   sources = [ "uuid_unittest.cc" ]
 
   deps = [
@@ -33,5 +31,14 @@ test_package("uuid_tests") {
     {
       name = "uuid_unittests"
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":uuid_tests",
+    ":uuid_unittests($host_toolchain)",
   ]
 }

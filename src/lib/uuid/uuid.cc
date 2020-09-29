@@ -5,12 +5,15 @@
 #include "src/lib/uuid/uuid.h"
 
 #include <stddef.h>
-#include <stdint.h>
-#include <zircon/syscalls.h>
-
-#include <string>
 
 #include "src/lib/fxl/strings/string_printf.h"
+
+#if defined(__Fuchsia__)
+#include <zircon/syscalls.h>
+#else
+#include <algorithm>
+#include <random>
+#endif
 
 namespace uuid {
 namespace {
@@ -38,6 +41,17 @@ bool IsValidInternal(const std::string& guid, bool strict) {
   return true;
 }
 
+void FillRandomly(RawUuid* raw) {
+#if defined(__Fuchsia__)
+  zx_cprng_draw(raw, kUuidSize);
+#else
+  std::random_device rd;
+  auto* begin = reinterpret_cast<std::random_device::result_type*>(raw);
+  auto* end = begin + kUuidSize / sizeof(std::random_device::result_type);
+  std::generate(begin, end, std::ref(rd));
+#endif
+}
+
 }  // namespace
 
 Uuid Uuid::Generate() {
@@ -46,7 +60,7 @@ Uuid Uuid::Generate() {
 
   // Generate 16 random bytes.
   Uuid result;
-  zx_cprng_draw(&result.raw_, sizeof(result));
+  FillRandomly(&result.raw_);
 
   // Set the version field (bits 12 through 15 of |time_hi_and_version|) to 4.
   result.raw_.time_hi_and_version = (result.raw_.time_hi_and_version & 0x0fffu) | 0x4000u;
