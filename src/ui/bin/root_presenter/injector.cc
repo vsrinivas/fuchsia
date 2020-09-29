@@ -15,7 +15,7 @@
 namespace root_presenter {
 namespace {
 
-// TODO(SCN-1278): Remove this.
+// TODO(fxbug.dev/24476): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;
@@ -140,7 +140,7 @@ void Injector::OnEvent(const fuchsia::ui::input::InputEvent& event) {
 
   FX_DCHECK(injectors_.count(injector_id));
 
-  // TODO(SCN-1278): Use proper trace_id for tracing flow.
+  // TODO(fxbug.dev/24476): Use proper trace_id for tracing flow.
   const trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
   TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
 
