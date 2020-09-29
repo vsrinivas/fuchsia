@@ -31,6 +31,7 @@ bool StoreItem(uint32_t type) {
     case ZBI_TYPE_IMAGE_ARGS:
     case ZBI_TYPE_SERIAL_NUMBER:
     case ZBI_TYPE_BOOTLOADER_FILE:
+    case ZBI_TYPE_DEVICETREE:
       return true;
     default:
       return ZBI_TYPE_DRV_METADATA(type);

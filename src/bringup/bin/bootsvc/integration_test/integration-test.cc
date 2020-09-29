@@ -236,16 +236,14 @@ TEST(BootsvcIntegrationTest, BootItems) {
   ASSERT_EQ(ZX_OK, status);
 
   // Check that we can get the following boot item types.
-  // clang-format off
-  uint32_t types[] = {
-      ZBI_TYPE_CRASHLOG,
-      ZBI_TYPE_PLATFORM_ID,
-      ZBI_TYPE_DRV_BOARD_INFO,
-      ZBI_TYPE_STORAGE_RAMDISK,
-      ZBI_TYPE_SERIAL_NUMBER,
-  };
-  // clang-format on
-  for (uint32_t type : types) {
+  for (uint32_t type : (uint32_t[]){
+           ZBI_TYPE_CRASHLOG,
+           ZBI_TYPE_DEVICETREE,
+           ZBI_TYPE_DRV_BOARD_INFO,
+           ZBI_TYPE_PLATFORM_ID,
+           ZBI_TYPE_SERIAL_NUMBER,
+           ZBI_TYPE_STORAGE_RAMDISK,
+       }) {
     zx::vmo payload;
     uint32_t length;
     status = fuchsia_boot_ItemsGet(local.get(), type, 0, payload.reset_and_get_address(), &length);

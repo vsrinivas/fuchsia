@@ -21,6 +21,7 @@ import("//build/testing/host_test_data.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":devicetree-extract-package",
     ":devicetree-test-package",
     ":devicetree-tests($host_toolchain)",
   ]
@@ -34,6 +35,15 @@ test("devicetree-tests") {
   ]
   if (is_host) {
     data_deps = [ ":host-test-data" ]
+  } else if (is_fuchsia && current_cpu == "arm64") {
+    # Only arm64 emulation uses a devicetree-based boot shim.
+    sources += [ "zbi-item-test.cc" ]
+    deps += [
+      "//sdk/fidl/fuchsia.boot",
+      "//sdk/lib/sys/cpp",
+      "//zircon/public/lib/zx",
+      "//zircon/public/lib/zxc",
+    ]
   }
 }
 
@@ -51,11 +61,15 @@ if (is_host) {
   }
 }
 
-unittest_package("devicetree-test-package") {
+test_package("devicetree-test-package") {
+  deps = [ ":devicetree-tests" ]
   package_name = "devicetree-test"
   tests = [
     {
       name = "devicetree-tests"
+
+      # The test requires that a ZBI item of type ZBI_TYPE_DEVICETREE exists,
+      # which is true in the case of the arm64 qemu-boot-shim.
       environments = [ emu_env ]
     },
   ]
@@ -68,6 +82,29 @@ unittest_package("devicetree-test-package") {
       },
     ]
   }
+}
 
-  deps = [ ":devicetree-tests" ]
+executable("devicetree-extract") {
+  testonly = true
+  sources = [ "zbi-item-tool.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.boot",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+  ]
+}
+
+package("devicetree-extract-package") {
+  testonly = true
+  deps = [ ":devicetree-extract" ]
+  package_name = "devicetree-extract"
+  binaries = [
+    {
+      name = "devicetree-extract"
+      shell = true
+    },
+  ]
 }

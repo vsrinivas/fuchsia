@@ -67,6 +67,7 @@ typedef enum {
 } node_t;
 
 typedef struct {
+  dt_slice_t devicetree;
   node_t node;
   uintptr_t initrd_start;
   size_t memory_base;
@@ -180,6 +181,8 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
   if (ret) {
     fail("dt_init failed\n");
   }
+  ctx->devicetree.data = device_tree;
+  ctx->devicetree.size = dt.hdr.size;
   dt_walk(&dt, node_callback, prop_callback, ctx);
 
 #if USE_DEVICE_TREE_CPU_COUNT
@@ -219,6 +222,7 @@ static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ct
   if (ctx->cmdline && ctx->cmdline_length) {
     append_boot_item(zbi, ZBI_TYPE_CMDLINE, 0, ctx->cmdline, ctx->cmdline_length);
   }
+  append_boot_item(zbi, ZBI_TYPE_DEVICETREE, 0, ctx->devicetree.data, ctx->devicetree.size);
 }
 
 #else

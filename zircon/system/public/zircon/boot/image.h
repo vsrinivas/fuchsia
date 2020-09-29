@@ -12,6 +12,7 @@
 #include <stdint.h>
 #endif
 
+
 // Zircon Boot Image format (ZBI).
 //
 // A Zircon Boot Image consists of a container header followed by boot
@@ -135,7 +136,8 @@ typedef struct {
     macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin") \
     macro(ZBI_TYPE_HW_REBOOT_REASON, "HW_REBOOT_REASON", ".bin") \
     macro(ZBI_TYPE_SERIAL_NUMBER, "SERIAL_NUMBER", ".txt") \
-    macro(ZBI_TYPE_BOOTLOADER_FILE, "BOOTLOADER_FILE", ".bin")
+    macro(ZBI_TYPE_BOOTLOADER_FILE, "BOOTLOADER_FILE", ".bin") \
+    macro(ZBI_TYPE_DEVICETREE, "DEVICETREE", ".dtb")
 
 // Each ZBI starts with a container header.
 //     length:          Total size of the image after this header.
@@ -667,5 +669,13 @@ using zbi_hw_reboot_reason_t = ZbiHwRebootReason;
 // Layout: | name_len |        name       |   payload
 //           ^(1 byte)  ^(name_len bytes)     ^(length of file)
 #define ZBI_TYPE_BOOTLOADER_FILE        (0x4C465442) // BTFL
+
+// The devicetree blob from the legacy boot loader, if any.  This is used only
+// for diagnostic and development purposes.  Zircon kernel and driver
+// configuration is entirely driven by specific ZBI items from the boot
+// loader.  The boot shims for legacy boot loaders pass the raw devicetree
+// along for development purposes, but extract information from it to populate
+// specific ZBI items such as ZBI_TYPE_KERNEL_DRIVER et al.
+#define ZBI_TYPE_DEVICETREE             (0xd00dfeed)
 
 #endif  // SYSROOT_ZIRCON_BOOT_IMAGE_H_

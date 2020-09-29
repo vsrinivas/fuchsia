@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.Items"
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/devicetree-extract"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.Items"
+        ]
+    }
+}
