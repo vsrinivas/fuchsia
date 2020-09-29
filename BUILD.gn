@@ -863,11 +863,11 @@ build_api_module("zircon") {
 
 # Describes the paths to all the package manifests for packages in universe.
 # These paths are relative to the $root_build_dir.
-# in file: "$root_build_dir/universe_manifests.json".
+# in file: "$root_build_dir/all_package_manifest_paths.json".
 #
 # Type: list(string)
 #
-build_api_module("universe_manifests") {
+build_api_module("all_package_manifest_paths") {
   testonly = true
   data_keys = [ "package_output_manifests" ]
   rebase = root_build_dir
