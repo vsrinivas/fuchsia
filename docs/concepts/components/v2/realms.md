@@ -200,3 +200,4 @@ documentation.
 [runners]: ./runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
 [use]: ./component_manifests.md#use
+[lifecycle]: /docs/concepts/components/v2/lifecycle.md
