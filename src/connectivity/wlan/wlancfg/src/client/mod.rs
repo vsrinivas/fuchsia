@@ -29,7 +29,7 @@ use {
 };
 
 pub mod network_selection;
-mod scan;
+pub mod scan;
 pub mod state_machine;
 pub mod types;
 
@@ -497,39 +497,6 @@ pub(crate) async fn scan_for_network_selector(
     // perform_scan is infallible.  Base the result on the ability to read the scan results
     // reported by perform_scan.
     join(scan_fut, process_results_fut).await.1
-}
-
-/// Handle events from client state machines.
-pub(crate) async fn handle_client_state_machine_event(
-    event: client_fsm::ClientStateMachineNotification,
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    selector: Arc<network_selection::NetworkSelector>,
-) {
-    match event {
-        client_fsm::ClientStateMachineNotification::Idle { iface_id } => {
-            // Record the idle interface.
-            let temp_iface_manager = iface_manager.clone();
-            let mut temp_iface_manager = temp_iface_manager.lock().await;
-            match temp_iface_manager.record_idle_client(iface_id).await {
-                Ok(()) => {
-                    drop(temp_iface_manager);
-
-                    // See what networks are available and attempt a reconnect.
-                    info!("Received notification of idle interface, will attempt to reconnect");
-                    if scan_for_network_selector(iface_manager.clone(), selector.clone())
-                        .await
-                        .is_ok()
-                    {
-                        // TODO(fxbug.dev/54046): Centralize the calls that reconnect a disconnected client.
-                        connect_to_best_network(iface_manager, selector).await;
-                    }
-                }
-                Err(e) => {
-                    error!("Unable to record idle client {}: {:?}", iface_id, e);
-                }
-            }
-        }
-    }
 }
 
 /// Registers a new update listener.

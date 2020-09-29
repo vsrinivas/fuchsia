@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client::state_machine as client_fsm, config_management::SavedNetworksManager,
+        client::network_selection::NetworkSelector, config_management::SavedNetworksManager,
         util::listener,
     },
     anyhow::Error,
@@ -24,20 +24,23 @@ pub(crate) fn create_iface_manager(
     ap_update_sender: listener::ApListenerMessageSender,
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     saved_networks: Arc<SavedNetworksManager>,
-    client_event_sender: mpsc::Sender<client_fsm::ClientStateMachineNotification>,
-) -> (iface_manager_api::IfaceManager, impl Future<Output = Result<Void, Error>>) {
+    network_selector: Arc<NetworkSelector>,
+) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Void, Error>>) {
     let (sender, receiver) = mpsc::channel(0);
-    let iface_manager_sender = iface_manager_api::IfaceManager { sender };
+    let iface_manager_sender = Arc::new(Mutex::new(iface_manager_api::IfaceManager { sender }));
     let iface_manager = iface_manager::IfaceManagerService::new(
         phy_manager,
         client_update_sender,
         ap_update_sender,
         dev_svc_proxy,
         saved_networks,
-        client_event_sender,
     );
-    let iface_manager_service =
-        iface_manager::serve_iface_manager_requests(iface_manager, receiver);
+    let iface_manager_service = iface_manager::serve_iface_manager_requests(
+        iface_manager,
+        iface_manager_sender.clone(),
+        network_selector,
+        receiver,
+    );
 
     (iface_manager_sender, iface_manager_service)
 }
