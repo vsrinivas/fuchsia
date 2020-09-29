@@ -191,11 +191,8 @@ func NewLocalFuchsiaBuild() (Build, error) {
 	return build, nil
 }
 
-// Struct for parsing fuzzers.json
-type fuzzerPackage struct {
-	Name    string   `json:"fuzzers_package"`
-	Fuzzers []string `json:"fuzzers"`
-}
+// Convenience type alias for heterogenous metadata objects in fuzzers.json
+type fuzzerMetadata map[string]string
 
 // LoadFuzzers reads and parses fuzzers.json to populate the build's map of Fuzzers.
 // Unless an error is returned, any previously loaded fuzzers will be discarded.
@@ -214,17 +211,44 @@ func (b *BaseBuild) LoadFuzzers() error {
 		return fmt.Errorf("failed to read %q: %s", jsonPath, err)
 	}
 
-	var fuzzerPackages []fuzzerPackage
-	if err := json.Unmarshal(jsonBlob, &fuzzerPackages); err != nil {
+	var metadataList []fuzzerMetadata
+	if err := json.Unmarshal(jsonBlob, &metadataList); err != nil {
 		return fmt.Errorf("failed to parse %q: %s", jsonPath, err)
 	}
 
-	b.Fuzzers = make(map[string]*Fuzzer)
-	for _, pkg := range fuzzerPackages {
-		for _, fuzzer := range pkg.Fuzzers {
-			f := NewFuzzer(b, pkg.Name, fuzzer)
-			b.Fuzzers[f.Name] = f
+	// Condense metadata entries by label
+	metadataByLabel := make(map[string]fuzzerMetadata)
+	for _, metadata := range metadataList {
+		label, found := metadata["label"]
+		if !found {
+			return fmt.Errorf("failed to parse %q: entry missing label", jsonPath)
 		}
+
+		if _, found := metadataByLabel[label]; !found {
+			metadataByLabel[label] = make(fuzzerMetadata)
+		}
+
+		for k, v := range metadata {
+			if v != "" {
+				metadataByLabel[label][k] = v
+			}
+		}
+	}
+
+	b.Fuzzers = make(map[string]*Fuzzer)
+	for label, metadata := range metadataByLabel {
+		pkg, found := metadata["package"]
+		if !found {
+			return fmt.Errorf("failed to parse %q: no package for %q", jsonPath, label)
+		}
+
+		fuzzer, found := metadata["fuzzer"]
+		if !found {
+			return fmt.Errorf("failed to parse %q: no fuzzer for %q", jsonPath, label)
+		}
+
+		f := NewFuzzer(b, pkg, fuzzer)
+		b.Fuzzers[f.Name] = f
 	}
 
 	return nil

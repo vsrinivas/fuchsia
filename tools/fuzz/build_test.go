@@ -59,10 +59,43 @@ func TestLoadFuzzersFromEmptyFile(t *testing.T) {
 	}
 }
 
+func TestLoadFuzzersWithIncompleteMetadata(t *testing.T) {
+	build := newBaseBuild()
+
+	// Missing "fuzzer"
+	data := `[{"label": "//src/foo:bar", "package": "foo"}`
+	filename := createTempfileWithContents(t, data, "json")
+	defer os.Remove(filename)
+
+	build.Paths["fuzzers.json"] = filename
+
+	if err := build.LoadFuzzers(); err == nil {
+		t.Fatal("expected failure for missing fuzzer in metadata")
+	}
+
+	// Missing "package"
+	data = `[{"label": "//src/foo:bar", "fuzzer": "bar"}`
+	filename = createTempfileWithContents(t, data, "json")
+	defer os.Remove(filename)
+
+	build.Paths["fuzzers.json"] = filename
+
+	if err := build.LoadFuzzers(); err == nil {
+		t.Fatal("expected failure for missing package in metadata")
+	}
+}
+
 func TestLoadFuzzers(t *testing.T) {
 	build := newBaseBuild()
 
-	data := `[{"fuzzers_package": "foo", "fuzzers": ["bar", "baz"], "fuzz_host": false}]`
+	data := `[
+	{"label": "//src/foo:bar", "package": "foo", "package_url": "fuchsia-pkg://fuchsia.com/foo"},
+	{"label": "//src/foo:bar", "fuzzer": "bar-fuzzer", "manifest": "bar-fuzzer.cmx"},
+	{"label": "//src/foo:baz", "package": "foo", "package_url": "fuchsia-pkg://fuchsia.com/foo"},
+	{"label": "//src/foo:baz", "fuzzer": "baz-fuzzer", "manifest": "baz-fuzzer.cmx"},
+	{"label": "//src/foo:baz", "corpus": "//src/foo/baz-corpus"}
+	]`
+
 	filename := createTempfileWithContents(t, data, "json")
 	defer os.Remove(filename)
 
@@ -72,10 +105,10 @@ func TestLoadFuzzers(t *testing.T) {
 		t.Fatalf("error loading fuzzers: %s", err)
 	}
 
-	if _, err := build.Fuzzer("foo/bar"); err != nil {
+	if _, err := build.Fuzzer("foo/bar-fuzzer"); err != nil {
 		t.Fatalf("missing expected fuzzer")
 	}
-	if _, err := build.Fuzzer("foo/baz"); err != nil {
+	if _, err := build.Fuzzer("foo/baz-fuzzer"); err != nil {
 		t.Fatalf("missing expected fuzzer")
 	}
 }
