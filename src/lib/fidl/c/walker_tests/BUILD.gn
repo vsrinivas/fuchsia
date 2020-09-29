@@ -43,9 +43,6 @@ source_set("test_sources") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 if (is_fuchsia) {
@@ -97,9 +94,6 @@ if (is_fuchsia) {
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/zx",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   fuchsia_unittest_package("fidl-handle-closing-tests") {

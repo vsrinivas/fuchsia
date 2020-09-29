@@ -147,9 +147,10 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* encoder,
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -381,9 +382,10 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* encoder,
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -1694,9 +1696,10 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* encoder,
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }

@@ -70,9 +70,10 @@ void UnionSize8Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -253,9 +254,10 @@ void UnionSize36Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -441,9 +443,10 @@ void UnionSize12Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -664,9 +667,10 @@ void UnionSize24Alignment8::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }

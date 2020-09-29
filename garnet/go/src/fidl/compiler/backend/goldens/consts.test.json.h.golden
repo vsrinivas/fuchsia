@@ -83,7 +83,7 @@ constexpr uint32_t POPULATION_USA_2018 = 330000000u;
 
 constexpr int8_t OFFSET = -33;
 
-constexpr float MIN_TEMP = -273.15;
+constexpr float MIN_TEMP = -273.15f;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 

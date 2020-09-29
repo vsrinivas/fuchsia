@@ -110,9 +110,10 @@ void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -363,9 +364,10 @@ void StrictUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -581,9 +583,10 @@ void StrictSimpleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -770,9 +773,10 @@ void StrictFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -930,9 +934,10 @@ void StrictBoundedXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -1088,9 +1093,10 @@ void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -1310,9 +1316,10 @@ void StrictPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -1488,9 +1495,10 @@ void PizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -1681,9 +1689,10 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -1876,9 +1885,10 @@ void ExplicitPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -2064,9 +2074,10 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -2592,9 +2603,10 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -2834,9 +2846,10 @@ void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -3059,9 +3072,10 @@ void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -3228,9 +3242,10 @@ void FieldCollision::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -3393,9 +3408,10 @@ void ExplicitXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -3577,9 +3593,10 @@ void ExplicitUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -3753,9 +3770,10 @@ void ExplicitStrictFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -3938,9 +3956,10 @@ void ExplicitFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
@@ -4150,9 +4169,10 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder,
 
   if (envelope_offset) {
     xunion->tag = tag_;
-    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
     xunion->envelope.num_handles =
-        encoder->CurrentHandleCount() - handles_before;
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }

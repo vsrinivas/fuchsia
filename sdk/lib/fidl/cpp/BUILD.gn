@@ -146,9 +146,6 @@ source_set("test_util") {
   sources = [ "test/test_util.h" ]
 
   public_deps = [ ":cpp_base" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("handle_util") {
@@ -213,9 +210,6 @@ source_set("host_test_sources") {
     ":test_util",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("test_sources") {
@@ -257,9 +251,6 @@ source_set("test_sources") {
   ]
 
   public_configs = [ "//sdk/config" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("fidl_hlcpp_conformance_test") {

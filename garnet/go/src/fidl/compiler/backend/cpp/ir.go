@@ -902,13 +902,13 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 			return val.Value
 		}
 
-		// No special handling of floats.
+		// float32 literals must be marked as such.
 		if strings.ContainsRune(val.Value, '.') {
-			return val.Value
-		}
-		if typ.Kind == types.PrimitiveType &&
-			(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
-			return val.Value
+			if typ.Kind == types.PrimitiveType && typ.PrimitiveSubtype == types.Float32 {
+				return fmt.Sprintf("%sf", val.Value)
+			} else {
+				return val.Value
+			}
 		}
 
 		if !strings.HasPrefix(val.Value, "-") {

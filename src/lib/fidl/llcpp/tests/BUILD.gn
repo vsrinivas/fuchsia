@@ -36,9 +36,6 @@ executable("fidl_llcpp_conformance_test_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("fidl-llcpp-conformance-test") {
@@ -62,9 +59,6 @@ test("fidl_llcpp_conformance_test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fidl.llcpp.types.test") {
@@ -127,9 +121,6 @@ executable("fidl_llcpp_types_test_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("fidl_llcpp_types_test") {
@@ -177,9 +168,6 @@ executable("fidl_llcpp_builder_test_bin") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("fidl_llcpp_builder_test") {

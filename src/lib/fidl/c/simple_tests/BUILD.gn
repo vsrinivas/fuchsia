@@ -33,9 +33,6 @@ executable("bin") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/ldmsg",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fidl.test.echo") {
