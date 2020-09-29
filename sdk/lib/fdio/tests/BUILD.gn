@@ -66,6 +66,7 @@ test("fdio") {
     "fdio_get_vmo.cc",
     "fdio_handle_fd.c",
     "fdio_io.cc",
+    "fdio_memfd.cc",
     "fdio_null_namespace.cc",
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
@@ -79,6 +80,7 @@ test("fdio") {
     "fdio_timerfd.cc",
     "fdio_unsafe.cc",
     "fdio_watcher.cc",
+    "memfd.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",

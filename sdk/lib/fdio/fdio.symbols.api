@@ -96,6 +96,7 @@ linkat
 listen
 lseek
 lstat
+memfd_create
 mkdir
 mkdirat
 mkfifo

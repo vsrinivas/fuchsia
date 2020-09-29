@@ -70,6 +70,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "fdio.cc",
       "get-vmo.cc",
       "iovec.cc",
+      "mem.cc",
       "namespace/local-connection.cc",
       "namespace/local-filesystem.cc",
       "namespace/local-vnode.cc",
