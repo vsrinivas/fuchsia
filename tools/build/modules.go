@@ -5,9 +5,7 @@
 package build
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -18,6 +16,7 @@ const (
 	binaryModuleName           = "binaries.json"
 	checkoutArtifactModuleName = "checkout_artifacts.json"
 	imageModuleName            = "images.json"
+	packageManifestModuleName  = "all_package_manifest_paths.json"
 	platformModuleName         = "platforms.json"
 	prebuiltBinaryModuleName   = "prebuilt_binaries.json"
 	testDurationsName          = "test_durations.json"
@@ -34,6 +33,7 @@ type Modules struct {
 	binaries          []Binary
 	checkoutArtifacts []CheckoutArtifact
 	images            []Image
+	packageManifests  []string
 	platforms         []DimensionSet
 	prebuiltBins      []PrebuiltBinaries
 	testSpecs         []TestSpec
@@ -47,7 +47,7 @@ func NewModules(buildDir string) (*Modules, error) {
 	var err error
 	m := &Modules{buildDir: buildDir}
 
-	m.apis, err = loadAPIs(m.APIManifest())
+	m.apis, err = loadStringsFromJson(m.APIManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -68,6 +68,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	m.images, err = LoadImages(m.ImageManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.packageManifests, err = loadStringsFromJson(m.PackageManifestsManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -158,6 +163,16 @@ func (m Modules) ImageManifest() string {
 	return filepath.Join(m.BuildDir(), imageModuleName)
 }
 
+// PackageManifests returns a list of paths to all the universe package manifests.
+func (m Modules) PackageManifests() []string {
+	return m.packageManifests
+}
+
+// PackageManifestsManifest returns the path to the manifest of universe package manifests in the build.
+func (m Modules) PackageManifestsManifest() string {
+	return filepath.Join(m.BuildDir(), packageManifestModuleName)
+}
+
 // Platforms returns the build API module of available platforms to test on.
 func (m Modules) Platforms() []DimensionSet {
 	return m.platforms
@@ -206,17 +221,4 @@ func (m Modules) Tools() []Tool {
 // ToolManifest returns the path to the manifest of tools in the build.
 func (m Modules) ToolManifest() string {
 	return filepath.Join(m.BuildDir(), toolModuleName)
-}
-
-func loadAPIs(manifest string) ([]string, error) {
-	f, err := os.Open(manifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
-	}
-	defer f.Close()
-	var apis []string
-	if err := json.NewDecoder(f).Decode(&apis); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
-	}
-	return apis, nil
 }
