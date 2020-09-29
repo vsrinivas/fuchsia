@@ -218,8 +218,14 @@ impl Component {
 
 fn visit_child_realms(realm_path: &Path) -> RealmsResult {
     let child_realms_path = realm_path.join("r");
-    let entries = fs::read_dir(child_realms_path)?;
     let mut child_realms: Vec<Realm> = Vec::new();
+    let entries = match fs::read_dir(&child_realms_path) {
+        Ok(ent) => ent,
+        Err(err) => {
+            fx_log_err!("Error: {:?} realms path {:?} is not found.", err, child_realms_path);
+            return Ok(child_realms);
+        }
+    };
     // visit all entries within <realm id>/r/
     for entry in entries {
         let entry = entry?;
@@ -236,8 +242,14 @@ fn visit_child_realms(realm_path: &Path) -> RealmsResult {
 /// Used as a helper function to traverse <realm id>/r/, <realm id>/c/,
 /// <component instance id>/c/, following through into their id subdirectories.
 fn find_id_directories(dir: &Path) -> DirEntryResult {
-    let entries = fs::read_dir(dir)?;
     let mut vec = vec![];
+    let entries = match fs::read_dir(dir) {
+        Ok(ent) => ent,
+        Err(err) => {
+            fx_log_err!("Error: {:?} directory {:?} is not found.", err, dir);
+            return Ok(vec);
+        }
+    };
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
@@ -264,9 +276,18 @@ fn visit_child_components(parent_path: &Path) -> ComponentsResult {
     if !child_components_path.is_dir() {
         return Ok(vec![]);
     }
-
     let mut child_components: Vec<Component> = Vec::new();
-    let entries = fs::read_dir(&child_components_path)?;
+    let entries = match fs::read_dir(&child_components_path) {
+        Ok(ent) => ent,
+        Err(err) => {
+            fx_log_err!(
+                "Error: {:?} Component path {:?} is not found.",
+                err,
+                child_components_path
+            );
+            return Ok(child_components);
+        }
+    };
     for entry in entries {
         let entry = entry?;
         // Visits */c/<component name>/<component instance id>.
