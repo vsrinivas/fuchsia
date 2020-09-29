@@ -138,9 +138,7 @@ class TestServer final : public fuchsia_io::File::Interface {
     llcpp::fuchsia::mem::Buffer buffer = {};
     buffer.size = context->content_size;
 
-    // TODO(fxbug.dev/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently
-    // this mimics what most filesystems do.
-    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
+    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
     rights |= (flags & fuchsia_io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & fuchsia_io::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
     rights |= (flags & fuchsia_io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
@@ -148,6 +146,7 @@ class TestServer final : public fuchsia_io::File::Interface {
     zx_status_t status = ZX_OK;
     zx::vmo result;
     if (flags & fuchsia_io::VMO_FLAG_PRIVATE) {
+      rights |= ZX_RIGHT_SET_PROPERTY;
       uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
       if (flags & fuchsia_io::VMO_FLAG_EXEC) {
         // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it,
@@ -206,9 +205,8 @@ bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
 void create_context_vmo(size_t size, zx::vmo* out_vmo) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(size, 0, &vmo));
-  // TODO(fxbug.dev/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently this
-  // mimics what most filesystems do.
-  ASSERT_OK(vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY, &vmo));
+  ASSERT_OK(vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
+                        &vmo));
   ASSERT_OK(vmo.replace_as_executable(zx::resource(), out_vmo));
 }
 
@@ -234,9 +232,8 @@ TEST(GetVMOTest, Remote) {
   ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
   fbl::unique_fd fd(raw_fd);
 
-  // TODO(fxbug.dev/37091): This should just have GET_PROPERTY, not SET_PROPERTY, but currently this
-  // mimics what most filesystems do.
-  zx_rights_t expected_rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY | ZX_RIGHT_READ;
+  zx_rights_t expected_rights =
+      ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ;
 
   zx::vmo received;
   EXPECT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
