@@ -31,7 +31,12 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::prelude::*,
     futures::{
-        self, channel::mpsc, future::try_join5, lock::Mutex, prelude::*, select, TryFutureExt,
+        self,
+        channel::mpsc,
+        future::{try_join, try_join4},
+        lock::Mutex,
+        prelude::*,
+        select, TryFutureExt,
     },
     log::error,
     pin_utils::pin_mut,
@@ -136,6 +141,15 @@ async fn saved_networks_manager_metrics_loop(saved_networks: Arc<SavedNetworksMa
     }
 }
 
+/// Runs the recording and sending of metrics to Cobalt.
+async fn serve_metrics(
+    saved_networks: Arc<SavedNetworksManager>,
+    cobalt_fut: impl Future<Output = ()>,
+) -> Result<(), Error> {
+    let record_metrics_fut = saved_networks_manager_metrics_loop(saved_networks);
+    try_join(record_metrics_fut.map(|()| Ok(())), cobalt_fut.map(|()| Ok(()))).await.map(|_| ())
+}
+
 fn main() -> Result<(), Error> {
     util::logger::init();
 
@@ -193,13 +207,14 @@ fn main() -> Result<(), Error> {
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
+    let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
+
     executor
-        .run_singlethreaded(try_join5(
+        .run_singlethreaded(try_join4(
             fidl_fut,
             dev_watcher_fut,
             iface_manager_service,
-            cobalt_fut.map(|()| Ok(())),
-            saved_networks_manager_metrics_loop(saved_networks.clone()).map(|()| Ok(())),
+            metrics_fut,
         ))
-        .map(|_: (Void, (), Void, (), ())| ())
+        .map(|_: (Void, (), Void, ())| ())
 }
