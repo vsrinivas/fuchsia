@@ -20,9 +20,6 @@
 ##
 ##    --output-directory    (Optional) Directory where the files will be stored.
 ##                          Must be an existing directory.
-##
-##    <TARGET ARGS>         Arguments to be passed to the bugreport client within
-##                          the target.
 
 # Load environment helpers.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
