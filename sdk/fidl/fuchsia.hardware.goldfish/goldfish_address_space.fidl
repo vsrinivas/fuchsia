@@ -6,60 +6,60 @@ library fuchsia.hardware.goldfish;
 
 using zx;
 
-// Interface for the Goldfish address space driver.
-
+/// Interface for the Goldfish address space driver.
 enum AddressSpaceChildDriverType : uint32 {
-    /// The DEFAULT child driver type is for graphics.
+    /// The `DEFAULT` child driver type is for graphics.
     DEFAULT = 0;
 };
 
-// State
-// The driver consists of three main pieces of state:
-
-// 1. A PCI BAR that clients can suballocate into. This is used for mapping
-// coherent memory from the hardware, such as for Vulkan HOST_COHERENT
-// memory, or for any other buffer owned by the hardware such as video
-// codec buffers. This also includes a mapping where each connection of the
-// driver is associated with one or more mappings.
-
-// The next two pieces of state are for child driver connections.
-
-// 2. A set of context handles, one per driver connection that the client
-// establishes. This is used to support higher-level/VMM-defined (child)
-// drivers. Each such driver is considered a "child" driver of goldfish address
-// space.
-
-// 3. A set of command pages, one per connection. This is used as a shared
-// device/host memory to support the "Ping" command. The "Ping" command is used
-// to run the child driver logic, driven by the app. There is a protocol to
-// permanently associate a particular goldfish address space driver connection
-// with a particular type of child driver, discussed next.
-
+/// State
+/// The driver consists of three main pieces of state:
+///
+/// 1. A PCI BAR that clients can suballocate into. This is used for mapping
+/// coherent memory from the hardware, such as for Vulkan HOST_COHERENT
+/// memory, or for any other buffer owned by the hardware such as video
+/// codec buffers. This also includes a mapping where each connection of the
+/// driver is associated with one or more mappings.
+///
+/// The next two pieces of state are for child driver connections.
+///
+/// 2. A set of context handles, one per driver connection that the client
+/// establishes. This is used to support higher-level/VMM-defined (child)
+/// drivers. Each such driver is considered a "child" driver of goldfish
+/// address space.
+///
+/// 3. A set of command pages, one per connection. This is used as a shared
+/// device/host memory to support the "Ping" command. The "Ping" command is used
+/// to run the child driver logic, driven by the app. There is a protocol to
+/// permanently associate a particular goldfish address space driver connection
+/// with a particular type of child driver, discussed next.
 protocol AddressSpaceDevice {
-    OpenChildDriver(AddressSpaceChildDriverType type, request<AddressSpaceChildDriver> req);
+    OpenChildDriver(AddressSpaceChildDriverType type,
+                    request<AddressSpaceChildDriver> req);
 };
 
-// Child driver protocol
-
-// By default, creating connection to the driver does not associate any child
-// driver with the connection.
-
-// The client opens a child driver via OpenChildDriver, giving the type of the
-// driver as an argument along with a request for the connection.  The type of
-// the driver is a number and the number/drivertype mapping is
-// determined/maintained in:
-// https://android.googlesource.com/platform/external/qemu/+/refs/heads/emu-master-dev/android/android-emu/android/emulation/AddressSpaceService.h
-// In Fuchsia, we currently only support the DEFAULT type, which is used for
-// graphics.
-
+/// Child driver protocol
+///
+/// By default, creating connection to the driver does not associate any child
+/// driver with the connection.
+///
+/// The client opens a child driver via OpenChildDriver, giving the type of the
+/// driver as an argument along with a request for the connection.  The type of
+/// the driver is a number and the number/drivertype mapping is
+/// determined/maintained in:
+/// https://android.googlesource.com/platform/external/qemu/+/refs/heads/emu-master-dev/android/android-emu/android/emulation/AddressSpaceService.h
+///
+/// In Fuchsia, we currently only support the DEFAULT type, which is used for
+/// graphics.
+///
 /// After opening the child driver, the client and hardware communicate via a
-/// child driver-specific protocol, with notifications driven by
-/// Ping(), each of which writes and reads messages to the hardware
-/// that follow this AddressSpaceChildDriverPingMessage struct.
+/// child driver-specific protocol, with notifications driven by `Ping()`, each
+/// of which writes and reads messages to the hardware that follow this
+/// `AddressSpaceChildDriverPingMessage` struct.
 /// Each child driver type will have its own semantics for each field.
-/// It's common for child drivers to refer to offset/size plus a metadata
-/// field. We also provide extra data fields for other use cases in
-/// particular child drivers.
+/// It's common for child drivers to refer to offset/size plus a metadata field.
+/// We also provide extra data fields for other use cases in particular child
+/// drivers.
 struct AddressSpaceChildDriverPingMessage {
     uint64 offset;
     uint64 size;
@@ -71,23 +71,24 @@ struct AddressSpaceChildDriverPingMessage {
 };
 
 protocol AddressSpaceChildDriver {
-    // Allocates goldfish address space of given size.
+    /// Allocates goldfish address space of given size.
     AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, zx.handle:VMO? vmo);
-    // Free goldfish address space associated with given ID.
+    /// Free goldfish address space associated with given ID.
     DeallocateBlock(uint64 paddr) -> (zx.status res);
 
-    // Claim a region at [offset, offset + size) that is a subregion of a
-    // larger region managed by hardware.  It is possible to share the same
-    // regions across different connections, but within a connection, we
-    // require the claimed regions to be disjoint. Otherwise, ZX_ERROR_INVALID_ARGS
-    // is returned.
+    /// Claim a region at `[offset, offset + size)` that is a subregion of a
+    /// larger region managed by hardware.  It is possible to share the same
+    /// regions across different connections, but within a connection, we
+    /// require the claimed regions to be disjoint. Otherwise,
+    /// `ZX_ERROR_INVALID_ARGS1 is returned.
     ClaimSharedBlock(uint64 offset, uint64 size) -> (zx.status res, zx.handle:VMO? vmo);
 
-    // Unclaim a hardware-shared region. This must correspond to an existing claimed
-    // region in the current connection. Otherwise, ZX_ERROR_INVALID_ARGS is returned.
+    /// Unclaim a hardware-shared region. This must correspond to an existing 
+    /// claimed region in the current connection. Otherwise,
+    /// `ZX_ERROR_INVALID_ARGS` is returned.
     UnclaimSharedBlock(uint64 offset) -> (zx.status res);
 
-    // Ping (General notification for child drivers)
+    /// Ping (General notification for child drivers)
     Ping(AddressSpaceChildDriverPingMessage ping)
         -> (zx.status res, AddressSpaceChildDriverPingMessage ping);
 };
