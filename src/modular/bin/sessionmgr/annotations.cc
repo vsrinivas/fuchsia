@@ -72,6 +72,36 @@ std::string ToInspect(const fuchsia::modular::AnnotationValue& value) {
   return text;
 }
 
+fuchsia::session::Annotation ToSessionAnnotation(const fuchsia::modular::Annotation& annotation) {
+  std::unique_ptr<fuchsia::session::Value> value;
+  if (annotation.value->is_buffer()) {
+    fuchsia::mem::Buffer buffer;
+    annotation.value->buffer().Clone(&buffer);
+    value = std::make_unique<fuchsia::session::Value>(
+        fuchsia::session::Value::WithBuffer(std::move(buffer)));
+  } else {
+    value = std::make_unique<fuchsia::session::Value>(
+        fuchsia::session::Value::WithText(std::string{annotation.value->text()}));
+  }
+
+  return fuchsia::session::Annotation{.key = std::string{annotation.key},
+                                      .value = std::move(value)};
+}
+
+fuchsia::session::Annotations ToSessionAnnotations(
+    const std::vector<fuchsia::modular::Annotation>& annotations) {
+  std::vector<fuchsia::session::Annotation> custom_annotations;
+  custom_annotations.reserve(annotations.size());
+
+  for (const fuchsia::modular::Annotation& annotation : annotations) {
+    custom_annotations.push_back(modular::annotations::ToSessionAnnotation(annotation));
+  }
+
+  fuchsia::session::Annotations session_annotations;
+  session_annotations.set_custom_annotations(std::move(custom_annotations));
+  return session_annotations;
+}
+
 }  // namespace modular::annotations
 
 namespace session::annotations {

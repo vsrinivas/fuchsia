@@ -16,6 +16,7 @@ source_set("annotations_matchers") {
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//third_party/googletest:gmock",

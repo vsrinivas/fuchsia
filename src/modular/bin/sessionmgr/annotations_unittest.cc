@@ -122,6 +122,75 @@ TEST(AnnotationsTest, BytesToInspect) {
   EXPECT_THAT(ToInspect(*annotation_bytes.value.get()), "bytes");
 }
 
+TEST(AnnotationsTest, ToSessionAnnotation) {
+  constexpr char kTestAnnotationKey[] = "test_key";
+  constexpr char kTestAnnotationValue[] = "test_value";
+
+  Annotation modular_annotation = MakeAnnotation(kTestAnnotationKey, kTestAnnotationValue);
+
+  auto expected_annotation =
+      fuchsia::session::Annotation{.key = kTestAnnotationKey,
+                                   .value = std::make_unique<fuchsia::session::Value>(
+                                       fuchsia::session::Value::WithText(kTestAnnotationValue))};
+
+  auto actual_annotation = ToSessionAnnotation(modular_annotation);
+
+  EXPECT_THAT(expected_annotation, session::annotations::AnnotationEq(ByRef(actual_annotation)));
+}
+
+TEST(AnnotationsTest, ToSessionAnnotations) {
+  constexpr char kTestAnnotationKey1[] = "test_key_1";
+  constexpr char kTestAnnotationKey2[] = "test_key_2";
+  constexpr char kTestAnnotationValue1[] = "test_value_1";
+  constexpr char kTestAnnotationValue2[] = "test_value_2";
+
+  std::vector<Annotation> modular_annotations;
+  modular_annotations.push_back(MakeAnnotation(kTestAnnotationKey1, kTestAnnotationValue1));
+  modular_annotations.push_back(MakeAnnotation(kTestAnnotationKey2, kTestAnnotationValue2));
+
+  std::vector<fuchsia::session::Annotation> session_annotations;
+  session_annotations.push_back(
+      fuchsia::session::Annotation{.key = kTestAnnotationKey1,
+                                   .value = std::make_unique<fuchsia::session::Value>(
+                                       fuchsia::session::Value::WithText(kTestAnnotationValue1))});
+  session_annotations.push_back(
+      fuchsia::session::Annotation{.key = kTestAnnotationKey2,
+                                   .value = std::make_unique<fuchsia::session::Value>(
+                                       fuchsia::session::Value::WithText(kTestAnnotationValue2))});
+
+  fuchsia::session::Annotations actual_annotations = ToSessionAnnotations(modular_annotations);
+
+  EXPECT_TRUE(actual_annotations.has_custom_annotations());
+  EXPECT_THAT(
+      actual_annotations.custom_annotations(),
+      UnorderedElementsAre(session::annotations::AnnotationEq(ByRef(session_annotations[0])),
+                           session::annotations::AnnotationEq(ByRef(session_annotations[1]))));
+}
+
+TEST(AnnotationsTest, ToSessionAnnotationBuffer) {
+  static constexpr auto kTestAnnotationKey = "annotation_key";
+  static constexpr auto kTestAnnotationValue = "annotation_value";
+
+  fuchsia::mem::Buffer buffer{};
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto modular_annotation = Annotation {
+      .key = kTestAnnotationKey,
+      .value = fidl::MakeOptional(AnnotationValue::WithBuffer(std::move(buffer)))
+  };
+
+  // Set the buffer again because it was moved into |annotation.value|.
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto expected_annotation = fuchsia::session::Annotation{
+      .key = kTestAnnotationKey,
+      .value = fidl::MakeOptional(fuchsia::session::Value::WithBuffer(std::move(buffer)))
+  };
+
+  EXPECT_THAT(ToSessionAnnotation(modular_annotation),
+              session::annotations::AnnotationEq(ByRef(expected_annotation)));
+}
+
 }  // namespace
 }  // namespace modular::annotations
 

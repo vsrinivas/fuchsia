@@ -25,6 +25,15 @@ std::vector<Annotation> Merge(std::vector<Annotation> a, std::vector<Annotation>
 // Helper function for translating annotation values to types ingestable by Inpect framework.
 // TODO(fxbug.dev/37645): Template this to return the proper properties
 std::string ToInspect(const fuchsia::modular::AnnotationValue& value);
+
+// Helper function for converting a fuchsia::modular::Annotation to a fuchsia::session::Annotation.
+fuchsia::session::Annotation ToSessionAnnotation(
+    const fuchsia::modular::Annotation& annotation);
+
+// Helper function for converting a vector of fuchsia::modular::Annotations to a
+// fuchsia::session::Annotations object.
+fuchsia::session::Annotations ToSessionAnnotations(
+    const std::vector<fuchsia::modular::Annotation>& annotations);
 }  // namespace modular::annotations
 
 namespace session::annotations {
