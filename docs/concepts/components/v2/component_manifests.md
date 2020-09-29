@@ -330,7 +330,7 @@ it expects to receive, and how it interprets them.
 ### children {#children}
 
 The `children` section declares child component instances as described in [Child
-component instances][children]
+component instances][doc-children]
 
 `children` is an array of objects with the following properties:
 
