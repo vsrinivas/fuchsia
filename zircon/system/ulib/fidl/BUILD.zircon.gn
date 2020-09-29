@@ -123,6 +123,7 @@ if (is_fuchsia) {
       "llcpp_client_base.cc",
       "llcpp_coding.c",
       "llcpp_message.cc",
+      "llcpp_server.cc",
       "llcpp_transaction.cc",
     ]
     public_deps = [

@@ -346,23 +346,23 @@ namespace entries {
 
 }  // namespace entries
 
-bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                         ::fidl::Transaction* txn) {
+::fidl::DispatchResult Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                                           ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Parent,
       entries::Parent +
           sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
 
-bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
-                      ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+::fidl::DispatchResult Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                        ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
 }
 
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
@@ -441,17 +441,17 @@ namespace entries {
 
 }  // namespace entries
 
-bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                        ::fidl::Transaction* txn) {
-  return false;
+::fidl::DispatchResult Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                                          ::fidl::Transaction* txn) {
+  return ::fidl::DispatchResult::kNotFound;
 }
 
-bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
-                     ::fidl::Transaction* txn) {
+::fidl::DispatchResult Child::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                       ::fidl::Transaction* txn) {
   zx_handle_close_many(msg->handles, msg->num_handles);
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
-  return false;
+  return ::fidl::DispatchResult::kNotFound;
 }
 
 }  // namespace name

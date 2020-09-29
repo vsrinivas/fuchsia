@@ -21,7 +21,7 @@ namespace methods {
   {{- if .HasRequest }}
 
 void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}(void* interface, void* bytes,
-                         ::fidl::Transaction* txn) {
+    ::fidl::Transaction* txn) {
   {{- if .Request }}
   auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
   {{- end }}
@@ -47,31 +47,31 @@ namespace entries {
 
 }  // namespace entries
 
-bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} {
+::fidl::DispatchResult {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} {
   {{- if HasMethodWithReqs .Methods }}
   return ::fidl::internal::TryDispatch(
       impl, msg, txn,
       entries::{{ .Name }},
       entries::{{ .Name }} + sizeof(entries::{{ .Name }}) / sizeof(::fidl::internal::MethodEntry));
   {{- else }}
-    return false;
+    return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
 {{- end }}
 
 {{- define "SyncServerDispatchMethodDefinition" }}
-bool {{ .Name }}::Dispatch{{ template "SyncServerDispatchMethodSignature" }} {
+::fidl::DispatchResult {{ .Name }}::Dispatch{{ template "SyncServerDispatchMethodSignature" }} {
   {{- if HasMethodWithReqs .Methods }}
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
   {{- else }}
   zx_handle_close_many(msg->handles, msg->num_handles);
   txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
-  return false;
+  return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
 {{- end }}

@@ -69,17 +69,18 @@ namespace entries {
 
 }  // namespace entries
 
-bool SomeProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                               ::fidl::Transaction* txn) {
-  return false;
+::fidl::DispatchResult SomeProtocol::TryDispatch(Interface* impl,
+                                                 fidl_msg_t* msg,
+                                                 ::fidl::Transaction* txn) {
+  return ::fidl::DispatchResult::kNotFound;
 }
 
-bool SomeProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
-                            ::fidl::Transaction* txn) {
+::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                              ::fidl::Transaction* txn) {
   zx_handle_close_many(msg->handles, msg->num_handles);
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
-  return false;
+  return ::fidl::DispatchResult::kNotFound;
 }
 
 }  // namespace handles

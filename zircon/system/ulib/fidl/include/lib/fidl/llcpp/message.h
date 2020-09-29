@@ -80,26 +80,6 @@ class FidlMessage final : public ::fidl::Result {
   uint32_t handle_capacity_;
 };
 
-namespace internal {
-
-// Defines an incomming method entry. Used by a server to dispatch an incoming message.
-struct MethodEntry {
-  // The ordinal of the method handled by the entry.
-  uint64_t ordinal;
-  // The coding table of the method (used to decode the message).
-  const fidl_type_t* type;
-  // The function which handles the decoded message.
-  void (*dispatch)(void* interface, void* bytes, ::fidl::Transaction* txn);
-};
-
-// The compiler generates an array of MethodEntry for each protocol.
-// The TryDispatch method for each protocol calls this function using the generated entries, which
-// searches through the array using the method ordinal to find the corresponding dispatch function.
-bool TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn, MethodEntry* begin,
-                 MethodEntry* end);
-
-}  // namespace internal
-
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_MESSAGE_H_

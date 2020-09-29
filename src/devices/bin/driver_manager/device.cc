@@ -523,8 +523,8 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
     // If the device is already dead, we are detecting an expected disconnect from the driver_host.
     if (dev->state() != Device::State::kDead) {
       // TODO(fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
-      LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause", dev.get(),
-           dev->name().data());
+      LOGF(WARNING, "Disconnected device %p '%s', see fxbug.dev/56208 for potential cause",
+           dev.get(), dev->name().data());
       dev->coordinator->RemoveDevice(dev, true);
     }
     // Do not start waiting again on this device's channel again
@@ -643,10 +643,10 @@ zx_status_t Device::HandleRead() {
   {
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
-    bool dispatched =
+    ::fidl::DispatchResult dispatch_result =
         llcpp::fuchsia::device::manager::Coordinator::TryDispatch(this, &fidl_msg, &txn);
     auto status = txn.Status();
-    if (dispatched) {
+    if (dispatch_result == ::fidl::DispatchResult::kFound) {
       if (status == ZX_OK && state_ == Device::State::kDead) {
         // We have removed the device. Signal that we are done with this channel.
         return ZX_ERR_STOP;

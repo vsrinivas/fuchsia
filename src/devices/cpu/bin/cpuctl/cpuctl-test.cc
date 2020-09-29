@@ -106,7 +106,7 @@ zx_status_t FakeCpuDevice::MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn
 
 zx_status_t FakeCpuDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  if (cpuctrl::Device::TryDispatch(this, msg, &transaction)) {
+  if (cpuctrl::Device::TryDispatch(this, msg, &transaction) == ::fidl::DispatchResult::kFound) {
     return transaction.Status();
   }
   fuchsia_device::Controller::Dispatch(this, msg, &transaction);

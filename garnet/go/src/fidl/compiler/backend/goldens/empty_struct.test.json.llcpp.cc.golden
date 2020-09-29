@@ -307,23 +307,24 @@ namespace entries {
 
 }  // namespace entries
 
-bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                                ::fidl::Transaction* txn) {
+::fidl::DispatchResult EmptyProtocol::TryDispatch(Interface* impl,
+                                                  fidl_msg_t* msg,
+                                                  ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::EmptyProtocol,
       entries::EmptyProtocol + sizeof(entries::EmptyProtocol) /
                                    sizeof(::fidl::internal::MethodEntry));
 }
 
-bool EmptyProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
-                             ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+::fidl::DispatchResult EmptyProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                               ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
 }
 
 zx_status_t EmptyProtocol::SendReceiveEvent(

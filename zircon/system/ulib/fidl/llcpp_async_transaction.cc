@@ -22,14 +22,22 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
   owned_binding_ = std::move(binding);
   // Avoid static_pointer_cast for now since it results in atomic inc/dec.
   auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
-  auto success = dispatch_fn_(binding_raw->interface_, msg, this);
+  fidl::DispatchResult dispatch_result = dispatch_fn_(binding_raw->interface_, msg, this);
   if (moved)
     return {};  // Return if `this` is no longer valid.
   moved_ = nullptr;
   // Transfer ownership of the binding back to the dispatcher if we still have it.
   if (owned_binding_)
     binding_raw->keep_alive_ = std::move(owned_binding_);
-  return success ? unbind_info_ : UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
+
+  switch (dispatch_result) {
+    case fidl::DispatchResult::kFound:
+      // Propagate any error that happened during the message handling.
+      return unbind_info_;
+    case fidl::DispatchResult::kNotFound:
+      // The message was not recognized by the |dispatch_fn_|.
+      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
+  }
 }
 
 zx_status_t AsyncTransaction::Reply(fidl::FidlMessage* message) {

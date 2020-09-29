@@ -142,23 +142,23 @@ namespace entries {
 
 }  // namespace entries
 
-bool super::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                        ::fidl::Transaction* txn) {
+::fidl::DispatchResult super::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                                          ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::super,
       entries::super +
           sizeof(entries::super) / sizeof(::fidl::internal::MethodEntry));
 }
 
-bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
-                     ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+::fidl::DispatchResult super::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                       ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
 }
 
 ::fidl::Result super::Interface::fooCompleterBase::Reply(int64_t y) {
@@ -311,22 +311,23 @@ namespace entries {
 
 }  // namespace entries
 
-bool sub::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                      ::fidl::Transaction* txn) {
+::fidl::DispatchResult sub::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                                        ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::sub,
       entries::sub +
           sizeof(entries::sub) / sizeof(::fidl::internal::MethodEntry));
 }
 
-bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+::fidl::DispatchResult sub::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                     ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
 }
 
 ::fidl::Result sub::Interface::fooCompleterBase::Reply(int64_t y) {

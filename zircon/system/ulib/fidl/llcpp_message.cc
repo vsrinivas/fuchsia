@@ -5,6 +5,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/server.h>
 #include <stdio.h>
 
 namespace fidl {
@@ -100,29 +101,5 @@ void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, ui
   }
   return ::fidl::Result(status_, error_);
 }
-
-namespace internal {
-
-bool TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn, MethodEntry* begin,
-                 MethodEntry* end) {
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  while (begin < end) {
-    if (hdr->ordinal == begin->ordinal) {
-      const char* error_message;
-      zx_status_t status = fidl_decode(begin->type, msg->bytes, msg->num_bytes, msg->handles,
-                                       msg->num_handles, &error_message);
-      if (status != ZX_OK) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, status});
-      } else {
-        begin->dispatch(impl, msg->bytes, txn);
-      }
-      return true;
-    }
-    ++begin;
-  }
-  return false;
-}
-
-}  // namespace internal
 
 }  // namespace fidl

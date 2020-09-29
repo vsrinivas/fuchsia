@@ -163,23 +163,23 @@ namespace entries {
 
 }  // namespace entries
 
-bool Example::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                          ::fidl::Transaction* txn) {
+::fidl::DispatchResult Example::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                                            ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Example,
       entries::Example +
           sizeof(entries::Example) / sizeof(::fidl::internal::MethodEntry));
 }
 
-bool Example::Dispatch(Interface* impl, fidl_msg_t* msg,
-                       ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+::fidl::DispatchResult Example::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                         ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
 }
 
 ::fidl::Result Example::Interface::fooCompleterBase::Reply(

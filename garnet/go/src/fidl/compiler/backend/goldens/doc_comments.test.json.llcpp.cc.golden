@@ -170,23 +170,23 @@ namespace entries {
 
 }  // namespace entries
 
-bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg,
-                            ::fidl::Transaction* txn) {
+::fidl::DispatchResult Interface::TryDispatch(Interface* impl, fidl_msg_t* msg,
+                                              ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Interface,
       entries::Interface +
           sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
 }
 
-bool Interface::Dispatch(Interface* impl, fidl_msg_t* msg,
-                         ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
+::fidl::DispatchResult Interface::Dispatch(Interface* impl, fidl_msg_t* msg,
+                                           ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->InternalError(
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
-  return found;
+  return dispatch_result;
 }
 
 zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _channel) {

@@ -31,6 +31,22 @@ fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
 
+// Defines an incoming method entry. Used by a server to dispatch an incoming message.
+struct MethodEntry {
+  // The ordinal of the method handled by the entry.
+  uint64_t ordinal;
+  // The coding table of the method (used to decode the message).
+  const fidl_type_t* type;
+  // The function which handles the decoded message.
+  void (*dispatch)(void* interface, void* bytes, ::fidl::Transaction* txn);
+};
+
+// The compiler generates an array of MethodEntry for each protocol.
+// The TryDispatch method for each protocol calls this function using the generated entries, which
+// searches through the array using the method ordinal to find the corresponding dispatch function.
+::fidl::DispatchResult TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn,
+                                   MethodEntry* begin, MethodEntry* end);
+
 }  // namespace internal
 
 // This class owns and manages the lifetime of the server end of a channel and its binding to an
@@ -163,7 +179,8 @@ template <typename Interface>
 fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
   return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
-      dispatcher, std::move(channel), impl, &Interface::_EnclosingProtocol::TypeErasedDispatch, nullptr);
+      dispatcher, std::move(channel), impl, &Interface::_EnclosingProtocol::TypeErasedDispatch,
+      nullptr);
 }
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
@@ -198,15 +215,14 @@ fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_
       [intf = std::move(impl)](void*, UnbindInfo, zx::channel) {});
 }
 
-
 namespace internal {
 
 template <typename Protocol>
 fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncServerBinding::Create(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound));
+  auto internal_binding = internal::AsyncServerBinding::Create(dispatcher, std::move(channel), impl,
+                                                               dispatch_fn, std::move(on_unbound));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {
     return fit::ok(fidl::ServerBindingRef<Protocol>(std::move(internal_binding)));

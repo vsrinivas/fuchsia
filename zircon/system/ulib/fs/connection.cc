@@ -239,9 +239,8 @@ bool Connection::OnMessage() {
 
   // Do basic validation on the message.
   auto* header = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
-  r = msg.num_bytes < sizeof(fidl_message_header_t)
-      ? ZX_ERR_INVALID_ARGS
-      : fidl_validate_txn_header(header);
+  r = msg.num_bytes < sizeof(fidl_message_header_t) ? ZX_ERR_INVALID_ARGS
+                                                    : fidl_validate_txn_header(header);
   if (r != ZX_OK) {
     zx_handle_close_many(msg.handles, msg.num_handles);
     return false;
@@ -249,8 +248,8 @@ bool Connection::OnMessage() {
 
   FidlTransaction txn(header->txid, binding);
 
-  bool handled = fidl_protocol_.TryDispatch(&msg, &txn);
-  if (!handled) {
+  ::fidl::DispatchResult dispatch_result = fidl_protocol_.TryDispatch(&msg, &txn);
+  if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     vnode_->HandleFsSpecificMessage(&msg, &txn);
   }
 

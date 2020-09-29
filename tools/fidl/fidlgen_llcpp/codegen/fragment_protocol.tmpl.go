@@ -702,17 +702,18 @@ class {{ .Name }} final {
   // If there is no matching handler, it returns false, leaving the message and transaction intact.
   // In all other cases, it consumes the message and returns true.
   // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch{{ template "SyncServerDispatchMethodSignature" }};
+  static ::fidl::DispatchResult TryDispatch{{ template "SyncServerDispatchMethodSignature" }};
 
   // Dispatches the incoming message to one of the handlers functions in the protocol.
   // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
   // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch{{ template "SyncServerDispatchMethodSignature" }};
+  static ::fidl::DispatchResult Dispatch{{ template "SyncServerDispatchMethodSignature" }};
 
   // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
   // Only used with |fidl::BindServer| to reduce template expansion.
   // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  static ::fidl::DispatchResult TypeErasedDispatch(
+      void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 

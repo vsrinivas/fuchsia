@@ -7,6 +7,7 @@
 
 #include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
@@ -19,7 +20,7 @@ using OnChannelClosedFn = fit::callback<void(Interface*)>;
 
 namespace internal {
 
-using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
+using TypeErasedDispatchFn = ::fidl::DispatchResult (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
 
 using TypeErasedOnChannelClosedFn = fit::callback<void(void*)>;
 

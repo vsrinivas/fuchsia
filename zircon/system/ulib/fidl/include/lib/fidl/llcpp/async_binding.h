@@ -21,9 +21,21 @@
 
 namespace fidl {
 
+// The return value of various Dispatch, TryDispatch, or TypeErasedDispatch functions,
+// which call into the appropriate server message handlers based on the method ordinal.
+enum class __attribute__((enum_extensibility(closed))) DispatchResult {
+  // The FIDL method ordinal was not recognized by the dispatch function.
+  kNotFound = false,
+
+  // The FIDL method ordinal matched one of the handlers.
+  // Note that this does not necessarily mean the message was handled successfully.
+  // For example, the message could fail to decode.
+  kFound = true
+};
+
 namespace internal {
 
-using TypeErasedServerDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
+using TypeErasedServerDispatchFn = DispatchResult (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
 using TypeErasedOnUnboundFn = fit::callback<void(void*, UnbindInfo, zx::channel)>;
 
 class AsyncTransaction;
@@ -109,9 +121,10 @@ class AsyncBinding : private async_wait_t {
 
 class AsyncServerBinding final : public AsyncBinding {
  public:
-  static std::shared_ptr<AsyncServerBinding> Create(
-      async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
+  static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
+                                                    zx::channel channel, void* impl,
+                                                    TypeErasedServerDispatchFn dispatch_fn,
+                                                    TypeErasedOnUnboundFn on_unbound_fn);
 
   virtual ~AsyncServerBinding() = default;
 
@@ -138,9 +151,10 @@ class AsyncServerBinding final : public AsyncBinding {
 
 class AsyncClientBinding final : public AsyncBinding {
  public:
-  static std::shared_ptr<AsyncClientBinding> Create(
-      async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-      std::shared_ptr<ClientBase> client, OnClientUnboundFn on_unbound_fn);
+  static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<ChannelRef> channel,
+                                                    std::shared_ptr<ClientBase> client,
+                                                    OnClientUnboundFn on_unbound_fn);
 
   virtual ~AsyncClientBinding() = default;
 

@@ -55,7 +55,7 @@ std::variant<::fidl::Transaction*, std::unique_ptr<::fidl::Transaction>> FromDdk
   return ptr;
 }
 
-bool FidlMessenger::Dispatch(fidl_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult FidlMessenger::Dispatch(fidl_msg_t* msg, ::fidl::Transaction* txn) {
   auto ddk_txn = MakeDdkInternalTransaction(txn);
   auto status = message_op_(op_ctx_, msg, ddk_txn.Txn());
   const bool found = status == ZX_OK || status == ZX_ERR_ASYNC;
@@ -63,7 +63,7 @@ bool FidlMessenger::Dispatch(fidl_msg_t* msg, ::fidl::Transaction* txn) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->Close(status);
   }
-  return found;
+  return found ? ::fidl::DispatchResult::kFound : ::fidl::DispatchResult::kNotFound;
 }
 
 zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op,
