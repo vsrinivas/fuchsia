@@ -61,8 +61,6 @@ void MemoryRange::CleanCache() { DoCacheOp(ZX_VMO_OP_CACHE_CLEAN); }
 
 void MemoryRange::CleanInvalidateCache() { DoCacheOp(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE); }
 
-void MemoryRange::InvalidateCache() { DoCacheOp(ZX_VMO_OP_CACHE_INVALIDATE); }
-
 MemoryRange::~MemoryRange() {
   ZX_ASSERT(zx::vmar::root_self()->unmap(reinterpret_cast<zx_vaddr_t>(addr_), size_) == ZX_OK);
 }

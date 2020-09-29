@@ -57,7 +57,6 @@ class MemoryRange {
   // CPU cache operations, via the kernel.
   void CleanCache();
   void CleanInvalidateCache();
-  void InvalidateCache();
 
   // Return the underlying vmo.
   const zx::vmo& vmo() const { return vmo_; }

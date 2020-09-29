@@ -58,7 +58,6 @@ TEST(MemoryRange, CacheOps) {
       MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
   range->CleanCache();
   range->CleanInvalidateCache();
-  range->InvalidateCache();
 }
 
 }  // namespace
