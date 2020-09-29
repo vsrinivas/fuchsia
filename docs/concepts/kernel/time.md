@@ -4,13 +4,13 @@
 
 *zx\_time\_t* is in nanoseconds.
 
-Use [`zx_clock_get()`] to get the current time.
+Use [`zx_clock_get_monotonic()`] to get the current time as the number of nanoseconds since boot.
 
 ## Kernel-internal time units
 
 *lk\_time\_t* is in nanoseconds.
 
-To get the current time since boot, use:
+When writing code which will run in the kernel, to read the current monotonic clock value, use:
 
 ```
 #include <platform.h>
@@ -18,4 +18,4 @@ To get the current time since boot, use:
 lk_time_t current_time(void);
 ```
 
-[`zx_clock_get()`]: /docs/reference/syscalls/clock_get.md
+[`zx_clock_get_monotonic()`]: /docs/reference/syscalls/clock_get_monotonic.md

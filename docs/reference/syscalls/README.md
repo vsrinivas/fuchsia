@@ -126,12 +126,12 @@
 
 ## Time
 + [nanosleep](nanosleep.md) - sleep for some number of nanoseconds
-+ [clock_get](clock_get.md) - read a system clock
++ [clock_get](clock_get.md) - read a system clock (**DEPRECATED**)
 + [clock_get_monotonic](clock_get_monotonic.md) - read the monotonic system clock
 + [ticks_get](ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](ticks_per_second.md) - read the number of high-precision timer ticks in a second
 + [deadline_after](deadline_after.md) - Convert a time relative to now to an absolute deadline
-+ [clock_adjust](clock_adjust.md)
++ [clock_adjust](clock_adjust.md) (**DEPRECATED**)
 
 ## Timers
 + [timer_create](timer_create.md) - create a timer object

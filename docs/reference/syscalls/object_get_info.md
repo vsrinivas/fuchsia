@@ -310,7 +310,7 @@ response, then this returns the exception report as a single
 Returns **ZX_ERR_BAD_STATE** if the thread is not in an exception and waiting for
 an exception response.
 
-### ZX_INFO_THREAD_STATS
+### ZX_INFO_THREAD_STATS {#zx-info-thread-stats}
 
 *handle* type: **Thread**
 
@@ -833,7 +833,7 @@ The resource kind is one of
 ```
 typedef struct zx_info_bti {
     // zx_bti_pin will always be able to return addresses that are contiguous for at
-    // least this many bytes.  E.g. if this returns 1MB, then a call to
+    // least this many bytes. E.g. if this returns 1MB, then a call to
     // zx_bti_pin() with a size of 2MB will return at most two physically-contiguous runs.
     // If the size were 2.5MB, it will return at most three physically-contiguous runs.
     uint64_t minimum_contiguity;

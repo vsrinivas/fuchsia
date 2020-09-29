@@ -258,7 +258,8 @@ The first argument is the handle you obtained via the call to
 **pci_map_interrupt()**,
 and the second parameter can be `NULL` (typical), or it can be a pointer to a time
 stamp that indicates when the interrupt was triggered (in nanoseconds,
-relative to the clock source `ZX_CLOCK_MONOTONIC`).
+relative to the monotonic clock source fetched with
+[`zx_clock_get_monotonic()`](/docs/reference/syscalls/clock_get_monotonic.md)).
 
 Therefore, a typical IHT would have the following shape:
 

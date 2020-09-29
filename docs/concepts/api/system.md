@@ -57,9 +57,10 @@ Use `void*` for pointers to arbitrary types in the caller's address space. Use
 `zx_vaddr_t` / `zx_paddr_t` for addresses that might be in other address spaces.
 
 Use `zx_time_t` for timeouts, which must be expressed as absolute deadlines in
-nanoseconds in the `ZX_CLOCK_MONOTONIC` timebase. In scenarios where absolute
-deadlines do not make sense (for example, timer slack), use `zx_duration_t` to
-represent an amount of time in nanoseconds with no specific timebase.
+nanoseconds in the system's monotonic clock timebase. In scenarios where
+absolute deadlines do not make sense (for example, timer slack), use
+`zx_duration_t` to represent an amount of time in nanoseconds with no specific
+timebase.
 
 ## Parameters
 
@@ -153,8 +154,8 @@ positive value range. Instead, use an out parameter.
 
 Other return types may be used for functions that cannot fail. For example,
 `zx_thread_exit` never fails to exit the thread and has a return type of void.
-Similarly, `zx_clock_get` cannot fail to get the current time and has a return
-type of `zx_time_t`.
+Similarly, `zx_clock_get_monotonic` cannot fail to get the current time and has
+a return type of `zx_time_t`.
 
 ## Function-specific rules
 

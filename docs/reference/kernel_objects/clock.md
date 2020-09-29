@@ -120,7 +120,8 @@ the details structure returned to callers will include:
 
 + The current clock monotonic to clock transformation.
 + The current ticks to clock transformation.
-+ The current symmetric error estimate (if any) for the clock.
++ The current symmetric [error bound estimate](#error-bound) (if any) for the
+  clock.
 + The last time the clock was updated as defined by the clock monotonic
   reference timeline.
 + An observation of the system tick counter which was taken during the
@@ -137,7 +138,7 @@ to also:
   `zx_clock_get_details()` operation (using the generation nonce).
 + Compose the clock transformation with other clocks' transformations to reason
   about the relationship between two clocks.
-+ Know the clock maintainer's best estimate of absolute error.
++ Know the clock maintainer's best estimate of [error bound](#error-bound).
 + Reason about the range of possible future values of the clock relative to the
   reference clock based on the last correction time, the current transformation,
   and the maximum permissible correction factor for the clock (see the maximum
@@ -185,7 +186,8 @@ all three need to be adjusted each time. These values are:
 + The clock's absolute value.
 + The frequency adjustment of the clock (deviation from nominal expressed in
   ppm)
-+ The absolute error estimate of the clock (expressed in nanoseconds)
++ The absolute [error bound estimate](#error-bound) of the clock (expressed in
+  nanoseconds)
 
 Changes to a clocks transformation occur during the syscall itself. The
 specific reference time of the adjustment may not be specified by the user.
@@ -200,6 +202,27 @@ set-value operation.
 Aside from the very first set-value  operation, all attempts to set the absolute
 value of a clock with the **ZX_CLOCK_OPT_CONTINUOUS** property set on it will
 fail with a return code of **ZX_ERR_INVALID_ARGS**
+
+### Notes on the clock error bound estimate {#error-bound}
+
+The `zx_clock_get_details()` syscall provides the user with a number of fine
+grained details about a clock, including the "error bound estimate". This
+value, expressed in nanoseconds, represents the clock maintainer's best current
+estimate of how wrong the clock currently might be relative to the reference(s)
+being used by the maintainer. For example, if a user fetched a time `X` with an
+error bound estimate of `E`, then the clock maintainer is attempting to say that
+it believes that the clock's actual value is somewhere in the range `[ X-E, X+E ]`.
+
+The level of confidence in this estimate is _not_ specified by the kernel APIs.
+It is possible that some clock maintainers are using a strict bound, while
+others are using a bound which is not provable but provides "high confidence",
+while others still might have little to no confidence in their estimates.
+
+In the case that a user needs to understand the objective quality of the error
+estimates they are accessing (for example, to enforce certificate validity
+dates, or DRM license expiration), they should understand which component in the
+system is maintaining their clock, and what guarantees that maintainer provides
+when it comes to the confidence levels of its published error bound estimates.
 
 ## SYSCALLS
 

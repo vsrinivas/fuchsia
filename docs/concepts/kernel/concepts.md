@@ -22,7 +22,7 @@ requested operation.
 System calls fall into three broad categories, from an access standpoint:
 
 1. Calls which have no limitations, of which there are only a very few, for
-example [`zx_clock_get()`](/docs/reference/syscalls/clock_get.md)
+example [`zx_clock_get_monotonic()`](/docs/reference/syscalls/clock_get_monotonic.md)
 and [`zx_nanosleep()`](/docs/reference/syscalls/nanosleep.md) may be called by any thread.
 2. Calls which take a Handle as the first parameter, denoting the Object they act upon,
 which are the vast majority, for example [`zx_channel_write()`](/docs/reference/syscalls/channel_write.md)

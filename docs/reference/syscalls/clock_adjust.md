@@ -6,6 +6,10 @@
 
 TODO(fxbug.dev/32938)
 
+## STATUS
+
+`zx_clock_adjust` is currently **DEPRECATED**. Do not make use of it in any new code.
+
 ## SYNOPSIS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->

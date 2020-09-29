@@ -48,10 +48,6 @@ exports a number of symbols with a C calling convention. The source of truth for
 these symbols is [//zircon/vdso](/zircon/vdso/). Their semantics are
 described in [the documentation](/docs/reference/syscalls/).
 
-Of particular importance are the semantics of the clocks defined by
-`libzircon.so`. The semantics of these clocks are described by
-[clock_get.md](/docs/reference/syscalls/clock_get.md#supported-clock-ids)
-
 ### FIDL protocols
 
 The bulk of the system interfaces are defined in the Fuchsia Interface
