@@ -28,6 +28,8 @@ go_library("target") {
   deps = [
     ":constants",
     "//third_party/golibs:github.com/creack/pty",
+    "//third_party/golibs:golang.org/x/crypto",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/bootserver:bootserver_lib",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
@@ -46,6 +48,8 @@ go_library("main") {
     ":botanist_lib",
     ":constants",
     ":target",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/lib/color",
     "//tools/lib/command",
     "//tools/lib/environment",

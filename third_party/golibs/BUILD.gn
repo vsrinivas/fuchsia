@@ -156,6 +156,10 @@ golib("go.uber.org/multierr") {
 
 ### golang.org/x/*
 golib("golang.org/x/crypto") {
+  deps = [
+    ":golang.org/x/net",
+    ":golang.org/x/sys",
+  ]
 }
 golib("golang.org/x/net") {
   deps = [ ":golang.org/x/text" ]
