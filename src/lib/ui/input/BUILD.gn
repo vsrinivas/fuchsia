@@ -27,6 +27,9 @@ source_set("input") {
     "//src/lib/ui/base_view",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("gesture") {
@@ -45,6 +48,9 @@ source_set("gesture") {
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
@@ -77,4 +83,7 @@ executable("gesture_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

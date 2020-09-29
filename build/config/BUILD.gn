@@ -837,6 +837,7 @@ config("Wno-conversion") {
     "//src/lib/line_input/*",
     "//src/lib/listnode/*",
     "//src/lib/process_builder/*",
+    "//src/lib/ui/input/*",
     "//src/lib/ui/scenic/cpp/*",
     "//src/lib/url/*",
     "//src/lib/usb_bulk/cpp/*",

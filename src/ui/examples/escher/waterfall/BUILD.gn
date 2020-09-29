@@ -30,6 +30,11 @@ if (is_mac) {
     if (is_fuchsia) {
       deps += [ "//zircon/system/ulib/trace" ]
     }
+
+    configs += [
+      # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+      "//build/config:Wno-conversion",
+    ]
   }
 }
 
@@ -44,6 +49,11 @@ source_set("waterfall_demo") {
     "//src/lib/vulkan",
     "//src/ui/examples/escher/common:demo_base",
   ]
+
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }
 
 source_set("waterfall_scenes") {
@@ -55,4 +65,9 @@ source_set("waterfall_scenes") {
   ]
 
   deps = [ "//src/ui/examples/escher/common:demo_base" ]
+
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
 }

@@ -53,6 +53,9 @@ executable("bin") {
   ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("lib") {
@@ -107,6 +110,9 @@ source_set("lib") {
     "//src/ui/lib/input_report_reader",
     "//zircon/system/ulib/trace",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("displays") {

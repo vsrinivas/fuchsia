@@ -9,10 +9,5 @@ config("public_glm_dirs") {
 source_set("glm_workaround") {
   sources = [ "glm_workaround.h" ]
 
-  public_configs = [
-    ":public_glm_dirs",
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
+  public_configs = [ ":public_glm_dirs" ]
 }

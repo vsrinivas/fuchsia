@@ -51,6 +51,9 @@ source_set("gfx_always_optimized") {
     "//sdk/lib/images/cpp",
     "//src/ui/lib/yuv",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("gfx") {

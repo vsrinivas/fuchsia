@@ -49,6 +49,9 @@ source_set("demo_base") {
     "demo.h",
   ]
   public_deps = [ "//src/ui/lib/escher:escher_with_glslang" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("demo_harness_fuchsia") {
@@ -71,6 +74,9 @@ source_set("demo_harness_fuchsia") {
     ":headers",
     "//src/ui/lib/input_report_reader",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("demo_harness_linux") {
@@ -84,6 +90,9 @@ source_set("demo_harness_linux") {
     ":demo_base",
     ":headers",
   ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("headers") {

@@ -33,4 +33,7 @@ executable("scenic_dev_app") {
   ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

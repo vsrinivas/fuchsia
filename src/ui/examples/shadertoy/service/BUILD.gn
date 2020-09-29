@@ -50,4 +50,7 @@ executable("service") {
     "//lib",
     "//src/ui/lib/escher",
   ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }
