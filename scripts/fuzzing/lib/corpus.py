@@ -124,7 +124,7 @@ class Corpus(object):
         """
         if not self._srcdir:
             self.host.error('No corpus set for {}.'.format(str(self.fuzzer)))
-        srcdir = self.fuzzer.buildenv.path(self._srcdir)
+        srcdir = self.fuzzer.buildenv.abspath(self._srcdir)
         if not self.host.isdir(srcdir):
             self.host.error('No such directory: {}'.format(srcdir))
 
@@ -132,7 +132,7 @@ class Corpus(object):
             str(self.fuzzer))
         if build_gn:
             comment = comment_prefix + ' -o ' + build_gn + '`.'
-            build_gn = self.fuzzer.buildenv.path(build_gn)
+            build_gn = self.fuzzer.buildenv.abspath(build_gn)
         else:
             comment = comment_prefix + '`.'
             build_gn = os.path.join(srcdir, 'BUILD.gn')

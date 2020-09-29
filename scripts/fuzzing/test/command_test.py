@@ -266,8 +266,8 @@ class CommandTest(TestCaseWithFuzzer):
 
         args = self.parse_args('update', '1/2')
         fuzzer = self.create_fuzzer('1/2')
-        corpus_dir = self.buildenv.path(fuzzer.corpus.srcdir)
-        build_gn = self.buildenv.path(corpus_dir, 'BUILD.gn')
+        corpus_dir = self.buildenv.abspath(fuzzer.corpus.srcdir)
+        build_gn = self.buildenv.abspath(corpus_dir, 'BUILD.gn')
         self.host.mkdir(corpus_dir)
 
         self.assertFalse(self.host.isfile(build_gn))
@@ -281,10 +281,10 @@ class CommandTest(TestCaseWithFuzzer):
         build_gn = '//src/fake/new.gn'
         args = self.parse_args('update', '-o', build_gn, '1/3')
         fuzzer = self.create_fuzzer('1/3')
-        corpus_dir = self.buildenv.path(fuzzer.corpus.srcdir)
-        build_gn = self.buildenv.path(build_gn)
+        corpus_dir = self.buildenv.abspath(fuzzer.corpus.srcdir)
+        build_gn = self.buildenv.abspath(build_gn)
         self.host.mkdir(corpus_dir)
-        self.host.touch(self.buildenv.path(corpus_dir, 'foo'))
+        self.host.touch(self.buildenv.abspath(corpus_dir, 'foo'))
 
         self.assertFalse(self.host.isfile(build_gn))
         command.update_corpus(args, self.factory)
@@ -296,9 +296,9 @@ class CommandTest(TestCaseWithFuzzer):
         # Fuzzer not currently built as fuzzer
         args = self.parse_args('update', '1/5')
         fuzzer = self.create_fuzzer('1/5', include_tests=True)
-        corpus_dir = self.buildenv.path(fuzzer.corpus.srcdir)
+        corpus_dir = self.buildenv.abspath(fuzzer.corpus.srcdir)
         self.host.mkdir(corpus_dir)
-        self.host.touch(self.buildenv.path(corpus_dir, 'bar'))
+        self.host.touch(self.buildenv.abspath(corpus_dir, 'bar'))
         command.update_corpus(args, self.factory)
         self.assertLogged(
             'Added:', '  bar', '',

@@ -98,12 +98,12 @@ class Host(object):
             self.echo('       {}'.format(line), fd=fd)
         sys.exit(status)
 
-    def choose(self, prompt, choices, preselected=None):
+    def choose(self, prompt, choices):
         """Displays a simple interactive menu."""
         self.echo(prompt + ' (or enter 0 to cancel):')
         for i, choice in enumerate(choices, 1):
             self.echo("  {}) {}".format(i, choice))
-        choice = preselected
+        choice = None
         while not choice:
             self.echo("Choose 1-{}: ".format(len(choices)), end='')
             try:
@@ -117,6 +117,10 @@ class Host(object):
         return choice
 
     # Filesystem routines
+
+    def getcwd(self):
+        """Returns the current working directory."""
+        return os.getcwd()
 
     def isfile(self, pathname):
         """Returns true for files that exist on the host."""

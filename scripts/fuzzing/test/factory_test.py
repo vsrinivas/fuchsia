@@ -27,7 +27,7 @@ class FactoryTest(TestCaseWithFactory):
 
         # Use an empty directory to simulate an unconfigured $FUCHSIA_DIR
         build_dir = self.buildenv.build_dir
-        fx_build_dir = self.buildenv.path('.fx-build-dir')
+        fx_build_dir = self.buildenv.abspath('//.fx-build-dir')
         self.assertError(
             lambda: factory.buildenv,
             'Failed to read build directory from {}.'.format(fx_build_dir),
@@ -36,10 +36,10 @@ class FactoryTest(TestCaseWithFactory):
             opened.write(self.buildenv.build_dir + '\n')
 
         # No $FUCHSIA_DIR/out/default/fuzzer.json
-        fuzzers_json = self.buildenv.path(build_dir, 'fuzzers.json')
+        fuzzers_json = self.buildenv.abspath(build_dir, 'fuzzers.json')
         self.assertError(
             lambda: factory.buildenv,
-            'Failed to read fuzzers from fuchsia_dir/build_dir/fuzzers.json.',
+            'Failed to read fuzzers from {}.'.format(fuzzers_json),
             'Have you run "fx set ... --fuzz-with <sanitizer>"?',
         )
 
@@ -47,7 +47,7 @@ class FactoryTest(TestCaseWithFactory):
         with self.host.open(fuzzers_json, 'w') as opened:
             json.dump([], opened)
         buildenv = factory.buildenv
-        self.assertEqual(buildenv.build_dir, buildenv.path(build_dir))
+        self.assertEqual(buildenv.build_dir, buildenv.abspath(build_dir))
         self.assertEqual(buildenv.fuzzers(), [])
 
     def test_create_device(self):
@@ -64,24 +64,25 @@ class FactoryTest(TestCaseWithFactory):
         build_dir = self.buildenv.build_dir
         device_addr = '::1'
         cmd = [
-            self.buildenv.path('.jiri_root', 'bin', 'fx'), 'device-finder',
+            self.buildenv.abspath('//.jiri_root/bin/fx'), 'device-finder',
             'list'
         ]
         self.set_outputs(cmd, [device_addr])
-        self.host.touch(self.buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
+        self.host.touch(
+            self.buildenv.abspath(build_dir, 'ssh-keys', 'ssh_config'))
         self.assertEqual(factory.device.addr, device_addr)
 
         # Clear the device to force re-initialization.
         factory._device = None
 
         # $FUCHSIA_DIR/out/default.device present
-        device_file = self.buildenv.path('{}.device'.format(build_dir))
+        device_file = self.buildenv.abspath('{}.device'.format(build_dir))
         device_name = 'device_name'
         device_addr = '::2'
         with self.host.open(device_file, 'w') as opened:
             opened.write(device_name + '\n')
         cmd = [
-            self.buildenv.path('.jiri_root', 'bin', 'fx'), 'device-finder',
+            self.buildenv.abspath('//.jiri_root/bin/fx'), 'device-finder',
             'resolve', '-device-limit', '1', device_name
         ]
         self.set_outputs(cmd, [device_addr])

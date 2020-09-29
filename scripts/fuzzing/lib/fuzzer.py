@@ -175,8 +175,8 @@ class Fuzzer(object):
     def output(self):
         """Path under which to write the results of fuzzing."""
         if not self._output:
-            self._output = self.buildenv.path(
-                'local', '{}_{}'.format(self._package, self._executable))
+            self._output = self.buildenv.abspath(
+                '//local/{}_{}'.format(self._package, self._executable))
         return self._output
 
     @output.setter

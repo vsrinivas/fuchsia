@@ -28,13 +28,13 @@ class FakeHost(Host):
     def __init__(self):
         super(FakeHost, self).__init__()
         self._log = []
-        self._selection = None
         self._dirs = set()
         self._files = {}
         self._links = {}
         self._envvars = {}
         self._processes = {}
         self._elapsed = 0.0
+        self._cwd = '/'
         self.tracing |= os.getenv(Host.TRACE_ENVVAR) == '1'
         if self.tracing:
             # Makes the output a bit prettier...
@@ -49,7 +49,19 @@ class FakeHost(Host):
     def elapsed(self):
         return self._elapsed
 
+    @property
+    def cwd(self):
+        return self._cwd
+
+    @cwd.setter
+    def cwd(self, cwd):
+        self._cwd = cwd
+
     # Fake filesystem routines
+
+    def getcwd(self):
+        """Fake implementation overriding Host.getcwd."""
+        return self._cwd
 
     def _dereference(self, pathname):
         while pathname in self._links:
@@ -57,15 +69,15 @@ class FakeHost(Host):
         return pathname
 
     def isdir(self, pathname):
-        """Fake implementation overriding CLI.isdir."""
+        """Fake implementation overriding Host.isdir."""
         return self._dereference(pathname) in self._dirs
 
     def isfile(self, pathname):
-        """Fake implementation overriding CLI.isfile."""
+        """Fake implementation overriding Host.isfile."""
         return self._dereference(pathname) in self._files
 
     def glob(self, pattern):
-        """Fake implementation overriding CLI.glob."""
+        """Fake implementation overriding Host.glob."""
         return sorted(fnmatch.filter(self._files, pattern))
 
     class File(StringIO):

@@ -3,8 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import sys
 import json
+import os
+import sys
 
 import test_env
 from lib.factory import Factory
@@ -36,24 +37,23 @@ class FakeFactory(Factory):
         """The associated BuildEnv object."""
         if self._buildenv:
             return self._buildenv
-        fuchsia_dir = 'fuchsia_dir'
+        fuchsia_dir = '/fuchsia_dir'
         self.host.mkdir(fuchsia_dir)
         self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
         buildenv = BuildEnv(self)
-        build_dir = 'build_dir'
-        self.host.mkdir(buildenv.path(build_dir))
-        self.host.touch(buildenv.path(build_dir, 'host_x64', 'symbolize'))
+        build_dir = buildenv.abspath(fuchsia_dir, "build_dir")
+        self.host.mkdir(build_dir)
+        self.host.cwd = build_dir
+        self.host.touch(build_dir + '/host_x64/symbolize')
         self.host.touch(
-            buildenv.path(
-                'prebuilt', 'third_party', 'clang', self.host.platform, 'bin',
-                'llvm-symbolizer'))
+            '{}/prebuilt/third_party/clang/{}/bin/llvm-symbolizer'.format(
+                fuchsia_dir, self.host.platform))
         self.host.mkdir(
-            buildenv.path(
-                'prebuilt', 'third_party', 'clang', self.host.platform, 'lib',
-                'debug', '.build-id'))
-        self.host.mkdir(buildenv.path(build_dir, '.build-id'))
-        self.host.mkdir(buildenv.path(build_dir + '.zircon', '.build-id'))
-        self.host.touch(buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
+            '{}/prebuilt/third_party/clang/{}/lib/debug/.build-id'.format(
+                fuchsia_dir, self.host.platform))
+        self.host.mkdir(build_dir + '/.build-id')
+        self.host.mkdir(build_dir + '.zircon/.build-id')
+        self.host.touch(build_dir + '/ssh-keys/ssh_config')
         buildenv.configure(build_dir)
         golden = 'data/v2.fuzzers.json'
         self.host.add_golden(golden)

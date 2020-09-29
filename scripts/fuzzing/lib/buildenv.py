@@ -64,6 +64,7 @@ class BuildEnv(object):
 
     @symbolizer_exec.setter
     def symbolizer_exec(self, symbolizer_exec):
+        symbolizer_exec = self.abspath(symbolizer_exec)
         if not self.host.isfile(symbolizer_exec):
             self.host.error(
                 'Invalid symbolizer executable: {}'.format(symbolizer_exec))
@@ -76,6 +77,7 @@ class BuildEnv(object):
 
     @llvm_symbolizer.setter
     def llvm_symbolizer(self, llvm_symbolizer):
+        llvm_symbolizer = self.abspath(llvm_symbolizer)
         if not self.host.isfile(llvm_symbolizer):
             self.host.error(
                 'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
@@ -88,11 +90,15 @@ class BuildEnv(object):
 
     @build_id_dirs.setter
     def build_id_dirs(self, build_id_dirs):
+        abspaths = []
         for build_id_dir in build_id_dirs:
-            if not self.host.isdir(build_id_dir):
+            abspath = self.abspath(build_id_dir)
+            srcpath = self.srcpath(build_id_dir)
+            if not self.host.isdir(abspath):
                 self.host.error(
-                    'Invalid build ID directory: {}'.format(build_id_dir))
-        self._build_id_dirs = build_id_dirs
+                    'Invalid build ID directory: {}'.format(srcpath))
+            abspaths.append(abspath)
+        self._build_id_dirs = abspaths
 
     @property
     def gsutil(self):
@@ -108,23 +114,23 @@ class BuildEnv(object):
 
     @gsutil.setter
     def gsutil(self, gsutil):
-        if not self.host.isfile(gsutil):
-            self.host.error('Invalid GS utility: {}'.format(gsutil))
-        self._gsutil = gsutil
+        abspath = self.abspath(gsutil)
+        if not self.host.isfile(abspath):
+            self.host.error('Invalid GS utility: {}'.format(abspath))
+        self._gsutil = abspath
 
     # Initialization routines
 
     def configure(self, build_dir):
         """Sets multiple properties based on the given build directory."""
-        self._build_dir = self.path(build_dir)
-        clang_dir = os.path.join(
-            'prebuilt', 'third_party', 'clang', self.host.platform)
-        self.symbolizer_exec = self.path(build_dir, 'host_x64', 'symbolize')
-        self.llvm_symbolizer = self.path(clang_dir, 'bin', 'llvm-symbolizer')
+        self._build_dir = self.abspath(build_dir)
+        clang_dir = '//prebuilt/third_party/clang/' + self.host.platform
+        self.symbolizer_exec = build_dir + '/host_x64/symbolize'
+        self.llvm_symbolizer = clang_dir + '/bin/llvm-symbolizer'
         self.build_id_dirs = [
-            self.path(clang_dir, 'lib', 'debug', '.build-id'),
-            self.path(build_dir, '.build-id'),
-            self.path(build_dir + '.zircon', '.build-id'),
+            clang_dir + '/lib/debug/.build-id',
+            build_dir + '/.build-id',
+            build_dir + '.zircon/.build-id',
         ]
 
     def read_fuzzers(self, pathname):
@@ -222,19 +228,63 @@ class BuildEnv(object):
 
     # Other routines
 
-    def path(self, *segments):
-        """Returns absolute path to a path in the build environment."""
+    def abspath(self, *segments):
+        """Returns absolute path to a path in the build environment.
+
+        This method can handle three types of path inputs:
+        1. GN source-absolute paths, as identified by a leading '//', e.g. '//some/src/path'.
+        2. Paths that are already valid absolute paths, e.g. '/an/absolute/path'.
+        3. Paths interpreted as relative to the current working directory. e.g. 'a/relative/path'.
+           See also Host.getcwd().
+
+        This method normalizes the path using os.path.normpath, so forward slashes are automatically
+        converted on Windows and callers should simply use POSIX-style paths.
+
+        Parameters:
+            segments    A list of path segments.
+
+        Returns:
+            A string containing the absolute path.
+        """
         assert segments, 'No path segments provided.'
-        joined = os.path.join(*segments)
-        if joined.startswith('//'):
-            joined = os.path.join(self.fuchsia_dir, joined[2:])
-        elif not joined.startswith(self.fuchsia_dir):
-            joined = os.path.join(self.fuchsia_dir, joined)
-        return joined
+        if segments[0].startswith('//'):
+            joined = os.path.join(
+                self.fuchsia_dir, segments[0][2:], *segments[1:])
+        else:
+            joined = os.path.join(*segments)
+        if not os.path.isabs(joined):
+            joined = os.path.join(self.host.getcwd(), joined)
+        return os.path.normpath(joined)
+
+    def srcpath(self, label_or_path):
+        """Returns a GN source-absolute path for a label, like GN's `get_label_info(..., "dir")`.
+
+        This method can handle the same types of path inputs as `abspath`, plus one more:
+        4. GN relative labels, i.e. labels without a leading '//'. The specific GN target is removed
+           and the remainder is treated as relative to the working directory, similar to how GN
+           behaves.
+
+        As with `abspath`, callers should simply use forward slashes, as used by both POSIX-style
+        and GN-style paths.
+
+        Parameters:
+            label_or_path   A string containing either a filesystem path or GN label.
+
+        Returns:
+            A string containing the source-absolute path, that is one beginning with '//'.
+        """
+        joined = self.abspath(label_or_path.split(':')[0])
+        if not joined.startswith(self.fuchsia_dir):
+            self.host.error(
+                '{} is not a path in the source tree.'.format(joined))
+        return '//' + os.path.relpath(joined, self.fuchsia_dir).replace(
+            os.sep, '/')
 
     def find_device(self, device_name=None):
         """Returns the IPv6 address for a device."""
-        cmd = [self.path('.jiri_root', 'bin', 'fx'), 'device-finder']
+        cmd = [
+            self.abspath(self.fuchsia_dir, '.jiri_root/bin/fx'), 'device-finder'
+        ]
         if device_name:
             cmd += ['resolve', '-device-limit', '1', device_name]
         else:

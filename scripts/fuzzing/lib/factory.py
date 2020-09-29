@@ -57,15 +57,15 @@ class Factory(object):
         if self._buildenv:
             return self._buildenv
         buildenv = BuildEnv(self)
-        pathname = buildenv.path('.fx-build-dir')
-        build_dir = self.host.readfile(
+        pathname = buildenv.abspath('//.fx-build-dir')
+        build_dir = '//' + self.host.readfile(
             pathname,
             on_error=[
                 'Failed to read build directory from {}.'.format(pathname),
                 'Have you run "fx set ... --fuzz-with <sanitizer>"?'
             ])
         buildenv.configure(build_dir)
-        buildenv.read_fuzzers(buildenv.path(build_dir, 'fuzzers.json'))
+        buildenv.read_fuzzers(buildenv.abspath(build_dir, 'fuzzers.json'))
         self._buildenv = buildenv
         return self._buildenv
 

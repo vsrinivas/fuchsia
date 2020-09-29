@@ -118,7 +118,7 @@ class Device(object):
 
     def configure(self):
         """Sets the defaults for this device."""
-        self.ssh_config = self.buildenv.path(
+        self.ssh_config = self.buildenv.abspath(
             self.buildenv.build_dir, 'ssh-keys', 'ssh_config')
 
     def ssh_opts(self):

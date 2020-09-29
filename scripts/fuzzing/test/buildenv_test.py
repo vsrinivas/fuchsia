@@ -20,7 +20,7 @@ class BuildEnvTest(TestCaseWithFactory):
             'Have you sourced "scripts/fx-env.sh"?')
 
     def test_configure(self):
-        fuchsia_dir = 'test_configure'
+        fuchsia_dir = os.path.abspath('/test_configure')
         self.host.mkdir(fuchsia_dir)
         self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
 
@@ -52,28 +52,28 @@ class BuildEnvTest(TestCaseWithFactory):
             os.path.join(build_dir + '.zircon', '.build-id'),
         ]
         for build_id_dir in build_id_dirs:
+            srcpath = buildenv.srcpath(build_id_dir)
             self.assertError(
                 lambda: buildenv.configure(build_dir),
-                'Invalid build ID directory: {}'.format(build_id_dir),
+                'Invalid build ID directory: {}'.format(srcpath),
             )
             self.host.mkdir(build_id_dir)
 
         buildenv.configure(build_dir)
-        clang_dir = os.path.join(
-            'prebuilt', 'third_party', 'clang', self.host.platform)
+        clang_dir = '//prebuilt/third_party/clang/' + self.host.platform
 
-        self.assertEqual(buildenv.build_dir, buildenv.path(build_dir))
+        self.assertEqual(buildenv.build_dir, buildenv.abspath(build_dir))
         self.assertEqual(
             buildenv.symbolizer_exec,
-            buildenv.path(build_dir, 'host_x64', 'symbolize'))
+            buildenv.abspath(build_dir + '/host_x64/symbolize'))
         self.assertEqual(
             buildenv.llvm_symbolizer,
-            buildenv.path(clang_dir, 'bin', 'llvm-symbolizer'))
+            buildenv.abspath(clang_dir + '/bin/llvm-symbolizer'))
         self.assertEqual(
             buildenv.build_id_dirs, [
-                buildenv.path(clang_dir, 'lib', 'debug', '.build-id'),
-                buildenv.path(build_dir, '.build-id'),
-                buildenv.path(build_dir + '.zircon', '.build-id'),
+                buildenv.abspath(clang_dir + '/lib/debug/.build-id'),
+                buildenv.abspath(build_dir + '/.build-id'),
+                buildenv.abspath(build_dir + '.zircon/.build-id'),
             ])
 
     # Unit tests
@@ -150,21 +150,43 @@ class BuildEnvTest(TestCaseWithFactory):
         with self.assertRaises(ValueError):
             self.buildenv.fuzzer_tests('a/b/c')
 
-    def test_path(self):
-        fuchsia_dir = 'fuchsia_dir'
+    def test_abspath(self):
+        self.host.cwd = os.path.join(self.buildenv.fuchsia_dir, 'foo')
         self.assertEqual(
-            self.buildenv.path('bar', 'baz'),
-            os.path.join(fuchsia_dir, 'bar', 'baz'))
+            self.buildenv.abspath('//bar/baz'),
+            os.path.join(self.buildenv.fuchsia_dir, 'bar', 'baz'))
         self.assertEqual(
-            self.buildenv.path(fuchsia_dir, 'baz'),
-            os.path.join(fuchsia_dir, 'baz'))
+            self.buildenv.abspath('/bar/baz'), os.path.abspath('/bar/baz'))
+        self.assertEqual(
+            self.buildenv.abspath('baz'),
+            os.path.join(self.buildenv.fuchsia_dir, 'foo/baz'))
+
+    def test_srcpath(self):
+        self.assertEqual(self.buildenv.srcpath('//foo/bar'), '//foo/bar')
+        self.assertEqual(self.buildenv.srcpath('//foo/bar:baz'), '//foo/bar')
+        self.host.cwd = os.path.join(self.buildenv.fuchsia_dir, 'foo')
+        self.assertEqual(self.buildenv.srcpath('bar'), '//foo/bar')
+        self.assertEqual(self.buildenv.srcpath('bar:baz'), '//foo/bar')
+        self.assertError(
+            lambda: self.buildenv.srcpath('/foo/bar'),
+            '/foo/bar is not a path in the source tree.')
+        self.assertError(
+            lambda: self.buildenv.srcpath('/foo/bar:baz'),
+            '/foo/bar is not a path in the source tree.')
+        self.host.cwd = '/qux'
+        self.assertError(
+            lambda: self.buildenv.srcpath('bar'),
+            '/qux/bar is not a path in the source tree.')
+        self.assertError(
+            lambda: self.buildenv.srcpath('bar:baz'),
+            '/qux/bar is not a path in the source tree.')
 
     def test_find_device(self):
         device_name = 'test_find_device'
         addrs = ['::1', '::2']
 
         cmd = [
-            self.buildenv.path('.jiri_root', 'bin', 'fx'),
+            self.buildenv.abspath('//.jiri_root/bin/fx'),
             'device-finder',
             'resolve',
             '-device-limit',
@@ -181,7 +203,7 @@ class BuildEnvTest(TestCaseWithFactory):
 
         # Multiple results from `fx device-finder list`
         cmd = [
-            self.buildenv.path('.jiri_root', 'bin', 'fx'), 'device-finder',
+            self.buildenv.abspath('//.jiri_root/bin/fx'), 'device-finder',
             'list'
         ]
         self.set_outputs(cmd, addrs)

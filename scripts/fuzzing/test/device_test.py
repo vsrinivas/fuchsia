@@ -92,7 +92,7 @@ class DeviceTest(TestCaseWithFactory):
         device.configure()
         self.assertEqual(
             device.ssh_config,
-            self.buildenv.path(
+            self.buildenv.abspath(
                 self.buildenv.build_dir, 'ssh-keys', 'ssh_config'))
         self.assertFalse(device.ssh_identity)
         self.assertFalse(device.ssh_options)
