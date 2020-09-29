@@ -8,5 +8,9 @@ group("unification") {
   deps = [
     "images",
     "zbi",
+
+    # Ensure the arm64 boot shims are built with the Fuchsia build
+    # even though they are not used for now.
+    "//zircon/kernel/target/arm64/boot-shim(//zircon/kernel/arch/arm64:physmem_arm64)",
   ]
 }

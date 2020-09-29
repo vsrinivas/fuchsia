@@ -5,7 +5,17 @@
 # https://opensource.org/licenses/MIT
 
 import("$zx/public/gn/toolchain/c_utils.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
+if (zx == "/") {
+  import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+  # zx_executable() is like executable() but also adds an
+  # entry to legacy_unification-$cpu.json for the corresponding
+  # binary. This won't be necessary after build unification.
+  _executable_target_type = "zx_executable"
+} else {
+  _executable_target_type = "executable"
+}
 
 assert(current_cpu == "arm64")
 
@@ -41,8 +51,9 @@ template("boot_shim") {
   if (toolchain.environment == "physmem") {
     shim_name = "${board}-boot-shim"
 
-    zx_executable(shim_name) {
+    target(_executable_target_type, shim_name) {
       output_extension = "elf"
+      output_dir = target_out_dir
       configs += [ ":boot_shim_config" ]
       deps = [
         ":common",
@@ -75,7 +86,11 @@ template("boot_shim") {
       # The shim code should be purely position-independent code.
       pure = true
 
-      output_dir = root_build_dir
+      if (zx == "/") {
+        output_dir = root_build_dir
+      } else {
+        output_dir = root_out_dir
+      }
       output_name = shim_name
       output_extension = "bin"
       metadata = {
@@ -112,10 +127,16 @@ template("boot_shim") {
       }
     }
   } else {
-    environment_redirect(board) {
-      environment_label = "$zx/kernel/arch/arm64:physmem"
-      direct = true
-      deps = [ ":$board" ]
+    if (zx == "/") {
+      environment_redirect(board) {
+        environment_label = "$zx/kernel/arch/arm64:physmem"
+        direct = true
+        deps = [ ":$board" ]
+      }
+    } else {
+      group(board) {
+        public_deps = [ ":$board($zx/kernel/arch/arm64:physmem_arm64)" ]
+      }
     }
     not_needed(invoker, "*")
   }

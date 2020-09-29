@@ -6,7 +6,7 @@
 
 import("$zx_build/public/gn/migrated_targets.gni")
 
-library("ktl") {
+zx_library("ktl") {
   kernel = true
   static = false
 
