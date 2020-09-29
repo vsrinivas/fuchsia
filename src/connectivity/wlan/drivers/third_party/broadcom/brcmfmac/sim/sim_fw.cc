@@ -595,6 +595,13 @@ zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
   static bool memoized = false;
   zx_status_t status;
 
+  // Use a value provided by the error injector, if one has been set
+  auto bootloader_mac_addr = err_inj_.BootloaderMacAddr();
+  if (bootloader_mac_addr) {
+    memcpy(mac_addr, bootloader_mac_addr->byte, ETH_ALEN);
+    return ZX_OK;
+  }
+
   if (!memoized) {
     BRCMF_INFO(
         "Bootloader MAC address not available to simulated firmware. Generating a random mac "

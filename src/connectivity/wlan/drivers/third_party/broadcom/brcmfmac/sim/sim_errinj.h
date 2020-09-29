@@ -51,6 +51,12 @@ class SimErrorInjector {
   void SetSignalErrInj(bool enable);
   bool HandleRxFrameErrorInjection(uint8_t* buffer) const;
 
+  // Configure the mac address as reported by the (simulated) bootloader
+  void SetBootloaderMacAddr(const wlan::common::MacAddr& mac_addr) {
+    bootloader_mac_addr_ = mac_addr;
+  }
+  std::optional<wlan::common::MacAddr> BootloaderMacAddr() { return bootloader_mac_addr_; }
+
  private:
   struct ErrInjCmd {
     std::optional<uint16_t> ifidx;
@@ -84,6 +90,9 @@ class SimErrorInjector {
   std::list<ErrInjIovar> iovars_;
   // If set to true this flag injects error (sets rssi to 0) in the rssi signal
   bool enable_rssi_sig_err_ = false;
+
+  // If set, overrides the bootloader-reported mac address
+  std::optional<wlan::common::MacAddr> bootloader_mac_addr_ = {};
 };
 
 }  // namespace wlan::brcmfmac
