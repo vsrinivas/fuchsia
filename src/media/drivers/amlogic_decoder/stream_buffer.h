@@ -1,12 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_STREAM_BUFFER_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_STREAM_BUFFER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_STREAM_BUFFER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_STREAM_BUFFER_H_
 
 #include <ddk/io-buffer.h>
 
-#include "internal_buffer.h"
+#include "src/media/lib/internal_buffer/internal_buffer.h"
 
 // The stream buffer is a fifo between parser and decoder.
 class StreamBuffer {
@@ -32,4 +32,4 @@ class StreamBuffer {
   uint32_t padding_size_ = 0;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_STREAM_BUFFER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_STREAM_BUFFER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_INTERNAL_BUFFER_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_INTERNAL_BUFFER_H_
+#ifndef SRC_MEDIA_LIB_INTERNAL_BUFFER_INTERNAL_BUFFER_H_
+#define SRC_MEDIA_LIB_INTERNAL_BUFFER_INTERNAL_BUFFER_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -90,4 +90,4 @@ class InternalBuffer {
   bool is_moved_out_ = false;
 };
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_INTERNAL_BUFFER_H_
+#endif  // SRC_MEDIA_LIB_INTERNAL_BUFFER_INTERNAL_BUFFER_H_

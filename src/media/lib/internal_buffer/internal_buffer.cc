@@ -5,12 +5,19 @@
 #include "internal_buffer.h"
 
 #include <lib/fit/result.h>
+#include <lib/syslog/global.h>
 #include <threads.h>
+
+#include <limits>
 
 #include <fbl/algorithm.h>
 
-#include "macros.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
+
+#define LOG(severity, fmt, ...)                                                       \
+  do {                                                                                \
+    FX_LOGF(severity, nullptr, "[%s:%d] " fmt "", __func__, __LINE__, ##__VA_ARGS__); \
+  } while (0)
 
 fit::result<InternalBuffer, zx_status_t> InternalBuffer::Create(
     const char* name, fuchsia::sysmem::AllocatorSyncPtr* sysmem, const zx::unowned_bti& bti,
@@ -170,9 +177,10 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
 
   // Allocate enough so that some portion must be aligned and large enough.
   real_size_ = size_ + alignment;
+  ZX_DEBUG_ASSERT(real_size_ < std::numeric_limits<uint32_t>::max());
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = real_size_;
-  constraints.buffer_memory_constraints.max_size_bytes = real_size_;
+  constraints.buffer_memory_constraints.min_size_bytes = static_cast<uint32_t>(real_size_);
+  constraints.buffer_memory_constraints.max_size_bytes = static_cast<uint32_t>(real_size_);
   // amlogic-video always requires contiguous; only contiguous is supported by InternalBuffer.
   constraints.buffer_memory_constraints.physically_contiguous_required = true;
   constraints.buffer_memory_constraints.secure_required = is_secure_;

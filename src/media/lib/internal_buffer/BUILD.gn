@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("internal_buffer") {
+  sources = [
+    "internal_buffer.cc",
+    "internal_buffer.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.sysmem",
+    "//src/media/lib/memory_barriers",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/syslog",
+  ]
+}

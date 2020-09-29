@@ -9,8 +9,8 @@
 
 #include <ddk/io-buffer.h>
 
-#include "internal_buffer.h"
 #include "registers.h"
+#include "src/media/lib/internal_buffer/internal_buffer.h"
 #include "video_decoder.h"
 
 class H264Decoder : public VideoDecoder {

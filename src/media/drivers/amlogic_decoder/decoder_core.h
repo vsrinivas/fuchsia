@@ -11,8 +11,8 @@
 
 #include <ddk/io-buffer.h>
 
-#include "internal_buffer.h"
 #include "registers.h"
+#include "src/media/lib/internal_buffer/internal_buffer.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
 
 struct MmioRegisters {
