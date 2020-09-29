@@ -132,7 +132,6 @@ group("deprecated_package_underscore") {
     "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers_pkg",
     "//garnet/examples/fidl/echo_server_go:echo_server_go",
     "//garnet/examples/fidl/echo_server_llcpp:echo_server_llcpp",
-    "//garnet/examples/http/example_http_server:example_http_server",
     "//garnet/examples/http/httpget_cpp:httpget_cpp",
     "//garnet/examples/http/httpget_rust:httpget_rust",
     "//garnet/examples/inspection:example_server",

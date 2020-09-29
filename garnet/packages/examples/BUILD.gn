@@ -63,7 +63,6 @@ group("eth-rs") {
 group("http") {
   testonly = true
   public_deps = [
-    "//garnet/examples/http/example_http_server",
     "//garnet/examples/http/httpget_cpp",
     "//garnet/examples/http/httpget_rust",
     "//garnet/examples/http/postfile",
