@@ -1,13 +1,6 @@
 {
-    "facets": {
-        "fuchsia.modular": {
-            "@version": 2,
-            "binary": "hello_experiences",
-            "intent_filters": []
-        }
-    },
     "program": {
-        "data": "data/hello_experiences"
+        "data": "data/hello-experiences"
     },
     "sandbox": {
         "services": [
@@ -26,7 +19,6 @@
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.modular.ComponentContext",
-            "fuchsia.web.ContextProvider"
         ]
     }
 }
