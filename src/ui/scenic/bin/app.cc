@@ -141,14 +141,22 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
 
   executor_.schedule_task(std::move(p));
 
+#ifdef NDEBUG
   // TODO(fxbug.dev/48596): Scenic sometimes gets stuck for consecutive 60 seconds.
   // Here we set up a Watchdog polling Scenic status every 15 seconds.
   constexpr uint32_t kWatchdogWarningIntervalMs = 15000u;
-
   // On some devices, the time to start up Scenic may exceed 15 seconds.
   // In that case we should only send a warning, and we should only crash
   // Scenic if the main thread is blocked for longer time.
   constexpr uint32_t kWatchdogTimeoutMs = 45000u;
+
+#else  // !defined(NDEBUG)
+  // We set a higher warning interval and timeout length for debug builds,
+  // since these builds could be slower than the default release ones.
+  constexpr uint32_t kWatchdogWarningIntervalMs = 30000u;
+  constexpr uint32_t kWatchdogTimeoutMs = 90000u;
+
+#endif  // NDEBUG
 
   watchdog_ = std::make_unique<Watchdog>(kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
                                          async_get_default_dispatcher());
