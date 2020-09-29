@@ -9,16 +9,16 @@ using fuchsia.sys2;
 using zx;
 
 const uint8 MAX_OFFER_COUNT = 64;
-const uint8 MAX_PROTOCOL_COUNT = 64;
-const uint8 MAX_PROTOCOL_NAME_LENGTH = 128;
+const uint8 MAX_SYMBOL_COUNT = 64;
+const uint8 MAX_SYMBOL_NAME_LENGTH = 128;
 const uint8 MAX_DEVICE_NAME_LENGTH = 128;
 
-/// Definition of a Banjo protocol, that is local to a driver host.
-table BanjoProtocol {
-    /// Fully-qualified name of the protocol.
-    1: string:MAX_PROTOCOL_NAME_LENGTH name;
+/// Definition of a symbol provided by a driver, local to a driver host.
+table DriverSymbol {
+    /// Name of the symbol.
+    1: string:MAX_SYMBOL_NAME_LENGTH name;
 
-    /// Virtual address of the protocol, within a driver host's process.
+    /// Virtual address of the symbol, within a driver host's process.
     2: zx.vaddr address;
 };
 
@@ -30,8 +30,8 @@ table NodeAddArgs {
     /// FIDL services to offer to the driver that is bound to this node.
     2: vector<fuchsia.sys2.OfferDecl>:MAX_OFFER_COUNT offers;
 
-    /// Banjo protocols to provide to the driver that is bound to this node.
-    3: vector<BanjoProtocol>:MAX_PROTOCOL_COUNT protocols;
+    /// Functions to provide to the driver that is bound to this node.
+    3: vector<DriverSymbol>:MAX_SYMBOL_COUNT symbols;
 };
 
 /// Protocol through which a parent node controls one of its children.

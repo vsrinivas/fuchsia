@@ -13,10 +13,10 @@ resource table DriverStartArgs {
     /// The node that the driver is being bound to.
     1: Node node;
 
-    /// The Banjo protocols provided to the driver, for |node|. These come from
-    /// the driver that added the node, and are filtered to the protocols
-    /// requested in the bind program.
-    2: vector<BanjoProtocol>:MAX_PROTOCOL_COUNT protocols;
+    /// The symbols provided to the driver, for |node|. These come from the
+    /// driver that added the node, and are filtered to the symbols requested
+    /// in the bind program.
+    2: vector<DriverSymbol>:MAX_SYMBOL_COUNT symbols;
 
     /// Information about the driver to start.
     3: fuchsia.data.Dictionary program;

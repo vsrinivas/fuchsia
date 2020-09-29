@@ -14,13 +14,13 @@ TEST(StartArgsTest, Encode_Decode) {
   // Setup input.
   zx::channel node_client_end, node_server_end;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &node_client_end, &node_server_end));
-  fdf::BanjoProtocol protocol_entries[] = {
-      fdf::BanjoProtocol::Builder(std::make_unique<fdf::BanjoProtocol::Frame>())
-          .set_name(std::make_unique<fidl::StringView>("proto"))
-          .set_address(std::make_unique<uint64_t>(0xf00d))
+  fdf::DriverSymbol symbol_entries[] = {
+      fdf::DriverSymbol::Builder(std::make_unique<fdf::DriverSymbol::Frame>())
+          .set_name(std::make_unique<fidl::StringView>("func"))
+          .set_address(std::make_unique<zx_vaddr_t>(0xf00d))
           .build(),
   };
-  auto protocols = fidl::unowned_vec(protocol_entries);
+  auto symbols = fidl::unowned_vec(symbol_entries);
   fdata::DictionaryEntry program_entries[] = {
       {
           .key = "binary",
@@ -46,7 +46,7 @@ TEST(StartArgsTest, Encode_Decode) {
 
   auto start_args = fdf::DriverStartArgs::UnownedBuilder()
                         .set_node(fidl::unowned_ptr(&node_client_end))
-                        .set_protocols(fidl::unowned_ptr(&protocols))
+                        .set_symbols(fidl::unowned_ptr(&symbols))
                         .set_program(fidl::unowned_ptr(&program))
                         .set_ns(fidl::unowned_ptr(&ns))
                         .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir_server_end));
@@ -80,10 +80,10 @@ TEST(StartArgsTest, Encode_Decode) {
                                            nullptr, nullptr));
   EXPECT_EQ(client_info.koid, server_info.related_koid);
 
-  auto& decode_protocols = start_args_ptr->protocols();
-  ASSERT_EQ(1u, decode_protocols.count());
-  EXPECT_STREQ("proto", decode_protocols[0].name().data());
-  EXPECT_EQ(0xf00du, decode_protocols[0].address());
+  auto& decode_symbols = start_args_ptr->symbols();
+  ASSERT_EQ(1u, decode_symbols.count());
+  EXPECT_STREQ("func", decode_symbols[0].name().data());
+  EXPECT_EQ(0xf00du, decode_symbols[0].address());
 
   auto& decode_entries = start_args_ptr->program().entries();
   ASSERT_EQ(1u, decode_entries.count());
