@@ -15,10 +15,6 @@ common_vars = {
 zx_library("zbi") {
   forward_variables_from(common_vars, "*")
   sdk_publishable = true
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 # In-tree library.
@@ -28,8 +24,4 @@ zx_library("zbi") {
 zx_library("in_tree") {
   forward_variables_from(common_vars, "*")
   deps = [ "//zircon/system/public" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }

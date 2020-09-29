@@ -266,7 +266,7 @@ zbi_result_t zbi_extend(void* dst_buffer, size_t capacity, const void* src_buffe
   }
 
   // This makes sure that there's enough space to perform the copy after
-  const uint32_t remaining_buffer = capacity - dst_size;
+  const size_t remaining_buffer = capacity - dst_size;
   if (remaining_buffer < src->length) {
     return ZBI_RESULT_TOO_BIG;
   }
