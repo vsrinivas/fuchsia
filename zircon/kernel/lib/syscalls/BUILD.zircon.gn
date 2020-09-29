@@ -7,7 +7,6 @@
 library("syscalls") {
   visibility = [
     "$zx/kernel/*",
-    "$zx/system/ulib/syscalls-headers:*",
     "$zx/system/ulib/zircon:*",
   ]
 

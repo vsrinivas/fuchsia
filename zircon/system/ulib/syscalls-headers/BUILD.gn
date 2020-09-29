@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This target allows headers to be published to the GN build.
+
+_label = "//zircon/vdso:private($default_toolchain)"
+_gen_dir = get_label_info(_label, "target_gen_dir")
+
+config("headers.config") {
+  include_dirs = [ "$_gen_dir/include" ]
+}
+
+group("headers") {
+  public_configs = [ ":headers.config" ]
+}
+
+source_set("syscalls-headers") {
+  visibility = [
+    "//zircon/system/ulib",
+    "//zircon/system/utest/core/bad-syscall/*",
+  ]
+  public = [ "$_gen_dir/include/lib/syscalls/zx-syscall-numbers.h" ]
+  public_deps = [
+    ":headers",
+    _label,
+  ]
+}

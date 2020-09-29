@@ -31,8 +31,8 @@ source_set("bad-syscall") {
   include_dirs = [ "//zircon/kernel/arch/$zircon_cpu/include" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/syscalls-headers",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/syscalls-headers",
   ]
 
   if (platform_enable_user_pci) {
