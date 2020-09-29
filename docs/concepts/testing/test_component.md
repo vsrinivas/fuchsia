@@ -189,9 +189,9 @@ list would be preferred and you will see a warning when running the test.
 
 ## Running test cases in parallel
 
-  [FTF][ftf] makes it easy to run test cases in parallel by standardizing the
-  option across various test runtimes. [Test runners][test-runner] decide
-  the default value for how many tests can run in parallel but developers can
+  [Test Runner Framework][ftf] makes it easy to run test cases in parallel by
+  standardizing the option across various test runtimes. [Test runners][test-runner]
+  decide the default value for how many tests can run in parallel but developers can
   override it using `BUILD.gn`.
 
   * {Using fuchsia\_test\_package}
@@ -236,7 +236,7 @@ list would be preferred and you will see a warning when running the test.
   }
   ```
 
-NOTE: This feature only works with FTF tests (v2 component tests).
+NOTE: This feature only works with v2 component tests.
 
 ### Running the test
 
@@ -287,5 +287,5 @@ demonstrated above.
 [syslogs]: /docs/development/logs/concepts.md
 [test-packages]: /docs/development/components/build.md#test-packages
 [legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity
-[ftf]: fuchsia_testing_framework.md
-[test-runner]: fuchsia_testing_framework.md#test-runner
+[ftf]: test_runner_framework.md
+[test-runner]: test_runner_framework.md#test-runner

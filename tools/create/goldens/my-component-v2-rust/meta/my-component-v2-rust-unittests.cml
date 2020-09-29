@@ -18,8 +18,8 @@
         { runner: "rust_test_runner" },
     ],
     expose: [
-        // The Fuchsia Test Framework expects this service to be exposed from the
-        // test component. The Rust test adapter provides this service.
+        // The Test Runner Framework expects this service to be exposed
+        // from the test component. The Rust test adapter provides this service.
         {
             protocol: "/svc/fuchsia.test.Suite",
             from: "self",

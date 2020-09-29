@@ -13,8 +13,8 @@
         { runner: "gtest_runner" },
     ],
     expose: [
-        // The Fuchsia Test Framework expects this service to be exposed from the
-        // test component. The gtest_runner provides this service.
+        // The Test Runner Framework expects this service to be exposed
+        // from the test component. The gtest_runner provides this service.
         {
             protocol: "/svc/fuchsia.test.Suite",
             from: "self",

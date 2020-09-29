@@ -242,7 +242,7 @@ not `echo_resp`.
 
 ## Test does not start {#troubleshoot-test}
 
-A Components v2 test is written using [Fuchsia Testing Framework][doc-ftf].
+A Components v2 test is written using the [Test Runner Framework][doc-ftf].
 Sometimes, if one of the test components is configured incorrectly, this can
 result in the test failing to run.
 
@@ -333,10 +333,10 @@ offer: [
 
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-epitaphs]: /docs/reference/fidl/language/wire-format/README.md#epitaphs
-[doc-ftf-driver]: /docs/concepts/testing/fuchsia_testing_framework.md#test-roles
-[doc-ftf-root]: /docs/concepts/testing/fuchsia_testing_framework.md#tests-as-components
-[doc-ftf-runner]: /docs/concepts/testing/fuchsia_testing_framework.md#test-runners
-[doc-ftf]: /docs/concepts/testing/fuchsia_testing_framework.md
+[doc-ftf-driver]: /docs/concepts/testing/test_runner_framework.md#test-roles
+[doc-ftf-root]: /docs/concepts/testing/test_runner_framework.md#tests-as-components
+[doc-ftf-runner]: /docs/concepts/testing/test_runner_framework.md#test-runners
+[doc-ftf]: /docs/concepts/testing/test_runner_framework.md
 [doc-intro]: /docs/concepts/components/v2/introduction.md
 [doc-logs]: /docs/development/logs/concepts.md
 [doc-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program

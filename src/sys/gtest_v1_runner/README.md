@@ -2,8 +2,8 @@
 
 Reviewed on: 2019-09-24
 
-Gtest runner is a component runner which runs gtests under appmgr (components v1) and integrates 
-them with the Fuchsia Test Framework API. This is an initial implementation and still WIP.
+Gtest runner is a component runner which runs gtests under appmgr (components v1) and integrates
+them with the Test Runner Framework API. This is an initial implementation and still WIP.
 
 ## Building
 

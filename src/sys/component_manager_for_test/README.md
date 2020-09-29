@@ -3,8 +3,8 @@
 Reviewed on: 2019-07-22
 
 This project contains a temporary prototype implementation of component manager which will be
-used by fuchsia test framework to launch v2 test components until we are able to use component
-manager which is started during boot.
+used by the Test Runner Framework to launch v2 test components until we are able to use
+component manager which is started during boot.
 
 ## Building
 

@@ -6,10 +6,10 @@ toc:
   path: /docs/concepts/testing/testability_rubric.md
 - title: "Tests as components"
   path: /docs/concepts/testing/tests_as_components.md
-- title: "Fuchsia testing framework"
+- title: "Test Runner Framework"
   section:
   - title: "Introduction"
-    path: /docs/concepts/testing/fuchsia_testing_framework.md
+    path: /docs/concepts/testing/test_runner_framework.md
   - title: "Test component"
     path: /docs/concepts/testing/test_component.md
   - title: "Test environments"

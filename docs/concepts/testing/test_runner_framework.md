@@ -1,9 +1,9 @@
 # Introduction to the Fuchsia Testing Framework
 
-This document introduces the Fuchsia Testing Framework (FTF) along with
+This document introduces the Fuchsia Test Runner Framework along with
 fundamental concepts and terminology around testing in Fuchsia.
 
-Note: The Fuchsia Testing Framework is only supported from
+Note: The Fuchsia Test Runner Framework is only supported from
 [Components v2][glossary-components-v2]. All component-related concepts
 discussed herein refer to Components v2 unless otherwise noted.
 
@@ -67,7 +67,7 @@ following:
 ```
 
 However, it's cumbersome for a test to manually implement this protocol. For
-this reason, the Fuchsia Testing Frameworks provides a set of special runners
+this reason, the Fuchsia Test Runner Frameworks provides a set of special runners
 called *test runners*. A test runner integrates a [test driver](#test-roles)
 that uses a language-native test library (such as C++ `gtest` or rust `libtest`)
 with the test suite protocol. If your component declares it uses the appropriate
