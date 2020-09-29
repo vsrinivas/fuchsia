@@ -188,7 +188,10 @@ void main() {
       var serveOutputBuilder = StringBuffer();
       var serveProcess = repoServer.getServeProcess();
       expect(serveProcess.isPresent, isTrue);
-      await serveProcess.value.stdout.transform(utf8.decoder).listen((data) {
+      await repoServer
+          .getServeStdoutSplitStream()
+          .transform(utf8.decoder)
+          .listen((data) {
         serveOutputBuilder.write(data);
       }).asFuture();
       final serveOutput = serveOutputBuilder.toString();
@@ -236,7 +239,10 @@ void main() {
       var serveOutputBuilder = StringBuffer();
       var serveProcess = repoServer.getServeProcess();
       expect(serveProcess.isPresent, isTrue);
-      await serveProcess.value.stdout.transform(utf8.decoder).listen((data) {
+      await repoServer
+          .getServeStdoutSplitStream()
+          .transform(utf8.decoder)
+          .listen((data) {
         serveOutputBuilder.write(data);
       }).asFuture();
       final serveOutput = serveOutputBuilder.toString();

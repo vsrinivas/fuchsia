@@ -10,9 +10,10 @@ dart_library("pm") {
   sources = [ "pm.dart" ]
 
   deps = [
+    "//cts/util/net:net",
     "//cts/util/pkg:pkg",
-    "//cts/util/ports:ports",
     "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/file",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/path",

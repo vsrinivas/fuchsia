@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:core';
 import 'dart:io';
 
+import 'package:async/async.dart';
 import 'package:logging/logging.dart';
+import 'package:net/curl.dart';
+import 'package:net/ports.dart';
 import 'package:path/path.dart' as path;
-import 'package:ports/ports.dart';
 import 'package:quiver/core.dart' show Optional;
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:retry/retry.dart';
@@ -20,15 +24,51 @@ class PackageManagerRepo {
   final Logger _log;
   Optional<Process> _serveProcess;
   Optional<int> _servePort;
+  Optional<StreamSplitter<List<int>>> _serveStdout;
+  Optional<StreamSplitter<List<int>>> _serveStderr;
 
   Optional<Process> getServeProcess() => _serveProcess;
   Optional<int> getServePort() => _servePort;
   String getRepoPath() => _repoPath;
 
+  /// Uses [StreamSplitter] to split the serve process's stdout so there can
+  /// be multiple listeners for a single stream source.
+  ///
+  /// This is useful because we are listening to stdout to determine if serve
+  /// has successfully started up, but tests want to be able to listen for
+  /// their own purposes as well.
+  Stream<List<int>> getServeStdoutSplitStream() {
+    if (_serveProcess.isNotPresent) {
+      throw Exception(
+          'Trying to get stdout from a process that does not exist.');
+    }
+    if (_serveStdout.isNotPresent) {
+      _serveStdout =
+          Optional.of(StreamSplitter<List<int>>(_serveProcess.value.stdout));
+    }
+    return _serveStdout.value.split();
+  }
+
+  /// Uses [StreamSplitter] to split the serve process's stderr so there can
+  /// be multiple listeners for a single stream source.
+  Stream<List<int>> getServeStderrSplitStream() {
+    if (_serveProcess.isNotPresent) {
+      throw Exception(
+          'Trying to get stderr from a process that does not exist.');
+    }
+    if (_serveStderr.isNotPresent) {
+      _serveStderr =
+          Optional.of(StreamSplitter<List<int>>(_serveProcess.value.stderr));
+    }
+    return _serveStderr.value.split();
+  }
+
   PackageManagerRepo._create(
       this._sl4fDriver, this._pmPath, this._repoPath, this._log) {
     _serveProcess = Optional.absent();
     _servePort = Optional.absent();
+    _serveStdout = Optional.absent();
+    _serveStderr = Optional.absent();
   }
 
   static Future<PackageManagerRepo> initRepo(
@@ -70,6 +110,51 @@ class PackageManagerRepo {
         workingDirectory: workingDirectory);
   }
 
+  /// Wait for the serve process's stdout to report its status.
+  ///
+  /// Listens to the given process's stdout for either
+  /// `[pm serve] serving /repo/path at http://[::]:55555`
+  /// or
+  /// `bind: address already in use`
+  ///
+  /// `timeout` parmeter dictates how long to wait for the serve to start.
+  /// This defaults to 10 seconds - arbitrarily chosen assuming test servers
+  /// are very slow.
+  Future waitForServeStartup(Process process,
+      {Duration timeout = const Duration(seconds: 10)}) {
+    final completer = Completer();
+
+    RegExp servingRegex = RegExp(r'\[pm serve\] serving.+ at http.+:(\d+)');
+
+    getServeStdoutSplitStream().transform(utf8.decoder).listen((data) {
+      print('[pm test][stdout] $data');
+      var servingMatch = servingRegex.firstMatch(data);
+      if (servingMatch != null) {
+        if (_servePort.isPresent) {
+          // Check the port if we can.
+          expect(servingMatch.group(1), _servePort.value.toString());
+        }
+        completer.complete(true);
+      }
+    });
+
+    getServeStderrSplitStream().transform(utf8.decoder).listen((data) {
+      print('[pm test][stderr] $data');
+      if (data.contains('address already in use')) {
+        completer.complete(false);
+      }
+    });
+
+    Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.completeError(
+            'Timed out waiting for serve to print its own status.');
+      }
+    });
+
+    return completer.future;
+  }
+
   /// Start a package server using `pm serve` with serve-selected port.
   ///
   /// Passes in `-l :0` to tell `serve` to choose its own port.
@@ -93,6 +178,12 @@ class PackageManagerRepo {
     _serveProcess =
         Optional.of(await Process.start(_pmPath, arguments + extraServeArgs));
     expect(_serveProcess.isPresent, isTrue);
+
+    var startupSuccess = await waitForServeStartup(_serveProcess.value);
+    // Want to see if flakes occur here at the same frequency.
+    // TODO(fxb/59463): If flakes begin to occur here, we should have it retry
+    // instead of fail.
+    expect(startupSuccess, isTrue);
 
     _log.info('Waiting until the port file is created at: $portFilePath');
     final portFile = File(portFilePath);
@@ -123,20 +214,25 @@ class PackageManagerRepo {
       return Process.start(_pmPath, arguments + extraServeArgs);
     }));
     expect(_serveProcess.isPresent, isTrue);
-
     expect(_servePort.isPresent, isTrue);
+
+    // Watch `serve`'s prints if we can.
+    // However, the `-q` flag makes its output silent.
+    // If `serve` is silent, skip and only check based on `curl`.
+    if (!extraServeArgs.contains('-q')) {
+      var startupSuccess = await waitForServeStartup(_serveProcess.value);
+      // Want to see if flakes occur here at the same frequency.
+      // TODO(fxb/59463): If flakes begin to occur here, we should have it retry
+      // instead of fail.
+      expect(startupSuccess, isTrue);
+    }
+
+    // Check if `serve` is up using `curl`.
     _log.info('Wait until serve responds to curl.');
-    final curlResponse = await Process.run('curl', [
-      'http://localhost:${_servePort.value}/targets.json',
-      '-I',
-      '--retry',
-      '5',
-      '--retry-delay',
-      '1',
-      '--retry-connrefused'
-    ]);
-    _log.info('curl response: ${curlResponse.stdout.toString()}');
-    expect(curlResponse.exitCode, 0);
+    final curlStatus = await retryWaitForCurlHTTPCode(
+        ['http://localhost:${_servePort.value}/targets.json'], 200,
+        logger: _log);
+    expect(curlStatus, 0);
   }
 
   /// Add repo source using `amberctl add_src`.
@@ -267,5 +363,8 @@ class PackageManagerRepo {
 
   void cleanup() {
     Directory(_repoPath).deleteSync(recursive: true);
+    if (_serveStdout.isPresent) {
+      _serveStdout.value.close();
+    }
   }
 }

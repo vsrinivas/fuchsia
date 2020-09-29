@@ -17,7 +17,6 @@ dart_test("package_manager_test") {
   deps = [
     "//cts/util/pkg:pkg",
     "//cts/util/pm:pm",
-    "//cts/util/ports:ports",
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/archive",
     "//third_party/dart-pkg/pub/logging",

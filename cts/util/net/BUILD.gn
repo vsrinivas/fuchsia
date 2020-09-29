@@ -4,10 +4,13 @@
 
 import("//build/dart/dart_library.gni")
 
-dart_library("ports") {
-  package_name = "ports"
+dart_library("net") {
+  package_name = "net"
 
-  sources = [ "ports.dart" ]
+  sources = [
+    "curl.dart",
+    "ports.dart",
+  ]
 
-  deps = []
+  deps = [ "//third_party/dart-pkg/pub/logging" ]
 }
