@@ -31,6 +31,28 @@ lazy_static! {
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
 pub const REPOSITORY_PATH: &str = "amber-files/repository";
 
+/// The PackageDataResponse contains all of the core model information extracted
+/// from the Fuchsia Archive (.far) packages from the current build.
+pub struct PackageDataResponse {
+    pub components: HashMap<String, Component>,
+    pub packages: Vec<Package>,
+    pub manifests: Vec<Manifest>,
+    pub routes: Vec<Route>,
+    pub zbi: Option<Zbi>,
+}
+
+impl PackageDataResponse {
+    pub fn new(
+        components: HashMap<String, Component>,
+        packages: Vec<Package>,
+        manifests: Vec<Manifest>,
+        routes: Vec<Route>,
+        zbi: Option<Zbi>,
+    ) -> Self {
+        Self { components, packages, manifests, routes, zbi }
+    }
+}
+
 pub struct PackageDataCollector {
     package_reader: Box<dyn PackageReader>,
 }
@@ -204,8 +226,7 @@ impl PackageDataCollector {
         served_pkgs: Vec<PackageDefinition>,
         _builtin_pkgs: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
-    ) -> Result<(HashMap<String, Component>, Vec<Package>, Vec<Manifest>, Vec<Route>, Option<Zbi>)>
-    {
+    ) -> Result<PackageDataResponse> {
         let mut components: HashMap<String, Component> = HashMap::new();
         let mut packages: Vec<Package> = Vec::new();
         let mut manifests: Vec<Manifest> = Vec::new();
@@ -393,7 +414,7 @@ impl PackageDataCollector {
             routes.len()
         );
 
-        Ok((components, packages, manifests, routes, zbi))
+        Ok(PackageDataResponse::new(components, packages, manifests, routes, zbi))
     }
 }
 
@@ -414,28 +435,29 @@ impl DataCollector for PackageDataCollector {
             builtin_packages.len()
         );
 
-        let (components, mut packages, mut manifests, mut routes, zbi) =
+        let mut response =
             PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
+
         let mut model_comps = model.components().write().unwrap();
         model_comps.clear();
-        for (_, val) in components.into_iter() {
+        for (_, val) in response.components.into_iter() {
             model_comps.push(val);
         }
 
         let mut model_packages = model.packages().write().unwrap();
         model_packages.clear();
-        model_packages.append(&mut packages);
+        model_packages.append(&mut response.packages);
 
         let mut model_manifests = model.manifests().write().unwrap();
         model_manifests.clear();
-        model_manifests.append(&mut manifests);
+        model_manifests.append(&mut response.manifests);
 
         let mut model_routes = model.routes().write().unwrap();
         model_routes.clear();
-        model_routes.append(&mut routes);
+        model_routes.append(&mut response.routes);
 
         let mut model_zbi = model.zbi().write().unwrap();
-        *model_zbi = zbi;
+        *model_zbi = response.zbi;
 
         Ok(())
     }
@@ -798,15 +820,14 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, packages, manifests, routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
 
-        assert_eq!(2, components.len());
-        assert_eq!(1, manifests.len());
-        assert_eq!(1, routes.len());
-        assert_eq!(1, packages.len());
-        assert_eq!(None, zbi);
-        assert_eq!((1, 1), count_defined_inferred(components)); // 1 real, 1 inferred
+        assert_eq!(2, response.components.len());
+        assert_eq!(1, response.manifests.len());
+        assert_eq!(1, response.routes.len());
+        assert_eq!(1, response.packages.len());
+        assert_eq!(None, response.zbi);
+        assert_eq!((1, 1), count_defined_inferred(response.components)); // 1 real, 1 inferred
     }
 
     #[test]
@@ -825,15 +846,14 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let (components, packages, manifests, routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
 
-        assert_eq!(2, components.len());
-        assert_eq!(1, manifests.len());
-        assert_eq!(1, routes.len());
-        assert_eq!(1, packages.len());
-        assert_eq!(None, zbi);
-        assert_eq!((1, 1), count_defined_inferred(components)); // 1 real, 1 inferred
+        assert_eq!(2, response.components.len());
+        assert_eq!(1, response.manifests.len());
+        assert_eq!(1, response.routes.len());
+        assert_eq!(1, response.packages.len());
+        assert_eq!(None, response.zbi);
+        assert_eq!((1, 1), count_defined_inferred(response.components)); // 1 real, 1 inferred
     }
 
     #[test]
@@ -851,15 +871,14 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, packages, manifests, routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
 
-        assert_eq!(0, components.len());
-        assert_eq!(0, manifests.len());
-        assert_eq!(0, routes.len());
-        assert_eq!(1, packages.len());
-        assert_eq!(None, zbi);
-        assert_eq!((0, 0), count_defined_inferred(components)); // 0 real, 0 inferred
+        assert_eq!(0, response.components.len());
+        assert_eq!(0, response.manifests.len());
+        assert_eq!(0, response.routes.len());
+        assert_eq!(1, response.packages.len());
+        assert_eq!(None, response.zbi);
+        assert_eq!((0, 0), count_defined_inferred(response.components)); // 0 real, 0 inferred
     }
 
     #[test]
@@ -871,15 +890,14 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, packages, manifests, routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
 
-        assert_eq!(1, components.len());
-        assert_eq!(components["fuchsia-pkg://fuchsia.com/foo#meta/foo.cm"].version, 2);
-        assert_eq!(1, manifests.len());
-        assert_eq!(0, routes.len());
-        assert_eq!(1, packages.len());
-        assert_eq!(None, zbi);
+        assert_eq!(1, response.components.len());
+        assert_eq!(response.components["fuchsia-pkg://fuchsia.com/foo#meta/foo.cm"].version, 2);
+        assert_eq!(1, response.manifests.len());
+        assert_eq!(0, response.routes.len());
+        assert_eq!(1, response.packages.len());
+        assert_eq!(None, response.zbi);
     }
 
     #[test]
@@ -898,15 +916,14 @@ mod tests {
         let builtins = Vec::new();
         let services = HashMap::new();
 
-        let (components, packages, manifests, routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
 
-        assert_eq!(3, components.len());
-        assert_eq!(2, manifests.len());
-        assert_eq!(2, routes.len());
-        assert_eq!(2, packages.len());
-        assert_eq!(None, zbi);
-        assert_eq!((2, 1), count_defined_inferred(components)); // 2 real, 1 inferred
+        assert_eq!(3, response.components.len());
+        assert_eq!(2, response.manifests.len());
+        assert_eq!(2, response.routes.len());
+        assert_eq!(2, response.packages.len());
+        assert_eq!(None, response.zbi);
+        assert_eq!((2, 1), count_defined_inferred(response.components)); // 2 real, 1 inferred
     }
 
     #[test]
@@ -930,15 +947,14 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let (components, packages, manifests, routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
 
-        assert_eq!(2, components.len());
-        assert_eq!(2, manifests.len());
-        assert_eq!(1, routes.len());
-        assert_eq!(2, packages.len());
-        assert_eq!(None, zbi);
-        assert_eq!((2, 0), count_defined_inferred(components)); // 2 real, 0 inferred
+        assert_eq!(2, response.components.len());
+        assert_eq!(2, response.manifests.len());
+        assert_eq!(1, response.routes.len());
+        assert_eq!(2, response.packages.len());
+        assert_eq!(None, response.zbi);
+        assert_eq!((2, 0), count_defined_inferred(response.components)); // 2 real, 0 inferred
     }
 
     // =-=-=-=-= collect() tests =-=-=-=-= //
@@ -1030,8 +1046,7 @@ mod tests {
         let builtins = vec![];
         let services = HashMap::new();
 
-        let (_components, _packages, _manifests, _routes, zbi) =
-            PackageDataCollector::build_model(served, builtins, services).unwrap();
-        assert_eq!(None, zbi);
+        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        assert_eq!(None, response.zbi);
     }
 }
