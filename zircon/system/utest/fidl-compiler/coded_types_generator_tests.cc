@@ -671,6 +671,42 @@ struct OuterStruct {
   EXPECT_EQ(std::get<uint32_t>(padding(struct_outer_struct->elements[4]).mask), 0xffffffff);
 }
 
+// In the following example, we define the `byte` struct. However, fidlc has
+// an outstanding scoping bug which causes the `byte` type within the
+// `badlookup` struct to resolve to the primitive alias of `uint8`.
+//
+// When calculating coding tables, we must therefore ensure to follow exactly
+// the object graph provided by earlier stages of the compiler rather than
+// implementing a lookup which may not be the same as the lookup done earlier.
+TEST(CodedTypesGeneratorTests, ScopingBugShouldNotAffectCodingTables) {
+  TestLibrary library(R"FIDL(
+library example;
+
+using membertype = uint32;
+
+struct byte {
+    membertype member = 1;
+};
+
+struct badlookup {
+  byte f1;
+  bytes f2;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto the_struct_name = fidl::flat::Name::Key(library.library(), "badlookup");
+  auto the_coded_type = gen.CodedTypeFor(the_struct_name);
+  ASSERT_NOT_NULL(the_coded_type);
+  auto the_struct_coded_type = static_cast<const fidl::coded::StructType*>(the_coded_type);
+  ASSERT_EQ(the_struct_coded_type->elements.size(), 2);
+  EXPECT_EQ(0xffffffffffffff00, std::get<uint64_t>(padding(the_struct_coded_type->elements[0]).mask));
+  EXPECT_EQ(fidl::coded::Type::Kind::kVector, field(the_struct_coded_type->elements[1]).type->kind);
+}
+
 TEST(CodedTypesGeneratorTests, CodedTypesOfTables) {
   TestLibrary library(R"FIDL(
 library example;

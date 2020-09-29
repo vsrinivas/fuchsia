@@ -20,21 +20,25 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::St
 
 std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::FlattenedStructMembers(
     const flat::Struct& input, const WireFormat wire_format) {
-  auto get_struct_decl = [this](const flat::StructMember& member) -> flat::Struct* {
+  auto get_struct_decl = [](const flat::StructMember& member) -> const flat::Struct* {
     if (member.type_ctor->nullability == types::Nullability::kNullable) {
       return nullptr;
     }
-    flat::Decl* decl = library_->LookupDeclByName(member.type_ctor->name);
-    if (decl == nullptr || decl->kind != flat::Decl::Kind::kStruct) {
+    const flat::Type* type = member.type_ctor->type;
+    if (type->kind != flat::Type::Kind::kIdentifier) {
       return nullptr;
     }
-    return static_cast<flat::Struct*>(decl);
+    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+    if (identifier_type->type_decl->kind != flat::Decl::Kind::kStruct) {
+      return nullptr;
+    }
+    return static_cast<const flat::Struct*>(identifier_type->type_decl);
   };
 
   std::vector<FlattenedStructMember> result;
   for (const auto& member : input.members) {
     auto flattened_member = FlattenedStructMember(member, wire_format);
-    flat::Struct* struct_decl = get_struct_decl(member);
+    auto struct_decl = get_struct_decl(member);
     if (!struct_decl) {
       result.push_back(flattened_member);
       continue;
