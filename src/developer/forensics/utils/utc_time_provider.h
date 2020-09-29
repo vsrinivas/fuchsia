@@ -24,6 +24,12 @@ class UtcTimeProvider {
   // Returns the current UTC time if the device's UTC time is accurate, std::nullopt otherwise.
   std::optional<zx::time_utc> CurrentTime() const;
 
+  // Returns the difference between the UTC clock and the device's monotonic time if the device's
+  // UTC time is accurate, std::nullopt otherwise.
+  //
+  // This value can be added to a monotonic time to convert it to a UTC time.
+  std::optional<zx::duration> CurrentUtcMonotonicDifference() const;
+
  private:
   // Keeps making asynchronous calls until the UTC time is accurate.
   void WatchForAccurateUtcTime();

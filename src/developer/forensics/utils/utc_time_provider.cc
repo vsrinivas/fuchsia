@@ -28,6 +28,20 @@ std::optional<zx::time_utc> UtcTimeProvider::CurrentTime() const {
   return CurrentUtcTimeRaw(clock_);
 }
 
+std::optional<zx::duration> UtcTimeProvider::CurrentUtcMonotonicDifference() const {
+  if (!is_utc_time_accurate_) {
+    return std::nullopt;
+  }
+
+  if (const std::optional<zx::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
+      current_utc_time.has_value()) {
+    const zx::time current_monotonic_time = clock_->Now();
+    return zx::duration(current_utc_time.value().get() - current_monotonic_time.get());
+  }
+
+  return std::nullopt;
+}
+
 void UtcTimeProvider::WatchForAccurateUtcTime() {
   utc_->WatchState([this](const fuchsia::time::UtcState& state) {
     switch (state.source()) {

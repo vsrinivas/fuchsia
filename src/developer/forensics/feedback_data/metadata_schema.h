@@ -22,6 +22,21 @@ constexpr const char* kMetadataSchema = R"({
           "^.*$":{
              "type":"object",
              "properties":{
+                "utc_monotonic_difference": {
+                  "type": "object",
+                  "properties": {
+                      "value": {
+                        "type": "integer"
+                      },
+                      "units": {
+                        "type": "string"
+                      },
+                      "required":[
+                        "value",
+                        "units"
+                      ]
+                  }
+                },
                 "state":{
                    "type":"string",
                    "enum":[
@@ -43,6 +58,9 @@ constexpr const char* kMetadataSchema = R"({
           "annotations.json":{
              "type":"object",
              "properties":{
+                "utc_monotonic_difference": {
+                  "type": "integer"
+                },
                 "state":{
                    "type":"string",
                    "enum":[
@@ -80,7 +98,6 @@ constexpr const char* kMetadataSchema = R"({
       "files"
     ]
 })";
-;
 
 }  // namespace feedback_data
 }  // namespace forensics

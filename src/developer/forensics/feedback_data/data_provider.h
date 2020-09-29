@@ -15,6 +15,8 @@
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/lib/timekeeper/clock.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -23,7 +25,9 @@ namespace feedback_data {
 class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               Metadata metadata, cobalt::Logger* cobalt, Datastore* datastore);
+               timekeeper::Clock* clock, const AnnotationKeys& annotation_allowlist,
+               const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
+               Datastore* datastore);
 
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
@@ -33,8 +37,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
 
  private:
   async_dispatcher_t* dispatcher_;
-  const std::shared_ptr<sys::ServiceDirectory> services_;
-  const Metadata metadata_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
+  Metadata metadata_;
   cobalt::Logger* cobalt_;
   Datastore* datastore_;
   async::Executor executor_;

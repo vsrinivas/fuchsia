@@ -20,6 +20,7 @@
 #include "src/developer/forensics/feedback_data/inspect_manager.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -56,6 +57,7 @@ class MainService {
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
   cobalt::Logger cobalt_;
+  timekeeper::SystemClock clock_;
 
   DeviceIdProvider device_id_provider_;
   ::fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;

@@ -4,10 +4,16 @@
 
 #include "src/developer/forensics/feedback_data/metadata.h"
 
+#include <lib/zx/time.h>
+
+#include <optional>
+#include <set>
+
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/errors.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
+
 // TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 #include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
@@ -19,6 +25,12 @@ namespace feedback_data {
 namespace {
 
 using namespace rapidjson;
+
+std::set<std::string> kUtcMonotonicDifferenceAllowlist = {
+    kAttachmentInspect,
+    kAttachmentLogKernel,
+    kAttachmentLogSystem,
+};
 
 std::string ToString(const enum AttachmentValue::State state) {
   switch (state) {
@@ -81,8 +93,21 @@ Attachments AllAttachments(const AttachmentKeys& allowlist,
   return all_attachments;
 }
 
+void AddUtcMonotonicDifference(const std::optional<zx::duration>& utc_monotonic_difference,
+                               Value* file, Document::AllocatorType& allocator) {
+  if (!utc_monotonic_difference.has_value() || !file->IsObject() ||
+      file->HasMember("utc_monotonic_difference_nanos")) {
+    return;
+  }
+
+  file->AddMember("utc_monotonic_difference_nanos",
+                  Value().SetInt64(utc_monotonic_difference.value().get()), allocator);
+}
+
 void AddAttachments(const AttachmentKeys& attachment_allowlist,
-                    const ::fit::result<Attachments>& attachments_result, Document* metadata_json) {
+                    const ::fit::result<Attachments>& attachments_result,
+                    const std::optional<zx::duration> utc_monotonic_difference,
+                    Document* metadata_json) {
   if (attachment_allowlist.empty()) {
     return;
   }
@@ -92,9 +117,14 @@ void AddAttachments(const AttachmentKeys& attachment_allowlist,
 
   for (const auto& [name, v] : AllAttachments(attachment_allowlist, attachments_result)) {
     Value file(kObjectType);
+
     file.AddMember("state", MakeValue(ToString(v.State())), allocator);
     if (v.HasError()) {
       file.AddMember("error", MakeValue(ToReason(v.Error())), allocator);
+    }
+
+    if (kUtcMonotonicDifferenceAllowlist.find(name) != kUtcMonotonicDifferenceAllowlist.end()) {
+      AddUtcMonotonicDifference(utc_monotonic_difference, &file, allocator);
     }
 
     (*metadata_json)["files"].AddMember(MakeValue(name), file, allocator);
@@ -163,13 +193,16 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
 
 }  // namespace
 
-Metadata::Metadata(const AnnotationKeys& annotation_allowlist,
+Metadata::Metadata(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
+                   const AnnotationKeys& annotation_allowlist,
                    const AttachmentKeys& attachment_allowlist)
-    : annotation_allowlist_(annotation_allowlist), attachment_allowlist_(attachment_allowlist) {}
+    : annotation_allowlist_(annotation_allowlist),
+      attachment_allowlist_(attachment_allowlist),
+      utc_provider_(services, clock) {}
 
 std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations_result,
                                    const ::fit::result<Attachments>& attachments_result,
-                                   bool missing_non_platform_annotations) const {
+                                   bool missing_non_platform_annotations) {
   Document metadata_json(kObjectType);
   auto& allocator = metadata_json.GetAllocator();
 
@@ -197,7 +230,10 @@ std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations
     return MetadataString();
   }
 
-  AddAttachments(attachment_allowlist_, attachments_result, &metadata_json);
+  const auto utc_monotonic_difference = utc_provider_.CurrentUtcMonotonicDifference();
+
+  AddAttachments(attachment_allowlist_, attachments_result, utc_monotonic_difference,
+                 &metadata_json);
   AddAnnotationsJson(annotation_allowlist_, annotations_result, missing_non_platform_annotations,
                      &metadata_json);
 

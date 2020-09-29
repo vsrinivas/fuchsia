@@ -214,6 +214,7 @@ source_set("metadata") {
   public_deps = [
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/utils:utc_time_provider",
     "//zircon/public/lib/fit",
   ]
 

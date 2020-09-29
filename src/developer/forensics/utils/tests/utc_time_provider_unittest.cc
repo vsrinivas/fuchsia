@@ -35,7 +35,7 @@ class UtcTimeProviderTest : public UnitTestFixture {
     InjectServiceProvider(utc_provider_server_.get());
   }
 
- private:
+ protected:
   timekeeper::TestClock clock_;
   std::unique_ptr<stubs::UtcProviderBase> utc_provider_server_;
 
@@ -93,6 +93,25 @@ TEST_F(UtcTimeProviderTest, Check_MultipleCalls) {
   RunLoopFor(kDelay);
   ASSERT_TRUE(utc_provider_->CurrentTime().has_value());
   EXPECT_EQ(utc_provider_->CurrentTime().value(), kTime);
+}
+
+TEST_F(UtcTimeProviderTest, Check_CurrentUtcMonotonicDifference) {
+  SetUpUtcProviderServer({
+      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
+  });
+  RunLoopUntilIdle();
+
+  zx::time monotonic;
+  zx::time_utc utc;
+
+  clock_.Set(zx::time(0));
+
+  ASSERT_EQ(clock_.Now(&monotonic), ZX_OK);
+  ASSERT_EQ(clock_.Now(&utc), ZX_OK);
+
+  const auto utc_offset = utc_provider_->CurrentUtcMonotonicDifference();
+  ASSERT_TRUE(utc_offset.has_value());
+  EXPECT_EQ(monotonic.get() + utc_offset.value().get(), utc.get());
 }
 
 }  // namespace
