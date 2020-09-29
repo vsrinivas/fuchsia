@@ -105,7 +105,7 @@ the following layout:
 ```
  A  <- offers service "/svc/fidl.example.X" from self to B as "/intermediary"
  |
- B  <- offers service "/intermediary" from realm to B as "/intermediary2"
+ B  <- offers service "/intermediary" from realm to C as "/intermediary2"
  |
  C  <- uses service "/intermediary2" as "/service/example"
 ```
