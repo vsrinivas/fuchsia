@@ -211,7 +211,6 @@ group("deprecated_package_underscore") {
     "//src/connectivity/network/netstack/dhcp:netstack_dhcp_gotests",
     "//src/connectivity/network/netstack/dns:netstack_dns_gotests",
     "//src/connectivity/network/netstack/routes:netstack_routes_gotests",
-    "//src/connectivity/network/netstack/tests:netstack_manual_tests",
     "//src/connectivity/network/testing/netemul/lib:netemul_lib_test",
     "//src/connectivity/network/testing/netemul/runner:netemul_devmgr",
     "//src/connectivity/network/testing/netemul/runner:netemul_sandbox",

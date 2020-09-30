@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+
 executable("sockettest") {
   testonly = true
 
@@ -117,4 +119,64 @@ executable("gethostbyname_test") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+package("netstack-manual-tests") {
+  testonly = true
+
+  deps = [
+    ":gethostbyname_test",
+    ":keepalivetest",
+    ":mctest",
+    ":nbiotest",
+    ":polltest",
+    ":selecttest",
+    ":sockettest",
+    ":sockopttest",
+    ":udptest",
+  ]
+
+  binaries = [
+    {
+      name = "gethostbyname_test"
+      shell = true
+    },
+    {
+      name = "keepalivetest"
+      shell = true
+    },
+    {
+      name = "mctest"
+      shell = true
+    },
+    {
+      name = "nbiotest"
+      shell = true
+    },
+    {
+      name = "polltest"
+      shell = true
+    },
+    {
+      name = "selecttest"
+      shell = true
+    },
+    {
+      name = "sockettest"
+      shell = true
+    },
+    {
+      name = "sockopttest"
+      shell = true
+    },
+    {
+      name = "udptest"
+      shell = true
+    },
+  ]
+}
+
+group("manual") {
+  testonly = true
+  deps = [ ":netstack-manual-tests" ]
 }
