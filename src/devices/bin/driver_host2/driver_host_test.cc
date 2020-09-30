@@ -148,19 +148,23 @@ class DriverHostTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &outgoing_dir_client_end, &outgoing_dir_server_end));
     zx::channel driver_client_end, driver_server_end;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
-    driver_host()->Start(
-        fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
-            .set_symbols(std::make_unique<fidl::VectorView<fdf::DriverSymbol>>(std::move(symbols)))
-            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
-                fidl::unowned_vec(ns_entries)))
-            .set_program(std::make_unique<fdata::Dictionary>(
-                fdata::Dictionary::Builder(std::make_unique<fdata::Dictionary::Frame>())
-                    .set_entries(std::make_unique<fidl::VectorView<fdata::DictionaryEntry>>(
-                        fidl::unowned_vec(program_entries)))
-                    .build()))
-            .set_outgoing_dir(std::make_unique<zx::channel>(std::move(outgoing_dir_server_end)))
-            .build(),
-        std::move(driver_server_end), Completer(&transaction));
+    {
+      Completer completer(&transaction);
+      driver_host()->Start(
+          fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+              .set_symbols(
+                  std::make_unique<fidl::VectorView<fdf::DriverSymbol>>(std::move(symbols)))
+              .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
+                  fidl::unowned_vec(ns_entries)))
+              .set_program(std::make_unique<fdata::Dictionary>(
+                  fdata::Dictionary::Builder(std::make_unique<fdata::Dictionary::Frame>())
+                      .set_entries(std::make_unique<fidl::VectorView<fdata::DictionaryEntry>>(
+                          fidl::unowned_vec(program_entries)))
+                      .build()))
+              .set_outgoing_dir(std::make_unique<zx::channel>(std::move(outgoing_dir_server_end)))
+              .build(),
+          std::move(driver_server_end), completer);
+    }
     loop().RunUntilIdle();
     EXPECT_EQ(ZX_OK, epitaph);
 
@@ -267,17 +271,22 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   // DriverStartArgs::ns not set.
   zx::channel driver_client_end, driver_server_end;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
-  driver_host()->Start(fdf::DriverStartArgs(), std::move(driver_server_end),
-                       Completer(&transaction));
+  {
+    Completer completer(&transaction);
+    driver_host()->Start(fdf::DriverStartArgs(), std::move(driver_server_end), completer);
+  }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
   // DriverStartArgs::ns is missing "/pkg" entry.
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
-  driver_host()->Start(
-      fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
-          .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>())
-          .build(),
-      std::move(driver_server_end), Completer(&transaction));
+  {
+    Completer completer(&transaction);
+    driver_host()->Start(
+        fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>())
+            .build(),
+        std::move(driver_server_end), completer);
+  }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 
   // DriverStartArgs::program not set.
@@ -289,12 +298,15 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
           .build(),
   };
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
-  driver_host()->Start(
-      fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
-          .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
-              fidl::unowned_vec(entries1)))
-          .build(),
-      std::move(driver_server_end), Completer(&transaction));
+  {
+    Completer completer(&transaction);
+    driver_host()->Start(
+        fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
+                fidl::unowned_vec(entries1)))
+            .build(),
+        std::move(driver_server_end), completer);
+  }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
   // DriverStartArgs::program is missing "binary" entry.
@@ -306,12 +318,15 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
           .build(),
   };
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
-  driver_host()->Start(
-      fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
-          .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
-              fidl::unowned_vec(entries2)))
-          .set_program(std::make_unique<fdata::Dictionary>())
-          .build(),
-      std::move(driver_server_end), Completer(&transaction));
+  {
+    Completer completer(&transaction);
+    driver_host()->Start(
+        fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
+                fidl::unowned_vec(entries2)))
+            .set_program(std::make_unique<fdata::Dictionary>())
+            .build(),
+        std::move(driver_server_end), completer);
+  }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }

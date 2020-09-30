@@ -47,38 +47,38 @@ class DeviceControllerConnection
  private:
   // Fidl methods
   void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
-                  BindDriverCompleter::Sync _completer) override;
-  void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) override;
-  void Init(InitCompleter::Sync _completer) override;
-  void Suspend(uint32_t flags, SuspendCompleter::Sync _completer) override;
-  void Resume(uint32_t target_system_state, ResumeCompleter::Sync _completer) override;
-  void Unbind(UnbindCompleter::Sync _completer) override;
-  void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) override;
+                  BindDriverCompleter::Sync& _completer) override;
+  void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync& _completer) override;
+  void Init(InitCompleter::Sync& _completer) override;
+  void Suspend(uint32_t flags, SuspendCompleter::Sync& _completer) override;
+  void Resume(uint32_t target_system_state, ResumeCompleter::Sync& _completer) override;
+  void Unbind(UnbindCompleter::Sync& _completer) override;
+  void CompleteRemoval(CompleteRemovalCompleter::Sync& _completer) override;
   void CompleteCompatibilityTests(llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
-                                  CompleteCompatibilityTestsCompleter::Sync _completer) override;
+                                  CompleteCompatibilityTestsCompleter::Sync& _completer) override;
 
   // Io.fidl methods
   void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
-            OpenCompleter::Sync _completer) override;
+            OpenCompleter::Sync& _completer) override;
 
   // All methods below are intentionally unimplemented.
-  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync _completer) override {}
-  void Close(CloseCompleter::Sync _completer) override {}
-  void Describe(DescribeCompleter::Sync _completer) override {}
-  void GetToken(GetTokenCompleter::Sync _completer) override {}
-  void Rewind(RewindCompleter::Sync _completer) override {}
-  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync _completer) override {}
-  void Unlink(::fidl::StringView path, UnlinkCompleter::Sync _completer) override {}
+  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& _completer) override {}
+  void Close(CloseCompleter::Sync& _completer) override {}
+  void Describe(DescribeCompleter::Sync& _completer) override {}
+  void GetToken(GetTokenCompleter::Sync& _completer) override {}
+  void Rewind(RewindCompleter::Sync& _completer) override {}
+  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& _completer) override {}
+  void Unlink(::fidl::StringView path, UnlinkCompleter::Sync& _completer) override {}
   void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
-               SetAttrCompleter::Sync _completer) override {}
-  void Sync(SyncCompleter::Sync _completer) override {}
-  void GetAttr(GetAttrCompleter::Sync _completer) override {}
+               SetAttrCompleter::Sync& _completer) override {}
+  void Sync(SyncCompleter::Sync& _completer) override {}
+  void GetAttr(GetAttrCompleter::Sync& _completer) override {}
   void Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-              RenameCompleter::Sync _completer) override {}
+              RenameCompleter::Sync& _completer) override {}
   void Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-            LinkCompleter::Sync _completer) override {}
+            LinkCompleter::Sync& _completer) override {}
   void Watch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-             WatchCompleter::Sync _completer) override {}
+             WatchCompleter::Sync& _completer) override {}
 };
 
 struct DevhostRpcReadContext {

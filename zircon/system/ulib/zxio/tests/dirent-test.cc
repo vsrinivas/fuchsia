@@ -27,38 +27,40 @@ class TestServer final : public fio::Directory::Interface {
   constexpr static int kEntryCount = 1000;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
   }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) override {
+  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void GetAttr(GetAttrCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void SetAttr(uint32_t flags, fio::NodeAttributes attribute,
-               SetAttrCompleter::Sync completer) override {
+               SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
-            OpenCompleter::Sync completer) override {
+            OpenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Unlink(::fidl::StringView path, UnlinkCompleter::Sync completer) override {
+  void Unlink(::fidl::StringView path, UnlinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync completer) override {
+  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {
     auto buffer_start = reinterpret_cast<uint8_t*>(buffer_);
     size_t actual = 0;
 
@@ -98,28 +100,28 @@ class TestServer final : public fio::Directory::Interface {
     completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
   }
 
-  void Rewind(RewindCompleter::Sync completer) override {
+  void Rewind(RewindCompleter::Sync& completer) override {
     memset(buffer_, 0, sizeof(buffer_));
     index_ = 0;
     completer.Reply(ZX_OK);
   }
 
-  void GetToken(GetTokenCompleter::Sync completer) override {
+  void GetToken(GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-              RenameCompleter::Sync completer) override {
+              RenameCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-            LinkCompleter::Sync completer) override {
+            LinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Watch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-             WatchCompleter::Sync completer) override {
+             WatchCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

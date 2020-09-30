@@ -196,9 +196,9 @@ zx_status_t Session::Init(netdev::Fifos* out) {
 zx_status_t Session::Bind(zx::channel channel) {
   auto result = fidl::BindServer(
       dispatcher_, std::move(channel), this,
-      fidl::OnUnboundFn<Session>(
-          [](Session* self, fidl::UnbindInfo info, zx::channel channel) {
-            self->OnUnbind(info.reason, std::move(channel)); }));
+      fidl::OnUnboundFn<Session>([](Session* self, fidl::UnbindInfo info, zx::channel channel) {
+        self->OnUnbind(info.reason, std::move(channel));
+      }));
   if (result.is_ok()) {
     binding_ = result.take_value();
     return ZX_OK;
@@ -488,7 +488,7 @@ void Session::ResumeTx() {
   }
 }
 
-void Session::SetPaused(bool paused, SetPausedCompleter::Sync _completer) {
+void Session::SetPaused(bool paused, SetPausedCompleter::Sync& _completer) {
   bool old = paused_.exchange(paused);
   if (paused != old) {
     // NOTE: SetPaused is served from the same thread as we operate the Tx FIFO on, so we can
@@ -507,7 +507,7 @@ void Session::SetPaused(bool paused, SetPausedCompleter::Sync _completer) {
   }
 }
 
-void Session::Close(CloseCompleter::Sync _completer) { Kill(); }
+void Session::Close(CloseCompleter::Sync& _completer) { Kill(); }
 
 void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) {
   ZX_ASSERT(descriptor_index < descriptor_count_);

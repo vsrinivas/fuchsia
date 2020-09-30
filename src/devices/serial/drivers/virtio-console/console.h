@@ -82,7 +82,7 @@ class ConsoleDevice : public Device,
   void IrqConfigChange() override {}  // No need to handle configuration changes
   const char* tag() const override { return "virtio-console"; }
 
-  void GetChannel(zx::channel req, GetChannelCompleter::Sync completer) override;
+  void GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) override;
   zx_status_t GetEvent(zx::eventpair* event) {
     return event_remote_.duplicate(ZX_RIGHTS_BASIC, event);
   }

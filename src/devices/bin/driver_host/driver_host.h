@@ -63,14 +63,14 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
   void CreateDevice(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                     ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy,
                     ::fidl::StringView proxy_args, uint64_t local_device_id,
-                    CreateDeviceCompleter::Sync completer) override;
+                    CreateDeviceCompleter::Sync& completer) override;
   void CreateCompositeDevice(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                              ::fidl::VectorView<uint64_t> fragments, ::fidl::StringView name,
                              uint64_t local_device_id,
-                             CreateCompositeDeviceCompleter::Sync completer) override;
+                             CreateCompositeDeviceCompleter::Sync& completer) override;
   void CreateDeviceStub(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                         uint32_t protocol_id, uint64_t local_device_id,
-                        CreateDeviceStubCompleter::Sync completer) override;
+                        CreateDeviceStubCompleter::Sync& completer) override;
 
   DriverHostContext* const driver_host_context_;
   fbl::RefPtr<zx_driver> proxy_driver_;

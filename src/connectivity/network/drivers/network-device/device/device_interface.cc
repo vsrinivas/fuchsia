@@ -183,7 +183,7 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
   // ever in place.
 }
 
-void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
+void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   LOG_TRACE("network-device: GetInfo");
   netdev::Info info{
       .class_ = static_cast<netdev::DeviceClass>(device_info_.device_class),
@@ -232,14 +232,14 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
   completer.Reply(std::move(info));
 }
 
-void DeviceInterface::GetStatus(GetStatusCompleter::Sync completer) {
+void DeviceInterface::GetStatus(GetStatusCompleter::Sync& completer) {
   status_t status;
   device_.GetStatus(&status);
   completer.Reply(FidlStatus(status).view());
 }
 
 void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::SessionInfo session_info,
-                                  OpenSessionCompleter::Sync completer) {
+                                  OpenSessionCompleter::Sync& completer) {
   netdev::Device_OpenSession_Response rsp;
   zx_status_t status = OpenSession(std::move(session_name), std::move(session_info), &rsp);
   netdev::Device_OpenSession_Result result;
@@ -252,7 +252,7 @@ void DeviceInterface::OpenSession(::fidl::StringView session_name, netdev::Sessi
 }
 
 void DeviceInterface::GetStatusWatcher(zx::channel watcher, uint32_t buffer,
-                                       GetStatusWatcherCompleter::Sync _completer) {
+                                       GetStatusWatcherCompleter::Sync& _completer) {
   {
     fbl::AutoLock teardown_lock(&teardown_lock_);
     // We're currently tearing down and can't open any new watchers.

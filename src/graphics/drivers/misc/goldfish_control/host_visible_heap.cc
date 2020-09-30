@@ -177,7 +177,7 @@ HostVisibleHeap::HostVisibleHeap(Control* control) : Heap(control, kTag) {}
 
 HostVisibleHeap::~HostVisibleHeap() = default;
 
-void HostVisibleHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) {
+void HostVisibleHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "HostVisibleHeap::AllocateVmo", "size", size);
 
   auto result = control()->address_space_child()->AllocateBlock(size);
@@ -248,7 +248,7 @@ void HostVisibleHeap::DeallocateVmo(zx_koid_t koid) {
 
 void HostVisibleHeap::CreateResource(::zx::vmo vmo,
                                      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
-                                     CreateResourceCompleter::Sync completer) {
+                                     CreateResourceCompleter::Sync& completer) {
   using llcpp::fuchsia::hardware::goldfish::ColorBufferFormatType;
   using llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params;
   using llcpp::fuchsia::sysmem2::PixelFormatType;
@@ -397,7 +397,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
   completer.Reply(ZX_OK, id);
 }
 
-void HostVisibleHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Sync completer) {
+void HostVisibleHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) {
   // This destroys the color buffer associated with |id| and frees the color
   // buffer handle |id|.
   control()->FreeBufferHandle(id);

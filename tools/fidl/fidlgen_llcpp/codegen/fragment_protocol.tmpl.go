@@ -689,9 +689,9 @@ class {{ .Name }} final {
     virtual void {{ .Name }}(
         {{- template "Params" .Request }}{{ if .Request }}, {{ end -}}
         {{- if .Transitional -}}
-          {{ .Name }}Completer::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+          {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
         {{- else -}}
-          {{ .Name }}Completer::Sync _completer) = 0;
+          {{ .Name }}Completer::Sync& _completer) = 0;
         {{- end }}
 {{ "" }}
       {{- end }}

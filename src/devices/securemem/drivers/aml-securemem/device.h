@@ -47,7 +47,7 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
 
   // LLCPP interface implementations
   void GetSecureMemoryPhysicalAddress(
-      zx::vmo secure_mem, GetSecureMemoryPhysicalAddressCompleter::Sync completer) override;
+      zx::vmo secure_mem, GetSecureMemoryPhysicalAddressCompleter::Sync& completer) override;
 
   fit::result<zx_paddr_t, zx_status_t> GetSecureMemoryPhysicalAddress(zx::vmo secure_mem);
 

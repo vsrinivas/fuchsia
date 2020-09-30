@@ -239,7 +239,7 @@ zx_status_t AmlCpu::DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep
 }
 
 void AmlCpu::GetPerformanceStateInfo(uint32_t state,
-                                     GetPerformanceStateInfoCompleter::Sync completer) {
+                                     GetPerformanceStateInfoCompleter::Sync& completer) {
   // Get all performance states.
   zx_status_t status;
   fuchsia_thermal::OperatingPoint opps;
@@ -279,12 +279,12 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* o
   return ZX_OK;
 }
 
-void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
   unsigned int result = zx_system_get_num_cpus();
   completer.Reply(result);
 }
 
-void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer) {
+void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
   // Placeholder.
   completer.Reply(0);
 }

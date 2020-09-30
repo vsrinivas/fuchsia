@@ -49,8 +49,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   if ((status = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl,
                                                device_get_name(parent), &netdev->device_)) !=
       ZX_OK) {
-    zxlogf(ERROR, "network-device: Failed to create inner device %s",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "network-device: Failed to create inner device %s", zx_status_get_string(status));
     return status;
   }
 
@@ -100,12 +99,12 @@ void NetworkDevice::DdkRelease() {
   delete this;
 }
 
-void NetworkDevice::GetDevice(zx::channel device, GetDeviceCompleter::Sync _completer) {
+void NetworkDevice::GetDevice(zx::channel device, GetDeviceCompleter::Sync& _completer) {
   ZX_ASSERT_MSG(device_, "Can't serve device if not bound to parent implementation");
   device_->Bind(std::move(device));
 }
 
-void NetworkDevice::GetMacAddressing(zx::channel mac, GetMacAddressingCompleter::Sync _completer) {
+void NetworkDevice::GetMacAddressing(zx::channel mac, GetMacAddressingCompleter::Sync& _completer) {
   if (mac_) {
     mac_->Bind(loop_.dispatcher(), std::move(mac));
   }

@@ -97,8 +97,8 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
 
   // Implementation of ram_metrics::Device::Interface FIDL service.
   void MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
-                        MeasureBandwidthCompleter::Sync completer) override;
-  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync completer) override;
+                        MeasureBandwidthCompleter::Sync& completer) override;
+  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) override;
 
   void StartReadBandwithCounters(Job* job);
   void FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time_t start_time);

@@ -68,32 +68,33 @@ class OpteeClient : public OpteeClientBase,
   void Shutdown();
 
   // `fuchsia.tee.Device` FIDL Handlers
-  void GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync completer) override;
+  void GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync& completer) override;
   void OpenSession(fuchsia_tee::Uuid trusted_app,
                    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-                   fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync completer) override;
+                   fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync& completer) override;
   void InvokeCommand(
       uint32_t session_id, uint32_t command_id,
       fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync completer) override;
-  void CloseSession(uint32_t session_id,
-                    fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync completer) override;
-
-  // `fuchsia.tee.Application` FIDL Handlers
-  void GetOsInfo(fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync completer) override;
-  void OpenSession(
-      fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync completer) override;
-  void OpenSession2(
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::OpenSession2Completer::Sync completer) override;
-  void InvokeCommand(
-      uint32_t session_id, uint32_t command_id,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync completer) override;
+      fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync& completer) override;
   void CloseSession(
       uint32_t session_id,
-      fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync completer) override;
+      fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync& completer) override;
+
+  // `fuchsia.tee.Application` FIDL Handlers
+  void GetOsInfo(fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync& completer) override;
+  void OpenSession(
+      fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+      fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync& completer) override;
+  void OpenSession2(
+      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+      fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) override;
+  void InvokeCommand(
+      uint32_t session_id, uint32_t command_id,
+      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+      fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) override;
+  void CloseSession(
+      uint32_t session_id,
+      fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync& completer) override;
 
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;

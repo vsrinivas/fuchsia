@@ -35,7 +35,7 @@ class OpteeDeviceInfo : public OpteeDeviceInfoBase,
   void DdkRelease();
 
   // `DeviceInfo` FIDL protocol
-  void GetOsInfo(GetOsInfoCompleter::Sync completer) override;
+  void GetOsInfo(GetOsInfoCompleter::Sync& completer) override;
 
  private:
   static constexpr TEEC_UUID kOpteeOsUuid = {

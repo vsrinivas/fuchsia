@@ -47,7 +47,7 @@ zx_status_t Instance::Bind() {
   return DdkAdd("pipe", DEVICE_ADD_INSTANCE);
 }
 
-void Instance::OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync completer) {
+void Instance::OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync& completer) {
   if (!pipe_request.is_valid()) {
     zxlogf(ERROR, "%s: invalid channel", kTag);
     completer.Close(ZX_ERR_INVALID_ARGS);

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -114,9 +114,9 @@ class RpmbDevice : public RpmbDeviceType,
 
   void RpmbConnectServer(zx::channel server);
 
-  void GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
   void Request(::llcpp::fuchsia::hardware::rpmb::Request request,
-               RequestCompleter::Sync completer) override;
+               RequestCompleter::Sync& completer) override;
 
  private:
   SdmmcBlockDevice* const sdmmc_parent_;
@@ -223,4 +223,4 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
 }  // namespace sdmmc
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_

@@ -210,7 +210,7 @@ class SecondProtocol final {
 
     using MethodOnSecondCompleter = ::fidl::Completer<>;
 
-    virtual void MethodOnSecond(MethodOnSecondCompleter::Sync _completer) = 0;
+    virtual void MethodOnSecond(MethodOnSecondCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -404,7 +404,7 @@ class FirstProtocol final {
 
     using MethodOnFirstCompleter = ::fidl::Completer<>;
 
-    virtual void MethodOnFirst(MethodOnFirstCompleter::Sync _completer) = 0;
+    virtual void MethodOnFirst(MethodOnFirstCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

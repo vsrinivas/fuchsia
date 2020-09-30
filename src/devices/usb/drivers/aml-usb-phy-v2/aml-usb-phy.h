@@ -52,7 +52,7 @@ class AmlUsbPhy : public AmlUsbPhyType,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   void WriteRegister(uint64_t address, uint32_t value,
-                     WriteRegisterCompleter::Sync completer) override;
+                     WriteRegisterCompleter::Sync& completer) override;
 
   // Public for testing.
   UsbMode mode() {

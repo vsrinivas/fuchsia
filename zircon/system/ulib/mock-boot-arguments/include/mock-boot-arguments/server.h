@@ -20,13 +20,13 @@ class Server final : public llcpp::fuchsia::boot::Arguments::Interface {
   void CreateClient(async_dispatcher* dispatcher,
                     llcpp::fuchsia::boot::Arguments::SyncClient* argclient);
 
-  void GetString(fidl::StringView view, GetStringCompleter::Sync completer) override;
+  void GetString(fidl::StringView view, GetStringCompleter::Sync& completer) override;
   void GetStrings(fidl::VectorView<fidl::StringView> keys,
-                  GetStringsCompleter::Sync completer) override;
-  void GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync completer) override;
+                  GetStringsCompleter::Sync& completer) override;
+  void GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync& completer) override;
   void GetBools(fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
-                GetBoolsCompleter::Sync completer) override;
-  void Collect(fidl::StringView prefix, CollectCompleter::Sync completer) override;
+                GetBoolsCompleter::Sync& completer) override;
+  void Collect(fidl::StringView prefix, CollectCompleter::Sync& completer) override;
 
  private:
   std::map<std::string, std::string> arguments;

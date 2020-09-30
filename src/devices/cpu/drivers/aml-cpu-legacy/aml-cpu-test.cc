@@ -199,19 +199,19 @@ class FakeAmlThermal : TestDeviceType, fuchsia_thermal::Device::Interface {
 
  private:
   // Implement Thermal FIDL Protocol.
-  void GetInfo(GetInfoCompleter::Sync completer);
-  void GetDeviceInfo(GetDeviceInfoCompleter::Sync completer);
-  void GetDvfsInfo(fuchsia_thermal::PowerDomain pd, GetDvfsInfoCompleter::Sync completer);
-  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer);
-  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync completer);
-  void GetStateChangePort(GetStateChangePortCompleter::Sync completer);
-  void SetTripCelsius(uint32_t id, float temp, SetTripCelsiusCompleter::Sync completer);
+  void GetInfo(GetInfoCompleter::Sync& completer);
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer);
+  void GetDvfsInfo(fuchsia_thermal::PowerDomain pd, GetDvfsInfoCompleter::Sync& completer);
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer);
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer);
+  void GetStateChangePort(GetStateChangePortCompleter::Sync& completer);
+  void SetTripCelsius(uint32_t id, float temp, SetTripCelsiusCompleter::Sync& completer);
   void GetDvfsOperatingPoint(fuchsia_thermal::PowerDomain pd,
-                             GetDvfsOperatingPointCompleter::Sync completer);
+                             GetDvfsOperatingPointCompleter::Sync& completer);
   void SetDvfsOperatingPoint(uint16_t op_idx, fuchsia_thermal::PowerDomain pd,
-                             SetDvfsOperatingPointCompleter::Sync completer);
-  void GetFanLevel(GetFanLevelCompleter::Sync completer);
-  void SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync completer);
+                             SetDvfsOperatingPointCompleter::Sync& completer);
+  void GetFanLevel(GetFanLevelCompleter::Sync& completer);
+  void SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer);
 
   uint16_t active_operating_point_;
   fake_ddk::FidlMessenger messenger_;
@@ -232,7 +232,7 @@ zx_status_t FakeAmlThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync completer) {
+void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_thermal::ThermalInfo result;
 
   result.state = 0;
@@ -243,39 +243,39 @@ void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync completer) {
   completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
 }
 
-void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
+void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   fuchsia_thermal::ThermalDeviceInfo result = device_info_;
   completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
 }
 
 void FakeAmlThermal::GetDvfsInfo(fuchsia_thermal::PowerDomain pd,
-                                 GetDvfsInfoCompleter::Sync completer) {
+                                 GetDvfsInfoCompleter::Sync& completer) {
   fuchsia_thermal::ThermalDeviceInfo device_info = device_info_;
   fuchsia_thermal::OperatingPoint result = device_info.opps[PowerDomainToIndex(pd)];
   completer.Reply(ZX_OK, fidl::unowned_ptr(&result));
 }
 
-void FakeAmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) {
+void FakeAmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   completer.Reply(ZX_OK, 0.0);
 }
 
-void FakeAmlThermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync completer) {
+void FakeAmlThermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
   zx::event invalid;
   completer.Reply(ZX_ERR_NOT_SUPPORTED, std::move(invalid));
 }
 
-void FakeAmlThermal::GetStateChangePort(GetStateChangePortCompleter::Sync completer) {
+void FakeAmlThermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
   zx::port invalid;
   completer.Reply(ZX_ERR_NOT_SUPPORTED, std::move(invalid));
 }
 
 void FakeAmlThermal::SetTripCelsius(uint32_t id, float temp,
-                                    SetTripCelsiusCompleter::Sync completer) {
+                                    SetTripCelsiusCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::PowerDomain pd,
-                                           GetDvfsOperatingPointCompleter::Sync completer) {
+                                           GetDvfsOperatingPointCompleter::Sync& completer) {
   if (pd == fuchsia_thermal::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     return;
@@ -285,7 +285,7 @@ void FakeAmlThermal::GetDvfsOperatingPoint(fuchsia_thermal::PowerDomain pd,
 }
 
 void FakeAmlThermal::SetDvfsOperatingPoint(uint16_t idx, fuchsia_thermal::PowerDomain pd,
-                                           SetDvfsOperatingPointCompleter::Sync completer) {
+                                           SetDvfsOperatingPointCompleter::Sync& completer) {
   if (pd == fuchsia_thermal::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -295,11 +295,11 @@ void FakeAmlThermal::SetDvfsOperatingPoint(uint16_t idx, fuchsia_thermal::PowerD
   completer.Reply(ZX_OK);
 }
 
-void FakeAmlThermal::GetFanLevel(GetFanLevelCompleter::Sync completer) {
+void FakeAmlThermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void FakeAmlThermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync completer) {
+void FakeAmlThermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_OUT_OF_RANGE);
 }
 

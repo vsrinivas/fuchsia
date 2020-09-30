@@ -39,15 +39,15 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
                               bool add_invisible,
-                              AddDeviceWithPowerArgsCompleter::Sync completer) override;
+                              AddDeviceWithPowerArgsCompleter::Sync& completer) override;
 
-  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
-  void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) override;
+  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync& completer) override;
+  void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
-      GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
+      GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
 
   void SetTestStatusInfo(::llcpp::fuchsia::device::power::test::TestStatusInfo test_info,
-                         SetTestStatusInfoCompleter::Sync completer) override;
+                         SetTestStatusInfoCompleter::Sync& completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -71,7 +71,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
     perf_states_count_ = perf_states_count;
   }
 
-  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync completer) override {
+  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync& completer) override {
     zx::event complete;
     zx_status_t status =
         suspend_completion_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &complete);
@@ -151,7 +151,7 @@ zx_status_t TestPowerDriverChild::DdkConfigureAutoSuspend(bool enable,
 void TestPowerDriverChild::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,
     ::fidl::VectorView<DevicePerformanceStateInfo> perf_states, bool add_invisible,
-    AddDeviceWithPowerArgsCompleter::Sync completer) {
+    AddDeviceWithPowerArgsCompleter::Sync& completer) {
   fbl::AllocChecker ac;
   auto child2 = fbl::make_unique_checked<TestPowerDriverChild>(&ac, this->parent());
   if (!ac.check()) {
@@ -199,7 +199,7 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
 
 void TestPowerDriverChild::SetTestStatusInfo(
     llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
-    SetTestStatusInfoCompleter::Sync completer) {
+    SetTestStatusInfoCompleter::Sync& completer) {
   reply_suspend_status_ = status_info.suspend_status;
   reply_resume_status_ = status_info.resume_status;
   reply_out_power_state_ = status_info.out_power_state;
@@ -208,18 +208,18 @@ void TestPowerDriverChild::SetTestStatusInfo(
 }
 
 void TestPowerDriverChild::GetCurrentDevicePowerState(
-    GetCurrentDevicePowerStateCompleter::Sync completer) {
+    GetCurrentDevicePowerStateCompleter::Sync& completer) {
   completer.ReplySuccess(
       static_cast<llcpp::fuchsia::device::DevicePowerState>(current_power_state_));
 }
 
 void TestPowerDriverChild::GetCurrentSuspendReason(
-    GetCurrentSuspendReasonCompleter::Sync completer) {
+    GetCurrentSuspendReasonCompleter::Sync& completer) {
   completer.ReplySuccess(current_suspend_reason_);
 }
 
 void TestPowerDriverChild::GetCurrentDeviceAutoSuspendConfig(
-    GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) {
+    GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) {
   completer.ReplySuccess(
       auto_suspend_enabled_,
       static_cast<llcpp::fuchsia::device::DevicePowerState>(auto_suspend_sleep_state_));

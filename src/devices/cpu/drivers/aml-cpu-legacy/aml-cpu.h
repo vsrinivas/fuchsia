@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
-#define SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
+#ifndef SRC_DEVICES_CPU_DRIVERS_AML_CPU_LEGACY_AML_CPU_H_
+#define SRC_DEVICES_CPU_DRIVERS_AML_CPU_LEGACY_AML_CPU_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
@@ -48,9 +48,9 @@ class AmlCpu : public DeviceType,
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep_state);
 
   // Fidl server interface implementation.
-  void GetPerformanceStateInfo(uint32_t state, GetPerformanceStateInfoCompleter::Sync completer);
-  void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer);
-  void GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer);
+  void GetPerformanceStateInfo(uint32_t state, GetPerformanceStateInfoCompleter::Sync& completer);
+  void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer);
+  void GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer);
 
   // Set CpuInfo in inspect.
   void SetCpuInfo(uint32_t cpu_version_packed);
@@ -67,4 +67,4 @@ class AmlCpu : public DeviceType,
 
 }  // namespace amlogic_cpu
 
-#endif  // SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
+#endif  // SRC_DEVICES_CPU_DRIVERS_AML_CPU_LEGACY_AML_CPU_H_

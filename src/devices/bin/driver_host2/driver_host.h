@@ -39,7 +39,7 @@ class DriverHost : public llcpp::fuchsia::driver::framework::DriverHost::Interfa
 
  private:
   void Start(llcpp::fuchsia::driver::framework::DriverStartArgs start_args, zx::channel request,
-             StartCompleter::Sync completer) override;
+             StartCompleter::Sync& completer) override;
 
   async_dispatcher_t* dispatcher_;
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;

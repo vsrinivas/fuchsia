@@ -51,16 +51,16 @@ class FakeBootArgsServer final : public fboot::Arguments::Interface {
   void SetBool(std::string key, bool value) { values_.insert_or_assign(key, value); }
 
   // llcpp::fuchsia::boot::Arguments::Interface methods:
-  void GetString(::fidl::StringView key, GetStringCompleter::Sync completer) {
+  void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void GetStrings(::fidl::VectorView<::fidl::StringView> keys,
-                  GetStringsCompleter::Sync completer) {
+                  GetStringsCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync completer) {
+  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync& completer) {
     bool result = defaultval;
     auto value = values_.find(std::string(key.data()));
     if (value != values_.end()) {
@@ -69,11 +69,11 @@ class FakeBootArgsServer final : public fboot::Arguments::Interface {
     completer.Reply(result);
   }
 
-  void GetBools(::fidl::VectorView<fboot::BoolPair> keys, GetBoolsCompleter::Sync completer) {
+  void GetBools(::fidl::VectorView<fboot::BoolPair> keys, GetBoolsCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Collect(::fidl::StringView prefix, CollectCompleter::Sync completer) {
+  void Collect(::fidl::StringView prefix, CollectCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

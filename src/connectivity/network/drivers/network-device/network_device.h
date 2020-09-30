@@ -38,8 +38,8 @@ class NetworkDevice : public DeviceType,
 
   void DdkRelease();
 
-  void GetDevice(zx::channel device, GetDeviceCompleter::Sync _completer) override;
-  void GetMacAddressing(zx::channel mac, GetMacAddressingCompleter::Sync _completer) override;
+  void GetDevice(zx::channel device, GetDeviceCompleter::Sync& _completer) override;
+  void GetMacAddressing(zx::channel mac, GetMacAddressingCompleter::Sync& _completer) override;
 
  private:
   fit::optional<thrd_t> loop_thread_;

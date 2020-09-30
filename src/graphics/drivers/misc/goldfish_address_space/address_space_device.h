@@ -60,7 +60,7 @@ class AddressSpaceDevice
 
   // |llcpp::fuchsia::hardware::goldfish::AddressSpaceDevice::Interface|
   void OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
-                       zx::channel request, OpenChildDriverCompleter::Sync completer) override {
+                       zx::channel request, OpenChildDriverCompleter::Sync& completer) override {
     zx_status_t result = OpenChildDriver(type, std::move(request));
     completer.Close(result);
   }
@@ -108,13 +108,13 @@ class AddressSpaceChildDriver
   zx_status_t Bind();
 
   // |llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriver::Interface|
-  void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync completer) override;
-  void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync completer) override;
+  void AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync& completer) override;
+  void DeallocateBlock(uint64_t paddr, DeallocateBlockCompleter::Sync& completer) override;
   void ClaimSharedBlock(uint64_t offset, uint64_t size,
-                        ClaimSharedBlockCompleter::Sync completer) override;
-  void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync completer) override;
+                        ClaimSharedBlockCompleter::Sync& completer) override;
+  void UnclaimSharedBlock(uint64_t offset, UnclaimSharedBlockCompleter::Sync& completer) override;
   void Ping(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
-            PingCompleter::Sync completer) override;
+            PingCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();

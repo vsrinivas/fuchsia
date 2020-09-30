@@ -22,8 +22,8 @@ class Server : public ::llcpp::fidl::test::simple::Simple::Interface {
 
   ~Server() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync completer) override { completer.Reply(request); }
-  void Close(CloseCompleter::Sync completer) override { completer.Close(ZX_OK); }
+  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
 
  private:
   sync_completion_t* destroyed_;

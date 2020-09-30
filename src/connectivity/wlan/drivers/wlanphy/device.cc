@@ -32,7 +32,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
  public:
   DeviceConnector(Device* device) : device_(device) {}
-  void Connect(::zx::channel request, ConnectCompleter::Sync _completer) override {
+  void Connect(::zx::channel request, ConnectCompleter::Sync& _completer) override {
     device_->Connect(std::move(request));
   }
 

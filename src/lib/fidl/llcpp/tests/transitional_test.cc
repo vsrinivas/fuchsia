@@ -18,7 +18,7 @@ namespace {
 
 class Server : public test::TransitionMethods::Interface {
  public:
-  void ImplementedMethod(ImplementedMethodCompleter::Sync txn) override {
+  void ImplementedMethod(ImplementedMethodCompleter::Sync& txn) override {
     // Reply call to maintain an open connection.
     txn.Reply(fidl::StringView("test reply"));
   }

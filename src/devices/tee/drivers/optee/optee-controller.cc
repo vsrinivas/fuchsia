@@ -409,13 +409,13 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
 }
 
 void OpteeController::ConnectTee(zx::channel service_provider, zx::channel tee_request,
-                                 [[maybe_unused]] ConnectTeeCompleter::Sync _completer) {
+                                 [[maybe_unused]] ConnectTeeCompleter::Sync& _completer) {
   TeeConnect(std::move(tee_request), std::move(service_provider));
 }
 
 void OpteeController::ConnectToDeviceInfo(
     zx::channel device_info_request,
-    [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync _completer) {
+    [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync& _completer) {
   ZX_DEBUG_ASSERT(device_info_request.is_valid());
 
   // Create a new `OpteeDeviceInfo` device and hand off client communication to it.
@@ -438,7 +438,7 @@ void OpteeController::ConnectToDeviceInfo(
 void OpteeController::ConnectToApplication(
     llcpp::fuchsia::tee::Uuid application_uuid, zx::channel service_provider,
     zx::channel application_request,
-    [[maybe_unused]] ConnectToApplicationCompleter::Sync _completer) {
+    [[maybe_unused]] ConnectToApplicationCompleter::Sync& _completer) {
   ZX_DEBUG_ASSERT(application_request.is_valid());
 
   // Create a new `OpteeClient` device and hand off client communication to it.

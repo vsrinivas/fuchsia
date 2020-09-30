@@ -24,7 +24,7 @@ class SystemStateManager : public device_manager_fidl::SystemStateTransition::In
   // SystemStateTransition interface
   void SetTerminationSystemState(power_fidl::statecontrol::SystemPowerState state,
                                  device_manager_fidl::SystemStateTransition::Interface::
-                                     SetTerminationSystemStateCompleter::Sync completer) override;
+                                     SetTerminationSystemStateCompleter::Sync& completer) override;
 
  private:
   Coordinator* dev_coord_;

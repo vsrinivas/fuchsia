@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_DEBUGDATA_DEBUGDATA_H_
+#define LIB_DEBUGDATA_DEBUGDATA_H_
 
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <fuchsia/debugdata/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-
 #include <stdint.h>
 
 #include <mutex>
@@ -20,6 +18,9 @@
 #include <utility>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
+
 namespace debugdata {
 
 class DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
@@ -27,8 +28,8 @@ class DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
   explicit DebugData(fbl::unique_fd root_dir_fd);
   ~DebugData() = default;
 
-  void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync completer) override;
-  void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync completer) override;
+  void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync& completer) override;
+  void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) override;
 
   const auto& data() const { return data_; }
 
@@ -39,3 +40,5 @@ class DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
 };
 
 }  // namespace debugdata
+
+#endif  // LIB_DEBUGDATA_DEBUGDATA_H_

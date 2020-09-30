@@ -25,35 +25,35 @@ class TestServerBase : public fio2::Node::Interface {
   virtual ~TestServerBase() = default;
 
   void Reopen(fio2::ConnectionOptions options, ::zx::channel object_request,
-              ReopenCompleter::Sync completer) override {
+              ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Close(ZX_OK);
   }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
+  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken(GetTokenCompleter::Sync completer) override {
+  void GetToken(GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void GetAttributes(fio2::NodeAttributesQuery query,
-                     GetAttributesCompleter::Sync completer) override {
+                     GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void UpdateAttributes(fio2::NodeAttributes attributes,
-                        UpdateAttributesCompleter::Sync completer) override {
+                        UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -109,7 +109,7 @@ TEST_F(RemoteV2, GetAttributes) {
   class TestServer : public TestServerBase {
    public:
     void GetAttributes(fio2::NodeAttributesQuery query,
-                       GetAttributesCompleter::Sync completer) override {
+                       GetAttributesCompleter::Sync& completer) override {
       EXPECT_EQ(query, fio2::NodeAttributesQuery::mask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
@@ -143,7 +143,7 @@ TEST_F(RemoteV2, GetAttributesError) {
   class TestServer : public TestServerBase {
    public:
     void GetAttributes(fio2::NodeAttributesQuery query,
-                       GetAttributesCompleter::Sync completer) override {
+                       GetAttributesCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
     }
   };
@@ -158,7 +158,7 @@ TEST_F(RemoteV2, SetAttributes) {
   class TestServer : public TestServerBase {
    public:
     void UpdateAttributes(fio2::NodeAttributes attributes,
-                          UpdateAttributesCompleter::Sync completer) override {
+                          UpdateAttributesCompleter::Sync& completer) override {
       EXPECT_TRUE(attributes.has_creation_time());
       EXPECT_FALSE(attributes.has_protocols());
       EXPECT_FALSE(attributes.has_abilities());
@@ -189,7 +189,7 @@ TEST_F(RemoteV2, SetAttributesError) {
   class TestServer : public TestServerBase {
    public:
     void UpdateAttributes(fio2::NodeAttributes attributes,
-                          UpdateAttributesCompleter::Sync completer) override {
+                          UpdateAttributesCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
     }
   };

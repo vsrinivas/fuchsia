@@ -280,17 +280,17 @@ namespace methods {
 void EmptyProtocolDispatchSend(void* interface, void* bytes,
                                ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<EmptyProtocol::SendRequest*>(bytes);
+  EmptyProtocol::Interface::SendCompleter::Sync completer(txn);
   reinterpret_cast<EmptyProtocol::Interface*>(interface)->Send(
-      std::move(message->e),
-      EmptyProtocol::Interface::SendCompleter::Sync(txn));
+      std::move(message->e), completer);
 }
 
 void EmptyProtocolDispatchSendAndReceive(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<EmptyProtocol::SendAndReceiveRequest*>(bytes);
+  EmptyProtocol::Interface::SendAndReceiveCompleter::Sync completer(txn);
   reinterpret_cast<EmptyProtocol::Interface*>(interface)->SendAndReceive(
-      std::move(message->e),
-      EmptyProtocol::Interface::SendAndReceiveCompleter::Sync(txn));
+      std::move(message->e), completer);
 }
 
 }  // namespace methods

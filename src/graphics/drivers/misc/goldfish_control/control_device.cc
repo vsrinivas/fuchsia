@@ -459,7 +459,7 @@ Control::CreateColorBuffer2Result Control::CreateColorBuffer2(
 
 void Control::CreateColorBuffer2(
     zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
-    CreateColorBuffer2Completer::Sync completer) {
+    CreateColorBuffer2Completer::Sync& completer) {
   auto result = CreateColorBuffer2(std::move(vmo), std::move(create_params));
   if (result.is_ok()) {
     completer.Reply(result.value().res, result.value().hw_address_page_offset);
@@ -554,7 +554,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
 void Control::CreateBuffer2(zx::vmo vmo,
                             llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params,
-                            CreateBuffer2Completer::Sync completer) {
+                            CreateBuffer2Completer::Sync& completer) {
   auto result = CreateBuffer2(std::move(vmo), std::move(create_params));
   if (result.is_ok()) {
     completer.Reply(result.take_value());
@@ -563,7 +563,7 @@ void Control::CreateBuffer2(zx::vmo vmo,
   }
 }
 
-void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) {
+void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Control::FidlCreateBuffer", "size", size);
 
   zx_koid_t koid = GetKoidForVmo(vmo);
@@ -598,7 +598,7 @@ void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sy
   completer.Reply(ZX_OK);
 }
 
-void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync completer) {
+void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandle");
 
   zx_koid_t koid = GetKoidForVmo(vmo);

@@ -53,7 +53,7 @@ class Control : public ControlType,
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateColorBuffer2(
       zx::vmo vmo, llcpp::fuchsia::hardware::goldfish::CreateColorBuffer2Params create_params,
-      CreateColorBuffer2Completer::Sync completer) override;
+      CreateColorBuffer2Completer::Sync& completer) override;
 
   using CreateBuffer2Result =
       fit::result<llcpp::fuchsia::hardware::goldfish::ControlDevice_CreateBuffer2_Result,
@@ -65,13 +65,13 @@ class Control : public ControlType,
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void CreateBuffer2(zx::vmo vmo,
                      llcpp::fuchsia::hardware::goldfish::CreateBuffer2Params create_params,
-                     CreateBuffer2Completer::Sync completer) override;
+                     CreateBuffer2Completer::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
-  void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync completer) override;
+  void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
-  void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync completer) override;
+  void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) override;
 
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn);

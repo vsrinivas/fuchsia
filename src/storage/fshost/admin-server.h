@@ -28,7 +28,7 @@ class AdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
                                          async_dispatcher* dispatcher);
 
   // Implementation of the Shutdown method from the FIDL protocol.
-  void Shutdown(ShutdownCompleter::Sync completer) override;
+  void Shutdown(ShutdownCompleter::Sync& completer) override;
 
  private:
   devmgr::FsManager* fs_manager_;

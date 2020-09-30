@@ -53,7 +53,7 @@ class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWat
   void PushStatus(const status_t& status);
 
  private:
-  void WatchStatus(WatchStatusCompleter::Sync _completer) override;
+  void WatchStatus(WatchStatusCompleter::Sync& _completer) override;
 
   fbl::Mutex lock_;
   uint32_t max_queue_;

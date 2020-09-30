@@ -43,9 +43,9 @@ using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
 
 struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
  public:
-  void Query(uint64_t query_id, QueryCompleter::Sync _completer) override {}  // Deprecated
+  void Query(uint64_t query_id, QueryCompleter::Sync& _completer) override {}  // Deprecated
 
-  void Query2(uint64_t query_id, Query2Completer::Sync _completer) override {
+  void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override {
     DLOG("sysdrv_device_t::Query2");
     DASSERT(this->magma_system_device);
 
@@ -71,7 +71,7 @@ struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
   }
 
   void QueryReturnsBuffer(uint64_t query_id,
-                          QueryReturnsBufferCompleter::Sync _completer) override {
+                          QueryReturnsBufferCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::QueryReturnsBuffer");
 
     zx_handle_t result;
@@ -84,7 +84,7 @@ struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
     _completer.ReplySuccess(zx::vmo(result));
   }
 
-  void Connect(uint64_t client_id, ConnectCompleter::Sync _completer) override {
+  void Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::Connect");
 
     auto connection =
@@ -102,7 +102,7 @@ struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
     this->magma_system_device->StartConnectionThread(std::move(connection));
   }
 
-  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) override {
+  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::DumpState");
     if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
                       MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
@@ -115,7 +115,7 @@ struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
       this->magma_system_device->DumpStatus(dump_type);
   }
 
-  void TestRestart(TestRestartCompleter::Sync _completer) override {
+  void TestRestart(TestRestartCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("sysdrv_device_t::TestRestart");
     std::unique_lock<std::mutex> lock(this->magma_mutex);
@@ -131,7 +131,7 @@ struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
 #endif
   }
 
-  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) override {
+  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::GetUnitTestStatus");
     _completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }

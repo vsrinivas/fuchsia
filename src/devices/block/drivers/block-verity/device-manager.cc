@@ -162,7 +162,7 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
 }
 
 void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::Config config,
-                                 OpenForWriteCompleter::Sync completer) {
+                                 OpenForWriteCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kClosed) {
@@ -216,7 +216,7 @@ void DeviceManager::OpenForWrite(llcpp::fuchsia::hardware::block::verified::Conf
   async_completer.ReplySuccess();
 }
 
-void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync completer) {
+void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   llcpp::fuchsia::hardware::block::verified::Seal seal;
@@ -331,7 +331,7 @@ void DeviceManager::CompleteOpenForVerifiedRead(zx_status_t status) {
 
 void DeviceManager::OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
                                         llcpp::fuchsia::hardware::block::verified::Seal seal,
-                                        OpenForVerifiedReadCompleter::Sync completer) {
+                                        OpenForVerifiedReadCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kClosed) {
@@ -365,7 +365,7 @@ void DeviceManager::OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verifie
   superblock_verifier_->StartVerifying(this, SuperblockVerificationCallback);
 }
 
-void DeviceManager::Close(CloseCompleter::Sync completer) {
+void DeviceManager::Close(CloseCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kAuthoring && state_ != kVerifiedRead) {

@@ -83,7 +83,7 @@ zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc
 }
 
 void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
-                       StartCompleter::Sync completer) {
+                       StartCompleter::Sync& completer) {
   auto pkg = start_args.has_ns() ? start_args::ns_value(start_args.ns(), "/pkg")
                                  : zx::error(ZX_ERR_INVALID_ARGS);
   if (pkg.is_error()) {
@@ -134,7 +134,7 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    binary = std::move(binary.value()), storage = std::move(storage),
-                   msg = std::move(encode.value()),
+                   msg = encode.value(),
                    file = std::move(file)](zx_status_t status, auto buffer) mutable {
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),

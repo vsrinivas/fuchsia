@@ -25,13 +25,13 @@ namespace debugdata {
 
 DebugData::DebugData(fbl::unique_fd root_dir_fd) : root_dir_fd_(std::move(root_dir_fd)) {}
 
-void DebugData::Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync) {
+void DebugData::Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync&) {
   std::lock_guard<std::mutex> lock(lock_);
   std::string name(data_sink.data(), data_sink.size());
   data_[name].push_back(std::move(vmo));
 }
 
-void DebugData::LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync completer) {
+void DebugData::LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) {
   // When loading debug configuration file, we expect an absolute path.
   if (config_name[0] != '/') {
     // TODO(phosek): Use proper logging mechanism.

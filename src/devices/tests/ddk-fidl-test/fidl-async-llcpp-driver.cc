@@ -46,7 +46,7 @@ zx_status_t DdkFidlDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return ZX_ERR_ASYNC;
 }
 
-void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync completer) {
+void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync& completer) {
   struct CompletionContext {
     std::optional<GetChannelCompleter::Async> completer;
   };

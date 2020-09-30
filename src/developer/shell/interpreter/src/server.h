@@ -163,15 +163,15 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   Interpreter* interpreter() const { return interpreter_.get(); }
 
   void CreateExecutionContext(uint64_t context_id,
-                              CreateExecutionContextCompleter::Sync completer) override;
+                              CreateExecutionContextCompleter::Sync& completer) override;
   void AddNodes(uint64_t context_id,
                 ::fidl::VectorView<::llcpp::fuchsia::shell::NodeDefinition> nodes,
-                AddNodesCompleter::Sync _completer) override;
+                AddNodesCompleter::Sync& _completer) override;
   void DumpExecutionContext(uint64_t context_id,
-                            DumpExecutionContextCompleter::Sync completer) override;
+                            DumpExecutionContextCompleter::Sync& completer) override;
   void ExecuteExecutionContext(uint64_t context_id,
-                               ExecuteExecutionContextCompleter::Sync completer) override;
-  void Shutdown(ShutdownCompleter::Sync completer) override;
+                               ExecuteExecutionContextCompleter::Sync& completer) override;
+  void Shutdown(ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
   zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,

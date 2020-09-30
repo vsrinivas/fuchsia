@@ -21,12 +21,12 @@ class FakeBootArgsServer final : public llcpp::fuchsia::boot::Arguments::Interfa
   void SetString(std::string key, std::string value) { strings_.insert_or_assign(key, value); }
 
   // llcpp::fuchsia::boot::Arguments::Interface methods:
-  void GetString(::fidl::StringView key, GetStringCompleter::Sync completer) {
+  void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void GetStrings(::fidl::VectorView<::fidl::StringView> keys,
-                  GetStringsCompleter::Sync completer) {
+                  GetStringsCompleter::Sync& completer) {
     std::vector<fidl::StringView> values;
     for (auto& key : keys) {
       auto value = strings_.find(std::string(key.data()));
@@ -40,7 +40,7 @@ class FakeBootArgsServer final : public llcpp::fuchsia::boot::Arguments::Interfa
         fidl::unowned_ptr_t<fidl::StringView>(values.data()), values.size()));
   }
 
-  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync completer) {
+  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync& completer) {
     bool result = defaultval;
     auto value = bools_.find(std::string(key.data()));
     if (value != bools_.end()) {
@@ -50,7 +50,7 @@ class FakeBootArgsServer final : public llcpp::fuchsia::boot::Arguments::Interfa
   }
 
   void GetBools(::fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
-                GetBoolsCompleter::Sync completer) {
+                GetBoolsCompleter::Sync& completer) {
     std::vector<uint8_t> values;
     for (auto& bool_pair : keys) {
       bool result = bool_pair.defaultval;
@@ -64,7 +64,7 @@ class FakeBootArgsServer final : public llcpp::fuchsia::boot::Arguments::Interfa
         fidl::unowned_ptr_t<bool>(reinterpret_cast<bool*>(values.data())), values.size()));
   }
 
-  void Collect(::fidl::StringView prefix, CollectCompleter::Sync completer) {
+  void Collect(::fidl::StringView prefix, CollectCompleter::Sync& completer) {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

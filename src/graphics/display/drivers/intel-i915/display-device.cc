@@ -213,7 +213,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
   pipe_->ApplyConfiguration(config);
 }
 
-void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
+void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
   FidlBacklight::State state = {};
 
@@ -238,7 +238,7 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync complet
 }
 
 void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
-                                       SetStateNormalizedCompleter::Sync completer) {
+                                       SetStateNormalizedCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
 
   if (display_ref_ != nullptr) {
@@ -258,7 +258,7 @@ void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
   completer.ReplySuccess();
 }
 
-void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
+void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   FidlBacklight::Device_GetStateAbsolute_Result result;
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   result.set_err(fidl::unowned_ptr(&status));
@@ -266,23 +266,23 @@ void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) 
 }
 
 void DisplayDevice::SetStateAbsolute(FidlBacklight::State state,
-                                     SetStateAbsoluteCompleter::Sync completer) {
+                                     SetStateAbsoluteCompleter::Sync& completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
+void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
   FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DisplayDevice::SetNormalizedBrightnessScale(
-    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DisplayDevice::GetNormalizedBrightnessScale(
-    GetNormalizedBrightnessScaleCompleter::Sync completer) {
+    GetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

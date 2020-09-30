@@ -470,7 +470,7 @@ WriteFirmwareResult CreateWriteFirmwareResult(
 
 }  // namespace
 
-void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _completer) {
+void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& _completer) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
@@ -484,7 +484,7 @@ void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _com
 }
 
 void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
-                           UseBlockDeviceCompleter::Sync _completer) {
+                           UseBlockDeviceCompleter::Sync& _completer) {
   UseBlockDevice(std::move(block_device), std::move(dynamic_data_sink));
 }
 
@@ -501,7 +501,7 @@ void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_si
                         std::move(block_device), std::move(dynamic_data_sink), context_);
 }
 
-void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync _completer) {
+void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::Sync& _completer) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
@@ -515,7 +515,8 @@ void Paver::FindBootManager(zx::channel boot_manager, FindBootManagerCompleter::
 }
 
 void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                         ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) {
+                         ::llcpp::fuchsia::paver::Asset asset,
+                         ReadAssetCompleter::Sync& completer) {
   auto status = sink_.ReadAsset(configuration, asset);
   if (status.is_ok()) {
     completer.ReplySuccess(std::move(status.value()));
@@ -526,12 +527,12 @@ void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
 
 void DataSink::WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration,
                              fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
-                             WriteFirmwareCompleter::Sync completer) {
+                             WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 
-void DataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
+void DataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   auto status = sink_.WipeVolume();
   if (status.is_ok()) {
     completer.ReplySuccess(std::move(status.value()));
@@ -835,17 +836,17 @@ void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_
 }
 
 void DynamicDataSink::InitializePartitionTables(
-    InitializePartitionTablesCompleter::Sync completer) {
+    InitializePartitionTablesCompleter::Sync& completer) {
   completer.Reply(sink_.partitioner()->InitPartitionTables().status_value());
 }
 
-void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync completer) {
+void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) {
   completer.Reply(sink_.partitioner()->WipePartitionTables().status_value());
 }
 
 void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
                                 ::llcpp::fuchsia::paver::Asset asset,
-                                ReadAssetCompleter::Sync completer) {
+                                ReadAssetCompleter::Sync& completer) {
   auto status = sink_.ReadAsset(configuration, asset);
   if (status.is_ok()) {
     completer.ReplySuccess(std::move(status.value()));
@@ -856,12 +857,12 @@ void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configura
 
 void DynamicDataSink::WriteFirmware(::llcpp::fuchsia::paver::Configuration configuration,
                                     fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
-                                    WriteFirmwareCompleter::Sync completer) {
+                                    WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 
-void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
+void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   auto status = sink_.WipeVolume();
   if (status.is_ok()) {
     completer.ReplySuccess(std::move(status.value()));
@@ -885,7 +886,7 @@ void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root
   fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(boot_manager));
 }
 
-void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync completer) {
+void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) {
   zx::status<Configuration> status = abr::QueryBootConfig(svc_root_);
   if (status.is_error()) {
     completer.ReplyError(status.status_value());
@@ -894,7 +895,7 @@ void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::
   completer.ReplySuccess(status.value());
 }
 
-void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
+void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) {
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
   if (!config) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -904,7 +905,7 @@ void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sy
 }
 
 void BootManager::QueryConfigurationStatus(Configuration configuration,
-                                           QueryConfigurationStatusCompleter::Sync completer) {
+                                           QueryConfigurationStatusCompleter::Sync& completer) {
   auto slot_index = ConfigurationToSlotIndex(configuration);
   auto status = slot_index ? abr_client_->GetSlotInfo(*slot_index) : zx::error(ZX_ERR_INVALID_ARGS);
   if (status.is_error()) {
@@ -924,7 +925,7 @@ void BootManager::QueryConfigurationStatus(Configuration configuration,
 }
 
 void BootManager::SetConfigurationActive(Configuration configuration,
-                                         SetConfigurationActiveCompleter::Sync completer) {
+                                         SetConfigurationActiveCompleter::Sync& completer) {
   LOG("Setting configuration %d as active\n", static_cast<uint32_t>(configuration));
 
   auto slot_index = ConfigurationToSlotIndex(configuration);
@@ -942,7 +943,7 @@ void BootManager::SetConfigurationActive(Configuration configuration,
 }
 
 void BootManager::SetConfigurationUnbootable(Configuration configuration,
-                                             SetConfigurationUnbootableCompleter::Sync completer) {
+                                             SetConfigurationUnbootableCompleter::Sync& completer) {
   LOG("Setting configuration %d as unbootable\n", static_cast<uint32_t>(configuration));
 
   auto slot_index = ConfigurationToSlotIndex(configuration);
@@ -960,7 +961,7 @@ void BootManager::SetConfigurationUnbootable(Configuration configuration,
 }
 
 void BootManager::SetActiveConfigurationHealthy(
-    SetActiveConfigurationHealthyCompleter::Sync completer) {
+    SetActiveConfigurationHealthyCompleter::Sync& completer) {
   LOG("Setting active configuration as healthy\n");
 
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
@@ -982,7 +983,7 @@ void BootManager::SetActiveConfigurationHealthy(
   completer.Reply(ZX_OK);
 }
 
-void Paver::FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync completer) {
+void Paver::FindSysconfig(zx::channel sysconfig, FindSysconfigCompleter::Sync& completer) {
   FindSysconfig(std::move(sysconfig));
 }
 

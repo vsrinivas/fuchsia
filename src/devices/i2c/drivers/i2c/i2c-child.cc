@@ -21,7 +21,7 @@ namespace i2c {
 void I2cChild::Transfer(fidl::VectorView<bool> segments_is_write,
                         fidl::VectorView<fidl::VectorView<uint8_t>> write_segments_data,
                         fidl::VectorView<uint8_t> read_segments_length,
-                        TransferCompleter::Sync completer) {
+                        TransferCompleter::Sync& completer) {
   if (segments_is_write.count() < 1) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;

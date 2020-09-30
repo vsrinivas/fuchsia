@@ -81,7 +81,7 @@ zx_status_t NoHardwareGpu::Bind() {
   return DdkAdd("msd-img-rgx-no-hardware");
 }
 
-void NoHardwareGpu::Query2(uint64_t query_id, Query2Completer::Sync _completer) {
+void NoHardwareGpu::Query2(uint64_t query_id, Query2Completer::Sync& _completer) {
   DLOG("NoHardwareGpu::Query");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -107,7 +107,7 @@ void NoHardwareGpu::Query2(uint64_t query_id, Query2Completer::Sync _completer) 
 }
 
 void NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id,
-                                       QueryReturnsBufferCompleter::Sync _completer) {
+                                       QueryReturnsBufferCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::QueryReturnsBuffer");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -143,7 +143,7 @@ void NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id,
   _completer.ReplySuccess(zx::vmo(result));
 }
 
-void NoHardwareGpu::Connect(uint64_t client_id, ConnectCompleter::Sync _completer) {
+void NoHardwareGpu::Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -161,7 +161,7 @@ void NoHardwareGpu::Connect(uint64_t client_id, ConnectCompleter::Sync _complete
   magma_system_device_->StartConnectionThread(std::move(connection));
 }
 
-void NoHardwareGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) {
+void NoHardwareGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::DumpState");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
@@ -174,7 +174,7 @@ void NoHardwareGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync _comp
     magma_system_device_->DumpStatus(dump_type);
 }
 
-void NoHardwareGpu::TestRestart(TestRestartCompleter::Sync _completer) {
+void NoHardwareGpu::TestRestart(TestRestartCompleter::Sync& _completer) {
   DLOG("NoHardwareGpu::TestRestart");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   StopMagma();
@@ -183,7 +183,7 @@ void NoHardwareGpu::TestRestart(TestRestartCompleter::Sync _completer) {
   }
 }
 
-void NoHardwareGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) {
+void NoHardwareGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) {
   _completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 

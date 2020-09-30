@@ -182,9 +182,10 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
 
  private:
   // FIDL interface implementation
-  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync _completer) override;
-  void SetNetwork(bool connected, SetNetworkCompleter::Sync _completer) override;
-  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync _completer) override;
+  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& _completer) override;
+  void SetNetwork(bool connected, SetNetworkCompleter::Sync& _completer) override;
+  void SetSnoopChannel(::zx::channel interface,
+                       SetSnoopChannelCompleter::Sync& _completer) override;
 
   // Ethernet
   zx_device_t* eth_zxdev_;

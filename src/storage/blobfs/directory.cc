@@ -173,7 +173,7 @@ void Directory::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn)
   llcpp::fuchsia::blobfs::Blobfs::Dispatch(this, msg, txn);
 }
 
-void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) {
+void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
   static_assert(sizeof(llcpp::fuchsia::blobfs::BlockRegion) == sizeof(BlockRegion));
   static_assert(offsetof(llcpp::fuchsia::blobfs::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));
@@ -197,7 +197,7 @@ void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer
 }
 
 void Directory::SetCorruptBlobHandler(zx::channel handler,
-                                      SetCorruptBlobHandlerCompleter::Sync completer) {
+                                      SetCorruptBlobHandlerCompleter::Sync& completer) {
   blobfs_->SetCorruptBlobHandler(std::move(handler));
   completer.Reply(ZX_OK);
 }

@@ -42,7 +42,7 @@ class InputReportsReader : public ::llcpp::fuchsia::input::report::InputReportsR
                      hid_input_report::Device* device);
 
   // FIDL functions.
-  void ReadInputReports(ReadInputReportsCompleter::Sync completer) override;
+  void ReadInputReports(ReadInputReportsCompleter::Sync& completer) override;
 
  private:
   // This is the static size that is used to allocate this instance's InputReports that

@@ -22,9 +22,9 @@ namespace fsys = llcpp::fuchsia::sys2;
 DriverComponent::DriverComponent(zx::channel exposed_dir, zx::channel driver)
     : exposed_dir_(std::move(exposed_dir)), driver_(std::move(driver)) {}
 
-void DriverComponent::Stop(DriverComponent::StopCompleter::Sync completer) { driver_.reset(); }
+void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) { driver_.reset(); }
 
-void DriverComponent::Kill(DriverComponent::KillCompleter::Sync completer) {}
+void DriverComponent::Kill(DriverComponent::KillCompleter::Sync& completer) {}
 
 DriverHostComponent::DriverHostComponent(
     zx::channel driver_host, async_dispatcher_t* dispatcher,
@@ -85,7 +85,7 @@ void Node::Remove() {
   }
 }
 
-void Node::Remove(RemoveCompleter::Sync completer) {
+void Node::Remove(RemoveCompleter::Sync& completer) {
   // When NodeController::Remove() is called, we unbind the Node. This causes
   // the Node binding to then call Node::Remove().
   //
@@ -99,7 +99,7 @@ void Node::Remove(RemoveCompleter::Sync completer) {
 }
 
 void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel node,
-                    AddChildCompleter::Sync completer) {
+                    AddChildCompleter::Sync& completer) {
   auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_);
 
   auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
@@ -176,7 +176,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
 }
 
 void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel controller,
-                         StartCompleter::Sync completer) {
+                         StartCompleter::Sync& completer) {
   auto& url = start_info.resolved_url();
   auto it = driver_args_.find(std::string(url.data(), url.size()));
   if (it == driver_args_.end()) {

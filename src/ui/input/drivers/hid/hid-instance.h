@@ -56,18 +56,18 @@ class HidInstance : public HidInstanceDeviceType,
   void DdkRelease();
   zx_status_t DdkClose(uint32_t flags);
 
-  void GetBootProtocol(GetBootProtocolCompleter::Sync _completer) override;
-  void GetDeviceIds(GetDeviceIdsCompleter::Sync _completer) override;
-  void GetReportDesc(GetReportDescCompleter::Sync _completer) override;
-  void GetReportsEvent(GetReportsEventCompleter::Sync _completer) override;
-  void GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) override;
+  void GetBootProtocol(GetBootProtocolCompleter::Sync& _completer) override;
+  void GetDeviceIds(GetDeviceIdsCompleter::Sync& _completer) override;
+  void GetReportDesc(GetReportDescCompleter::Sync& _completer) override;
+  void GetReportsEvent(GetReportsEventCompleter::Sync& _completer) override;
+  void GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync& _completer) override;
   void SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
-                 SetReportCompleter::Sync _completer) override;
-  void SetTraceId(uint32_t id, SetTraceIdCompleter::Sync _completer) override;
-  void ReadReports(ReadReportsCompleter::Sync _completer) override;
-  void ReadReport(ReadReportCompleter::Sync completer) override;
+                 SetReportCompleter::Sync& _completer) override;
+  void SetTraceId(uint32_t id, SetTraceIdCompleter::Sync& _completer) override;
+  void ReadReports(ReadReportsCompleter::Sync& _completer) override;
+  void ReadReport(ReadReportCompleter::Sync& completer) override;
   void GetDeviceReportsReader(zx::channel reader,
-                              GetDeviceReportsReaderCompleter::Sync completer) override;
+                              GetDeviceReportsReaderCompleter::Sync& completer) override;
 
   void CloseInstance();
   void WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);

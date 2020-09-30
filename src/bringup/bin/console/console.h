@@ -58,10 +58,10 @@ class Console : public llcpp::fuchsia::logger::LogListenerSafe::Interface,
   void DebugReaderThread();
 
   // Functions to handle fuchsia.log.LogListenerSafe
-  void Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync completer) override;
+  void Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync& completer) override;
   void LogMany(fidl::VectorView<llcpp::fuchsia::logger::LogMessage> logs,
-               LogManyCompleter::Sync completer) override;
-  void Done(DoneCompleter::Sync completer) override;
+               LogManyCompleter::Sync& completer) override;
+  void Done(DoneCompleter::Sync& completer) override;
 
   Fifo rx_fifo_;
   zx::eventpair rx_event_;

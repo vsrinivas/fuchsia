@@ -25,7 +25,7 @@ PayloadStreamer::~PayloadStreamer() {
   }
 }
 
-void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
+void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer) {
   if (vmo_) {
     completer.Reply(ZX_ERR_ALREADY_BOUND);
     return;
@@ -41,7 +41,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync comple
   completer.Reply(ZX_OK);
 }
 
-void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
+void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
   ::llcpp::fuchsia::paver::ReadResult result = {};
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;

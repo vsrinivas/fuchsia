@@ -26,62 +26,62 @@ class TestServerBase : public fio2::Directory::Interface {
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Close(ZX_OK);
   }
 
   void Reopen(fio2::ConnectionOptions options, ::zx::channel object_request,
-              ReopenCompleter::Sync completer) override {
+              ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
+  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken(GetTokenCompleter::Sync completer) override {
+  void GetToken(GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void GetAttributes(fio2::NodeAttributesQuery query,
-                     GetAttributesCompleter::Sync completer) override {
+                     GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void UpdateAttributes(fio2::NodeAttributes attributes,
-                        UpdateAttributesCompleter::Sync completer) override {
+                        UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
   void Open(fidl::StringView path, fio2::OpenMode mode, fio2::ConnectionOptions options,
-            zx::channel object_request, OpenCompleter::Sync completer) override {
+            zx::channel object_request, OpenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Unlink(fidl::StringView path, UnlinkCompleter::Sync completer) override {
+  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Enumerate(fio2::DirectoryEnumerateOptions options, zx::channel iterator,
-                 EnumerateCompleter::Sync completer) override {
+                 EnumerateCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-              RenameCompleter::Sync completer) override {
+              RenameCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
-            LinkCompleter::Sync completer) override {
+            LinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Watch(fio2::DirectoryWatchMask mask, fio2::DirectoryWatchOptions options,
-             zx::channel watcher, WatchCompleter::Sync completer) override {
+             zx::channel watcher, WatchCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -133,13 +133,13 @@ TEST_F(DirV2, Enumerate) {
   class TestServer : public TestServerBase {
    public:
     void Enumerate(fio2::DirectoryEnumerateOptions options, zx::channel iterator,
-                   EnumerateCompleter::Sync completer) override {
+                   EnumerateCompleter::Sync& completer) override {
       class IteratorServer : public fio2::DirectoryIterator::Interface {
        public:
         explicit IteratorServer(sync_completion_t* completion) : completion_(completion) {}
 
         // Sends a different entry every time.
-        void GetNext(GetNextCompleter::Sync completer) override {
+        void GetNext(GetNextCompleter::Sync& completer) override {
           auto builder = fio2::DirectoryEntry::UnownedBuilder();
           fidl::StringView name;
           fio2::NodeProtocols protocols;

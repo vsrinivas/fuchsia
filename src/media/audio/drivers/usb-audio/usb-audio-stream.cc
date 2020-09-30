@@ -223,7 +223,7 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
   ring_buffer_vmo_.reset();
 }
 
-void UsbAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
+void UsbAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
 
   // Attempt to allocate a new driver channel and bind it to us.  If we don't

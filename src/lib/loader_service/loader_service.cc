@@ -54,10 +54,10 @@ zx::status<> LoaderServiceBase::Bind(zx::channel channel) {
   return zx::ok();
 }
 
-void LoaderConnection::Done(DoneCompleter::Sync completer) { completer.Close(ZX_OK); }
+void LoaderConnection::Done(DoneCompleter::Sync& completer) { completer.Close(ZX_OK); }
 
 void LoaderConnection::LoadObject(fidl::StringView object_name,
-                                  LoadObjectCompleter::Sync completer) {
+                                  LoadObjectCompleter::Sync& completer) {
   std::string name(object_name.data(), object_name.size());
 
   auto reply = [this, &name, &completer](zx::status<zx::vmo> status) {
@@ -90,7 +90,7 @@ void LoaderConnection::LoadObject(fidl::StringView object_name,
   reply(std::move(status));
 }
 
-void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync completer) {
+void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync& completer) {
   // fidl::StringView is not null-terminated so must pass size to std::string constructor.
   std::string config_str(config.data(), config.size());
 
@@ -125,7 +125,7 @@ void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync com
   reply(ZX_OK);
 }
 
-void LoaderConnection::Clone(zx::channel loader, CloneCompleter::Sync completer) {
+void LoaderConnection::Clone(zx::channel loader, CloneCompleter::Sync& completer) {
   completer.Reply(server_->Bind(std::move(loader)).status_value());
 }
 
