@@ -14,6 +14,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/event_limiter.h>
 #include <ktl/atomic.h>
 #include <ktl/move.h>
 
@@ -149,6 +150,10 @@ class HandleTableArena {
   static_assert(offsetof(Handle, dispatcher_) + sizeof(Handle::dispatcher_) <=
                 Handle::PreserveSize);
   fbl::GPArena<Handle::PreserveSize, sizeof(Handle)> arena_;
+
+  // Limit logs about handle counts being too high.
+  EventLimiter<ZX_SEC(1)> handle_count_high_log_;
+
   // Give the Handle access to its arena.
   friend Handle;
 };

@@ -17,8 +17,8 @@ namespace {
 // The number of outstanding (live) handles in the arena.
 constexpr size_t kMaxHandleCount = 256 * 1024u;
 
-// Warning level: high_handle_count() is called when
-// there are this many outstanding handles.
+// Warning level: When the number of handles exceeds this value, we start to emit
+// warnings to the kernel's debug log.
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
 KCOUNTER(handle_count_made, "handles.made")
@@ -99,29 +99,27 @@ uint32_t HandleTableArena::GetNewBaseValue(void* addr) {
 // says whether this is allocation or duplication, for the error message.
 void* HandleTableArena::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const char* what,
                               uint32_t* base_value) {
-  size_t outstanding_handles;
-  {
-    void* addr = arena_.Alloc();
-    outstanding_handles = arena_.DiagnosticCount();
-    if (likely(addr)) {
-      if (outstanding_handles > kHighHandleCount) {
-        // TODO: Avoid calling this for every handle after
-        // kHighHandleCount; printfs are slow and we're
-        // holding the lock.
-        printf("WARNING: High handle count: %zu handles\n", outstanding_handles);
-      }
-      dispatcher->increment_handle_count();
-      // checking the process_id_ and dispatcher is really about trying to catch cases where this
-      // Handle might somehow already be in use.
-      DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->process_id_ == ZX_KOID_INVALID);
-      DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->dispatcher_ == nullptr);
-      *base_value = GetNewBaseValue(addr);
-      return addr;
-    }
+  // Attempt to allocate a handle.
+  void* addr = arena_.Alloc();
+  size_t outstanding_handles = arena_.DiagnosticCount();
+  if (unlikely(addr == nullptr)) {
+    printf("WARNING: Could not allocate %s handle (%zu outstanding)\n", what, outstanding_handles);
+    return nullptr;
   }
 
-  printf("WARNING: Could not allocate %s handle (%zu outstanding)\n", what, outstanding_handles);
-  return nullptr;
+  // Emit a warning if too many handles have been created and we haven't recently logged
+  if (unlikely(outstanding_handles > kHighHandleCount) && handle_count_high_log_.Ready()) {
+    printf("WARNING: High handle count: %zu / %zu handles\n", outstanding_handles,
+           kHighHandleCount);
+  }
+
+  dispatcher->increment_handle_count();
+  // checking the process_id_ and dispatcher is really about trying to catch cases where this
+  // Handle might somehow already be in use.
+  DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->process_id_ == ZX_KOID_INVALID);
+  DEBUG_ASSERT(reinterpret_cast<Handle*>(addr)->dispatcher_ == nullptr);
+  *base_value = GetNewBaseValue(addr);
+  return addr;
 }
 
 HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
