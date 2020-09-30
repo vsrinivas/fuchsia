@@ -26,6 +26,7 @@ protocol DangerousEvents {
     -> box();
     -> break();
     -> byte();
+    -> bytes();
     -> case();
     -> catch();
     -> chan();

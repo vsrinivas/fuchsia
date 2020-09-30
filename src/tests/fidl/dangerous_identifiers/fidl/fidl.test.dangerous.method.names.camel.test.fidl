@@ -26,6 +26,7 @@ protocol DangerousMethods {
     Box();
     Break();
     Byte();
+    Bytes();
     Case();
     Catch();
     Chan();

@@ -27,6 +27,7 @@ protocol DangerousResponseArguments {
     Method18() -> (argtype box);
     Method19() -> (argtype break);
     Method20() -> (argtype byte);
+    Method214() -> (argtype bytes);
     Method21() -> (argtype case);
     Method22() -> (argtype catch);
     Method23() -> (argtype chan);

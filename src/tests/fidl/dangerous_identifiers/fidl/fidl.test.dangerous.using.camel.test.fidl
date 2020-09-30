@@ -24,6 +24,7 @@ using Bool = vector;
 using Box = vector;
 using Break = vector;
 using Byte = vector;
+using Bytes = vector;
 using Case = vector;
 using Catch = vector;
 using Chan = vector;

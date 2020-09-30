@@ -88,6 +88,10 @@ protocol BYTE {
     JustOneMethod();
 };
 
+protocol BYTES {
+    JustOneMethod();
+};
+
 protocol CASE {
     JustOneMethod();
 };

@@ -24,6 +24,7 @@ const uint32 BOOL = 1;
 const uint32 BOX = 1;
 const uint32 BREAK = 1;
 const uint32 BYTE = 1;
+const uint32 BYTES = 1;
 const uint32 CASE = 1;
 const uint32 CATCH = 1;
 const uint32 CHAN = 1;

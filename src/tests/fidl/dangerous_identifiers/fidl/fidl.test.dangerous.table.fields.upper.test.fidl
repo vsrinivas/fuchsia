@@ -26,6 +26,7 @@ table DangerousMembers {
     19: uint32 BOX;
     20: uint32 BREAK;
     21: uint32 BYTE;
+    215: uint32 BYTES;
     22: uint32 CASE;
     23: uint32 CATCH;
     24: uint32 CHAN;

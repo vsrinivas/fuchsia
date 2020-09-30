@@ -26,6 +26,7 @@ struct DangerousMembers {
     uint32 Box;
     uint32 Break;
     uint32 Byte;
+    uint32 Bytes;
     uint32 Case;
     uint32 Catch;
     uint32 Chan;

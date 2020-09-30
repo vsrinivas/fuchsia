@@ -27,6 +27,7 @@ protocol DangerousRequestArguments {
     Method18(argtype BOX);
     Method19(argtype BREAK);
     Method20(argtype BYTE);
+    Method214(argtype BYTES);
     Method21(argtype CASE);
     Method22(argtype CATCH);
     Method23(argtype CHAN);

@@ -89,6 +89,10 @@ struct Byte {
     membertype member = 1;
 };
 
+struct Bytes {
+    membertype member = 1;
+};
+
 struct Case {
     membertype member = 1;
 };
@@ -883,6 +887,7 @@ struct DangerousMembers {
     Box f18;
     Break f19;
     Byte f20;
+    Bytes f214;
     Case f21;
     Catch f22;
     Chan f23;

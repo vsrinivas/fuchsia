@@ -6,6 +6,7 @@
 import datetime
 import os
 import platform
+import re
 import subprocess
 import sys
 
@@ -32,6 +33,29 @@ if ZIRCON_TOOLS_DIR is None:
     print('Run "fx exec %s".' % sys.argv[0])
     sys.exit(1)
 FIDL_FORMAT = os.path.join(ZIRCON_TOOLS_DIR, 'fidl-format')
+
+
+# IdentifierDef represents individual parts of an identifier, along with a tag.
+# An identifier definition produces an `Identifier` when styled.
+#
+# For instance, the defintion
+#
+#     my_super_identifier:8
+#
+# has three parts [my, super, identifer] and tag 8.
+class IdentifierDef:
+
+    def __init__(self, parts: List[str], tag: int):
+        self.parts = parts
+        self.tag = tag
+
+
+class Identifier:
+
+    def __init__(self, ident: str, tag: int):
+        self.ident = ident
+        self.tag = tag
+
 
 # Define ways that identifiers may be rendered
 STYLES = []
@@ -65,20 +89,20 @@ def use(func):
 
 
 @use
-def constants(f, idents):
+def constants(f, idents: List[Identifier]):
     for ident in idents:
         # TODO(fxbug.dev/38124): Enable this case once we've clarified these edge cases
         # and chosen a way to unambiguously reference the root library. Currently,
         # "const uint32 uint32 = 1;" will fail with an includes-cycle fidlc error.
-        if ident == "uint32":
+        if ident.ident == "uint32":
             continue
-        f.write('const uint32 %s = 1;\n' % ident)
+        f.write('const uint32 %s = 1;\n' % ident.ident)
 
 
 @use
-def using(f, idents):
+def using(f, idents: List[Identifier]):
     for ident in idents:
-        f.write('using %s = vector;\n' % ident)
+        f.write('using %s = vector;\n' % ident.ident)
 
 
 # TODO(ianloic): Make this test work. It requires N libraries to import for N
@@ -90,43 +114,43 @@ def using(f, idents):
 
 
 @use
-def enums(f, idents):
+def enums(f, idents: List[Identifier]):
     # enums with every dangerous name
     for ident in idents:
-        f.write('enum %s { MEMBER = 1; };\n' % ident)
+        f.write('enum %s { MEMBER = 1; };\n' % ident.ident)
 
     # enum with every dangerous field name
     f.write('enum DangerousMembers {\n')
-    for i, ident in enumerate(idents):
-        f.write('  %s = %d;\n' % (ident, i))
+    for ident in idents:
+        f.write('  %s = %d;\n' % (ident.ident, ident.tag - 1))
     f.write('};\n')
 
 
 @use
-def struct_types(f, idents):
+def struct_types(f, idents: List[Identifier]):
     # structs with every dangerous name
     f.write('using membertype = uint32;\n')
     for ident in idents:
         # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
         # aliased causes a cycle.
-        if ident == "uint32":
+        if ident.ident == "uint32":
             continue
-        f.write('struct %s { membertype member = 1; };\n' % ident)
+        f.write('struct %s { membertype member = 1; };\n' % ident.ident)
 
     # a struct with every dangerous name as the field type
     f.write('struct DangerousMembers {\n')
-    for i, ident in enumerate(idents):
+    for ident in idents:
         # dangerous field type
-        f.write('  %s f%d;\n' % (ident, i))
+        f.write('  %s f%d;\n' % (ident.ident, ident.tag - 1))
     f.write('};\n')
 
 
 @use
-def struct_names(f, idents):
+def struct_names(f, idents: List[Identifier]):
     # a struct with every dangerous name as the field name
     f.write('struct DangerousMembers {\n')
-    for i, ident in enumerate(idents):
-        f.write('  uint32 %s;\n' % ident)
+    for ident in idents:
+        f.write('  uint32 %s;\n' % ident.ident)
     f.write('};\n')
 
 
@@ -161,84 +185,85 @@ def struct_names(f, idents):
 
 
 @use
-def table_names(f, idents):
+def table_names(f, idents: List[Identifier]):
     # tables with every dangerous name
     f.write('using membertype = uint32;\n')
     for ident in idents:
         # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
         # aliased causes a cycle.
-        if ident == "uint32":
+        if ident.ident == "uint32":
             continue
-        f.write('table %s { 1: membertype member; };\n' % ident)
+        f.write('table %s { 1: membertype member; };\n' % ident.ident)
     # a table with every dangerous name as the field type
     f.write('table DangerousMembers {\n')
-    for i, ident in enumerate(idents):
+    for ident in idents:
         # dangerous field type
-        f.write('  %d: %s f%d;\n' % (i + 1, ident, i))
+        f.write('  %s: %s f%s;\n' % (ident.tag, ident.ident, ident.tag - 1))
     f.write('};\n')
 
 
 @use
-def table_fields(f, idents):
+def table_fields(f, idents: List[Identifier]):
     # a table with every dangerous name as the field name
     f.write('table DangerousMembers {\n')
-    for i, ident in enumerate(idents):
-        f.write('  %d: uint32 %s;\n' % (i + 1, ident))
+    for ident in idents:
+        f.write('  %d: uint32 %s;\n' % (ident.tag, ident.ident))
     f.write('};\n')
 
 
 @use
-def protocol_names(f, idents):
+def protocol_names(f, idents: List[Identifier]):
     # a protocols with every dangerous name
     for ident in idents:
-        f.write('protocol %s { JustOneMethod(); };\n' % ident)
+        f.write('protocol %s { JustOneMethod(); };\n' % ident.ident)
 
 
 @use
-def method_names(f, idents):
+def method_names(f, idents: List[Identifier]):
     # a protocol with every dangerous name as a method name
     f.write('protocol DangerousMethods {\n')
     for ident in idents:
-        f.write('  %s();\n' % ident)
+        f.write('  %s();\n' % ident.ident)
     f.write('};\n')
 
 
 @use
-def event_names(f, idents):
+def event_names(f, idents: List[Identifier]):
     # a protocol with every dangerous name as an event name
     f.write('protocol DangerousEvents {\n')
     for ident in idents:
-        f.write('  -> %s();\n' % ident)
+        f.write('  -> %s();\n' % ident.ident)
     f.write('};\n')
 
 
 @use
-def method_request_arguments(f, idents):
+def method_request_arguments(f, idents: List[Identifier]):
     # a protocol with every dangerous name as a request argument
     f.write('using argtype = uint32;\n')
     f.write('protocol DangerousRequestArguments {\n')
-    for i, ident in enumerate(idents):
-        f.write('  Method%d(argtype %s);\n' % (i, ident))
+    for ident in idents:
+        f.write('  Method%d(argtype %s);\n' % (ident.tag - 1, ident.ident))
     f.write('};\n')
 
 
 @use
-def method_response_arguments(f, idents):
+def method_response_arguments(f, idents: List[Identifier]):
     # a protocol with every dangerous name as a response argument
     f.write('using argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
-    for i, ident in enumerate(idents):
-        f.write('  Method%d() -> (argtype %s);\n' % (i, ident))
+    for ident in idents:
+        f.write(
+            '  Method%d() -> (argtype %s);\n' % (ident.tag - 1, ident.ident))
     f.write('};\n')
 
 
 @use
-def method_event_arguments(f, idents):
+def method_event_arguments(f, idents: List[Identifier]):
     # a protocol with every dangerous name as a event argument
     f.write('using argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
-    for i, ident in enumerate(idents):
-        f.write('  -> Event%d(argtype %s);\n' % (i, ident))
+    for ident in idents:
+        f.write('  -> Event%d(argtype %s);\n' % (ident.tag - 1, ident.ident))
     f.write('};\n')
 
 
@@ -258,27 +283,42 @@ def library_target(library_name):
     return '//src/tests/fidl/dangerous_identifiers/fidl:%s' % library_name
 
 
-def dangerous_identifiers() -> List[List[str]]:
-    """Load a list of dangerous identifiers from the source tree."""
+def dangerous_identifiers() -> List[IdentifierDef]:
+    """Load a list of dangerous identifiers definitions from the source tree.
+
+  Verifies that all definitions are well formed, and that their tags are unique.
+  """
     file_path = os.path.join(DIR, 'dangerous_identifiers.txt')
-    dangerous = (
+    lines = (
         line.strip()
         for line in open(file_path).readlines()
         if not line.startswith('#'))
-    idents = [ident.split('_') for ident in dangerous]
 
-    assert all(
-        all(
-            all(c.islower() or c.isnumeric()
-                for c in piece)
-            for piece in ident)
-        for ident in idents), 'All identifiers must be in lower_camel_case'
+    failed = False
+    idents = []
+    tags_seen = set()
+    for line in lines:
+        line_search = re.match(r'^([a-z0-9_]+):([0-9]+)$', line)
+        if line_search:
+            parts = line_search.group(1).split('_')
+            tag = int(line_search.group(2))
+            if tag not in tags_seen:
+                tags_seen.add(tag)
+                idents.append(IdentifierDef(parts, tag))
+            else:
+                failed = True
+                print("line '%s' has duplicate tag" % line)
+        else:
+            failed = True
+            print("line '%s' is malformed" % line)
 
+    if failed:
+        exit(1)
     return idents
 
 
-def generate_fidl(identifiers: List[str]) -> List[str]:
-    """Generate FIDL libraries for the specified identifiers.
+def generate_fidl(identifier_defs: List[IdentifierDef]) -> List[str]:
+    """Generate FIDL libraries for the specified identifier definitions.
 
   Return the list of library names.
   """
@@ -294,7 +334,11 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
             with open(fidl_file, 'w') as f:
                 f.write(generated('//'))
                 f.write('library %s;\n' % library_name)
-                use_func(f, [style_func(r) for r in identifiers])
+                use_func(
+                    f, [
+                        Identifier(style_func(r.parts), r.tag)
+                        for r in identifier_defs
+                    ])
             subprocess.check_output([FIDL_FORMAT, '-i', fidl_file])
             library_names.append(library_name)
 
@@ -316,45 +360,49 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
     return library_names
 
 
-def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
+def generate_cpp(libraries: List[str]) -> None:
     directory = os.path.join(DIR, 'cpp')
     os.makedirs(directory, exist_ok=True)
-    # generate C++ test
-    for library_name in libraries:
-        with open(os.path.join(directory, '%s_test.cc' % library_name),
-                  'w') as f:
-            f.write(generated('//'))
-            f.write(
-                '#include <%s/cpp/fidl.h>\n' % (library_name.replace('.', '/')))
-            f.write('\nint main() { return 0; }\n')
-
     # generate BUILD.gn for C++ test
     build_file = os.path.join(directory, 'BUILD.gn')
     with open(build_file, 'w') as build_gn:
         build_gn.write(generated('#'))
         for library_name in libraries:
-            build_gn.write(
-                """source_set("%s_cpp") {
+            with open(os.path.join(directory, '%s_test.cc' % library_name),
+                      'w') as f:
+                f.write(generated('//'))
+                f.write(
+                    '#include <%s/cpp/fidl.h>\n' %
+                    (library_name.replace('.', '/')))
+                f.write('\nint main() { return 0; }\n')
+
+        # generate BUILD.gn for C++ test
+        build_file = os.path.join(directory, 'BUILD.gn')
+        with open(build_file, 'w') as build_gn:
+            build_gn.write(generated('#'))
+            for library_name in libraries:
+                build_gn.write(
+                    """source_set("%s_cpp") {
     output_name = "cpp_fidl_dangerous_identifiers_test_%s"
     sources = [ "%s_test.cc" ]
     deps = [
 """ % (library_name, library_name, library_name))
-            build_gn.write('    "%s",\n' % library_target(library_name))
-            build_gn.write('  ]\n}\n')
-        build_gn.write("""group("cpp") {
+                build_gn.write('    "%s",\n' % library_target(library_name))
+                build_gn.write('  ]\n}\n')
+            build_gn.write("""group("cpp") {
     deps = [""")
-        for library_name in libraries:
-            build_gn.write("""
+            for library_name in libraries:
+                build_gn.write("""
         ":%s_cpp",
 """ % (library_name))
-        build_gn.write("""
+            build_gn.write("""
     ]
   }""")
 
-    subprocess.check_output([GN, 'format', build_file])
+        subprocess.check_output([GN, 'format', build_file])
 
 
 if __name__ == '__main__':
-    identifiers = dangerous_identifiers()
-    library_names = generate_fidl(identifiers)
-    generate_cpp(identifiers, library_names)
+    identifier_defs = dangerous_identifiers()
+    library_names = generate_fidl(identifier_defs)
+    generate_cpp(library_names)

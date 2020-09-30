@@ -24,6 +24,7 @@ const uint32 Bool = 1;
 const uint32 Box = 1;
 const uint32 Break = 1;
 const uint32 Byte = 1;
+const uint32 Bytes = 1;
 const uint32 Case = 1;
 const uint32 Catch = 1;
 const uint32 Chan = 1;

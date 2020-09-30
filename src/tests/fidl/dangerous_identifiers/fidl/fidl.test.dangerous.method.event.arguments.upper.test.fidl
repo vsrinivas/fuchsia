@@ -27,6 +27,7 @@ protocol DangerousResponseArguments {
     -> Event18(argtype BOX);
     -> Event19(argtype BREAK);
     -> Event20(argtype BYTE);
+    -> Event214(argtype BYTES);
     -> Event21(argtype CASE);
     -> Event22(argtype CATCH);
     -> Event23(argtype CHAN);

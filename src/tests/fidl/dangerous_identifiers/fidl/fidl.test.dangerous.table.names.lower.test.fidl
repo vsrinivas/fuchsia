@@ -89,6 +89,10 @@ table byte {
     1: membertype member;
 };
 
+table bytes {
+    1: membertype member;
+};
+
 table case {
     1: membertype member;
 };
@@ -879,6 +883,7 @@ table DangerousMembers {
     19: box f18;
     20: break f19;
     21: byte f20;
+    215: bytes f214;
     22: case f21;
     23: catch f22;
     24: chan f23;

@@ -88,6 +88,10 @@ enum BYTE {
     MEMBER = 1;
 };
 
+enum BYTES {
+    MEMBER = 1;
+};
+
 enum CASE {
     MEMBER = 1;
 };
@@ -882,6 +886,7 @@ enum DangerousMembers {
     BOX = 18;
     BREAK = 19;
     BYTE = 20;
+    BYTES = 214;
     CASE = 21;
     CATCH = 22;
     CHAN = 23;
