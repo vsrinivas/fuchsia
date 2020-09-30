@@ -139,12 +139,12 @@ func (r *Repository) lookupUpdateContentPackageMerkle(updatePackageName string, 
 	if err != nil {
 		return "", err
 	}
-	f, err := p.Open("packages")
+	f, err := p.Open("packages.json")
 	if err != nil {
 		return "", err
 	}
 
-	packages, err := util.ParsePackageList(f)
+	packages, err := util.ParsePackagesJSON(f)
 	if err != nil {
 		return "", err
 	}

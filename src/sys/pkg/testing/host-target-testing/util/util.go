@@ -6,7 +6,6 @@ package util
 
 import (
 	"archive/tar"
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -104,24 +103,6 @@ func untarNext(dst string, tr *tar.Reader, header *tar.Header) error {
 	}
 
 	return nil
-}
-
-func ParsePackageList(rd io.Reader) (map[string]string, error) {
-	scanner := bufio.NewScanner(rd)
-	packages := make(map[string]string)
-	for scanner.Scan() {
-		s := strings.TrimSpace(scanner.Text())
-		entry := strings.Split(s, "=")
-		if len(entry) != 2 {
-			return nil, fmt.Errorf("parser: entry format: %q", s)
-		}
-		packages[entry[0]] = entry[1]
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return packages, nil
 }
 
 type PackageJSON struct {

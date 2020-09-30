@@ -14,61 +14,6 @@ func pkgURL(name, hash string) string {
 	return fmt.Sprintf("fuchsia-pkg://host/%s?hash=%s", name, hash)
 }
 
-func TestParseCompat(t *testing.T) {
-	tests := []struct {
-		id   string
-		list string
-		json []byte
-	}{
-		{
-			id:   "single package match",
-			list: "abc/0=def\n",
-			json: []byte(fmt.Sprintf(`{"version":1,"content":["%s"]}`, pkgURL("abc/0", "def"))),
-		},
-		{
-			id:   "multiple package match",
-			list: "abc/0=def\nghi/0=jkl",
-			json: []byte(fmt.Sprintf(`{"version":1,"content":["%s","%s"]}`, pkgURL("abc/0", "def"), pkgURL("ghi/0", "jkl"))),
-		},
-		{
-			id:   "order immaterial",
-			list: "ghi/0=jkl\nabc/0=def",
-			json: []byte(fmt.Sprintf(`{"version":1,"content":["%s","%s"]}`, pkgURL("abc/0", "def"), pkgURL("ghi/0", "jkl"))),
-		},
-		{
-			id:   "variant-less match",
-			list: "abc=def\n",
-			json: []byte(fmt.Sprintf(`{"version":1,"content":["%s"]}`, pkgURL("abc", "def"))),
-		},
-	}
-
-	for _, test := range tests {
-		r := bytes.NewBufferString(test.list)
-		listMap, err := ParsePackageList(r)
-		if err != nil {
-			t.Errorf("test %s: failed to parse package list", test.id)
-		}
-
-		r = bytes.NewBuffer(test.json)
-		jsonMap, err := ParsePackagesJSON(r)
-		if err != nil {
-			t.Errorf("test %s: failed to parse packages.json", test.id)
-		}
-
-		if len(jsonMap) != len(listMap) {
-			t.Errorf("test %s: got %d packages from json; want %d from list", test.id, len(jsonMap), len(listMap))
-		}
-
-		for k, v := range jsonMap {
-			if lv, ok := listMap[k]; !ok {
-				t.Errorf("test %s: got key %s in json; not found in list", test.id, k)
-			} else if v != lv {
-				t.Errorf("test %s: got value %s for key %s in json, want %s from list", test.id, v, k, lv)
-			}
-		}
-	}
-}
-
 type pkgMerkle struct {
 	name string
 	hash string
