@@ -54,6 +54,16 @@ enum Role {
     CHECK_BOX = 8;
     /// A radio button that selects an option among a group of options.
     RADIO_BUTTON = 9;
+
+    /// Role used to represent lists.
+    LIST = 10;
+
+    /// Role used to represent a list marker (e.g. a bullet point, number, roman
+    /// numeral, etc.).
+    LIST_ELEMENT_MARKER = 12;
+
+    /// Role used to represent immutable text.
+    STATIC_TEXT = 13;
 };
 
 /// Slider / range control attributes.
@@ -62,7 +72,7 @@ table RangeAttributes {
     1: float32 min_value;
     /// The maximum value a range control element can take.
     2: float32 max_value;
-    /// The step delta the element applies when the action DECREMENT or 
+    /// The step delta the element applies when the action DECREMENT or
     /// INCREMENT are invoked.
     3: float32 step_delta;
 };
@@ -102,6 +112,13 @@ table Attributes {
     /// Set attributes are filled if the element is part of some type of set.
     /// For example, radio buttons that are related are part of the same set.
     5: SetAttributes set;
+
+    /// The list attributes are filled iff the node is a list.
+    /// Note that only the size and set_element_ids may be filled for a list node.
+    6: SetAttributes list_attributes;
+
+    /// The list element attributes are filled iff the node is a child of a list node.
+    7: SetAttributes list_element_attributes;
 };
 
 /// Represents the state of a UI checkbox.
