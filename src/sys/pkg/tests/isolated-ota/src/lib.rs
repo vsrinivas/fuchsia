@@ -20,10 +20,10 @@ use {
     futures::prelude::*,
     http::uri::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
-    itertools::Itertools,
     matches::assert_matches,
     mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    serde_json::json,
     std::{
         collections::{BTreeSet, HashMap},
         str::FromStr,
@@ -115,21 +115,23 @@ impl TestEnvBuilder {
     }
 
     fn generate_packages(&self) -> String {
-        // FIXME(51061): switch to new update package format.
-        format!(
-            "{}",
-            self.packages.iter().format_with("\n", |p, f| f(&format_args!(
-                "{}/0={}",
-                p.name(),
-                p.meta_far_merkle_root()
-            )))
-        )
+        json!({
+            "version": "1",
+            "content": self.packages
+                .iter()
+                .map(|p| format!("{}/{}/0?hash={}",
+                                 TEST_REPO_URL,
+                                 p.name(),
+                                 p.meta_far_merkle_root()))
+                .collect::<Vec<String>>(),
+        })
+        .to_string()
     }
 
     /// Turn this |TestEnvBuilder| into a |TestEnv|
     pub async fn build(mut self) -> Result<TestEnv, Error> {
         let mut update = PackageBuilder::new("update")
-            .add_resource_at("packages", self.generate_packages().as_bytes());
+            .add_resource_at("packages.json", self.generate_packages().as_bytes());
 
         let (repo_config, served_repo, cert_dir, packages, merkle) = if self.repo_config.is_none() {
             // If no repo config was specified, host a repo containing the provided packages,
