@@ -25,7 +25,4 @@ driver_module("realtek-8111") {
     "//src/lib/ddk",
     "//zircon/public/lib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

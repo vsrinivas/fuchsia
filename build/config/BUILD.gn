@@ -654,7 +654,7 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/hci/vendor/broadcom/*",
     "//src/connectivity/bluetooth/tools/bt-hci-tool/*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool/*",
-    "//src/connectivity/ethernet/drivers/*",
+    "//src/connectivity/ethernet/drivers/asix-88772b/*",
     "//src/connectivity/management/reachability/core/*",
     "//src/connectivity/network/netstack/tests/manual/*",
     "//src/connectivity/network/tun/network-tun/*",
