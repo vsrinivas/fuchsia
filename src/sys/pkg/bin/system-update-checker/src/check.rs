@@ -206,45 +206,29 @@ pub mod test_check_for_system_update_impl {
             PackageResolverProxyTempDir { temp_dir }
         }
 
-        fn new_with_empty_packages_file() -> PackageResolverProxyTempDir {
+        fn new_with_empty_packages_json() -> PackageResolverProxyTempDir {
             let temp_dir = tempfile::tempdir().expect("create temp dir");
             fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
                 .expect("write meta");
-            fs::File::create(format!(
-                "{}/packages",
-                temp_dir.path().to_str().expect("path is utf8")
-            ))
-            .expect("create empty packages file");
+            let mut packages_json = fs::File::create(
+                temp_dir.path().join("packages.json").to_str().expect("path is utf8"),
+            )
+            .expect("create packages.json");
+            write!(&mut packages_json, r#"{{"version": "1", "content": []}}"#)
+                .expect("write json with no contents");
             PackageResolverProxyTempDir { temp_dir }
         }
 
-        fn new_with_latest_system_image_merkle(merkle: &str) -> PackageResolverProxyTempDir {
+        fn new_with_latest_system_image(merkle: &str) -> PackageResolverProxyTempDir {
             let temp_dir = tempfile::tempdir().expect("create temp dir");
             fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
                 .expect("write meta");
-            let mut packages_file = fs::File::create(format!(
-                "{}/packages",
-                temp_dir.path().to_str().expect("path is utf8")
-            ))
-            .expect("create empty packages file");
-            write!(&mut packages_file, "system_image/0={}\n", merkle)
-                .expect("write to package file");
-            PackageResolverProxyTempDir { temp_dir }
-        }
-
-        fn new_with_latest_system_image_using_versioned_manifest(
-            merkle: &str,
-        ) -> PackageResolverProxyTempDir {
-            let temp_dir = tempfile::tempdir().expect("create temp dir");
-            fs::write(temp_dir.path().join("meta"), UPDATE_PACKAGE_MERKLE.to_string())
-                .expect("write meta");
-            let mut packages_file = fs::File::create(format!(
-                "{}/packages.json",
-                temp_dir.path().to_str().expect("path is utf8")
-            ))
-            .expect("create empty packages file");
+            let mut packages_json = fs::File::create(
+                temp_dir.path().join("packages.json").to_str().expect("path is utf8"),
+            )
+            .expect("create packages.json");
             write!(
-                &mut packages_file,
+                &mut packages_json,
                 r#"{{"version": "1", "content": ["fuchsia-pkg://fuchsia.com/system_image/0?hash={}"]}}"#,
                 merkle
             )
@@ -396,7 +380,7 @@ pub mod test_check_for_system_update_impl {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_update_package_missing_packages_file() {
+    async fn test_update_package_missing_packages_json() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
 
@@ -409,9 +393,9 @@ pub mod test_check_for_system_update_impl {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_update_package_empty_packages_file() {
+    async fn test_update_package_empty_packages_json() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
-        let package_resolver = PackageResolverProxyTempDir::new_with_empty_packages_file();
+        let package_resolver = PackageResolverProxyTempDir::new_with_empty_packages_json();
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
@@ -422,10 +406,10 @@ pub mod test_check_for_system_update_impl {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_update_package_bad_system_image_merkle() {
+    async fn test_update_package_bad_system_image() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver =
-            PackageResolverProxyTempDir::new_with_latest_system_image_merkle("bad-merkle");
+            PackageResolverProxyTempDir::new_with_latest_system_image("bad-merkle");
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
         assert_matches!(
@@ -437,32 +421,8 @@ pub mod test_check_for_system_update_impl {
     #[fasync::run_singlethreaded(test)]
     async fn test_up_to_date() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
-        let package_resolver = PackageResolverProxyTempDir::new_with_latest_system_image_merkle(
-            ACTIVE_SYSTEM_IMAGE_MERKLE,
-        );
-
-        let result = check_for_system_update_impl(
-            &mut file_system,
-            &package_resolver,
-            Some(&UPDATE_PACKAGE_MERKLE),
-        )
-        .await;
-        assert_matches!(
-            result,
-            Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
-            if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
-                .parse()
-                .expect("active system image string literal")
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_up_to_date_versioned_packages_manifest() {
-        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver =
-            PackageResolverProxyTempDir::new_with_latest_system_image_using_versioned_manifest(
-                ACTIVE_SYSTEM_IMAGE_MERKLE,
-            );
+            PackageResolverProxyTempDir::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -482,9 +442,8 @@ pub mod test_check_for_system_update_impl {
     #[fasync::run_singlethreaded(test)]
     async fn test_update_available() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
-        let package_resolver = PackageResolverProxyTempDir::new_with_latest_system_image_merkle(
-            NEW_SYSTEM_IMAGE_MERKLE,
-        );
+        let package_resolver =
+            PackageResolverProxyTempDir::new_with_latest_system_image(NEW_SYSTEM_IMAGE_MERKLE);
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
@@ -504,9 +463,8 @@ pub mod test_check_for_system_update_impl {
     #[fasync::run_singlethreaded(test)]
     async fn test_update_package_only_update_available() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
-        let package_resolver = PackageResolverProxyTempDir::new_with_latest_system_image_merkle(
-            ACTIVE_SYSTEM_IMAGE_MERKLE,
-        );
+        let package_resolver =
+            PackageResolverProxyTempDir::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
 
         let previous_update_package = Hash::from([0x44; 32]);
         let result = check_for_system_update_impl(
