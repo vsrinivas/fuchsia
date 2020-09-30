@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/syscalls/port.h>
 
 #include <gtest/gtest.h>
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <cstddef>

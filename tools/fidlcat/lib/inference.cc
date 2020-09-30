@@ -4,8 +4,8 @@
 
 #include "tools/fidlcat/lib/inference.h"
 
-#include <zircon/system/public/zircon/processargs.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/processargs.h>
+#include <zircon/types.h>
 
 #include <ios>
 #include <ostream>

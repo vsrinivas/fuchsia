@@ -5,13 +5,13 @@
 #ifndef TOOLS_FIDLCAT_LIB_TYPE_DECODER_H_
 #define TOOLS_FIDLCAT_LIB_TYPE_DECODER_H_
 
-#include <zircon/system/public/zircon/rights.h>
-#include <zircon/system/public/zircon/syscalls/debug.h>
-#include <zircon/system/public/zircon/syscalls/exception.h>
-#include <zircon/system/public/zircon/syscalls/hypervisor.h>
-#include <zircon/system/public/zircon/syscalls/object.h>
-#include <zircon/system/public/zircon/syscalls/resource.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/hypervisor.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/resource.h>
+#include <zircon/types.h>
 
 #include <cinttypes>
 #include <cstdint>

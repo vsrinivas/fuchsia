@@ -4,8 +4,8 @@
 
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
-#include <zircon/system/public/zircon/errors.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <fstream>

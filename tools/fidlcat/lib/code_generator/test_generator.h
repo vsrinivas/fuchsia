@@ -1,7 +1,7 @@
 #ifndef TOOLS_FIDLCAT_LIB_CODE_GENERATOR_TEST_GENERATOR_H_
 #define TOOLS_FIDLCAT_LIB_CODE_GENERATOR_TEST_GENERATOR_H_
 
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/types.h>
 
 #include <filesystem>
 

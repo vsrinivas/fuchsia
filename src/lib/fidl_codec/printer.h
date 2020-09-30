@@ -6,15 +6,15 @@
 #define SRC_LIB_FIDL_CODEC_PRINTER_H_
 
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/system/public/zircon/rights.h>
-#include <zircon/system/public/zircon/syscalls/debug.h>
-#include <zircon/system/public/zircon/syscalls/exception.h>
-#include <zircon/system/public/zircon/syscalls/object.h>
-#include <zircon/system/public/zircon/syscalls/pci.h>
-#include <zircon/system/public/zircon/syscalls/port.h>
-#include <zircon/system/public/zircon/syscalls/profile.h>
-#include <zircon/system/public/zircon/syscalls/resource.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/syscalls/profile.h>
+#include <zircon/syscalls/resource.h>
+#include <zircon/types.h>
 
 #include <cinttypes>
 #include <cstdint>

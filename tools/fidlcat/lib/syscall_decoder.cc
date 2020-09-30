@@ -5,7 +5,7 @@
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <cstddef>

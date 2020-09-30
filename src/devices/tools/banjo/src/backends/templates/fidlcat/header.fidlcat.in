@@ -5,13 +5,13 @@
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
 // Generated from the {primary_namespace} banjo file
 
-#include <zircon/system/public/zircon/errors.h>
-#include <zircon/system/public/zircon/syscalls/pci.h>
-#include <zircon/system/public/zircon/syscalls/port.h>
-#include <zircon/system/public/zircon/syscalls/profile.h>
-#include <zircon/system/public/zircon/syscalls/smc.h>
-#include <zircon/system/public/zircon/syscalls/system.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/syscalls/profile.h>
+#include <zircon/syscalls/smc.h>
+#include <zircon/syscalls/system.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <memory>

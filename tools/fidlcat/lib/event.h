@@ -5,7 +5,7 @@
 #ifndef TOOLS_FIDLCAT_LIB_EVENT_H_
 #define TOOLS_FIDLCAT_LIB_EVENT_H_
 
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <memory>

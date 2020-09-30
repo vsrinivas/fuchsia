@@ -4,13 +4,13 @@
 
 #include "src/lib/fidl_codec/display_handle.h"
 
-#include <zircon/system/public/zircon/features.h>
-#include <zircon/system/public/zircon/rights.h>
-#include <zircon/system/public/zircon/syscalls/exception.h>
-#include <zircon/system/public/zircon/syscalls/object.h>
-#include <zircon/system/public/zircon/syscalls/port.h>
-#include <zircon/system/public/zircon/syscalls/system.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/features.h>
+#include <zircon/rights.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/syscalls/port.h>
+#include <zircon/syscalls/system.h>
+#include <zircon/types.h>
 
 #include <iomanip>
 

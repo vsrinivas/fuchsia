@@ -4,8 +4,8 @@
 
 #include "src/lib/fidl_codec/semantic.h"
 
-#include <zircon/system/public/zircon/processargs.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/processargs.h>
+#include <zircon/types.h>
 
 #include <string>
 

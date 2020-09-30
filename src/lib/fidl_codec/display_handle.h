@@ -5,8 +5,8 @@
 #ifndef SRC_LIB_FIDL_CODEC_DISPLAY_HANDLE_H_
 #define SRC_LIB_FIDL_CODEC_DISPLAY_HANDLE_H_
 
-#include <zircon/system/public/zircon/syscalls/debug.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/syscalls/debug.h>
+#include <zircon/types.h>
 
 #include <ostream>
 

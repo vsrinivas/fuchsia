@@ -5,7 +5,7 @@
 #ifndef TOOLS_FIDLCAT_LIB_FIDLCAT_PRINTER_H_
 #define TOOLS_FIDLCAT_LIB_FIDLCAT_PRINTER_H_
 
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/types.h>
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/lib/fidl_codec/wire_object.h"

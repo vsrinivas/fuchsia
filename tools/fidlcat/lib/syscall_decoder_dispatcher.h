@@ -6,8 +6,8 @@
 #define TOOLS_FIDLCAT_LIB_SYSCALL_DECODER_DISPATCHER_H_
 
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/system/public/zircon/errors.h>
-#include <zircon/system/public/zircon/types.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <cinttypes>
 #include <cstddef>
