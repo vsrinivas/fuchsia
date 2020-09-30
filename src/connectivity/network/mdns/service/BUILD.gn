@@ -117,9 +117,6 @@ source_set("source_set") {
   if (enable_mdns_trace) {
     defines = [ "MDNS_TRACE" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("mdns_test") {
@@ -146,9 +143,6 @@ test("mdns_test") {
   if (enable_mdns_trace) {
     defines = [ "MDNS_TRACE" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("mdns") {
@@ -221,9 +215,6 @@ fuzzer("packet_reader_fuzzer") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/inet",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuzzers_package("mdns_fuzzers") {

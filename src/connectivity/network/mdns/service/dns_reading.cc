@@ -29,7 +29,7 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
     if ((label_size & 0xc0) == 0xc0) {
       // We have an offset rather than the actual name. The offset is in the
       // 14 bits following two 1's.
-      uint16_t offset = (label_size & 0x3f) << 8;
+      uint16_t offset = static_cast<uint16_t>((label_size & 0x3f) << 8);
       reader >> label_size;
       offset |= label_size;
 
