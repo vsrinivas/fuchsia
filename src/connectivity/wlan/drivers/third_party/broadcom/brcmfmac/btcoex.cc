@@ -336,7 +336,7 @@ idle:
   brcmf_btcoex_boost_wifi(btci, false);
   cfg80211_crit_proto_stopped(&btci->vif->wdev);
   brcmf_btcoex_restore_part1(btci);
-  btci->vif = NULL;
+  btci->vif = nullptr;
 }
 
 /**
@@ -346,7 +346,7 @@ idle:
  * return: 0 on success
  */
 zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
-  struct brcmf_btcoex_info* btci = NULL;
+  struct brcmf_btcoex_info* btci = nullptr;
   BRCMF_DBG(TRACE, "enter");
 
   btci = static_cast<decltype(btci)>(malloc(sizeof(struct brcmf_btcoex_info)));
@@ -359,7 +359,8 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
   /* Set up timer for BT  */
   btci->timer_on = false;
   btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
-  btci->timer = new Timer(cfg->pub, std::bind(brcmf_btcoex_timerfunc, btci), false);
+  btci->timer = new Timer(
+      cfg->pub, [btci] { return brcmf_btcoex_timerfunc(btci); }, false);
   btci->cfg = cfg;
   btci->saved_regs_part1 = false;
   btci->saved_regs_part2 = false;
@@ -393,7 +394,7 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg) {
 
   delete cfg->btcoex->timer;
   free(cfg->btcoex);
-  cfg->btcoex = NULL;
+  cfg->btcoex = nullptr;
 }
 
 static void brcmf_btcoex_dhcp_start(struct brcmf_btcoex_info* btci) {
