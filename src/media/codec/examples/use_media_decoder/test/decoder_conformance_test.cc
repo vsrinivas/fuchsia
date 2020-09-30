@@ -147,6 +147,9 @@ int decoder_conformance_test(int argc, char* argv[], UseVideoDecoderFunction use
              loop_test_index, pass_count, fail_count);
     }
 
+    zx_status_t status = in_stream_peeker->ResetToStart();
+    ZX_ASSERT(status == ZX_OK);
+
     MD5_CTX md5_ctx{};
     ZX_ASSERT(MD5_Init(&md5_ctx));
 
@@ -225,9 +228,6 @@ int decoder_conformance_test(int argc, char* argv[], UseVideoDecoderFunction use
     } else {
       ++fail_count;
     }
-
-    zx_status_t status = in_stream_peeker->ResetToStart();
-    ZX_ASSERT(status == ZX_OK);
   }
 
   if (!overall_result) {

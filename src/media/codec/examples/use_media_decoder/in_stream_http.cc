@@ -28,37 +28,7 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
       [](zx_status_t status) { Exit("http_loader_ failed - status: %lu", status); });
   component_context->svc()->Connect(http_loader_.NewRequest(fidl_dispatcher_));
 
-  fuchsia::net::http::Request http_request{};
-  // url_ is already UTF-8
-  http_request.set_url(url_);
-
-  fuchsia::net::http::Response http_response{};
-  OneShotEvent have_response_event;
-  http_loader_->Fetch(std::move(http_request), [&http_response, &have_response_event](
-                                                   fuchsia::net::http::Response response_param) {
-    http_response = std::move(response_param);
-    have_response_event.Signal();
-  });
-  have_response_event.Wait(zx::deadline_after(zx::sec(30)));
-
-  if (http_response.has_error()) {
-    fprintf(stderr, "*response.error: %d\n", http_response.error());
-  }
-
-  ZX_ASSERT_MSG(!http_response.has_error(), "http response has error");
-  ZX_ASSERT_MSG(http_response.has_body(), "http response missing body");
-
-  if (http_response.has_headers()) {
-    for (auto& header : http_response.headers()) {
-      // TODO(dustingreen): deal with chunked encoding, or switch to a new http
-      // client impl that deals with de-chunking before we see the data. For now
-      // we rely on the http server to not generate chunked encoding.
-      ZX_ASSERT(!(std::string(header.name.begin(), header.name.end()) == "transfer-encoding" &&
-                  std::string(header.value.begin(), header.value.end()) == "chunked"));
-    }
-  }
-
-  socket_ = std::move(*http_response.mutable_body());
+  ResetToStartInternal(zx::deadline_after(zx::sec(30)));
 }
 
 InStreamHttp::~InStreamHttp() {
@@ -115,4 +85,45 @@ zx_status_t InStreamHttp::ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t
   }
   FX_NOTREACHED();
   return ZX_ERR_INTERNAL;
+}
+
+zx_status_t InStreamHttp::ResetToStartInternal(zx::time just_fail_deadline) {
+  fuchsia::net::http::Request http_request{};
+  // url_ is already UTF-8
+  http_request.set_url(url_);
+
+  fuchsia::net::http::Response http_response{};
+  OneShotEvent have_response_event;
+  http_loader_->Fetch(std::move(http_request), [&http_response, &have_response_event](
+                                                   fuchsia::net::http::Response response_param) {
+    http_response = std::move(response_param);
+    have_response_event.Signal();
+  });
+  have_response_event.Wait(zx::deadline_after(zx::sec(30)));
+
+  if (http_response.has_error()) {
+    fprintf(stderr, "*response.error: %d\n", http_response.error());
+  }
+
+  // test only
+  ZX_ASSERT_MSG(!http_response.has_error(), "http response has error");
+  ZX_ASSERT_MSG(http_response.has_body(), "http response missing body");
+
+  if (http_response.has_headers()) {
+    for (auto& header : http_response.headers()) {
+      // TODO(dustingreen): deal with chunked encoding, or switch to a new http
+      // client impl that deals with de-chunking before we see the data. For now
+      // we rely on the http server to not generate chunked encoding.
+      ZX_ASSERT(!(std::string(header.name.begin(), header.name.end()) == "transfer-encoding" &&
+                  std::string(header.value.begin(), header.value.end()) == "chunked"));
+    }
+  }
+
+  socket_ = std::move(*http_response.mutable_body());
+  cursor_position_ = 0;
+  failure_seen_ = false;
+  eos_position_known_ = false;
+  eos_position_ = 0;
+
+  return ZX_OK;
 }

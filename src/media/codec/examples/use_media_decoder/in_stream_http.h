@@ -20,6 +20,8 @@ class InStreamHttp : public InStream {
   zx_status_t ReadBytesInternal(uint32_t max_bytes_to_read, uint32_t* bytes_read_out,
                                 uint8_t* buffer_out, zx::time deadline) override;
 
+  zx_status_t ResetToStartInternal(zx::time just_fail_deadline) override;
+
   const std::string url_;
   fuchsia::net::http::LoaderPtr http_loader_;
   // The Response.body.stream socket.

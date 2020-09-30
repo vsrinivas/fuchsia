@@ -111,6 +111,9 @@ void InStream::FencePostToFidlSerial() {
 
 zx_status_t InStream::ResetToStart(zx::time just_fail_deadline) {
   ZX_DEBUG_ASSERT(thrd_current() != fidl_thread_);
+  if (cursor_position_ == 0) {
+    return ZX_OK;
+  }
   return ResetToStartInternal(just_fail_deadline);
 }
 
