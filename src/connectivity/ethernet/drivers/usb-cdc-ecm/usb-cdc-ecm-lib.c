@@ -58,7 +58,7 @@ static bool parse_cdc_ethernet_descriptor(ecm_ctx_t* ctx,
       return false;
     }
     if (ndx % 4 == 0) {
-      ctx->mac_addr[ndx / 4] = value << 4;
+      ctx->mac_addr[ndx / 4] = (uint8_t)(value << 4);
     } else {
       ctx->mac_addr[ndx / 4] |= value;
     }
