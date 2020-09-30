@@ -23,6 +23,9 @@
 ##  fx metrics disable
 ##       Disable metrics collection in fx tools
 ##
+## If you opt-in to metrics collection, data will be collected and used by
+## Google in accordance with the Google privacy policy
+## (https://policies.google.com/privacy)
 
 set -e
 
@@ -62,6 +65,14 @@ new UUID will be created if metrics is later re-enabled.
 
 When enabled, the UUID and the status are stored in ${METRICS_CONFIG}
 
+EOF
+}
+
+function describe-privacy-policy {
+  cat << EOF
+If you opt-in to metrics collection, data will be collected and used by Google
+in accordance with the Google privacy policy
+(https://policies.google.com/privacy)
 EOF
 }
 
@@ -149,6 +160,7 @@ fi
 
 if [[ $action == "enable" ]]; then
   maybe-print-metrics-logfile-status
+  describe-privacy-policy
   if [[ $METRICS_ENABLED -eq 1 ]]; then
     echo "Metrics collection is already enabled."
     exit 0
@@ -180,4 +192,3 @@ fi
 
 metrics-write-config "${METRICS_ENABLED}" "${METRICS_UUID}" "${debug_logfile}"
 echo "Collection of metrics is now $(styled-status $METRICS_ENABLED) for ${FUCHSIA_DIR}"
-
