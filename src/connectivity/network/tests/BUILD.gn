@@ -252,9 +252,6 @@ test("netstack_bsdsocket_c_api_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("netstack_if_nameindex_test") {
@@ -287,9 +284,6 @@ test("netstack_fuchsia_c_api_test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("netstack_no_network_test") {
