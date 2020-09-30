@@ -13,7 +13,7 @@ From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_pa
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:84
+From //build/images/args.gni:87
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -21,7 +21,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:90
+From //build/images/args.gni:93
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -31,7 +31,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:96
+From //build/images/args.gni:99
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -54,7 +54,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:108
+From //build/images/args.gni:111
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -208,6 +208,16 @@ required for the filesystem.
 
 From //build/images/fvm.gni:46
 
+### blobfs_page_in_metrics_recording
+Set this to true when configuring gn args to enable blobfs page-in
+metrics recording.
+This will also increase the inspect VMO size for blobfs to 2 MiB,
+to accommodate the large number of metrics entries.
+
+**Current value (from the default):** `false`
+
+From //src/storage/blobfs/BUILD.gn:22
+
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
 
@@ -313,7 +323,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:138
+From //build/images/args.gni:141
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -442,6 +452,13 @@ Whether to build SDK tarballs.
 
 From //build/sdk/config.gni:7
 
+### build_uefi_disk
+Generate a UEFI disk image
+
+**Current value (from the default):** `false`
+
+From //build/images/args.gni:21
+
 ### cache_package_labels
 If you add package labels to this variable, the packages will be included
 in the 'cache' package set, which represents an additional set of software
@@ -499,7 +516,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:102
+From //build/images/args.gni:105
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -540,7 +557,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:105
+From //build/images/args.gni:108
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -663,7 +680,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:58
+From //build/images/args.gni:61
 
 ### debian_guest_earlycon
 
@@ -750,7 +767,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:63
+From //build/images/args.gni:66
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -822,7 +839,7 @@ From //build/config/BUILDCONFIG.gn:862
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:85
+From //build/images/args.gni:88
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -848,7 +865,7 @@ Each entry in the list is a scope containing:
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:43
+From //build/images/args.gni:46
 
 ### firmware_prebuilts_path_suffix
 Suffix to append to all `firmware_prebuilts` `path` variables.
@@ -858,7 +875,7 @@ that users can easily switch revisions using a single arg.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:49
+From //build/images/args.gni:52
 
 ### flutter_default_app
 
@@ -999,7 +1016,7 @@ From //build/images/fvm.gni:30
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:86
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -1032,7 +1049,7 @@ From //build/go/go_build.gni:21
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/fidling/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/fidling/.gocache"`
 
 From //build/go/go_build.gni:17
 
@@ -1057,7 +1074,7 @@ Typically useful for initially flashing a device from zero-state.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:54
+From //build/images/args.gni:57
 
 ### graphics_compute_generate_debug_shaders
 Set to true in your args.gn file to generate pre-processed and
@@ -1199,7 +1216,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:115
+From //build/images/args.gni:118
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1292,7 +1309,7 @@ From //products/core.gni:14
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:23
+From //build/images/args.gni:26
 
 **Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
@@ -1300,7 +1317,7 @@ From //products/core.gni:14
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:23
+From //build/images/args.gni:26
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -1310,7 +1327,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:29
+From //build/images/args.gni:32
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1568,7 +1585,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:38
 
 ### magma_python_path
 
-**Current value (from the default):** `"/b/s/w/ir/k/third_party/mako"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/third_party/mako"`
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:20
 
@@ -1675,7 +1692,7 @@ From //products/core.gni:16
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:66
+From //build/images/args.gni:69
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
@@ -1683,7 +1700,7 @@ From //products/core.gni:16
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:66
+From //build/images/args.gni:69
 
 ### minfs_maximum_bytes
 
@@ -1795,7 +1812,7 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:127
+From //build/images/args.gni:130
 
 ### persist_logs
 
@@ -1807,7 +1824,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:112
+From //build/images/args.gni:115
 
 ### platform_enable_user_pci
 
@@ -1819,7 +1836,7 @@ From //src/devices/bus/drivers/pci/pci.gni:10
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:86
+From //build/images/args.gni:89
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -1890,7 +1907,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:124
+From //build/images/args.gni:127
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -2458,7 +2475,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:35
+From //build/images/args.gni:38
 
 ### use_cast_runner_canary
 If true then the most recent canary version of the Cast Runner is used,
@@ -2591,19 +2608,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:83
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:81
+From //build/images/args.gni:84
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:82
+From //build/images/args.gni:85
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -2747,7 +2764,7 @@ doesn't require the FVM or SSH keys.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:77
+From //build/images/args.gni:80
 
 ### zircon_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2765,7 +2782,7 @@ silently clobber the default value shown here.
 {
   default_deps = ["//:legacy-arm64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-arm64"]
   disable_kernel_pci = false
-  goma_dir = "/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"
+  goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
   rustc_version_string = "0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"
   use_ccache = false
@@ -2788,7 +2805,7 @@ From //build/config/fuchsia/BUILD.gn:193
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:78
+From //build/images/args.gni:81
 
 ### zircon_build_root
 
@@ -2840,7 +2857,7 @@ From //build/config/zircon/levels.gni:18
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:79
+From //build/images/args.gni:82
 
 ### zircon_toolchain
 *This should never be set as a build argument.*

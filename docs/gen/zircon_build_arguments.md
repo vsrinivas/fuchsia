@@ -16,7 +16,7 @@ injected that way can override that option's setting in this list.
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:4
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:4
 
 **Overridden from the default:** `[]`
 
@@ -42,7 +42,7 @@ hexadecimal of any length), `xx/yyy` is a hard link to the stripped
 file and `xx/yyy.debug` is a hard link to the unstripped file.
 Symbolization tools and debuggers find symbolic information this way.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/.build-id"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir.zircon/.build-id"`
 
 From //public/gn/toolchain/c_toolchain.gni:20
 
@@ -68,7 +68,7 @@ From //public/gn/toolchain/clang.gni:17
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/clang-crashreports"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir.zircon/clang-crashreports"`
 
 From //public/gn/config/BUILD.zircon.gn:14
 
@@ -95,7 +95,7 @@ TODO(fxbug.dev/3156): This must be set by the controlling Fuchsia GN build.
 
 **Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-x64"]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:12
 
 **Overridden from the default:** `false`
 
@@ -107,7 +107,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `false`
 
@@ -269,9 +269,9 @@ From //public/gn/toolchain/gcc.gni:19
 Directory containing the Goma source code.  This can be a GN
 source-absolute path ("//...") or a system absolute path.
 
-**Current value for `target_cpu = `:** `"/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"`
+**Current value for `target_cpu = `:** `"/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:18
 
 **Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
@@ -345,7 +345,7 @@ injected that way can override that option's setting in this list.
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:5
 
 **Overridden from the default:** `[]`
 
@@ -383,7 +383,7 @@ Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:19
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
 
 **Overridden from the default:** `false`
 
@@ -409,7 +409,7 @@ prebuilt.
 
 **Current value for `target_cpu = `:** `"0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:20
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:20
 
 **Overridden from the default:** `""`
 
@@ -516,7 +516,7 @@ injected that way can override that option's setting in this list.
 
 **Current value for `target_cpu = `:** `["print_stacktrace=1", "halt_on_error=1"]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:6
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:6
 
 **Overridden from the default:** `["print_stacktrace=1", "halt_on_error=1"]`
 
@@ -527,7 +527,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:21
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:21
 
 **Overridden from the default:** `false`
 
@@ -538,7 +538,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:22
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:22
 
 **Overridden from the default:** `false`
 
@@ -782,7 +782,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:23
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:23
 
 **Overridden from the default:** `[]`
 
@@ -801,7 +801,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:24
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:24
 
 **Overridden from the default:** `"zstd"`
 
@@ -843,7 +843,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:25
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:25
 
 **Overridden from the default:** `0`
 
