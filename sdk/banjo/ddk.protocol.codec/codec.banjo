@@ -15,16 +15,16 @@ enum SampleFormat : uint8 {
 enum FrameFormat : uint8 {
     /// No frame format as in samples without a frame sync like PDM.
     NONE = 1;
-    /// Justification as specified in the I2S specification (left justified, 2 channels, 32 bits per
+    /// Format as specified in the I2S specification (left justified, 2 channels, 32 bits per
     /// channel, frame sync stays low for the left channel and high for the right channel, data
-    /// starts one clock cycle after frame sync changes clocked out at the rising edge of sclk).
+    /// starts one clock cycle after frame sync changes clocked out at the falling edge of sclk).
     I2S = 2;
     /// Left justified, 2 channels, data starts at frame sync changes from low to high clocked out
-    /// at the rising edge of sclk. The frame sync must stay high for bits_per_channel bits for the
+    /// at the falling edge of sclk. The frame sync must stay high for bits_per_channel bits for the
     /// first channel and low for bits_per_channel bits for the second channel.
     STEREO_LEFT = 3;
     /// Right justified, 2 channels, data starts at frame sync changes from low to high clocked out
-    /// at the rising edge of sclk. The frame sync must stay high for bits_per_channel bits for the
+    /// at the falling edge of sclk. The frame sync must stay high for bits_per_channel bits for the
     /// first channel and low for bits_per_channel bits for the second channel.
     STEREO_RIGHT = 4;
     /// Left justified, variable number of channels, data starts at frame sync changes from low to
