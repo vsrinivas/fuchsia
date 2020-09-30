@@ -17,7 +17,7 @@ namespace client {
 
 namespace {
 // The buffer length used by `DefaultSessionConfig`.
-constexpr uint64_t kDefaultBufferLength = 2048;
+constexpr uint32_t kDefaultBufferLength = 2048;
 // The maximum FIFO depth that this client can handle.
 // Set to the maximum number of `uint16`s that a zx FIFO can hold.
 constexpr uint64_t kMaxDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
@@ -47,11 +47,14 @@ SessionConfig NetworkDeviceClient::DefaultSessionConfig(const netdev::Info& dev_
   SessionConfig config;
   config.rx_frames = dev_info.rx_types;
   config.descriptor_length = sizeof(buffer_descriptor_t);
-  config.tx_descriptor_count = dev_info.rx_depth;
-  config.rx_descriptor_count = dev_info.tx_depth;
+  // TODO(fxbug.dev/61082): tx_depth and rx_depth definitions should really be uint16 so they match
+  // the maximum descriptor namespace that must fit uint16.
+  config.tx_descriptor_count = static_cast<uint16_t>(
+      std::min(dev_info.tx_depth, static_cast<uint32_t>(std::numeric_limits<uint16_t>::max())));
+  config.rx_descriptor_count = static_cast<uint16_t>(
+      std::min(dev_info.rx_depth, static_cast<uint32_t>(std::numeric_limits<uint16_t>::max())));
   config.options = netdev::SessionFlags::PRIMARY;
-  config.buffer_length =
-      std::min(static_cast<uint32_t>(kDefaultBufferLength), dev_info.max_buffer_length);
+  config.buffer_length = std::min(kDefaultBufferLength, dev_info.max_buffer_length);
   config.buffer_stride = config.buffer_length;
   if (config.buffer_stride % dev_info.buffer_alignment != 0) {
     // align back:
@@ -162,7 +165,9 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
   }
 
   descriptor_count_ = session_config_.rx_descriptor_count + session_config_.tx_descriptor_count;
-  if (descriptor_count_ >= (1u << 16u)) {
+  // Check if sum of descriptor count overflows.
+  if (descriptor_count_ < session_config_.rx_descriptor_count ||
+      descriptor_count_ < session_config_.tx_descriptor_count) {
     FX_LOGS(ERROR) << "Invalid descriptor count, maximum total descriptors must be less than 2^16";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -232,7 +237,12 @@ zx_status_t NetworkDeviceClient::MakeSessionInfo(netdev::SessionInfo* session_in
     return status;
   }
   session_info->options = session_config_.options;
-  session_info->descriptor_length = session_config_.descriptor_length / sizeof(uint64_t);
+
+  uint64_t descriptor_length_words = session_config_.descriptor_length / sizeof(uint64_t);
+  ZX_DEBUG_ASSERT_MSG(descriptor_length_words <= std::numeric_limits<uint8_t>::max(),
+                      "session descriptor length %ld (%ld words) overflows uint8_t",
+                      session_config_.descriptor_length, descriptor_length_words);
+  session_info->descriptor_length = static_cast<uint8_t>(descriptor_length_words);
   session_info->rx_frames = session_config_.rx_frames;
   session_info->descriptor_count = descriptor_count_;
   session_info->descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
@@ -292,7 +302,7 @@ zx_status_t NetworkDeviceClient::PrepareDescriptors() {
     pDesc += session_config_.descriptor_length;
     rx_out_queue_.push_back(desc);
   }
-  for (; desc < static_cast<uint16_t>(descriptor_count_); desc++) {
+  for (; desc < descriptor_count_; desc++) {
     auto* descriptor = reinterpret_cast<buffer_descriptor_t*>(pDesc);
     ResetTxDescriptor(descriptor);
     descriptor->offset = buff_off;
@@ -630,8 +640,8 @@ size_t NetworkDeviceClient::BufferData::Write(const BufferData& data) {
   size_t count = 0;
 
   size_t idx_me = 0;
-  uint64_t offset_me = 0;
-  uint64_t offset_other = 0;
+  size_t offset_me = 0;
+  size_t offset_other = 0;
   for (size_t idx_o = 0; idx_o < data.parts_count_ && idx_me < parts_count_;) {
     size_t wr = parts_[idx_me].Write(offset_me, data.parts_[idx_o], offset_other);
     offset_me += wr;
@@ -646,9 +656,10 @@ size_t NetworkDeviceClient::BufferData::Write(const BufferData& data) {
       offset_other = 0;
     }
   }
-  // update the length on the last descriptor
+  // Update the length on the last descriptor.
   if (idx_me < parts_count_) {
-    parts_[idx_me].CapLength(offset_me);
+    ZX_DEBUG_ASSERT(offset_me <= std::numeric_limits<uint32_t>::max());
+    parts_[idx_me].CapLength(static_cast<uint32_t>(offset_me));
   }
 
   return count;

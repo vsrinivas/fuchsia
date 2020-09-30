@@ -24,7 +24,7 @@ namespace netdev = fuchsia::hardware::network;
 // Configuration for sessions opened by a `NetworkDeviceClient`.
 struct SessionConfig {
   // Length of each buffer, in bytes.
-  uint64_t buffer_length;
+  uint32_t buffer_length;
   // Buffer stride on VMO, in bytes.
   uint64_t buffer_stride;
   // Descriptor length, in bytes.
@@ -262,7 +262,7 @@ class NetworkDeviceClient {
   ErrorCallback err_callback_;
   async_dispatcher_t* dispatcher_;
   SessionConfig session_config_;
-  uint64_t descriptor_count_;
+  uint16_t descriptor_count_;
   zx::vmo data_vmo_;
   fzl::VmoMapper data_;
   zx::vmo descriptors_vmo_;
