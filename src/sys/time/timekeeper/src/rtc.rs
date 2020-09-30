@@ -17,6 +17,8 @@ use {
     std::{fs, path::PathBuf},
     thiserror::Error,
 };
+#[cfg(test)]
+use {parking_lot::Mutex, std::sync::Arc};
 
 lazy_static! {
     /// The absolute path at which RTC devices are exposed.
@@ -42,7 +44,7 @@ pub enum RtcCreationError {
 /// to a resolution of one second; times returned by the RTC will always be a whole number of
 /// seconds and times sent to the RTC will discard any fractional second.
 #[async_trait]
-pub trait Rtc {
+pub trait Rtc: Send + Sync {
     /// Returns the current time reported by the realtime clock.
     async fn get(&self) -> Result<zx::Time, Error>;
     /// Sets the time of the realtime clock to `value`.
@@ -133,30 +135,32 @@ impl Rtc for RtcImpl {
 }
 
 /// A Fake implementation of the Rtc trait for use in testing. The fake always returns a fixed
-/// value set during construction and remembers the last value it was told to set.
+/// value set during construction and remembers the last value it was told to set (shared across
+/// all clones of the `FakeRtc`).
 #[cfg(test)]
+#[derive(Clone)]
 pub struct FakeRtc {
     /// The response used for get requests.
     value: Result<zx::Time, String>,
     /// The most recent value received in a set request.
-    last_set: futures::lock::Mutex<Option<zx::Time>>,
+    last_set: Arc<Mutex<Option<zx::Time>>>,
 }
 
 #[cfg(test)]
 impl FakeRtc {
     /// Returns a new `FakeRtc` that always returns the supplied time.
     pub fn valid(time: zx::Time) -> FakeRtc {
-        FakeRtc { value: Ok(time), last_set: futures::lock::Mutex::new(None) }
+        FakeRtc { value: Ok(time), last_set: Arc::new(Mutex::new(None)) }
     }
 
     /// Returns a new `FakeRtc` that always returns the supplied error message.
     pub fn invalid(error: String) -> FakeRtc {
-        FakeRtc { value: Err(error), last_set: futures::lock::Mutex::new(None) }
+        FakeRtc { value: Err(error), last_set: Arc::new(Mutex::new(None)) }
     }
 
     /// Returns the last time set on this clock, or none if the clock has never been set.
-    pub async fn last_set(&self) -> Option<zx::Time> {
-        self.last_set.lock().await.map(|time| time.clone())
+    pub fn last_set(&self) -> Option<zx::Time> {
+        self.last_set.lock().map(|time| time.clone())
     }
 }
 
@@ -168,7 +172,7 @@ impl Rtc for FakeRtc {
     }
 
     async fn set(&self, value: zx::Time) -> Result<(), Error> {
-        let mut last_set = self.last_set.lock().await;
+        let mut last_set = self.last_set.lock();
         last_set.replace(value);
         Ok(())
     }
@@ -203,11 +207,11 @@ mod test {
     async fn valid_fake() {
         let fake = FakeRtc::valid(*TEST_ZX_TIME);
         assert_eq!(fake.get().await.unwrap(), *TEST_ZX_TIME);
-        assert_eq!(fake.last_set().await, None);
+        assert_eq!(fake.last_set(), None);
 
         // Set a new time, this should be recorded but get should still return the original time.
         assert!(fake.set(*DIFFERENT_ZX_TIME).await.is_ok());
-        assert_eq!(fake.last_set().await, Some(*DIFFERENT_ZX_TIME));
+        assert_eq!(fake.last_set(), Some(*DIFFERENT_ZX_TIME));
         assert_eq!(fake.get().await.unwrap(), *TEST_ZX_TIME);
     }
 
@@ -216,11 +220,11 @@ mod test {
         let message = "I'm designed to fail".to_string();
         let fake = FakeRtc::invalid(message.clone());
         assert_eq!(&fake.get().await.unwrap_err().to_string(), &message);
-        assert_eq!(fake.last_set().await, None);
+        assert_eq!(fake.last_set(), None);
 
         // Setting a new time should still succeed and be recorded but it won't make get valid.
         assert!(fake.set(*DIFFERENT_ZX_TIME).await.is_ok());
-        assert_eq!(fake.last_set().await, Some(*DIFFERENT_ZX_TIME));
+        assert_eq!(fake.last_set(), Some(*DIFFERENT_ZX_TIME));
         assert_eq!(&fake.get().await.unwrap_err().to_string(), &message);
     }
 }

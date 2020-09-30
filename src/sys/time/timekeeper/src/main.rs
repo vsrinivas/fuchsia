@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
 
     info!("connecting to real time clock");
     let optional_rtc = match RtcImpl::only_device() {
-        Ok(rtc) => Some(Arc::new(rtc)),
+        Ok(rtc) => Some(rtc),
         Err(err) => {
             warn!("failed to connect to RTC, ZX_CLOCK_UTC won't be updated: {}", err);
             diagnostics.record(Event::InitializeRtc { outcome: err.into(), time: None });
@@ -128,7 +128,7 @@ fn initial_clock_state(utc_clock: &zx::Clock) -> InitialClockState {
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
 async fn maintain_utc<R, T, S, D>(
     utc_clock: Arc<zx::Clock>,
-    mut optional_rtc: Option<Arc<R>>,
+    mut optional_rtc: Option<R>,
     notifs: Notifier,
     primary_source: T,
     interface_event_stream: S,
@@ -288,7 +288,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn successful_update_single_notify_client() {
         let (clock, initial_update_ticks) = create_clock();
-        let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
+        let rtc = FakeRtc::valid(*INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
@@ -310,7 +310,7 @@ mod tests {
 
         let _task = fasync::Task::spawn(maintain_utc(
             Arc::clone(&clock),
-            Some(Arc::clone(&rtc)),
+            Some(rtc.clone()),
             notifier.clone(),
             time_source,
             interface_event_stream,
@@ -320,7 +320,7 @@ mod tests {
         // Checking that the reported time source has been updated to the first input
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::External);
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
-        assert_eq!(rtc.last_set().await, Some(*UPDATE_TIME));
+        assert_eq!(rtc.last_set(), Some(*UPDATE_TIME));
 
         // Checking that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
@@ -343,7 +343,7 @@ mod tests {
     fn no_update_invalid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
-        let rtc = Arc::new(FakeRtc::valid(*INVALID_RTC_TIME));
+        let rtc = FakeRtc::valid(*INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
@@ -363,7 +363,7 @@ mod tests {
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
             Arc::clone(&clock),
-            Some(Arc::clone(&rtc)),
+            Some(rtc.clone()),
             notifier.clone(),
             time_source,
             interface_event_stream,
@@ -378,9 +378,7 @@ mod tests {
 
         // Checking that the clock has not been updated yet
         assert_eq!(initial_update_ticks, clock.get_details().unwrap().last_value_update_ticks);
-        let fut4 = rtc.last_set();
-        futures::pin_mut!(fut4);
-        assert_eq!(executor.run_until_stalled(&mut fut4), Poll::Ready(None));
+        assert_eq!(rtc.last_set(), None);
 
         // Checking that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
@@ -398,7 +396,7 @@ mod tests {
     fn no_update_valid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
-        let rtc = Arc::new(FakeRtc::valid(*VALID_RTC_TIME));
+        let rtc = FakeRtc::valid(*VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
@@ -418,7 +416,7 @@ mod tests {
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
             Arc::clone(&clock),
-            Some(Arc::clone(&rtc)),
+            Some(rtc.clone()),
             notifier.clone(),
             time_source,
             interface_event_stream,
@@ -437,9 +435,7 @@ mod tests {
         // Checking that the clock was updated to use the valid RTC time.
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
         assert!(clock.read().unwrap() >= *VALID_RTC_TIME);
-        let fut4 = rtc.last_set();
-        futures::pin_mut!(fut4);
-        assert_eq!(executor.run_until_stalled(&mut fut4), Poll::Ready(None));
+        assert_eq!(rtc.last_set(), None);
 
         // Checking that the correct diagnostic events were logged.
         diagnostics.assert_events(&[
