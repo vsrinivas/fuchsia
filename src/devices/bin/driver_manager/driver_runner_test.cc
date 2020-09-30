@@ -128,7 +128,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     fidl::InterfaceRequestHandler<fsys::Realm> handler = [this](auto request) {
-      realm_binding_.Bind(std::move(request), loop_.dispatcher());
+      EXPECT_EQ(ZX_OK, realm_binding_.Bind(std::move(request), loop_.dispatcher()));
     };
     ASSERT_EQ(ZX_OK, provider_.context()->outgoing()->AddPublicService(std::move(handler)));
   }
@@ -174,15 +174,15 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     realm().SetBindChildHandler([this, coll, name](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ(coll, child.collection.value_or(""));
       EXPECT_EQ(name, child.name);
-      directory_binding_.Bind(std::move(exposed_dir), loop_.dispatcher());
+      EXPECT_EQ(ZX_OK, directory_binding_.Bind(std::move(exposed_dir), loop_.dispatcher()));
     });
     directory().SetOpenHandler([this](std::string path, auto object) {
       EXPECT_EQ("svc/fuchsia.driver.framework.DriverHost", path);
-      driver_host_binding_.Bind(object.TakeChannel(), loop_.dispatcher());
+      EXPECT_EQ(ZX_OK, driver_host_binding_.Bind(object.TakeChannel(), loop_.dispatcher()));
     });
   }
 
-  void StartDriver(DriverRunner* driver_runner, zx::channel* controller, Driver driver) {
+  zx::channel StartDriver(DriverRunner* driver_runner, Driver driver) {
     fidl::StringView binary = fidl::unowned_str(driver.binary);
     auto colocate = driver.colocate ? fidl::StringView("true") : fidl::StringView("false");
     fdata::DictionaryEntry program_entries[] = {
@@ -202,23 +202,23 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     auto url = fidl::unowned_str(driver.url);
     fidl::VectorView<frunner::ComponentNamespaceEntry> ns;
     zx::channel outgoing_client_end, outgoing_server_end;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &outgoing_client_end, &outgoing_server_end));
+    EXPECT_EQ(ZX_OK, zx::channel::create(0, &outgoing_client_end, &outgoing_server_end));
     auto start_info = frunner::ComponentStartInfo::UnownedBuilder()
                           .set_resolved_url(fidl::unowned_ptr(&url))
                           .set_program(fidl::unowned_ptr(&program))
                           .set_ns(fidl::unowned_ptr(&ns))
                           .set_outgoing_dir(fidl::unowned_ptr(&outgoing_server_end));
     zx::channel controller_client_end, controller_server_end;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, controller, &controller_server_end));
+    EXPECT_EQ(ZX_OK, zx::channel::create(0, &controller_client_end, &controller_server_end));
     TestTransaction transaction(driver.close);
     frunner::ComponentRunner::Interface::StartCompleter::Sync completer(&transaction);
     static_cast<frunner::ComponentRunner::Interface*>(driver_runner)
         ->Start(start_info.build(), std::move(controller_server_end), std::move(completer));
     loop().RunUntilIdle();
+    return controller_client_end;
   }
 
-  zx::status<> StartRootDriver(std::string_view name, DriverRunner* driver_runner,
-                               zx::channel* controller) {
+  zx::status<zx::channel> StartRootDriver(std::string_view name, DriverRunner* driver_runner) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
       EXPECT_EQ("drivers", collection.name);
       EXPECT_EQ("driver-0", decl.name());
@@ -235,12 +235,12 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     loop().RunUntilIdle();
 
     StartDriverHost("driver_hosts", "driver_host-1");
-    StartDriver(driver_runner, controller,
-                {
-                    .url = "fuchsia-boot:///#meta/root-driver.cm",
-                    .binary = "driver/root-driver.so",
-                });
-    return zx::ok();
+    zx::channel controller =
+        StartDriver(driver_runner, {
+                                       .url = "fuchsia-boot:///#meta/root-driver.cm",
+                                       .binary = "driver/root-driver.so",
+                                   });
+    return zx::ok(std::move(controller));
   }
 
   void Unbind() {
@@ -272,8 +272,7 @@ TEST_F(DriverRunnerTest, StartRootDriver) {
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("false", entries[1].value->str());
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   Unbind();
 }
@@ -300,8 +299,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild) {
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()),
                         second_node.NewRequest(loop().dispatcher()));
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   Unbind();
 }
@@ -329,8 +327,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()),
                         second_node.NewRequest(loop().dispatcher()));
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   node_controller->Remove();
   loop().RunUntilIdle();
@@ -343,7 +340,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
 TEST_F(DriverRunnerTest, StartRootDriver_UnknownDriver) {
   auto driver_index = CreateDriverIndex();
   DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
-  ASSERT_TRUE(StartRootDriver("unknown-driver", &driver_runner, nullptr).is_error());
+  ASSERT_TRUE(StartRootDriver("unknown-driver", &driver_runner).is_error());
 }
 
 // Start the root driver, and then start a second driver in a new driver host.
@@ -376,8 +373,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
@@ -387,13 +383,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("false", entries[1].value->str());
   });
-  zx::channel second_driver_controller;
   StartDriverHost("driver_hosts", "driver_host-3");
-  StartDriver(&driver_runner, &second_driver_controller,
-              {
-                  .url = "fuchsia-boot:///#meta/second-driver.cm",
-                  .binary = "driver/second-driver.so",
-              });
+  StartDriver(&driver_runner, {
+                                  .url = "fuchsia-boot:///#meta/second-driver.cm",
+                                  .binary = "driver/second-driver.so",
+                              });
 
   Unbind();
 }
@@ -429,8 +423,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
@@ -440,13 +433,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("true", entries[1].value->str());
   });
-  zx::channel second_driver_controller;
-  StartDriver(&driver_runner, &second_driver_controller,
-              {
-                  .url = "fuchsia-boot:///#meta/second-driver.cm",
-                  .binary = "driver/second-driver.so",
-                  .colocate = true,
-              });
+  StartDriver(&driver_runner, {
+                                  .url = "fuchsia-boot:///#meta/second-driver.cm",
+                                  .binary = "driver/second-driver.so",
+                                  .colocate = true,
+                              });
 
   Unbind();
 }
@@ -472,11 +463,9 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
-  zx::channel second_driver_controller;
-  StartDriver(&driver_runner, &second_driver_controller, {.close = true});
+  StartDriver(&driver_runner, {.close = true});
 
   Unbind();
 }
@@ -511,8 +500,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   fdf::NodePtr second_node;
   driver_host().SetStartHandler([this, &second_node](fdf::DriverStartArgs start_args, auto driver) {
@@ -526,13 +514,13 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
     EXPECT_EQ(ZX_OK,
               second_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
   });
-  zx::channel second_driver_controller;
+  ;
   StartDriverHost("driver_hosts", "driver_host-3");
-  StartDriver(&driver_runner, &second_driver_controller,
-              {
-                  .url = "fuchsia-boot:///#meta/second-driver.cm",
-                  .binary = "driver/second-driver.so",
-              });
+  zx::channel second_driver_controller =
+      StartDriver(&driver_runner, {
+                                      .url = "fuchsia-boot:///#meta/second-driver.cm",
+                                      .binary = "driver/second-driver.so",
+                                  });
 
   // Unbinding the second node stops the driver bound to it.
   second_node.Unbind();
@@ -575,8 +563,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
-  zx::channel root_driver_controller;
-  ASSERT_TRUE(StartRootDriver("root", &driver_runner, &root_driver_controller).is_ok());
+  auto root_driver = StartRootDriver("root", &driver_runner);
+  ASSERT_TRUE(root_driver.is_ok());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
     auto& entries = start_args.program().entries();
@@ -586,13 +574,13 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("false", entries[1].value->str());
   });
-  zx::channel second_driver_controller;
+  ;
   StartDriverHost("driver_hosts", "driver_host-3");
-  StartDriver(&driver_runner, &second_driver_controller,
-              {
-                  .url = "fuchsia-boot:///#meta/second-driver.cm",
-                  .binary = "driver/second-driver.so",
-              });
+  zx::channel second_driver_controller =
+      StartDriver(&driver_runner, {
+                                      .url = "fuchsia-boot:///#meta/second-driver.cm",
+                                      .binary = "driver/second-driver.so",
+                                  });
 
   // Unbinding the root node stops all drivers.
   root_node.Unbind();
@@ -601,8 +589,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   ASSERT_EQ(ZX_OK, second_driver_controller.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
                                                      &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
-  ASSERT_EQ(ZX_OK, root_driver_controller.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                                   &signals));
+  ASSERT_EQ(ZX_OK,
+            root_driver.value().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
 
   Unbind();
