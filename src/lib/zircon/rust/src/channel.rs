@@ -109,7 +109,7 @@ impl Channel {
     /// Write a message to a channel. Wraps the
     /// [zx_channel_write](https://fuchsia.dev/fuchsia-src/reference/syscalls/channel_write.md)
     /// syscall.
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), Status> {
+    pub fn write(&self, bytes: &[u8], handles: &mut [Handle]) -> Result<(), Status> {
         let opts = 0;
         let n_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
         let n_handles = usize_into_u32(handles.len()).map_err(|_| Status::OUT_OF_RANGE)?;
@@ -122,8 +122,10 @@ impl Channel {
                 handles.as_ptr() as *const sys::zx_handle_t,
                 n_handles,
             );
-            // Handles are always consumed, forget them on sender side
-            handles.set_len(0);
+            // Handles are consumed by zx_channel_write so prevent the destructor from being called.
+            for handle in handles {
+                std::mem::forget(std::mem::replace(handle, Handle::invalid()));
+            }
             ok(status)?;
             Ok(())
         }
@@ -152,7 +154,7 @@ impl Channel {
         &self,
         timeout: Time,
         bytes: &[u8],
-        handles: &mut Vec<Handle>,
+        handles: &mut [Handle],
         buf: &mut MessageBuf,
     ) -> Result<(), Status> {
         let write_num_bytes = usize_into_u32(bytes.len()).map_err(|_| Status::OUT_OF_RANGE)?;
@@ -184,8 +186,10 @@ impl Channel {
             ))
         };
         unsafe {
-            // Handles are always consumed.
-            handles.set_len(0);
+            // Outgoing handles are consumed by zx_channel_call so prevent the destructor from being called.
+            for handle in handles {
+                std::mem::forget(std::mem::replace(handle, Handle::invalid()));
+            }
             buf.bytes.set_len(actual_read_bytes as usize);
             buf.handles.set_len(actual_read_handles as usize);
         }
@@ -361,8 +365,10 @@ mod tests {
         let duplicate_vmo_handle = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         assert!(p1.write(b"", &mut handles_to_send).is_ok());
-        // Handle should be removed from vector.
-        assert!(handles_to_send.is_empty());
+        // The handle vector should only contain invalid handles.
+        for handle in handles_to_send {
+            assert!(handle.is_invalid());
+        }
 
         // Read the handle from the receiving channel.
         let mut buf = MessageBuf::new();
@@ -401,9 +407,11 @@ mod tests {
             p1.call(Time::after(ten_ms), b"0000call", &mut handles_to_send, &mut buf),
             Err(Status::TIMED_OUT)
         );
-        // Handle should be removed from vector even though we didn't get a response, as it was
-        // still sent over the channel.
-        assert!(handles_to_send.is_empty());
+        // Despite not getting a response, the handles were sent so the handle slice
+        // should only contain invalid handles.
+        for handle in handles_to_send {
+            assert!(handle.is_invalid());
+        }
 
         // Should be able to read call even though it timed out waiting for a response.
         let mut buf = MessageBuf::new();

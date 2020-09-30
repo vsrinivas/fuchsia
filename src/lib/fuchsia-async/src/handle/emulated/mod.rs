@@ -276,17 +276,20 @@ impl Channel {
     }
 
     /// Write a message to a channel.
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status> {
-        let bytes = bytes.to_vec();
+    pub fn write(&self, bytes: &[u8], handles: &mut [Handle]) -> Result<(), zx_status::Status> {
+        let bytes_vec = bytes.to_vec();
+        let mut handles_vec = Vec::with_capacity(handles.len());
+        for i in 0..handles.len() {
+            handles_vec.push(std::mem::replace(&mut handles[i], Handle::invalid()));
+        }
         with_handle(self.0, |h, side| {
             if let HdlRef::Channel(obj) = h {
                 if !obj.liveness.is_open() {
                     return Err(zx_status::Status::PEER_CLOSED);
                 }
-                obj.q.side_mut(side).push_back(ChannelMessage {
-                    bytes,
-                    handles: std::mem::replace(handles, Vec::new()),
-                });
+                obj.q
+                    .side_mut(side)
+                    .push_back(ChannelMessage { bytes: bytes_vec, handles: handles_vec });
                 obj.wakers.side_mut(side).take().map(|w| w.wake());
                 Ok(())
             } else {
@@ -825,8 +828,10 @@ mod test {
         // Send one socket down the channel
         let mut handles_to_send: Vec<Handle> = vec![s1.into_handle()];
         assert!(p1.write(b"", &mut handles_to_send).is_ok());
-        // Handle should be removed from vector.
-        assert!(handles_to_send.is_empty());
+        // The handle vector should only contain invalid handles.
+        for handle in handles_to_send {
+            assert!(handle.is_invalid());
+        }
 
         // Read the handle from the receiving channel.
         let mut buf = MessageBuf::new();

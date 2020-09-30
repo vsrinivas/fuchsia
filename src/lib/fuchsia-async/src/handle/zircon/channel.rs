@@ -87,7 +87,7 @@ impl Channel {
     }
 
     /// Writes a message into the channel.
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<zx::Handle>) -> Result<(), zx::Status> {
+    pub fn write(&self, bytes: &[u8], handles: &mut [zx::Handle]) -> Result<(), zx::Status> {
         self.0.get_ref().write(bytes, handles)
     }
 
