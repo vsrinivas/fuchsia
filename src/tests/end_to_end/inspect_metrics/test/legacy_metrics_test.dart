@@ -8,10 +8,12 @@ import 'util.dart';
 
 void main() {
   sl4f.Sl4f sl4fDriver;
+  sl4f.Inspect inspect;
 
   setUp(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
+    inspect = sl4f.Inspect(sl4fDriver);
   });
 
   tearDown(() async {
@@ -25,11 +27,19 @@ void main() {
     'cobalt_system_metrics.cmx:root/platform_metrics/cpu:mean',
   ]) {
     test('legacy metrics includes $selector', () async {
-      final inspect = sl4f.Inspect(sl4fDriver);
       expect(
           await getInspectValues(inspect, selector,
               pipeline: sl4f.InspectPipeline.legacyMetrics),
           singleValue(isNotEmpty));
     });
   }
+
+  test('legacy metrics includes historical_max_cpu_temperature_c', () async {
+    // Verify the `historical_max_cpu_temperature_c` node is present
+    expect(
+        await getInspectValues(inspect,
+            'bootstrap/power_manager:root/platform_metrics/historical_max_cpu_temperature_c:*',
+            pipeline: sl4f.InspectPipeline.legacyMetrics),
+        multiValue(isNotNull, length: greaterThan(0)));
+  });
 }

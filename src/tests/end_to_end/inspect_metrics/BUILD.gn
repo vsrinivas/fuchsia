@@ -135,12 +135,6 @@ dart_test("legacy_metrics_test") {
       }
     },
   ]
-
-  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
-  # as we don't currently support Dart on arm64 hosts.
-  if (is_host && target_cpu == "x64") {
-    environments += [ emu_env ]
-  }
 }
 
 group("test") {
