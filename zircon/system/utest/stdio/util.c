@@ -45,16 +45,16 @@ int read_to_end(int fd, uint8_t** buf, size_t* buf_size) {
     }
 
     uint8_t* buf_slice = &(*buf)[*buf_size - unused];
-    int result = read(fd, buf_slice, unused);
+    ssize_t result = read(fd, buf_slice, unused);
     if (result == 0) {
       *buf_size -= unused;
-      return *buf_size - start_len;
+      return (int)(*buf_size - start_len);
     } else if (result > 0) {
       unused -= result;
     } else if (result == EINTR) {
     } else {
       *buf_size -= unused;
-      return result;
+      return (int)result;
     }
   }
 }
