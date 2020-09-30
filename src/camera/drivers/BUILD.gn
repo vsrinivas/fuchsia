@@ -39,7 +39,6 @@ group("all") {
 }
 
 group("sherlock") {
-  testonly = true
   deps = [
     "bus",
     "controller/sherlock",

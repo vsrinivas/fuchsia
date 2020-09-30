@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("hw_accel") {
-  testonly = true
   deps = [
     "gdc",
     "ge2d",

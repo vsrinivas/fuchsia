@@ -3,6 +3,5 @@
 # found in the LICENSE file.
 
 group("sensors") {
-  testonly = true
   deps = [ "imx227" ]
 }

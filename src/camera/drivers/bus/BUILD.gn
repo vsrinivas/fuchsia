@@ -3,6 +3,5 @@
 # found in the LICENSE file.
 
 group("bus") {
-  testonly = true
   deps = [ "aml-mipicsi" ]
 }
