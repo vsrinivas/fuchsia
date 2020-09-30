@@ -4,19 +4,6 @@
 
 import("//build/test/test_package.gni")
 
-executable("sockettest") {
-  testonly = true
-
-  sources = [ "sockettest.c" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
 executable("keepalivetest") {
   testonly = true
 
@@ -131,7 +118,6 @@ package("netstack-manual-tests") {
     ":nbiotest",
     ":polltest",
     ":selecttest",
-    ":sockettest",
     ":sockopttest",
     ":udptest",
   ]
@@ -159,10 +145,6 @@ package("netstack-manual-tests") {
     },
     {
       name = "selecttest"
-      shell = true
-    },
-    {
-      name = "sockettest"
       shell = true
     },
     {
