@@ -119,6 +119,7 @@ protocol Frame {
     ///
     /// `view_ref_control` must not have the `ZX_RIGHT_DUPLICATE` set, or view creation will fail
     /// and `view_token` will be closed.
+    [Transitional]
     CreateViewWithViewRef(fuchsia.ui.views.ViewToken view_token,
                           fuchsia.ui.views.ViewRefControl view_ref_control,
                           fuchsia.ui.views.ViewRef view_ref);
@@ -237,6 +238,10 @@ protocol Frame {
     /// - `error()` logs are logged with `ERROR` severity level in
     ///   [`fuchsia.logger/LogLevelFilter`].
     SetJavaScriptLogLevel(ConsoleLogLevel level);
+
+    /// Deprecated. Use [`Frame.ConfigureInputTypes`] instead.
+    [Transitional, Deprecated]
+    SetEnableInput(bool enable_input);
 
     /// Enables or disables the processing of the specified `types` of user inputs.
     /// `allow` specifies whether to enable or disable the specified `types`.
