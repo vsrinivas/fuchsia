@@ -135,3 +135,7 @@ group("base_config") {
 group("luis_config") {
   deps = [ "node_config:luis" ]
 }
+
+group("sherlock_config") {
+  deps = [ "node_config:sherlock" ]
+}

@@ -37,6 +37,10 @@ node_config("luis") {
   source = "luis_node_config.json"
 }
 
+node_config("sherlock") {
+  source = "sherlock_node_config.json"
+}
+
 # Make the node config files available for the power_manager_tests test package
 # to allow for some more advanced validation beyond what we can accomplish with
 # JSON schema validation alone.
@@ -47,5 +51,6 @@ config_data("test_config_data") {
     "astro_node_config.json",
     "base_node_config.json",
     "luis_node_config.json",
+    "sherlock_node_config.json",
   ]
 }

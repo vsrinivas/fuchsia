@@ -1,0 +1,89 @@
+[
+  {
+    "type": "DriverManagerHandler",
+    "name": "driver_manager_handler",
+    "config": {}
+  },
+  {
+    "type": "ShutdownWatcher",
+    "name": "shutdown_watcher"
+  },
+  {
+    "type": "SystemShutdownHandler",
+    "name": "sys_shutdown",
+    "config": {
+      "component_manager_path": "/svc/fuchsia.sys2.SystemController",
+      "shutdown_timeout_s": 3600
+    },
+    "dependencies": {
+      "driver_manager_handler_node": "driver_manager_handler",
+      "shutdown_watcher_node": "shutdown_watcher"
+    }
+  },
+  {
+    "type": "CrashReportHandler",
+    "name": "crash_handler"
+  },
+  {
+    "type": "CpuStatsHandler",
+    "name": "cpu_stats"
+  },
+  {
+    "type": "DeviceControlHandler",
+    "name": "cpu_dev",
+    "config": {
+      "driver_path": "/dev/class/cpu-ctrl/000"
+    }
+  },
+  {
+    "type": "CpuControlHandler",
+    "name": "cpu_control",
+    "config": {
+      "driver_path": "/dev/class/cpu-ctrl/000",
+      "capacitance": 1.2E-10,
+      "min_cpu_clock_speed": 1000000000.0
+    },
+    "dependencies": {
+      "cpu_stats_handler_node": "cpu_stats",
+      "cpu_dev_handler_node": "cpu_dev"
+    }
+  },
+  {
+    "type": "TemperatureHandler",
+    "name": "temperature_soc_pll",
+    "config": {
+      "driver_path": "/dev/aml-thermal-pll/thermal"
+    }
+  },
+  {
+    "type": "ThermalLimiter",
+    "name": "thermal_limiter"
+  },
+  {
+    "type": "ThermalPolicy",
+    "name": "thermal_policy",
+    "dependencies": {
+      "crash_report_handler_node": "crash_handler",
+      "temperature_handler_node": "temperature_soc_pll",
+      "cpu_control_nodes": [
+        "cpu_control"
+      ],
+      "system_power_handler_node": "sys_shutdown",
+      "thermal_limiter_node": "thermal_limiter"
+    },
+    "config": {
+      "controller_params": {
+        "sample_interval": 1.0,
+        "filter_time_constant": 5.0,
+        "target_temperature": 80.0,
+        "e_integral_min": 0.0,
+        "e_integral_max": 0.0,
+        "sustainable_power": 1.0,
+        "proportional_gain": 0.0,
+        "integral_gain": 0.0
+      },
+      "thermal_shutdown_temperature": 0.0,
+      "throttle_end_delay": 60.0
+    }
+  }
+]

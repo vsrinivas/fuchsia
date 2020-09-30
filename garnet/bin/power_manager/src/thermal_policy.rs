@@ -348,6 +348,18 @@ impl ThermalPolicy {
             throttling_state,
         );
 
+        // TODO(fxbug.dev/32618): Having both gain values of 0 indicates an intention to disable the
+        // thermal policy. Bail after logging the above metrics. We only need this for Sherlock to
+        // publish the metrics before the real thermal policy is brought up. Once we have Sherlock
+        // thermal policy ready, this should be removed.
+        if (
+            self.config.policy_params.controller_params.proportional_gain,
+            self.config.policy_params.controller_params.integral_gain,
+        ) == (0.0, 0.0)
+        {
+            return Ok(());
+        }
+
         // If the new temperature is above the critical threshold then shut down the system
         let result = self.check_critical_temperature(timestamp, temperature.raw).await;
         log_if_err!(result, "Error checking critical temperature");
