@@ -11,8 +11,8 @@ use {
         LifecycleGetStateResponder, LifecycleRequest, LifecycleRequestStream, LifecycleState,
     },
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
     futures::StreamExt,
+    log::error,
 };
 
 /// `ComponentLifecycleServer` handles a single, hanging-get based request, `GetState` for the
@@ -53,7 +53,7 @@ impl ComponentLifecycleServer {
                             Ok(LifecycleRequest::GetState { responder }) => {
                                 let _ = subscriber.register(responder).await;
                             }
-                            Err(e) => fx_log_err!("Error handing client request: {}", e),
+                            Err(e) => error!("Error handing client request: {}", e),
                         }
                     }
                 }
