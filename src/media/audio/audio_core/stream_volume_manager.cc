@@ -31,7 +31,7 @@ void StreamVolumeManager::VolumeSettingImpl::SetVolume(float volume) {
   owner_->SetUsageVolume(fidl::Clone(usage_), volume);
 }
 
-StreamVolumeManager::StreamVolumeManager(async_dispatcher_t* fidl_dispatcher)
+StreamVolumeManager::StreamVolumeManager(async_dispatcher_t* fidl_dispatcher, const RenderUsageVolumes& initial_volumes)
     : render_usage_volume_setting_impls_{
           VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::BACKGROUND), this),
           VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA), this),
@@ -70,6 +70,13 @@ StreamVolumeManager::StreamVolumeManager(async_dispatcher_t* fidl_dispatcher)
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::FOREGROUND) == 1);
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT) == 2);
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION) == 3);
+
+  // Persist default render usage volumes.
+  for (auto it = initial_volumes.begin(); it != initial_volumes.end(); ++it) {
+    auto usage = it->first;
+    render_usage_volume_setting_impls_[fidl::ToUnderlying(usage)].SetVolume(
+        initial_volumes.at(usage));
+  }
 }
 
 const UsageGainSettings& StreamVolumeManager::GetUsageGainSettings() const {

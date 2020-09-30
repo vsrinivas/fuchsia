@@ -12,6 +12,7 @@
 #include <unordered_set>
 
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/volume_control.h"
 
@@ -58,7 +59,8 @@ class StreamVolumeManager {
   StreamVolumeManager& operator=(StreamVolumeManager) = delete;
   StreamVolumeManager& operator=(StreamVolumeManager&&) = delete;
 
-  StreamVolumeManager(async_dispatcher_t* fidl_dispatcher);
+  explicit StreamVolumeManager(async_dispatcher_t* fidl_dispatcher,
+                               const RenderUsageVolumes& initial_volumes = {});
 
   const UsageGainSettings& GetUsageGainSettings() const;
 

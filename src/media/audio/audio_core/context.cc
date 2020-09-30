@@ -39,7 +39,8 @@ class ContextImpl : public Context {
         route_graph_(&link_matrix_),
         device_manager_(*threading_model_, std::move(plug_detector), route_graph_, link_matrix_,
                         process_config_),
-        stream_volume_manager_(threading_model_->FidlDomain().dispatcher()),
+        stream_volume_manager_(threading_model_->FidlDomain().dispatcher(),
+                               process_config_.default_render_usage_volumes()),
         audio_admin_(&stream_volume_manager_, threading_model_->FidlDomain().dispatcher(),
                      &usage_reporter_, &activity_dispatcher_),
         vmar_manager_(

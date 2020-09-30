@@ -44,6 +44,37 @@ class StreamVolumeManagerTest : public ::gtest::TestLoopFixture {
   StreamVolumeManager manager_;
 };
 
+TEST_F(StreamVolumeManagerTest, InitWithRenderUsageVolumes) {
+  RenderUsageVolumes default_volumes = {
+      {RenderUsage::BACKGROUND, 0.0}, {RenderUsage::MEDIA, 0.5}, {RenderUsage::SYSTEM_AGENT, 0.3}};
+  StreamVolumeManager manager = StreamVolumeManager(dispatcher(), default_volumes);
+
+  MockStreamVolume mock_background;
+  mock_background.usage_ =
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::BACKGROUND);
+  manager.AddStream(&mock_background);
+  EXPECT_FLOAT_EQ(mock_background.volume_command_.volume, 0.0);
+
+  MockStreamVolume mock_media;
+  mock_media.usage_ =
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA);
+  manager.AddStream(&mock_media);
+  EXPECT_FLOAT_EQ(mock_media.volume_command_.volume, 0.5);
+
+  MockStreamVolume mock_system_agent;
+  mock_system_agent.usage_ =
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  manager.AddStream(&mock_system_agent);
+  EXPECT_FLOAT_EQ(mock_system_agent.volume_command_.volume, 0.3);
+
+  // Uninitialized render usage volume defaults to 1.0.
+  MockStreamVolume mock_interruption;
+  mock_interruption.usage_ =
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+  manager.AddStream(&mock_interruption);
+  EXPECT_FLOAT_EQ(mock_interruption.volume_command_.volume, 1.0);
+}
+
 TEST_F(StreamVolumeManagerTest, StreamCanUpdateSelf) {
   mock_.usage_ =
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION);
