@@ -200,6 +200,24 @@ rustc_test("pkg_resolve_inspect") {
   sources = [ "src/pkg_resolve_inspect.rs" ]
 }
 
+rustc_test("resolve_fails") {
+  name = "resolve-fails"
+  edition = "2018"
+
+  source_root = "src/resolve_fails.rs"
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+  ]
+
+  sources = [ "src/resolve_fails.rs" ]
+}
+
 rustc_test("resolve_propagates_pkgfs_failure") {
   name = "resolve-propagates-pkgfs-failure"
   edition = "2018"
@@ -552,6 +570,7 @@ test_package("pkg-resolver-integration-tests") {
     ":lib",
     ":metrics",
     ":pkg_resolve_inspect",
+    ":resolve_fails",
     ":resolve_propagates_pkgfs_failure",
     ":resolve_recovers_from_http_errors",
     ":resolve_succeeds",
@@ -642,6 +661,14 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "resolve_recovers_from_http_errors"
       dest = "resolve-recovers-from-http-errors"
+      environments = basic_envs
+    },
+    {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      name = "resolve_fails"
+      dest = "resolve-fails"
       environments = basic_envs
     },
     {

@@ -240,6 +240,7 @@ where
     mounts: MountsFn,
     boot_arguments_service: Option<BootArgumentsService<'static>>,
     local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
+    allow_local_mirror: bool,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
@@ -255,6 +256,7 @@ impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
             },
             boot_arguments_service: None,
             local_mirror_repo: None,
+            allow_local_mirror: false,
         }
     }
 }
@@ -271,6 +273,7 @@ where
             (self.mounts)(),
             self.boot_arguments_service,
             self.local_mirror_repo,
+            self.allow_local_mirror,
         )
         .await
     }
@@ -286,6 +289,7 @@ where
             mounts: self.mounts,
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
+            allow_local_mirror: self.allow_local_mirror,
         }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
@@ -294,6 +298,7 @@ where
             mounts: || mounts,
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
+            allow_local_mirror: self.allow_local_mirror,
         }
     }
     pub fn boot_arguments_service(
@@ -305,11 +310,17 @@ where
             mounts: self.mounts,
             boot_arguments_service: Some(svc),
             local_mirror_repo: self.local_mirror_repo,
+            allow_local_mirror: self.allow_local_mirror,
         }
     }
 
     pub fn local_mirror_repo(mut self, repo: &Arc<Repository>, hostname: RepoUrl) -> Self {
         self.local_mirror_repo = Some((repo.clone(), hostname));
+        self
+    }
+
+    pub fn allow_local_mirror(mut self) -> Self {
+        self.allow_local_mirror = true;
         self
     }
 }
@@ -544,6 +555,7 @@ impl<P: PkgFs> TestEnv<P> {
         mounts: Mounts,
         boot_arguments_service: Option<BootArgumentsService<'static>>,
         local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
+        allow_local_mirror: bool,
     ) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
@@ -581,7 +593,7 @@ impl<P: PkgFs> TestEnv<P> {
             .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
             .unwrap();
 
-        let pkg_resolver = if local_mirror.is_some() {
+        let pkg_resolver = if allow_local_mirror {
             pkg_resolver.args(vec!["--allow-local-mirror", "true"])
         } else {
             pkg_resolver

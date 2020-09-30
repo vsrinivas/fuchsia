@@ -401,6 +401,12 @@ impl From<RepositoryConfig> for fidl::RepositoryConfig {
     }
 }
 
+impl From<RepositoryConfig> for RepositoryConfigBuilder {
+    fn from(config: RepositoryConfig) -> Self {
+        Self { config }
+    }
+}
+
 /// Convenience wrapper for generating [RepositoryConfig] values.
 #[derive(Clone, Debug)]
 pub struct RepositoryConfigBuilder {

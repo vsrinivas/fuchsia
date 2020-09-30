@@ -916,6 +916,7 @@ async fn resolve_local_mirror() {
     );
 
     let env = TestEnvBuilder::new()
+        .allow_local_mirror()
         .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
         .build()
         .await;
