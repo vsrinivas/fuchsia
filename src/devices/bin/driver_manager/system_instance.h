@@ -81,12 +81,6 @@ class SystemInstance : public FsProvider {
 
   zx_status_t InitializeDriverHostSvcDir();
 
-  // The handle used to transmit messages to miscsvc.
-  zx::channel miscsvc_client_;
-
-  // The handle used by miscsvc to serve incoming requests.
-  zx::channel miscsvc_server_;
-
   // The handle used to transmit messages to device_name_provider.
   zx::channel device_name_provider_client_;
 
@@ -96,7 +90,7 @@ class SystemInstance : public FsProvider {
   // The outgoing (exposed) connection to the svchost.
   zx::channel svchost_outgoing_;
 
-  // The job in which we run "svc" realm services, like svchost, miscsvc, netsvc, etc.
+  // The job in which we run "svc" realm services, like svchost, netsvc, etc.
   zx::job svc_job_;
 
   // The job in which we run shell processes like consoles and autorun.

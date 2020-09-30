@@ -316,7 +316,6 @@ int main(int argc, char** argv) {
   root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
   zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
   zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
-  zx::channel miscsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 6)));
   zx::channel devcoordinator_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
   zx::channel device_name_provider_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 8)));
 
@@ -376,7 +375,7 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), deprecated_services,
                    zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), fshost_services, zx::unowned_channel(devcoordinator_svc));
-  publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
+  publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devcoordinator_services,
                    zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));

@@ -250,12 +250,8 @@ zx_status_t SystemInstance::MaybeCreateShellJob(
 }
 
 zx_status_t SystemInstance::PrepareChannels() {
-  zx_status_t status;
-  status = zx::channel::create(0, &miscsvc_client_, &miscsvc_server_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = zx::channel::create(0, &device_name_provider_client_, &device_name_provider_server_);
+  zx_status_t status =
+      zx::channel::create(0, &device_name_provider_client_, &device_name_provider_server_);
   if (status != ZX_OK) {
     return status;
   }
@@ -315,20 +311,6 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   status = zx::channel::create(0, &virtcon_client, &virtcon_fidl_);
   if (status != ZX_OK) {
     return status;
-  }
-
-  zx::channel miscsvc_svc;
-  {
-    zx::channel miscsvc_svc_req;
-    status = zx::channel::create(0, &miscsvc_svc_req, &miscsvc_svc);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_service_connect_at(miscsvc_client_.get(), "svc", miscsvc_svc_req.release());
-    if (status != ZX_OK) {
-      return status;
-    }
   }
 
   zx::channel device_name_provider_svc;
@@ -423,12 +405,6 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
         .h = {.id = PA_HND(PA_USER0, 5), .handle = virtcon_client.release()},
     });
   }
-
-  // Add handle to channel to allow svchost to talk to miscsvc.
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 6), .handle = miscsvc_svc.release()},
-  });
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
   // is hosted by fragment_manager and includes services routed from other fragments; see
@@ -536,30 +512,6 @@ int wait_for_system_available(void* arg) {
 }
 
 int SystemInstance::ServiceStarter(Coordinator* coordinator) {
-  // Launch miscsvc binary with access to:
-  // * /dev to talk to hardware
-  // * /boot to dynamically load drivers (zxcrypt)
-  // * /svc to call launch processes (minfs)
-  // * /volume to mount (minfs)
-  const zx_handle_t handles[] = {miscsvc_server_.release()};
-  const uint32_t types[] = {PA_DIRECTORY_REQUEST};
-  const char* args[] = {"/boot/bin/miscsvc", nullptr};
-
-  {
-    // TODO(fxbug.dev/34633): miscsvc needs access to /boot/lib/asan when devcoordinator runs in
-    // isolated devmgr mode.
-    zx::channel ldsvc;
-    zx_status_t status = clone_fshost_ldsvc(&ldsvc);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to clone loader service for miscsvc: %s", zx_status_get_string(status));
-      return status;
-    }
-
-    launcher_.LaunchWithLoader(svc_job_, "miscsvc", zx::vmo(), std::move(ldsvc), args, nullptr, -1,
-                               coordinator->root_resource(), handles, types, countof(handles),
-                               nullptr, FS_BOOT | FS_DEV | FS_SVC | FS_VOLUME);
-  }
-
   bool netboot = false;
   bool vruncmd = false;
 

@@ -20,6 +20,10 @@
             startup: "eager",
         },
         {
+            name: "miscsvc",
+            url: "fuchsia-boot:///#meta/miscsvc.cm",
+        },
+        {
             name: "ptysvc",
             url: "fuchsia-boot:///#meta/ptysvc.cm",
         },
@@ -57,6 +61,7 @@
                 "#console-launcher",
                 "#driver_manager",
                 "#fshost",
+                "#miscsvc",
             ],
             rights: [ "rx*" ],
         },
@@ -109,6 +114,15 @@
                 "#driver_manager",
                 "#fshost",
             ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.boot.Arguments",
+                "/svc/fuchsia.boot.WriteOnlyLog",
+                "/svc/fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [ "#miscsvc" ],
         },
         {
             protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
@@ -179,6 +193,7 @@
             to: [
                 "#console-launcher",
                 "#fshost",
+                "#miscsvc",
                 "#sysinfo",
             ],
         },
@@ -225,12 +240,6 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/volume",
-            from: "#fshost",
-            to: [ "#driver_manager" ],
-            dependency: "weak_for_migration",
-        },
-        {
             directory: "/install",
             from: "#fshost",
             to: [
@@ -269,6 +278,11 @@
             ],
             dependency: "weak_for_migration",
         },
+        {
+            directory: "/volume",
+            from: "#fshost",
+            to: [ "#miscsvc" ],
+        },
 
         // Offer the log services to the console
         {
@@ -295,6 +309,19 @@
                 "#console-launcher",
                 "#driver_manager",
             ],
+        },
+
+        // Offer the misc service to the driver_manager
+        {
+            protocol: [
+                "/svc/fuchsia.kernel.Counter",
+                "/svc/fuchsia.paver.Paver",
+            ],
+            from: "#miscsvc",
+            to: [ "#driver_manager" ],
+
+            // TODO: Once netsvc is spawned by component manager, we can remove this.
+            dependency: "weak_for_migration",
         },
 
         // Offer the pty service to the driver_manager
@@ -427,6 +454,11 @@
             to: [ "#pwrbtn-monitor" ],
             subdir: "class/input",
         },
+        {
+            protocol: [ "/svc/fuchsia.fshost.Registry" ],
+            from: "#fshost",
+            to: [ "#miscsvc" ],
+        },
     ],
     expose: [
         // This handle is used by component manager to resolve packages from the
@@ -481,9 +513,7 @@
                 "/svc/fuchsia.device.manager.BindDebugger",
                 "/svc/fuchsia.device.manager.DebugDumper",
                 "/svc/fuchsia.device.NameProvider",
-                "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
-                "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.scheduler.ProfileProvider",
                 "/svc/fuchsia.tracing.kernel.Controller",
                 "/svc/fuchsia.tracing.kernel.Reader",
@@ -498,6 +528,13 @@
         {
             protocol: "/svc/fuchsia.hardware.pty.Device",
             from: "#ptysvc",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.kernel.Counter",
+                "/svc/fuchsia.paver.Paver",
+            ],
+            from: "#miscsvc",
         },
         {
             protocol: "/svc/fuchsia.sysinfo.SysInfo",

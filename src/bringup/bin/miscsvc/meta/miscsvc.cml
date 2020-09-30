@@ -1,0 +1,55 @@
+{
+    program: {
+        binary: "bin/miscsvc",
+    },
+    use: [
+        { runner: "elf" },
+
+        // For access to filesystem binaries under /boot/bin/ for mounting.
+        // For access to drivers under /boot/drivers/ for dynamic binding.
+        {
+            directory: "/boot",
+            rights: [ "rx*" ],
+        },
+
+        // For block and skip-block device access.
+        {
+            directory: "/dev",
+            rights: [ "rw*" ],
+        },
+
+        // TODO: Paver should create its own memfs instead, so this can eventually be removed.
+        {
+            directory: "/volume",
+            rights: [
+                "admin",
+                "rw*",
+            ],
+        },
+        {
+            protocol: [
+                // Services from bootsvc
+                "/svc/fuchsia.boot.Arguments",
+                "/svc/fuchsia.boot.WriteOnlyLog",
+
+                // Services from fshost
+                "/svc/fuchsia.fshost.Registry",
+
+                // Builtin service
+                "/svc/fuchsia.process.Launcher",
+
+                // Services from sysinfo
+                "/svc/fuchsia.sysinfo.SysInfo",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.kernel.Counter",
+                "/svc/fuchsia.paver.Paver",
+            ],
+            from: "self",
+        },
+    ],
+}

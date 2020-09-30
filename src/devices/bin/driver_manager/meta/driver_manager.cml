@@ -60,17 +60,6 @@
             directory: "/factory",
             rights: [ "r*" ],
         },
-
-        // TODO: this volume directory is only used by the paver lib in netsvc under
-        // driver_manager. The paver lib could create its own memfs instead, so
-        // this should eventually be removed.
-        {
-            directory: "/volume",
-            rights: [
-                "admin",
-                "rw*",
-            ],
-        },
         {
             directory: "/system-delayed",
             rights: [ "rx*" ],
@@ -117,6 +106,7 @@
                 "/svc/fuchsia.hardware.pci.Bus",
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.hardware.pty.Device",
+                "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",
@@ -124,6 +114,7 @@
                 "/svc/fuchsia.net.stack.Log",
                 "/svc/fuchsia.net.stack.Stack",
                 "/svc/fuchsia.netstack.Netstack",
+                "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.pkg.PackageResolver",
                 "/svc/fuchsia.pkg.RepositoryManager",
                 "/svc/fuchsia.pkg.rewrite.Engine",

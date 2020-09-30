@@ -96,7 +96,6 @@ template("isolated_devmgr_component") {
     }
     deps += [
       ":${manifest_name}",
-      "//src/bringup/bin/miscsvc",
       "//src/bringup/bin/netsvc:device-name-provider",
       "//src/devices/bin/driver_host",
       "//src/devices/bin/driver_manager",

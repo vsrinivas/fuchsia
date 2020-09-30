@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/component_manifest_resources.gni")
+
+group("bootfs") {
+  deps = [
+    ":meta",
+    ":miscsvc",
+  ]
+}
+
 executable("miscsvc") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -23,4 +32,8 @@ executable("miscsvc") {
     "//zircon/system/ulib/svc",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
+}
+
+component_manifest_resources("meta") {
+  sources = [ "meta/miscsvc.cml" ]
 }
