@@ -26,6 +26,7 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
+#include <lib/fit/optional.h>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>

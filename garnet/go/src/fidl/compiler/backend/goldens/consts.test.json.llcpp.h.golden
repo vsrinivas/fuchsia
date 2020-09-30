@@ -16,6 +16,7 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
+#include <lib/fit/optional.h>
 
 #include <variant>
 #ifdef __Fuchsia__
@@ -41,10 +42,12 @@ enum class EnumType : int32_t {
   true_ = 2u,
 };
 
+// |BitsType| is strict, hence is guaranteed to only contain
+// members defined in the FIDL schema.
 class BitsType final {
  public:
-  constexpr BitsType() : value_(0u) {}
-  explicit constexpr BitsType(uint32_t value) : value_(value) {}
+  constexpr BitsType() = default;
+  constexpr BitsType(const BitsType& other) = default;
   const static BitsType VALUE;
   const static BitsType true_;
   const static BitsType mask;
@@ -67,8 +70,26 @@ class BitsType final {
   constexpr inline void operator&=(const BitsType& other);
   constexpr inline void operator^=(const BitsType& other);
 
+  // Constructs an instance of |BitsType| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<BitsType> TryFrom(uint32_t value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
+    }
+    return BitsType(value & BitsType::mask.value_);
+  }
+
+  // Constructs an instance of |BitsType| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static BitsType TruncatingUnknown(uint32_t value) {
+    return BitsType(value & BitsType::mask.value_);
+  }
+
  private:
-  uint32_t value_;
+  constexpr explicit BitsType(uint32_t value) : value_(value) {}
+
+  uint32_t value_ = 0;
 };
 constexpr const ::llcpp::test::name::BitsType BitsType::VALUE =
     ::llcpp::test::name::BitsType(1u);

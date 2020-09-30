@@ -207,7 +207,7 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync completer) {
     auto& dst = tx[i];
     auto& src = device_info_.tx_types_list[i];
     dst.features = src.features;
-    dst.supported_flags = static_cast<netdev::TxFlags>(src.supported_flags);
+    dst.supported_flags = netdev::TxFlags::TruncatingUnknown(src.supported_flags);
     dst.type = static_cast<netdev::FrameType>(src.type);
   }
 

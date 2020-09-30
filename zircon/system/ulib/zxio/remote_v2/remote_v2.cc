@@ -154,8 +154,7 @@ void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
   // static_cast is a-okay, because |fio2::DeviceSignal| values are defined
   // using Zircon ZX_USER_* signals.
-  auto device_signal_part =
-      fio2::DeviceSignal(zx_signals & static_cast<zx_signals_t>(fio2::DeviceSignal::mask));
+  auto device_signal_part = fio2::DeviceSignal::TruncatingUnknown(zx_signals);
   if (device_signal_part & fio2::DeviceSignal::READABLE) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
@@ -302,8 +301,7 @@ void zxio_file_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_
 
 void zxio_file_v2_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  auto file_signal_part =
-      fio2::FileSignal(zx_signals & static_cast<zx_signals_t>(fio2::FileSignal::mask));
+  auto file_signal_part = fio2::FileSignal::TruncatingUnknown(zx_signals);
   if (file_signal_part & fio2::FileSignal::READABLE) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }

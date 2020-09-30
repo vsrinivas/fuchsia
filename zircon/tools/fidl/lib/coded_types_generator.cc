@@ -395,11 +395,10 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
       std::string bits_name = NameCodedName(bits_decl->name);
       auto primitive_type = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
       named_coded_types_.emplace(
-          bits_decl->name,
-          std::make_unique<coded::BitsType>(std::move(bits_name), primitive_type->subtype,
-                                            primitive_type->typeshape(wire_format).InlineSize(),
-                                            bits_decl->mask, NameFlatName(bits_decl->name),
-                                            bits_decl->strictness));
+          bits_decl->name, std::make_unique<coded::BitsType>(
+                               std::move(bits_name), primitive_type->subtype,
+                               primitive_type->typeshape(wire_format).InlineSize(), bits_decl->mask,
+                               NameFlatName(bits_decl->name), bits_decl->strictness));
       break;
     }
     case flat::Decl::Kind::kEnum: {

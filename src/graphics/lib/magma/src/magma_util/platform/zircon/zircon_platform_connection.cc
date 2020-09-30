@@ -22,7 +22,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
     zx_status_t status = llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
         SendOnPerformanceCounterReadCompletedEvent(
             zx::unowned_channel(channel_), trigger_id, buffer_id, buffer_offset, time,
-            static_cast<llcpp::fuchsia::gpu::magma::ResultFlags>(result_flags));
+            llcpp::fuchsia::gpu::magma::ResultFlags::TruncatingUnknown(result_flags));
     switch (status) {
       case ZX_OK:
         return MAGMA_STATUS_OK;

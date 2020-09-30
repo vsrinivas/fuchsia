@@ -178,7 +178,7 @@ func (co *Const) compileProperties(c compiler) {
 }
 
 type Bits struct {
-	types.Attributes
+	types.Bits
 	Namespace string
 	Type      string
 	Name      string
@@ -1078,12 +1078,12 @@ func (c *compiler) compileType(val types.Type) Type {
 
 func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 	r := Bits{
-		Attributes: val.Attributes,
-		Namespace:  c.namespace,
-		Type:       c.compileType(val.Type).Decl,
-		Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
-		Mask:       val.Mask,
-		MaskName:   c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace, false),
+		Bits:      val,
+		Namespace: c.namespace,
+		Type:      c.compileType(val.Type).Decl,
+		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
+		Mask:      val.Mask,
+		MaskName:  c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace, false),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{

@@ -16,6 +16,7 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
+#include <lib/fit/optional.h>
 
 #include <variant>
 #ifdef __Fuchsia__
@@ -37,10 +38,12 @@ namespace fidl {
 namespace test {
 namespace json {
 
+// |StrictBits| is strict, hence is guaranteed to only contain
+// members defined in the FIDL schema.
 class StrictBits final {
  public:
-  constexpr StrictBits() : value_(0u) {}
-  explicit constexpr StrictBits(uint64_t value) : value_(value) {}
+  constexpr StrictBits() = default;
+  constexpr StrictBits(const StrictBits& other) = default;
   const static StrictBits SMALLEST;
   const static StrictBits BIGGEST;
   const static StrictBits mask;
@@ -63,8 +66,26 @@ class StrictBits final {
   constexpr inline void operator&=(const StrictBits& other);
   constexpr inline void operator^=(const StrictBits& other);
 
+  // Constructs an instance of |StrictBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<StrictBits> TryFrom(uint64_t value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
+    }
+    return StrictBits(value & StrictBits::mask.value_);
+  }
+
+  // Constructs an instance of |StrictBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static StrictBits TruncatingUnknown(uint64_t value) {
+    return StrictBits(value & StrictBits::mask.value_);
+  }
+
  private:
-  uint64_t value_;
+  constexpr explicit StrictBits(uint64_t value) : value_(value) {}
+
+  uint64_t value_ = 0;
 };
 constexpr const ::llcpp::fidl::test::json::StrictBits StrictBits::SMALLEST =
     ::llcpp::fidl::test::json::StrictBits(1u);
@@ -112,10 +133,12 @@ constexpr inline void StrictBits::operator^=(
   this->value_ ^= other.value_;
 }
 
+// |MyBits| is strict, hence is guaranteed to only contain
+// members defined in the FIDL schema.
 class MyBits final {
  public:
-  constexpr MyBits() : value_(0u) {}
-  explicit constexpr MyBits(uint32_t value) : value_(value) {}
+  constexpr MyBits() = default;
+  constexpr MyBits(const MyBits& other) = default;
   const static MyBits MY_FIRST_BIT;
   const static MyBits MY_OTHER_BIT;
   const static MyBits MASK;
@@ -139,8 +162,26 @@ class MyBits final {
   constexpr inline void operator&=(const MyBits& other);
   constexpr inline void operator^=(const MyBits& other);
 
+  // Constructs an instance of |MyBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<MyBits> TryFrom(uint32_t value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
+    }
+    return MyBits(value & MyBits::mask.value_);
+  }
+
+  // Constructs an instance of |MyBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static MyBits TruncatingUnknown(uint32_t value) {
+    return MyBits(value & MyBits::mask.value_);
+  }
+
  private:
-  uint32_t value_;
+  constexpr explicit MyBits(uint32_t value) : value_(value) {}
+
+  uint32_t value_ = 0;
 };
 constexpr const ::llcpp::fidl::test::json::MyBits MyBits::MY_FIRST_BIT =
     ::llcpp::fidl::test::json::MyBits(1u);
@@ -189,10 +230,12 @@ constexpr inline void MyBits::operator^=(
   this->value_ ^= other.value_;
 }
 
+// |FlexibleBits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
 class FlexibleBits final {
  public:
-  constexpr FlexibleBits() : value_(0u) {}
-  explicit constexpr FlexibleBits(uint64_t value) : value_(value) {}
+  constexpr FlexibleBits() = default;
+  constexpr FlexibleBits(const FlexibleBits& other) = default;
   const static FlexibleBits SMALLEST;
   const static FlexibleBits BIGGEST;
   const static FlexibleBits mask;
@@ -215,8 +258,38 @@ class FlexibleBits final {
   constexpr inline void operator&=(const FlexibleBits& other);
   constexpr inline void operator^=(const FlexibleBits& other);
 
+  // Constructs an instance of |FlexibleBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<FlexibleBits> TryFrom(uint64_t value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
+    }
+    return FlexibleBits(value & FlexibleBits::mask.value_);
+  }
+
+  // Constructs an instance of |FlexibleBits| from an underlying primitive
+  // value, clearing any bit member not defined in the FIDL schema.
+  constexpr inline static FlexibleBits TruncatingUnknown(uint64_t value) {
+    return FlexibleBits(value & FlexibleBits::mask.value_);
+  }
+  // Constructs an instance of |FlexibleBits| from an underlying primitive
+  // value, preserving any bit member not defined in the FIDL schema.
+  constexpr inline static FlexibleBits AllowingUnknown(uint64_t value) {
+    return FlexibleBits(value);
+  }
+
+  constexpr inline FlexibleBits unknown_bits() const {
+    return *this & FlexibleBits(~mask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const {
+    return static_cast<bool>(unknown_bits());
+  }
+
  private:
-  uint64_t value_;
+  constexpr explicit FlexibleBits(uint64_t value) : value_(value) {}
+
+  uint64_t value_ = 0;
 };
 constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::SMALLEST =
     ::llcpp::fidl::test::json::FlexibleBits(1u);

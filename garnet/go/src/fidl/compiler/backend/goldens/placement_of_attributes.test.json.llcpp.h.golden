@@ -16,6 +16,7 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
+#include <lib/fit/optional.h>
 
 #include <variant>
 #ifdef __Fuchsia__
@@ -46,10 +47,12 @@ enum class ExampleEnum : uint32_t {
   MEMBER = 1u,
 };
 
+// |ExampleBits| is strict, hence is guaranteed to only contain
+// members defined in the FIDL schema.
 class ExampleBits final {
  public:
-  constexpr ExampleBits() : value_(0u) {}
-  explicit constexpr ExampleBits(uint32_t value) : value_(value) {}
+  constexpr ExampleBits() = default;
+  constexpr ExampleBits(const ExampleBits& other) = default;
   const static ExampleBits MEMBER;
   const static ExampleBits mask;
 
@@ -71,8 +74,26 @@ class ExampleBits final {
   constexpr inline void operator&=(const ExampleBits& other);
   constexpr inline void operator^=(const ExampleBits& other);
 
+  // Constructs an instance of |ExampleBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<ExampleBits> TryFrom(uint32_t value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
+    }
+    return ExampleBits(value & ExampleBits::mask.value_);
+  }
+
+  // Constructs an instance of |ExampleBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static ExampleBits TruncatingUnknown(uint32_t value) {
+    return ExampleBits(value & ExampleBits::mask.value_);
+  }
+
  private:
-  uint32_t value_;
+  constexpr explicit ExampleBits(uint32_t value) : value_(value) {}
+
+  uint32_t value_ = 0;
 };
 constexpr const ::llcpp::example::ExampleBits ExampleBits::MEMBER =
     ::llcpp::example::ExampleBits(1u);

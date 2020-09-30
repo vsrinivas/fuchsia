@@ -60,6 +60,21 @@ func (a *allocatorBuilder) construct(typename string, isPointer bool, str string
 	return fmt.Sprintf("%s(%s)", typename, fmt.Sprintf(str, args...))
 }
 
+func formatPrimitive(value interface{}) string {
+	switch value := value.(type) {
+	case int64:
+		if value == -9223372036854775808 {
+			return "-9223372036854775807ll - 1"
+		}
+		return fmt.Sprintf("%dll", value)
+	case uint64:
+		return fmt.Sprintf("%dull", value)
+	case float64:
+		return fmt.Sprintf("%f", value)
+	}
+	panic("Unreachable")
+}
+
 func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, isAlwaysPointer bool) string {
 	// Unions, StringView and VectorView in LLCPP represent nullability within the object rather than as
 	// as pointer to the object.
@@ -71,15 +86,23 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 	switch value := value.(type) {
 	case bool:
 		return a.construct(typeName(decl), isPointer, "%t", value)
-	case int64:
-		if value == -9223372036854775808 {
-			return a.construct(typeName(decl), isPointer, "-9223372036854775807ll - 1")
+	case int64, uint64, float64:
+		switch decl := decl.(type) {
+		case gidlmixer.PrimitiveDeclaration, *gidlmixer.EnumDecl:
+			return a.construct(typeName(decl), isPointer, formatPrimitive(value))
+		case *gidlmixer.BitsDecl:
+			if decl.IsFlexible() {
+				return fmt.Sprintf("%s::AllowingUnknown(%s)", declName(decl), formatPrimitive(value))
+			}
+			// Given a strict bits declaration, it is impossible to construct one
+			// with unknown members using "regular C++". Here we use a questionable
+			// reinterpret-cast in an IIFE to fabricate such an illegal value:
+			//
+			// ([] { T bits; *reinterpret_cast<Underlying*>(&bits) = value; return bits; })()
+			//
+			return fmt.Sprintf("([] { %s bits; *reinterpret_cast<%s*>(&bits) = %s; return bits; })()", declName(decl), primitiveTypeName(decl.Underlying.Subtype()), formatPrimitive(value))
 		}
-		return a.construct(typeName(decl), isPointer, "%dll", value)
-	case uint64:
-		return a.construct(typeName(decl), isPointer, "%dull", value)
-	case float64:
-		return a.construct(typeName(decl), isPointer, "%f", value)
+		panic(fmt.Errorf("Unsupported combination of value and decl: %v, %v", value, decl))
 	case string:
 		if !isPointer {
 			// This clause is optional and simplifies the output.

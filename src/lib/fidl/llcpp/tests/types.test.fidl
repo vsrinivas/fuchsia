@@ -42,7 +42,15 @@ flexible union TestNonResourceXUnion {
 ///
 /// We use a uint8 since most bitwise operations will cast their operands to
 /// int, and therefore special casting is required to properly compile.
-bits SampleBits : uint8 {
+strict bits StrictBits : uint8 {
+    B = 2;
+    D = 4;
+    E = 8;
+};
+
+/// The members should be kept in sync with those in [`StrictBits`], as we have
+/// tests parameterized on both bits types.
+flexible bits FlexibleBits : uint8 {
     B = 2;
     D = 4;
     E = 8;

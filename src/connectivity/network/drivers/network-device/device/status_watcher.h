@@ -26,7 +26,8 @@ namespace network::internal {
 /// `status_t``.
 class FidlStatus {
  public:
-  explicit FidlStatus(const status_t& status) : mtu_(status.mtu), flags_(status.flags) {
+  explicit FidlStatus(const status_t& status)
+      : mtu_(status.mtu), flags_(netdev::StatusFlags::TruncatingUnknown(status.flags)) {
     builder_.set_flags(fidl::unowned_ptr(&flags_));
     builder_.set_mtu(fidl::unowned_ptr(&mtu_));
   }

@@ -6,10 +6,20 @@ package codegen
 
 const fragmentBitsTmpl = `
 {{- define "BitsForwardDeclaration" }}
+{{- range .DocComments }}
+//{{ . }}
+{{- end }}
+{{- if .IsStrict }}
+// |{{ .Name }}| is strict, hence is guaranteed to only contain
+// members defined in the FIDL schema.
+{{- else }}
+// |{{ .Name }}| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+{{- end }}
 class {{ .Name }} final {
 public:
-  constexpr {{ .Name }}() : value_(0u) {}
-  explicit constexpr {{ .Name }}({{ .Type }} value) : value_(value) {}
+  constexpr {{ .Name }}() = default;
+  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
 
   {{- range .Members }}
   const static {{ $.Name }} {{ .Name }};
@@ -28,8 +38,39 @@ public:
   constexpr inline void operator&=(const {{ .Name }}& other);
   constexpr inline void operator^=(const {{ .Name }}& other);
 
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<{{ .Name }}> TryFrom({{ .Type }} value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
+    }
+    return {{ .Name }}(value & {{ .Name }}::mask.value_);
+  }
+
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static {{ .Name }} TruncatingUnknown({{ .Type }} value) {
+    return {{ .Name }}(value & {{ .Name }}::mask.value_);
+  }
+
+  {{- if .IsFlexible }}
+  // Constructs an instance of |{{ .Name }}| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  constexpr inline static {{ .Name }} AllowingUnknown({{ .Type }} value) {
+    return {{ .Name }}(value);
+  }
+
+  constexpr inline {{ .Name }} unknown_bits() const {
+    return *this & {{ .Name }}(~mask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
+  {{- end }}
+
 private:
-  {{ .Type }} value_;
+  constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
+
+  {{ .Type }} value_ = 0;
 };
 
 {{- range $member := .Members }}
