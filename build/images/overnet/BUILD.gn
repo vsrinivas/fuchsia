@@ -10,8 +10,6 @@ assemble_system("overnet") {
     "//garnet/bin/run",
     "//garnet/bin/trace",
     "//garnet/bin/vsock_service:vsock_service",
-    "//src/diagnostics/archivist",
-    "//src/diagnostics/archivist:with_default_config",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/core",

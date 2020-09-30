@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/dist/component_manifest_resources.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
@@ -115,6 +116,18 @@ rustc_binary("bin") {
   name = "archivist"
   with_unit_tests = true
   edition = "2018"
+  force_opt = "z"
+
+  # Archivist must always be small (even in debug builds) since it is part of bootfs.
+  #
+  # The add/remove/add ensures we get the configuration without producing errors for builds which
+  # enable ThinLTO themselves.
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/lto:thinlto" ]
+  configs += [ "//build/config/lto:thinlto" ]
+
+  # we can't dynamically link std when we're in the zbi :(
+  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   deps = [
     ":lib",
@@ -141,12 +154,6 @@ rustc_binary("bin") {
 fuchsia_component("archivist-v1") {
   component_name = "archivist"
   manifest = "meta/archivist.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("archivist-v2") {
-  component_name = "archivist"
-  manifest = "meta/archivist.cml"
   deps = [ ":bin" ]
 }
 
@@ -177,13 +184,30 @@ fuchsia_component("archivist-for-embedding-v2") {
   ]
 }
 
+# TODO(fxbug.dev/60992) remove
 fuchsia_package("archivist") {
   deps = [
     ":archivist-v1",
-    ":archivist-v2",
 
     # TODO(fxbug.dev/58074) remove
     ":observer-v1",
+  ]
+}
+
+component_manifest_resources("root-manifest") {
+  sources = [ "meta/archivist.cml" ]
+}
+
+resource("root-config") {
+  sources = [ "configs/root-config.json" ]
+  outputs = "config/archivist/archivist_config.json"
+}
+
+group("bootfs") {
+  deps = [
+    ":bin",
+    ":root-config",
+    ":root-manifest",
   ]
 }
 
@@ -194,6 +218,7 @@ fuchsia_package("archivist-for-embedding") {
   ]
 }
 
+# TODO(fxbug.dev/60992) remove
 config_data("archivist_config") {
   for_pkg = "archivist"
   outputs = [ "archivist_config.json" ]

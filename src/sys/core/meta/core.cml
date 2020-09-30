@@ -9,7 +9,7 @@
         },
         {
             name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cm",
+            url: "fuchsia-boot:///#meta/archivist.cm",
         },
 
         // Children below this line may be present on some but not all product configurations (whereas
@@ -169,10 +169,11 @@
             to: [ "#archivist" ],
         },
         {
-            directory: "/config/data",
+            directory: "/boot",
             from: "parent",
+            as: "/config/data",
             to: [ "#archivist" ],
-            subdir: "archivist",
+            subdir: "config/archivist",
         },
         {
             directory: "/config/data",

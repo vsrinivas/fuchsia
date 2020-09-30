@@ -46,8 +46,6 @@ base_package_labels += [
   "//src/connectivity/wlan/config:default",
   "//src/developer/forensics:pkg",
   "//src/developer/forensics/snapshot:pkg",
-  "//src/diagnostics/archivist",
-  "//src/diagnostics/archivist:with_default_config",
   "//src/hwinfo:hwinfo",
   "//src/hwinfo:default_product_config",
   "//src/media/audio/bundles:audio_config",

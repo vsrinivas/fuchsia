@@ -1,0 +1,8 @@
+{
+  // Maximum available memory for an archive store.
+  "max_archive_size_bytes": 10485760,
+  // Maximum size a single archive event group can be.
+  "max_event_group_size_bytes": 262144,
+  // Number of threads available to Archive.
+  "num_threads": 4,
+}
