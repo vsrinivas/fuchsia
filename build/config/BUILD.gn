@@ -659,7 +659,6 @@ config("Wno-conversion") {
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm/*",
     "//src/connectivity/management/reachability/core/*",
     "//src/connectivity/network/netstack/tests/manual/*",
-    "//src/connectivity/network/tools/sockscripter/*",
     "//src/connectivity/network/tun/network-tun/*",
     "//src/connectivity/openthread/drivers/ot-radio/*",
     "//src/connectivity/openthread/ot-stack/*",

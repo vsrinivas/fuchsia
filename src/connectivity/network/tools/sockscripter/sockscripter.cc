@@ -512,7 +512,8 @@ bool SockScripter::LogIpMcastLoop6(char* arg) {
 
 bool SockScripter::SetBindToDevice(char* arg) {
 #ifdef SO_BINDTODEVICE
-  if (api_->setsockopt(sockfd_, SOL_SOCKET, SO_BINDTODEVICE, arg, strlen(arg)) < 0) {
+  if (api_->setsockopt(sockfd_, SOL_SOCKET, SO_BINDTODEVICE, arg,
+                       static_cast<socklen_t>(strlen(arg))) < 0) {
     LOG(ERROR) << "Error-Setting SO_BINDTODEVICE failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
@@ -870,7 +871,8 @@ bool SockScripter::SendTo(char* arg) {
     return false;
   }
 
-  int sent = api_->sendto(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_, addr, addr_len);
+  ssize_t sent =
+      api_->sendto(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_, addr, addr_len);
   if (sent < 0) {
     LOG(ERROR) << "Error-sendto(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
@@ -885,7 +887,7 @@ bool SockScripter::Send(char* arg) {
 
   LOG(INFO) << "Sending [" << snd_buf.length() << "]='" << snd_buf << "' on fd:" << sockfd_;
 
-  int sent = api_->send(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_);
+  ssize_t sent = api_->send(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_);
   if (sent < 0) {
     LOG(ERROR) << "Error-send(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
@@ -902,7 +904,7 @@ bool SockScripter::RecvFromInternal(bool ping) {
   LOG(INFO) << "RecvFrom(fd:" << sockfd_ << ")...";
 
   memset(recv_buf_, 0, sizeof(recv_buf_));
-  int recvd =
+  ssize_t recvd =
       api_->recvfrom(sockfd_, recv_buf_, sizeof(recv_buf_) - 1, recv_flags_, addr, &addr_len);
   if (recvd < 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -941,7 +943,7 @@ int SockScripter::RecvInternal(bool ping) {
   LogPeerAddress(nullptr);
 
   memset(recv_buf_, 0, sizeof(recv_buf_));
-  int recvd = api_->recv(sockfd_, recv_buf_, sizeof(recv_buf_) - 1, recv_flags_);
+  ssize_t recvd = api_->recv(sockfd_, recv_buf_, sizeof(recv_buf_) - 1, recv_flags_);
   if (recvd < 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       LOG(INFO) << "  returned EAGAIN or EWOULDBLOCK!";

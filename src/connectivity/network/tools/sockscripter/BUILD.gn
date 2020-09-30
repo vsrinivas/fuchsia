@@ -19,11 +19,6 @@ source_set("src") {
   ]
 
   public_deps = [ "//src/lib/fxl" ]
-
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 executable("bin") {
@@ -43,10 +38,6 @@ executable("sockscripter_test") {
     ":src",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-  ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
   ]
 }
 

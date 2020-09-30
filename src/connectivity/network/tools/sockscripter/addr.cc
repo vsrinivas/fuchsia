@@ -206,7 +206,7 @@ bool SockAddrIn::Set(const std::string& ip_port_str) {
                  << "' for <ip>:<port> - missing port!";
       return false;
     }
-    if (ip_port_str.find_first_of(col_pos + 1, ':') != std::string::npos) {
+    if (ip_port_str.find_first_of(':', col_pos + 1) != std::string::npos) {
       LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
                  << "' for <ip>:<port> - too many colons ':',"
                  << " use '[]' brackets around IPv6 addresses!";
@@ -230,7 +230,7 @@ bool SockAddrIn::Set(const std::string& ip_port_str) {
     LOG(ERROR) << "Error-Cannot parse port='" << port_str << "'!";
     return false;
   }
-  port_ = port;
+  port_ = static_cast<uint16_t>(port);
   return true;
 }
 

@@ -16,7 +16,7 @@ class InAddr {
 
   void Reset() { family_ = AF_UNSPEC; }
 
-  int GetFamily() { return family_; }
+  sa_family_t GetFamily() const { return family_; }
 
   bool IsSet() { return family_ != AF_UNSPEC; }
 
@@ -39,7 +39,7 @@ class InAddr {
 
  private:
   std::string ip_str_;
-  int family_;
+  sa_family_t family_;
   // Tagged union storing an address, using family_ as the tag.
   union {
     struct in_addr addr4_;
@@ -104,7 +104,7 @@ class SockAddrIn {
 
  private:
   InAddr addr_;
-  int port_ = -1;
+  uint16_t port_;
 };
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_ADDR_H_
