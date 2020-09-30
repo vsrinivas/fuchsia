@@ -17,19 +17,6 @@ executable("keepalivetest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("mctest") {
-  testonly = true
-
-  sources = [ "mctest.c" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
 executable("nbiotest") {
   testonly = true
 
@@ -101,7 +88,6 @@ package("netstack-manual-tests") {
   deps = [
     ":gethostbyname_test",
     ":keepalivetest",
-    ":mctest",
     ":nbiotest",
     ":polltest",
     ":selecttest",
@@ -115,10 +101,6 @@ package("netstack-manual-tests") {
     },
     {
       name = "keepalivetest"
-      shell = true
-    },
-    {
-      name = "mctest"
       shell = true
     },
     {
