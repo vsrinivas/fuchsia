@@ -669,7 +669,6 @@ config("Wno-conversion") {
     "//src/connectivity/lib/network-device/cpp/*",
     "//src/connectivity/management/reachability/core/*",
     "//src/connectivity/network/netstack/tests/manual/*",
-    "//src/connectivity/network/tests/benchmarks/*",
     "//src/connectivity/network/tools/sockscripter/*",
     "//src/connectivity/network/tun/network-tun/*",
     "//src/connectivity/openthread/drivers/ot-radio/*",
