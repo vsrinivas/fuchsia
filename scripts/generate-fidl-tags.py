@@ -640,7 +640,6 @@ def get_tags(json, tags):
     tags.extend(extract_name_and_members(json['struct_declarations']))
     tags.extend(extract_name_and_members(json['table_declarations']))
     tags.extend(extract_name_and_members(json['union_declarations']))
-    tags.extend(extract_name_and_members(json['xunion_declarations']))
 
 
 def get_syscall_tags(json, tags):
@@ -657,7 +656,7 @@ def main():
 
     # Include the syscalls ir file too, which is only in the Zircon outdir.
     matches.append(
-        os.path.join(args.zircon_build_dir, 'gen', 'syscalls.ir.json'))
+        os.path.join(args.zircon_build_dir, 'gen', 'vdso', 'zx.json', 'fidl.json'))
 
     tags = []
     for filename in matches:
