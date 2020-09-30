@@ -14,6 +14,6 @@ zx_library("root_resource_filter") {
     "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/init",
     "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/zbi",
+    "$zx/system/ulib/zbitl",
   ]
 }

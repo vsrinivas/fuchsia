@@ -82,7 +82,6 @@ class RootResourceFilter {
     fbl::RefPtr<VmObject> vmo;
   };
 
-  void ProcessZbiEntry(const zbi_header_t* hdr, const void* payload);
   std::optional<uintptr_t> ProcessCmdLineReservation(size_t size, std::string_view name);
 
   // By default, RegionAllocators are thread safe (protected by a fbl::Mutex),

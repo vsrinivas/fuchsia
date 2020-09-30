@@ -8,11 +8,12 @@
 #include <lib/counters.h>
 #include <lib/root_resource_filter.h>
 #include <lib/root_resource_filter_internal.h>
-#include <lib/zbi/zbi.h>
+#include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <trace.h>
 
 #include <ktl/algorithm.h>
+#include <ktl/byte.h>
 #include <lk/init.h>
 #include <vm/pmm.h>
 #include <vm/vm_object_paged.h>
@@ -47,20 +48,32 @@ void RootResourceFilter::Finalize() {
     ASSERT(res == ZX_OK);
   }
 
-  const zbi_header_t* zbi_image = platform_get_zbi();
-  if (zbi_image != nullptr) {
-    zbi_result result = zbi_check(zbi_image, nullptr);
-    if (result != ZBI_RESULT_OK) {
+  const zbi_header_t* zbi_container = platform_get_zbi();
+  if (zbi_container) {
+    ktl::span<const ktl::byte> zbi{reinterpret_cast<const std::byte*>(zbi_container),
+                                   sizeof(*zbi_container) + zbi_container->length};
+    zbitl::View view(zbi);
+    for (auto [header, payload] : view) {
+      if (header->type != ZBI_TYPE_MEM_CONFIG) {
+        continue;
+      }
+      const zbi_mem_range_t* mem_range = reinterpret_cast<const zbi_mem_range_t*>(payload.data());
+      const uint32_t count = header->length / static_cast<uint32_t>(sizeof(zbi_mem_range_t));
+
+      for (uint32_t i = 0; i < count; i++, mem_range++) {
+        if (mem_range->type == ZBI_MEM_RANGE_RESERVED) {
+          mmio_deny_.SubtractRegion({.base = mem_range->paddr, .size = mem_range->length},
+                                    RegionAllocator::AllowIncomplete::Yes);
+        }
+      }
+    }
+    if (auto result = view.take_error(); result.is_error()) {
+      auto error = std::move(result).error_value();
       dprintf(INFO,
-              "WARNING - ZBI failed sanity check (%d). Reserved memory regions will not be "
-              "removed from the resource deny list.\n",
-              result);
-    } else {
-      auto cb = [](zbi_header_t* hdr, void* payload, void* ctx) -> zbi_result_t {
-        reinterpret_cast<RootResourceFilter*>(ctx)->ProcessZbiEntry(hdr, payload);
-        return ZBI_RESULT_OK;
-      };
-      zbi_for_each(zbi_image, cb, this);
+              "WARNING - error encountered while iterating over ZBI at offset"
+              " %#x: %.*s. Reserved memory regions will not be removed from the"
+              " resource deny list.\n",
+              error.item_offset, static_cast<int>(error.zbi_error.size()), error.zbi_error.data());
     }
   } else {
     dprintf(INFO,
@@ -161,22 +174,6 @@ std::optional<uintptr_t> RootResourceFilter::ProcessCmdLineReservation(size_t si
   Printf("Created command line RAM reservation \"%V\" at [%lx, %lx)\n", name, phys, phys + size);
   cmd_line_reservations_.push_front(std::move(node));
   return phys;
-}
-
-void RootResourceFilter::ProcessZbiEntry(const zbi_header_t* hdr, const void* payload) {
-  if (hdr->type != ZBI_TYPE_MEM_CONFIG) {
-    return;
-  }
-
-  const zbi_mem_range_t* mem_range = reinterpret_cast<const zbi_mem_range_t*>(payload);
-  uint32_t count = hdr->length / static_cast<uint32_t>(sizeof(zbi_mem_range_t));
-
-  for (uint32_t i = 0; i < count; i++, mem_range++) {
-    if (mem_range->type == ZBI_MEM_RANGE_RESERVED) {
-      mmio_deny_.SubtractRegion({.base = mem_range->paddr, .size = mem_range->length},
-                                RegionAllocator::AllowIncomplete::Yes);
-    }
-  }
 }
 
 bool RootResourceFilter::IsRegionAllowed(uintptr_t base, size_t size, zx_rsrc_kind_t kind) const {
