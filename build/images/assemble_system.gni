@@ -261,7 +261,9 @@ template("assemble_system") {
     # Referenced by guest_package.
     testonly = true
     output_name = "$target_out_dir/$target_name"
-    args = fvm_create_args
+    # This target is only ever used for a ram-based FVM, so the slice size chosen does not need
+    # to be the same as used in other places.
+    args = [ "create", "--slice", "1048576" ]
     partitions = [
       {
         type = "blob"
