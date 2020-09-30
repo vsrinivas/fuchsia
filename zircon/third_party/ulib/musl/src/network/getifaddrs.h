@@ -21,7 +21,8 @@ struct sockaddr_ll_hack {
   unsigned short sll_family, sll_protocol;
   int sll_ifindex;
   unsigned short sll_hatype;
-  unsigned char sll_pkttype, sll_halen;
+  unsigned char sll_pkttype;
+  socklen_t sll_halen;
   unsigned char sll_addr[24];
 };
 
@@ -46,8 +47,8 @@ struct ifaddrs_ctx {
   struct ifaddrs_storage* hash[IFADDRS_HASH_SIZE];
 };
 
-static inline void copy_addr(struct sockaddr** r, int af, union sockany* sa, void* addr,
-                             size_t addrlen, int ifindex) {
+static inline void copy_addr(struct sockaddr** r, sa_family_t af, union sockany* sa, void* addr,
+                             socklen_t addrlen, uint32_t ifindex) {
   uint8_t* dst;
   size_t len;
 
@@ -72,7 +73,8 @@ static inline void copy_addr(struct sockaddr** r, int af, union sockany* sa, voi
   *r = &sa->sa;
 }
 
-static inline void gen_netmask(struct sockaddr** r, int af, union sockany* sa, size_t prefixlen) {
+static inline void gen_netmask(struct sockaddr** r, sa_family_t af, union sockany* sa,
+                               uint8_t prefixlen) {
   uint8_t addr[16] = {};
   size_t i;
 
@@ -81,12 +83,12 @@ static inline void gen_netmask(struct sockaddr** r, int af, union sockany* sa, s
   i = prefixlen / 8;
   memset(addr, 0xff, i);
   if (i < sizeof(addr))
-    addr[i++] = 0xff << (8 - (prefixlen % 8));
+    addr[i++] = (uint8_t)(0xff << (8 - (prefixlen % 8)));
   copy_addr(r, af, sa, addr, sizeof(addr), 0);
 }
 
-static inline void copy_lladdr(struct sockaddr** r, union sockany* sa, void* addr, size_t addrlen,
-                               int ifindex, unsigned short hatype) {
+static inline void copy_lladdr(struct sockaddr** r, union sockany* sa, void* addr,
+                               socklen_t addrlen, uint32_t ifindex, unsigned short hatype) {
   if (addrlen > sizeof(sa->ll.sll_addr))
     return;
   sa->ll.sll_family = AF_PACKET;

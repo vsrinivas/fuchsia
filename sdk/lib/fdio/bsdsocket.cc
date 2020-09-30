@@ -585,14 +585,16 @@ int getifaddrs(struct ifaddrs** ifap) {
         case fnet::IpAddress::Tag::kIpv4: {
           const auto& addr_bytes = addr.ipv4().addr;
           copy_addr(&ifs->ifa.ifa_addr, AF_INET, &ifs->addr,
-                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(), iface.id());
+                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(),
+                    static_cast<uint32_t>(iface.id()));
           gen_netmask(&ifs->ifa.ifa_netmask, AF_INET, &ifs->netmask, prefix_len);
           break;
         }
         case fnet::IpAddress::Tag::kIpv6: {
           const auto& addr_bytes = addr.ipv6().addr;
           copy_addr(&ifs->ifa.ifa_addr, AF_INET6, &ifs->addr,
-                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(), iface.id());
+                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(),
+                    static_cast<uint32_t>(iface.id()));
           gen_netmask(&ifs->ifa.ifa_netmask, AF_INET6, &ifs->netmask, prefix_len);
           break;
         }

@@ -102,9 +102,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/system/ulib/zxio",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 } else {
   source_set("fdio") {

@@ -623,7 +623,6 @@ config("Wno-conversion") {
     "//garnet/public/lib/fostr/*",
     "//garnet/public/lib/test_runner/cpp/*",
     "//garnet/tests/fdio_spawn/*",
-    "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp/*",
     "//sdk/lib/media/audio/cpp/*",
     "//sdk/lib/media/cpp/*",

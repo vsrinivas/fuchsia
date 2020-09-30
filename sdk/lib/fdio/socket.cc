@@ -76,7 +76,8 @@ fsocket::RecvMsgFlags to_recvmsg_flags(int flags) {
 
 fsocket::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::SendMsgFlags(); }
 
-size_t fidl_to_sockaddr(const fnet::SocketAddress& fidl, struct sockaddr* addr, size_t addr_len) {
+socklen_t fidl_to_sockaddr(const fnet::SocketAddress& fidl, struct sockaddr* addr,
+                           socklen_t addr_len) {
   switch (fidl.which()) {
     case fnet::SocketAddress::Tag::kIpv4: {
       struct sockaddr_in tmp;
