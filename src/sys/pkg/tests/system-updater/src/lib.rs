@@ -16,6 +16,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
+    fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon::Status,
     futures::prelude::*,
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
@@ -752,15 +753,6 @@ macro_rules! pinned_pkg_url {
         $crate::merkle_str!(@check $merkle_seed);
         concat!("fuchsia-pkg://fuchsia.com/", $path, "?hash=", $crate::merkle_str!(@unchecked $merkle_seed))
     }};
-}
-
-fn make_packages_json<'a>(urls: impl AsRef<[&'a str]>) -> String {
-    json!({
-      // TODO(fxbug.dev/50754): Change to "1" once we remove support for versions as ints.
-      "version": 1,
-      "content": urls.as_ref(),
-    })
-    .to_string()
 }
 
 const UPDATE_HASH: &str = "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";

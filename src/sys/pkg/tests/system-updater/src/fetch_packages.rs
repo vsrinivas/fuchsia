@@ -45,10 +45,9 @@ async fn fails_on_package_resolver_connect_error() {
 async fn fails_on_update_package_fetch_error() {
     let env = TestEnv::builder().oneshot(true).build();
 
-    env.resolver.register_package("update", "upd4t3").add_file(
-        "packages",
-        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-    );
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]));
 
     let system_image_url = SYSTEM_IMAGE_URL;
     env.resolver.mock_resolve_failure(system_image_url, Status::NOT_FOUND);

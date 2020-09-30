@@ -25,7 +25,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
     let package_url = SYSTEM_IMAGE_URL;
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages", package_url)
+        .add_file("packages.json", make_packages_json([package_url]))
         .add_file("update-mode", &force_recovery_json())
         .add_file("recovery", "the recovery image")
         .add_file("recovery.vbmeta", "the recovery vbmeta");
@@ -97,7 +97,7 @@ async fn reboots_regardless_of_reboot_arg() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages", "")
+        .add_file("packages", make_packages_json([]))
         .add_file("update-mode", &force_recovery_json());
 
     env.run_system_updater_oneshot(SystemUpdaterArgs {
@@ -119,7 +119,7 @@ async fn reboots_regardless_of_reboot_controller() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages", "")
+        .add_file("packages", make_packages_json([]))
         .add_file("update-mode", &force_recovery_json());
 
     // Start the system update.
@@ -148,10 +148,7 @@ async fn rejects_zbi() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file(
-            "packages",
-            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-        )
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("update-mode", &force_recovery_json())
         .add_file("bootloader", "new bootloader")
         .add_file("zbi", "fake zbi");
@@ -190,7 +187,7 @@ async fn rejects_skip_recovery_flag() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages", "")
+        .add_file("packages", make_packages_json([]))
         .add_file("update-mode", &force_recovery_json());
 
     let result = env

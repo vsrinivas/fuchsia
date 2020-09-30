@@ -32,6 +32,7 @@ rustc_test("driver") {
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
     "//src/sys/pkg/lib/fuchsia-pkg",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/mock-reboot",
