@@ -27,10 +27,10 @@ source_set("src") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.network.device",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
+    "//sdk/fidl/fuchsia.net.tun",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/drivers/network-device/mac",
-    "//src/connectivity/network/tun/fidl",
     "//src/lib/fxl",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",

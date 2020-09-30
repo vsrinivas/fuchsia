@@ -9,12 +9,12 @@ rustc_binary("bin") {
   name = "svc_list"
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
-    "//src/connectivity/network/tun/fidl:fidl-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

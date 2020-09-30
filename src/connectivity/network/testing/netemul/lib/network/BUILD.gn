@@ -58,9 +58,9 @@ source_set("network_service") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.net.tun",
     "//src/connectivity/network/testing/netemul/lib/fidl:internal",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
-    "//src/connectivity/network/tun/fidl",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

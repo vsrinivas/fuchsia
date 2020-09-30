@@ -2,14 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
-
-fidl("fidl") {
-  name = "fuchsia.net.tun"
-  sources = [ "tun.fidl" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.net",
-  ]
+# TODO(fxbug.dev/61063): Remove this rule and delete this file once out-of-tree users have
+# transitioned to new SDK path.
+group("fidl") {
+  public_deps = [ "//sdk/fidl/fuchsia.net.tun" ]
 }
