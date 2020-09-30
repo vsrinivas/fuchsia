@@ -30,11 +30,12 @@ fuchsia_package("netstack") {
 }
 
 package("tools") {
-  deps = [ "ifconfig" ]
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
 
   binaries = [
     {
       name = "ifconfig"
+      source = "grand_unified_binary"
       shell = true
     },
   ]

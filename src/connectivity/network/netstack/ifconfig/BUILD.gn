@@ -7,12 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
-go_binary("ifconfig") {
-  gopackage =
-      "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/ifconfig"
-  deps = [ ":ifconfig_lib" ]
-}
-
 go_library("ifconfig_lib") {
   name = "ifconfig_lib"
 

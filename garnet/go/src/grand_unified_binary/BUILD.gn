@@ -8,6 +8,7 @@ import("//build/go/go_library.gni")
 go_library("lib") {
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
+    "//src/connectivity/network/netstack/ifconfig:ifconfig_lib",
     "//src/sys/pkg/bin/amber:lib",
     "//src/sys/pkg/bin/pkgfs:pmd",
   ]

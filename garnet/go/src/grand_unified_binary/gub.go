@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/ifconfig"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/amberctl"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
@@ -43,6 +44,8 @@ func main() {
 		amberctl.Main()
 	case "netstack":
 		netstack.Main()
+	case "ifconfig":
+		ifconfig.Main()
 	default:
 		log.Printf("software delivery grand unified binary: unknown inner binary name: %s (%s)", name, os.Args[0])
 		os.Exit(1)
