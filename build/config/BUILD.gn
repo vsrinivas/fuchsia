@@ -655,7 +655,6 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/tools/bt-hci-tool/*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool/*",
     "//src/connectivity/ethernet/drivers/*",
-    "//src/connectivity/ethernet/drivers/ethernet/*",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm/*",
     "//src/connectivity/management/reachability/core/*",
     "//src/connectivity/network/netstack/tests/manual/*",
