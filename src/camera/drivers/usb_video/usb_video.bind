@@ -1,0 +1,10 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.usb;
+
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.VIDEO;
+fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.BIND_USB_SUBCLASS.VIDEO_INTERFACE_COLLECTION;
+fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.BIND_USB_PROTOCOL.UNDEFINED;

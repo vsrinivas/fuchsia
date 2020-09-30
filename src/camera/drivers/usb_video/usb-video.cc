@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <zircon/hw/usb/video.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -17,6 +16,7 @@
 #include <usb/usb.h>
 
 #include "src/camera/drivers/usb_video/usb-video-stream.h"
+#include "src/camera/drivers/usb_video/usb_video-bind.h"
 #include "src/camera/drivers/usb_video/uvc_format.h"
 
 namespace {
@@ -369,10 +369,6 @@ static zx_driver_ops_t driver_ops = []() {
 }  // namespace
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_video, driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_VIDEO),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-ZIRCON_DRIVER_END(usb_video)
-    // clang-format on
+ZIRCON_DRIVER(usb_video, driver_ops, "zircon", "0.1");
+
+// clang-format on
