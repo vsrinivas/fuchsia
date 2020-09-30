@@ -34,9 +34,6 @@ ddk_source_split("device") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs = [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
