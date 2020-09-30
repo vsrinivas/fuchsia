@@ -2696,7 +2696,14 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
     }
   });
   fut_started.wait();
-  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+  // Give the asynchronous blocking operation some time to reach the blocking state. Clocks
+  // sometimes jump in infrastructure, which may cause a single wait to trip sooner than expected,
+  // without the asynchronous task getting a meaningful shot at running. We protect against that by
+  // splitting the wait into multiple calls as an attempt to guarantee that clock jumps are not what
+  // causes the wait below to continue prematurely.
+  for (int i = 0; i < 50; i++) {
+    EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(1)), std::future_status::timeout);
+  }
 
   // When enabled, causes `close` to send a TCP RST.
   struct linger opt = {
