@@ -60,6 +60,7 @@
                     {
                         "name": "fuchsia-node",
                         "services": {
+                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
                             "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
                             "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx"
@@ -104,6 +105,7 @@
                 ],
                 "name": "weave-node",
                 "services": {
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
                     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-debug.cmx"

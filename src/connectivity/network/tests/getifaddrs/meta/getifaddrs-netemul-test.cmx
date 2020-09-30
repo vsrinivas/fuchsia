@@ -3,6 +3,7 @@
         "fuchsia.netemul": {
             "environment": {
                 "services": {
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/getifaddrs-tests#meta/netstack-debug.cmx",
                     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/getifaddrs-tests#meta/netstack-debug.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/getifaddrs-tests#meta/netstack-debug.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/getifaddrs-tests#meta/netstack-debug.cmx"

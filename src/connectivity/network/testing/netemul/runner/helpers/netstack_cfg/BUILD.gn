@@ -11,6 +11,7 @@ rustc_binary("netstack_cfg") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -19,6 +20,7 @@ rustc_binary("netstack_cfg") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/network/fidl_fuchsia_netstack_ext",
     "//src/lib/syslog/rust:syslog",

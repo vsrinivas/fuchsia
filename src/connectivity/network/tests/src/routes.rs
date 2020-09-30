@@ -27,6 +27,9 @@ async fn test_resolve_route() -> Result {
     let host_netstack = host
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
+    let host_interface_state = host
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
 
     let host_ep = host
         .join_network::<netemul::NetworkDevice, _>(
@@ -37,19 +40,28 @@ async fn test_resolve_route() -> Result {
         .await
         .context("host failed to join network")?;
     let () = host_ep.add_ip_addr(HOST_IP_V6).await.context("failed to add IPv6 address to host")?;
-    let () =
-        crate::wait_for_addresses(&host_netstack, host_ep.id(), std::iter::once(HOST_IP_V6.addr))
-            .await
-            .context("failed to observe host IPv6 address assignment")?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&host_interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(host_ep.id()),
+        |properties| {
+            if properties.addresses.as_ref()?.iter().any(|a| a.addr == Some(HOST_IP_V6)) {
+                Some(())
+            } else {
+                None
+            }
+        },
+    )
+    .await
+    .context("failed to observe host IPv6")?;
 
     // Configure a gateway.
     let gateway = sandbox
         .create_netstack_environment::<Netstack2, _>("resolve_route_gateway")
         .context("failed to create server environment")?;
 
-    let gateway_netstack = gateway
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to netstack")?;
+    let gateway_interface_state = gateway
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
 
     let gateway_ep = gateway
         .join_network::<netemul::NetworkDevice, _>(
@@ -63,10 +75,16 @@ async fn test_resolve_route() -> Result {
         .add_ip_addr(GATEWAY_IP_V6)
         .await
         .context("failed to add IPv6 address to gateway")?;
-    let () = crate::wait_for_addresses(
-        &gateway_netstack,
-        gateway_ep.id(),
-        std::iter::once(GATEWAY_IP_V6.addr),
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&gateway_interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(gateway_ep.id()),
+        |properties| {
+            if properties.addresses.as_ref()?.iter().any(|a| a.addr == Some(GATEWAY_IP_V6)) {
+                Some(())
+            } else {
+                None
+            }
+        },
     )
     .await
     .context("failed to observe gateway IPv6 address assignment")?;

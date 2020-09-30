@@ -6,6 +6,7 @@
         "services": [
             "fuchaia.logger.LogSink",
             "fuchsia.net.NameLookup",
+            "fuchsia.net.interfaces.State",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.sync.SyncManager",

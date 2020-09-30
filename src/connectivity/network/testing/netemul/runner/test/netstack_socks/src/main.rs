@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_net_interfaces::StateMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };
@@ -86,6 +87,11 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             },
             LaunchService {
                 name: String::from(ProviderMarker::NAME),
+                url: String::from(NETSTACK_URL),
+                arguments: Vec::new(),
+            },
+            LaunchService {
+                name: String::from(StateMarker::NAME),
                 url: String::from(NETSTACK_URL),
                 arguments: Vec::new(),
             },

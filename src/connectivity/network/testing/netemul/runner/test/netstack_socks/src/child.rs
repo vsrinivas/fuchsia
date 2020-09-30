@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_netemul_network::{DeviceConnection, EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_component::client,
-    futures::TryStreamExt,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
     std::str::FromStr,
@@ -107,22 +106,6 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         filepath: "[TBD]".to_string(),
         metric: DEFAULT_METRIC,
     };
-    let mut if_changed = netstack.take_event_stream().try_filter_map(
-        |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            let iface = interfaces.iter().filter(|iface| iface.name == if_name).next();
-            match iface {
-                None => futures::future::ok(None),
-                Some(a) => {
-                    if a.flags.contains(fidl_fuchsia_netstack::Flags::Up) {
-                        futures::future::ok(Some((a.id, a.hwaddr.clone())))
-                    } else {
-                        println!("Found interface, but it's down. waiting.");
-                        futures::future::ok(None)
-                    }
-                }
-            }
-        },
-    );
     let nicid = match device_connection {
         DeviceConnection::Ethernet(eth) => netstack
             .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
@@ -139,13 +122,22 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
     let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;
 
-    let (if_id, hwaddr) = if_changed
-        .try_next()
-        .await
-        .context("wait for interfaces")?
-        .ok_or_else(|| format_err!("interface added"))?;
+    let interface_state = client::connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
+        |properties| {
+            if properties.online? {
+                Some(())
+            } else {
+                None
+            }
+        },
+    )
+    .await
+    .context("wait for interface online")?;
 
-    println!("Found ethernet with id {} {:?}", if_id, hwaddr);
+    println!("Found ethernet with id {}", nicid);
 
     if let Some(remote) = opt.connect_ip {
         run_client(&remote)

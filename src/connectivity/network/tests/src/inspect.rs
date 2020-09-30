@@ -5,11 +5,10 @@
 use crate::environments::{Netstack2, TestSandboxExt};
 use crate::Result;
 use anyhow::Context as _;
+use fidl_fuchsia_net_interfaces_ext::CloneExt as _;
 use fuchsia_inspect_node_hierarchy::Property;
-use futures::TryStreamExt as _;
-use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
+use net_declare::{fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
-use std::convert::TryInto as _;
 
 /// A helper type to provide address verification in inspect NIC data.
 ///
@@ -23,37 +22,28 @@ struct AddressMatcher {
 
 impl AddressMatcher {
     /// Creates an `AddressMatcher` from interface properties.
-    fn new(props: &fidl_fuchsia_netstack::NetInterface) -> Self {
-        // NB: We naively count ones in the netmask to get the prefix. The
-        // assumption being that netmask is well formed.
-        let pfx_len: u8 = match &props.netmask {
-            fidl_fuchsia_net::IpAddress::Ipv4(a) => &a.addr[..],
-            fidl_fuchsia_net::IpAddress::Ipv6(a) => &a.addr[..],
-        }
-        .iter()
-        .map(|b| b.count_ones())
-        .sum::<u32>()
-        .try_into()
-        .expect("invalid prefix length");
-
-        let set =
-            std::iter::once(&fidl_fuchsia_net::Subnet { addr: props.addr, prefix_len: pfx_len })
-                .chain(props.ipv6addrs.iter())
-                .map(|addr| {
-                    let prefix = match addr.addr {
+    fn new(props: &fidl_fuchsia_net_interfaces::Properties, has_hwaddr: bool) -> Self {
+        let set = props
+            .addresses
+            .iter()
+            .flatten()
+            .filter_map(|a| {
+                a.addr.map(|a| {
+                    let prefix = match a.addr {
                         fidl_fuchsia_net::IpAddress::Ipv4(_) => "ipv4",
                         fidl_fuchsia_net::IpAddress::Ipv6(_) => "ipv6",
                     };
-                    format!("[{}] {}", prefix, fidl_fuchsia_net_ext::Subnet::from(*addr))
+                    format!("[{}] {}", prefix, fidl_fuchsia_net_ext::Subnet::from(a))
                 })
-                .chain(if props.hwaddr.is_empty() {
-                    None
-                } else {
-                    // If we have a non-empty hardware address, assume that we're going to
-                    // have the fixed ARP protocol address in the set.
-                    Some("[arp] 617270/0".to_string())
-                })
-                .collect();
+            })
+            .chain(if has_hwaddr {
+                // If we have a non-empty hardware address, assume that we're going to
+                // have the fixed ARP protocol address in the set.
+                Some("[arp] 617270/0".to_string())
+            } else {
+                None
+            })
+            .collect::<std::collections::HashSet<_>>();
 
         Self { set: std::rc::Rc::new(std::cell::RefCell::new(set)) }
     }
@@ -173,81 +163,77 @@ async fn inspect_nic() -> Result {
         .await
         .context("failed to join network with netdevice endpoint")?;
 
-    let netstack = env
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to netstack")?;
+    let interfaces_state = env
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
 
     // Wait for the world to stabilize and capture the state to verify inspect
     // data.
-    let (loopback_id, mut ifaces) = netstack
-        .take_event_stream()
-        .try_filter_map(
-            |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                let interfaces_by_id = interfaces
-                    .into_iter()
-                    .map(|i| (u64::from(i.id), i))
-                    .collect::<std::collections::HashMap<_, _>>();
-                // Find the loopback interface.
-                let loopback = if let Some((id, _)) = interfaces_by_id.iter().find(|(_, iface)| {
-                    iface.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback)
-                }) {
-                    *id
-                } else {
-                    return futures::future::ok(None);
+    let (loopback_props, netdev_props, eth_props) =
+        fidl_fuchsia_net_interfaces_ext::wait_interface(
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)?,
+            &mut std::collections::HashMap::new(),
+            |if_map| {
+                let loopback = if_map.iter().find_map(|(_, properties)| {
+                    match properties.device_class.as_ref()? {
+                        fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                            fidl_fuchsia_net_interfaces::Empty {},
+                        ) => Some(properties.clone()),
+                        fidl_fuchsia_net_interfaces::DeviceClass::Device(_) => None,
+                    }
+                })?;
+                // Endpoint is up, has assigned IPv4 and at least the expected number of
+                // IPv6 addresses.
+                let get_properties = |id| {
+                    let properties = if_map.get(&id)?;
+                    let addresses = properties.addresses.as_ref()?;
+                    if !properties.online? {
+                        return None;
+                    }
+                    let (v4_count, v6_count) =
+                        addresses.iter().fold((0, 0), |(v4_count, v6_count), a| match a.addr {
+                            Some(fidl_fuchsia_net::Subnet {
+                                addr: fidl_fuchsia_net::IpAddress::Ipv4(_),
+                                prefix_len: _,
+                            }) => (v4_count + 1, v6_count),
+                            Some(fidl_fuchsia_net::Subnet {
+                                addr: fidl_fuchsia_net::IpAddress::Ipv6(_),
+                                prefix_len: _,
+                            }) => (v4_count, v6_count + 1),
+                            None => (v4_count, v6_count),
+                        });
+                    if v4_count > 0 && v6_count >= EXPECTED_NUM_IPV6_ADDRESSES {
+                        Some(properties.clone())
+                    } else {
+                        None
+                    }
                 };
-
-                // Verify installed interface state.
-                let ready = [netdev.id(), eth.id()].iter().all(|id| {
-                    interfaces_by_id
-                        .get(id)
-                        .map(|iface| {
-                            // Endpoint is up, has assigned IPv4 and at least the expected number of
-                            // IPv6 addresses.
-                            iface.flags.contains(fidl_fuchsia_netstack::Flags::Up)
-                                && iface.addr != fidl_ip!(0.0.0.0)
-                                && iface.ipv6addrs.len() >= EXPECTED_NUM_IPV6_ADDRESSES
-                        })
-                        .unwrap_or(false)
-                });
-                futures::future::ok(if ready { Some((loopback, interfaces_by_id)) } else { None })
+                Some((loopback, get_properties(netdev.id())?, get_properties(eth.id())?))
             },
         )
-        .try_next()
         .await
-        .context("failed to observe desired final state")?
-        .ok_or_else(|| anyhow::anyhow!("netstack stream ended unexpectedly"))?;
-
-    let loopback_props = ifaces.remove(&loopback_id).context("loopback missing")?;
-    let eth_props = ifaces.remove(&eth.id()).context("eth missing")?;
-    let netdev_props = ifaces.remove(&netdev.id()).context("netdev missing")?;
-    let loopback_id = format!("{}", loopback_id);
-    let eth_id = format!("{}", eth_props.id);
-    let netdev_id = format!("{}", netdev_props.id);
-
-    let eth_mac = format!("{}", fidl_fuchsia_net_ext::MacAddress::from(ETH_MAC));
-    let netdev_mac = format!("{}", fidl_fuchsia_net_ext::MacAddress::from(NETDEV_MAC));
-
-    let loopback_addrs = AddressMatcher::new(&loopback_props);
-    let eth_addrs = AddressMatcher::new(&eth_props);
-    let netdev_addrs = AddressMatcher::new(&netdev_props);
+        .context("failed to wait for interfaces up and addresses configured")?;
+    let loopback_id = loopback_props.id.ok_or(anyhow::anyhow!("loopback ID missing"))?;
+    let loopback_addrs = AddressMatcher::new(&loopback_props, false);
+    let netdev_addrs = AddressMatcher::new(&netdev_props, true);
+    let eth_addrs = AddressMatcher::new(&eth_props, true);
 
     let data = get_inspect_data(&env, "netstack-debug.cmx", "NICs", "interfaces")
         .await
         .context("get_inspect_data failed")?;
-
     // Debug print the tree to make debugging easier in case of failures.
     println!("Got inspect data: {:#?}", data);
     use fuchsia_inspect::testing::AnyProperty;
     fuchsia_inspect::assert_inspect_tree!(data, NICs: {
-        loopback_id.clone() => {
-            Name: loopback_props.name,
+        loopback_id.to_string() => {
+            Name: loopback_props.name.ok_or(anyhow::anyhow!("loopback name missing"))?,
             Loopback: "true",
             LinkOnline: "true",
             AdminUp: "true",
             Promiscuous: "false",
             Up: "true",
             MTU: 65536u64,
-            NICID: loopback_id,
+            NICID: loopback_id.to_string(),
             Running: "true",
             "DHCP enabled": "false",
             ProtocolAddress0: loopback_addrs.clone(),
@@ -267,18 +253,18 @@ async fn inspect_nic() -> Result {
                 }
             }
         },
-        eth_id.clone() => {
-            Name: eth_props.name,
+        eth.id().to_string() => {
+            Name: eth_props.name.ok_or(anyhow::anyhow!("eth name missing"))?,
             Loopback: "false",
             LinkOnline: "true",
             AdminUp: "true",
             Promiscuous: "false",
             Up: "true",
             MTU: u64::from(netemul::DEFAULT_MTU),
-            NICID: eth_id,
+            NICID: eth.id().to_string(),
             Running: "true",
             "DHCP enabled": "false",
-            LinkAddress: eth_mac,
+            LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(ETH_MAC).to_string(),
             // NB: The interface has 4 addresses: IPv4, 2x link-local IPv6, and
             // the ARP protocol address that is always reported.
             ProtocolAddress0: eth_addrs.clone(),
@@ -310,18 +296,18 @@ async fn inspect_nic() -> Result {
                 TxWrites: contains {}
             }
         },
-        netdev_id.clone() => {
-            Name: netdev_props.name,
+        netdev.id().to_string() => {
+            Name: netdev_props.name.ok_or(anyhow::anyhow!("netdev name missing"))?,
             Loopback: "false",
             LinkOnline: "true",
             AdminUp: "true",
             Promiscuous: "false",
             Up: "true",
             MTU: u64::from(netemul::DEFAULT_MTU),
-            NICID: netdev_id,
+            NICID: netdev.id().to_string(),
             Running: "true",
             "DHCP enabled": "false",
-            LinkAddress: netdev_mac,
+            LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(NETDEV_MAC).to_string(),
             // NB: The interface has 4 addresses: IPv4, 2x link-local IPv6, and
             // the ARP protocol address that is always reported.
             ProtocolAddress0: netdev_addrs.clone(),

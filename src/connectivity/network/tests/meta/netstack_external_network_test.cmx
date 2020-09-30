@@ -9,6 +9,7 @@
                 "name": "external_network_environment",
                 "services": {
                     "fuchsia.device.NameProvider": "fuchsia-pkg://fuchsia.com/device_name_provider#meta/device_name_provider.cmx",
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx"
                 },

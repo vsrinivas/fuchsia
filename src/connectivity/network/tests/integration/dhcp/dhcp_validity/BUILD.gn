@@ -34,6 +34,7 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -41,6 +42,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",

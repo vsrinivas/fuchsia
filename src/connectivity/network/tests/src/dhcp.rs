@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::Context as _;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use fuchsia_async::TimeoutExt as _;
+use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_subnet};
 use netstack_testing_macros::variants_test;
 
@@ -27,7 +28,7 @@ struct DhcpTestEndpoint<'a> {
     static_addr: Option<fidl_fuchsia_net::Subnet>,
     /// want_addr is the address expected after a successfull address acquisition
     /// from a DHCP client.
-    want_addr: Option<(fidl_fuchsia_net::IpAddress, fidl_fuchsia_net::IpAddress)>,
+    want_addr: Option<fidl_fuchsia_net::Subnet>,
 }
 
 /// A network can have multiple endpoints. Each endpoint can be attached to a
@@ -55,7 +56,10 @@ async fn acquire_dhcp<E: netemul::Endpoint>(name: &str) -> Result {
                     name: "client-ep",
                     env: DhcpTestEnv::Client,
                     static_addr: None,
-                    want_addr: Some((fidl_ip!(192.168.0.2), fidl_ip!(255.255.255.128))),
+                    want_addr: Some(fidl_fuchsia_net::Subnet {
+                        addr: fidl_ip!(192.168.0.2),
+                        prefix_len: 25,
+                    }),
                 },
             ],
         }],
@@ -82,7 +86,10 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
                     name: "client-ep",
                     env: DhcpTestEnv::Client,
                     static_addr: None,
-                    want_addr: Some((fidl_ip!(192.168.0.2), fidl_ip!(255.255.255.128))),
+                    want_addr: Some(fidl_fuchsia_net::Subnet {
+                        addr: fidl_ip!(192.168.0.2),
+                        prefix_len: 25,
+                    }),
                 },
             ],
         }],
@@ -110,7 +117,10 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                         name: "client-ep1",
                         env: DhcpTestEnv::Client,
                         static_addr: None,
-                        want_addr: Some((fidl_ip!(192.168.0.2), fidl_ip!(255.255.255.128))),
+                        want_addr: Some(fidl_fuchsia_net::Subnet {
+                            addr: fidl_ip!(192.168.0.2),
+                            prefix_len: 25,
+                        }),
                     },
                 ],
             },
@@ -127,7 +137,10 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                         name: "client-ep2",
                         env: DhcpTestEnv::Client,
                         static_addr: None,
-                        want_addr: Some((fidl_ip!(192.168.1.2), fidl_ip!(255.255.255.0))),
+                        want_addr: Some(fidl_fuchsia_net::Subnet {
+                            addr: fidl_ip!(192.168.1.2),
+                            prefix_len: 24,
+                        }),
                     },
                 ],
             },
@@ -243,82 +256,66 @@ async fn test_dhcp<E: netemul::Endpoint>(
             .map(Result::Ok),
     )
     .try_for_each(|(_, _, addr, interface)| async move {
-        let (want_addr, want_netmask) =
+        let want_addr =
             addr.ok_or(anyhow::format_err!("expected address must be set for client endpoints"))?;
 
         interface.start_dhcp().await.context("Failed to start DHCP")?;
 
-        let client_netstack = client_env_ref
-            .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
-            .context("failed to connect to client netstack")?;
-
+        let client_interface_state = client_env_ref
+            .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+            .context("failed to connect to client fuchsia.net.interfaces/State")?;
+        let (watcher, watcher_server) =
+            ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        let () = client_interface_state
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, watcher_server)
+            .context("failed to initialize interface watcher")?;
+        let mut properties =
+            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
         for _ in 0..cycles {
             let () = interface.set_link_up(true).await.context("Failed to bring link up")?;
-            let mut address_change_stream = futures::TryStreamExt::try_filter_map(
-                client_netstack.take_event_stream(),
-                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                    futures::future::ok(
-                        interfaces.into_iter().find(|i| i.id as u64 == interface.id()).and_then(
-                            |fidl_fuchsia_netstack::NetInterface { addr, netmask, .. }| {
-                                let ipaddr = addr;
-                                match ipaddr {
-                                    fidl_fuchsia_net::IpAddress::Ipv4(
-                                        fidl_fuchsia_net::Ipv4Address { addr },
-                                    ) => {
-                                        if addr == std::net::Ipv4Addr::UNSPECIFIED.octets() {
-                                            None
-                                        } else {
-                                            Some((ipaddr, netmask))
-                                        }
-                                    }
-                                    fidl_fuchsia_net::IpAddress::Ipv6(
-                                        fidl_fuchsia_net::Ipv6Address { .. },
-                                    ) => None,
-                                }
-                            },
-                        ),
-                    )
+
+            let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+                fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+                &mut properties,
+                |properties| {
+                    properties.addresses.as_ref()?.iter().filter_map(|a| a.addr).find(|a| {
+                        match a.addr {
+                            fidl_fuchsia_net::IpAddress::Ipv4(_) => true,
+                            fidl_fuchsia_net::IpAddress::Ipv6(_) => false,
+                        }
+                    })
                 },
-            );
-            let address_change = futures::StreamExt::next(&mut address_change_stream);
-            let address_change = fuchsia_async::TimeoutExt::on_timeout(
-                address_change,
+            )
+            .on_timeout(
                 // Netstack's DHCP client retries every 3 seconds. At the time of writing, dhcpd loses
                 // the race here and only starts after the first request from the DHCP client, which
                 // results in a 3 second toll. This test typically takes ~4.5 seconds; we apply a large
                 // multiple to be safe.
                 fuchsia_async::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
-                || None,
-            );
-            let (addr, netmask) = address_change
-                .await
-                .ok_or(anyhow::format_err!(
-                    "failed to observe DHCP acquisition on client ep {}",
-                    name
-                ))?
-                .context(format!("failed to observe DHCP acquisition on client ep {}", name))?;
+                || Err(anyhow::anyhow!("timed out")),
+            )
+            .await
+            .context("failed to observe DHCP acquisition on client ep {}")?;
             assert_eq!(addr, want_addr);
-            assert_eq!(netmask, want_netmask);
-            // Drop so we can listen on the stream again.
-            std::mem::drop(address_change_stream);
 
             // Set interface online signal to down and wait for address to be removed.
             let () = interface.set_link_up(false).await.context("Failed to bring link up")?;
-            let _ifaces = futures::TryStreamExt::try_filter(
-                client_netstack.take_event_stream(),
-                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                    futures::future::ready(
-                        interfaces
-                            .into_iter()
-                            .find(|i| i.id as u64 == interface.id())
-                            .map(|i| i.addr == fidl_ip!(0.0.0.0))
-                            .unwrap_or(false),
-                    )
+
+            let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+                fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+                &mut properties,
+                |properties| {
+                    properties.addresses.as_ref().map_or(Some(()), |addresses| {
+                        if addresses.iter().any(|a| a.addr == Some(addr)) {
+                            None
+                        } else {
+                            Some(())
+                        }
+                    })
                 },
             )
-            .next()
             .await
-            .ok_or_else(|| anyhow::anyhow!("event stream ended unexpectedly"))?;
+            .context("failed to wait for address removal")?;
         }
         Result::Ok(())
     })

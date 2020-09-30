@@ -7,8 +7,8 @@ use std::str::FromStr as _;
 
 use fidl_fuchsia_net_dhcp as net_dhcp;
 use fidl_fuchsia_net_dhcpv6 as net_dhcpv6;
+use fidl_fuchsia_net_interfaces as net_interfaces;
 use fidl_fuchsia_net_name as net_name;
-use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -254,12 +254,12 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
         .with_context(|| format!("add virtual device {}", endpoint_mount_path.display()))?;
 
     // Make sure the Netstack got the new device added.
-    let netstack = environment
-        .connect_to_service::<netstack::NetstackMarker>()
-        .context("connect to netstack service")?;
+    let interface_state = environment
+        .connect_to_service::<net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
     let mut wait_for_netmgr_fut = netmgr.wait().fuse();
     let (_id, _name): (u32, String) = crate::management::wait_for_non_loopback_interface_up(
-        &netstack,
+        &interface_state,
         &mut wait_for_netmgr_fut,
         None,
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,

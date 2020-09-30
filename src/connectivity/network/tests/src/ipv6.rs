@@ -161,7 +161,6 @@ pub(super) async fn write_ndp_message<
     let () = ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
     Ok(())
 }
-
 /// Launches a new netstack with the endpoint and returns the IPv6 addresses
 /// initially assigned to it.
 ///
@@ -367,7 +366,7 @@ async fn sends_router_solicitations<E: netemul::Endpoint>(name: &str) -> Result 
 #[variants_test]
 async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_network, _environment, netstack, iface, fake_ep) =
+    let (_network, environment, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
 
     // Wait for a Router Solicitation.
@@ -429,40 +428,46 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
     //
     // We expect two addresses for the SLAAC prefixes to be assigned to the NIC as the
     // netstack should generate both a stable and temporary SLAAC address.
+    let interface_state = environment
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
     let expected_addrs = 2;
-    netstack
-        .take_event_stream()
-        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            if let Some(netstack::NetInterface { ipv6addrs, .. }) =
-                interfaces.iter().find(|i| u64::from(i.id) == iface.id())
-            {
-                let mut slaac_addrs = 0;
-
-                for ip in ipv6addrs {
-                    if let net::IpAddress::Ipv6(a) = ip.addr {
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
+        |properties| {
+            if properties
+                .addresses
+                .as_ref()?
+                .iter()
+                .filter_map(|a| match a.addr?.addr {
+                    net::IpAddress::Ipv6(a) => {
                         if ipv6_consts::PREFIX.contains(&net_types_ip::Ipv6Addr::new(a.addr)) {
-                            slaac_addrs += 1;
+                            Some(())
+                        } else {
+                            None
                         }
                     }
-                }
-
-                if slaac_addrs == expected_addrs {
-                    return future::ok(Some(()));
-                }
+                    net::IpAddress::Ipv4(_) => None,
+                })
+                .count()
+                == expected_addrs as usize
+            {
+                Some(())
+            } else {
+                None
             }
-
-            future::ok(None)
-        })
-        .try_next()
-        .map(|r| r.context("error getting OnInterfaceChanged event"))
-        .on_timeout(
-            (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
-                + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
-                .after_now(),
-            || Err(anyhow::anyhow!("timed out waiting for SLAAC addresses")),
-        )
-        .await?
-        .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
+        },
+    )
+    .on_timeout(
+        (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
+            + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+            .after_now(),
+        || Err(anyhow::anyhow!("timed out")),
+    )
+    .await
+    .context("failed to wait for SLAAC addresses")?;
+    Ok(())
 }
 
 /// Adds `ipv6_consts::LINK_LOCAL_ADDR` to the interface and makes sure a Neighbor Solicitation
@@ -615,7 +620,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
     }
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_network, _environment, netstack, iface, fake_ep) =
+    let (_network, environment, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
 
     // Add an address and expect it to fail DAD because we simulate another node
@@ -628,38 +633,38 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
 
     // Add the address, and make sure it gets assigned.
     let () = add_address_for_dad(&iface, &fake_ep, |_, _| async { Ok(()) }).await?;
-    netstack
-        .take_event_stream()
-        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            if let Some(netstack::NetInterface { ipv6addrs, .. }) =
-                interfaces.iter().find(|i| u64::from(i.id) == iface.id())
-            {
-                for ip in ipv6addrs {
-                    if let net::IpAddress::Ipv6(a) = ip.addr {
-                        if ipv6_consts::LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(a.addr) {
-                            return future::ok(Some(()));
-                        }
+
+    let interface_state = environment
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
+        |properties| {
+            properties.addresses.as_ref()?.iter().find_map(|a| match a.addr?.addr {
+                net::IpAddress::Ipv6(a) => {
+                    if ipv6_consts::LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(a.addr) {
+                        Some(())
+                    } else {
+                        None
                     }
                 }
-            }
-
-            future::ok(None)
-        })
-        .try_next()
-        .map(|r| r.context("error getting OnInterfaceChanged event"))
-        .on_timeout(
-            (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
-                + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
-                .after_now(),
-            || {
-                Err(anyhow::anyhow!(
-                    "timed out waiting for the address {} to be assigned",
-                    ipv6_consts::LINK_LOCAL_ADDR
-                ))
-            },
-        )
-        .await?
-        .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
+                net::IpAddress::Ipv4(_) => None,
+            })
+        },
+    )
+    .on_timeout(
+        (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
+            + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+            .after_now(),
+        || Err(anyhow::anyhow!("timed out")),
+    )
+    .await
+    .context(format!(
+        "failed to wait for address {} to be assigned",
+        ipv6_consts::LINK_LOCAL_ADDR
+    ))?;
+    Ok(())
 }
 
 #[variants_test]
@@ -702,8 +707,9 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) -> Result
             if pred(&route_table) {
                 return Ok(());
             } else {
-                let route_table =
-                    RouteTable::new(route_table).display().context("failed to format route table")?;
+                let route_table = RouteTable::new(route_table)
+                    .display()
+                    .context("failed to format route table")?;
                 println!("route table at attempt={}:\n{}", attempt, route_table);
             }
         }
@@ -811,7 +817,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
     }
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_network, _environment, netstack, iface, fake_ep) =
+    let (_network, environment, _netstack, iface, fake_ep) =
         setup_network_with::<E, _, _>(&sandbox, name, &[KnownServices::SecureStash]).await?;
 
     // Send a Router Advertisement with information for a SLAAC prefix.
@@ -870,56 +876,62 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
     // We expect two addresses for the SLAAC prefixes to be assigned to the NIC as the
     // netstack should generate both a stable and temporary SLAAC address.
     let expected_addrs = 2;
-    netstack
-        .take_event_stream()
-        .err_into()
-        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            if let Some(netstack::NetInterface { ipv6addrs, .. }) =
-                interfaces.iter().find(|i| u64::from(i.id) == iface.id())
-            {
-                // We have to make sure 2 things:
-                // 1. We have `expected_addrs` addrs which have the advertised prefix for the
-                // interface.
-                let mut slaac_addrs = 0;
-                // 2. The last tried address should be among the addresses for the interface.
-                let mut has_target_addr = false;
-
-                for ip in ipv6addrs {
-                    if let net::IpAddress::Ipv6(a) = ip.addr {
-                        let configured_addr = net_types_ip::Ipv6Addr::new(a.addr);
-                        if configured_addr == tried_address {
-                            return future::err(anyhow::anyhow!(
-                                "unexpected address ({}) assigned to the interface which previously failed DAD", configured_addr
-                            ));
-                        }
-                        if ipv6_consts::PREFIX.contains(&configured_addr) {
-                            slaac_addrs += 1;
-                        }
-                        if configured_addr == target_address {
-                            has_target_addr = true;
+    let interface_state = environment
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
+        |properties| {
+            // We have to make sure 2 things:
+            // 1. We have `expected_addrs` addrs which have the advertised prefix for the
+            // interface.
+            // 2. The last tried address should be among the addresses for the interface.
+            let (slaac_addrs, has_target_addr) = properties.addresses.as_ref()?.iter().fold(
+                (0, false),
+                |(mut slaac_addrs, mut has_target_addr), a| {
+                    if let Some(a) = a.addr {
+                        match a.addr {
+                            net::IpAddress::Ipv6(a) => {
+                                let configured_addr = net_types_ip::Ipv6Addr::new(a.addr);
+                                assert!(configured_addr != tried_address,
+                                    "unexpected address ({}) assigned to the interface which previously failed DAD",
+                                    configured_addr
+                                );
+                                if ipv6_consts::PREFIX.contains(&configured_addr) {
+                                    slaac_addrs += 1;
+                                }
+                                if configured_addr == target_address {
+                                    has_target_addr = true;
+                                }
+                            }
+                            net::IpAddress::Ipv4(_) => {}
                         }
                     }
-                }
-                if slaac_addrs > expected_addrs {
-                    return future::err(anyhow::anyhow!(
-                        "more addresses found than expected, found {}, expected {}",
-                        slaac_addrs, expected_addrs
-                    ));
-                }
-                if slaac_addrs == expected_addrs && has_target_addr {
-                    return future::ok(Some(()));
-                }
+                    (slaac_addrs, has_target_addr)
+                },
+            );
+
+            assert!(
+                slaac_addrs <= expected_addrs,
+                "more addresses found than expected, found {}, expected {}",
+                slaac_addrs,
+                expected_addrs
+            );
+            if slaac_addrs == expected_addrs && has_target_addr {
+                Some(())
+            } else {
+                None
             }
-            future::ok(None)
-        })
-        .try_next()
-        .map(|r| r.context("error getting OnInterfaceChanged event"))
-        .on_timeout(
-            (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
-                + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
-                .after_now(),
-            || Err(anyhow::anyhow!("timed out waiting for SLAAC addresses")),
-        )
-        .await?
-        .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
+        },
+    )
+    .on_timeout(
+        (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
+            + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+            .after_now(),
+        || Err(anyhow::anyhow!("timed out")),
+    )
+    .await
+    .context("failed to wait for SLAAC addresses")?;
+    Ok(())
 }

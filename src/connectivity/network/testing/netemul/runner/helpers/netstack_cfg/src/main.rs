@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_netstack::{InterfaceConfig, NetstackMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    futures::TryStreamExt,
     structopt::StructOpt,
 };
 
@@ -135,39 +134,37 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     }
 
     log::info!("Waiting for interface up...");
-    let (if_id, hwaddr) = netstack
-        .take_event_stream()
-        .try_filter_map(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            if let Some(iface) = interfaces.iter().find(|iface| iface.name == opt.endpoint) {
-                if !opt.skip_up_check {
-                    if !iface.flags.contains(fidl_fuchsia_netstack::Flags::Up) {
-                        log::info!("Found interface, but it's down. waiting.");
-                        return futures::future::ok(None);
-                    }
-
-                    // If subnet is an IPv6 address, make sure the interface has
-                    // the address assigned so we know DAD has resolved.
-                    if let Some(subnet) = subnet {
-                        if let fidl_fuchsia_net::IpAddress::Ipv6(_) = subnet.addr {
-                            if !iface.ipv6addrs.iter().any(|x| x.addr == subnet.addr)  {
-                                log::info!("Found interface, but IPv6 address is not resolved. waiting.");
-                                return futures::future::ok(None);
-                            }
-                        }
-                    }
-                }
-
-                return futures::future::ok(Some((iface.id, iface.hwaddr.clone())));
+    let interface_state = client::connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
+        |properties| {
+            if !opt.skip_up_check && !properties.online.unwrap_or(false) {
+                log::info!("Found interface, but it's down. waiting.");
+                return None;
             }
+            // If configuring a static address, make sure the address is present (this ensures that
+            // DAD has resolved for IPv6 addresses).
+            if subnet.is_some() {
+                if properties
+                    .addresses
+                    .as_ref()
+                    .map_or(false, |addresses| addresses.iter().any(|a| a.addr == subnet))
+                {
+                    Some(())
+                } else {
+                    log::info!("Found interface, but address not yet present. waiting.");
+                    None
+                }
+            } else {
+                Some(())
+            }
+        },
+    )
+    .await
+    .context("wait for interface")?;
 
-            futures::future::ok(None)
-        })
-        .try_next()
-        .await
-        .context("wait for interfaces")?
-        .ok_or_else(|| format_err!("interface added"))?;
-
-    log::info!("Found ethernet with id {} {:?}", if_id, hwaddr);
+    log::info!("Found ethernet with id {}", nicid);
 
     Ok(())
 }

@@ -8,6 +8,7 @@
                         "name": "dhcp_server",
                         "services": {
                             "fuchsia.net.dhcpv6.ClientProvider": "fuchsia-pkg://fuchsia.com/dhcpv6-client#meta/dhcpv6-client.cmx",
+                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/netstack-debug.cmx",
                             "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/netstack-debug.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/netstack-debug.cmx",
                             "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/netstack-debug.cmx"

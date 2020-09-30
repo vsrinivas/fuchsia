@@ -2,22 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use fidl_fuchsia_hardware_ethernet as eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as dhcp;
 use fidl_fuchsia_net_ext::IntoExt as _;
-use fidl_fuchsia_net_stack as net_stack;
-use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_net_interfaces as net_interfaces;
 use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::future::{self, FusedFuture, Future, FutureExt as _};
-use futures::stream::{self, StreamExt as _, TryStreamExt as _};
+use futures::future::{FusedFuture, Future, FutureExt as _};
+use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
 use netstack_testing_macros::variants_test;
@@ -36,40 +34,43 @@ use crate::{
 pub(crate) async fn wait_for_non_loopback_interface_up<
     F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
 >(
-    netstack: &netstack::NetstackProxy,
+    interface_state: &net_interfaces::StateProxy,
     mut wait_for_netmgr: &mut F,
     exclude_ids: Option<&HashSet<u32>>,
     timeout: zx::Duration,
 ) -> Result<(u32, String)> {
-    let mut wait_for_interface = netstack
-        .take_event_stream()
-        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            future::ok(interfaces.into_iter().find_map(
-                |netstack::NetInterface { id, features, flags, name, .. }| {
-                    // Ignore the loopback device.
-                    if !features.contains(eth::Features::Loopback)
-                        && flags.contains(netstack::Flags::Up)
-                        && exclude_ids.map_or(true, |x| !x.contains(&id))
-                    {
-                        Some((id, name))
-                    } else {
-                        None
-                    }
-                },
-            ))
-        })
-        .map(|r| r.context("getting next OnInterfaceChanged event"));
-    let mut wait_for_interface = wait_for_interface
-        .try_next()
-        .on_timeout(timeout.after_now(), || {
-            Err(anyhow::anyhow!(
-                "timed out waiting for OnInterfaceseChanged event with a non-loopback interface"
-            ))
-        })
-        .fuse();
+    let mut if_map = HashMap::new();
+    let wait_for_interface = fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interface_state)?,
+        &mut if_map,
+        |if_map| {
+            if_map.iter().find_map(|(id, properties)| {
+                let id = *id as u32;
+                if properties.device_class
+                    != Some(net_interfaces::DeviceClass::Loopback(net_interfaces::Empty {}))
+                    && properties.online?
+                    && exclude_ids.map_or(true, |ids| !ids.contains(&id))
+                {
+                    Some((
+                        id,
+                        properties.name.clone().expect("failed to find loopback interface name"),
+                    ))
+                } else {
+                    None
+                }
+            })
+        },
+    )
+    .on_timeout(timeout.after_now(), || {
+        Err(anyhow::anyhow!(
+            "timed out waiting for OnInterfaceseChanged event with a non-loopback interface"
+        ))
+    })
+    .fuse();
+    fuchsia_async::pin_mut!(wait_for_interface);
     futures::select! {
         wait_for_interface_res = wait_for_interface => {
-            wait_for_interface_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))
+            wait_for_interface_res
         }
         wait_for_netmgr_res = wait_for_netmgr => {
             Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
@@ -109,11 +110,11 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
 
     // Make sure the Netstack got the new device added.
     let mut wait_for_netmgr = netmgr.wait().fuse();
-    let netstack = environment
-        .connect_to_service::<netstack::NetstackMarker>()
-        .context("connect to netstack service")?;
+    let interface_state = environment
+        .connect_to_service::<net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
     let (_id, _name): (u32, String) = wait_for_non_loopback_interface_up(
-        &netstack,
+        &interface_state,
         &mut wait_for_netmgr,
         None,
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
@@ -168,8 +169,11 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> R
     let () = environment
         .add_virtual_device(&ethx7, endpoint_mount_path)
         .with_context(|| format!("add virtual device1 {}", endpoint_mount_path.display()))?;
+    let interface_state = environment
+        .connect_to_service::<net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
     let (id_ethx7, name_ethx7) = wait_for_non_loopback_interface_up(
-        &netstack,
+        &interface_state,
         &mut wait_for_netmgr,
         None,
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
@@ -208,7 +212,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> R
         .set_interface_status(netstack_id_etht0, true /* enabled */)
         .context("set interface status FIDL error")?;
     let (id_etht0, name_etht0) = wait_for_non_loopback_interface_up(
-        &netstack,
+        &interface_state,
         &mut wait_for_netmgr,
         Some(&std::iter::once(id_ethx7).collect()),
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
@@ -235,7 +239,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> R
         .add_virtual_device(&etht1, endpoint_mount_path)
         .with_context(|| format!("add virtual device2 {}", endpoint_mount_path.display()))?;
     let (id_etht1, name_etht1) = wait_for_non_loopback_interface_up(
-        &netstack,
+        &interface_state,
         &mut wait_for_netmgr,
         Some(&vec![id_ethx7, id_etht0].into_iter().collect()),
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
@@ -326,32 +330,44 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
 
         // Make sure the WLAN AP interface is added to the Netstack and is brought up with
         // the right IP address.
-        let netstack = environment
-            .connect_to_service::<netstack::NetstackMarker>()
-            .context("connect to netstack service")?;
-        let (wlan_ap_id, wlan_ap_name) = netstack
-            .take_event_stream()
-            .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                future::ok(interfaces.into_iter().find_map(
-                    |netstack::NetInterface { id, name, addr, flags, .. }| {
-                        if addr == INTERFACE_ADDR.into_ext() && flags.contains(netstack::Flags::Up)
-                        {
-                            Some((id, name))
-                        } else {
-                            None
-                        }
-                    },
-                ))
-            })
-            .map(|r| r.context("getting next OnInterfaceChanged event"))
-            .try_next()
-            .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                Err(anyhow::anyhow!(
-                    "timed out waiting for OnInterfaceseChanged event with a WLAN AP interface"
-                ))
-            })
-            .await?
-            .ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
+        let interface_state = environment
+            .connect_to_service::<net_interfaces::StateMarker>()
+            .context("connect to fuchsia.net.interfaces/State service")?;
+        let (watcher, watcher_server) =
+            ::fidl::endpoints::create_proxy::<net_interfaces::WatcherMarker>()?;
+        let () = interface_state
+            .get_watcher(net_interfaces::WatcherOptions {}, watcher_server)
+            .context("failed to initialize interface watcher")?;
+        let mut if_map = HashMap::new();
+        let (wlan_ap_id, wlan_ap_name) = fidl_fuchsia_net_interfaces_ext::wait_interface(
+            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            &mut if_map,
+            |if_map| {
+                if_map.iter().find_map(|(id, properties)| {
+                    if properties.online?
+                        && properties
+                            .addresses
+                            .as_ref()?
+                            .iter()
+                            .filter_map(|a| a.addr)
+                            .any(|a| a.addr == INTERFACE_ADDR.into_ext())
+                    {
+                        Some((
+                            *id,
+                            properties.name.clone().expect("WLAN AP interface name missing"),
+                        ))
+                    } else {
+                        None
+                    }
+                })
+            },
+        )
+        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
+            Err(anyhow::anyhow!(
+                "timed out waiting for OnInterfaceseChanged event with a WLAN AP interface"
+            ))
+        })
+        .await?;
 
         // Check the DHCP server's configured parameters.
         let dhcp_server = environment
@@ -420,40 +436,35 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             .add_virtual_device(&host, path.as_path())
             .with_context(|| format!("add host virtual device {}", path.display()))?;
         let () = host.set_link_up(true).await.context("set host link up")?;
-        let () = netstack
-            .take_event_stream()
-            .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                if interfaces.iter().any(
-                    |netstack::NetInterface { id, addr, netmask, broadaddr, flags, .. }| {
-                        id != &wlan_ap_id
-                            && flags.contains(netstack::Flags::Up)
-                            && netmask == &NETWORK_MASK.into_ext()
-                            && broadaddr == &BROADCAST_ADDR.into_ext()
-                            && match addr {
+        let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
+            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            &mut if_map,
+            |if_map| {
+                if_map.iter().find_map(|(id, properties)| {
+                    if *id != wlan_ap_id
+                        && properties.online?
+                        && properties.addresses.as_ref()?.iter().filter_map(|a| a.addr).any(|a| {
+                            match a.addr {
                                 net::IpAddress::Ipv4(addr) => NETWORK_ADDR_SUBNET
                                     .contains(&net_types_ip::Ipv4Addr::new(addr.addr)),
-                                net::IpAddress::Ipv6(addr) => panic!(
-                                "NetInterface.addr should only contain an IPv4 Address, got = {:?}",
-                                addr
-                            ),
+                                net::IpAddress::Ipv6(_) => false,
                             }
-                    },
-                ) {
-                    future::ok(Some(()))
-                } else {
-                    future::ok(None)
-                }
-            })
-            .map(|r| r.context("getting next OnInterfaceChanged event"))
-            .try_next()
-            .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                Err(anyhow::anyhow!(
-                    "timed out waiting for OnInterfaceseChanged event with a WLAN AP interface"
-                ))
-            })
-            .await
-            .context("wait for host interface to be configured")?
-            .ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
+                        })
+                    {
+                        Some(())
+                    } else {
+                        None
+                    }
+                })
+            },
+        )
+        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
+            Err(anyhow::anyhow!(
+                "timed out waiting for OnInterfaceseChanged event with a WLAN AP interface"
+            ))
+        })
+        .await
+        .context("wait for host interface to be configured")?;
 
         // Take the interface down, the DHCP server should be stopped.
         let () = wlan_ap.set_link_up(false).await.context("set wlan ap link down")?;
@@ -468,14 +479,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             .context("check DHCP server started after interface up")?;
 
         // Remove the interface, the DHCP server should be stopped.
-        let stack = environment
-            .connect_to_service::<net_stack::StackMarker>()
-            .context("connect to stack service")?;
-        let () = stack
-            .del_ethernet_interface(wlan_ap_id.into())
-            .await
-            .squash_result()
-            .with_context(|| format!("failed to delete interface with id = {}", wlan_ap_id))?;
+        std::mem::drop(wlan_ap);
         let () = check_dhcp_status(&dhcp_server, false)
             .await
             .context("check DHCP server stopped after interface removed")?;

@@ -13,6 +13,7 @@ use fidl_fuchsia_hardware_ethernet as hw_eth;
 use fidl_fuchsia_hardware_network as hw_net;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as net_dhcp;
+use fidl_fuchsia_net_interfaces as net_interfaces;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_environment as netemul_environment;
@@ -25,7 +26,6 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::future::{FutureExt as _, TryFutureExt as _};
-use futures::stream::TryStreamExt as _;
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
@@ -316,25 +316,23 @@ impl<'a> TestEnvironment<'a> {
 
         // Wait for Netstack to observe interface up so callers can safely
         // assume the state of the world on return.
-        let netstack = self
-            .connect_to_service::<netstack::NetstackMarker>()
-            .context("failed to connect to Netstack")?;
-        let iface_id = interface.id();
-        let _ifaces = netstack
-            .take_event_stream()
-            .try_filter(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-                futures::future::ready(
-                    interfaces
-                        .iter()
-                        .find(|iface| iface.id as u64 == iface_id)
-                        .map(|iface| iface.flags.contains(netstack::Flags::Up))
-                        .unwrap_or(false),
-                )
-            })
-            .try_next()
-            .await
-            .context("failed to observe interface up")?
-            .ok_or_else(|| anyhow::anyhow!("netstack event stream ended unexpectedly"))?;
+        let interface_state = self
+            .connect_to_service::<net_interfaces::StateMarker>()
+            .context("failed to connect to fuchsia.net.interfaces/State")?;
+        let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id()),
+            |properties| {
+                if properties.online? {
+                    Some(())
+                } else {
+                    None
+                }
+            },
+        )
+        .await
+        .context("failed to observe interface up")?;
+
         Ok(interface)
     }
 

@@ -186,7 +186,7 @@ async fn install_ip_device(
     addrs: &mut [fidl_fuchsia_net::Subnet],
 ) -> Result<u64> {
     let stack = env.connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()?;
-    let netstack = env.connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()?;
+    let interface_state = env.connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()?;
     let id = stack
         .add_interface(
             fidl_fuchsia_net_stack::InterfaceConfig { name: None, topopath: None, metric: None },
@@ -206,9 +206,20 @@ async fn install_ip_device(
     }
     // Wait for addresses to be assigned. Necessary for IPv6 addresses
     // since DAD must be performed.
-    let () = crate::wait_for_addresses(&netstack, id, addrs.iter().map(|a| a.addr))
-        .await
-        .context("failed to observe addresses")?;
+    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+        |properties| {
+            let got = properties.addresses.as_ref()?;
+            if addrs.iter().all(|want| got.iter().any(|got| got.addr == Some(*want))) {
+                Some(())
+            } else {
+                None
+            }
+        },
+    )
+    .await
+    .context("failed to observe addresses")?;
     Ok(id)
 }
 

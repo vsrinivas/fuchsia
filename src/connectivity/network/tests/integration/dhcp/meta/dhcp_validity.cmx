@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.dhcpv6.ClientProvider",
+            "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.netemul.guest.GuestDiscovery",
             "fuchsia.netstack.Netstack"

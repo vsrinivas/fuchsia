@@ -62,6 +62,7 @@
                 ],
                 "name": "server",
                 "services": {
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx",
                     "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/netstack-debug.cmx"

@@ -5,18 +5,16 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net as fnet, fidl_fuchsia_net_dhcpv6 as fdhcpv6,
-    fidl_fuchsia_net_name as fnetname, fidl_fuchsia_net_stack as fstack,
+    fidl_fuchsia_net_interfaces as finterfaces, fidl_fuchsia_net_name as fnetname,
+    fidl_fuchsia_net_stack as fstack,
     fidl_fuchsia_net_stack_ext::FidlReturn as _,
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, GuestDiscoveryMarker, GuestInteractionMarker,
     },
-    fidl_fuchsia_netstack::{NetInterface, NetstackEvent, NetstackMarker},
-    fuchsia_async::{Time, Timer},
+    fuchsia_async::TimeoutExt as _,
     fuchsia_component::client,
-    fuchsia_zircon::Duration as ZirconDuration,
-    futures::{future, select, StreamExt},
     netemul_guest_lib::wait_for_command_completion,
-    std::{fmt::Write, time::Duration},
+    std::time::Duration,
 };
 
 /// Run a command on a guest VM to configure its DHCP server.
@@ -47,40 +45,30 @@ pub async fn configure_dhcp_server(guest_name: &str, command_to_run: &str) -> Re
 /// * `addr` - IpAddress that should appear on a Netstack interface.
 /// * `timeout` - Duration to wait for the address to appear in Netstack.
 pub async fn verify_v4_addr_present(addr: fnet::IpAddress, timeout: Duration) -> Result<(), Error> {
-    let timeout = ZirconDuration::from(timeout);
-
-    let netstack = client::connect_to_service::<NetstackMarker>()?;
-    let mut stream = netstack.take_event_stream();
-    let mut timer = future::maybe_done(Timer::new(Time::after(timeout)));
-    let mut ifs: Vec<NetInterface> = Vec::new();
-
-    loop {
-        select! {
-            event = stream.next() => {
-                let NetstackEvent::OnInterfacesChanged { interfaces } = event
-                    .ok_or(format_err!("netstack event stream ended"))?
-                    .context("failed to get network interface")?;
-                if interfaces.iter().any(|interface| interface.addr == addr) {
-                    return Ok(());
-                }
-                ifs = interfaces;
-            },
-            () = timer => {
-                break;
-            }
-        }
-    }
-
-    let mut addresses_present = String::from("addresses present:");
-    for interface in ifs {
-        let () = write!(addresses_present, " {:?}: {:?}", interface.name, interface.addr)
-            .context("writing to bail string")?;
-    }
-    Err(format_err!(
-        "DHCPv4 client got unexpected addresses: {}, address missing: {:?}",
-        addresses_present,
-        addr
-    ))
+    let interface_state = client::connect_to_service::<finterfaces::StateMarker>()?;
+    let mut if_map = std::collections::HashMap::new();
+    fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut if_map,
+        |if_map| {
+            if_map
+                .iter()
+                .filter_map(|(_, properties)| properties.addresses.as_ref())
+                .flatten()
+                .find_map(|a| if a.addr?.addr == addr { Some(()) } else { None })
+        },
+    )
+    .on_timeout(timeout, || Err(anyhow::anyhow!("timed out")))
+    .await
+    .map_err(|e| {
+        e.context(format!(
+            "DHCPv4 client got unexpected addresses: {}, address missing: {:?}",
+            if_map.iter().fold(String::from("addresses present:"), |s, (id, properties)| {
+                s + &format!(" {:?}: {:?}", id, properties.addresses)
+            }),
+            addr
+        ))
+    })
 }
 
 /// Verifies a DHCPv6 client can receive an expected list of DNS servers.

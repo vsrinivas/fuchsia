@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netstack.Netstack"
