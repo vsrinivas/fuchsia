@@ -117,28 +117,6 @@ static zx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t*
   return ZX_OK;
 }
 
-static zx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t value) {
-  zx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
-  if (status < 0) {
-    zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_SERIAL_MGMT_CTRL failed: %d", status);
-    return status;
-  }
-  status = usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-                           ASIX_REQ_PHY_WRITE, eth->phy_id, offset, ZX_TIME_INFINITE, &value,
-                           sizeof(value));
-  if (status < 0) {
-    zxlogf(ERROR, "ax88772b: ASIX_REQ_PHY_WRITE failed: %d", status);
-    return status;
-  }
-  status = ax88772b_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
-  if (status < 0) {
-    zxlogf(ERROR, "ax88772b: ASIX_REQ_HW_SERIAL_MGMT_CTRL failed: %d", status);
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 static zx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
   for (int i = 0; i < 100; i++) {
     uint16_t bmsr;
@@ -218,8 +196,8 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request,
 
   // write 4 byte packet header
   uint8_t header[ETH_HEADER_SIZE];
-  uint8_t lo = length & 0xFF;
-  uint8_t hi = length >> 8;
+  uint8_t lo = (uint8_t)length;
+  uint8_t hi = (uint8_t)(length >> 8);
   header[0] = lo;
   header[1] = hi;
   header[2] = lo ^ 0xFF;
@@ -329,8 +307,8 @@ static void ax88772b_interrupt_complete(void* ctx, usb_request_t* request) {
     usb_request_copy_from(request, status, sizeof(status), 0);
     if (memcmp(eth->status, status, sizeof(eth->status))) {
       const uint8_t* b = status;
-      zxlogf(DEBUG, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X", b[0],
-             b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
+      zxlogf(DEBUG, "ax88772b: status changed: %02X %02X %02X %02X %02X %02X %02X %02X", b[0], b[1],
+             b[2], b[3], b[4], b[5], b[6], b[7]);
       memcpy(eth->status, status, sizeof(eth->status));
       uint8_t bb = eth->status[2];
       bool online = (bb & 1) != 0;
@@ -543,7 +521,7 @@ static int ax88772b_start_thread(void* arg) {
     goto fail;
   }
   eth->phy_id = phy_addr[1];
-  int embed_phy = (eth->phy_id & 0x1F) == 0x10 ? 1 : 0;
+  uint16_t embed_phy = (eth->phy_id & 0x1F) == 0x10 ? 1 : 0;
   status = ax88772b_set_value(eth, ASIX_REQ_SW_PHY_SELECT, embed_phy);
   if (status < 0) {
     zxlogf(ERROR, "ax88772b: ASIX_REQ_SW_PHY_SELECT failed: %d", status);

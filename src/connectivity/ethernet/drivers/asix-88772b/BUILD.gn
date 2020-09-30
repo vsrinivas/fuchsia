@@ -25,10 +25,4 @@ driver_module("asix-88772b") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
-
-  # TODO(fxbug.dev/58161): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-unused-function" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
