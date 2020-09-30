@@ -2,356 +2,424 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(fxbug.dev/54180) Keep in sync with BUILD.gn
-
 import("$zx/vdso/vdso.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
+import("$zx_build_config/standard.gni")
 
-zx_library("c") {
-  shared = true
-  static = false
+if (zx != "/") {
+  import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 
-  # At link time and in DT_SONAME, musl is known as libc.so.  But the
-  # (only) place it needs to be installed at runtime is where the
-  # PT_INTERP strings embedded in executables point, which is ld.so.1.
-  install_path = "lib/${toolchain.libprefix}ld.so.1"
-
-  public_configs = [ "$zx/third_party/ulib/musl:headers" ]
-
-  # The code comes from musl, where a source_set is defined.
-  sources = []
-
-  deps = [
-    ":exit",
-    "$zx/system/ulib/zx-panic-libc:as_source",
-    "$zx/third_party/scudo",
-    "$zx/third_party/ulib/musl",
-    "sanitizers",
-    "setjmp",
-    "zircon",
-  ]
-
-  # Suppress the ${toolchain.implicit_deps} that points back to here.
-  no_implicit_deps = true
-
-  # Don't link against the shared libc++.
-  configs += [ "$zx_build_config:static-libc++" ]
-
-  metadata = {
-    # This library is on the allowlist for driver() shared library deps.
-    # It doesn't cause driver-denylist-check.sh to fail, and it prunes the
-    # metadata walk here so our own deps are not subject to the check.
-    driver_shlib_denylist = []
-    driver_shlib_denylist_barrier = []
-
-    # TODO(fxbug.dev/3156): temporary kludges; see //zircon/public/sysroot
-    legacy_sysroot = [
-      {
-        libc = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
-      },
-      {
-        libc_dist = rebase_path("$target_out_dir/libc.so", root_build_dir)
-      },
-      {
-        include_dirs = [
-          "//zircon/system/public",
-          "//zircon/system/ulib/zircon/include",
-          "//zircon/third_party/ulib/musl/include",
-        ]
-      },
-      {
-        sdk = {
-          include_dir = "//zircon/system/public"
-          headers = [
-            "zircon/assert.h",
-            "zircon/boot/driver-config.h",
-            "zircon/boot/e820.h",
-            "zircon/boot/image.h",
-            "zircon/boot/multiboot.h",
-            "zircon/boot/netboot.h",
-            "zircon/boot/sysconfig.h",
-            "zircon/compiler.h",
-            "zircon/errors.h",
-            "zircon/features.h",
-            "zircon/fidl.h",
-            "zircon/hw/gpt.h",
-            "zircon/hw/i2c.h",
-            "zircon/hw/pci.h",
-            "zircon/hw/usb.h",
-            "zircon/hw/usb/audio.h",
-            "zircon/hw/usb/cdc.h",
-            "zircon/hw/usb/dfu.h",
-            "zircon/hw/usb/hid.h",
-            "zircon/hw/usb/hub.h",
-            "zircon/hw/usb/ums.h",
-            "zircon/hw/usb/video.h",
-            "zircon/limits.h",
-            "zircon/listnode.h",
-            "zircon/pixelformat.h",
-            "zircon/process.h",
-            "zircon/processargs.h",
-            "zircon/rights.h",
-            "zircon/string_view.h",
-            "zircon/syscalls.h",
-            "zircon/syscalls/clock.h",
-            "zircon/syscalls/debug.h",
-            "zircon/syscalls/exception.h",
-            "zircon/syscalls/hypervisor.h",
-            "zircon/syscalls/iommu.h",
-            "zircon/syscalls/log.h",
-            "zircon/syscalls/object.h",
-            "zircon/syscalls/pci.h",
-            "zircon/syscalls/policy.h",
-            "zircon/syscalls/port.h",
-            "zircon/syscalls/profile.h",
-            "zircon/syscalls/resource.h",
-            "zircon/syscalls/scheduler.h",
-            "zircon/syscalls/smc.h",
-            "zircon/syscalls/system.h",
-            "zircon/syscalls/types.h",
-            "zircon/time.h",
-            "zircon/tls.h",
-            "zircon/types.h",
-
-            # Note: Most of zircon/device is excluded from SDKs.
-            # TODO(fxbug.dev/7610,fxbug.dev/32355): remove this allowlist.
-            "zircon/device/audio.h",
-          ]
-
-          if (!exclude_testonly_syscalls) {
-            headers += [ "zircon/testonly-syscalls.h" ]
-          }
+  if (current_toolchain == default_toolchain) {
+    # This introduces a new toolchain suite to mimic the Zircon "user"
+    # toolchain. Howver, it will only be used to build the C library, so
+    # is named "user.libc" instead.
+    foreach(cpu, standard_fuchsia_cpus) {
+      zircon_toolchain_suite("user.libc_$cpu") {
+        cpu = cpu
+        os = "fuchsia"
+        environment = "user"
+        with_shared = false
+        is_pic_default = true
+        strip = "--strip-sections"
+        toolchain_variant_args = {
+          configs = [ "//zircon/system/ulib/c:libc_config" ]
         }
-      },
-      {
-        sdk = {
-          include_dir = "//zircon/third_party/ulib/musl/include"
-          headers = [
-            "alloca.h",
-            "ar.h",
-            "arpa/ftp.h",
-            "arpa/inet.h",
-            "arpa/nameser.h",
-            "arpa/nameser_compat.h",
-            "arpa/telnet.h",
-            "arpa/tftp.h",
-            "assert.h",
-            "bits/aarch64/endian.h",
-            "bits/aarch64/fenv.h",
-            "bits/aarch64/io.h",
-            "bits/aarch64/ioctl.h",
-            "bits/aarch64/ipc.h",
-            "bits/aarch64/reg.h",
-            "bits/aarch64/setjmp.h",
-            "bits/aarch64/signal.h",
-            "bits/aarch64/stat.h",
-            "bits/alltypes.h",
-            "bits/endian.h",
-            "bits/errno.h",
-            "bits/fcntl.h",
-            "bits/fenv.h",
-            "bits/io.h",
-            "bits/ioctl.h",
-            "bits/ipc.h",
-            "bits/limits.h",
-            "bits/msg.h",
-            "bits/null.h",
-            "bits/poll.h",
-            "bits/posix.h",
-            "bits/reg.h",
-            "bits/resource.h",
-            "bits/sem.h",
-            "bits/setjmp.h",
-            "bits/shm.h",
-            "bits/signal.h",
-            "bits/socket.h",
-            "bits/stat.h",
-            "bits/statfs.h",
-            "bits/termios.h",
-            "bits/x86_64/endian.h",
-            "bits/x86_64/fenv.h",
-            "bits/x86_64/io.h",
-            "bits/x86_64/ioctl.h",
-            "bits/x86_64/ipc.h",
-            "bits/x86_64/reg.h",
-            "bits/x86_64/setjmp.h",
-            "bits/x86_64/signal.h",
-            "bits/x86_64/stat.h",
-            "byteswap.h",
-            "complex.h",
-            "cpio.h",
-            "ctype.h",
-            "dirent.h",
-            "dlfcn.h",
-            "elf.h",
-            "endian.h",
-            "err.h",
-            "errno.h",
-            "fcntl.h",
-            "features.h",
-            "fenv.h",
-            "fmtmsg.h",
-            "fnmatch.h",
-            "getopt.h",
-            "glob.h",
-            "grp.h",
-            "iconv.h",
-            "ifaddrs.h",
-            "inttypes.h",
-            "iso646.h",
-            "langinfo.h",
-            "libgen.h",
-            "limits.h",
-            "link.h",
-            "locale.h",
-            "malloc.h",
-            "math.h",
-            "memory.h",
-            "monetary.h",
-            "net/ethernet.h",
-            "net/if.h",
-            "net/if_arp.h",
-            "net/route.h",
-            "netdb.h",
-            "netinet/ether.h",
-            "netinet/icmp6.h",
-            "netinet/if_ether.h",
-            "netinet/igmp.h",
-            "netinet/in.h",
-            "netinet/in_systm.h",
-            "netinet/ip.h",
-            "netinet/ip6.h",
-            "netinet/ip_icmp.h",
-            "netinet/tcp.h",
-            "netinet/udp.h",
-            "netpacket/packet.h",
-            "nl_types.h",
-            "paths.h",
-            "poll.h",
-            "pthread.h",
-            "pwd.h",
-            "regex.h",
-            "resolv.h",
-            "sched.h",
-            "search.h",
-            "semaphore.h",
-            "setjmp.h",
-            "signal.h",
-            "spawn.h",
-            "stdio.h",
-            "stdlib.h",
-            "string.h",
-            "strings.h",
-            "stropts.h",
-            "sys/acct.h",
-            "sys/auxv.h",
-            "sys/dir.h",
-            "sys/errno.h",
-            "sys/eventfd.h",
-            "sys/fcntl.h",
-            "sys/file.h",
-            "sys/fsuid.h",
-            "sys/io.h",
-            "sys/ioctl.h",
-            "sys/ipc.h",
-            "sys/klog.h",
-            "sys/mman.h",
-            "sys/mount.h",
-            "sys/msg.h",
-            "sys/mtio.h",
-            "sys/param.h",
-            "sys/personality.h",
-            "sys/poll.h",
-            "sys/quota.h",
-            "sys/random.h",
-            "sys/reboot.h",
-            "sys/reg.h",
-            "sys/select.h",
-            "sys/sem.h",
-            "sys/shm.h",
-            "sys/signal.h",
-            "sys/signalfd.h",
-            "sys/socket.h",
-            "sys/stat.h",
-            "sys/statfs.h",
-            "sys/statvfs.h",
-            "sys/stropts.h",
-            "sys/swap.h",
-            "sys/syslog.h",
-            "sys/termios.h",
-            "sys/time.h",
-            "sys/timeb.h",
-            "sys/timerfd.h",
-            "sys/times.h",
-            "sys/timex.h",
-            "sys/ttydefaults.h",
-            "sys/types.h",
-            "sys/ucontext.h",
-            "sys/uio.h",
-            "sys/un.h",
-            "sys/utsname.h",
-            "sys/vfs.h",
-            "sys/wait.h",
-            "sysexits.h",
-            "syslog.h",
-            "tar.h",
-            "termios.h",
-            "threads.h",
-            "time.h",
-            "uchar.h",
-            "ucontext.h",
-            "unistd.h",
-            "utime.h",
-            "values.h",
-            "wait.h",
-            "wchar.h",
-            "wctype.h",
-            "wordexp.h",
-            "zircon/dlfcn.h",
-            "zircon/sanitizer.h",
-            "zircon/threads.h",
-          ]
-        }
-      },
-      {
-        sdk = {
-          # TODO(fxbug.dev/27181): The stripped binary doesn't even have section
-          # headers, so the linker can't handle it.  Eventually we'll have
-          # linker stubs.  For now, just use the unstripped library to link
-          # against.  This matches what library() gives the SDK via
-          # zircon_library().
-          source = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
-          link = "lib/libc.so"
-        }
-      },
-      {
-        sdk = {
-          source = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
-          debug = "debug/libc.so"
-        }
-      },
-      {
-        sdk = {
-          source = rebase_path("$target_out_dir/libc.so", root_build_dir)
-          dist = "dist/lib/ld.so.1"
-        }
-      },
+
+        # NOTE: kernel artifacts currently do not build under fuzzer
+        # variants. This was also true with the Zircon build, but
+        # the Fuchsia build never invoked it with corresponding
+        # variant selectors. Using an exclude_variant_tag is
+        # enough to fix the issue.
+        exclude_variant_tags = [ "fuzzer" ]
+      }
+    }
+  } else if (toolchain_variant.base ==
+             "//zircon/system/ulib/c:user.libc_$target_cpu") {
+    config("libc_config") {
+      configs = [
+        "$zx_build_config:user",
+        "$zx_build_config:shared_library_config",
+        "$zx_build_config:no_undefined_symbols",
+      ]
+    }
+
+    group("libc_config_deps") {
+    }
+  }
+}
+
+# When built with the default/user Fuchsia toolchain, zx_library()
+# will not create a :headers sub-target for zx_library("c") below,
+# so add one manually as a special case.
+if (zx != "/" && zircon_toolchain == false) {
+  group("headers") {
+    public_configs = [
+      ":headers.config",
+      "$zx/third_party/ulib/musl:headers",
     ]
-    foreach(lib,
-            [
-              "libdl.so",
-              "libm.so",
-              "libpthread.so",
-              "librt.so",
-            ]) {
-      legacy_sysroot += [
+  }
+
+  config("headers.config") {
+    include_dirs = [ "include" ]
+  }
+}
+
+if (zx != "/" && zircon_toolchain == false) {
+  group("c") {
+    public_deps = [ ":c(//zircon/system/ulib/c:user.libc_$target_cpu)" ]
+  }
+} else {
+  zx_library("c") {
+    shared = true
+    static = false
+
+    sdk = "shared"
+    sdk_headers = []
+    sdk_migrated = true
+
+    if (zx == "/") {
+      # At link time and in DT_SONAME, musl is known as libc.so.  But the
+      # (only) place it needs to be installed at runtime is where the
+      # PT_INTERP strings embedded in executables point, which is ld.so.1.
+      install_path = "lib/${toolchain.libprefix}ld.so.1"
+    }
+
+    public_configs = [ "$zx/third_party/ulib/musl:headers" ]
+
+    # The code comes from musl, where a source_set is defined.
+    sources = []
+
+    deps = [
+      ":exit",
+      "$zx/system/ulib/zx-panic-libc:as_source",
+      "$zx/third_party/scudo",
+      "$zx/third_party/ulib/musl",
+      "sanitizers",
+      "setjmp",
+      "zircon",
+    ]
+
+    if (zx == "/") {
+      # Suppress the ${toolchain.implicit_deps} that points back to here.
+      no_implicit_deps = true
+    }
+
+    # Don't link against the shared libc++.
+    configs += [ "$zx_build_config:static-libc++" ]
+
+    metadata = {
+      # TODO(BLD-353): temporary kludges; see //zircon/public/sysroot
+      legacy_sysroot = [
+        {
+          libc = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+        },
+        {
+          libc_dist = rebase_path("$target_out_dir/libc.so", root_build_dir)
+        },
+        {
+          include_dirs = [
+            "//zircon/system/public",
+            "//zircon/system/ulib/zircon/include",
+            "//zircon/third_party/ulib/musl/include",
+          ]
+        },
+        {
+          sdk = {
+            include_dir = "//zircon/system/public"
+            headers = [
+              "zircon/assert.h",
+              "zircon/boot/driver-config.h",
+              "zircon/boot/e820.h",
+              "zircon/boot/image.h",
+              "zircon/boot/multiboot.h",
+              "zircon/boot/netboot.h",
+              "zircon/boot/sysconfig.h",
+              "zircon/compiler.h",
+              "zircon/errors.h",
+              "zircon/features.h",
+              "zircon/fidl.h",
+              "zircon/hw/gpt.h",
+              "zircon/hw/i2c.h",
+              "zircon/hw/pci.h",
+              "zircon/hw/usb.h",
+              "zircon/hw/usb/audio.h",
+              "zircon/hw/usb/cdc.h",
+              "zircon/hw/usb/dfu.h",
+              "zircon/hw/usb/hid.h",
+              "zircon/hw/usb/hub.h",
+              "zircon/hw/usb/ums.h",
+              "zircon/hw/usb/video.h",
+              "zircon/limits.h",
+              "zircon/listnode.h",
+              "zircon/pixelformat.h",
+              "zircon/process.h",
+              "zircon/processargs.h",
+              "zircon/rights.h",
+              "zircon/string_view.h",
+              "zircon/syscalls.h",
+              "zircon/syscalls/clock.h",
+              "zircon/syscalls/debug.h",
+              "zircon/syscalls/exception.h",
+              "zircon/syscalls/hypervisor.h",
+              "zircon/syscalls/iommu.h",
+              "zircon/syscalls/log.h",
+              "zircon/syscalls/object.h",
+              "zircon/syscalls/pci.h",
+              "zircon/syscalls/policy.h",
+              "zircon/syscalls/port.h",
+              "zircon/syscalls/profile.h",
+              "zircon/syscalls/resource.h",
+              "zircon/syscalls/scheduler.h",
+              "zircon/syscalls/smc.h",
+              "zircon/syscalls/system.h",
+              "zircon/syscalls/types.h",
+              "zircon/time.h",
+              "zircon/tls.h",
+              "zircon/types.h",
+
+              # Note: Most of zircon/device is excluded from SDKs.
+              # TODO(fxbug.dev/7610,fxbug.dev/32355): remove this allowlist.
+              "zircon/device/audio.h",
+            ]
+
+            if (!exclude_testonly_syscalls) {
+              headers += [ "zircon/testonly-syscalls.h" ]
+            }
+          }
+        },
+        {
+          sdk = {
+            include_dir = "//zircon/third_party/ulib/musl/include"
+            headers = [
+              "alloca.h",
+              "ar.h",
+              "arpa/ftp.h",
+              "arpa/inet.h",
+              "arpa/nameser.h",
+              "arpa/nameser_compat.h",
+              "arpa/telnet.h",
+              "arpa/tftp.h",
+              "assert.h",
+              "bits/aarch64/endian.h",
+              "bits/aarch64/fenv.h",
+              "bits/aarch64/io.h",
+              "bits/aarch64/ioctl.h",
+              "bits/aarch64/ipc.h",
+              "bits/aarch64/reg.h",
+              "bits/aarch64/setjmp.h",
+              "bits/aarch64/signal.h",
+              "bits/aarch64/stat.h",
+              "bits/alltypes.h",
+              "bits/endian.h",
+              "bits/errno.h",
+              "bits/fcntl.h",
+              "bits/fenv.h",
+              "bits/io.h",
+              "bits/ioctl.h",
+              "bits/ipc.h",
+              "bits/limits.h",
+              "bits/msg.h",
+              "bits/null.h",
+              "bits/poll.h",
+              "bits/posix.h",
+              "bits/reg.h",
+              "bits/resource.h",
+              "bits/sem.h",
+              "bits/setjmp.h",
+              "bits/shm.h",
+              "bits/signal.h",
+              "bits/socket.h",
+              "bits/stat.h",
+              "bits/statfs.h",
+              "bits/termios.h",
+              "bits/x86_64/endian.h",
+              "bits/x86_64/fenv.h",
+              "bits/x86_64/io.h",
+              "bits/x86_64/ioctl.h",
+              "bits/x86_64/ipc.h",
+              "bits/x86_64/reg.h",
+              "bits/x86_64/setjmp.h",
+              "bits/x86_64/signal.h",
+              "bits/x86_64/stat.h",
+              "byteswap.h",
+              "complex.h",
+              "cpio.h",
+              "ctype.h",
+              "dirent.h",
+              "dlfcn.h",
+              "elf.h",
+              "endian.h",
+              "err.h",
+              "errno.h",
+              "fcntl.h",
+              "features.h",
+              "fenv.h",
+              "fmtmsg.h",
+              "fnmatch.h",
+              "getopt.h",
+              "glob.h",
+              "grp.h",
+              "iconv.h",
+              "ifaddrs.h",
+              "inttypes.h",
+              "iso646.h",
+              "langinfo.h",
+              "libgen.h",
+              "limits.h",
+              "link.h",
+              "locale.h",
+              "malloc.h",
+              "math.h",
+              "memory.h",
+              "monetary.h",
+              "net/ethernet.h",
+              "net/if.h",
+              "net/if_arp.h",
+              "net/route.h",
+              "netdb.h",
+              "netinet/ether.h",
+              "netinet/icmp6.h",
+              "netinet/if_ether.h",
+              "netinet/igmp.h",
+              "netinet/in.h",
+              "netinet/in_systm.h",
+              "netinet/ip.h",
+              "netinet/ip6.h",
+              "netinet/ip_icmp.h",
+              "netinet/tcp.h",
+              "netinet/udp.h",
+              "netpacket/packet.h",
+              "nl_types.h",
+              "paths.h",
+              "poll.h",
+              "pthread.h",
+              "pwd.h",
+              "regex.h",
+              "resolv.h",
+              "sched.h",
+              "search.h",
+              "semaphore.h",
+              "setjmp.h",
+              "signal.h",
+              "spawn.h",
+              "stdio.h",
+              "stdlib.h",
+              "string.h",
+              "strings.h",
+              "stropts.h",
+              "sys/acct.h",
+              "sys/auxv.h",
+              "sys/dir.h",
+              "sys/errno.h",
+              "sys/eventfd.h",
+              "sys/fcntl.h",
+              "sys/file.h",
+              "sys/fsuid.h",
+              "sys/io.h",
+              "sys/ioctl.h",
+              "sys/ipc.h",
+              "sys/klog.h",
+              "sys/mman.h",
+              "sys/mount.h",
+              "sys/msg.h",
+              "sys/mtio.h",
+              "sys/param.h",
+              "sys/personality.h",
+              "sys/poll.h",
+              "sys/quota.h",
+              "sys/random.h",
+              "sys/reboot.h",
+              "sys/reg.h",
+              "sys/select.h",
+              "sys/sem.h",
+              "sys/shm.h",
+              "sys/signal.h",
+              "sys/signalfd.h",
+              "sys/socket.h",
+              "sys/stat.h",
+              "sys/statfs.h",
+              "sys/statvfs.h",
+              "sys/stropts.h",
+              "sys/swap.h",
+              "sys/syslog.h",
+              "sys/termios.h",
+              "sys/time.h",
+              "sys/timeb.h",
+              "sys/timerfd.h",
+              "sys/times.h",
+              "sys/timex.h",
+              "sys/ttydefaults.h",
+              "sys/types.h",
+              "sys/ucontext.h",
+              "sys/uio.h",
+              "sys/un.h",
+              "sys/utsname.h",
+              "sys/vfs.h",
+              "sys/wait.h",
+              "sysexits.h",
+              "syslog.h",
+              "tar.h",
+              "termios.h",
+              "threads.h",
+              "time.h",
+              "uchar.h",
+              "ucontext.h",
+              "unistd.h",
+              "utime.h",
+              "values.h",
+              "wait.h",
+              "wchar.h",
+              "wctype.h",
+              "wordexp.h",
+              "zircon/dlfcn.h",
+              "zircon/sanitizer.h",
+              "zircon/threads.h",
+            ]
+          }
+        },
+        {
+          sdk = {
+            # TODO(TC-446): The stripped binary doesn't even have section
+            # headers, so the linker can't handle it.  Eventually we'll have
+            # linker stubs.  For now, just use the unstripped library to link
+            # against.  This matches what library() gives the SDK via
+            # zircon_library().
+            source =
+                rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+            link = "lib/libc.so"
+          }
+        },
         {
           sdk = {
             source =
-                rebase_path("$zx/third_party/ulib/musl/lib.ld", root_build_dir)
-            link = "lib/$lib"
+                rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
+            debug = "debug/libc.so"
+          }
+        },
+        {
+          sdk = {
+            source = rebase_path("$target_out_dir/libc.so", root_build_dir)
+            dist = "dist/lib/ld.so.1"
           }
         },
       ]
+      foreach(lib,
+              [
+                "libdl.so",
+                "libm.so",
+                "libpthread.so",
+                "librt.so",
+              ]) {
+        legacy_sysroot += [
+          {
+            sdk = {
+              source = rebase_path("$zx/third_party/ulib/musl/lib.ld",
+                                   root_build_dir)
+              link = "lib/$lib"
+            }
+          },
+        ]
+      }
     }
   }
 }

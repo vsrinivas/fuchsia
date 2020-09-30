@@ -15,7 +15,21 @@ source_set("scudo") {
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/sync",
   ]
-  libs = [ "zircon" ]
+
+  if (zircon_toolchain != false) {
+    # Tell the code to use "scudo_platform_tls_slot.h" and where to find it.
+    # This uses libc internals, so it needs access to the internal headers.
+    defines = [ "SCUDO_HAS_PLATFORM_TLS_SLOT=1" ]
+    include_dirs += [ "." ]
+    deps += [ "$zx/third_party/ulib/musl:musl_internal" ]
+
+    # This library is linked into libc, which is used by libfuzzer.
+    # Don't instrument it to avoid getting noise in code coverage.
+    # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
+    configs += [ "$zx_build_config:no_fuzzer" ]
+  } else {
+    libs = [ "zircon" ]
+  }
 }
 
 group("tests") {
