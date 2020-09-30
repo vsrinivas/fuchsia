@@ -9,9 +9,9 @@
 
 #include <optional>
 
+#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
-#include <fbl/auto_lock.h>
 
 namespace hid_driver {
 
@@ -34,7 +34,7 @@ class DeviceReportsReader
     }
   }
 
-  void ReadReports(ReadReportsCompleter::Sync completer) override;
+  void ReadReports(ReadReportsCompleter::Sync& completer) override;
   zx_status_t WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);
 
  private:

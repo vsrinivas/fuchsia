@@ -148,8 +148,9 @@ namespace methods {
 void ExampleDispatchfoo(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Example::fooRequest*>(bytes);
-  reinterpret_cast<Example::Interface*>(interface)->foo(
-      std::move(message->s), Example::Interface::fooCompleter::Sync(txn));
+  Example::Interface::fooCompleter::Sync completer(txn);
+  reinterpret_cast<Example::Interface*>(interface)->foo(std::move(message->s),
+                                                        completer);
 }
 
 }  // namespace methods

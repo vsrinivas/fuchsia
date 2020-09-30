@@ -18,35 +18,35 @@ class Server final : public llcpp::fuchsia::io::Node::Interface {
   explicit Server(llcpp::fuchsia::io::NodeInfo describe_info)
       : describe_info_(std::move(describe_info)) {}
 
-  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync completer) override {
+  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& completer) override {
     ADD_FAILURE("Clone should not be called");
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseCompleter::Sync completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     EXPECT_OK(completer.Reply(ZX_OK).status());
     // FDIO expects the channel to be closed after replying.
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     ASSERT_TRUE(describe_info_.has_value(), "Describe called more than once");
     EXPECT_OK(completer.Reply(std::move(*describe_info_)).status());
     describe_info_.reset();
   }
 
-  void Sync(SyncCompleter::Sync completer) override {
+  void Sync(SyncCompleter::Sync& completer) override {
     ADD_FAILURE("Sync should not be called");
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttr(GetAttrCompleter::Sync completer) override {
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
     ADD_FAILURE("GetAttr should not be called");
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
-               SetAttrCompleter::Sync completer) override {
+               SetAttrCompleter::Sync& completer) override {
     ADD_FAILURE("SetAttr should not be called");
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

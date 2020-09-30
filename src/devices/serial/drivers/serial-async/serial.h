@@ -42,14 +42,14 @@ class SerialDevice : public DeviceType,
   // Serial protocol implementation.
   zx_status_t SerialGetInfo(serial_port_info_t* info);
   zx_status_t SerialConfig(uint32_t baud_rate, uint32_t flags);
-  void Read(ReadCompleter::Sync completer) override;
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) override;
-  void GetChannel(zx::channel req, GetChannelCompleter::Sync completer) override;
+  void Read(ReadCompleter::Sync& completer) override;
+  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override;
+  void GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) override;
 
   // Fidl protocol implementation.
-  void GetClass(GetClassCompleter::Sync completer) override;
+  void GetClass(GetClassCompleter::Sync& completer) override;
   void SetConfig(llcpp::fuchsia::hardware::serial::Config config,
-                 SetConfigCompleter::Sync completer) override;
+                 SetConfigCompleter::Sync& completer) override;
 
  private:
   // The serial protocol of the device we are binding against.

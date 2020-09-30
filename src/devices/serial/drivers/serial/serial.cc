@@ -292,12 +292,12 @@ zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, 
   return serial_.Write(buf, count, actual);
 }
 
-void SerialDevice::GetClass(GetClassCompleter::Sync completer) {
+void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia::hardware::serial::Class>(serial_class_));
 }
 
 void SerialDevice::SetConfig(fuchsia::hardware::serial::Config config,
-                             SetConfigCompleter::Sync completer) {
+                             SetConfigCompleter::Sync& completer) {
   using fuchsia::hardware::serial::CharacterWidth;
   using fuchsia::hardware::serial::FlowControl;
   using fuchsia::hardware::serial::Parity;

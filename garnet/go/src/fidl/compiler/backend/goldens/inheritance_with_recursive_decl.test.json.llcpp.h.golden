@@ -234,7 +234,7 @@ class Parent final {
     using FirstCompleter = ::fidl::Completer<>;
 
     virtual void First(::zx::channel request,
-                       FirstCompleter::Sync _completer) = 0;
+                       FirstCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -589,12 +589,12 @@ class Child final {
     using FirstCompleter = ::fidl::Completer<>;
 
     virtual void First(::zx::channel request,
-                       FirstCompleter::Sync _completer) = 0;
+                       FirstCompleter::Sync& _completer) = 0;
 
     using SecondCompleter = ::fidl::Completer<>;
 
     virtual void Second(::zx::channel request,
-                        SecondCompleter::Sync _completer) = 0;
+                        SecondCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

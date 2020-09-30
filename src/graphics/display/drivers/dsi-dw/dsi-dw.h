@@ -61,7 +61,7 @@ class DsiDwBase : public DeviceTypeBase,
 
   // FIDL
   void SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd, ::fidl::VectorView<uint8_t> txdata,
-               SendCmdCompleter::Sync _completer) override;
+               SendCmdCompleter::Sync& _completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();

@@ -196,13 +196,13 @@ void MacInterface::Teardown(fit::callback<void()> callback) {
   }
 }
 
-void MacClientInstance::GetUnicastAddress(GetUnicastAddressCompleter::Sync completer) {
+void MacClientInstance::GetUnicastAddress(GetUnicastAddressCompleter::Sync& completer) {
   MacAddress addr{};
   parent_->impl_.GetAddress(addr.octets.data());
   completer.Reply(addr);
 }
 
-void MacClientInstance::SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sync completer) {
+void MacClientInstance::SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sync& completer) {
   mode_t resolved_mode = parent_->ConvertMode(mode);
   if (resolved_mode != 0) {
     fbl::AutoLock lock(&parent_->lock_);
@@ -215,7 +215,7 @@ void MacClientInstance::SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sy
 }
 
 void MacClientInstance::AddMulticastAddress(MacAddress address,
-                                            AddMulticastAddressCompleter::Sync completer) {
+                                            AddMulticastAddressCompleter::Sync& completer) {
   if ((address.octets[0] & kMacMulticast) == 0) {
     completer.Reply(ZX_ERR_INVALID_ARGS);
   } else {
@@ -231,7 +231,7 @@ void MacClientInstance::AddMulticastAddress(MacAddress address,
 }
 
 void MacClientInstance::RemoveMulticastAddress(MacAddress address,
-                                               RemoveMulticastAddressCompleter::Sync completer) {
+                                               RemoveMulticastAddressCompleter::Sync& completer) {
   if ((address.octets[0] & kMacMulticast) == 0) {
     completer.Reply(ZX_ERR_INVALID_ARGS);
   } else {
@@ -246,12 +246,12 @@ MacClientInstance::MacClientInstance(MacInterface* parent, mode_t default_mode)
     : parent_(parent), state_(default_mode) {}
 
 zx_status_t MacClientInstance::Bind(async_dispatcher_t* dispatcher, zx::channel req) {
-  auto result = fidl::BindServer(
-      dispatcher, std::move(req), this,
-      fidl::OnUnboundFn<MacClientInstance>(
-          [](MacClientInstance* client_instance, fidl::UnbindInfo, zx::channel) {
-            client_instance->parent_->CloseClient(client_instance);
-          }));
+  auto result =
+      fidl::BindServer(dispatcher, std::move(req), this,
+                       fidl::OnUnboundFn<MacClientInstance>(
+                           [](MacClientInstance* client_instance, fidl::UnbindInfo, zx::channel) {
+                             client_instance->parent_->CloseClient(client_instance);
+                           }));
   if (result.is_ok()) {
     binding_ = result.take_value();
     return ZX_OK;

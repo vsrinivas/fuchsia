@@ -224,10 +224,10 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   zx_status_t Init(async_dispatcher_t* dispatcher, zx::channel chan, uint64_t id) {
     id_ = id;
 
-    fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
-        [this](ButtonsNotifyInterface*, fidl::UnbindInfo, zx::channel) {
-          device_->ClosingChannel(id_);
-        };
+    fidl::OnUnboundFn<ButtonsNotifyInterface> unbound = [this](ButtonsNotifyInterface*,
+                                                               fidl::UnbindInfo, zx::channel) {
+      device_->ClosingChannel(id_);
+    };
     auto res = fidl::BindServer(dispatcher, std::move(chan), this, std::move(unbound));
     if (res.is_error())
       return res.error();
@@ -239,10 +239,10 @@ class ButtonsNotifyInterface : public Buttons::Interface {
   const fidl::ServerBindingRef<Buttons>& binding() { return *binding_; }
 
   // Methods required by the FIDL interface
-  void GetState(ButtonType type, GetStateCompleter::Sync _completer) {
+  void GetState(ButtonType type, GetStateCompleter::Sync& _completer) {
     _completer.Reply(device_->GetState(type));
   }
-  void RegisterNotify(uint8_t types, RegisterNotifyCompleter::Sync _completer) {
+  void RegisterNotify(uint8_t types, RegisterNotifyCompleter::Sync& _completer) {
     zx_status_t status = ZX_OK;
     if ((status = device_->RegisterNotify(types, id_)) == ZX_OK) {
       _completer.ReplySuccess();

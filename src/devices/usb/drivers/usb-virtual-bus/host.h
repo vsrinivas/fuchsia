@@ -40,7 +40,7 @@ class Device : public DeviceType,
 
   void DdkRelease();
   static zx_status_t Bind(zx_device_t* device);
-  void RunShortPacketTest(RunShortPacketTestCompleter::Sync completer);
+  void RunShortPacketTest(RunShortPacketTestCompleter::Sync& completer);
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);

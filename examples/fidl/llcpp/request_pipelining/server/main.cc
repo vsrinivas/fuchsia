@@ -20,8 +20,8 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
  public:
   explicit EchoImpl(std::string prefix) : prefix_(prefix) {}
   // This method is not used in the request pipelining example, so requests are ignored.
-  void SendString(fidl::StringView value, SendStringCompleter::Sync completer) override {}
-  void EchoString(fidl::StringView value, EchoStringCompleter::Sync completer) override {
+  void SendString(fidl::StringView value, SendStringCompleter::Sync& completer) override {}
+  void EchoString(fidl::StringView value, EchoStringCompleter::Sync& completer) override {
     std::cout << "Got echo request for prefix " << prefix_ << std::endl;
     auto value_str = std::string(value.data(), value.size());
     auto response = prefix_ + value_str;
@@ -39,7 +39,7 @@ class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::In
  public:
   explicit EchoLauncherImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  void GetEcho(fidl::StringView prefix, GetEchoCompleter::Sync completer) override {
+  void GetEcho(fidl::StringView prefix, GetEchoCompleter::Sync& completer) override {
     std::cout << "Got non pipelined request" << std::endl;
     zx::channel server_end, client_end;
     ZX_ASSERT(zx::channel::create(0, &client_end, &server_end) == ZX_OK);
@@ -48,7 +48,7 @@ class EchoLauncherImpl final : public llcpp::fuchsia::examples::EchoLauncher::In
   }
 
   void GetEchoPipelined(fidl::StringView prefix, zx::channel server_end,
-                        GetEchoPipelinedCompleter::Sync completer) override {
+                        GetEchoPipelinedCompleter::Sync& completer) override {
     std::cout << "Got pipelined request" << std::endl;
     RunEchoServer(std::move(prefix), std::move(server_end));
   }

@@ -304,22 +304,20 @@ void ProtocolDispatchRequestStrictResponseFlexible(void* interface, void* bytes,
                                                    ::fidl::Transaction* txn) {
   auto message =
       reinterpret_cast<Protocol::RequestStrictResponseFlexibleRequest*>(bytes);
+  Protocol::Interface::RequestStrictResponseFlexibleCompleter::Sync completer(
+      txn);
   reinterpret_cast<Protocol::Interface*>(interface)
-      ->RequestStrictResponseFlexible(
-          std::move(message->s),
-          Protocol::Interface::RequestStrictResponseFlexibleCompleter::Sync(
-              txn));
+      ->RequestStrictResponseFlexible(std::move(message->s), completer);
 }
 
 void ProtocolDispatchRequestFlexibleResponseStrict(void* interface, void* bytes,
                                                    ::fidl::Transaction* txn) {
   auto message =
       reinterpret_cast<Protocol::RequestFlexibleResponseStrictRequest*>(bytes);
+  Protocol::Interface::RequestFlexibleResponseStrictCompleter::Sync completer(
+      txn);
   reinterpret_cast<Protocol::Interface*>(interface)
-      ->RequestFlexibleResponseStrict(
-          std::move(message->s),
-          Protocol::Interface::RequestFlexibleResponseStrictCompleter::Sync(
-              txn));
+      ->RequestFlexibleResponseStrict(std::move(message->s), completer);
 }
 
 }  // namespace methods

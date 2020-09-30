@@ -94,8 +94,8 @@ class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events:
     fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
-  void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);
-  void FunctionsCleared(FunctionsClearedCompleter::Sync completer);
+  void FunctionRegistered(FunctionRegisteredCompleter::Sync& completer);
+  void FunctionsCleared(FunctionsClearedCompleter::Sync& completer);
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
   bool all_functions_cleared() { return all_functions_cleared_; }
@@ -108,7 +108,7 @@ class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events:
   bool all_functions_cleared_ = false;
 };
 
-void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync completer) {
+void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync& completer) {
   functions_registered_++;
   if (all_functions_registered()) {
     loop_->Quit();
@@ -118,7 +118,7 @@ void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync complete
   }
 }
 
-void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync completer) {
+void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync& completer) {
   all_functions_cleared_ = true;
   loop_->Quit();
   completer.Close(ZX_ERR_CANCELED);

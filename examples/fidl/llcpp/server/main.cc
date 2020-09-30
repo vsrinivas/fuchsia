@@ -23,14 +23,14 @@ class EchoImpl final : public llcpp::fuchsia::examples::Echo::Interface {
  public:
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
-  void SendString(fidl::StringView value, SendStringCompleter::Sync completer) override {
+  void SendString(fidl::StringView value, SendStringCompleter::Sync& completer) override {
     if (binding_) {
       binding_.value()->OnString(std::move(value));
     }
   }
   // Handle an EchoString request by responding with the request value. For two-way
   // methods, the completer is also used to send a response.
-  void EchoString(fidl::StringView value, EchoStringCompleter::Sync completer) override {
+  void EchoString(fidl::StringView value, EchoStringCompleter::Sync& completer) override {
     completer.Reply(std::move(value));
   }
 

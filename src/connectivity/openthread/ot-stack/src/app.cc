@@ -123,7 +123,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher_t* dispatcher
   app_.binding_ = res.take_value();
 }
 
-void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {
+void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
   if (app_.connected_to_device_ == false) {
     FX_LOGS(ERROR) << "ot-radio not connected when client called Open()";
     completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
@@ -139,7 +139,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer)
   completer.ReplySuccess();
 }
 
-void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync completer) {
+void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
   if (app_.connected_to_device_ == false) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     completer.ReplyError(fidl_spinel::Error::UNSPECIFIED);
@@ -158,7 +158,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync complete
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
-    GetMaxFrameSizeCompleter::Sync completer) {
+    GetMaxFrameSizeCompleter::Sync& completer) {
   if (app_.connected_to_device_ == false) {
     FX_LOGS(ERROR) << "ot-stack: ot-radio not connected";
     app_.Shutdown();
@@ -184,7 +184,7 @@ void OtStackApp::PushFrameToOtLib() {
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
-                                                       SendFrameCompleter::Sync completer) {
+                                                       SendFrameCompleter::Sync& completer) {
   if (app_.connected_to_device_ == false) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
@@ -197,7 +197,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_
 }
 
 void OtStackApp::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
-    uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync completer) {
+    uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync& completer) {
   if (app_.connected_to_device_ == false) {
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;

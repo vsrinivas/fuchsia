@@ -33,24 +33,24 @@ class FileConnection : public Connection, public llcpp::fuchsia::io::File::Inter
   // |fuchsia.io/Node| operations.
   //
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) final;
-  void Close(CloseCompleter::Sync completer) final;
-  void Describe(DescribeCompleter::Sync completer) final;
-  void Sync(SyncCompleter::Sync completer) final;
-  void GetAttr(GetAttrCompleter::Sync completer) final;
+  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) final;
+  void Close(CloseCompleter::Sync& completer) final;
+  void Describe(DescribeCompleter::Sync& completer) final;
+  void Sync(SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrCompleter::Sync& completer) final;
   void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
-               SetAttrCompleter::Sync completer) final;
-  void NodeGetFlags(NodeGetFlagsCompleter::Sync completer) final;
-  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync completer) final;
+               SetAttrCompleter::Sync& completer) final;
+  void NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) final;
+  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/File| operations.
   //
 
-  void Truncate(uint64_t length, TruncateCompleter::Sync completer) final;
-  void GetFlags(GetFlagsCompleter::Sync completer) final;
-  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) final;
-  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) final;
+  void Truncate(uint64_t length, TruncateCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) final;
+  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) final;
 };
 
 }  // namespace internal

@@ -10,6 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
+
 #include "lib/fidl/llcpp/types.h"
 
 namespace goldfish {
@@ -141,7 +142,7 @@ void Pipe::Bind(zx::channel server_request) {
   }
 }
 
-void Pipe::SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync completer) {
+void Pipe::SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::SetBufferSize", "size", size);
 
   fbl::AutoLock lock(&lock_);
@@ -155,7 +156,7 @@ void Pipe::SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync completer) 
   }
 }
 
-void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync completer) {
+void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::SetEvent");
 
   if (!event.is_valid()) {
@@ -176,7 +177,7 @@ void Pipe::SetEvent(zx::event event, SetEventCompleter::Sync completer) {
   completer.Close(ZX_OK);
 }
 
-void Pipe::GetBuffer(GetBufferCompleter::Sync completer) {
+void Pipe::GetBuffer(GetBufferCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::GetBuffer");
 
   fbl::AutoLock lock(&lock_);
@@ -191,7 +192,7 @@ void Pipe::GetBuffer(GetBufferCompleter::Sync completer) {
   }
 }
 
-void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync completer) {
+void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::Read", "count", count);
 
   fbl::AutoLock lock(&lock_);
@@ -208,7 +209,7 @@ void Pipe::Read(uint64_t count, uint64_t offset, ReadCompleter::Sync completer) 
   completer.Reply(status, actual);
 }
 
-void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync completer) {
+void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::Write", "count", count);
 
   fbl::AutoLock lock(&lock_);
@@ -226,7 +227,7 @@ void Pipe::Write(uint64_t count, uint64_t offset, WriteCompleter::Sync completer
 }
 
 void Pipe::DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
-                  DoCallCompleter::Sync completer) {
+                  DoCallCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::DoCall", "count", count, "read_count", read_count);
 
   fbl::AutoLock lock(&lock_);

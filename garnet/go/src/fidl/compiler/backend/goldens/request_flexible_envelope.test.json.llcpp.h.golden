@@ -928,7 +928,7 @@ class Protocol final {
 
     virtual void RequestStrictResponseFlexible(
         ::llcpp::fidl::test::json::StrictFoo s,
-        RequestStrictResponseFlexibleCompleter::Sync _completer) = 0;
+        RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
 
     class RequestFlexibleResponseStrictCompleterBase
         : public ::fidl::CompleterBase {
@@ -956,7 +956,7 @@ class Protocol final {
 
     virtual void RequestFlexibleResponseStrict(
         ::llcpp::fidl::test::json::FlexibleFoo s,
-        RequestFlexibleResponseStrictCompleter::Sync _completer) = 0;
+        RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

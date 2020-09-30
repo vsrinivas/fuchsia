@@ -26,28 +26,30 @@ class TestServerBase : public fio::Node::Interface {
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) override {
+  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     fio::FileObject file_object;
     completer.Reply(fio::NodeInfo::WithFile(fidl::unowned_ptr(&file_object)));
   }
 
-  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void GetAttr(GetAttrCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
-               SetAttrCompleter::Sync completer) override {
+               SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -102,7 +104,7 @@ class Remote : public zxtest::Test {
 TEST_F(Remote, ServiceGetAttributes) {
   class TestServer : public TestServerBase {
    public:
-    void GetAttr(GetAttrCompleter::Sync completer) override {
+    void GetAttr(GetAttrCompleter::Sync& completer) override {
       completer.Reply(ZX_OK, ::llcpp::fuchsia::io::NodeAttributes{
                                  .mode = ::llcpp::fuchsia::io::MODE_TYPE_SERVICE});
     }

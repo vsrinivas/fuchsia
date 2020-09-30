@@ -112,7 +112,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   return ZX_OK;
 }
 
-void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
+void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
   FidlBacklight::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
@@ -123,7 +123,7 @@ void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync complete
 }
 
 void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
-                                      SetStateNormalizedCompleter::Sync completer) {
+                                      SetStateNormalizedCompleter::Sync& completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -132,7 +132,7 @@ void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
   }
 }
 
-void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
+void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   if (!max_absolute_brightness_nits_.has_value()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -154,7 +154,7 @@ void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
 }
 
 void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
-                                    SetStateAbsoluteCompleter::Sync completer) {
+                                    SetStateAbsoluteCompleter::Sync& completer) {
   if (!max_absolute_brightness_nits_.has_value()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -177,7 +177,7 @@ void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
   }
 }
 
-void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
+void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
   if (max_absolute_brightness_nits_.has_value()) {
     completer.ReplySuccess(max_absolute_brightness_nits_.value());
   } else {
@@ -186,7 +186,7 @@ void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::S
 }
 
 void Lp8556Device::SetNormalizedBrightnessScale(
-    double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+    double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) {
   scale = std::clamp(scale, 0.0, 1.0);
 
   zx_status_t status = SetCurrentScale(static_cast<uint16_t>(scale * kBrightnessRegMaxValue));
@@ -198,7 +198,7 @@ void Lp8556Device::SetNormalizedBrightnessScale(
 }
 
 void Lp8556Device::GetNormalizedBrightnessScale(
-    GetNormalizedBrightnessScaleCompleter::Sync completer) {
+    GetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplySuccess(static_cast<double>(scale_) / kBrightnessRegMaxValue);
 }
 

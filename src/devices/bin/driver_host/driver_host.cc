@@ -437,7 +437,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
                                                ::zx::vmo driver_vmo, ::zx::handle parent_proxy,
                                                ::fidl::StringView proxy_args,
                                                uint64_t local_device_id,
-                                               CreateDeviceCompleter::Sync completer) {
+                                               CreateDeviceCompleter::Sync& completer) {
   std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
   // This does not operate under the driver_host api lock,
   // since the newly created device is not visible to
@@ -514,7 +514,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_rpc, zx::channel device_controller_rpc,
     ::fidl::VectorView<uint64_t> fragments, ::fidl::StringView name, uint64_t local_device_id,
-    CreateCompositeDeviceCompleter::Sync completer) {
+    CreateCompositeDeviceCompleter::Sync& completer) {
   // Convert the fragment IDs into zx_device references
   CompositeFragments fragments_list(new fbl::RefPtr<zx_device>[fragments.count()],
                                     fragments.count());
@@ -578,7 +578,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
 void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
                                                    zx::channel device_controller_rpc,
                                                    uint32_t protocol_id, uint64_t local_device_id,
-                                                   CreateDeviceStubCompleter::Sync completer) {
+                                                   CreateDeviceStubCompleter::Sync& completer) {
   // This method is used for creating driverless proxies in case of misc, root, test devices.
   // Since there are no proxy drivers backing the device, a dummy proxy driver will be used for
   // device creation.

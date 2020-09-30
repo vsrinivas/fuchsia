@@ -369,11 +369,11 @@ fbl::RefPtr<fs::Service> BlockWatcherServer::Create(devmgr::FsManager* fs_manage
   });
 }
 
-void BlockWatcherServer::Pause(PauseCompleter::Sync completer) {
+void BlockWatcherServer::Pause(PauseCompleter::Sync& completer) {
   completer.Reply(watcher->Pause());
 }
 
-void BlockWatcherServer::Resume(ResumeCompleter::Sync completer) {
+void BlockWatcherServer::Resume(ResumeCompleter::Sync& completer) {
   completer.Reply(watcher->Resume());
 }
 

@@ -78,7 +78,7 @@ zx_status_t FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(async_dispatcher
   return ZX_OK;
 }
 
-void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync completer) {
+void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
@@ -96,7 +96,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync com
   }
 }
 
-void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync completer) {
+void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
@@ -109,12 +109,12 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync c
 }
 
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
-    GetMaxFrameSizeCompleter::Sync completer) {
+    GetMaxFrameSizeCompleter::Sync& completer) {
   completer.Reply(kMaxFrameSize);
 }
 
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_t> data,
-                                                              SendFrameCompleter::Sync completer) {
+                                                              SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
     (*ot_radio_obj_.fidl_binding_)->OnError(lowpan_spinel_fidl::Error::CLOSED, false);
   } else if (data.count() > kMaxFrameSize) {
@@ -145,7 +145,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView
 }
 
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
-    uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync completer) {
+    uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync& completer) {
   zxlogf(DEBUG, "allow to receive %u frame", number_of_frames);
   bool prev_no_inbound_allowance = (ot_radio_obj_.inbound_allowance_ == 0) ? true : false;
   ot_radio_obj_.inbound_allowance_ += number_of_frames;
@@ -166,7 +166,7 @@ zx_status_t FakeOtRadioDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void FakeOtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync completer) {
+void FakeOtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync& completer) {
   if (fidl_impl_obj_ != nullptr) {
     zxlogf(ERROR, "ot-audio: channel already set");
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

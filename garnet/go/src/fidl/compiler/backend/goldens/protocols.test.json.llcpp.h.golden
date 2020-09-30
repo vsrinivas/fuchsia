@@ -1040,13 +1040,13 @@ class Transitional final {
 
     using RequestCompleter = ::fidl::Completer<RequestCompleterBase>;
 
-    virtual void Request(int64_t x, RequestCompleter::Sync _completer) {
+    virtual void Request(int64_t x, RequestCompleter::Sync& _completer) {
       _completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
 
     using OneWayCompleter = ::fidl::Completer<>;
 
-    virtual void OneWay(int64_t x, OneWayCompleter::Sync _completer) {
+    virtual void OneWay(int64_t x, OneWayCompleter::Sync& _completer) {
       _completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
   };
@@ -1890,7 +1890,7 @@ class ChannelProtocol final {
     using MethodACompleter = ::fidl::Completer<>;
 
     virtual void MethodA(int64_t a, int64_t b,
-                         MethodACompleter::Sync _completer) = 0;
+                         MethodACompleter::Sync& _completer) = 0;
 
     class MethodBCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -1914,7 +1914,7 @@ class ChannelProtocol final {
     using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
 
     virtual void MethodB(int64_t a, int64_t b,
-                         MethodBCompleter::Sync _completer) = 0;
+                         MethodBCompleter::Sync& _completer) = 0;
 
     class MutateSocketCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -1938,7 +1938,7 @@ class ChannelProtocol final {
     using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
 
     virtual void MutateSocket(::zx::socket a,
-                              MutateSocketCompleter::Sync _completer) = 0;
+                              MutateSocketCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -3519,7 +3519,7 @@ class WithAndWithoutRequestResponse final {
     using NoRequestNoResponseCompleter = ::fidl::Completer<>;
 
     virtual void NoRequestNoResponse(
-        NoRequestNoResponseCompleter::Sync _completer) = 0;
+        NoRequestNoResponseCompleter::Sync& _completer) = 0;
 
     class NoRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -3543,7 +3543,7 @@ class WithAndWithoutRequestResponse final {
         ::fidl::Completer<NoRequestEmptyResponseCompleterBase>;
 
     virtual void NoRequestEmptyResponse(
-        NoRequestEmptyResponseCompleter::Sync _completer) = 0;
+        NoRequestEmptyResponseCompleter::Sync& _completer) = 0;
 
     class NoRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -3568,13 +3568,13 @@ class WithAndWithoutRequestResponse final {
         ::fidl::Completer<NoRequestWithResponseCompleterBase>;
 
     virtual void NoRequestWithResponse(
-        NoRequestWithResponseCompleter::Sync _completer) = 0;
+        NoRequestWithResponseCompleter::Sync& _completer) = 0;
 
     using WithRequestNoResponseCompleter = ::fidl::Completer<>;
 
     virtual void WithRequestNoResponse(
         ::fidl::StringView arg,
-        WithRequestNoResponseCompleter::Sync _completer) = 0;
+        WithRequestNoResponseCompleter::Sync& _completer) = 0;
 
     class WithRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -3599,7 +3599,7 @@ class WithAndWithoutRequestResponse final {
 
     virtual void WithRequestEmptyResponse(
         ::fidl::StringView arg,
-        WithRequestEmptyResponseCompleter::Sync _completer) = 0;
+        WithRequestEmptyResponseCompleter::Sync& _completer) = 0;
 
     class WithRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -3625,7 +3625,7 @@ class WithAndWithoutRequestResponse final {
 
     virtual void WithRequestWithResponse(
         ::fidl::StringView arg,
-        WithRequestWithResponseCompleter::Sync _completer) = 0;
+        WithRequestWithResponseCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -4488,7 +4488,7 @@ class WithErrorSyntax final {
         ::fidl::Completer<ResponseAsStructCompleterBase>;
 
     virtual void ResponseAsStruct(
-        ResponseAsStructCompleter::Sync _completer) = 0;
+        ResponseAsStructCompleter::Sync& _completer) = 0;
 
     class ErrorAsPrimitiveCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -4519,7 +4519,7 @@ class WithErrorSyntax final {
         ::fidl::Completer<ErrorAsPrimitiveCompleterBase>;
 
     virtual void ErrorAsPrimitive(
-        ErrorAsPrimitiveCompleter::Sync _completer) = 0;
+        ErrorAsPrimitiveCompleter::Sync& _completer) = 0;
 
     class ErrorAsEnumCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -4548,7 +4548,7 @@ class WithErrorSyntax final {
 
     using ErrorAsEnumCompleter = ::fidl::Completer<ErrorAsEnumCompleterBase>;
 
-    virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync _completer) = 0;
+    virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

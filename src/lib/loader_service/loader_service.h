@@ -78,11 +78,11 @@ class LoaderConnection : public llcpp::fuchsia::ldsvc::Loader::Interface {
   LoaderConnection(std::shared_ptr<LoaderServiceBase> server) : server_(server) {}
 
   // llcpp::fuchsia::ldsvc::Loader::Interface implementation
-  virtual void Done(DoneCompleter::Sync completer) override;
+  virtual void Done(DoneCompleter::Sync& completer) override;
   virtual void LoadObject(fidl::StringView object_name,
-                          LoadObjectCompleter::Sync completer) override;
-  virtual void Config(fidl::StringView config, ConfigCompleter::Sync completer) override;
-  virtual void Clone(zx::channel loader, CloneCompleter::Sync completer) override;
+                          LoadObjectCompleter::Sync& completer) override;
+  virtual void Config(fidl::StringView config, ConfigCompleter::Sync& completer) override;
+  virtual void Clone(zx::channel loader, CloneCompleter::Sync& completer) override;
 
  private:
   const std::string& log_prefix() { return server_->log_prefix(); }

@@ -32,13 +32,13 @@ class AmlogicTestDevice : public llcpp::fuchsia::hardware::mediacodec::Tester::I
   }
 
   void SetOutputDirectoryHandle(zx::channel handle,
-                                SetOutputDirectoryHandleCompleter::Sync completer) override {
+                                SetOutputDirectoryHandleCompleter::Sync& completer) override {
     fdio_ns_t* ns;
     zx_status_t status = fdio_ns_get_installed(&ns);
     status = fdio_ns_bind(ns, "/tmp", handle.release());
     fprintf(stderr, "NS bind: %d\n", status);
   }
-  void RunTests(RunTestsCompleter::Sync completer) override {
+  void RunTests(RunTestsCompleter::Sync& completer) override {
     TestSupport::set_parent_device(parent());
     if (!TestSupport::RunAllTests()) {
       DECODE_ERROR("Tests failed, failing to initialize");

@@ -59,7 +59,7 @@ zx_status_t Shtv3Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void Shtv3Device::DdkRelease() { delete this; }
 
-void Shtv3Device::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) {
+void Shtv3Device::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   const zx::status<float> status = ReadTemperature();
   completer.Reply(status.error_value(), status.value_or(0.0f));
 }

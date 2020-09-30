@@ -22,7 +22,7 @@ class ComponentLifecycleServer final
   static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
                             zx::channel chan, SuspendCallback callback);
 
-  void Stop(StopCompleter::Sync completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
 
  private:
   Coordinator* dev_coord_;

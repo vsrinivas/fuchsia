@@ -34,7 +34,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
 
   // Device message ops implementation.
   void CreateDevice(zx::channel lifecycle_client, zx::channel instance_client,
-                    CreateDeviceCompleter::Sync completer) override;
+                    CreateDeviceCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -44,7 +44,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
 };
 
 void TestLifecycleDriver::CreateDevice(zx::channel lifecycle_client, zx::channel instance_client,
-                                       CreateDeviceCompleter::Sync completer) {
+                                       CreateDeviceCompleter::Sync& completer) {
   zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), std::move(lifecycle_client),
                                                         std::move(instance_client));
   if (status != ZX_OK) {

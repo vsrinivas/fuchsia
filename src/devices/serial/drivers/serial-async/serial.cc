@@ -30,11 +30,11 @@ zx_status_t SerialDevice::SerialConfig(uint32_t baud_rate, uint32_t flags) {
   return serial_.Config(baud_rate, flags);
 }
 
-void SerialDevice::GetClass(GetClassCompleter::Sync completer) {
+void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia::hardware::serial::Class>(serial_class_));
 }
 
-void SerialDevice::Read(ReadCompleter::Sync completer) {
+void SerialDevice::Read(ReadCompleter::Sync& completer) {
   if (read_completer_.has_value()) {
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
@@ -57,7 +57,7 @@ void SerialDevice::Read(ReadCompleter::Sync completer) {
       this);
 }
 
-void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync completer) {
+void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync& completer) {
   if (loop_.has_value()) {
     if (loop_->GetState() == ASYNC_LOOP_SHUTDOWN) {
       loop_.reset();
@@ -90,7 +90,7 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
   binding_.emplace(std::move(binding.value()));
 }
 
-void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {
+void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
   if (write_completer_.has_value()) {
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
@@ -113,7 +113,7 @@ void SerialDevice::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync co
 }
 
 void SerialDevice::SetConfig(fuchsia::hardware::serial::Config config,
-                             SetConfigCompleter::Sync completer) {
+                             SetConfigCompleter::Sync& completer) {
   using fuchsia::hardware::serial::CharacterWidth;
   using fuchsia::hardware::serial::FlowControl;
   using fuchsia::hardware::serial::Parity;

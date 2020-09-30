@@ -38,7 +38,7 @@ class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interf
     return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(client));
   }
 
-  void Shutdown(ShutdownCompleter::Sync completer) override {
+  void Shutdown(ShutdownCompleter::Sync& completer) override {
     has_been_shutdown_ = true;
     completer.Reply();
   }

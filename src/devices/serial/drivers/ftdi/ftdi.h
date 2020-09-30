@@ -117,7 +117,7 @@ class FtdiDevice : public DeviceType,
  private:
   void CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout,
                  ::llcpp::fuchsia::hardware::ftdi::I2cDevice device,
-                 CreateI2CCompleter::Sync _completer) override;
+                 CreateI2CCompleter::Sync& _completer) override;
 
   static zx_status_t FidlCreateI2c(void* ctx,
                                    const ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout* layout,

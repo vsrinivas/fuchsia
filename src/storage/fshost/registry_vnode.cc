@@ -35,7 +35,7 @@ zx_status_t RegistryVnode::AddFilesystem(zx::channel directory) {
 }
 
 void RegistryVnode::RegisterFilesystem(zx::channel public_export,
-                                       RegisterFilesystemCompleter::Sync completer) {
+                                       RegisterFilesystemCompleter::Sync& completer) {
   completer.Reply(AddFilesystem(std::move(public_export)));
 }
 

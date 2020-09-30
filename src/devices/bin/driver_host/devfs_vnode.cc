@@ -95,7 +95,7 @@ zx_status_t DevfsVnode::Write(const void* data, size_t len, size_t off, size_t* 
   return dev_->WriteOp(data, len, off, out_actual);
 }
 
-void DevfsVnode::Bind(::fidl::StringView driver, BindCompleter::Sync completer) {
+void DevfsVnode::Bind(::fidl::StringView driver, BindCompleter::Sync& completer) {
   char drv_libname[fuchsia_device_MAX_DRIVER_PATH_LEN + 1];
   memcpy(drv_libname, driver.data(), driver.size());
   drv_libname[driver.size()] = 0;
@@ -114,7 +114,7 @@ void DevfsVnode::Bind(::fidl::StringView driver, BindCompleter::Sync completer) 
   }
 };
 
-void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync completer) {
+void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync& completer) {
   auto& perf_states = dev_->GetPerformanceStates();
   ZX_DEBUG_ASSERT(perf_states.size() == fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES);
 
@@ -125,11 +125,11 @@ void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter:
   completer.Reply(states, ZX_OK);
 }
 
-void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync completer) {
+void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) {
   completer.Reply(dev_->current_performance_state());
 }
 
-void DevfsVnode::Rebind(::fidl::StringView driver, RebindCompleter::Sync completer) {
+void DevfsVnode::Rebind(::fidl::StringView driver, RebindCompleter::Sync& completer) {
   char drv_libname[fuchsia_device_MAX_DRIVER_PATH_LEN + 1];
   memcpy(drv_libname, driver.data(), driver.size());
   drv_libname[driver.size()] = 0;
@@ -151,7 +151,7 @@ void DevfsVnode::Rebind(::fidl::StringView driver, RebindCompleter::Sync complet
   }
 }
 
-void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync completer) {
+void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync& completer) {
   zx_status_t status = device_schedule_unbind_children(dev_);
 
   if (status != ZX_OK) {
@@ -168,7 +168,7 @@ void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync completer) {
   }
 }
 
-void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync completer) {
+void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync& completer) {
   zx_status_t status = device_schedule_remove(dev_, true /* unbind_self */);
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -177,7 +177,7 @@ void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync completer) {
   }
 }
 
-void DevfsVnode::GetDriverName(GetDriverNameCompleter::Sync completer) {
+void DevfsVnode::GetDriverName(GetDriverNameCompleter::Sync& completer) {
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
     return;
@@ -189,11 +189,11 @@ void DevfsVnode::GetDriverName(GetDriverNameCompleter::Sync completer) {
   completer.Reply(ZX_OK, fidl::unowned_str(name, strlen(name)));
 }
 
-void DevfsVnode::GetDeviceName(GetDeviceNameCompleter::Sync completer) {
+void DevfsVnode::GetDeviceName(GetDeviceNameCompleter::Sync& completer) {
   completer.Reply(fidl::unowned_str(dev_->name(), strlen(dev_->name())));
 }
 
-void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
+void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   char buf[fuchsia_device_MAX_DEVICE_PATH_LEN + 1];
   size_t actual;
   zx_status_t status = dev_->driver_host_context()->GetTopoPath(dev_, buf, sizeof(buf), &actual);
@@ -209,7 +209,7 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer)
   completer.ReplySuccess(std::move(path));
 }
 
-void DevfsVnode::GetEventHandle(GetEventHandleCompleter::Sync completer) {
+void DevfsVnode::GetEventHandle(GetEventHandleCompleter::Sync& completer) {
   zx::eventpair event;
   zx_status_t status = dev_->event.duplicate(ZX_RIGHTS_BASIC, &event);
   static_assert(fuchsia_device_DEVICE_SIGNAL_READABLE == DEV_STATE_READABLE);
@@ -222,7 +222,7 @@ void DevfsVnode::GetEventHandle(GetEventHandleCompleter::Sync completer) {
   completer.Reply(status, zx::event(event.release()));
 }
 
-void DevfsVnode::GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync completer) {
+void DevfsVnode::GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync& completer) {
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE, 0);
     return;
@@ -232,7 +232,7 @@ void DevfsVnode::GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync completer) {
 }
 
 void DevfsVnode::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
-                                   SetDriverLogFlagsCompleter::Sync completer) {
+                                   SetDriverLogFlagsCompleter::Sync& completer) {
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE);
     return;
@@ -245,7 +245,7 @@ void DevfsVnode::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
 }
 
 void DevfsVnode::RunCompatibilityTests(int64_t hook_wait_time,
-                                       RunCompatibilityTestsCompleter::Sync completer) {
+                                       RunCompatibilityTestsCompleter::Sync& completer) {
   zx_status_t status = device_run_compatibility_tests(dev_, hook_wait_time);
   if (status == ZX_OK) {
     dev_->PushTestCompatibilityConn(
@@ -255,7 +255,7 @@ void DevfsVnode::RunCompatibilityTests(int64_t hook_wait_time,
   }
 };
 
-void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync completer) {
+void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& completer) {
   // For now, the result is always a successful response because the device itself is not added
   // without power states validation. In future, we may add more checks for validation, and the
   // error result will be put to use.
@@ -271,7 +271,7 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync completer)
 };
 
 void DevfsVnode::SetPerformanceState(uint32_t requested_state,
-                                     SetPerformanceStateCompleter::Sync completer) {
+                                     SetPerformanceStateCompleter::Sync& completer) {
   uint32_t out_state;
   zx_status_t status =
       dev_->driver_host_context()->DeviceSetPerformanceState(dev_, requested_state, &out_state);
@@ -280,7 +280,7 @@ void DevfsVnode::SetPerformanceState(uint32_t requested_state,
 
 void DevfsVnode::ConfigureAutoSuspend(bool enable,
                                       ::llcpp::fuchsia::device::DevicePowerState requested_state,
-                                      ConfigureAutoSuspendCompleter::Sync completer) {
+                                      ConfigureAutoSuspendCompleter::Sync& completer) {
   zx_status_t status =
       dev_->driver_host_context()->DeviceConfigureAutoSuspend(dev_, enable, requested_state);
   completer.Reply(status);
@@ -290,7 +290,7 @@ void DevfsVnode::UpdatePowerStateMapping(
     ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo,
                   power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES>
         mapping,
-    UpdatePowerStateMappingCompleter::Sync completer) {
+    UpdatePowerStateMappingCompleter::Sync& completer) {
   std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
              power_fidl::statecontrol::MAX_SYSTEM_POWER_STATES>
       states_mapping;
@@ -309,7 +309,7 @@ void DevfsVnode::UpdatePowerStateMapping(
       fidl::unowned_ptr(&response)));
 }
 
-void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync completer) {
+void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& completer) {
   ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response response;
 
   auto& mapping = dev_->GetSystemPowerStateMapping();
@@ -323,7 +323,7 @@ void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync comple
 };
 
 void DevfsVnode::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
-                         SuspendCompleter::Sync completer) {
+                         SuspendCompleter::Sync& completer) {
   dev_->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
                                                        uint8_t out_state) mutable {
     completer.Reply(status, static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_state));
@@ -331,7 +331,7 @@ void DevfsVnode::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_st
   dev_->driver_host_context()->DeviceSuspendNew(dev_, requested_state);
 }
 
-void DevfsVnode::Resume(ResumeCompleter::Sync completer) {
+void DevfsVnode::Resume(ResumeCompleter::Sync& completer) {
   dev_->resume_cb = [completer = completer.ToAsync()](zx_status_t status, uint8_t out_power_state,
                                                       uint32_t out_perf_state) mutable {
     completer.Reply(status,

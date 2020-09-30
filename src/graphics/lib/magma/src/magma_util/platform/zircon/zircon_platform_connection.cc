@@ -116,7 +116,7 @@ bool ZirconPlatformConnection::AsyncTaskHandler(async_dispatcher_t* dispatcher, 
   return DRETF(false, "Unhandled notification type: %d", task->notification.type);
 }
 
-void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlCompleter::Sync _completer) {
+void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlCompleter::Sync& _completer) {
   flow_control_enabled_ = true;
 }
 
@@ -149,7 +149,7 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
 }
 
 void ZirconPlatformConnection::ImportBuffer(::zx::vmo buffer,
-                                            ImportBufferCompleter::Sync _completer) {
+                                            ImportBufferCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection - ImportBuffer");
   uint64_t size = 0;
   buffer.get_size(&size);
@@ -161,7 +161,7 @@ void ZirconPlatformConnection::ImportBuffer(::zx::vmo buffer,
 }
 
 void ZirconPlatformConnection::ReleaseBuffer(uint64_t buffer_id,
-                                             ReleaseBufferCompleter::Sync _completer) {
+                                             ReleaseBufferCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: ReleaseBuffer");
   FlowControl();
 
@@ -170,7 +170,7 @@ void ZirconPlatformConnection::ReleaseBuffer(uint64_t buffer_id,
 }
 
 void ZirconPlatformConnection::ImportObject(zx::handle handle, uint32_t object_type,
-                                            ImportObjectCompleter::Sync _completer) {
+                                            ImportObjectCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: ImportObject");
   FlowControl();
 
@@ -179,7 +179,7 @@ void ZirconPlatformConnection::ImportObject(zx::handle handle, uint32_t object_t
 }
 
 void ZirconPlatformConnection::ReleaseObject(uint64_t object_id, uint32_t object_type,
-                                             ReleaseObjectCompleter::Sync _completer) {
+                                             ReleaseObjectCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: ReleaseObject");
   FlowControl();
 
@@ -188,7 +188,7 @@ void ZirconPlatformConnection::ReleaseObject(uint64_t object_id, uint32_t object
 }
 
 void ZirconPlatformConnection::CreateContext(uint32_t context_id,
-                                             CreateContextCompleter::Sync _completer) {
+                                             CreateContextCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: CreateContext");
   FlowControl();
 
@@ -197,7 +197,7 @@ void ZirconPlatformConnection::CreateContext(uint32_t context_id,
 }
 
 void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
-                                              DestroyContextCompleter::Sync _completer) {
+                                              DestroyContextCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: DestroyContext");
   FlowControl();
 
@@ -209,7 +209,7 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
     uint32_t context_id, llcpp::fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
     ::fidl::VectorView<llcpp::fuchsia::gpu::magma::Resource> fidl_resources,
     ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
-    ExecuteCommandBufferWithResourcesCompleter::Sync _completer) {
+    ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) {
   FlowControl();
 
   auto command_buffer = std::make_unique<magma_system_command_buffer>();
@@ -254,7 +254,7 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
 void ZirconPlatformConnection::ExecuteImmediateCommands(
     uint32_t context_id, ::fidl::VectorView<uint8_t> command_data_vec,
     ::fidl::VectorView<uint64_t> semaphore_vec,
-    ExecuteImmediateCommandsCompleter::Sync _completer) {
+    ExecuteImmediateCommandsCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: ExecuteImmediateCommands");
   FlowControl();
 
@@ -265,7 +265,7 @@ void ZirconPlatformConnection::ExecuteImmediateCommands(
     SetError(status.get());
 }
 
-void ZirconPlatformConnection::GetError(GetErrorCompleter::Sync _completer) {
+void ZirconPlatformConnection::GetError(GetErrorCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: GetError");
   magma_status_t result = error_;
   error_ = 0;
@@ -275,7 +275,7 @@ void ZirconPlatformConnection::GetError(GetErrorCompleter::Sync _completer) {
 void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
                                             uint64_t page_offset, uint64_t page_count,
                                             uint64_t flags,
-                                            MapBufferGpuCompleter::Sync _completer) {
+                                            MapBufferGpuCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
   FlowControl();
 
@@ -284,7 +284,7 @@ void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
 }
 
 void ZirconPlatformConnection::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
-                                              UnmapBufferGpuCompleter::Sync _completer) {
+                                              UnmapBufferGpuCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
   FlowControl();
 
@@ -294,7 +294,7 @@ void ZirconPlatformConnection::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_v
 
 void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
                                             uint64_t page_count,
-                                            CommitBufferCompleter::Sync _completer) {
+                                            CommitBufferCompleter::Sync& _completer) {
   DLOG("ZirconPlatformConnection: CommitBufferFIDL");
   FlowControl();
 
@@ -303,7 +303,7 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 }
 
 void ZirconPlatformConnection::AccessPerformanceCounters(
-    zx::event event, AccessPerformanceCountersCompleter::Sync completer) {
+    zx::event event, AccessPerformanceCountersCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::AccessPerformanceCounters");
   FlowControl();
 
@@ -315,13 +315,13 @@ void ZirconPlatformConnection::AccessPerformanceCounters(
 }
 
 void ZirconPlatformConnection::IsPerformanceCounterAccessEnabled(
-    IsPerformanceCounterAccessEnabledCompleter::Sync completer) {
+    IsPerformanceCounterAccessEnabledCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessEnabled");
   completer.Reply(delegate_->IsPerformanceCounterAccessEnabled());
 }
 
 void ZirconPlatformConnection::EnablePerformanceCounters(
-    ::fidl::VectorView<uint64_t> counters, EnablePerformanceCountersCompleter::Sync completer) {
+    ::fidl::VectorView<uint64_t> counters, EnablePerformanceCountersCompleter::Sync& completer) {
   FlowControl();
   magma::Status status = delegate_->EnablePerformanceCounters(counters.data(), counters.count());
   if (!status) {
@@ -331,7 +331,7 @@ void ZirconPlatformConnection::EnablePerformanceCounters(
 
 void ZirconPlatformConnection::CreatePerformanceCounterBufferPool(
     uint64_t pool_id, zx::channel event_channel,
-    CreatePerformanceCounterBufferPoolCompleter::Sync completer) {
+    CreatePerformanceCounterBufferPoolCompleter::Sync& completer) {
   FlowControl();
   auto pool = std::make_unique<ZirconPlatformPerfCountPool>(pool_id, std::move(event_channel));
   magma::Status status = delegate_->CreatePerformanceCounterBufferPool(std::move(pool));
@@ -341,7 +341,7 @@ void ZirconPlatformConnection::CreatePerformanceCounterBufferPool(
 }
 
 void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
-    uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync completer) {
+    uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) {
   FlowControl();
   magma::Status status = delegate_->ReleasePerformanceCounterBufferPool(pool_id);
   if (!status) {
@@ -351,7 +351,7 @@ void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
 
 void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
     uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets,
-    AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync completer) {
+    AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) {
   FlowControl();
   for (auto& offset : offsets) {
     magma::Status status = delegate_->AddPerformanceCounterBufferOffsetToPool(
@@ -364,7 +364,7 @@ void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
 
 void ZirconPlatformConnection::RemovePerformanceCounterBufferFromPool(
     uint64_t pool_id, uint64_t buffer_id,
-    RemovePerformanceCounterBufferFromPoolCompleter::Sync completer) {
+    RemovePerformanceCounterBufferFromPoolCompleter::Sync& completer) {
   FlowControl();
   magma::Status status = delegate_->RemovePerformanceCounterBufferFromPool(pool_id, buffer_id);
   if (!status) {
@@ -373,7 +373,7 @@ void ZirconPlatformConnection::RemovePerformanceCounterBufferFromPool(
 }
 
 void ZirconPlatformConnection::DumpPerformanceCounters(
-    uint64_t pool_id, uint32_t trigger_id, DumpPerformanceCountersCompleter::Sync completer) {
+    uint64_t pool_id, uint32_t trigger_id, DumpPerformanceCountersCompleter::Sync& completer) {
   FlowControl();
   magma::Status status = delegate_->DumpPerformanceCounters(pool_id, trigger_id);
   if (!status) {
@@ -382,7 +382,7 @@ void ZirconPlatformConnection::DumpPerformanceCounters(
 }
 
 void ZirconPlatformConnection::ClearPerformanceCounters(
-    ::fidl::VectorView<uint64_t> counters, ClearPerformanceCountersCompleter::Sync completer) {
+    ::fidl::VectorView<uint64_t> counters, ClearPerformanceCountersCompleter::Sync& completer) {
   FlowControl();
   magma::Status status = delegate_->ClearPerformanceCounters(counters.data(), counters.count());
   if (!status) {

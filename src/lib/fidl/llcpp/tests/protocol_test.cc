@@ -38,7 +38,7 @@ uint32_t GetHandleCount(zx::unowned<T> h) {
 class ErrorServer : public test::ErrorMethods::Interface {
  public:
   void NoArgsPrimitiveError(bool should_error,
-                            NoArgsPrimitiveErrorCompleter::Sync completer) override {
+                            NoArgsPrimitiveErrorCompleter::Sync& completer) override {
     if (should_error) {
       completer.ReplyError(kErrorStatus);
     } else {
@@ -46,7 +46,7 @@ class ErrorServer : public test::ErrorMethods::Interface {
     }
   }
   void ManyArgsCustomError(bool should_error,
-                           ManyArgsCustomErrorCompleter::Sync completer) override {
+                           ManyArgsCustomErrorCompleter::Sync& completer) override {
     if (should_error) {
       completer.ReplyError(test::MyError::REALLY_BAD_ERROR);
     } else {
@@ -119,9 +119,9 @@ TEST_F(ResultTest, OwnedSuccessManyArgs) {
 
 class FrobinatorImpl : public test::Frobinator::Interface {
  public:
-  virtual void Frob(::fidl::StringView value, FrobCompleter::Sync completer) override {}
+  virtual void Frob(::fidl::StringView value, FrobCompleter::Sync& completer) override {}
 
-  virtual void Grob(::fidl::StringView value, GrobCompleter::Sync completer) override {
+  virtual void Grob(::fidl::StringView value, GrobCompleter::Sync& completer) override {
     completer.Reply(std::move(value));
   }
 };
@@ -234,13 +234,13 @@ TEST(SyncClientTest, DefaultInitializationError) {
 
 class HandleProviderServer : public test::HandleProvider::Interface {
  public:
-  void GetHandle(GetHandleCompleter::Sync completer) override {
+  void GetHandle(GetHandleCompleter::Sync& completer) override {
     test::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
   }
 
-  void GetHandleVector(uint32_t count, GetHandleVectorCompleter::Sync completer) override {
+  void GetHandleVector(uint32_t count, GetHandleVectorCompleter::Sync& completer) override {
     std::vector<test::HandleStruct> v(count);
     for (auto& s : v) {
       zx::event::create(0, &s.h);
@@ -248,7 +248,7 @@ class HandleProviderServer : public test::HandleProvider::Interface {
     completer.Reply(fidl::unowned_vec(v));
   }
 
-  void GetHandleUnion(GetHandleUnionCompleter::Sync completer) override {
+  void GetHandleUnion(GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
     test::HandleUnionStruct s = {.u = test::HandleUnion::WithH(fidl::unowned_ptr(&h))};

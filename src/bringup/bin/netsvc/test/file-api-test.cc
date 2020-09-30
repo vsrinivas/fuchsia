@@ -74,21 +74,21 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
     fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
   }
 
-  void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {
+  void GetHypervisorResource(GetHypervisorResourceCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
   }
 
-  void GetBoardName(GetBoardNameCompleter::Sync completer) {
+  void GetBoardName(GetBoardNameCompleter::Sync& completer) {
     completer.Reply(ZX_OK, fidl::StringView{board_, sizeof(board_)});
   }
 
-  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer) { completer.Reply(ZX_OK, 0); }
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) { completer.Reply(ZX_OK, 0); }
 
-  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) {
     completer.Reply(ZX_OK, fidl::StringView{vendor_, sizeof(vendor_)});
   }
 
-  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
+  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   }
 

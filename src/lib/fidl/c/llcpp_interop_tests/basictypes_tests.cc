@@ -299,7 +299,8 @@ namespace gen = llcpp::fidl::test::llcpp::basictypes;
 
 class Server : public gen::TestInterface::Interface {
  public:
-  void ConsumeSimpleStruct(gen::SimpleStruct arg, ConsumeSimpleStructCompleter::Sync txn) override {
+  void ConsumeSimpleStruct(gen::SimpleStruct arg,
+                           ConsumeSimpleStructCompleter::Sync& txn) override {
     num_struct_calls_.fetch_add(1);
     // Verify that all the handles are valid channels
     if (!IsPeerValid(zx::unowned_eventpair(arg.ep))) {

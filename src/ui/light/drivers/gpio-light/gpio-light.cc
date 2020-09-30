@@ -27,15 +27,15 @@
 
 namespace gpio_light {
 
-void GpioLight::GetNumLights(GetNumLightsCompleter::Sync completer) {
+void GpioLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
   completer.Reply(gpio_count_);
 }
 
-void GpioLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync completer) {
+void GpioLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
   completer.Reply(0);
 }
 
-void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync completer) {
+void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   if (index >= gpio_count_) {
     completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::INVALID_INDEX);
     return;
@@ -56,7 +56,7 @@ void GpioLight::GetInfo(uint32_t index, GetInfoCompleter::Sync completer) {
 }
 
 void GpioLight::GetCurrentSimpleValue(uint32_t index,
-                                      GetCurrentSimpleValueCompleter::Sync completer) {
+                                      GetCurrentSimpleValueCompleter::Sync& completer) {
   if (index >= gpio_count_) {
     completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::INVALID_INDEX);
     return;
@@ -71,7 +71,7 @@ void GpioLight::GetCurrentSimpleValue(uint32_t index,
 }
 
 void GpioLight::SetSimpleValue(uint32_t index, bool value,
-                               SetSimpleValueCompleter::Sync completer) {
+                               SetSimpleValueCompleter::Sync& completer) {
   if (index >= gpio_count_) {
     completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::INVALID_INDEX);
     return;
@@ -85,21 +85,21 @@ void GpioLight::SetSimpleValue(uint32_t index, bool value,
 }
 
 void GpioLight::GetCurrentBrightnessValue(uint32_t index,
-                                          GetCurrentBrightnessValueCompleter::Sync completer) {
+                                          GetCurrentBrightnessValueCompleter::Sync& completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
 void GpioLight::SetBrightnessValue(uint32_t index, double value,
-                                   SetBrightnessValueCompleter::Sync completer) {
+                                   SetBrightnessValueCompleter::Sync& completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-void GpioLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer) {
+void GpioLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
 void GpioLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
-                            SetRgbValueCompleter::Sync completer) {
+                            SetRgbValueCompleter::Sync& completer) {
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 

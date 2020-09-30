@@ -297,7 +297,7 @@ zx_status_t IntelHDAStreamBase::SetDMAStreamLocked(uint16_t id, uint8_t tag) {
   return ZX_OK;
 }
 
-void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync completer) {
+void IntelHDAStreamBase::GetChannel(GetChannelCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
 
   // Do not allow any new connections if we are in the process of shutting down

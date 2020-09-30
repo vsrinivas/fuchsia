@@ -657,18 +657,18 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
   return fs_->bc_->device()->GetDevicePath(buffer_len, out_name, out_len);
 }
 
-void VnodeMinfs::GetMetrics(GetMetricsCompleter::Sync completer) {
+void VnodeMinfs::GetMetrics(GetMetricsCompleter::Sync& completer) {
   ::llcpp::fuchsia::minfs::Metrics metrics;
   zx_status_t status = fs_->GetMetrics(&metrics);
   completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&metrics) : nullptr);
 }
 
-void VnodeMinfs::ToggleMetrics(bool enable, ToggleMetricsCompleter::Sync completer) {
+void VnodeMinfs::ToggleMetrics(bool enable, ToggleMetricsCompleter::Sync& completer) {
   fs_->SetMetrics(enable);
   completer.Reply(ZX_OK);
 }
 
-void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) {
+void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
   static_assert(sizeof(llcpp::fuchsia::minfs::BlockRegion) == sizeof(BlockRegion));
   static_assert(offsetof(llcpp::fuchsia::minfs::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));
@@ -691,7 +691,7 @@ void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync complete
   };
 }
 
-void VnodeMinfs::GetMountState(GetMountStateCompleter::Sync completer) {
+void VnodeMinfs::GetMountState(GetMountStateCompleter::Sync& completer) {
   fidl::aligned<MountState> state = fs_->GetMountState();
   completer.Reply(ZX_OK, fidl::unowned_ptr(&state));
 }

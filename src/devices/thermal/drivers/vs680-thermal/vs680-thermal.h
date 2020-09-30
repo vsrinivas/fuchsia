@@ -57,19 +57,19 @@ class Vs680Thermal : public DeviceType,
   zx_status_t Init();
 
  private:
-  void GetInfo(GetInfoCompleter::Sync completer) override;
-  void GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) override;
-  void GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync completer) override;
-  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) override;
-  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync completer) override;
-  void GetStateChangePort(GetStateChangePortCompleter::Sync completer) override;
-  void SetTripCelsius(uint32_t id, float temp, SetTripCelsiusCompleter::Sync completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
+  void GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) override;
+  void GetStateChangePort(GetStateChangePortCompleter::Sync& completer) override;
+  void SetTripCelsius(uint32_t id, float temp, SetTripCelsiusCompleter::Sync& completer) override;
   void GetDvfsOperatingPoint(PowerDomain power_domain,
-                             GetDvfsOperatingPointCompleter::Sync completer) override;
+                             GetDvfsOperatingPointCompleter::Sync& completer) override;
   void SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
-                             SetDvfsOperatingPointCompleter::Sync completer) override;
-  void GetFanLevel(GetFanLevelCompleter::Sync completer) override;
-  void SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync completer) override;
+                             SetDvfsOperatingPointCompleter::Sync& completer) override;
+  void GetFanLevel(GetFanLevelCompleter::Sync& completer) override;
+  void SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) override;
 
   zx_status_t SetOperatingPoint(uint16_t op_idx);
 

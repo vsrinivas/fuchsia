@@ -46,23 +46,23 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   };
 
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
-  void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync completer) override;
+  void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
-  void SetEvent(::zx::event event, SetEventCompleter::Sync completer) override;
+  void SetEvent(::zx::event event, SetEventCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
-  void GetBuffer(GetBufferCompleter::Sync completer) override;
+  void GetBuffer(GetBufferCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
-  void Read(uint64_t count, uint64_t offset, ReadCompleter::Sync completer) override;
+  void Read(uint64_t count, uint64_t offset, ReadCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
-  void Write(uint64_t count, uint64_t offset, WriteCompleter::Sync completer) override;
+  void Write(uint64_t count, uint64_t offset, WriteCompleter::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
   void DoCall(uint64_t count, uint64_t offset, uint64_t read_count, uint64_t read_offset,
-              DoCallCompleter::Sync completer) override;
+              DoCallCompleter::Sync& completer) override;
 
   zx_status_t TransferLocked(int32_t cmd, int32_t wake_cmd, zx_signals_t state_clr,
                              zx_paddr_t paddr, size_t count, zx_paddr_t read_paddr,

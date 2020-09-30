@@ -115,57 +115,57 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
 
   bool AsyncTaskHandler(async_dispatcher_t* dispatcher, AsyncTask* task, zx_status_t status);
 
-  void ImportBuffer(::zx::vmo buffer, ImportBufferCompleter::Sync _completer) override;
-  void ReleaseBuffer(uint64_t buffer_id, ReleaseBufferCompleter::Sync _completer) override;
+  void ImportBuffer(::zx::vmo buffer, ImportBufferCompleter::Sync& _completer) override;
+  void ReleaseBuffer(uint64_t buffer_id, ReleaseBufferCompleter::Sync& _completer) override;
   void ImportObject(zx::handle handle, uint32_t object_type,
-                    ImportObjectCompleter::Sync _completer) override;
+                    ImportObjectCompleter::Sync& _completer) override;
   void ReleaseObject(uint64_t object_id, uint32_t object_type,
-                     ReleaseObjectCompleter::Sync _completer) override;
-  void CreateContext(uint32_t context_id, CreateContextCompleter::Sync _completer) override;
-  void DestroyContext(uint32_t context_id, DestroyContextCompleter::Sync _completer) override;
+                     ReleaseObjectCompleter::Sync& _completer) override;
+  void CreateContext(uint32_t context_id, CreateContextCompleter::Sync& _completer) override;
+  void DestroyContext(uint32_t context_id, DestroyContextCompleter::Sync& _completer) override;
   void ExecuteCommandBufferWithResources(
       uint32_t context_id, llcpp::fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
       ::fidl::VectorView<llcpp::fuchsia::gpu::magma::Resource> fidl_resources,
       ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
-      ExecuteCommandBufferWithResourcesCompleter::Sync _completer) override;
+      ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) override;
   void ExecuteImmediateCommands(uint32_t context_id, ::fidl::VectorView<uint8_t> command_data_vec,
                                 ::fidl::VectorView<uint64_t> semaphore_vec,
-                                ExecuteImmediateCommandsCompleter::Sync _completer) override;
-  void GetError(GetErrorCompleter::Sync _completer) override;
+                                ExecuteImmediateCommandsCompleter::Sync& _completer) override;
+  void GetError(GetErrorCompleter::Sync& _completer) override;
   void MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                    uint64_t flags, MapBufferGpuCompleter::Sync _completer) override;
+                    uint64_t flags, MapBufferGpuCompleter::Sync& _completer) override;
   void UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
-                      UnmapBufferGpuCompleter::Sync _completer) override;
+                      UnmapBufferGpuCompleter::Sync& _completer) override;
   void CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count,
-                    CommitBufferCompleter::Sync _completer) override;
+                    CommitBufferCompleter::Sync& _completer) override;
   void AccessPerformanceCounters(zx::event event,
-                                 AccessPerformanceCountersCompleter::Sync completer) override;
+                                 AccessPerformanceCountersCompleter::Sync& completer) override;
   void IsPerformanceCounterAccessEnabled(
-      IsPerformanceCounterAccessEnabledCompleter::Sync completer) override;
+      IsPerformanceCounterAccessEnabledCompleter::Sync& completer) override;
 
-  void EnableFlowControl(EnableFlowControlCompleter::Sync _completer) override;
+  void EnableFlowControl(EnableFlowControlCompleter::Sync& _completer) override;
 
   std::pair<uint64_t, uint64_t> GetFlowControlCounts() override {
     return {messages_consumed_, bytes_imported_};
   }
 
   void EnablePerformanceCounters(::fidl::VectorView<uint64_t> counters,
-                                 EnablePerformanceCountersCompleter::Sync completer) override;
+                                 EnablePerformanceCountersCompleter::Sync& completer) override;
   void CreatePerformanceCounterBufferPool(
       uint64_t pool_id, zx::channel event_channel,
-      CreatePerformanceCounterBufferPoolCompleter::Sync completer) override;
+      CreatePerformanceCounterBufferPoolCompleter::Sync& completer) override;
   void ReleasePerformanceCounterBufferPool(
-      uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync completer) override;
+      uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) override;
   void AddPerformanceCounterBufferOffsetsToPool(
       uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets,
-      AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync completer) override;
+      AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync& completer) override;
   void RemovePerformanceCounterBufferFromPool(
       uint64_t pool_id, uint64_t buffer_id,
-      RemovePerformanceCounterBufferFromPoolCompleter::Sync completer) override;
+      RemovePerformanceCounterBufferFromPoolCompleter::Sync& completer) override;
   void DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id,
-                               DumpPerformanceCountersCompleter::Sync completer) override;
+                               DumpPerformanceCountersCompleter::Sync& completer) override;
   void ClearPerformanceCounters(::fidl::VectorView<uint64_t> counters,
-                                ClearPerformanceCountersCompleter::Sync completer) override;
+                                ClearPerformanceCountersCompleter::Sync& completer) override;
 
   void SetError(magma_status_t error) {
     if (!error_)

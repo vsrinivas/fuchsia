@@ -63,8 +63,8 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   bool ShouldTakeOverPrimary(const Session* current_primary) const;
 
   // FIDL interface implementation:
-  void SetPaused(bool paused, SetPausedCompleter::Sync _completer) override;
-  void Close(CloseCompleter::Sync _completer) override;
+  void SetPaused(bool paused, SetPausedCompleter::Sync& _completer) override;
+  void Close(CloseCompleter::Sync& _completer) override;
 
   // Sets the return code for a tx descriptor.
   void MarkTxReturnResult(uint16_t descriptor, zx_status_t status);

@@ -32,16 +32,16 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
                  ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
                  ::zx::vmo inspect, ::zx::channel client_remote,
-                 AddDeviceCompleter::Sync completer) override {
+                 AddDeviceCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) override {}
+  void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& completer) override {}
   void AddCompositeDevice(::fidl::StringView name,
                           llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
-                          AddCompositeDeviceCompleter::Sync completer) override {
+                          AddCompositeDeviceCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
@@ -49,66 +49,66 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
   }
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
-                       PublishMetadataCompleter::Sync completer) override {
+                       PublishMetadataCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void MakeVisible(MakeVisibleCompleter::Sync completer) override {
+  void MakeVisible(MakeVisibleCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync completer) override {
+  void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync& completer) override {
     bind_count_++;
     llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result response;
     zx_status_t status = ZX_OK;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) override {
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync completer) override {
+  void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void GetMetadata(uint32_t key, GetMetadataCompleter::Sync completer) override {
+  void GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync completer) override {
+  void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
   void AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
-                   AddMetadataCompleter::Sync completer) override {
+                   AddMetadataCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync completer) override {}
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) override {}
   void RunCompatibilityTests(int64_t hook_wait_time,
-                             RunCompatibilityTestsCompleter::Sync completer) override {
+                             RunCompatibilityTestsCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(response));
   }
   void DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-                      DirectoryWatchCompleter::Sync completer) override {
+                      DirectoryWatchCompleter::Sync& completer) override {
     llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result response;
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     response.set_err(fidl::unowned_ptr(&status));

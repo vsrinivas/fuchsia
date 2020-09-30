@@ -143,7 +143,7 @@ zx_status_t Console::Log(llcpp::fuchsia::logger::LogMessage log) {
   return tx_sink_(reinterpret_cast<const uint8_t*>("\n"), 1);
 }
 
-void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync completer) {
+void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync& completer) {
   zx_status_t status = Log(std::move(log));
   if (status != ZX_OK) {
     completer.Close(status);
@@ -153,7 +153,7 @@ void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync com
 }
 
 void Console::LogMany(fidl::VectorView<llcpp::fuchsia::logger::LogMessage> logs,
-                      LogManyCompleter::Sync completer) {
+                      LogManyCompleter::Sync& completer) {
   for (auto& log : logs) {
     zx_status_t status = Log(std::move(log));
     if (status != ZX_OK) {
@@ -164,4 +164,4 @@ void Console::LogMany(fidl::VectorView<llcpp::fuchsia::logger::LogMessage> logs,
   completer.Reply();
 }
 
-void Console::Done(DoneCompleter::Sync completer) {}
+void Console::Done(DoneCompleter::Sync& completer) {}

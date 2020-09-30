@@ -80,7 +80,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
           local_(local) {}
 
     void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
-                    BindDriverCompleter::Sync completer) override {
+                    BindDriverCompleter::Sync& completer) override {
       // Pretend that a device closure happened right before we began
       // processing BindDriver.  Close the other half of the channel, so the reply below will fail
       // from ZX_ERR_PEER_CLOSED.
@@ -112,11 +112,10 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
   bool unbound = false;
-  ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher(),
-                        [&](fidl::UnbindInfo) {
-                          unbound = true;
-                          conn_ref->UnboundDone();
-                        }));
+  ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher(), [&](fidl::UnbindInfo) {
+    unbound = true;
+    conn_ref->UnboundDone();
+  }));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
@@ -184,7 +183,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
         : DeviceControllerConnection(ctx, std::move(dev), std::move(rpc),
                                      std::move(coordinator_rpc)) {}
 
-    void Unbind(UnbindCompleter::Sync completer) {
+    void Unbind(UnbindCompleter::Sync& completer) {
       fbl::RefPtr<zx_device> dev = this->dev();
       // Set dev->flags() so that we can check that the unbind hook is called in
       // the test.

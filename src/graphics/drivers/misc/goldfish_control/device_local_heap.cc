@@ -54,7 +54,7 @@ DeviceLocalHeap::DeviceLocalHeap(Control* control) : Heap(control, kTag) {}
 
 DeviceLocalHeap::~DeviceLocalHeap() = default;
 
-void DeviceLocalHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) {
+void DeviceLocalHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
   if (status != ZX_OK) {
@@ -67,7 +67,7 @@ void DeviceLocalHeap::AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync comp
 
 void DeviceLocalHeap::CreateResource(::zx::vmo vmo,
                                      llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
-                                     CreateResourceCompleter::Sync completer) {
+                                     CreateResourceCompleter::Sync& completer) {
   uint64_t id = control()->RegisterBufferHandle(vmo);
   if (id == ZX_KOID_INVALID) {
     completer.Reply(ZX_ERR_INVALID_ARGS, 0u);
@@ -76,7 +76,7 @@ void DeviceLocalHeap::CreateResource(::zx::vmo vmo,
   }
 }
 
-void DeviceLocalHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Sync completer) {
+void DeviceLocalHeap::DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) {
   control()->FreeBufferHandle(id);
   completer.Reply();
 }

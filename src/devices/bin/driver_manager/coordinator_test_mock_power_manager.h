@@ -12,7 +12,7 @@ class MockPowerManager
     : public llcpp::fuchsia::power::manager::DriverManagerRegistration::Interface {
  public:
   void Register(zx::channel system_state_transition, zx::channel dir,
-                RegisterCompleter::Sync completer) override {
+                RegisterCompleter::Sync& completer) override {
     register_called_ = true;
     completer.ReplySuccess();
   }

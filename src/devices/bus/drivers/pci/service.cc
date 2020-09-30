@@ -26,7 +26,7 @@ constexpr size_t kAllocatorSize =
 
 static_assert(PciFidl::BASE_CONFIG_SIZE == PCI_BASE_CONFIG_SIZE);
 
-void Bus::GetDevices(GetDevicesCompleter::Sync completer) {
+void Bus::GetDevices(GetDevicesCompleter::Sync& completer) {
   fbl::AutoLock devices_lock(&devices_lock_);
   size_t dev_cnt = devices_.size();
   fidl::BufferThenHeapAllocator<kAllocatorSize> alloc;
@@ -100,7 +100,7 @@ void Bus::GetDevices(GetDevicesCompleter::Sync completer) {
   completer.Reply(fidl::VectorView<PciFidl::Device>(std::move(devices), dev_cnt));
 }
 
-void Bus::GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync completer) {
+void Bus::GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) {
   PciFidl::HostBridgeInfo info = {
       .start_bus_number = info_.start_bus_num,
       .end_bus_number = info_.end_bus_num,

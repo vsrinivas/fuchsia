@@ -66,9 +66,9 @@ class Device : ::llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface 
   zx_device_t*& GetTelDevPtr() { return tel_dev_; }
 
  private:
-  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) override;
-  void SetNetwork(bool connected, SetNetworkCompleter::Sync completer) override;
-  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) override;
+  void SetChannel(::zx::channel transport, SetChannelCompleter::Sync& completer) override;
+  void SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) override;
+  void SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync& completer) override;
 
   zx::channel ctrl_channel_;
   zx::port ctrl_channel_port_;

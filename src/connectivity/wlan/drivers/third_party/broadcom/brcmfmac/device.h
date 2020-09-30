@@ -80,9 +80,9 @@ class Device : public ::ddk::Device<Device, ddk::Messageable>,
 
   // ::llcpp::fuchsia::factory::wlan::iovar::Iovar::Interface Implementation
   void Get(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
-           GetCompleter::Sync _completer) override;
+           GetCompleter::Sync& _completer) override;
   void Set(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
-           SetCompleter::Sync _completer) override;
+           SetCompleter::Sync& _completer) override;
 };
 
 }  // namespace brcmfmac

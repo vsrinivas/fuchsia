@@ -34,8 +34,8 @@ class BlockWatcherServer final : public llcpp::fuchsia::fshost::BlockWatcher::In
   static fbl::RefPtr<fs::Service> Create(devmgr::FsManager* fs_manager,
                                          async_dispatcher* dispatcher);
 
-  void Pause(PauseCompleter::Sync completer) override;
-  void Resume(ResumeCompleter::Sync completer) override;
+  void Pause(PauseCompleter::Sync& completer) override;
+  void Resume(ResumeCompleter::Sync& completer) override;
 };
 
 // Monitors "/dev/class/block" for new devices indefinitely.

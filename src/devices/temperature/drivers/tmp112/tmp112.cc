@@ -65,7 +65,7 @@ zx_status_t Tmp112Device::WriteReg(uint8_t addr, uint16_t val) {
   return i2c_.WriteSync(buf, sizeof(buf));
 }
 
-void Tmp112Device::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) {
+void Tmp112Device::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   zx_status_t status;
   uint16_t reg_val;
 

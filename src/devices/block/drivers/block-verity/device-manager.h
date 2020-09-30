@@ -67,14 +67,14 @@ class DeviceManager final
 
   // implement `DeviceManager::Interface`
   void OpenForWrite(llcpp::fuchsia::hardware::block::verified::Config config,
-                    OpenForWriteCompleter::Sync completer) override __TA_EXCLUDES(mtx_);
-  void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync completer) override
+                    OpenForWriteCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
+  void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
   void OpenForVerifiedRead(llcpp::fuchsia::hardware::block::verified::Config config,
                            llcpp::fuchsia::hardware::block::verified::Seal seal,
-                           OpenForVerifiedReadCompleter::Sync completer) override
+                           OpenForVerifiedReadCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
-  void Close(CloseCompleter::Sync completer) override __TA_EXCLUDES(mtx_);
+  void Close(CloseCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
 
   void OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len)
       __TA_EXCLUDES(mtx_);

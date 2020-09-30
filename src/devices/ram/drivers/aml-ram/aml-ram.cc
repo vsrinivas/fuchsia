@@ -124,10 +124,7 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
 
 AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
                uint32_t device_pid)
-    : DeviceType(parent),
-      mmio_(std::move(mmio)),
-      irq_(std::move(irq)),
-      port_(std::move(port)) {
+    : DeviceType(parent), mmio_(std::move(mmio)), irq_(std::move(irq)), port_(std::move(port)) {
   // TODO(fxbug.dev/53325): ALL_GRANT counter is broken on S905D2.
   all_grant_broken_ = device_pid == PDEV_PID_AMLOGIC_S905D2;
 
@@ -168,7 +165,7 @@ zx_status_t AmlRam::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
-                              MeasureBandwidthCompleter::Sync completer) {
+                              MeasureBandwidthCompleter::Sync& completer) {
   zx_status_t st = ValidateRequest(config);
   if (st != ZX_OK) {
     zxlogf(ERROR, "aml-ram: bad request\n");
@@ -199,7 +196,7 @@ void AmlRam::MeasureBandwidth(ram_metrics::BandwidthMeasurementConfig config,
   }
 }
 
-void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync completer) {
+void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) {
   if (windowing_data_supported_) {
     completer.ReplySuccess(mmio_.Read32(DMC_STICKY_1));
   } else {

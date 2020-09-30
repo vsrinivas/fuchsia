@@ -24,8 +24,8 @@ using llcpp::fuchsia::device::lifecycle::test::Lifecycle;
 using llcpp::fuchsia::device::lifecycle::test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable,
-                               ddk::ChildPreReleaseable>;
+using DeviceType =
+    ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable, ddk::ChildPreReleaseable>;
 
 class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
  public:
@@ -41,13 +41,13 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
 
   // Device message ops implementation.
   void SubscribeToLifecycle(zx::channel client,
-                            SubscribeToLifecycleCompleter::Sync completer) override;
+                            SubscribeToLifecycleCompleter::Sync& completer) override;
   void AddChild(bool complete_init, int32_t init_status,
-                AddChildCompleter::Sync completer) override;
-  void RemoveChild(uint64_t child_id, RemoveChildCompleter::Sync completer) override;
-  void AsyncRemoveChild(uint64_t child_id, AsyncRemoveChildCompleter::Sync completer) override;
-  void CompleteUnbind(uint64_t child_id, CompleteUnbindCompleter::Sync completer) override;
-  void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync completer) override;
+                AddChildCompleter::Sync& completer) override;
+  void RemoveChild(uint64_t child_id, RemoveChildCompleter::Sync& completer) override;
+  void AsyncRemoveChild(uint64_t child_id, AsyncRemoveChildCompleter::Sync& completer) override;
+  void CompleteUnbind(uint64_t child_id, CompleteUnbindCompleter::Sync& completer) override;
+  void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -82,7 +82,7 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
 }
 
 void TestLifecycleDriver::AddChild(bool complete_init, int32_t init_status,
-                                   AddChildCompleter::Sync completer) {
+                                   AddChildCompleter::Sync& completer) {
   fbl::RefPtr<TestLifecycleDriverChild> child;
   zx_status_t status =
       TestLifecycleDriverChild::Create(zxdev(), complete_init, init_status, &child);
@@ -94,7 +94,7 @@ void TestLifecycleDriver::AddChild(bool complete_init, int32_t init_status,
   }
 }
 
-void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync completer) {
+void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync& completer) {
   bool found = false;
   for (auto& child : children_) {
     if (zxdev_to_id(child->zxdev()) == id) {
@@ -112,7 +112,8 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync co
   completer.ReplySuccess();
 }
 
-void TestLifecycleDriver::AsyncRemoveChild(uint64_t id, AsyncRemoveChildCompleter::Sync completer) {
+void TestLifecycleDriver::AsyncRemoveChild(uint64_t id,
+                                           AsyncRemoveChildCompleter::Sync& completer) {
   bool found = false;
   for (auto& child : children_) {
     if (zxdev_to_id(child->zxdev()) == id) {
@@ -131,7 +132,7 @@ void TestLifecycleDriver::AsyncRemoveChild(uint64_t id, AsyncRemoveChildComplete
 }
 
 void TestLifecycleDriver::CompleteUnbind(uint64_t child_id,
-                                         CompleteUnbindCompleter::Sync completer) {
+                                         CompleteUnbindCompleter::Sync& completer) {
   for (auto& child : children_) {
     if (zxdev_to_id(child->zxdev()) == child_id) {
       // We will remove it from our |children_| vector when we get the child pre-release callback.
@@ -146,7 +147,7 @@ void TestLifecycleDriver::CompleteUnbind(uint64_t child_id,
 }
 
 void TestLifecycleDriver::CompleteChildInit(uint64_t id,
-                                            CompleteChildInitCompleter::Sync completer) {
+                                            CompleteChildInitCompleter::Sync& completer) {
   zx_status_t status = ZX_ERR_NOT_FOUND;
   for (auto& child : children_) {
     if (zxdev_to_id(child->zxdev()) == id) {
@@ -163,7 +164,7 @@ void TestLifecycleDriver::CompleteChildInit(uint64_t id,
 }
 
 void TestLifecycleDriver::SubscribeToLifecycle(zx::channel client,
-                                               SubscribeToLifecycleCompleter::Sync completer) {
+                                               SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
   if (client_channel_) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

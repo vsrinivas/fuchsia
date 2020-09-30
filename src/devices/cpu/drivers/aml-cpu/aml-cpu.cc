@@ -367,7 +367,7 @@ zx_status_t AmlCpu::DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep
 }
 
 void AmlCpu::GetPerformanceStateInfo(uint32_t state,
-                                     GetPerformanceStateInfoCompleter::Sync completer) {
+                                     GetPerformanceStateInfoCompleter::Sync& completer) {
   if (state >= operating_points_.size()) {
     zxlogf(ERROR, "%s: Requested an operating point that's out of bounds, %u\n", __func__, state);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
@@ -381,12 +381,12 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
   completer.ReplySuccess(result);
 }
 
-void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
   unsigned int result = zx_system_get_num_cpus();
   completer.Reply(result);
 }
 
-void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer) {
+void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
   // Placeholder.
   completer.Reply(0);
 }

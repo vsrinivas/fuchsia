@@ -168,7 +168,7 @@ void Ft8201InputReportsReader::ReceiveReport(const Ft8201InputReport& report) {
   }
 }
 
-void Ft8201InputReportsReader::ReadInputReports(ReadInputReportsCompleter::Sync completer) {
+void Ft8201InputReportsReader::ReadInputReports(ReadInputReportsCompleter::Sync& completer) {
   fbl::AutoLock lock(&report_lock_);
   if (completer_) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
@@ -296,7 +296,7 @@ void Ft8201Device::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void Ft8201Device::GetInputReportsReader(zx::channel server,
-                                         GetInputReportsReaderCompleter::Sync completer) {
+                                         GetInputReportsReaderCompleter::Sync& completer) {
   fbl::AutoLock lock(&readers_lock_);
   auto reader = Ft8201InputReportsReader::Create(this, loop_.dispatcher(), std::move(server));
   if (reader) {
@@ -305,7 +305,7 @@ void Ft8201Device::GetInputReportsReader(zx::channel server,
   }
 }
 
-void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync completer) {
+void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fuchsia_input_report::Axis kAxisX = {
@@ -368,16 +368,16 @@ void Ft8201Device::GetDescriptor(GetDescriptorCompleter::Sync completer) {
 }
 
 void Ft8201Device::SendOutputReport(fuchsia_input_report::OutputReport report,
-                                    SendOutputReportCompleter::Sync completer) {
+                                    SendOutputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Ft8201Device::GetFeatureReport(GetFeatureReportCompleter::Sync completer) {
+void Ft8201Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Ft8201Device::SetFeatureReport(fuchsia_input_report::FeatureReport report,
-                                    SetFeatureReportCompleter::Sync completer) {
+                                    SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

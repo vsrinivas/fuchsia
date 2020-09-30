@@ -181,21 +181,21 @@ class RewriteTransaction : public fidl::Transaction {
 
 class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
  public:
-  void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync completer) override {
+  void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
     test::FlexibleXUnion xunion;
     fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
     xunion.set_want_more_than_30_bytes(fidl::unowned_ptr(&array));
     completer.Reply(std::move(xunion));
   }
 
-  void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync completer) override {
+  void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
     test::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
     xunion.set_want_more_than_4_handles(fidl::unowned_ptr(&array));
     completer.Reply(std::move(xunion));
   }
 
-  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync completer) override {
+  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync& completer) override {
     fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
     auto table_builder =
         test::FlexibleTable::UnownedBuilder().set_want_more_than_30_bytes_at_ordinal_3(
@@ -203,7 +203,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     completer.Reply(table_builder.build());
   }
 
-  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync completer) override {
+  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
     fidl::aligned<fidl::Array<zx::handle, 4>> array = {};
     auto table_builder =
         test::FlexibleTable::UnownedBuilder().set_want_more_than_4_handles_at_ordinal_4(

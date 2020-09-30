@@ -22,12 +22,12 @@ namespace {
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
-                      SetConstraintsCompleter::Sync _completer) override {
+                      SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     set_constraints_called_ = true;
   }
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync _completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
     sysmem::BufferCollectionInfo_2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;

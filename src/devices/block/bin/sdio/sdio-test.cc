@@ -24,34 +24,34 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
     loop_.StartThread("sdio-test-loop");
   }
 
-  void GetDevHwInfo(GetDevHwInfoCompleter::Sync completer) override { completer.ReplySuccess({}); }
+  void GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) override { completer.ReplySuccess({}); }
 
-  void EnableFn(EnableFnCompleter::Sync completer) override {
+  void EnableFn(EnableFnCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DisableFn(DisableFnCompleter::Sync completer) override {
+  void DisableFn(DisableFnCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void EnableFnIntr(EnableFnIntrCompleter::Sync completer) override {
+  void EnableFnIntr(EnableFnIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DisableFnIntr(DisableFnIntrCompleter::Sync completer) override {
+  void DisableFnIntr(DisableFnIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
   void UpdateBlockSize(uint16_t blk_sz, bool deflt,
-                       UpdateBlockSizeCompleter::Sync completer) override {
+                       UpdateBlockSizeCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetBlockSize(GetBlockSizeCompleter::Sync completer) override {
+  void GetBlockSize(GetBlockSizeCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync completer) override {
+  void DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync& completer) override {
     txns_.push_back(SdioRwTxn{
         .addr = txn.addr,
         .data_size = txn.data_size,
@@ -66,7 +66,7 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
   }
 
   void DoRwByte(bool write, uint32_t addr, uint8_t write_byte,
-                DoRwByteCompleter::Sync completer) override {
+                DoRwByteCompleter::Sync& completer) override {
     if (write) {
       byte_ = write_byte;
     }
@@ -75,20 +75,20 @@ class SdioTest : public zxtest::Test, public ::llcpp::fuchsia::hardware::sdio::D
     completer.ReplySuccess(write ? 0 : byte_);
   }
 
-  void GetInBandIntr(GetInBandIntrCompleter::Sync completer) override {
+  void GetInBandIntr(GetInBandIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IoAbort(IoAbortCompleter::Sync completer) override {
+  void IoAbort(IoAbortCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IntrPending(IntrPendingCompleter::Sync completer) override {
+  void IntrPending(IntrPendingCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
   void DoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
-                             DoVendorControlRwByteCompleter::Sync completer) override {
+                             DoVendorControlRwByteCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 

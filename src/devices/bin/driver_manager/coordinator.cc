@@ -1747,7 +1747,7 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
 }
 
 void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
-                                 GetBindProgramCompleter::Sync completer) {
+                                 GetBindProgramCompleter::Sync& completer) {
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
   const Driver* driver = LibnameToDriver(driver_path);
   if (driver == nullptr) {
@@ -1776,7 +1776,7 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
 }
 
 void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
-                                      GetDevicePropertiesCompleter::Sync completer) {
+                                      GetDevicePropertiesCompleter::Sync& completer) {
   fbl::RefPtr<Device> device;
   zx_status_t status = devfs_walk(root_device_->devnode(), device_path.data(), &device);
   if (status != ZX_OK) {

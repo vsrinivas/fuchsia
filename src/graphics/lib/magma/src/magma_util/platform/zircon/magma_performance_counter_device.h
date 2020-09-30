@@ -36,7 +36,7 @@ class MagmaPerformanceCounterDevice
 
   zx_koid_t GetEventKoid();
 
-  void GetPerformanceCountToken(GetPerformanceCountTokenCompleter::Sync completer) override;
+  void GetPerformanceCountToken(GetPerformanceCountTokenCompleter::Sync& completer) override;
 
   // This is the access token that will be given to PerformanceCounterAccess clients, and which the
   // MSD will compare against to validate access permissions.

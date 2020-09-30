@@ -147,9 +147,9 @@ namespace methods {
 void SimpleProtocolDispatchAdd(void* interface, void* bytes,
                                ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<SimpleProtocol::AddRequest*>(bytes);
+  SimpleProtocol::Interface::AddCompleter::Sync completer(txn);
   reinterpret_cast<SimpleProtocol::Interface*>(interface)->Add(
-      std::move(message->a), std::move(message->b),
-      SimpleProtocol::Interface::AddCompleter::Sync(txn));
+      std::move(message->a), std::move(message->b), completer);
 }
 
 }  // namespace methods

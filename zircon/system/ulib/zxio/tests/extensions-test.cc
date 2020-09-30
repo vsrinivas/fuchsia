@@ -22,27 +22,29 @@ class TestServerBase : public llcpp::fuchsia::io::Node::Interface {
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) override {
+  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void GetAttr(GetAttrCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
-               SetAttrCompleter::Sync completer) override {
+               SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -110,7 +112,7 @@ TEST_F(ExtensionNode, CloseError) {
 
   class TestServer : public TestServerBase {
    public:
-    void Close(CloseCompleter::Sync completer) override { completer.Reply(ZX_ERR_IO); }
+    void Close(CloseCompleter::Sync& completer) override { completer.Reply(ZX_ERR_IO); }
   };
   TestServer* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
@@ -192,7 +194,7 @@ TEST_F(ExtensionNode, GetAttr) {
 
   class TestServer : public TestServerBase {
    public:
-    void GetAttr(GetAttrCompleter::Sync completer) override {
+    void GetAttr(GetAttrCompleter::Sync& completer) override {
       ASSERT_FALSE(called());
       called_.store(true);
       llcpp::fuchsia::io::NodeAttributes attr = {};

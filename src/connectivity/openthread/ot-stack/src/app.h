@@ -86,12 +86,12 @@ class OtStackApp {
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync completer);
-    void Close(CloseCompleter::Sync completer);
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync completer);
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync completer);
+    void Open(OpenCompleter::Sync& completer);
+    void Close(CloseCompleter::Sync& completer);
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
+    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer);
     void ReadyToReceiveFrames(uint32_t number_of_frames,
-                              ReadyToReceiveFramesCompleter::Sync completer);
+                              ReadyToReceiveFramesCompleter::Sync& completer);
 
     OtStackApp& app_;
   };

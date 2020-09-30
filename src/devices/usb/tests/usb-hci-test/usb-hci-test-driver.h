@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_TESTS_USB_HCI_TEST_USB_HCI_TEST_DRIVER_H_
+#define SRC_DEVICES_USB_TESTS_USB_HCI_TEST_USB_HCI_TEST_DRIVER_H_
 
 #include <fuchsia/hardware/usb/hcitest/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
@@ -40,7 +41,7 @@ class HciTest : public HciTestBase,
     txn.Reply();
   }
   void DdkRelease() { delete this; }
-  void Run(RunCompleter::Sync _completer);
+  void Run(RunCompleter::Sync& _completer);
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -70,3 +71,5 @@ class HciTest : public HciTestBase,
 };
 
 }  // namespace usb
+
+#endif  // SRC_DEVICES_USB_TESTS_USB_HCI_TEST_USB_HCI_TEST_DRIVER_H_

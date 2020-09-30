@@ -101,13 +101,15 @@ zx_status_t LightDevice::SetBrightnessValue2(uint8_t value) {
   return ZX_OK;
 }
 
-void AmlLight::GetNumLights(GetNumLightsCompleter::Sync completer) {
+void AmlLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
   completer.Reply(static_cast<uint32_t>(lights_.size()));
 }
 
-void AmlLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync completer) { completer.Reply(0); }
+void AmlLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
+  completer.Reply(0);
+}
 
-void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync completer) {
+void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -120,7 +122,7 @@ void AmlLight::GetInfo(uint32_t index, GetInfoCompleter::Sync completer) {
 }
 
 void AmlLight::GetCurrentSimpleValue(uint32_t index,
-                                     GetCurrentSimpleValueCompleter::Sync completer) {
+                                     GetCurrentSimpleValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -132,7 +134,8 @@ void AmlLight::GetCurrentSimpleValue(uint32_t index,
   }
 }
 
-void AmlLight::SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer) {
+void AmlLight::SetSimpleValue(uint32_t index, bool value,
+                              SetSimpleValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -145,7 +148,7 @@ void AmlLight::SetSimpleValue(uint32_t index, bool value, SetSimpleValueComplete
 }
 
 void AmlLight::GetCurrentBrightnessValue(uint32_t index,
-                                         GetCurrentBrightnessValueCompleter::Sync completer) {
+                                         GetCurrentBrightnessValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -159,7 +162,7 @@ void AmlLight::GetCurrentBrightnessValue(uint32_t index,
 
 // TODO (rdzhuang): Redundant with GetCurrentBrightnessValue for migration to floating point
 void AmlLight::GetCurrentBrightnessValue2(uint32_t index,
-                                          GetCurrentBrightnessValue2Completer::Sync completer) {
+                                          GetCurrentBrightnessValue2Completer::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -172,7 +175,7 @@ void AmlLight::GetCurrentBrightnessValue2(uint32_t index,
 }
 
 void AmlLight::SetBrightnessValue(uint32_t index, double value,
-                                  SetBrightnessValueCompleter::Sync completer) {
+                                  SetBrightnessValueCompleter::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -186,7 +189,7 @@ void AmlLight::SetBrightnessValue(uint32_t index, double value,
 
 // TODO (rdzhuang): Redundant with SetCurrentBrightnessValue for migration to floating point
 void AmlLight::SetBrightnessValue2(uint32_t index, uint8_t value,
-                                   SetBrightnessValue2Completer::Sync completer) {
+                                   SetBrightnessValue2Completer::Sync& completer) {
   if (index >= lights_.size()) {
     completer.ReplyError(LightError::INVALID_INDEX);
     return;
@@ -198,11 +201,11 @@ void AmlLight::SetBrightnessValue2(uint32_t index, uint8_t value,
   }
 }
 
-void AmlLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer) {
+void AmlLight::GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) {
   completer.ReplyError(LightError::NOT_SUPPORTED);
 }
 
-void AmlLight::SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync completer) {
+void AmlLight::SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync& completer) {
   completer.ReplyError(LightError::INVALID_INDEX);
 }
 

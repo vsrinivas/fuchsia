@@ -59,7 +59,7 @@ class GpioDevice : public GpioDeviceType,
   zx_status_t GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua);
 
   // FIDL
-  void ConfigIn(GpioFlags flags, ConfigInCompleter::Sync completer) {
+  void ConfigIn(GpioFlags flags, ConfigInCompleter::Sync& completer) {
     zx_status_t status = GpioConfigIn(static_cast<uint32_t>(flags));
     if (status == ZX_OK) {
       completer.ReplySuccess();
@@ -67,7 +67,7 @@ class GpioDevice : public GpioDeviceType,
       completer.ReplyError(status);
     }
   }
-  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync completer) {
+  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync& completer) {
     zx_status_t status = GpioConfigOut(initial_value);
     if (status == ZX_OK) {
       completer.ReplySuccess();
@@ -75,7 +75,7 @@ class GpioDevice : public GpioDeviceType,
       completer.ReplyError(status);
     }
   }
-  void Read(ReadCompleter::Sync completer) {
+  void Read(ReadCompleter::Sync& completer) {
     uint8_t value = 0;
     zx_status_t status = GpioRead(&value);
     if (status == ZX_OK) {
@@ -84,7 +84,7 @@ class GpioDevice : public GpioDeviceType,
       completer.ReplyError(status);
     }
   }
-  void Write(uint8_t value, WriteCompleter::Sync completer) {
+  void Write(uint8_t value, WriteCompleter::Sync& completer) {
     zx_status_t status = GpioWrite(value);
     if (status == ZX_OK) {
       completer.ReplySuccess();
@@ -92,7 +92,7 @@ class GpioDevice : public GpioDeviceType,
       completer.ReplyError(status);
     }
   }
-  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync completer) {
+  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync& completer) {
     uint64_t actual = 0;
     zx_status_t status = GpioSetDriveStrength(ds_ua, &actual);
     if (status == ZX_OK) {

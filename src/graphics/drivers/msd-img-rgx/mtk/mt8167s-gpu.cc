@@ -392,7 +392,7 @@ zx_status_t Mt8167sGpu::Bind() {
   return DdkAdd("mt8167s-gpu");
 }
 
-void Mt8167sGpu::Query2(uint64_t query_id, Query2Completer::Sync _completer) {
+void Mt8167sGpu::Query2(uint64_t query_id, Query2Completer::Sync& _completer) {
   DLOG("Mt8167sGpu::Query");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -421,7 +421,7 @@ void Mt8167sGpu::Query2(uint64_t query_id, Query2Completer::Sync _completer) {
 }
 
 void Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id,
-                                    QueryReturnsBufferCompleter::Sync _completer) {
+                                    QueryReturnsBufferCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::QueryReturnsBuffer");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   zx_handle_t result;
@@ -435,7 +435,7 @@ void Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id,
   _completer.ReplySuccess(zx::vmo(result));
 }
 
-void Mt8167sGpu::Connect(uint64_t client_id, ConnectCompleter::Sync _completer) {
+void Mt8167sGpu::Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -452,7 +452,7 @@ void Mt8167sGpu::Connect(uint64_t client_id, ConnectCompleter::Sync _completer) 
   magma_system_device_->StartConnectionThread(std::move(connection));
 }
 
-void Mt8167sGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) {
+void Mt8167sGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::DumpState");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
@@ -464,7 +464,7 @@ void Mt8167sGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync _complet
     magma_system_device_->DumpStatus(dump_type);
 }
 
-void Mt8167sGpu::TestRestart(TestRestartCompleter::Sync _completer) {
+void Mt8167sGpu::TestRestart(TestRestartCompleter::Sync& _completer) {
   DLOG("Mt8167sGpu::TestRestart");
 #if MAGMA_TEST_DRIVER
   std::lock_guard<std::mutex> lock(magma_mutex_);
@@ -475,7 +475,7 @@ void Mt8167sGpu::TestRestart(TestRestartCompleter::Sync _completer) {
 #endif
 }
 
-void Mt8167sGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) {
+void Mt8167sGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) {
   _completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 

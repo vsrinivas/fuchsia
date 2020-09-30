@@ -51,11 +51,11 @@ class TestServer final : public fuchsia_io::File::Interface {
  public:
   TestServer(Context* context) : context(context) {}
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) override {}
+  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {}
 
-  void Close(CloseCompleter::Sync completer) override { completer.Reply(ZX_OK); }
+  void Close(CloseCompleter::Sync& completer) override { completer.Reply(ZX_OK); }
 
-  void Describe(DescribeCompleter::Sync completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     if (context->is_vmofile) {
       zx::vmo vmo;
       zx_status_t status = context->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
@@ -74,9 +74,9 @@ class TestServer final : public fuchsia_io::File::Interface {
     }
   }
 
-  void Sync(SyncCompleter::Sync completer) override {}
+  void Sync(SyncCompleter::Sync& completer) override {}
 
-  void GetAttr(GetAttrCompleter::Sync completer) override {
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
     fuchsia_io::NodeAttributes attributes;
     attributes.id = 5;
     attributes.content_size = context->content_size;
@@ -86,11 +86,11 @@ class TestServer final : public fuchsia_io::File::Interface {
   }
 
   void SetAttr(uint32_t flags, fuchsia_io::NodeAttributes attribute,
-               SetAttrCompleter::Sync completer) override {}
+               SetAttrCompleter::Sync& completer) override {}
 
-  void Read(uint64_t count, ReadCompleter::Sync completer) override {}
+  void Read(uint64_t count, ReadCompleter::Sync& completer) override {}
 
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) override {
+  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
     if (!context->supports_read_at) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::VectorView<uint8_t>());
       return;
@@ -109,25 +109,25 @@ class TestServer final : public fuchsia_io::File::Interface {
     completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer), actual));
   }
 
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) override {}
+  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {}
 
   void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync completer) override {}
+               WriteAtCompleter::Sync& completer) override {}
 
-  void Seek(int64_t offset, fuchsia_io::SeekOrigin start, SeekCompleter::Sync completer) override {
+  void Seek(int64_t offset, fuchsia_io::SeekOrigin start, SeekCompleter::Sync& completer) override {
     if (!context->supports_seek) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     }
     completer.Reply(ZX_OK, 0);
   }
 
-  void Truncate(uint64_t length, TruncateCompleter::Sync completer) override {}
+  void Truncate(uint64_t length, TruncateCompleter::Sync& completer) override {}
 
-  void GetFlags(GetFlagsCompleter::Sync completer) override {}
+  void GetFlags(GetFlagsCompleter::Sync& completer) override {}
 
-  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) override {}
+  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync& completer) override {}
 
-  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) override {
+  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) override {
     context->last_flags = flags;
 
     if (!context->supports_get_buffer) {
@@ -205,8 +205,8 @@ bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
 void create_context_vmo(size_t size, zx::vmo* out_vmo) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(size, 0, &vmo));
-  ASSERT_OK(vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
-                        &vmo));
+  ASSERT_OK(
+      vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY, &vmo));
   ASSERT_OK(vmo.replace_as_executable(zx::resource(), out_vmo));
 }
 

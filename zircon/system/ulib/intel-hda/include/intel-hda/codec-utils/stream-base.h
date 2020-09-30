@@ -136,7 +136,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
 
  private:
   // fuchsia.hardware.audio.Device
-  void GetChannel(GetChannelCompleter::Sync completer) override;
+  void GetChannel(GetChannelCompleter::Sync& completer) override;
 
   // Thunks for dispatching channel events.
   zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool privileged);

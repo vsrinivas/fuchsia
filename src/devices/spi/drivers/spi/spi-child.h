@@ -32,9 +32,9 @@ class SpiChild : public SpiChildType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync completer) override;
-  void Receive(uint32_t size, ReceiveCompleter::Sync completer) override;
-  void Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync completer) override;
+  void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync& completer) override;
+  void Receive(uint32_t size, ReceiveCompleter::Sync& completer) override;
+  void Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync& completer) override;
 
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,

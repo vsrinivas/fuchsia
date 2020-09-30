@@ -256,7 +256,7 @@ zx_status_t SkipBlockDevice::Bind() {
   return DdkAdd("skip-block");
 }
 
-void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoCompleter::Sync completer) {
+void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   PartitionInfo info;
@@ -361,7 +361,7 @@ zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
   return ZX_ERR_IO;
 }
 
-void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer) {
+void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   zx_status_t status = ValidateOperationLocked(op);
@@ -444,7 +444,7 @@ zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_
   return ZX_OK;
 }
 
-void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync completer) {
+void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   bool bad_block_grown = false;
@@ -523,7 +523,7 @@ zx_status_t SkipBlockDevice::ReadPartialBlocksLocked(WriteBytesOperation op, uin
   return ZX_OK;
 }
 
-void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync completer) {
+void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   bool bad_block_grown = false;
@@ -577,7 +577,7 @@ void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sy
 }
 
 void SkipBlockDevice::WriteBytesWithoutErase(WriteBytesOperation op,
-                                             WriteBytesWithoutEraseCompleter::Sync completer) {
+                                             WriteBytesWithoutEraseCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   if (auto status = ValidateOperationLocked(op); status != ZX_OK) {

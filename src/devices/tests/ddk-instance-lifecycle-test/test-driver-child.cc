@@ -71,12 +71,12 @@ void TestLifecycleDriverChildInstance::DdkRelease() {
   delete this;
 }
 
-void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync completer) {
+void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync& completer) {
   parent_ctx_->DdkAsyncRemove();
 }
 
 void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
-    zx::channel client, SubscribeToLifecycleCompleter::Sync completer) {
+    zx::channel client, SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
   if (lifecycle_) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

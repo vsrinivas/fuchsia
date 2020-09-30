@@ -61,7 +61,7 @@ zx_status_t DsiDwBase::Bind() {
 }
 
 void DsiDwBase::SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd,
-                        ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync _completer) {
+                        ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync& _completer) {
   zx_status_t status = ZX_OK;
   // TODO(payamm): We don't support READ at the moment. READ is complicated because it consumes
   // additional cycles required to get info from the LCD. This may cause issues if the command is

@@ -23,13 +23,13 @@ class Server : public Example::Interface {
  public:
   explicit Server(const char* data, size_t size) : data_(data), size_(size) {}
 
-  void TwoWay(fidl::StringView in, TwoWayCompleter::Sync completer) override {
+  void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
     ASSERT_EQ(size_, in.size());
     EXPECT_EQ(0, strncmp(data_, in.data(), size_));
     completer.Reply(std::move(in));
   }
 
-  void OneWay(fidl::StringView, OneWayCompleter::Sync) override {}
+  void OneWay(fidl::StringView, OneWayCompleter::Sync&) override {}
 
  private:
   const char* data_;
@@ -188,7 +188,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
    public:
     explicit ErrorServer() {}
 
-    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync completer) override {
+    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
       // Fail to send the reply due to an encoding error (the buffer is too
       // small).
       fidl::BytePart empty;
@@ -196,7 +196,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
       completer.Close(ZX_OK);  // This should not panic.
     }
 
-    void OneWay(fidl::StringView, OneWayCompleter::Sync) override {}
+    void OneWay(fidl::StringView, OneWayCompleter::Sync&) override {}
   };
 
   zx::channel local, remote;

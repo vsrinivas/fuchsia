@@ -112,7 +112,7 @@ zx_status_t Sgm37603a::DisableBacklight() {
   return ZX_OK;
 }
 
-void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
+void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
   FidlBacklight::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
@@ -123,7 +123,7 @@ void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) 
 }
 
 void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
-                                   SetStateNormalizedCompleter::Sync completer) {
+                                   SetStateNormalizedCompleter::Sync& completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -132,26 +132,26 @@ void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
   }
 }
 
-void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
+void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::SetStateAbsolute(FidlBacklight::State state,
-                                 SetStateAbsoluteCompleter::Sync completer) {
+                                 SetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
+void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::SetNormalizedBrightnessScale(
-    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::GetNormalizedBrightnessScale(
-    GetNormalizedBrightnessScaleCompleter::Sync completer) {
+    GetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

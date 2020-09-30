@@ -155,76 +155,76 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
  private:
   void ImportVmoImage(llcpp::fuchsia::hardware::display::ImageConfig image_config, zx::vmo vmo,
-                      int32_t offset, ImportVmoImageCompleter::Sync _completer) override;
+                      int32_t offset, ImportVmoImageCompleter::Sync& _completer) override;
   void ImportImage(llcpp::fuchsia::hardware::display::ImageConfig image_config,
                    uint64_t collection_id, uint32_t index,
-                   ImportImageCompleter::Sync _completer) override;
-  void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _completer) override;
-  void ImportEvent(zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) override;
-  void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) override;
-  void CreateLayer(CreateLayerCompleter::Sync _completer) override;
-  void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override;
+                   ImportImageCompleter::Sync& _completer) override;
+  void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _completer) override;
+  void ImportEvent(zx::event event, uint64_t id, ImportEventCompleter::Sync& _completer) override;
+  void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync& _completer) override;
+  void CreateLayer(CreateLayerCompleter::Sync& _completer) override;
+  void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync& _completer) override;
   void ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
                         ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
-                        ImportGammaTableCompleter::Sync _completer) override;
+                        ImportGammaTableCompleter::Sync& _completer) override;
   void ReleaseGammaTable(uint64_t gamma_table_id,
-                         ReleaseGammaTableCompleter::Sync _completer) override;
+                         ReleaseGammaTableCompleter::Sync& _completer) override;
   void SetDisplayMode(uint64_t display_id, llcpp::fuchsia::hardware::display::Mode mode,
-                      SetDisplayModeCompleter::Sync _completer) override;
+                      SetDisplayModeCompleter::Sync& _completer) override;
   void SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
                                  ::fidl::Array<float, 9> coefficients,
                                  ::fidl::Array<float, 3> postoffsets,
-                                 SetDisplayColorConversionCompleter::Sync _completer) override;
+                                 SetDisplayColorConversionCompleter::Sync& _completer) override;
   void SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
-                            SetDisplayGammaTableCompleter::Sync _completer) override;
+                            SetDisplayGammaTableCompleter::Sync& _completer) override;
   void SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
-                        SetDisplayLayersCompleter::Sync _completer) override;
+                        SetDisplayLayersCompleter::Sync& _completer) override;
   void SetLayerPrimaryConfig(uint64_t layer_id,
                              llcpp::fuchsia::hardware::display::ImageConfig image_config,
-                             SetLayerPrimaryConfigCompleter::Sync _completer) override;
+                             SetLayerPrimaryConfigCompleter::Sync& _completer) override;
   void SetLayerPrimaryPosition(uint64_t layer_id,
                                llcpp::fuchsia::hardware::display::Transform transform,
                                llcpp::fuchsia::hardware::display::Frame src_frame,
                                llcpp::fuchsia::hardware::display::Frame dest_frame,
-                               SetLayerPrimaryPositionCompleter::Sync _completer) override;
+                               SetLayerPrimaryPositionCompleter::Sync& _completer) override;
   void SetLayerPrimaryAlpha(uint64_t layer_id, llcpp::fuchsia::hardware::display::AlphaMode mode,
-                            float val, SetLayerPrimaryAlphaCompleter::Sync _completer) override;
+                            float val, SetLayerPrimaryAlphaCompleter::Sync& _completer) override;
   void SetLayerCursorConfig(uint64_t layer_id,
                             llcpp::fuchsia::hardware::display::ImageConfig image_config,
-                            SetLayerCursorConfigCompleter::Sync _completer) override;
+                            SetLayerCursorConfigCompleter::Sync& _completer) override;
   void SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
-                              SetLayerCursorPositionCompleter::Sync _completer) override;
+                              SetLayerCursorPositionCompleter::Sync& _completer) override;
   void SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
                            ::fidl::VectorView<uint8_t> color_bytes,
-                           SetLayerColorConfigCompleter::Sync _completer) override;
+                           SetLayerColorConfigCompleter::Sync& _completer) override;
   void SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id,
-                     uint64_t signal_event_id, SetLayerImageCompleter::Sync _completer) override;
-  void CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) override;
-  void ApplyConfig(ApplyConfigCompleter::Sync _completer) override;
-  void EnableVsync(bool enable, EnableVsyncCompleter::Sync _completer) override;
-  void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync _completer) override;
-  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override;
+                     uint64_t signal_event_id, SetLayerImageCompleter::Sync& _completer) override;
+  void CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) override;
+  void ApplyConfig(ApplyConfigCompleter::Sync& _completer) override;
+  void EnableVsync(bool enable, EnableVsyncCompleter::Sync& _completer) override;
+  void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync& _completer) override;
+  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) override;
   void ImportBufferCollection(uint64_t collection_id, zx::channel collection_token,
-                              ImportBufferCollectionCompleter::Sync _completer) override;
+                              ImportBufferCollectionCompleter::Sync& _completer) override;
   void SetBufferCollectionConstraints(
       uint64_t collection_id, llcpp::fuchsia::hardware::display::ImageConfig config,
-      SetBufferCollectionConstraintsCompleter::Sync _completer) override;
+      SetBufferCollectionConstraintsCompleter::Sync& _completer) override;
   void ReleaseBufferCollection(uint64_t collection_id,
-                               ReleaseBufferCollectionCompleter::Sync _completer) override;
+                               ReleaseBufferCollectionCompleter::Sync& _completer) override;
 
-  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync _completer) override;
+  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) override;
   void ImportImageForCapture(llcpp::fuchsia::hardware::display::ImageConfig image_config,
                              uint64_t collection_id, uint32_t index,
-                             ImportImageForCaptureCompleter::Sync _completer) override;
+                             ImportImageForCaptureCompleter::Sync& _completer) override;
 
   void StartCapture(uint64_t signal_event_id, uint64_t image_id,
-                    StartCaptureCompleter::Sync _completer) override;
+                    StartCaptureCompleter::Sync& _completer) override;
 
-  void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override;
+  void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _completer) override;
 
-  void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) override;
+  void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync& _completer) override;
 
-  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) override;
+  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _completer) override;
 
   // Cleans up layer state associated with an image. If image == nullptr, then
   // cleans up all image state. Return true if a current layer was modified.

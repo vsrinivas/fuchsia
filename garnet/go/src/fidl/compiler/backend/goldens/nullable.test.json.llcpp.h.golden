@@ -585,7 +585,7 @@ class SimpleProtocol final {
 
     using AddCompleter = ::fidl::Completer<AddCompleterBase>;
 
-    virtual void Add(int32_t a, int32_t b, AddCompleter::Sync _completer) = 0;
+    virtual void Add(int32_t a, int32_t b, AddCompleter::Sync& _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

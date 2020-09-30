@@ -376,7 +376,7 @@ void connect(void* untyped_context, const char* service_name, zx_handle_t servic
 // - Service ---------------------------------------------------------------------------------------
 
 void Service::CreateExecutionContext(uint64_t context_id,
-                                     CreateExecutionContextCompleter::Sync completer) {
+                                     CreateExecutionContextCompleter::Sync& completer) {
   auto context = interpreter_->AddContext(context_id);
   if (context != nullptr) {
     interpreter_->CreateServerContext(context);
@@ -385,7 +385,7 @@ void Service::CreateExecutionContext(uint64_t context_id,
 
 void Service::AddNodes(uint64_t context_id,
                        ::fidl::VectorView<::llcpp::fuchsia::shell::NodeDefinition> nodes,
-                       AddNodesCompleter::Sync _completer) {
+                       AddNodesCompleter::Sync& _completer) {
   auto context = interpreter_->GetServerContext(context_id);
   if (context == nullptr) {
     interpreter_->EmitError(nullptr,
@@ -435,7 +435,7 @@ void Service::AddNodes(uint64_t context_id,
 }
 
 void Service::DumpExecutionContext(uint64_t context_id,
-                                   ExecuteExecutionContextCompleter::Sync completer) {
+                                   ExecuteExecutionContextCompleter::Sync& completer) {
   auto context = interpreter_->GetServerContext(context_id);
   if (context == nullptr) {
     interpreter_->EmitError(nullptr,
@@ -446,7 +446,7 @@ void Service::DumpExecutionContext(uint64_t context_id,
 }
 
 void Service::ExecuteExecutionContext(uint64_t context_id,
-                                      ExecuteExecutionContextCompleter::Sync completer) {
+                                      ExecuteExecutionContextCompleter::Sync& completer) {
   auto context = interpreter_->GetServerContext(context_id);
   if (context == nullptr) {
     interpreter_->EmitError(nullptr,
@@ -462,7 +462,7 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
   }
 }
 
-void Service::Shutdown(ShutdownCompleter::Sync completer) {
+void Service::Shutdown(ShutdownCompleter::Sync& completer) {
   // Shutdown the interpreter. If we have some memory leaks, this will generate errors.
   std::vector<std::string> errors;
   interpreter_->Shutdown(&errors);

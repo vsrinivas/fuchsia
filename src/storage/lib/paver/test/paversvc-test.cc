@@ -183,15 +183,15 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void GetString(::fidl::StringView arg, GetStringCompleter::Sync completer) override {
+  void GetString(::fidl::StringView arg, GetStringCompleter::Sync& completer) override {
     completer.Reply(fidl::unowned_str(arg_response_));
   }
 
   // Stubs
   void GetStrings(::fidl::VectorView<::fidl::StringView> names,
-                  GetStringsCompleter::Sync completer) override {}
+                  GetStringsCompleter::Sync& completer) override {}
   void GetBool(::fidl::StringView name, bool defaultval,
-               GetBoolCompleter::Sync completer) override {
+               GetBoolCompleter::Sync& completer) override {
     if (strncmp(name.data(), "astro.sysconfig.abr-wear-leveling",
                 sizeof("astro.sysconfig.abr-wear-leveling")) == 0) {
       completer.Reply(astro_sysconfig_abr_wear_leveling_);
@@ -200,8 +200,8 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
     }
   }
   void GetBools(::fidl::VectorView<::llcpp::fuchsia::boot::BoolPair> name,
-                GetBoolsCompleter::Sync completer) override {}
-  void Collect(::fidl::StringView name, CollectCompleter::Sync completer) override {}
+                GetBoolsCompleter::Sync& completer) override {}
+  void Collect(::fidl::StringView name, CollectCompleter::Sync& completer) override {}
 
   void SetAstroSysConfigAbrWearLeveling(bool opt) { astro_sysconfig_abr_wear_leveling_ = opt; }
 

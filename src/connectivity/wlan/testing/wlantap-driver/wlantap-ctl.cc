@@ -51,7 +51,7 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
   static void DdkRelease(void* ctx) { delete static_cast<WlantapCtl*>(ctx); }
 
   void CreatePhy(wlantap::WlantapPhyConfig config, ::zx::channel proxy,
-                 CreatePhyCompleter::Sync completer) override {
+                 CreatePhyCompleter::Sync& completer) override {
     zx_status_t status;
 
     async_dispatcher_t* loop;

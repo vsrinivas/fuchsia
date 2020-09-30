@@ -42,34 +42,35 @@ class Lp50xxLight : public Lp50xxLightType,
   void DdkRelease();
 
   // FIDL messages.
-  void GetNumLights(GetNumLightsCompleter::Sync completer) override;
-  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync completer) override;
-  void GetInfo(uint32_t index, GetInfoCompleter::Sync completer) override;
+  void GetNumLights(GetNumLightsCompleter::Sync& completer) override;
+  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) override;
+  void GetInfo(uint32_t index, GetInfoCompleter::Sync& completer) override;
   void GetCurrentSimpleValue(uint32_t index,
-                             GetCurrentSimpleValueCompleter::Sync completer) override;
-  void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer) override;
+                             GetCurrentSimpleValueCompleter::Sync& completer) override;
+  void SetSimpleValue(uint32_t index, bool value,
+                      SetSimpleValueCompleter::Sync& completer) override;
   void GetCurrentBrightnessValue(uint32_t index,
-                                 GetCurrentBrightnessValueCompleter::Sync completer) override;
+                                 GetCurrentBrightnessValueCompleter::Sync& completer) override;
   void SetBrightnessValue(uint32_t index, double value,
-                          SetBrightnessValueCompleter::Sync completer) override;
-  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer) override;
+                          SetBrightnessValueCompleter::Sync& completer) override;
+  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer) override;
   void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
-                   SetRgbValueCompleter::Sync completer) override;
+                   SetRgbValueCompleter::Sync& completer) override;
 
-  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) override;
+  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) override;
   void GetGroupCurrentSimpleValue(uint32_t group_id,
-                                  GetGroupCurrentSimpleValueCompleter::Sync completer) override;
+                                  GetGroupCurrentSimpleValueCompleter::Sync& completer) override;
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
-                           SetGroupSimpleValueCompleter::Sync completer) override;
+                           SetGroupSimpleValueCompleter::Sync& completer) override;
   void GetGroupCurrentBrightnessValue(
-      uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync completer) override;
+      uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync& completer) override;
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
-                               SetGroupBrightnessValueCompleter::Sync completer) override;
+                               SetGroupBrightnessValueCompleter::Sync& completer) override;
   void GetGroupCurrentRgbValue(uint32_t group_id,
-                               GetGroupCurrentRgbValueCompleter::Sync completer) override;
+                               GetGroupCurrentRgbValueCompleter::Sync& completer) override;
   void SetGroupRgbValue(uint32_t group_id,
                         ::fidl::VectorView<llcpp::fuchsia::hardware::light::Rgb> values,
-                        SetGroupRgbValueCompleter::Sync completer) override;
+                        SetGroupRgbValueCompleter::Sync& completer) override;
 
   bool BlinkTest();
   zx_status_t Init();

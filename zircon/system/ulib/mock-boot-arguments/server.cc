@@ -42,7 +42,7 @@ void Server::CreateClient(async_dispatcher* dispatcher,
   *argclient = llcpp::fuchsia::boot::Arguments::SyncClient{std::move(local)};
 }
 
-void Server::GetString(fidl::StringView view, GetStringCompleter::Sync completer) {
+void Server::GetString(fidl::StringView view, GetStringCompleter::Sync& completer) {
   auto ret = arguments.find(std::string{view.data(), view.size()});
   if (ret == arguments.end()) {
     completer.Reply(fidl::StringView{});
@@ -52,7 +52,7 @@ void Server::GetString(fidl::StringView view, GetStringCompleter::Sync completer
 }
 
 void Server::GetStrings(fidl::VectorView<fidl::StringView> keys,
-                        GetStringsCompleter::Sync completer) {
+                        GetStringsCompleter::Sync& completer) {
   std::vector<fidl::StringView> result;
   for (uint64_t i = 0; i < keys.count(); i++) {
     auto ret = arguments.find(std::string{keys[i].data(), keys[i].size()});
@@ -65,12 +65,12 @@ void Server::GetStrings(fidl::VectorView<fidl::StringView> keys,
   completer.Reply(fidl::unowned_vec(result));
 }
 
-void Server::GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync completer) {
+void Server::GetBool(fidl::StringView view, bool defaultval, GetBoolCompleter::Sync& completer) {
   completer.Reply(StrToBool(view, defaultval));
 }
 
 void Server::GetBools(fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
-                      GetBoolsCompleter::Sync completer) {
+                      GetBoolsCompleter::Sync& completer) {
   // The vector<bool> optimisation means we have to use a manually-allocated array.
   std::unique_ptr<bool[]> ret = std::make_unique<bool[]>(keys.count());
   for (uint64_t i = 0; i < keys.count(); i++) {
@@ -79,7 +79,7 @@ void Server::GetBools(fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
   completer.Reply(fidl::VectorView{fidl::unowned_ptr(ret.get()), keys.count()});
 }
 
-void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync completer) {
+void Server::Collect(fidl::StringView prefix, CollectCompleter::Sync& completer) {
   std::string match{prefix.data(), prefix.size()};
   std::vector<fbl::String> result;
   for (auto entry : arguments) {
