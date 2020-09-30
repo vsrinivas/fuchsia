@@ -15,7 +15,7 @@ use {
     futures::channel::oneshot,
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
-    std::collections::HashSet,
+    std::collections::BTreeSet,
     std::future::Future,
     std::io,
     std::os::unix::io::{FromRawFd, IntoRawFd},
@@ -55,7 +55,7 @@ async fn latency_sensitive_copy(
 }
 
 impl HostPipeChild {
-    pub async fn new(addrs: HashSet<TargetAddr>) -> Result<HostPipeChild> {
+    pub async fn new(addrs: BTreeSet<TargetAddr>) -> Result<HostPipeChild> {
         let mut inner = build_ssh_command(addrs, vec!["remote_control_runner"])
             .await?
             .stdout(Stdio::piped())
@@ -149,7 +149,7 @@ impl HostPipeConnection {
 
     fn new_with_cmd<F>(
         target: Weak<impl TargetAddrFetcher + Sized + 'static>,
-        cmd_func: impl FnOnce(HashSet<TargetAddr>) -> F + Send + Copy + 'static,
+        cmd_func: impl FnOnce(BTreeSet<TargetAddr>) -> F + Send + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> impl Future<Output = Result<(), String>> + Send
     where
@@ -226,7 +226,7 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(_t: HashSet<TargetAddr>) -> Result<HostPipeChild> {
+    async fn start_child_normal_operation(_t: BTreeSet<TargetAddr>) -> Result<HostPipeChild> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
                 .arg("test-command")
@@ -237,7 +237,7 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(_t: HashSet<TargetAddr>) -> Result<HostPipeChild> {
+    async fn start_child_internal_failure(_t: BTreeSet<TargetAddr>) -> Result<HostPipeChild> {
         Err(anyhow!(ERR_CTX))
     }
 
@@ -246,8 +246,8 @@ mod test {
 
     #[async_trait]
     impl TargetAddrFetcher for FakeTarget {
-        async fn target_addrs(&self) -> HashSet<TargetAddr> {
-            HashSet::new()
+        async fn target_addrs(&self) -> BTreeSet<TargetAddr> {
+            BTreeSet::new()
         }
     }
 

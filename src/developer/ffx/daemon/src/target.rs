@@ -24,19 +24,19 @@ use {
     futures::future,
     futures::lock::Mutex,
     futures::prelude::*,
-    std::collections::{HashMap, HashSet},
+    std::collections::{BTreeSet, HashMap},
     std::default::Default,
     std::fmt,
     std::fmt::{Debug, Display},
     std::hash::Hash,
-    std::net::{IpAddr, SocketAddr},
+    std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
     std::sync::Arc,
     usb_bulk::Interface,
 };
 
 #[async_trait]
 pub trait TargetAddrFetcher: Send + Sync {
-    async fn target_addrs(&self) -> HashSet<TargetAddr>;
+    async fn target_addrs(&self) -> BTreeSet<TargetAddr>;
 }
 
 #[async_trait]
@@ -121,7 +121,7 @@ struct TargetInner {
     nodename: String,
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
-    addrs: RwLock<HashSet<TargetAddr>>,
+    addrs: RwLock<BTreeSet<TargetAddr>>,
     // used for Fastboot
     serial: RwLock<Option<String>>,
 }
@@ -132,7 +132,7 @@ impl Default for TargetInner {
             nodename: Default::default(),
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::new()),
-            addrs: RwLock::new(HashSet::new()),
+            addrs: RwLock::new(BTreeSet::new()),
             serial: RwLock::new(None),
         }
     }
@@ -143,7 +143,7 @@ impl TargetInner {
         Self { nodename: nodename.to_string(), ..Default::default() }
     }
 
-    pub fn new_with_addrs(nodename: &str, addrs: HashSet<TargetAddr>) -> Self {
+    pub fn new_with_addrs(nodename: &str, addrs: BTreeSet<TargetAddr>) -> Self {
         Self { nodename: nodename.to_string(), addrs: RwLock::new(addrs), ..Default::default() }
     }
 
@@ -169,7 +169,7 @@ impl TargetInner {
 
 #[async_trait]
 impl TargetAddrFetcher for TargetInner {
-    async fn target_addrs(&self) -> HashSet<TargetAddr> {
+    async fn target_addrs(&self) -> BTreeSet<TargetAddr> {
         self.addrs.read().await.clone()
     }
 }
@@ -211,7 +211,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn new_with_addrs(nodename: &str, addrs: HashSet<TargetAddr>) -> Self {
+    pub fn new_with_addrs(nodename: &str, addrs: BTreeSet<TargetAddr>) -> Self {
         let inner = Arc::new(TargetInner::new_with_addrs(nodename, addrs));
         Self::from_inner(inner)
     }
@@ -262,7 +262,7 @@ impl Target {
         self.inner.last_response.read().await.clone()
     }
 
-    pub async fn addrs(&self) -> HashSet<TargetAddr> {
+    pub async fn addrs(&self) -> BTreeSet<TargetAddr> {
         self.inner.addrs.read().await.clone()
     }
 
@@ -340,12 +340,12 @@ impl EventSynthesizer<DaemonEvent> for Target {
 #[async_trait]
 impl ToFidlTarget for Target {
     async fn to_fidl_target(self) -> bridge::Target {
-        let (mut addrs, last_response, rcs_state) =
+        let (addrs, last_response, rcs_state) =
             futures::join!(self.addrs(), self.last_response(), self.rcs_state());
 
         bridge::Target {
             nodename: Some(self.nodename()),
-            addresses: Some(addrs.drain().map(|a| a.into()).collect()),
+            addresses: Some(addrs.iter().map(|a| a.into()).collect()),
             age_ms: Some(
                 match Utc::now().signed_duration_since(last_response).num_milliseconds() {
                     dur if dur < 0 => {
@@ -391,7 +391,21 @@ pub struct TargetAddr {
     scope_id: u32,
 }
 
-impl Into<bridge::TargetAddrInfo> for TargetAddr {
+impl Ord for TargetAddr {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let this_socket = SocketAddr::from(self);
+        let other_socket = SocketAddr::from(other);
+        this_socket.cmp(&other_socket)
+    }
+}
+
+impl PartialOrd for TargetAddr {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Into<bridge::TargetAddrInfo> for &TargetAddr {
     fn into(self) -> bridge::TargetAddrInfo {
         bridge::TargetAddrInfo::Ip(bridge::TargetIp {
             ip: match self.ip {
@@ -400,6 +414,12 @@ impl Into<bridge::TargetAddrInfo> for TargetAddr {
             },
             scope_id: self.scope_id,
         })
+    }
+}
+
+impl Into<bridge::TargetAddrInfo> for TargetAddr {
+    fn into(self) -> bridge::TargetAddrInfo {
+        (&self).into()
     }
 }
 
@@ -424,6 +444,21 @@ impl From<Subnet> for TargetAddr {
         match i.addr {
             IpAddress::Ipv4(ip4) => SocketAddr::from((ip4.addr, 0)).into(),
             IpAddress::Ipv6(ip6) => SocketAddr::from((ip6.addr, 0)).into(),
+        }
+    }
+}
+
+impl From<TargetAddr> for SocketAddr {
+    fn from(t: TargetAddr) -> Self {
+        Self::from(&t)
+    }
+}
+
+impl From<&TargetAddr> for SocketAddr {
+    fn from(t: &TargetAddr) -> Self {
+        match t.ip {
+            IpAddr::V6(addr) => SocketAddr::V6(SocketAddrV6::new(addr, 0, 0, t.scope_id)),
+            IpAddr::V4(addr) => SocketAddr::V4(SocketAddrV4::new(addr, 0)),
         }
     }
 }
