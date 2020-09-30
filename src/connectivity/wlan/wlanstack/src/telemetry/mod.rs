@@ -579,7 +579,7 @@ mod tests {
             stats_scheduler::{self, StatsRequest},
         },
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
+        fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
@@ -635,48 +635,6 @@ mod tests {
         // Verify that stats are sent to Cobalt
         let _ = exec.run_until_stalled(&mut telemetry_fut);
         let mut expected_metrics = vec![
-            CobaltEvent {
-                metric_id: metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
-                event_codes: vec![0], // in
-                component: None,
-                payload: event_count(1),
-            },
-            CobaltEvent {
-                metric_id: metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
-                event_codes: vec![1], // out
-                component: None,
-                payload: event_count(2),
-            },
-            CobaltEvent {
-                metric_id: metrics::DISPATCHER_PACKET_COUNTS_METRIC_ID,
-                event_codes: vec![2], // dropped
-                component: None,
-                payload: event_count(3),
-            },
-            CobaltEvent {
-                metric_id: metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
-                event_codes: vec![0], // rx
-                component: None,
-                payload: event_count(1),
-            },
-            CobaltEvent {
-                metric_id: metrics::MLME_RX_TX_FRAME_COUNTS_METRIC_ID,
-                event_codes: vec![1], // tx
-                component: None,
-                payload: event_count(2),
-            },
-            CobaltEvent {
-                metric_id: metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
-                event_codes: vec![0], // rx
-                component: None,
-                payload: event_count(4),
-            },
-            CobaltEvent {
-                metric_id: metrics::MLME_RX_TX_FRAME_BYTES_METRIC_ID,
-                event_codes: vec![1], // tx
-                component: None,
-                payload: event_count(5),
-            },
             CobaltEvent {
                 metric_id: metrics::CLIENT_ASSOC_RSSI_METRIC_ID,
                 event_codes: vec![],
@@ -1033,10 +991,6 @@ mod tests {
             rssi_dbm: 0,
             snr_db: 0,
         }
-    }
-
-    fn event_count(count: i64) -> EventPayload {
-        EventPayload::EventCount(CountEvent { period_duration_micros: 0, count })
     }
 
     fn fake_iface_stats(nth_req: u64) -> IfaceStats {
