@@ -3,5 +3,9 @@
 # found in the LICENSE file.
 
 group("tests") {
-  deps = [ "cpp" ]
+  testonly = true
+  deps = [
+    "cpp",
+    "rust",
+  ]
 }

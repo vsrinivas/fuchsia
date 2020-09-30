@@ -28,11 +28,13 @@ HOST_PLARFORM = "{}-{}".format(
 GN = os.path.realpath(
     os.path.join(
         DIR, '../../../../prebuilt/third_party/gn', HOST_PLARFORM, 'gn'))
-ZIRCON_TOOLS_DIR = os.environ.get('ZIRCON_TOOLS_DIR')
-if ZIRCON_TOOLS_DIR is None:
+FUCHSIA_DIR = os.environ.get('FUCHSIA_DIR')
+FUCHSIA_BUILD_DIR = os.environ.get('FUCHSIA_BUILD_DIR')
+if FUCHSIA_BUILD_DIR is None:
     print('Run "fx exec %s".' % sys.argv[0])
     sys.exit(1)
-FIDL_FORMAT = os.path.join(ZIRCON_TOOLS_DIR, 'fidl-format')
+FIDL_FORMAT = os.path.join(FUCHSIA_BUILD_DIR, 'host_x64', 'fidl-format')
+RUST_FORMAT = os.path.join(FUCHSIA_DIR, 'prebuilt', 'third_party', 'rust_tools', 'linux-x64', 'bin', 'rustfmt')
 
 
 # IdentifierDef represents individual parts of an identifier, along with a tag.
@@ -402,46 +404,91 @@ def generate_fidl(identifier_defs: List[IdentifierDef]) -> List[str]:
 def generate_cpp(libraries: List[str]) -> None:
     directory = os.path.join(DIR, 'cpp')
     os.makedirs(directory, exist_ok=True)
+
     # generate BUILD.gn for C++ test
     build_file = os.path.join(directory, 'BUILD.gn')
     with open(build_file, 'w') as build_gn:
         build_gn.write(generated('#'))
         for library_name in libraries:
-            with open(os.path.join(directory, '%s_test.cc' % library_name),
-                      'w') as f:
-                f.write(generated('//'))
-                f.write(
-                    '#include <%s/cpp/fidl.h>\n' %
-                    (library_name.replace('.', '/')))
-                f.write('\nint main() { return 0; }\n')
-
-        # generate BUILD.gn for C++ test
-        build_file = os.path.join(directory, 'BUILD.gn')
-        with open(build_file, 'w') as build_gn:
-            build_gn.write(generated('#'))
-            for library_name in libraries:
-                build_gn.write(
-                    """source_set("%s_cpp") {
+            build_gn.write(
+                """source_set("%s_cpp") {
     output_name = "cpp_fidl_dangerous_identifiers_test_%s"
     sources = [ "%s_test.cc" ]
     deps = [
 """ % (library_name, library_name, library_name))
-                build_gn.write('    "%s",\n' % library_target(library_name))
-                build_gn.write('  ]\n}\n')
-            build_gn.write("""group("cpp") {
+            build_gn.write('    "%s",\n' % library_target(library_name))
+            build_gn.write('  ]\n}\n')
+        build_gn.write("""group("cpp") {
     deps = [""")
-            for library_name in libraries:
-                build_gn.write("""
+        for library_name in libraries:
+            build_gn.write("""
         ":%s_cpp",
 """ % (library_name))
-            build_gn.write("""
+        build_gn.write("""
     ]
   }""")
 
-        subprocess.check_output([GN, 'format', build_file])
+    subprocess.check_output([GN, 'format', build_file])
+
+
+def generate_rust(libraries: List[str]) -> None:
+    os.makedirs(os.path.join(DIR, 'rust', 'src'), exist_ok=True)
+
+    # Allowlist of libraries we can compile in Rust
+    # TODO(fxbug.dev/60219): Make all libraries pass.
+    allowed_libraries = {
+            'fidl.test.dangerous.constants.lower',
+            'fidl.test.dangerous.constants.camel',
+            'fidl.test.dangerous.constants.upper',
+            'fidl.test.dangerous.using.lower',
+            'fidl.test.dangerous.using.camel',
+            'fidl.test.dangerous.using.upper',
+            'fidl.test.dangerous.enums.lower',
+            'fidl.test.dangerous.struct.types.lower',
+            'fidl.test.dangerous.struct.types.upper',
+            'fidl.test.dangerous.table.names.lower',
+            'fidl.test.dangerous.table.names.camel',
+            'fidl.test.dangerous.table.names.upper',
+    }
+
+    # BUILD.gn
+    build_file = os.path.join(DIR, 'rust', 'BUILD.gn')
+    with open(build_file, 'w') as f:
+        f.write(generated('#'))
+        f.write('\n')
+        f.write('import("//build/rust/rustc_test.gni")\n')
+        f.write('import("//tools/fidl/measure-tape/measure_tape.gni")\n')
+        f.write('\n')
+        f.write('rustc_test("rust") {\n')
+        f.write('  sources = [ "src/lib.rs" ]\n')
+        f.write('  deps = [\n')
+        for library_name in libraries:
+            f.write('    ')
+            if library_name not in allowed_libraries:
+                f.write('# ')
+            f.write('"%s-rustc",\n' % library_target(library_name))
+        f.write('  ]\n')
+        f.write('}\n')
+    subprocess.check_output([GN, 'format', build_file])
+
+    # lib.rs
+    lib_rs = os.path.join(DIR, 'rust', 'src', 'lib.rs')
+    with open(lib_rs, 'w') as f:
+        f.write(generated('//'))
+        f.write('#![cfg(test)]\n')
+        f.write('#![allow(unused_imports)]\n')
+        f.write('use {\n')
+        for library_name in libraries:
+            f.write('  ')
+            if library_name not in allowed_libraries:
+                f.write('// ')
+            f.write('fidl_%s,\n' % library_name.replace('.', '_'))
+        f.write('};\n')
+    subprocess.check_output([RUST_FORMAT, lib_rs])
 
 
 if __name__ == '__main__':
     identifier_defs = dangerous_identifiers()
     library_names = generate_fidl(identifier_defs)
     generate_cpp(library_names)
+    generate_rust(library_names)
