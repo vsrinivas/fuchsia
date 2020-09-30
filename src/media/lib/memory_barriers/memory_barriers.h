@@ -16,6 +16,16 @@ inline void BarrierAfterFlush() {
   // read and write access types to be effective with regards to cache
   // operations.
   asm __volatile__("dsb sy");
+#elif defined(__x86_64__)
+  // This is here just in case we both (a) don't need to flush cache on x86 due to cache coherent
+  // DMA (CLFLUSH not needed), and (b) we have code using non-temporal stores or "string
+  // operations" whose surrounding code didn't itself take care of doing an SFENCE.  After returning
+  // from this function, we may write to MMIO to start DMA - we want any previous (program order)
+  // non-temporal stores to be visible to HW before that MMIO write that starts DMA.  The MFENCE
+  // instead of SFENCE is mainly paranoia, though one could hypothetically create HW that starts or
+  // continues DMA based on an MMIO read (please don't), in which case MFENCE might be needed here
+  // before that read.
+  asm __volatile__("mfence");
 #else
 #error need definition for this platform
 #endif
@@ -34,6 +44,9 @@ inline void BarrierBeforeInvalidate() {
   // read and write access types to be effective with regards to cache
   // operations.
   asm __volatile__("dsb sy");
+#elif defined(__x86_64__)
+  // This mfence may not be necessary due to cache coherent DMA on x86.
+  asm __volatile__("mfence");
 #else
 #error need definition for this platform
 #endif
@@ -52,6 +65,9 @@ inline void BarrierBeforeRelease() {
   // buffer, and LD isn't used because the caller may have determined that the
   // buffer can be released in several ways.
   asm __volatile__("dsb sy");
+#elif defined(__x86_64__)
+  // This mfence may not be necessary.
+  asm __volatile__("mfence");
 #else
 #error need definition for this platform
 #endif

@@ -63,6 +63,7 @@ source_set("codec_impl") {
 
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",
+    "//src/media/lib/memory_barriers",
 
     # Provides fx_log_get_logger
     "//zircon/system/ulib/syslog",

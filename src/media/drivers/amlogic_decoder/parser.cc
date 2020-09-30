@@ -239,7 +239,8 @@ zx_status_t Parser::ParseVideo(const void* data, uint32_t len) {
   return ParseVideoPhysical(io_buffer_phys(parser_input_.get()), len);
 }
 // The caller of this method must know that the physical range is entirely
-// within a VMO that's pinned for at least the duration of this call.
+// within a VMO that's pinned for at least the duration of this call, and that
+// the input data is already in RAM (not dirty in CPU cache).
 zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
   TRACE_DURATION("media", "Parser::ParseVideoPhysical");
   assert(!owner_->is_parser_gated());

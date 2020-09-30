@@ -80,9 +80,7 @@ void CodecPacket::ClearKeyFrame() { key_frame_is_set_ = true; }
 bool CodecPacket::has_key_frame() const { return key_frame_is_set_; }
 bool CodecPacket::key_frame() const { return key_frame_; }
 
-zx_status_t CodecPacket::CacheFlush() const {
-  return buffer()->CacheFlush(start_offset_, valid_length_bytes_);
-}
+void CodecPacket::CacheFlush() const { buffer()->CacheFlush(start_offset_, valid_length_bytes_); }
 
 void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 

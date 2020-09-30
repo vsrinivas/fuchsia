@@ -1122,11 +1122,7 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       port_settings_[kInputPort]->coherency_domain() == fuchsia::sysmem::CoherencyDomain::CPU) {
     // This flushes only the portion of the buffer that the packet is
     // referencing.
-    zx_status_t status = core_codec_packet->CacheFlush();
-    if (status != ZX_OK) {
-      Fail("CacheFlush() failed");
-      return;
-    }
+    core_codec_packet->CacheFlush();
   }
 
   // We don't need to be under lock for this, because the fact that we're on the

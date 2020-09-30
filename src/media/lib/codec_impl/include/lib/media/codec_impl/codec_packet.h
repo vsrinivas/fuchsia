@@ -54,7 +54,7 @@ class CodecPacket {
   bool has_key_frame() const;
   bool key_frame() const;
 
-  [[nodiscard]] zx_status_t CacheFlush() const;
+  void CacheFlush() const;
 
  private:
   // The public section is for the core codec to call - the private section is

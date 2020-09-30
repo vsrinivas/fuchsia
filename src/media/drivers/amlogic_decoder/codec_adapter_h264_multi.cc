@@ -9,6 +9,8 @@
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
 
+#include <src/media/lib/memory_barriers/memory_barriers.h>
+
 #include "device_ctx.h"
 #include "h264_multi_decoder.h"
 #include "lib/fit/defer.h"
@@ -111,6 +113,10 @@ void CodecAdapterH264Multi::CoreCodecSetSecureMemoryMode(
 
 void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   TRACE_DURATION("media", "CodecAdapterH264Multi::OnFrameReady", "index", frame->index);
+  output_stride_ = frame->stride;
+  const CodecBuffer* buffer = frame->codec_buffer;
+  ZX_DEBUG_ASSERT(buffer);
+
   // The Codec interface requires that emitted frames are cache clean. We invalidate without
   // skipping over stride-width per line, at least partly because stride - width is small (possibly
   // always 0) for this decoder. But we do invalidate the UV section separately in case
@@ -124,13 +130,12 @@ void CodecAdapterH264Multi::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
   // mappable.
   {
     TRACE_DURATION("media", "cache invalidate");
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
-    io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                     frame->stride * frame->coded_height / 2);
+    if (!IsOutputSecure()) {
+      buffer->CacheFlushAndInvalidate(0, frame->stride * frame->coded_height);
+      buffer->CacheFlushAndInvalidate(frame->uv_plane_offset,
+                                      frame->stride * frame->coded_height / 2);
+    }
   }
-  output_stride_ = frame->stride;
-  const CodecBuffer* buffer = frame->codec_buffer;
-  ZX_DEBUG_ASSERT(buffer);
 
   // We intentionally _don't_ use the packet with same index as the buffer (in
   // general - it's fine that they sometimes match), to avoid clients building
@@ -776,6 +781,10 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ReadMoreInputD
       continue;
     }
     result = std::move(parsed_input_data.value());
+    if (result.codec_buffer && !IsPortSecure(kInputPort)) {
+      // In case input is still dirty in CPU cache.
+      result.codec_buffer->CacheFlush(result.buffer_start_offset, result.length);
+    }
     if (item.packet()->has_timestamp_ish()) {
       result.pts = item.packet()->timestamp_ish();
     }

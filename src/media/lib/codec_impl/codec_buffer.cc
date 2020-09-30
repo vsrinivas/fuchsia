@@ -7,37 +7,10 @@
 #include <lib/media/codec_impl/codec_port.h>
 #include <lib/media/codec_impl/log.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #include <fbl/algorithm.h>
-
-namespace {
-
-void BarrierAfterFlush() {
-#if defined(__aarch64__)
-  // According to the ARMv8 ARM K11.5.4 it's better to use DSB instead of DMB
-  // for ordering with respect to MMIO (DMB is ok if all agents are just
-  // observing memory). The system shareability domain is used because that's
-  // the only domain the video decoder is guaranteed to be in. SY is used
-  // instead of LD or ST because section B2.3.5 says that the barrier needs both
-  // read and write access types to be effective with regards to cache
-  // operations.
-  asm __volatile__("dsb sy");
-#elif defined(__x86_64__)
-  // This is here just in case we both (a) don't need to flush cache on x86 due to cache coherent
-  // DMA (CLFLUSH not needed), and (b) we have code using non-temporal stores or "string
-  // operations" whose surrounding code didn't itself take care of doing an SFENCE.  After returning
-  // from this function, we may write to MMIO to start DMA - we want any previous (program order)
-  // non-temporal stores to be visible to HW before that MMIO write that starts DMA.  The MFENCE
-  // instead of SFENCE is mainly paranoia, though one could hypothetically create HW that starts or
-  // continues DMA based on an MMIO read (please don't), in which case MFENCE might be needed here
-  // before that read.
-  asm __volatile__("mfence");
-#else
-  ZX_PANIC("codec_buffer.cc missing BarrierAfterFlush() impl for this platform");
-#endif
-}
-
-}  // namespace
+#include <src/media/lib/memory_barriers/memory_barriers.h>
 
 CodecBuffer::CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range)
     : parent_(parent), buffer_info_(std::move(buffer_info)), vmo_range_(std::move(vmo_range)) {
@@ -170,14 +143,34 @@ zx_status_t CodecBuffer::Pin() {
 
 bool CodecBuffer::is_pinned() const { return !!pinned_; }
 
-zx_status_t CodecBuffer::CacheFlush(uint32_t flush_offset, uint32_t length) const {
+void CodecBuffer::CacheFlush(uint32_t flush_offset, uint32_t length) const {
+  CacheFlushInternal(flush_offset, length, /*also_invalidate*/ false);
+}
+
+void CodecBuffer::CacheFlushAndInvalidate(uint32_t flush_offset, uint32_t length) const {
+  CacheFlushInternal(flush_offset, length, /*also_invalidate=*/true);
+}
+
+void CodecBuffer::CacheFlushInternal(uint32_t flush_offset, uint32_t length,
+                                     bool also_invalidate) const {
   ZX_DEBUG_ASSERT(!is_secure());
+  if (also_invalidate) {
+    BarrierBeforeInvalidate();
+  }
   zx_status_t status;
   if (is_mapped_) {
-    status = zx_cache_flush(base() + flush_offset, length, ZX_CACHE_FLUSH_DATA);
+    uint32_t flush_type = also_invalidate ? ZX_CACHE_FLUSH_INVALIDATE : ZX_CACHE_FLUSH_DATA;
+    status = zx_cache_flush(base() + flush_offset, length, flush_type);
+    if (status != ZX_OK) {
+      ZX_PANIC("zx_cache_flush() failed - status: %d", status);
+    }
   } else {
-    status = vmo().op_range(ZX_VMO_OP_CACHE_CLEAN, vmo_offset() + flush_offset, length, nullptr, 0);
+    uint32_t flush_type =
+        also_invalidate ? ZX_VMO_OP_CACHE_CLEAN_INVALIDATE : ZX_VMO_OP_CACHE_CLEAN;
+    status = vmo().op_range(flush_type, vmo_offset() + flush_offset, length, nullptr, 0);
+    if (status != ZX_OK) {
+      ZX_PANIC("vmo().op_range() failed - status: %d", status);
+    }
   }
   BarrierAfterFlush();
-  return status;
 }

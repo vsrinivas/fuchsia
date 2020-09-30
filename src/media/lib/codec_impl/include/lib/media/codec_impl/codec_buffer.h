@@ -83,7 +83,8 @@ class CodecBuffer {
   zx_status_t Pin();
   bool is_pinned() const;
 
-  [[nodiscard]] zx_status_t CacheFlush(uint32_t flush_offset, uint32_t length) const;
+  void CacheFlush(uint32_t flush_offset, uint32_t length) const;
+  void CacheFlushAndInvalidate(uint32_t flush_offset, uint32_t length) const;
 
  private:
   friend class CodecImpl;
@@ -126,6 +127,8 @@ class CodecBuffer {
   // vmo_usable_start % ZX_PAGE_SIZE + vmo_usable_size (so that an access within the bounds of the
   // buffer will reliably fault cleanly).
   void FakeMap(uint8_t* fake_map_addr);
+
+  void CacheFlushInternal(uint32_t flush_offset, uint32_t length, bool also_invalidate) const;
 
   // The parent CodecImpl instance.  Just so we can call parent_->Fail().
   // The parent_ CodecImpl out-lives the CodecImpl::Buffer.
