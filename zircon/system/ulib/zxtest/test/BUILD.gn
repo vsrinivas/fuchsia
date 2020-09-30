@@ -46,8 +46,8 @@ test("zxtest") {
   ]
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zircon-headers",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zircon:zircon-headers",
   ]
   if (is_fuchsia) {
     sources += [ "death-statement_test.cc" ]

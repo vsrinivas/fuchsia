@@ -61,7 +61,7 @@ zx_library("fvm") {
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
-    public_deps += [ "//zircon/public/lib/zircon-headers" ]
+    public_deps += [ "//zircon/system/ulib/zircon:zircon-headers" ]
   }
   public_configs = [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

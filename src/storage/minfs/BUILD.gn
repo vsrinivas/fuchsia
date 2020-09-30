@@ -160,8 +160,8 @@ static_library("minfs") {
       "superblock_host.cc",
     ]
     deps += [
-      "//zircon/public/lib/zircon-headers",
       "//zircon/system/ulib/fs/journal",
+      "//zircon/system/ulib/zircon:zircon-headers",
     ]
   }
   configs += [

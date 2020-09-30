@@ -4,7 +4,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("syscalls") {
+import("$zx_build/public/gn/migrated_targets.gni")
+
+zx_library("syscalls") {
   visibility = [
     "$zx/kernel/*",
     "$zx/system/ulib/zircon:*",
@@ -17,6 +19,11 @@ library("syscalls") {
 
   # Depend on the files generated from the syscall IDL.
   public_deps = [ "$zx/vdso:private($default_toolchain)" ]
+  if (zx != "/") {
+    # The line above does not work in the Fuchsia build because its default
+    # toolchain does not propagate configs (see `gn help toolchain` for details).
+    public_configs = [ "$zx/vdso:private.config($default_toolchain)" ]
+  }
 
   if (is_kernel) {
     deps = [ ":impl" ]

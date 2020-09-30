@@ -11,6 +11,7 @@
 import("//build/config/zircon/standard.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
+import("//build/unification/zx_library.gni")
 
 if (current_toolchain == default_toolchain) {
   # Define the special toolchain itself only in the default toolchain.
@@ -18,8 +19,6 @@ if (current_toolchain == default_toolchain) {
     zircon_toolchain_suite("user.vdso_$cpu") {
       cpu = cpu
       os = current_os
-      with_shared = false
-      is_pic_default = true
       strip = "--strip-sections"
       environment = "user.vdso"
 
@@ -29,11 +28,10 @@ if (current_toolchain == default_toolchain) {
 
       # The vDSO can't use instrumentation runtimes.
       exclude_variant_tags = [ "instrumented" ]
-
-      #tags = [ "vdso" ]
     }
   }
-} else if (toolchain.environment == "user.vdso") {
+}
+if (toolchain.environment == "user.vdso") {
   config("user.vdso.config") {
     configs = [
       # This is mostly like other user code.
@@ -50,5 +48,175 @@ if (current_toolchain == default_toolchain) {
   }
 
   group("user.vdso.config_deps") {
+  }
+
+  zx_library("zircon") {
+    shared = true
+    static = false
+
+    sources = [
+      "data.S",
+      "syscall-wrappers.cc",
+      "zx_cache_flush.cc",
+      "zx_channel_call.cc",
+      "zx_clock_get_monotonic.cc",
+      "zx_cprng_draw.cc",
+      "zx_deadline_after.cc",
+      "zx_exception_get_string.cc",
+      "zx_status_get_string.cc",
+      "zx_system_get_dcache_line_size.cc",
+      "zx_system_get_features.cc",
+      "zx_system_get_num_cpus.cc",
+      "zx_system_get_physmem.cc",
+      "zx_system_get_version.cc",
+      "zx_system_get_version_string.cc",
+      "zx_ticks_get.cc",
+      "zx_ticks_per_second.cc",
+    ]
+
+    deps = [
+      ":syscall-asm",
+      "$zx/kernel/lib/syscalls:headers",
+      "$zx/kernel/lib/userabi:headers",
+      "$zx/system/ulib/affine",
+    ]
+    public_deps = [ "$zx/vdso:public($default_toolchain)" ]
+
+    # THe line above doesn't work in the Fuchsia build, because its default
+    # toolchain does not propagate configs (see `gn help toolchain` for details).
+    public_configs = [ "$zx/vdso:public.config($default_toolchain)" ]
+
+    # Instruct the linker to preserve the hidden alternate entry points.
+    # Note, "./" makes GN realize this is a file rather than a -l switch.
+    libs = [ "./alternates.ld" ]
+
+    ldflags = [
+      # Make sure libc++ is not linked into the vDSO.  Header-only use is OK.
+      "-nostdlib++",
+
+      # Set e_entry so _zx_process_exit is easy to find without reading .dynsym.
+      "-Wl,-e,_zx_process_exit",
+    ]
+
+    # TODO(BLD-353): The SDK exports this as part of the sysroot rather
+    # than as an independent library.  Legacy integration likewise does not
+    # use a //zircon/public/lib/zircon buts instead uses libs=["zircon"].
+    # See //zircon/public/sysroot.
+    #
+    # The stripped binary doesn't even have section headers, so the linker
+    # can't handle it.  Eventually we'll have linker stubs.  For now, just
+    # use the unstripped library to link against.  (In the case of the vDSO
+    # we don't really need to strip it in the first place, since its
+    # segments are embedded in the kernel and the stripped file is never
+    # put on a device.  But there's no reasonable way to disable the
+    # standard stripping behavior for a single target.)  The legacy build
+    # needs there to be a -L directory where libzircon.so is the name to
+    # link against so -lzircon works.  So mock up such a directory using a
+    # linker script to redirect to the actual unstripped file name, which
+    # is not that.
+    link_file = "$target_gen_dir/libzircon.so"
+    debug_file = rebase_path("$target_out_dir/libzircon.so.debug")
+    write_file(link_file, [ "INPUT($debug_file)" ])
+    gen_include_dir =
+        get_label_info(public_deps[0], "root_gen_dir") + "/include"
+
+    metadata = {
+      legacy_sysroot = [
+        {
+          vdso =
+              rebase_path("$target_out_dir/libzircon.so.debug", root_build_dir)
+        },
+        {
+          include_dirs = rebase_path([
+                                       "include",
+                                       gen_include_dir,
+                                     ],
+                                     root_build_dir)
+        },
+        {
+          sdk = {
+            include_dir = rebase_path(gen_include_dir, root_build_dir)
+            headers = [
+              "zircon/syscalls/internal/cdecls.inc",
+              # Note not included in SDK: "zircon/syscalls/definitions.rs",
+            ]
+          }
+        },
+        {
+          sdk = {
+            include_dir = rebase_path("include", root_build_dir)
+            headers = [ "zircon/status.h" ]
+          }
+        },
+        {
+          sdk = {
+            include_dir = rebase_path("include", root_build_dir)
+            headers = [ "zircon/exception.h" ]
+          }
+        },
+        {
+          sdk = {
+            source = rebase_path("$target_out_dir/libzircon.so.debug",
+                                 root_build_dir)
+            link = "lib/libzircon.so"
+          }
+        },
+        {
+          sdk = {
+            source = rebase_path("$target_out_dir/libzircon.so.debug",
+                                 root_build_dir)
+            debug = "debug/libzircon.so"
+          }
+        },
+      ]
+    }
+  }
+
+  source_set("syscall-asm") {
+    sources = [
+      "syscalls-$zircon_cpu.S",
+      "zx_futex_wake_handle_close_thread_exit-$zircon_cpu.S",
+      "zx_vmar_unmap_handle_close_thread_exit-$zircon_cpu.S",
+    ]
+    deps = [
+      ":headers",
+      "$zx/kernel/lib/syscalls",
+    ]
+    if (toolchain.base_environment == "user") {
+      configs -= [ "$zx_build_config:user" ]
+    }
+  }
+} else {
+  _user_vdso_toolchain = "//zircon/system/ulib/zircon:user.vdso_$target_cpu"
+
+  # Even non-user environments can see the headers.
+  group("headers") {
+    public_deps = [ ":headers($_user_vdso_toolchain)" ]
+  }
+
+  if (toolchain.base_environment == "user") {
+    # Other userland environments redirect to pick up the real library.
+    group("zircon") {
+      public_deps = [ ":zircon($_user_vdso_toolchain)" ]
+    }
+  } else {
+    # References from other environments only get the headers.  This
+    # makes it easy to have "$zx/system/ulib/zircon" deps in common
+    # libraries that need to link against it in userland but that in
+    # other contexts like kernel or userboot are just using the headers.
+    group("zircon") {
+      public_deps = [ ":headers" ]
+    }
+  }
+
+  # Publish headers to the GN build so that they may be used in host binaries.
+  zx_library("zircon-headers") {
+    sdk = "source"
+    sdk_headers = [
+      "zircon/exception.h",
+      "zircon/status.h",
+    ]
+    sdk_migrated = true
+    sources = []
   }
 }

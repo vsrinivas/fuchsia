@@ -75,6 +75,7 @@ if (current_toolchain == default_toolchain) {
       "zircon/exception.h",
       "zircon/status.h",
     ]
+    sdk_migrated = true
     sources = []
   }
 } else {

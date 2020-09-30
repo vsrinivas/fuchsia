@@ -5,8 +5,10 @@
 # https://opensource.org/licenses/MIT
 
 import("$zx/public/gn/toolchain/c_utils.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
-import("$zx/public/gn/zbi.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
+if (zx == "/") {
+  import("$zx/public/gn/toolchain/environment_redirect.gni")
+}
 
 zx_library("userabi") {
   kernel = true
@@ -33,8 +35,8 @@ zx_library("userabi") {
   } else {
     # Our own embedded "user" code needs some shared headers.
     visibility = [
-      "./*",
       "$zx/system/ulib/zircon/*",
+      "./*",
     ]
   }
 }
@@ -163,11 +165,17 @@ template("rodso") {
   }
 }
 
-# Redirect to the userland vDSO shared library target.
-environment_redirect("userland-vdso") {
-  visibility = [ ":*" ]
-  environment_label = "$zx/public/gn/toolchain:user"
-  deps = [ "$zx/system/ulib/zircon" ]
+if (zx == "/") {
+  # Redirect to the userland vDSO shared library target.
+  environment_redirect("userland-vdso") {
+    visibility = [ ":*" ]
+    environment_label = "$zx/public/gn/toolchain:user"
+    deps = [ "$zx/system/ulib/zircon" ]
+  }
+} else {
+  group("userland-vdso") {
+    public_deps = [ "$zx/system/ulib/zircon($default_toolchain)" ]
+  }
 }
 
 rodso("vdso") {

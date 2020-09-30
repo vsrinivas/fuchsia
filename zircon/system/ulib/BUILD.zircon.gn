@@ -20,11 +20,9 @@ group("ulib") {
     "c:crt1",
     "vdso-code-header",
     "zircon",
-    "zircon:zircon-headers",
   ]
 }
 
 group("ulib-host") {
   testonly = true
-  deps = [ "zircon:zircon-headers" ]
 }

@@ -315,8 +315,8 @@ template("zx_library") {
         lib_libs += [ "zircon" ]
       } else {
         lib_public_deps += [
-          "//zircon/public/lib/zircon-headers",
           "//zircon/system/public",
+          "//zircon/system/ulib/zircon:zircon-headers",
         ]
       }
     }
@@ -327,8 +327,8 @@ template("zx_library") {
         lib_libs += [ "zircon" ]
       } else {
         lib_public_deps += [
-          "//zircon/public/lib/zircon-headers",
           "//zircon/system/public",
+          "//zircon/system/ulib/zircon:zircon-headers",
         ]
       }
     }

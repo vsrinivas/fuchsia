@@ -4,8 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(fxbug.dev/54322): Keep in sync with BUILD.gn until kernel is migrated to
-# Fuchsia build, then remove this file.
+import("$zx_build/public/gn/migrated_targets.gni")
 
 zx_library("instrumentation") {
   kernel = true
@@ -46,9 +45,16 @@ zx_library("instrumentation") {
 # so a symbol by that name must be defined at link time regardless; this file
 # also defines it.
 source_set("profile") {
-  _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
-  if (toolchain.configs + _profile_config - _profile_config !=
-      toolchain.configs) {
+  if (zx == "/") {
+    _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
+    _has_profile = toolchain.configs + _profile_config - _profile_config !=
+                   toolchain.configs
+  } else {
+    _profile_config = [ "//build/config/profile:profile" ]
+    _has_profile = toolchain_variant.configs + _profile_config -
+                   _profile_config != toolchain_variant.configs
+  }
+  if (_has_profile) {
     sources = [ "profile.cc" ]
 
     if (current_os == "win") {
@@ -59,7 +65,7 @@ source_set("profile") {
 }
 
 source_set("sancov") {
-  _sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
+  _sancov_config = [ "$zx_build_config/instrumentation:sancov" ]
   if (configs + _sancov_config - _sancov_config != configs) {
     configs -= _sancov_config
     sources = [ "sancov.cc" ]
@@ -68,7 +74,7 @@ source_set("sancov") {
   # sancov code shouldn't make asan checks.
   # Annotating the functions with NO_ASAN is not enough, as it doesnt
   # allow for ktl::atomic operations to be inlined.
-  _asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
+  _asan_config = [ "$zx_build_config/instrumentation:asan" ]
   if (configs + _asan_config - _asan_config != configs) {
     configs -= _asan_config
   }
