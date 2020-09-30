@@ -4,6 +4,11 @@
 
 #include "nand_operation.h"
 
+#include <lib/fit/function.h>
+#include <zircon/errors.h>
+
+#include <iostream>
+
 #include <ddktl/protocol/nand.h>
 #include <zxtest/zxtest.h>
 
@@ -46,7 +51,9 @@ class NandTester : public ddk::NandProtocol<NandTester> {
   ftl::OobDoubler* doubler() { return &doubler_; }
   nand_operation_t* operation() { return operation_; }
 
-  void set_result(zx_status_t result) { result_ = result; }
+  void set_result_provider(fit::function<zx_status_t()> result_provider) {
+    result_provider_ = std::move(result_provider);
+  }
 
   void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
     *out_info = {};
@@ -55,7 +62,8 @@ class NandTester : public ddk::NandProtocol<NandTester> {
 
   void NandQueue(nand_operation_t* operation, nand_queue_callback callback, void* cookie) {
     operation_ = operation;
-    callback(cookie, result_, operation);
+    auto result = result_provider_();
+    callback(cookie, result, operation);
   }
 
   zx_status_t NandGetFactoryBadBlockList(uint32_t* out_bad_blocks_list, size_t bad_blocks_count,
@@ -67,7 +75,7 @@ class NandTester : public ddk::NandProtocol<NandTester> {
   nand_protocol_t proto_;
   nand_operation_t* operation_;
   ftl::OobDoubler doubler_;
-  zx_status_t result_ = ZX_OK;
+  fit::function<zx_status_t()> result_provider_ = []() { return ZX_OK; };
 };
 
 TEST(NandOperationTest, ExecuteSuccess) {
@@ -85,10 +93,52 @@ TEST(NandOperationTest, ExecuteFailure) {
   nand_operation_t* op = operation.GetOperation();
 
   NandTester tester;
-  tester.set_result(ZX_HANDLE_INVALID);
+  tester.set_result_provider([]() { return ZX_HANDLE_INVALID; });
   ASSERT_EQ(ZX_HANDLE_INVALID, operation.Execute(tester.doubler()));
 
   EXPECT_EQ(op, tester.operation());
+}
+
+TEST(NandOperationTest, ExecuteBatchSuccess) {
+  std::vector<std::unique_ptr<ftl::NandOperation>> operations(20);
+  for (auto& operation : operations) {
+    operation = std::make_unique<ftl::NandOperation>(sizeof(nand_operation_t));
+  }
+
+  NandTester tester;
+  auto results = ftl::NandOperation::ExecuteBatch(tester.doubler(), operations);
+
+  for (auto result : results) {
+    EXPECT_TRUE(result.is_ok());
+  }
+}
+
+TEST(NandOperationTest, ExecuteBatchSuccessAndFailures) {
+  std::vector<std::unique_ptr<ftl::NandOperation>> operations(20);
+  for (auto& operation : operations) {
+    operation = std::make_unique<ftl::NandOperation>(sizeof(nand_operation_t));
+  }
+
+  NandTester tester;
+  int operation_count = 0;
+  // Even operations are failed.
+  tester.set_result_provider([&]() -> zx_status_t {
+    if (operation_count++ % 2 == 0) {
+      return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
+  });
+
+  auto results = ftl::NandOperation::ExecuteBatch(tester.doubler(), operations);
+
+  int i = 0;
+  for (auto result : results) {
+    if (i++ % 2 == 0) {
+      EXPECT_TRUE(result.is_error());
+    } else {
+      EXPECT_TRUE(result.is_ok());
+    }
+  }
 }
 
 }  // namespace

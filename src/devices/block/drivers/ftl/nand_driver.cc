@@ -5,10 +5,13 @@
 #include "nand_driver.h"
 
 #include <lib/ftl/ndm-driver.h>
+#include <stdint.h>
 #include <zircon/assert.h>
 
+#include <cstdint>
 #include <memory>
 #include <new>
+#include <vector>
 
 #include <ddk/debug.h>
 #include <ddktl/protocol/badblock.h>
@@ -85,6 +88,7 @@ class NandDriverImpl final : public ftl::NandDriver {
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final;
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
+  void TryEraseRange(uint32_t start_block, uint32_t end_block) final;
   const fuchsia_hardware_nand_Info& info() const final { return info_; }
 
  private:
@@ -314,6 +318,35 @@ bool NandDriverImpl::IsEmptyPage(uint32_t page_num, const uint8_t* data, const u
   return IsEmptyPageImpl(data, info_.page_size, spare, info_.oob_size);
 }
 
+void NandDriverImpl::TryEraseRange(uint32_t start_block, uint32_t end_block) {
+  std::vector<std::unique_ptr<ftl::NandOperation>> erase_operations;
+  end_block = std::min(end_block, info_.num_blocks);
+
+  for (unsigned int i = start_block; i < end_block; ++i) {
+    // Skip known bad blocks.
+    if (IsBadBlock(i) != ftl::kFalse) {
+      continue;
+    }
+
+    // Each erase operation is queued independently to prevent a new bad block in the range
+    // invalidating the erasure of the entire range.
+    erase_operations.push_back(std::make_unique<ftl::NandOperation>(op_size_));
+    auto& operation = *erase_operations.back();
+    operation.GetOperation()->command = NAND_OP_ERASE;
+    operation.GetOperation()->erase.first_block = i;
+    operation.GetOperation()->erase.num_blocks = 1;
+  }
+
+  auto results = ftl::NandOperation::ExecuteBatch(&parent_, erase_operations);
+  for (size_t i = 0; i < erase_operations.size(); ++i) {
+    // If we run into a new bad block while erasing, its harmless, though we should log it.
+    if (results[i].is_error()) {
+      zxlogf(DEBUG, "FTL: Bad block detect at block number %i.",
+             erase_operations[i]->GetOperation()->erase.first_block);
+    }
+  }
+}
+
 bool NandDriverImpl::HandleAlternateConfig(const ftl::Volume* ftl_volume,
                                            ftl::VolumeOptions options) {
   uint32_t num_blocks = GetParameter("driver.ftl.original-size");
@@ -341,15 +374,7 @@ bool NandDriverImpl::HandleAlternateConfig(const ftl::Volume* ftl_volume,
   }
   RemoveNdmVolume();
 
-  ftl::NandOperation operation(op_size_);
-  operation.GetOperation()->command = NAND_OP_ERASE;
-  // Erase all new blocks when extending.
-  operation.GetOperation()->erase.first_block = num_blocks;
-  operation.GetOperation()->erase.num_blocks = info_.num_blocks - num_blocks;
-  if (operation.Execute(&parent_) != ZX_OK) {
-    return true;
-  }
-
+  TryEraseRange(num_blocks, info_.num_blocks);
   options.num_blocks = info_.num_blocks;
   if (!IsNdmDataPresent(options)) {
     zxlogf(ERROR, "FTL: Failed to NDM extend volume");

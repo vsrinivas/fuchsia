@@ -4,10 +4,14 @@
 
 #include "nand_operation.h"
 
+#include <zircon/errors.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+
+#include "lib/zx/status.h"
 
 namespace ftl {
 
@@ -69,6 +73,26 @@ zx_status_t NandOperation::GetVmo(size_t num_bytes) {
   }
 
   return mapper_.CreateAndMap(num_bytes, "");
+}
+
+std::vector<zx::status<>> NandOperation::ExecuteBatch(
+    OobDoubler* parent, fbl::Span<std::unique_ptr<NandOperation>> operations) {
+  std::vector<zx::status<>> results(operations.size(), zx::ok());
+  for (auto& operation : operations) {
+    parent->Queue(operation->GetOperation(), &OnCompletion, static_cast<void*>(operation.get()));
+  }
+
+  for (size_t i = 0; i < operations.size(); ++i) {
+    zx_status_t status = sync_completion_wait(&operations[i]->event_, zx::sec(60).get());
+    results[i] = status == ZX_OK ? zx::status<>(zx::ok()) : zx::status<>(zx::error(status));
+    if (results[i].is_ok()) {
+      results[i] = operations[i]->status_ == ZX_OK
+                       ? zx::status<>(zx::ok())
+                       : zx::status<>(zx::error(operations[i]->status_));
+    }
+  }
+
+  return results;
 }
 
 void NandOperation::CreateOperation() {

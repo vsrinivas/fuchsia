@@ -114,7 +114,9 @@ class FakeVolume final : public ftl::Volume {
     num_pages_ = num_pages;
     return ZX_OK;
   }
+
   zx_status_t GarbageCollect() final { return ZX_OK; }
+
   zx_status_t GetStats(Stats* stats) final {
     *stats = {};
     stats->wear_count = kWearCount;

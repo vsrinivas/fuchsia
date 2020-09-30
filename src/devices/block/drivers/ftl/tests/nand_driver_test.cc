@@ -5,6 +5,7 @@
 #include "nand_driver.h"
 
 #include <memory>
+#include <vector>
 
 #include <ddk/driver.h>
 #include <ddktl/protocol/badblock.h>
@@ -39,7 +40,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   }
 
   nand_protocol_t* proto() { return &proto_; }
-  nand_operation_t& operation() { return operation_; }
+  auto& operations() { return operations_; }
 
   void set_result(zx_status_t result) { result_ = result; }
   void set_ecc_bits(uint32_t ecc_bits) { ecc_bits_ = ecc_bits; }
@@ -47,11 +48,11 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   // Nand protocol:
   void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
     *out_info = info_;
-    *out_nand_op_size = sizeof(operation_);
+    *out_nand_op_size = sizeof(nand_operation_t);
   }
 
   void NandQueue(nand_operation_t* operation, nand_queue_callback callback, void* cookie) {
-    operation_ = *operation;
+    operations_.push_back(*operation);
     if (operation->rw.command == NAND_OP_READ) {
       uint8_t data = 'd';
       uint64_t vmo_addr = operation->rw.offset_data_vmo * kRealPageSize;
@@ -86,7 +87,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
  private:
   nand_protocol_t proto_;
   fuchsia_hardware_nand_Info info_ = {};
-  nand_operation_t operation_ = {};
+  std::vector<nand_operation_t> operations_ = {};
   zx_status_t result_ = ZX_OK;
   uint32_t ecc_bits_ = 0;
 };
@@ -124,7 +125,7 @@ class NandDriverTest : public zxtest::Test {
  public:
   nand_protocol_t* nand_proto() { return nand_proto_.proto(); }
   bad_block_protocol_t* bad_block_proto() { return bad_block_proto_.proto(); }
-  nand_operation_t& nand_operation() { return nand_proto_.operation(); }
+  auto& nand_operations() { return nand_proto_.operations(); }
   FakeNand* nand() { return &nand_proto_; }
   FakeBadBlock* bad_block() { return &bad_block_proto_; }
 
@@ -165,7 +166,8 @@ TEST_F(NandDriverTest, Read) {
 
   ASSERT_EQ(ftl::kNdmOk, driver->NandRead(5, 2, data.data(), oob.data()));
 
-  nand_operation_t& operation = nand_operation();
+  ASSERT_EQ(1, nand_operations().size());
+  nand_operation_t& operation = nand_operations()[0];
   EXPECT_EQ(NAND_OP_READ, operation.command);
   EXPECT_EQ(2 * 2, operation.rw.length);
   EXPECT_EQ(5 * 2, operation.rw.offset_nand);
@@ -219,7 +221,8 @@ TEST_F(NandDriverTest, Write) {
 
   ASSERT_EQ(ftl::kNdmOk, driver->NandWrite(5, 2, data.data(), oob.data()));
 
-  nand_operation_t& operation = nand_operation();
+  ASSERT_EQ(1, nand_operations().size());
+  nand_operation_t& operation = nand_operations()[0];
   EXPECT_EQ(NAND_OP_WRITE, operation.command);
   EXPECT_EQ(2 * 2, operation.rw.length);
   EXPECT_EQ(5 * 2, operation.rw.offset_nand);
@@ -258,7 +261,8 @@ TEST_F(NandDriverTest, Erase) {
 
   ASSERT_EQ(ftl::kNdmOk, driver->NandErase(5 * kBlockSize));
 
-  nand_operation_t& operation = nand_operation();
+  ASSERT_EQ(1, nand_operations().size());
+  nand_operation_t& operation = nand_operations()[0];
   EXPECT_EQ(NAND_OP_ERASE, operation.command);
   EXPECT_EQ(1, operation.erase.num_blocks);
   EXPECT_EQ(5, operation.erase.first_block);
@@ -302,6 +306,22 @@ TEST_F(NandDriverTest, OperationCounter) {
 
   EXPECT_EQ(ftl::kNdmFatalError, driver->NandRead(5, 0, nullptr, nullptr));
   EXPECT_EQ(3, ftl::g_nand_op_count);
+}
+
+TEST_F(NandDriverTest, TryEraseRangeWithFailuresIsOk) {
+  auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
+  ASSERT_EQ(nullptr, driver->Init());
+
+  // Block number 1 is bad block.
+  ASSERT_TRUE(driver->IsBadBlock(1 * kBlockSize));
+  // Sanity Check.
+  driver->TryEraseRange(0, 4);
+  // There should be 2 erase operations, since block 1 is bad, and the range is non inclusive.
+  ASSERT_EQ(2, nand_operations().size());
+
+  for (auto& operation : nand_operations()) {
+    EXPECT_EQ(NAND_OP_ERASE, operation.command);
+  }
 }
 
 }  // namespace

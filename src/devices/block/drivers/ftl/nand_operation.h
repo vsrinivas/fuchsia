@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
 
+#include <lib/fit/result.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/status.h>
 
 #include <memory>
+#include <vector>
 
 #include <ddk/protocol/nand.h>
 #include <fbl/macros.h>
+#include <fbl/span.h>
 
 #include "oob_doubler.h"
 
@@ -20,6 +24,13 @@ namespace ftl {
 // Wrapper for nand Queue() protocol operations.
 class NandOperation {
  public:
+  // Will attempt to queue all operations in |operations|  into |parent|, returning a collection of
+  // the result of queueing and completing such operations. Unlike calling |Execute| in sequence,
+  // this method will queue all operations before waiting, and will return once all successfully
+  // queued operations are signalled.
+  static std::vector<zx::status<>> ExecuteBatch(
+      OobDoubler* parent, fbl::Span<std::unique_ptr<NandOperation>> operation);
+
   explicit NandOperation(size_t op_size) : op_size_(op_size) {}
   ~NandOperation() {}
 
@@ -52,4 +63,4 @@ class NandOperation {
 
 }  // namespace ftl.
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
