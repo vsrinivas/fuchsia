@@ -13,7 +13,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/trace/event.h>
@@ -21,6 +20,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
+#include "src/camera/drivers/hw_accel/gdc/gdc-bind.h"
 #include "src/camera/drivers/hw_accel/gdc/gdc-regs.h"
 
 namespace gdc {
@@ -589,9 +589,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace gdc
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(gdc, gdc::driver_ops, "gdc", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_ARM),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GDC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_IV010),
-ZIRCON_DRIVER_END(gdc)
+ZIRCON_DRIVER(gdc, gdc::driver_ops, "gdc", "0.1");

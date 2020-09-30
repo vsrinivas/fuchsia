@@ -11,6 +11,7 @@ executable("test") {
   deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
+    "//src/camera/drivers/hw_accel/gdc:gdc_bind",
     "//src/camera/drivers/hw_accel/gdc:source",
     "//src/camera/drivers/test_utils",
     "//src/devices/lib/driver",
