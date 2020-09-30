@@ -19,7 +19,8 @@ namespace interceptor {
 // Default generator for random distributions.
 class RandomNormalDistribution {
  public:
-  RandomNormalDistribution(uint64_t mean, uint64_t stddev) : dist_(mean, stddev) {}
+  RandomNormalDistribution(uint64_t mean, uint64_t stddev)
+      : dist_(static_cast<double>(mean), static_cast<double>(stddev)) {}
 
   int64_t Next() { return static_cast<int64_t>(dist_(dev_)); }
 

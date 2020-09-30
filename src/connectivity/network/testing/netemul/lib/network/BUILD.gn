@@ -23,9 +23,6 @@ source_set("ethertap") {
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.hardware.ethertap",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("network_service") {
@@ -62,9 +59,6 @@ source_set("network_service") {
     "//src/connectivity/network/testing/netemul/lib/fidl:internal",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("netdump") {
@@ -76,9 +70,6 @@ source_set("netdump") {
   deps = [ "//src/lib/fxl" ]
   public_deps =
       [ "//src/connectivity/network/testing/netemul/lib/fidl:network" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("network_test_bin") {
@@ -109,7 +100,4 @@ executable("network_test_bin") {
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.hardware.ethertap" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

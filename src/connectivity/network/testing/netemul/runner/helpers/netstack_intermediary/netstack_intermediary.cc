@@ -162,7 +162,7 @@ void NetstackIntermediary::ReadGuestEp(size_t index) {
   auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
   fake_ep->Read([this, index](std::vector<uint8_t> data, uint64_t _dropped) {
     auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
-    eth_client->Send(data.data(), data.size());
+    eth_client->Send(data.data(), static_cast<uint16_t>(data.size()));
     ReadGuestEp(index);
   });
 }

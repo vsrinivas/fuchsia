@@ -123,15 +123,11 @@ zx_status_t EthertapClient::Create(EthertapConfig config, std::unique_ptr<Ethert
 void EthertapConfig::RandomLocalUnicast(const std::string& str_seed) {
   std::vector<uint8_t> sseed(str_seed.begin(), str_seed.end());
   std::random_device rd;
-  // Add some randomness to the name from random_device
-  // as a temporary fix due to ethertap devfs entries being leaked
-  // across test boundaries (which caused tests to fail).
-  // TODO(brunodalbo) go back to only the string seed
-  //  once fxbug.dev/32792 is fixed.
-  sseed.push_back(rd());
-  sseed.push_back(rd());
-  sseed.push_back(rd());
-  sseed.push_back(rd());
+  // Add some randomness to the name from random_device as a measure to prevent ethertap devfs
+  // entries being leaked across test boundaries (which caused tests to fail).
+  for (int i = 0; i < 4; i++) {
+    sseed.push_back(static_cast<uint8_t>(rd()));
+  }
   std::seed_seq seed(sseed.begin(), sseed.end());
   std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t> rnd(seed);
   std::generate(tap_cfg.mac.octets.begin(), tap_cfg.mac.octets.end(), rnd);

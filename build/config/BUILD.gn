@@ -672,8 +672,6 @@ config("Wno-conversion") {
     "//src/connectivity/network/drivers/network-device/*",
     "//src/connectivity/network/mdns/service/*",
     "//src/connectivity/network/netstack/tests/manual/*",
-    "//src/connectivity/network/testing/netemul/lib/network/*",
-    "//src/connectivity/network/testing/netemul/runner/*",
     "//src/connectivity/network/tests/*",
     "//src/connectivity/network/tools/sockscripter/*",
     "//src/connectivity/network/tun/network-tun/*",

@@ -4,8 +4,9 @@
 
 #include "netdump.h"
 
-#include <iomanip>
 #include <lib/zx/clock.h>
+
+#include <iomanip>
 
 #include "netdump_types.h"
 
@@ -54,8 +55,7 @@ void NetworkDump::WriteHeaders() {
 uint32_t NetworkDump::AddInterface(const std::string& name) {
   pcap_idb_t idb;
   idb.type = kInterfaceDescriptionBlockType;
-  idb.blk_tot_len = IDB_MIN_SIZE + OPTION_LEN(name.length());
-  ;
+  idb.blk_tot_len = static_cast<uint32_t>(IDB_MIN_SIZE + OPTION_LEN(name.length()));
   idb.linktype = kLinkTypeEthernet;
   idb.reserved = 0;
   // We can't use a zero here, but tcpdump also rejects 2^32 - 1. Try 2^16 - 1.
