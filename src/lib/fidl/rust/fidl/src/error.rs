@@ -100,6 +100,10 @@ pub enum Error {
     #[error("Invalid bits value for a strict bits type.")]
     InvalidBitsValue,
 
+    /// Invalid enum value for a strict enum type.
+    #[error("Invalid enum value for a strict enum type.")]
+    InvalidEnumValue,
+
     /// Unrecognized descriminant for a FIDL union type.
     #[error("Unrecognized descriminant for a FIDL union type.")]
     UnknownUnionTag,

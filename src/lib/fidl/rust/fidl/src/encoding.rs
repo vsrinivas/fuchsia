@@ -1641,7 +1641,7 @@ macro_rules! fidl_strict_bits {
 /// by the bitflags crate. Also generates the following methods:
 ///
 /// ```rust
-/// pub fn from_bits_flexible(bits: $prim_ty) -> Self;
+/// pub fn from_bits_allow_unknown(bits: $prim_ty) -> Self;
 /// pub fn has_unknown_bits(&self) -> bool;
 /// pub fn get_unknown_bits(&self) -> $prim_ty;
 /// ```
@@ -1653,7 +1653,7 @@ macro_rules! fidl_flexible_bits {
     ) => {
         impl $name {
             #[inline(always)]
-            pub fn from_bits_flexible(bits: $prim_ty) -> Self {
+            pub fn from_bits_allow_unknown(bits: $prim_ty) -> Self {
                 unsafe { Self::from_bits_unchecked(bits) }
             }
 
@@ -1706,7 +1706,7 @@ macro_rules! fidl_flexible_bits {
             ) -> ::std::result::Result<(), $crate::Error> {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
-                *self = Self::from_bits_flexible(prim);
+                *self = Self::from_bits_allow_unknown(prim);
                 Ok(())
             }
         }
@@ -1725,8 +1725,6 @@ macro_rules! fidl_flexible_bits {
 /// following methods, but with deprecation notices:
 ///
 /// ```rust
-/// pub fn from_primitive_flexible(prim: $prim_ty) -> Self;
-/// pub fn unknown() -> Self;
 /// pub fn validate(self) -> Result<Self, $prim_ty>;
 /// pub fn is_unknown(&self) -> bool;
 /// ```
@@ -1806,7 +1804,7 @@ macro_rules! fidl_strict_enum {
             {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
-                *self = Self::from_primitive(prim).ok_or($crate::Error::Invalid)?;
+                *self = Self::from_primitive(prim).ok_or($crate::Error::InvalidEnumValue)?;
                 Ok(())
             }
         }
@@ -1818,7 +1816,7 @@ macro_rules! fidl_strict_enum {
 ///
 /// ```rust
 /// pub fn from_primitive(prim: $prim_ty) -> Option<Self>;
-/// pub fn from_primitive_flexible(prim: $prim_ty) -> Self;
+/// pub fn from_primitive_allow_unknown(prim: $prim_ty) -> Self;
 /// pub fn unknown() -> Self;
 /// pub fn into_primitive(self) -> $prim_ty;
 /// pub fn validate(self) -> Result<Self, $prim_ty>;
@@ -1850,7 +1848,7 @@ macro_rules! fidl_flexible_enum {
             }
 
             #[inline]
-            pub fn from_primitive_flexible(prim: $prim_ty) -> Self {
+            pub fn from_primitive_allow_unknown(prim: $prim_ty) -> Self {
                 match prim {
                     $(
                         $member_value => $name::$member_name,
@@ -1926,7 +1924,7 @@ macro_rules! fidl_flexible_enum {
             {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
-                *self = Self::from_primitive_flexible(prim);
+                *self = Self::from_primitive_allow_unknown(prim);
                 Ok(())
             }
         }
@@ -3889,26 +3887,32 @@ mod test {
 
         assert_eq!(Buttons::from_bits(1), Some(Buttons::PLAY));
         assert_eq!(Buttons::from_bits(12), None);
-        assert_eq!(Buttons::from_bits_flexible(2 | 8) & Buttons::all(), Buttons::PAUSE);
+        assert_eq!(Buttons::from_bits_allow_unknown(2 | 8) & Buttons::all(), Buttons::PAUSE);
         assert_eq!(Buttons::STOP.bits, 4);
         assert_eq!(Buttons::STOP.bits(), 4);
-        assert_eq!(Buttons::from_bits_flexible(2 | 8).bits, 2 | 8);
-        assert_eq!(Buttons::from_bits_flexible(u32::MAX).bits, u32::MAX);
+        assert_eq!(Buttons::from_bits_allow_unknown(2 | 8).bits, 2 | 8);
+        assert_eq!(Buttons::from_bits_allow_unknown(u32::MAX).bits, u32::MAX);
 
         assert_eq!(Buttons::PLAY.has_unknown_bits(), false);
         assert_eq!(Buttons::PLAY.get_unknown_bits(), 0);
-        assert_eq!(Buttons::from_bits_flexible(2 | 8).has_unknown_bits(), true);
-        assert_eq!(Buttons::from_bits_flexible(2 | 8).get_unknown_bits(), 8);
-        assert_eq!(Buttons::from_bits_flexible(u32::MAX).has_unknown_bits(), true);
+        assert_eq!(Buttons::from_bits_allow_unknown(2 | 8).has_unknown_bits(), true);
+        assert_eq!(Buttons::from_bits_allow_unknown(2 | 8).get_unknown_bits(), 8);
+        assert_eq!(Buttons::from_bits_allow_unknown(u32::MAX).has_unknown_bits(), true);
         assert_eq!(
-            Buttons::from_bits_flexible(u32::MAX).get_unknown_bits(),
+            Buttons::from_bits_allow_unknown(u32::MAX).get_unknown_bits(),
             u32::MAX & !(1 | 2 | 4)
         );
 
         // Negation ANDs with the mask.
-        assert_ne!(Buttons::from_bits_flexible(1 | 4 | 64 | 256), Buttons::PLAY | Buttons::STOP);
-        assert_eq!(!Buttons::from_bits_flexible(1 | 4 | 64 | 256), Buttons::PAUSE);
-        assert_eq!(!!Buttons::from_bits_flexible(1 | 4 | 64 | 256), Buttons::PLAY | Buttons::STOP);
+        assert_ne!(
+            Buttons::from_bits_allow_unknown(1 | 4 | 64 | 256),
+            Buttons::PLAY | Buttons::STOP
+        );
+        assert_eq!(!Buttons::from_bits_allow_unknown(1 | 4 | 64 | 256), Buttons::PAUSE);
+        assert_eq!(
+            !!Buttons::from_bits_allow_unknown(1 | 4 | 64 | 256),
+            Buttons::PLAY | Buttons::STOP
+        );
 
         identities![
             Buttons::empty(),
@@ -3918,8 +3922,8 @@ mod test {
             Buttons::STOP,
             Buttons::from_bits(1).expect("should be Play"),
             Buttons::from_bits(Buttons::PAUSE.bits).expect("should be Pause"),
-            Buttons::from_bits_flexible(2 | 8),
-            Buttons::from_bits_flexible(u32::MAX),
+            Buttons::from_bits_allow_unknown(2 | 8),
+            Buttons::from_bits_allow_unknown(u32::MAX),
         ];
     }
 
@@ -3988,8 +3992,8 @@ mod test {
 
         assert_eq!(Animal::from_primitive(0), Some(Animal::Dog));
         assert_eq!(Animal::from_primitive(3), None);
-        assert_eq!(Animal::from_primitive_flexible(0), Animal::Dog);
-        assert_eq!(Animal::from_primitive_flexible(3), Animal::__Unknown(3));
+        assert_eq!(Animal::from_primitive_allow_unknown(0), Animal::Dog);
+        assert_eq!(Animal::from_primitive_allow_unknown(3), Animal::__Unknown(3));
         assert_eq!(Animal::Cat.into_primitive(), 1);
         assert_eq!(Animal::__Unknown(3).into_primitive(), 3);
         assert_eq!(Animal::unknown().into_primitive(), i32::MAX);
@@ -4008,7 +4012,7 @@ mod test {
             Animal::Frog,
             Animal::from_primitive(0).expect("should be dog"),
             Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
-            Animal::from_primitive_flexible(123),
+            Animal::from_primitive_allow_unknown(123),
             Animal::unknown(),
         ];
     }
