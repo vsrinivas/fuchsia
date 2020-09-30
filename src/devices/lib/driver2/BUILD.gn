@@ -24,6 +24,8 @@ source_set("llcpp") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//zircon/public/lib/zxc",
   ]

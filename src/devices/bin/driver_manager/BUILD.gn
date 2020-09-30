@@ -172,12 +172,6 @@ fuchsia_unittest_component("driver-host-loader-service-test") {
   deps = [ ":driver_host_loader_service_test" ]
 }
 
-source_set("start_info") {
-  sources = [ "program.h" ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp" ]
-}
-
 source_set("driver_runner") {
   sources = [
     "driver_runner.cc",
@@ -185,11 +179,11 @@ source_set("driver_runner") {
   ]
 
   public_deps = [
-    ":start_info",
     "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_llcpp",
+    "//src/devices/lib/driver2:llcpp",
     "//src/devices/lib/log",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs",
@@ -198,10 +192,7 @@ source_set("driver_runner") {
 
 executable("driver_runner_test") {
   testonly = true
-  sources = [
-    "driver_runner_test.cc",
-    "program_test.cc",
-  ]
+  sources = [ "driver_runner_test.cc" ]
 
   deps = [
     ":driver_runner",
