@@ -271,6 +271,36 @@ TEST_fx-command-run() {
     "Expected a single argument 'myarg1' to mycmd, got '${BT_MOCK_ARGS[@]:1}'"
 }
 
+# Ensure that FX_CALLER is set as expected
+TEST_fx-caller() {
+  local called_cmd="${BT_TEMP_DIR}/tools/devshell/called_cmd"
+  btf::make_mock "${called_cmd}"
+  {
+    echo "#!/bin/bash"
+    echo 'echo $FX_CALLER'
+  } > "${called_cmd}.mock_side_effects"
+  BT_EXPECT_EQ "$($called_cmd)" ""
+
+  local caller_run_cmd="${BT_TEMP_DIR}/tools/devshell/caller_run_cmd"
+  btf::make_mock "${caller_run_cmd}"
+  {
+    echo "#!/bin/bash"
+    echo "source ${BT_TEMP_DIR}/tools/devshell/lib/vars.sh || exit \$?"
+    echo "fx-command-run called_cmd"
+  } > "${caller_run_cmd}.mock_side_effects"
+  BT_EXPECT_EQ "$($caller_run_cmd)" "$caller_run_cmd"
+
+  local caller_exec_cmd="${BT_TEMP_DIR}/tools/devshell/caller_exec_cmd"
+  btf::make_mock "${caller_exec_cmd}"
+  {
+    echo "#!/bin/bash"
+    echo "source ${BT_TEMP_DIR}/tools/devshell/lib/vars.sh || exit \$?"
+    echo "fx-command-exec called_cmd"
+  } > "${caller_exec_cmd}.mock_side_effects"
+
+  BT_EXPECT_EQ "$($caller_exec_cmd)" "$caller_exec_cmd"
+}
+
 TEST_get-ssh-components() {
   local manifest="${BT_TEMP_DIR}/.fx-ssh-path"
   # no manifest

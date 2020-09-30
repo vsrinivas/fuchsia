@@ -424,18 +424,18 @@ function fx-command-run {
   local -r command_name="$1"
   local -r command_path="$(find_executable ${command_name})"
 
-  if [[ ${command_path} == "" ]]; then
+  if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"
     exit 1
   fi
 
   shift
-  "${command_path}" "$@"
+  env FX_CALLER="$0" "${command_path}" "$@"
 }
 
 function fx-command-exec {
   local -r command_name="$1"
-  local -r command_path="${FUCHSIA_DIR}/tools/devshell/${command_name}"
+  local -r command_path="$(find_executable ${command_name})"
 
   if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"
@@ -443,7 +443,7 @@ function fx-command-exec {
   fi
 
   shift
-  exec "${command_path}" "$@"
+  exec env FX_CALLER="$0" "${command_path}" "$@"
 }
 
 function fx-print-command-help {

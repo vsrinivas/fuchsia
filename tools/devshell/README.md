@@ -60,7 +60,10 @@ then these outputs are colored.
 `fx-command-run` and `fx-command-exec` execute another `fx` subcommand, for
 example, running `fx-command-run shell` will invoke the `fx shell` command.
 The run variant executes the subcommand in a subshell and the exec variant
-`exec`s the subcommand, replacing the calling process.
+`exec`s the subcommand, replacing the calling process. They both set a variable
+`FX_CALLER` to the caller script, which can be useful to switch behavior if
+the user executed the script directly or if it was executed by another fx
+script.
 
 `fx-command-help` prints the command output for the currently running
 subcommand.

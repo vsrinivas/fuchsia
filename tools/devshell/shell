@@ -118,7 +118,11 @@ args+=( "$@" )
 # It's not a huge burden compared to end user support.
 fx-command-run ssh "${args[@]}"
 status=$?
-if [[ $status -ne 0 ]]; then
+
+# FX_CALLER is not empty if this script was executed via fx-command-run/exec
+# and we only want to show this hint message when the user executes 'fx shell'
+# directly.
+if [[ -z "${FX_CALLER}" && $status -ne 0 ]]; then
   echo "Hint: use 'fx shell --check' to diagnose SSH configuration issues."
-  exit $status
 fi
+exit $status
