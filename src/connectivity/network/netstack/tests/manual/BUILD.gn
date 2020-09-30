@@ -4,19 +4,6 @@
 
 import("//build/test/test_package.gni")
 
-executable("keepalivetest") {
-  testonly = true
-
-  sources = [ "keepalivetest.c" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
 executable("nbiotest") {
   testonly = true
 
@@ -74,7 +61,6 @@ package("netstack-manual-tests") {
 
   deps = [
     ":gethostbyname_test",
-    ":keepalivetest",
     ":nbiotest",
     ":selecttest",
     ":sockopttest",
@@ -83,10 +69,6 @@ package("netstack-manual-tests") {
   binaries = [
     {
       name = "gethostbyname_test"
-      shell = true
-    },
-    {
-      name = "keepalivetest"
       shell = true
     },
     {
