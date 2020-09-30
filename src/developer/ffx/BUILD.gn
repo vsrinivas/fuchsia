@@ -78,8 +78,10 @@ if (is_host) {
 
     # TODO(fxbug.dev/60683): split additional dimensions such as multi-device
     # mac + device, etc.
+    #
+    # TODO(fxbug.dev/60740): Further diagnose flake conditions in nuc_env
     environments = [
-      nuc_env
+      # nuc_env
     ]
   }
 }
