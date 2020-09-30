@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{id::Id, services::discovery::filter::*, Result, SessionId};
+use anyhow::format_err;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
@@ -12,6 +13,7 @@ use fidl_table_validation::*;
 use fuchsia_inspect as inspect;
 use fuchsia_syslog::fx_log_info;
 use futures::{
+    channel::oneshot,
     future::BoxFuture,
     stream::{FusedStream, FuturesUnordered},
     Future, FutureExt, Stream, StreamExt,
@@ -200,6 +202,7 @@ pub struct Player {
     inspect_state: inspect::Node,
     proxy_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
     waker: Option<Waker>,
+    published_sender: Option<oneshot::Sender<()>>,
 }
 
 impl Player {
@@ -208,6 +211,7 @@ impl Player {
         client_end: ClientEnd<PlayerMarker>,
         registration: PlayerRegistration,
         inspect_handle: inspect::Node,
+        published_sender: oneshot::Sender<()>,
     ) -> Result<Self> {
         let inspect_state = inspect_handle.create_child("state");
         Ok(Player {
@@ -221,11 +225,22 @@ impl Player {
             inspect_state,
             proxy_tasks: FuturesUnordered::new(),
             waker: None,
+            published_sender: Some(published_sender),
         })
     }
 
     pub fn id(&self) -> SessionId {
         self.id.get()
+    }
+
+    /// Notify any listeners on the other side of the `published_sender` oneshot channel that it's
+    /// safe to let external clients know about this player's id.
+    pub fn notify_published(&mut self) -> Result<()> {
+        if let Some(sender) = self.published_sender.take() {
+            sender.send(()).map_err(|_| format_err!("Failed to notify"))
+        } else {
+            Err(format_err!("Already notified"))
+        }
     }
 
     /// Returns whether the player is in an active state.
@@ -477,11 +492,13 @@ mod test {
         let (player_client, player_server) =
             create_endpoints::<PlayerMarker>().expect("Creating endpoints for test");
         let inspector = Inspector::new();
+        let (player_published_sink, _player_published_receiver) = oneshot::channel();
         let player = Player::new(
             Id::new().expect("Creating id for test player"),
             player_client,
             PlayerRegistration { domain: Some(TEST_DOMAIN.to_string()), ..Decodable::new_empty() },
             inspector.root().create_child("test_player"),
+            player_published_sink,
         )
         .expect("Creating player from valid prereqs");
         (inspector, player, player_server)

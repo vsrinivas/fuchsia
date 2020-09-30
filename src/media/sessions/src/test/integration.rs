@@ -883,7 +883,6 @@ async fn player_paused_before_interruption_is_not_resumed_by_its_end() -> Result
     Ok(())
 }
 
-#[ignore = "TODO(fxbug.dev/52668) Re-enable when publish/discover race is fixed"]
 #[fasync::run_singlethreaded(test)]
 async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result<()> {
     init_logger();

@@ -358,7 +358,10 @@ impl Discovery {
                 _ = self.watchers.next().fuse() => {
                 },
                 // A new player has been published to `fuchsia.media.sessions2.Publisher`.
-                new_player = self.player_stream.select_next_some() => {
+                mut new_player = self.player_stream.select_next_some() => {
+                    if let Err(e) = new_player.notify_published() {
+                        fx_log_warn!(tag: LOG_TAG, "Notify failed {:?}", e);
+                    }
                     self.players.insert(new_player.id(), new_player);
                 }
                 // A player answered a hanging get for its status.
@@ -383,6 +386,7 @@ mod test {
     use fidl_fuchsia_media::UsageReporterMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
+    use futures::channel::oneshot;
     use matches::assert_matches;
 
     #[fasync::run_singlethreaded]
@@ -391,6 +395,7 @@ mod test {
         let (mut player_sink, player_stream) = mpsc::channel(100);
         let (mut discovery_request_sink, discovery_request_stream) = mpsc::channel(100);
         let (_observer_request_sink, observer_request_stream) = mpsc::channel(100);
+        let (player_published_sink, _player_published_receiver) = oneshot::channel();
         let dummy_control_handle =
             create_endpoints::<DiscoveryMarker>()?.1.into_stream_and_control_handle()?.1;
 
@@ -420,6 +425,7 @@ mod test {
                 ..Decodable::new_empty()
             },
             inspector.root().create_child("test_player"),
+            player_published_sink,
         )?;
         player_sink.send(player).await?;
         let mut player_requests = player_server.into_stream()?;

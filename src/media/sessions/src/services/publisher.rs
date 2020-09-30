@@ -7,7 +7,7 @@ use anyhow::Context as _;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_inspect as inspect;
 use fuchsia_syslog::fx_log_warn;
-use futures::{channel::mpsc, prelude::*};
+use futures::{channel::mpsc, channel::oneshot, prelude::*};
 use std::sync::Arc;
 
 const LOG_TAG: &str = "publisher";
@@ -31,21 +31,27 @@ impl Publisher {
                 }
             };
 
+            let (player_published_sink, player_published_receiever) = oneshot::channel();
             let id = Id::new().context("Allocating new unique id")?;
             let id_str = format!("{}", id.get());
             let player_node = self.player_list.create_child(id_str);
 
-            let player_result = (move || -> Result<Player> {
-                let player = Player::new(id, player, registration, player_node)?;
-                if let Some(responder) = responder {
-                    responder.send(player.id())?;
-                }
-
-                Ok(player)
-            })();
+            let player_result =
+                Player::new(id, player, registration, player_node, player_published_sink);
 
             match player_result {
-                Ok(player) => self.player_sink.send(player).await?,
+                Ok(player) => {
+                    let session_id = player.id();
+                    self.player_sink.send(player).await?;
+
+                    // Wait till other tasks know about this ID
+                    player_published_receiever.await?;
+
+                    // Tell client about the new ID
+                    if let Some(responder) = responder {
+                        responder.send(session_id)?;
+                    }
+                }
                 Err(e) => {
                     fx_log_warn!(
                         tag: LOG_TAG,
