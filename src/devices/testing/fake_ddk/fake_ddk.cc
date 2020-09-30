@@ -124,6 +124,9 @@ void Bind::StartUnbindIfNeeded() {
 
 zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                             zx_device_t** out) {
+  if (args) {
+    zx_handle_close(args->inspect_vmo);
+  }
   zx_status_t status;
   if (parent != kFakeParent) {
     bad_parent_ = true;

@@ -11,6 +11,7 @@ group("tests") {
     "fake-msi:tests",
     "fake-object:tests",
     "fake-resource:tests",
+    "fake_ddk:tests",
     "mock-mmio-reg:tests",
   ]
 }

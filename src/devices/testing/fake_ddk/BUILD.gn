@@ -4,6 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "test:fake-ddk-package" ]
+}
+
 zx_library("fake_ddk") {
   sdk = "source"
   sdk_headers = [ "lib/fake_ddk/fake_ddk.h" ]
@@ -35,6 +40,9 @@ zx_library("fake_ddk") {
 
     # <lib/fake_ddk/fake_ddk.h> has #include <ddk/device.h>.
     "//src/lib/ddk",
+
+    # <lib/fake_ddk/fidl-helper.h> has #include <ddktl/fidl.h>.
+    "//src/lib/ddktl",
 
     # <lib/fake_ddk/fake_ddk.h> has #include <fbl/array.h>
     "//zircon/public/lib/fbl",

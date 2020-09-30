@@ -1,0 +1,33 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+test("fake-ddk") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "fake-ddk-test.cc" ]
+  deps = [
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+unittest_package("fake-ddk-package") {
+  package_name = "fake-ddk"
+  deps = [ ":fake-ddk" ]
+
+  tests = [
+    {
+      name = "fake-ddk"
+      dest = "fake-ddk-test"
+    },
+  ]
+}
