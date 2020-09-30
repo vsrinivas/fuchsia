@@ -400,27 +400,22 @@ template("package") {
         dest = "disabled/${dest}"
       }
 
-      if (bootfs_only) {
-        dest = "test/$dest"
-        path = "/boot/$dest"
+      url = "fuchsia-pkg://fuchsia.com"
+      dest = "test/$dest"
+      if (pkg.__deprecated_system_image) {
+        url_pkg_name = "system"
+        path = "/system/$dest"
       } else {
-        url = "fuchsia-pkg://fuchsia.com"
-        dest = "test/$dest"
-        if (pkg.__deprecated_system_image) {
-          url_pkg_name = "system"
-          path = "/system/$dest"
-        } else {
-          url_pkg_name = pkg.package_name
-          path = ""
-        }
-        url += "/${url_pkg_name}"
+        url_pkg_name = pkg.package_name
+        path = ""
       }
+      url += "/${url_pkg_name}"
 
       dest_name = get_path_info(dest, "name")
       not_needed([ "dest_name" ])
 
       # Check that all tests are components with cmx/cm files at the expected path.
-      if (!pkg.__deprecated_system_image && !bootfs_only && !is_disabled &&
+      if (!pkg.__deprecated_system_image && !is_disabled &&
           (!defined(require_bare_tests_allowlist) ||
            !require_bare_tests_allowlist)) {
         require_bare_tests_allowlist = true
@@ -445,14 +440,12 @@ template("package") {
         test_spec(test_spec_name) {
           target = ":${invoker.target_name}"
           path = path
-          if (!bootfs_only) {
-            package_url = url
-            forward_variables_from(test,
-                                   [
-                                     "log_settings",
-                                     "parallel",
-                                   ])
-          }
+          package_url = url
+          forward_variables_from(test,
+                                 [
+                                   "log_settings",
+                                   "parallel",
+                                 ])
           forward_variables_from(test, [ "environments" ])
         }
       } else {
@@ -593,7 +586,7 @@ template("package") {
       pkg.__deprecated_system_image = true
     }
 
-    if (pkg.__deprecated_system_image || bootfs_only) {
+    if (pkg.__deprecated_system_image) {
       system_rsp_label = pkg_target_name + ".system.rsp"
 
       # System image packages just donate manifest arguments
@@ -680,11 +673,11 @@ template("package") {
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps
 
-      if (pkg.__deprecated_system_image || bootfs_only) {
+      if (pkg.__deprecated_system_image) {
         public_deps += [ ":" + system_rsp_label ]
       }
 
-      if (!bootfs_only) {
+      if (!pkg.__deprecated_system_image) {
         # Prevent the contents of this package from getting picked up in a zbi.
         # See fxbug.dev/45680 for more information.
         metadata.distribution_entries_barrier = []
