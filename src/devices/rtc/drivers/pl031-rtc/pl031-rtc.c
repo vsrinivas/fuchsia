@@ -58,7 +58,7 @@ static zx_status_t pl031_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
   }
 
   pl031_t* context = ctx;
-  MmioWrite32(seconds_since_epoch(rtc), &context->regs->lr);
+  MmioWrite32((uint32_t)seconds_since_epoch(rtc), &context->regs->lr);
 
   zx_status_t status = set_utc_offset(rtc);
   if (status != ZX_OK) {
