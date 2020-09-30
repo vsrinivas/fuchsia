@@ -295,9 +295,6 @@ if (current_toolchain == default_toolchain) {
     foreach(cpu, standard_fuchsia_cpus) {
       deps += [ ":legacy-$cpu" ]
     }
-    foreach(host, standard_build_hosts) {
-      deps += [ ":legacy_host_targets-${host.os}-${host.cpu}" ]
-    }
   }
 
   foreach(cpu, standard_fuchsia_cpus) {
@@ -307,15 +304,7 @@ if (current_toolchain == default_toolchain) {
         ":legacy-aux-$cpu",
         ":legacy-deps-$cpu",
         ":legacy-tests-$cpu",
-        ":legacy_targets-$cpu",
       ]
-    }
-
-    build_api_module("legacy_targets-$cpu") {
-      testonly = true
-      data_keys = [ "legacy_targets" ]
-      walk_keys = [ "legacy_barrier" ]
-      deps = [ ":all-ulib-$cpu" ]
     }
 
     build_api_module("legacy_sysroot-$cpu") {
@@ -324,25 +313,6 @@ if (current_toolchain == default_toolchain) {
       walk_keys = [ "legacy_barrier" ]
       deps = [ ":all-ulib-$cpu" ]
     }
-  }
-
-  foreach(host, standard_build_hosts) {
-    build_api_module("legacy_host_targets-${host.os}-${host.cpu}") {
-      testonly = true
-      data_keys = [ "legacy_targets" ]
-      walk_keys = [ "legacy_barrier" ]
-      deps = [ ":all-ulib-host-${host.os}-${host.cpu}" ]
-    }
-  }
-}
-
-foreach(host, standard_build_hosts) {
-  environment_redirect("all-ulib-host-${host.os}-${host.cpu}") {
-    testonly = true
-    cpu = host.cpu
-    os = host.os
-    environment_label = "$zx/public/gn/toolchain:host"
-    deps = [ "$zx/system/ulib:ulib-host" ]
   }
 }
 

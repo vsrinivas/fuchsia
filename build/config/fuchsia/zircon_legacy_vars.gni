@@ -6,16 +6,6 @@ import("//build/config/fuchsia/zircon.gni")
 
 # TODO: Refactor so that only //build/zircon/*_template.gn needs these.
 
-# The `gn gen` stage of the Zircon GN build writes these files.
-# See //build/zircon/*_template.gn for how they're used.
-zircon_legacy_targets =
-    read_file("$zircon_root_build_dir/legacy_targets-$target_cpu.json", "json")
-
-zircon_legacy_host_targets =
-    read_file(
-        "$zircon_root_build_dir/legacy_host_targets-$host_os-$host_cpu.json",
-        "json")
-
 # See //zircon/public/sysroot/BUILD.gn and //build/config/fuchsia/BUILD.gn.
 zircon_legacy_sysroot =
     read_file("$zircon_root_build_dir/legacy_sysroot-$target_cpu.json", "json")

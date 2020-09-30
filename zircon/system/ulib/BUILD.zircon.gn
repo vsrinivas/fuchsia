@@ -21,7 +21,3 @@ group("ulib") {
     "zircon",
   ]
 }
-
-group("ulib-host") {
-  testonly = true
-}

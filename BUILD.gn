@@ -142,11 +142,7 @@ declare_args() {
       # through.
       optimize = optimize
     }
-    default_deps = [
-                     "//:legacy-$target_cpu",
-                     "//:legacy_host_targets-$host_os-$host_cpu",
-                     "//:legacy_unification-$target_cpu",
-                   ] + zircon_extra_deps
+    default_deps = [ "//:legacy_unification-$target_cpu" ] + zircon_extra_deps
     forward_variables_from(zircon_extra_args, "*")
 
     # TODO(fxbug.dev/32978): This is temporary until the kernel build is unified or
@@ -203,17 +199,6 @@ if (current_toolchain == default_toolchain) {
     }
 
     exec_script("//prebuilt/third_party/gn/${host_platform}/gn", gn_cmd)
-
-    exec_script("//build/zircon/populate_zircon_public.py",
-                [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
-                "",
-                [
-                  "$zircon_root_build_dir/legacy_dirs.json",
-                  "//build/unification/zircon_library_forward.gn",
-                  "//build/unification/zircon_library_mappings.json",
-                  "//build/zircon/lib_template.gn",
-                  "//build/zircon/tool_template.gn",
-                ])
   }
   _run_zircon_gn("zircon") {
   }
