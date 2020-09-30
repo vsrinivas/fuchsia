@@ -1,4 +1,4 @@
-# Rust tutorials
+# LLCPP tutorials
 
 This section includes the following tutorials for using the LLCPP
 FIDL bindings:
