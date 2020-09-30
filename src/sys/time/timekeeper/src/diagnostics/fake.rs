@@ -36,7 +36,7 @@ impl Diagnostics for FakeDiagnostics {
     }
 }
 
-impl<T: AsRef<FakeDiagnostics>> Diagnostics for T {
+impl<T: AsRef<FakeDiagnostics> + Send + Sync> Diagnostics for T {
     fn record(&self, event: Event) {
         self.as_ref().events.lock().push(event);
     }

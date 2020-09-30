@@ -4,7 +4,7 @@
 
 use {
     crate::diagnostics::{Diagnostics, Event},
-    crate::enums::{InitializeRtcOutcome, WriteRtcOutcome},
+    crate::enums::{InitializeRtcOutcome, Track, WriteRtcOutcome},
     fuchsia_inspect::{
         health::Reporter, Inspector, IntProperty, Node, NumericProperty, Property, UintProperty,
     },
@@ -235,25 +235,27 @@ impl InspectDiagnostics {
     }
 
     /// Records an update to the UTC zx::Clock
-    fn update_clock(&self) {
-        self.health.lock().set_ok();
-        match self.clock.get_details() {
-            Ok(details) => {
-                let mut lock = self.last_update.lock();
-                if let Some(last_update) = &*lock {
-                    last_update.update(details.into());
-                } else {
-                    lock.replace(ClockDetailsNode::create(
-                        self.node.create_child("last_update"),
-                        details.into(),
-                    ));
+    fn update_clock(&self, track: Track) {
+        if track == Track::Primary {
+            self.health.lock().set_ok();
+            match self.clock.get_details() {
+                Ok(details) => {
+                    let mut lock = self.last_update.lock();
+                    if let Some(last_update) = &*lock {
+                        last_update.update(details.into());
+                    } else {
+                        lock.replace(ClockDetailsNode::create(
+                            self.node.create_child("last_update"),
+                            details.into(),
+                        ));
+                    }
                 }
-            }
-            Err(err) => {
-                warn!("Failed to export clock update to inspect: {}", err);
-                return;
-            }
-        };
+                Err(err) => {
+                    warn!("Failed to export clock update to inspect: {}", err);
+                    return;
+                }
+            };
+        }
     }
 }
 
@@ -279,7 +281,9 @@ impl Diagnostics for InspectDiagnostics {
                     rtc_node.write(outcome);
                 }
             }
-            Event::StartClock { .. } | Event::UpdateClock => self.update_clock(),
+            Event::StartClock { track, .. } | Event::UpdateClock { track } => {
+                self.update_clock(track)
+            }
         }
     }
 }
@@ -396,7 +400,7 @@ mod tests {
                     .error_bounds(0),
             )
             .expect("Failed to update test clock");
-        inspect_diagnostics.update_clock();
+        inspect_diagnostics.update_clock(Track::Primary);
         clock
             .update(
                 zx::ClockUpdate::new()
@@ -405,7 +409,7 @@ mod tests {
                     .error_bounds(ERROR_BOUNDS),
             )
             .expect("Failed to update test clock");
-        inspect_diagnostics.update_clock();
+        inspect_diagnostics.update_clock(Track::Primary);
         assert_inspect_tree!(
             inspector,
             root: contains {

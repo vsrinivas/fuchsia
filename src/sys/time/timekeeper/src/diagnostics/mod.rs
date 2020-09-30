@@ -17,7 +17,7 @@ pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 use {
     crate::enums::{
         InitialClockState, InitializeRtcOutcome, Role, SampleValidationError, StartClockSource,
-        TimeSourceError, WriteRtcOutcome,
+        TimeSourceError, Track, WriteRtcOutcome,
     },
     fidl_fuchsia_time_external::Status,
     fuchsia_zircon as zx,
@@ -41,13 +41,13 @@ pub enum Event {
     /// An attempt was made to write to the real time clock.
     WriteRtc { outcome: WriteRtcOutcome },
     /// The userspace clock has been started for the first time.
-    StartClock { source: StartClockSource },
+    StartClock { track: Track, source: StartClockSource },
     /// The userspace clock has been updated.
-    UpdateClock,
+    UpdateClock { track: Track },
 }
 
 /// A standard interface for systems record events for diagnostic purposes.
-pub trait Diagnostics {
+pub trait Diagnostics: Send + Sync {
     /// Records the supplied event if relevant.
     fn record(&self, event: Event);
 }

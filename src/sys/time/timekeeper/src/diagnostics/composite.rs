@@ -34,19 +34,19 @@ mod test {
     use {
         super::*,
         crate::diagnostics::FakeDiagnostics,
-        crate::enums::{Role, TimeSourceError},
-        std::rc::Rc,
+        crate::enums::{Role, TimeSourceError, Track},
+        std::sync::Arc,
     };
 
-    const UPDATE_EVENT: Event = Event::UpdateClock;
+    const UPDATE_EVENT: Event = Event::UpdateClock { track: Track::Monitor };
     const TIME_SOURCE_FAILED_EVENT: Event =
         Event::TimeSourceFailed { role: Role::Primary, error: TimeSourceError::CallFailed };
 
     #[test]
     fn log_events() {
-        let left = Rc::new(FakeDiagnostics::new());
-        let right = Rc::new(FakeDiagnostics::new());
-        let composite = CompositeDiagnostics::new(Rc::clone(&left), Rc::clone(&right));
+        let left = Arc::new(FakeDiagnostics::new());
+        let right = Arc::new(FakeDiagnostics::new());
+        let composite = CompositeDiagnostics::new(Arc::clone(&left), Arc::clone(&right));
         left.assert_events(&[]);
         right.assert_events(&[]);
 

@@ -19,7 +19,9 @@ use {
         diagnostics::{
             CobaltDiagnostics, CompositeDiagnostics, Diagnostics, Event, InspectDiagnostics,
         },
-        enums::{InitialClockState, InitializeRtcOutcome, Role, StartClockSource, WriteRtcOutcome},
+        enums::{
+            InitialClockState, InitializeRtcOutcome, Role, StartClockSource, Track, WriteRtcOutcome,
+        },
         network::{event_stream, wait_for_network_available},
         notifier::Notifier,
         rtc::{Rtc, RtcImpl},
@@ -176,7 +178,10 @@ async fn maintain_utc<R, T, S, D>(
                         );
                     } else {
                         notifs.set_source(ftime::UtcSource::Unverified).await;
-                        diagnostics.record(Event::StartClock { source: StartClockSource::Rtc });
+                        diagnostics.record(Event::StartClock {
+                            track: Track::Primary,
+                            source: StartClockSource::Rtc,
+                        });
                         info!("started UTC clock from RTC at time: {}", utc_chrono);
                         clock_started = true;
                     }
@@ -210,11 +215,14 @@ async fn maintain_utc<R, T, S, D>(
         if let Err(status) = utc_clock.update(zx::ClockUpdate::new().value(utc)) {
             error!("failed to update UTC clock to {}: {}", utc_chrono, status);
         } else if !clock_started {
-            diagnostics.record(Event::StartClock { source: StartClockSource::Primary });
+            diagnostics.record(Event::StartClock {
+                track: Track::Primary,
+                source: StartClockSource::External(Role::Primary),
+            });
             info!("started UTC time from external source at time {}", utc_chrono);
             clock_started = true;
         } else {
-            diagnostics.record(Event::UpdateClock);
+            diagnostics.record(Event::UpdateClock { track: Track::Primary });
             info!("adjusted UTC time to {}", utc_chrono);
         }
         if let Some(ref rtc) = optional_rtc {
@@ -323,7 +331,10 @@ mod tests {
             },
             Event::NetworkAvailable,
             Event::TimeSourceStatus { role: Role::Primary, status: ftexternal::Status::Ok },
-            Event::StartClock { source: StartClockSource::Primary },
+            Event::StartClock {
+                track: Track::Primary,
+                source: StartClockSource::External(Role::Primary),
+            },
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
         ]);
     }
@@ -437,7 +448,7 @@ mod tests {
                 outcome: InitializeRtcOutcome::Succeeded,
                 time: Some(*VALID_RTC_TIME),
             },
-            Event::StartClock { source: StartClockSource::Rtc },
+            Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc },
             Event::NetworkAvailable,
             Event::TimeSourceStatus { role: Role::Primary, status: ftexternal::Status::Network },
         ]);

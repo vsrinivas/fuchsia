@@ -73,13 +73,33 @@ pub enum Role {
     Primary,
     #[allow(unused)]
     Monitor,
+    // TODO(jsankey): Add Gating and Fallback when some product requires them.
+}
+
+/// Which of the independent estimates of time is applicable. Timekeeper maintains a Primary track
+/// that is externally visable and optionally a internal Monitor track that is used to validate
+/// proposed changes to the time synchronization source or algorithms.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Track {
+    Primary,
+    #[allow(unused)]
+    Monitor,
+}
+
+impl From<Role> for Track {
+    fn from(role: Role) -> Track {
+        match role {
+            Role::Primary => Track::Primary,
+            Role::Monitor => Track::Monitor,
+        }
+    }
 }
 
 /// The time sources from which the userspace clock might be started.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StartClockSource {
     Rtc,
-    Primary,
+    External(Role),
 }
 
 /// The reasons a received time sample may not be valid.

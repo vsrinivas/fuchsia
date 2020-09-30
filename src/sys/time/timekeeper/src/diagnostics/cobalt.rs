@@ -4,7 +4,7 @@
 
 use {
     crate::diagnostics::{Diagnostics, Event},
-    crate::enums::{InitialClockState, StartClockSource},
+    crate::enums::{InitialClockState, StartClockSource, Track},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     parking_lot::Mutex,
@@ -66,14 +66,18 @@ impl Diagnostics for CobaltDiagnostics {
                     Into::<RtcEventType>::into(outcome),
                 );
             }
-            Event::StartClock { source } => {
-                let event = match source {
-                    StartClockSource::Rtc => LifecycleEventType::StartedUtcFromRtc,
-                    StartClockSource::Primary => LifecycleEventType::StartedUtcFromTimeSource,
-                };
-                self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
+            Event::StartClock { track, source } => {
+                if track == Track::Primary {
+                    let event = match source {
+                        StartClockSource::Rtc => LifecycleEventType::StartedUtcFromRtc,
+                        StartClockSource::External(_) => {
+                            LifecycleEventType::StartedUtcFromTimeSource
+                        }
+                    };
+                    self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
+                }
             }
-            Event::UpdateClock => {}
+            Event::UpdateClock { .. } => {}
         }
     }
 }
@@ -82,7 +86,7 @@ impl Diagnostics for CobaltDiagnostics {
 mod test {
     use {
         super::*,
-        crate::enums::{InitializeRtcOutcome, WriteRtcOutcome},
+        crate::enums::{InitializeRtcOutcome, Role, WriteRtcOutcome},
         fidl_fuchsia_cobalt::{CobaltEvent, Event as EmptyEvent, EventPayload},
         futures::StreamExt,
     };
@@ -111,7 +115,14 @@ mod test {
         let sender = CobaltSender::new(mpsc_sender);
         let diagnostics = CobaltDiagnostics { sender: Mutex::new(sender) };
 
-        diagnostics.record(Event::StartClock { source: StartClockSource::Primary });
+        diagnostics.record(Event::StartClock {
+            track: Track::Monitor,
+            source: StartClockSource::External(Role::Monitor),
+        });
+        diagnostics.record(Event::StartClock {
+            track: Track::Primary,
+            source: StartClockSource::External(Role::Primary),
+        });
         assert_eq!(
             mpsc_receiver.next().await,
             Some(CobaltEvent {
