@@ -375,18 +375,28 @@ zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
 
 static zx_status_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags,
                                         size_t* out_actual, int16_t* out_code) {
-  if (!(*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED))) {
-    return ZX_ERR_NOT_CONNECTED;
+  switch (*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
+    case 0:
+      return ZX_ERR_NOT_CONNECTED;
+    case IOFLAG_SOCKET_CONNECTING:
+      // Enable the caller to wait for the connection completion and retry.
+      return ZX_ERR_SHOULD_WAIT;
   }
+
   return fdio_zxio_recvmsg(io, msg, flags, out_actual, out_code);
 }
 
 static zx_status_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int flags,
                                         size_t* out_actual, int16_t* out_code) {
   // TODO: support flags and control messages
-  if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
-    return ZX_ERR_NOT_CONNECTED;
+  switch (*fdio_get_ioflag(io) & (IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED)) {
+    case 0:
+      return ZX_ERR_BAD_STATE;
+    case IOFLAG_SOCKET_CONNECTING:
+      // Enable the caller to wait for the connection completion and retry.
+      return ZX_ERR_SHOULD_WAIT;
   }
+
   return fdio_zxio_sendmsg(io, msg, flags, out_actual, out_code);
 }
 
