@@ -42,7 +42,8 @@ template("_dart_snapshot_invocation") {
 
     script = "//build/dart/gen_app_invocation.py"
 
-    app_path = "$root_out_dir/dart-tools/$app_name"
+    app_rel_path = "dart-tools/$app_name"
+    app_path = "$root_out_dir/$app_rel_path"
     dart_binary = invoker.dart
     snapshot = invoker.snapshot
 
@@ -60,6 +61,19 @@ template("_dart_snapshot_invocation") {
       "--snapshot",
       rebase_path(snapshot),
     ]
+
+    metadata = {
+      # Record metadata for the //:tool_paths build API.
+      tool_paths = [
+        {
+          cpu = current_cpu
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = app_name
+          os = current_os
+          path = app_rel_path
+        },
+      ]
+    }
   }
 }
 
