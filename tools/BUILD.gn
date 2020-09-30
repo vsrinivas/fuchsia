@@ -7,6 +7,10 @@ group("tools") {
 
   public_deps = [
     ":infratools",
+
+    # TODO(olivernewman): Move blobstats code into //tools once recipes no
+    # longer have its location hardcoded.
+    "//scripts/blobstats($host_toolchain)",
     "//tools/bindc:host",
     "//tools/blackout:all",
     "//tools/bootserver_old:host($host_toolchain)",
@@ -15,9 +19,9 @@ group("tools") {
     "//tools/component_id_index($host_toolchain)",
     "//tools/component_manager_config($host_toolchain)",
     "//tools/create:install($host_toolchain)",
-    "//tools/dart-strict-deps:strict_deps",
+    "//tools/dart-strict-deps:strict_deps($host_toolchain)",
     "//tools/debroot($host_toolchain)",
-    "//tools/doc_checker",
+    "//tools/doc_checker($host_toolchain)",
     "//tools/fidl",
     "//tools/fidlcat:fidlcat_host",
     "//tools/loglistener:host($host_toolchain)",
