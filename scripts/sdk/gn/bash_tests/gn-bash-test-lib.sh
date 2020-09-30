@@ -191,3 +191,41 @@ function  gn-test-log-mock  {
     echo return "$RC"
   } >> "${state_file}"
 }
+
+# Returns the latest name for the mock file given.
+# The Bash test framework creates a file named <mock_state> (by default
+# <tool>.mock_state) for the first execution of the mock. For a second
+# execution, it renames the first file to <mock_state>.1 and creates a
+# <mock_state>.2. After that, each subsequent execution of the mock creates
+# a file named <mock_state>.<n>. For most tests, it is relevant to check
+# the n-th specific execution, but in some rare cases, for example when the
+# mock is executed in a loop, the test can care only about the latest execution
+# and finding it is a tedious process. This method helps with that, returning
+# <mock_state> if there was none or only a single invocation of the mock, or
+# <mock_state>.<n> if there were <n> executions of the mock.
+#
+# Args:
+#   name: the mock state filename without the ".<n>" suffix.
+#
+function gn-test-latest-mock {
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    echo "$path"
+  else
+    # find the number of dots in the mock state path:
+    local dots="${path//[^.]}"
+    # the key will be the last dot-separated token of numbered mock_state's, so:
+    #   my.path.with.dots/my.tool.mock_state
+    # will be keyed by
+    #   (# dots before numbering + 1 dot to separate the number + 1) = 7th field
+    # my.path.with.dots/my.tool.mock_state.10 and
+    # my.path.with.dots/my.tool.mock_state.9 will be correctly sorted by
+    # numeric order.
+    local key=$(( ${#dots} + 1 + 1 ))
+
+    find "$(dirname "${path}")" -mindepth 1 -maxdepth 1 \
+        -name "$(basename "${path}")\.[0-9]*" 2>/dev/null \
+      | sort -t. -k${key} -n -r \
+      | head -1
+  fi
+}

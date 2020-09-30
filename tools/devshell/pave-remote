@@ -6,14 +6,17 @@
 #### CATEGORY=Other
 ### Remotely build, fetch and pave
 
-## usage: fx pave-remote HOST [DIR] [--no-pave] [--no-build] [-- PAVE_ARGS]
+## usage: fx pave-remote HOST [DIR] [--no-pave] [--no-build]
+##          [--no-check-ssh-keys] [-- PAVE_ARGS]
 ##
 ## Connect to HOST, run a build using fx from DIR, fetch the artifacts and
 ## start the paver.
 ##
-##  --no-build    do not build, just pull artifacts already present
-##  --no-pave     do not start the paver, just pull the artifacts
-##  --            pass any arguments after the -- to the fx pave command
+##  --no-build           do not build, just pull artifacts already present
+##  --no-pave            do not start the paver, just pull the artifacts
+##  --no-check-ssh-keys  do not verify that the default SSH credentials are the
+##                       same before paving.
+##  --                   pass any arguments after the -- to the fx pave command
 ##
 ##  HOST          the hostname to connect to
 ##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
@@ -26,10 +29,12 @@ set -o errexit
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/verify-default-keys.sh || exit $?
 fx-config-read
 
 build=true
 pave=true
+check_ssh_keys=true
 host=""
 dir=""
 args=()
@@ -44,6 +49,9 @@ while [[ $# -ne 0 ]]; do
     ;;
   --no-pave)
     pave=false
+    ;;
+  --no-check-ssh-keys)
+    check_ssh_keys=false
     ;;
   --)
     shift
@@ -69,11 +77,6 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-authkeys_path="$(get-ssh-authkeys)" || {
-  fx-error "Cannot continue without a valid authorized keys file."
-  exit 1
-}
-
 if cached=( $(load_remote_info "$host") ); then
   host="${cached[0]}"
   dir="${cached[1]}"
@@ -95,7 +98,17 @@ if [[ -z "${dir}" ]]; then
   fi
 fi
 
+# Verify that keys match.
+if "${check_ssh_keys}"; then
+  verify_default_keys "${FUCHSIA_DIR}" "${host}" "${dir}" || exit $?
+fi
+
 save_remote_info "$host" "$dir"
+
+authkeys_path="$(get-ssh-authkeys)" || {
+  fx-error "Cannot continue without a valid authorized keys file."
+  exit 1
+}
 
 artifact_dir="${FUCHSIA_DIR}/out/fetched"
 fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" pave $build

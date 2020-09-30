@@ -137,7 +137,7 @@ else
     shift
   done
   tests="${tests_arr[@]}"
-  if [[ $# -gt 0 && "$arg" == "--"* ]]; then
+  if [[ $# -gt 0 && "$1" == "--"* ]]; then
     test_args+=( "$@" )
   fi
 fi

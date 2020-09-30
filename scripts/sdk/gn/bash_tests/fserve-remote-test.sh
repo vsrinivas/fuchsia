@@ -70,9 +70,15 @@ TEST_fserve_remote() {
       return 0
     fi
 
-    # if the check is in quiet mode, return true.
+    # if the check is in quiet mode, return true if there is a tunnel
+    # file, indicating that the mock ssh call that creates the tunnel
+    # has finished. Since it happens in the background, this check avoids
+    # racing conditions and flake tests.
     if [[ "$*" =~ "-q -O check" ]]; then
       rc=0
+      if [[ ! -f "$0.tunnel" ]]; then
+        rc=254
+      fi
       gn-test-log-mock "${0}.qcheck" $rc $@
       return $rc
     fi
@@ -143,21 +149,13 @@ EOF
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.tunnel"
-  expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083"
-    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
-    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
-    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
-    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  # A loop in fserve-remote checks every second if the tunnel has been
+  # established, every time invocating the ssh mock to check it and thus
+  # creating a new mock_state file for ssh.qcheck. The gn-test-latest-mock
+  # function guarantees that we only check the latest invocation of the mock.
+  source "$(gn-test-latest-mock "${SSH_MOCK_PATH}/ssh.qcheck")"
   expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
-
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.fconfig"
@@ -169,7 +167,6 @@ EOF
     "./bin/fconfig.sh" "list" )
   gn-test-check-mock-args "${expected[@]}"
 
-
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.check_for_8083"
   expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8083")
@@ -180,6 +177,17 @@ EOF
   expected=("${ssh_common_expected[@]}" )
   expected+=("cd" "\$HOME" "&&"
     "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
 }
 
 TEST_fserve_remote_with_config() {
@@ -211,9 +219,15 @@ TEST_fserve_remote_with_config() {
       return 0
     fi
 
-    # if the check is in quiet mode, return true.
+    # if the check is in quiet mode, return true if there is a tunnel
+    # file, indicating that the mock ssh call that creates the tunnel
+    # has finished. Since it happens in the background, this check avoids
+    # racing conditions and flake tests.
     if [[ "$*" =~ "-q -O check" ]]; then
       rc=0
+      if [[ ! -f "$0.tunnel" ]]; then
+        rc=254
+      fi
       gn-test-log-mock "${0}.qcheck" $rc $@
       return $rc
     fi
@@ -283,18 +297,11 @@ EOF
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.tunnel"
-  expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083"
-    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
-    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
-    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
-    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  # A loop in fserve-remote checks every second if the tunnel has been
+  # established, every time invocating the ssh mock to check it and thus
+  # creating a new mock_state file for ssh.qcheck. The gn-test-latest-mock
+  # function guarantees that we only check the latest invocation of the mock.
+  source "$(gn-test-latest-mock "${SSH_MOCK_PATH}/ssh.qcheck")"
   expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
 
@@ -322,10 +329,20 @@ EOF
     "&&" "./bin/fserve.sh" "&&" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 
-
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.check.2"
   expected=("${ssh_common_expected[@]}" -O "check")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 }
 
@@ -355,9 +372,15 @@ TEST_fserve_remote_existing_session() {
       return 0
     fi
 
-    # if the check is in quiet mode, return true.
+    # if the check is in quiet mode, return true if there is a tunnel
+    # file, indicating that the mock ssh call that creates the tunnel
+    # has finished. Since it happens in the background, this check avoids
+    # racing conditions and flake tests.
     if [[ "$*" =~ "-q -O check" ]]; then
       rc=0
+      if [[ ! -f "$0.tunnel" ]]; then
+        rc=254
+      fi
       gn-test-log-mock "${0}.qcheck" $rc $@
       return $rc
     fi
@@ -457,18 +480,11 @@ EOF
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.tunnel"
-  expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083"
-    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
-    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
-    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
-    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  # A loop in fserve-remote checks every second if the tunnel has been
+  # established, every time invocating the ssh mock to check it and thus
+  # creating a new mock_state file for ssh.qcheck. The gn-test-latest-mock
+  # function guarantees that we only check the latest invocation of the mock.
+  source "$(gn-test-latest-mock "${SSH_MOCK_PATH}/ssh.qcheck")"
   expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
 
@@ -503,6 +519,17 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.exit.2"
   expected=("${ssh_common_expected[@]}" -O "exit")
   gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
 }
 
 TEST_fserve_remote_pm_running() {
@@ -531,9 +558,15 @@ TEST_fserve_remote_pm_running() {
       return 0
     fi
 
-    # if the check is in quiet mode, return true.
+    # if the check is in quiet mode, return true if there is a tunnel
+    # file, indicating that the mock ssh call that creates the tunnel
+    # has finished. Since it happens in the background, this check avoids
+    # racing conditions and flake tests.
     if [[ "$*" =~ "-q -O check" ]]; then
       rc=0
+      if [[ ! -f "$0.tunnel" ]]; then
+        rc=254
+      fi
       gn-test-log-mock "${0}.qcheck" $rc $@
       return $rc
     fi
@@ -617,18 +650,11 @@ EOF
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.tunnel"
-  expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083"
-    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
-    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
-    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
-    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  # A loop in fserve-remote checks every second if the tunnel has been
+  # established, every time invocating the ssh mock to check it and thus
+  # creating a new mock_state file for ssh.qcheck. The gn-test-latest-mock
+  # function guarantees that we only check the latest invocation of the mock.
+  source "$(gn-test-latest-mock "${SSH_MOCK_PATH}/ssh.qcheck")"
   expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
 
@@ -660,20 +686,32 @@ EOF
     "&&" "./bin/fserve.sh" "&&" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 
-
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.check.2"
   expected=("${ssh_common_expected[@]}" -O "check")
   gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
 }
 
-# Test initialization.
+# Test initialization. Note that we copy various tools/devshell files and need to replicate the
+# behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/fserve-remote.sh
   scripts/sdk/gn/base/bin/fconfig.sh
+  scripts/sdk/gn/base/bin/fserve-remote.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
+  tools/devshell/tests/subcommands/data/fx_remote_test/verify-default-keys.sh
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
@@ -692,6 +730,12 @@ BT_INIT_TEMP_DIR() {
   # Create a stub SDK manifest.
   cp "${BT_DEPS_ROOT}/scripts/sdk/gn/testdata/meta/manifest.json" \
     "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta/manifest.json"
+
+  # Stage the files we copy from fx implementation, replicating behavior of generate.py
+  cp -r "${BT_TEMP_DIR}/tools/devshell" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/"
+
+  mkdir "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib"
+  mv "${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_remote_test/verify-default-keys.sh" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/verify-default-keys.sh"
 }
 
 BT_SET_UP() {

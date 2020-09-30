@@ -11,16 +11,20 @@
 ## HOSTNAME     the hostname of the workstation you want to serve from
 ## REMOTE-PATH  defaults to ~/fuchsia. The path on the to FUCHSIA_DIR on the workstation.
 ##
-##  --no-serve  only tunnel, do not start a package server
+##  --no-serve                    only tunnel, do not start a package server
+##  --no-check-ssh-keys  do not verify that the default SSH
+##                                credentials are the same before serving.
 ##
 ## HOST and DIR are persisted in the file //.fx-remote-config and are reused as
 ## defaults in future invocations of any 'fx *-remote' tools.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/verify-default-keys.sh || exit $?
 fx-config-read
 
 serve=true
+check_ssh_keys=true
 verbose=false
 host=""
 dir=""
@@ -32,6 +36,9 @@ while [[ $# -ne 0 ]]; do
       ;;
   --no-serve)
     serve=false
+    ;;
+  --no-check-ssh-keys)
+    check_ssh_keys=false
     ;;
   -v)
     verbose=true
@@ -94,13 +101,13 @@ echo "Using target device $(get-device-name)"
 # intentionally do not use %h/%p in the control path because there can only be one forwarding
 # session at a time (due to the local forward of 8083).
 ssh_base_args=(
-  "${host}"
-  -S "~/.ssh/control-fuchsia-fx-remote"
-  -o ControlMaster=auto
+  -S "${HOME}/.ssh/control-fuchsia-fx-remote"
+  -o "ControlMaster=auto"
 )
 
 ssh_exit() {
-  ssh ${ssh_base_args[@]}  -O exit > /dev/null 2>&1
+  # Failure to end existing multiplexed SSH connections is acceptable.
+  ssh "${ssh_base_args[@]}" "${host}" -O exit > /dev/null 2>&1 || true
   wait # for ssh to exit
 }
 
@@ -134,13 +141,18 @@ ssh_tunnel_args=(
 # to allow the script to be consistent on how it is exited for both serve and non-serve cases. It
 # also allows script to explicitly close the control session (to better avoid stale sshd sessions).
 
+# Verify that keys match.
+if "${check_ssh_keys}"; then
+  verify_default_keys "${FUCHSIA_DIR}" "${host}" "${dir}" "${ssh_base_args[@]}" || exit $?
+fi
+
 # XXX: had to stop using -Nf because of b/160269794.
-ssh ${ssh_base_args[@]} ${ssh_tunnel_args[@]} -nT sleep infinity &
+ssh "${ssh_base_args[@]}" "${ssh_tunnel_args[@]}" "${host}" -nT sleep infinity &
 # Attempt to assert that the backgrounded ssh is alive and kicking, emulating -f as best we can.
 ssh_pid=$!
 # If there's a 2fa prompt, we may need a "human time" number of tries, which is why this is high.
 tries=30
-until ssh -q -O check ${ssh_base_args[@]}; do
+until ssh -q -O check ${ssh_base_args[@]} "${host}"; do
   if ! kill -0 ${ssh_pid}; then
     fx-error "SSH tunnel terminated prematurely"
     exit 1
@@ -157,8 +169,8 @@ done
 # remote server already running and kill it, this prevents most cases where
 # signal propagation seems to sometimes not make it to "pm".
 # TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
-if "${serve}" && ssh ${ssh_base_args[@]} 'ss -ln | grep :8083' > /dev/null; then
-  ssh "${ssh_base_args[@]}" 'pkill -x -u $USER pm'
+if "${serve}" && ssh "${host}" "${ssh_base_args[@]}" 'ss -ln | grep :8083' > /dev/null; then
+  ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm'
 fi
 
 if "${serve}"; then
@@ -174,7 +186,7 @@ if "${serve}"; then
     "-tt" # explicitly force a pty, for HUP'ing on the remote
     "cd ${dir} && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx set-device '${_FX_REMOTE_WORKFLOW_DEVICE_ADDR}' && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx serve-updates${serve_verbose_arg}"
   )
-  ssh ${ssh_base_args[@]} ${ssh_serve_args[@]}
+  ssh "${host}" "${ssh_base_args[@]}" "${ssh_serve_args[@]}"
 else
   echo "Press Ctrl-C to stop tunneling."
   # Wait for user Ctrl-C. Then script exit will trigger trap_exit to close the ssh connection.

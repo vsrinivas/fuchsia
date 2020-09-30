@@ -93,6 +93,7 @@ host_script_test_data("gn_sdk_bash_tests") {
         "//tools/devshell/emu",
         "//tools/devshell/lib/fvm.sh",
         "//tools/devshell/lib/emu-ifup-macos.sh",
+        "//tools/devshell/tests/subcommands/data/fx_remote_test/verify-default-keys.sh",
       ]
     },
     {

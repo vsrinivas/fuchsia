@@ -9,6 +9,8 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # Fuchsia command common functions.
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
+# shellcheck disable=SC1090
+source "${SCRIPT_SRC_DIR}/devshell/lib/verify-default-keys.sh" || exit $?
 
 usage() {
   cat << EOF
@@ -23,6 +25,8 @@ usage: fserve-remote.sh [--no-serve] [--device-name <device hostname>] HOSTNAME 
       Name of GCS bucket containing the image archive.
   --no-serve
       Only tunnel, do not start a package server.
+  --no-check-ssh-keys
+      Do not verify that the default SSH credentials are the same before serving.
   -v
       Enable verbose SSH logging.
   -x
@@ -42,6 +46,7 @@ EOF
 DEBUG_FLAG=""
 TTL_TIME="infinity"
 START_SERVE=1
+CHECK_SSH_KEYS=1
 VERBOSE=0
 REMOTE_HOST=""
 REMOTE_DIR=""
@@ -57,6 +62,9 @@ while [[ $# -ne 0 ]]; do
       ;;
   --no-serve)
     START_SERVE=0
+    ;;
+  --no-check-ssh-keys)
+    CHECK_SSH_KEYS=0
     ;;
   --device-name)
     shift
@@ -142,6 +150,11 @@ fi
 echo "Using remote ${REMOTE_HOST}:${REMOTE_DIR}"
 echo "Using target device ${DEVICE_NAME}"
 
+# Verify that keys match.
+if [[ "${CHECK_SSH_KEYS}" == "1" ]]; then
+  verify_default_keys "" "${REMOTE_HOST}" "" || exit $?
+fi
+
 # set the device name as the default to avoid confusion, and clear out the IP address
 set-fuchsia-property "device-name" "${DEVICE_NAME}"
 set-fuchsia-property "device-ip" ""
@@ -150,7 +163,7 @@ set-fuchsia-property "device-ip" ""
 # Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
 # intentionally do not use %h/%p in the control path because there can only be one forwarding
 # session at a time (due to the local forward of 8083).
-ssh_base_args=(
+ssh_base_args_gn=(
   "${REMOTE_HOST}"
   -S "${HOME}/.ssh/control-fuchsia-fx-remote"
   -o "ControlMaster=auto"
@@ -158,13 +171,13 @@ ssh_base_args=(
 )
 
 if ((VERBOSE)); then
-  ssh_base_args+=( -o "LogLevel=DEBUG2")
+  ssh_base_args_gn+=( -o "LogLevel=DEBUG2")
 fi
 
 
 ssh_exit() {
-  if ssh "${ssh_base_args[@]}" -O check > /dev/null 2>&1; then
-    if  ! ssh "${ssh_base_args[@]}" -O exit > /dev/null 2>&1 ; then
+  if ssh "${ssh_base_args_gn[@]}" -O check > /dev/null 2>&1; then
+    if  ! ssh "${ssh_base_args_gn[@]}" -O exit > /dev/null 2>&1 ; then
       echo "Error exiting session: $?"
     fi
   fi
@@ -182,7 +195,7 @@ trap trap_exit SIGINT
 # First we need to check if we already have a control master for the
 # host, if we do, we might already have the forwards and so we don't
 # need to worry about tearing down:
-if ssh "${ssh_base_args[@]}" -O check > /dev/null 2>&1; then
+if ssh "${ssh_base_args_gn[@]}" -O check > /dev/null 2>&1; then
   # If there is already control master then exit it. We can't be sure its to the right host and it
   # also could be stale.
   fx-warn "Cleaning up existing remote session"
@@ -195,9 +208,9 @@ fi
   # forward, so we'll check for that and speculatively attempt to clean
   # it up. Unfortunately this means authing twice, but it's likely the
   # best we can do for now.
-  if ssh "${ssh_base_args[@]}" 'ss -ln | grep :8022' > /dev/null  2>&1; then
+  if ssh "${ssh_base_args_gn[@]}" 'ss -ln | grep :8022' > /dev/null  2>&1; then
     fx-warn "Found existing port forwarding, attempting to kill remote sshd sessions."
-    if  pkill_result="$(ssh "${ssh_base_args[@]}" "pkill -u \$USER sshd"  2>&1)"; then
+    if  pkill_result="$(ssh "${ssh_base_args_gn[@]}" "pkill -u \$USER sshd"  2>&1)"; then
       fx-error "Unexpected message from remote: ${pkill_result}"
     else
       echo "SSH session cleaned up."
@@ -218,13 +231,13 @@ ssh_tunnel_args=(
 # to allow the script to be consistent on how it is exited for both serve and non-serve cases. It
 # also allows script to explicitly close the control session (to better avoid stale sshd sessions).
 
-ssh "${ssh_base_args[@]}" "${ssh_tunnel_args[@]}" -nT sleep "${TTL_TIME}" &
+ssh "${ssh_base_args_gn[@]}" "${ssh_tunnel_args[@]}" -nT sleep "${TTL_TIME}" &
 # Attempt to assert that the backgrounded ssh is alive and kicking, emulating -f as best we can.
 ssh_pid=$!
 
 # If there's a 2fa prompt, we may need a "human time" number of tries, which is why this is high.
 tries=30
-until ssh "${ssh_base_args[@]}" -q -O check; do
+until ssh "${ssh_base_args_gn[@]}" -q -O check; do
   if ! kill -0 ${ssh_pid}; then
     fx-error "SSH tunnel terminated prematurely"
     exit 1
@@ -263,15 +276,15 @@ fi
 # The variables here should be expanded locally, disabling the shellcheck lint
 # message about ssh and variables.
 # shellcheck disable=SC2029
-ssh "${ssh_base_args[@]}" "${remote_cmds[@]}"
+ssh "${ssh_base_args_gn[@]}" "${remote_cmds[@]}"
 
 if ((START_SERVE)); then
 # If the user requested serving, then we'll check to see if there's a
 # server already running and kill it, this prevents most cases where
 # signal propagation seems to sometimes not make it to "pm".
-  if ssh "${ssh_base_args[@]}" 'ss -ln | grep :8083' > /dev/null; then
+  if ssh "${ssh_base_args_gn[@]}" 'ss -ln | grep :8083' > /dev/null; then
     fx-warn "Cleaning up \`pm\` running on remote desktop"
-    if ssh "${ssh_base_args[@]}" "pkill -u \$USER pm"; then
+    if ssh "${ssh_base_args_gn[@]}" "pkill -u \$USER pm"; then
       echo "Success"
     fi
   fi
@@ -285,7 +298,7 @@ if ((START_SERVE)); then
   args+=("&&" "sleep ${TTL_TIME}")
 
   # shellcheck disable=SC2029
-  ssh "${ssh_base_args[@]}" "${args[@]}"
+  ssh "${ssh_base_args_gn[@]}" "${args[@]}"
 fi
 
 echo "Press Ctrl-C to stop tunneling."

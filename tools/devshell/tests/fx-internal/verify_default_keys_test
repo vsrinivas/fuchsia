@@ -1,0 +1,150 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx verify_default_keys library
+
+BT_FILE_DEPS=(
+  "tools/devshell/lib/verify-default-keys.sh"
+)
+
+declare ssh_mock scp_mock local_gensshkeys_mock sync_remote_keys_intree_mock \
+  compare_remote_and_local_mock normalize_local_intree_key_mock \
+  normalize_remote_intree_key_mock
+export HOME="${BT_TEMP_DIR}/HOME"
+
+fx-warn() {
+ echo "$@"
+}
+fx-error() {
+ echo "$@"
+}
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  ssh_mock=$(btf::make_mock_binary "ssh")
+  btf::add_binary_to_path "$ssh_mock"
+
+  scp_mock=$(btf::make_mock_binary "scp")
+  btf::add_binary_to_path "$scp_mock"
+
+  local_gensshkeys_mock="${BT_TEMP_DIR}/tools/ssh-keys/gen-ssh-keys.sh"
+  btf::make_mock "${local_gensshkeys_mock}"
+
+  # make mock scripts of relevant methods, so that we can play around with
+  # its inputs/outputs
+  sync_remote_keys_intree_mock="${BT_TEMP_DIR}/tools/ssh-keys/sync_remote_keys_intree.sh"
+  compare_remote_and_local_mock="${BT_TEMP_DIR}/tools/ssh-keys/compare_remote_and_local.sh"
+  normalize_remote_intree_key_mock="${BT_TEMP_DIR}/tools/ssh-keys/normalize_remote_intree_key.sh"
+  normalize_local_intree_key_mock="${BT_TEMP_DIR}/tools/ssh-keys/normalize_local_intree_key.sh"
+  btf::make_mock "${sync_remote_keys_intree_mock}"
+  btf::make_mock "${compare_remote_and_local_mock}"
+  btf::make_mock "${normalize_remote_intree_key_mock}"
+  btf::make_mock "${normalize_local_intree_key_mock}"
+  {
+    echo "function sync_remote_keys_intree { ${sync_remote_keys_intree_mock} --description \"\$@\"; }"
+    echo "function compare_remote_and_local { ${compare_remote_and_local_mock} \"\$@\"; }"
+    echo "function normalize_remote_intree_key { ${normalize_remote_intree_key_mock} \"\$@\"; }"
+    echo "function normalize_local_intree_key { ${normalize_local_intree_key_mock} \"\$@\"; }"
+  } >> "${BT_TEMP_DIR}/tools/devshell/lib/verify-default-keys.sh"
+
+  source "${BT_TEMP_DIR}/tools/devshell/lib/verify-default-keys.sh"
+}
+
+# test if local keys are copied to remote if necessary
+TEST_sshkeys-localhas-remotedoesnt() {
+  # key exists in local
+  echo 0 > "${normalize_local_intree_key_mock}.mock_status"
+  # key does not exist in remote
+  echo 1 > "${normalize_remote_intree_key_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  mkdir -p "$HOME/.ssh"
+  echo "myauthkeys mock" > "$HOME/.ssh/fuchsia_authorized_keys"
+  # check if verify_default_keys executes with success status
+  BT_EXPECT verify_default_keys "$BT_TEMP_DIR" "myhost" "fuchsia" >>${out} 2>&1
+
+  # check if scp was executed as expected
+  btf::expect-mock-args "${scp_mock}" -q -p \
+    "$HOME/.ssh/fuchsia_ed25519" "$HOME/.ssh/fuchsia_ed25519.pub" "myhost:.ssh/"
+  # check if ssh was executed as expected
+  btf::expect-mock-args "${ssh_mock}" myhost "cat >> .ssh/fuchsia_authorized_keys"
+}
+
+# test if remote keys are copied to local if necessary
+TEST_sshkeys-remotehas-localdoesnt() {
+  # key exists in remote
+  echo 0 > "${normalize_remote_intree_key_mock}.mock_status"
+  # key does not exist in local
+  echo 1 > "${normalize_local_intree_key_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  # check if verify_default_keys executes with success status
+  BT_EXPECT verify_default_keys "$BT_TEMP_DIR" "myhost" "fuchsia"  >>${out} 2>&1
+
+  # check if scp was executed as expected
+  btf::expect-mock-args "${scp_mock}" -q -p \
+    "myhost:.ssh/fuchsia_ed25519" "myhost:.ssh/fuchsia_ed25519.pub" "$HOME/.ssh"
+  # check if ssh was executed as expected
+  btf::expect-mock-args "${ssh_mock}" myhost cat .ssh/fuchsia_authorized_keys
+}
+
+# test if verify-default-keys fail if keys exist on remote and local but differ
+TEST_sshkeys-remotehas-localhas-mismatch() {
+  # key exists in remote
+  echo 0 > "${normalize_remote_intree_key_mock}.mock_status"
+  # key exists in local
+  echo 0 > "${normalize_local_intree_key_mock}.mock_status"
+  # keys don't match
+  echo 1 > "${compare_remote_and_local_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  # check if verify_default_keys executes with fail status
+  # a subshell is needed because of 'exit' statements inside verify_default_keys
+  BT_EXPECT_FAIL "( verify_default_keys \"$BT_TEMP_DIR\" myhost fuchsia )"  >>${out} 2>&1
+}
+
+# test if verify-default-keys succeeds if keys exist on remote and local and are
+# the same
+TEST_sshkeys-remotehas-localhas() {
+  # key exists in remote
+  echo 0 > "${normalize_remote_intree_key_mock}.mock_status"
+  # key exists in local
+  echo 0 > "${normalize_local_intree_key_mock}.mock_status"
+  # keys match
+  echo 0 > "${compare_remote_and_local_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  # check if verify_default_keys executes with success status
+  BT_EXPECT verify_default_keys "$BT_TEMP_DIR" myhost fuchsia >>${out} 2>&1
+}
+
+# test if a new key is generated in remote if no keys exist anywhere
+# and if the key is copied to local after being generated
+TEST_sshkeys-nokeys() {
+  # no key in remote
+  echo 1 > "${normalize_remote_intree_key_mock}.mock_status"
+  # no key in local
+  echo 1 > "${normalize_local_intree_key_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  # check if verify_default_keys executes with success status
+  BT_EXPECT verify_default_keys "$BT_TEMP_DIR" myhost fuchsia >>${out} 2>&1
+
+  # check if remote gen-ssh-keys was executed
+  btf::expect-mock-args "${sync_remote_keys_intree_mock}" "--description" _ANY_
+
+  # check if scp was executed as expected
+  btf::expect-mock-args "${scp_mock}" -q -p \
+    "myhost:.ssh/fuchsia_ed25519" "myhost:.ssh/fuchsia_ed25519.pub" "$HOME/.ssh"
+  # check if ssh was executed as expected
+  btf::expect-mock-args "${ssh_mock}" myhost cat .ssh/fuchsia_authorized_keys
+}
+
+BT_RUN_TESTS "$@"

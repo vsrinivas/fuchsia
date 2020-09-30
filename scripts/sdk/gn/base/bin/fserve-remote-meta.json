@@ -1,7 +1,8 @@
 {
     "files": [
         "bin/fserve-remote.sh",
-        "bin/fuchsia-common.sh"
+        "bin/fuchsia-common.sh",
+        "bin/devshell/lib/verify-default-keys.sh"
     ],
     "name": "fserve-remote",
     "root": "bin",

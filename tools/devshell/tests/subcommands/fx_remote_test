@@ -15,19 +15,35 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/platform.sh"
   "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/verify-default-keys.sh"
 )
 
-declare fx sshmock
+declare fx ssh_mock scp_mock local_gensshkeys_mock remote_gensshkeys_mock compare_remote_and_local_mock
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
-  sshmock=$(btf::make_mock_binary "ssh")
+  ssh_mock=$(btf::make_mock_binary "ssh")
+  btf::add_binary_to_path "$ssh_mock"
+
+  scp_mock=$(btf::make_mock_binary "scp")
+  btf::add_binary_to_path "$scp_mock"
+
+  local_gensshkeys_mock="${BT_TEMP_DIR}/tools/ssh-keys/gen-ssh-keys.sh"
+  remote_gensshkeys_mock="${BT_TEMP_DIR}/tools/ssh-keys/remote-gen-ssh-keys.sh"
+  compare_remote_and_local_mock="${BT_TEMP_DIR}/tools/ssh-keys/compare_remote_and_local.sh"
+  btf::make_mock "${local_gensshkeys_mock}"
+  btf::make_mock "${remote_gensshkeys_mock}"
+  btf::make_mock "${compare_remote_and_local_mock}"
+  {
+    echo "function run_remote_gen_ssh_keys { ${remote_gensshkeys_mock} --description \"\$@\"; }" 
+    echo "function run_remote_gen_ssh_keys_no_new_key { ${remote_gensshkeys_mock} --no-new-key; }" 
+    echo "function compare_remote_and_local { ${compare_remote_and_local_mock} \"\$@\"; }" 
+  } >> "${BT_TEMP_DIR}/tools/devshell/lib/verify-default-keys.sh"
+
   devfinder="$(btf::make_installed_hosttools_mock device-finder)"
   echo "127.0.0.1" > "${devfinder}.mock_stdout"
-
-  btf::add_binary_to_path "$sshmock"
 }
 
 # test if the host/dir info is correctly stored in the cache file
@@ -48,7 +64,7 @@ TEST_fx-remote-default-args() {
 
   echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
   BT_EXPECT ${fx} serve-remote >>${out} 2>&1
-  btf::does-mock-args-contain "${sshmock}.mock_state.1" "$testhost"
+  btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$testhost"
 }
 
 # test if the given host is used even when there's a cache file, and that the
@@ -62,7 +78,36 @@ TEST_fx-remote-args-given() {
   echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
   BT_EXPECT ${fx} serve-remote "$anotherhost" "${testdir}" >>${out} 2>&1
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
-  btf::does-mock-args-contain "${sshmock}.mock_state.1" "$anotherhost"
+  btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$anotherhost"
+}
+
+# keep in sync with //tools/ssh-keys/gen-ssh-keys.sh
+readonly _ERROR_NO_KEY=112
+readonly _ERROR_MISMATCHED_KEYS=113
+# // keep in sync with //tools/ssh-keys/gen-ssh-keys.sh
+
+# test if remote keys are copied to local if necessary
+TEST_fx-remote-remotehas-localdoesnt() {
+  # key exists in remote
+  echo 0 > "${remote_gensshkeys_mock}.mock_status"
+  # key doesn't exist in local
+  echo $_ERROR_NO_KEY > "${local_gensshkeys_mock}.mock_status"
+
+ 
+}
+
+# test if the given host is used even when there's a cache file, and that the
+# cache file is updated with the given host
+TEST_fx-remote-args-given() {
+  local testhost=myhostname.my.server.com
+  local testdir=~/myfuchsia/directory
+  local anotherhost=myhostname.my.server.com
+  local out="${BT_TEMP_DIR}/output.log"
+
+  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
+  BT_EXPECT ${fx} serve-remote "$anotherhost" "${testdir}" >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
+  btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$anotherhost"
 }
 
 
