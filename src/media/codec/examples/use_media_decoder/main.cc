@@ -14,6 +14,8 @@
 
 #include <thread>
 
+#include <fbl/unique_fd.h>
+
 #include "in_stream_peeker.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -38,6 +40,40 @@ void usage(const char* prog_name) {
       "usage: %s (--aac_adts|--h264) [--imagepipe [--fps=<double>]] "
       "<input_file> [<output_file>]\n",
       prog_name);
+}
+
+std::optional<double> GetDoubleOption(const fxl::CommandLine& command_line,
+                                      std::string option_name) {
+  std::string option_as_string;
+  if (!command_line.GetOptionValue(option_name.c_str(), &option_as_string)) {
+    return std::nullopt;
+  }
+  const char* str_begin = option_as_string.c_str();
+  char* str_end;
+  errno = 0;
+  double result = std::strtod(str_begin, &str_end);
+  if (str_end == str_begin || (result == HUGE_VAL && errno == ERANGE)) {
+    printf("error parsing comamnd line option as double: %s\n", option_name.c_str());
+    usage(command_line.argv0().c_str());
+    exit(-1);
+  }
+  return result;
+}
+
+std::optional<int32_t> GetInt32Option(const fxl::CommandLine& command_line,
+                                      std::string option_name) {
+  std::string option_as_string;
+  if (!command_line.GetOptionValue(option_name.c_str(), &option_as_string)) {
+    return std::nullopt;
+  }
+  errno = 0;
+  int32_t result = std::stoi(option_as_string);
+  if (errno == ERANGE) {
+    printf("error parsing command line option as int32_t: %s\n", option_name.c_str());
+    usage(command_line.argv0().c_str());
+    exit(-1);
+  }
+  return result;
 }
 
 }  // namespace
@@ -100,9 +136,9 @@ int main(int argc, char* argv[]) {
       });
 
   std::string input_file = command_line.positional_args()[0];
-  std::string output_file;
+  std::string output_file_name;
   if (command_line.positional_args().size() >= 2) {
-    output_file = command_line.positional_args()[1];
+    output_file_name = command_line.positional_args()[1];
   }
 
   // In case of --h264 and --imagepipe, this will be non-nullptr:
@@ -112,24 +148,17 @@ int main(int argc, char* argv[]) {
 
   bool use_imagepipe = command_line.HasOption("imagepipe");
 
-  double frames_per_second = 0.0;
-  std::string frames_per_second_string;
-  if (command_line.GetOptionValue("fps", &frames_per_second_string)) {
-    if (!use_imagepipe) {
-      printf("--fps requires --imagepipe\n");
-      usage(command_line.argv0().c_str());
-      exit(-1);
-    }
-    const char* str_begin = frames_per_second_string.c_str();
-    char* str_end;
-    errno = 0;
-    frames_per_second = std::strtod(str_begin, &str_end);
-    if (str_end == str_begin || (frames_per_second == HUGE_VAL && errno == ERANGE)) {
-      printf("fps parse error\n");
-      usage(command_line.argv0().c_str());
-      exit(-1);
-    }
+  std::optional<double> maybe_frames_per_second = GetDoubleOption(command_line, "fps");
+  if (maybe_frames_per_second && !use_imagepipe) {
+    printf("--fps requires --imagepipe\n");
+    usage(command_line.argv0().c_str());
+    exit(-1);
   }
+  double frames_per_second = maybe_frames_per_second.value_or(24.0);
+
+  uint32_t loop_stream_count = GetInt32Option(command_line, "loop_stream_count").value_or(1);
+  uint32_t frame_count =
+      GetInt32Option(command_line, "frame_count").value_or(std::numeric_limits<int32_t>::max());
 
   OneShotEvent image_pipe_ready;
   if (use_imagepipe) {
@@ -174,6 +203,18 @@ int main(int argc, char* argv[]) {
   auto in_stream_peeker = std::make_unique<InStreamPeeker>(
       &fidl_loop, fidl_thread, component_context.get(), std::move(in_stream_file), kMaxPeekBytes);
 
+  fbl::unique_fd output_file;
+  if (!output_file_name.empty()) {
+    int output_file_desc = open(output_file_name.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+    output_file.reset(output_file_desc);
+    ZX_ASSERT(output_file.is_valid());
+  }
+
+  UseVideoDecoderTestParams test_params = {
+      .loop_stream_count = loop_stream_count,
+      .frame_count = frame_count,
+  };
+
   // We set up a closure here just to avoid forcing the two decoder types to
   // take the same parameters, but still be able to share the
   // drive_decoder_thread code below.
@@ -182,32 +223,38 @@ int main(int argc, char* argv[]) {
   if (command_line.HasOption("aac_adts")) {
     is_hash_valid = true;
     use_decoder = [&fidl_loop, codec_factory = std::move(codec_factory), sysmem = std::move(sysmem),
-                   input_file, output_file, &md]() mutable {
+                   input_file, output_file_name, &md]() mutable {
       use_aac_decoder(&fidl_loop, std::move(codec_factory), std::move(sysmem), input_file,
-                      output_file, md);
+                      output_file_name, md);
     };
   } else if (command_line.HasOption("h264")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
-                   frame_sink = frame_sink.get()]() mutable {
-      UseVideoDecoderParams params{.fidl_loop = &fidl_loop,
-                                   .fidl_thread = fidl_thread,
-                                   .codec_factory = std::move(codec_factory),
-                                   .sysmem = std::move(sysmem),
-                                   .in_stream = in_stream_peeker,
-                                   .frame_sink = frame_sink};
+                   frame_sink = frame_sink.get(), &test_params]() mutable {
+      UseVideoDecoderParams params{
+          .fidl_loop = &fidl_loop,
+          .fidl_thread = fidl_thread,
+          .codec_factory = std::move(codec_factory),
+          .sysmem = std::move(sysmem),
+          .in_stream = in_stream_peeker,
+          .frame_sink = frame_sink,
+          .test_params = &test_params,
+      };
       use_h264_decoder(std::move(params));
     };
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&fidl_loop, fidl_thread, codec_factory = std::move(codec_factory),
                    sysmem = std::move(sysmem), in_stream_peeker = in_stream_peeker.get(),
-                   frame_sink = frame_sink.get()]() mutable {
-      UseVideoDecoderParams params{.fidl_loop = &fidl_loop,
-                                   .fidl_thread = fidl_thread,
-                                   .codec_factory = std::move(codec_factory),
-                                   .sysmem = std::move(sysmem),
-                                   .in_stream = in_stream_peeker,
-                                   .frame_sink = frame_sink};
+                   frame_sink = frame_sink.get(), &test_params]() mutable {
+      UseVideoDecoderParams params{
+          .fidl_loop = &fidl_loop,
+          .fidl_thread = fidl_thread,
+          .codec_factory = std::move(codec_factory),
+          .sysmem = std::move(sysmem),
+          .in_stream = in_stream_peeker,
+          .frame_sink = frame_sink,
+          .test_params = &test_params,
+      };
       use_vp9_decoder(std::move(params));
     };
   } else {

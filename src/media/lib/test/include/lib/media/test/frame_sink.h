@@ -47,7 +47,7 @@ class FrameSink {
 
   // The on_done will get called on main_loop_'s thread.  If the callee
   // wants/needs to, the callee can post to a different thread.
-  void PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
+  void PutFrame(uint32_t image_id, zx::vmo vmo, uint64_t vmo_offset,
                 std::shared_ptr<const fuchsia::media::StreamOutputFormat> output_format,
                 fit::closure on_done);
 
@@ -59,6 +59,9 @@ class FrameSink {
   // The on_frames_returned gets called on main_loop_'s thread.  If the callee
   // wants/needs to, the callee can post to a different thread.
   void PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_frames_returned);
+
+  // Can be called on any thread.
+  uint32_t GetPendingCount() const;
 
   void AddFrameSinkView(FrameSinkView* view);
   void RemoveFrameSinkView(FrameSinkView* view);
@@ -95,7 +98,7 @@ class FrameSink {
   // view_provider_app_ early during ~FrameSink.
   std::unique_ptr<scenic::ViewProviderComponent> view_provider_component_;
 
-  uint32_t frames_outstanding_ = 0;
+  std::atomic<uint32_t> frames_outstanding_ = 0;
 
   fit::closure on_frames_returned_;
 

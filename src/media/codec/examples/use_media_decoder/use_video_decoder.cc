@@ -52,7 +52,7 @@ constexpr zx::duration kInStreamDeadlineDuration = zx::sec(30);
 // stream, even if it's just to decode the same data again.
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
 
-// Scenic ImagePipe doesn't allow image_id 0, so offset by this much.
+// Scenic ImagePipe doesn't allow image_id 0, so start here.
 constexpr uint32_t kFirstValidImageId = 1;
 
 constexpr uint8_t kLongStartCodeArray[] = {0x00, 0x00, 0x00, 0x01};
@@ -693,7 +693,20 @@ void VideoDecoderRunner::Run() {
     const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
     std::optional<zx::time> frame_zero_time;
     uint64_t frame_index = 0;
+    uint32_t image_id = kFirstValidImageId;
+    std::atomic<uint32_t> async_put_frame_count = 0;
     while (true) {
+      if (params_.frame_sink) {
+        // Control concurrency of pending Present()s to scenic - this could be an issue for very
+        // large buffer collections, or in cases where we switch buffer collections a lot - in such
+        // cases Scenic can start complaining about too many queued Present()s.  This avoids the
+        // frame_sink needing to block/delay the output thread anywhere other than here.
+        //
+        // It'd be better if this were event driven, but this works for now.
+        while (async_put_frame_count + params_.frame_sink->GetPendingCount() >= 10) {
+          zx::nanosleep(zx::deadline_after(zx::msec(10)));
+        }
+      }
       VLOGF("BlockingGetEmittedOutput()...");
       std::unique_ptr<CodecOutput> output = codec_client_->BlockingGetEmittedOutput();
       VLOGF("BlockingGetEmittedOutput() done");
@@ -949,13 +962,15 @@ void VideoDecoderRunner::Run() {
       }
 
       if (params_.frame_sink) {
+        async_put_frame_count++;
+        zx::vmo image_vmo;
+        ZX_ASSERT(ZX_OK == buffer.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo));
         async::PostTask(
             params_.fidl_loop->dispatcher(),
-            [this, image_id = packet.header().packet_index() + kFirstValidImageId,
-             &vmo = buffer.vmo(),
+            [this, image_id = image_id++, vmo = std::move(image_vmo),
              vmo_offset = buffer.vmo_offset() + packet.start_offset() + raw->primary_start_offset,
-             format, cleanup = std::move(cleanup)]() mutable {
-              params_.frame_sink->PutFrame(image_id, vmo, vmo_offset, format,
+             format, cleanup = std::move(cleanup), &async_put_frame_count]() mutable {
+              params_.frame_sink->PutFrame(image_id, std::move(vmo), vmo_offset, format,
                                            [cleanup = std::move(cleanup)] {
                                              // The ~cleanup can run on any thread (the
                                              // current thread is main_loop's thread),
@@ -965,6 +980,7 @@ void VideoDecoderRunner::Run() {
                                              //
                                              // ~cleanup
                                            });
+              async_put_frame_count--;
             });
       }
       // If we didn't std::move(cleanup) before here, then ~cleanup runs here.

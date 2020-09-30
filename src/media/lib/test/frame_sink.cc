@@ -40,7 +40,7 @@ FrameSink::~FrameSink() {
 }
 
 // Must be called on main_loop_'s thread.
-void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
+void FrameSink::PutFrame(uint32_t image_id, zx::vmo vmo, uint64_t vmo_offset,
                          std::shared_ptr<const fuchsia::media::StreamOutputFormat> output_format,
                          fit::closure on_done) {
   // This method fans out to the views_, and runs on_done async when all the
@@ -85,6 +85,7 @@ void FrameSink::PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_off
   FX_VLOGS(3) << "putting frame - present_time: " << present_time << " image_id: " << image_id;
 
   for (FrameSinkView* view : views_) {
+    // Each view duplicates the vmo.
     view->PutFrame(image_id, present_time, vmo, vmo_offset, video_format, [shared_done_runner] {
       // ~shared_done_runner will run on_done when shared_ptr<>
       // refcount drops to 0
@@ -148,6 +149,8 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_fra
   // after a frame comes back that'll see all the frames returned.
   CheckIfAllFramesReturned();
 }
+
+uint32_t FrameSink::GetPendingCount() const { return frames_outstanding_; }
 
 void FrameSink::AddFrameSinkView(FrameSinkView* view) {
   views_.insert(view);
