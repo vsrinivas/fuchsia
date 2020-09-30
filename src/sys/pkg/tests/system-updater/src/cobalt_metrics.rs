@@ -102,7 +102,7 @@ async fn succeeds_even_if_metrics_fail_to_send() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -111,11 +111,12 @@ async fn succeeds_even_if_metrics_fail_to_send() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,

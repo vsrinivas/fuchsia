@@ -343,12 +343,14 @@ pub async fn test_no_network() -> Result<(), Error> {
     assert_eq!(
         update_result.paver_events,
         vec![
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::ReadAsset {
                 configuration: Configuration::A,
                 asset: Asset::VerifiedBootMetadata
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
+            PaverEvent::QueryCurrentConfiguration,
+            PaverEvent::QueryActiveConfiguration,
         ]
     );
     update_result.check_packages();
@@ -384,12 +386,13 @@ pub async fn test_pave_fails() -> Result<(), Error> {
     assert_eq!(
         result.paver_events,
         vec![
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::ReadAsset {
                 configuration: Configuration::A,
                 asset: Asset::VerifiedBootMetadata
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteAsset {
                 asset: Asset::Kernel,
@@ -435,12 +438,13 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
     assert_eq!(
         result.paver_events,
         vec![
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::ReadAsset {
                 configuration: Configuration::A,
                 asset: Asset::VerifiedBootMetadata
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteFirmware {
                 configuration: Configuration::B,
@@ -678,12 +682,13 @@ pub async fn test_omaha_works() -> Result<(), Error> {
     assert_eq!(
         result.paver_events,
         vec![
-            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::ReadAsset {
                 configuration: Configuration::A,
                 asset: Asset::VerifiedBootMetadata
             },
             PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
+            PaverEvent::QueryCurrentConfiguration,
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteFirmware {
                 configuration: Configuration::B,

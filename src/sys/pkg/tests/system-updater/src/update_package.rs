@@ -34,7 +34,7 @@ async fn rejects_invalid_package_name() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -43,6 +43,8 @@ async fn rejects_invalid_package_name() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(not_update_package_url.to_string())
         ]
@@ -82,7 +84,7 @@ async fn fails_if_package_unavailable() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -91,6 +93,8 @@ async fn fails_if_package_unavailable() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
         ]

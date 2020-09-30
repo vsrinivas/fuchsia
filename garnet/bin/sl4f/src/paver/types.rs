@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub(super) enum Method {
     QueryActiveConfiguration,
+    QueryCurrentConfiguration,
     QueryConfigurationStatus,
     ReadAsset,
 }
@@ -20,6 +21,7 @@ impl std::str::FromStr for Method {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "QueryActiveConfiguration" => Ok(Method::QueryActiveConfiguration),
+            "QueryCurrentConfiguration" => Ok(Method::QueryCurrentConfiguration),
             "QueryConfigurationStatus" => Ok(Method::QueryConfigurationStatus),
             "ReadAsset" => Ok(Method::ReadAsset),
             _ => return Err(format_err!("Invalid paver facade method: {}", method)),

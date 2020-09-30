@@ -16,6 +16,10 @@ impl Facade for PaverFacade {
                 let result = self.query_active_configuration().await?;
                 Ok(to_value(result)?)
             }
+            Method::QueryCurrentConfiguration => {
+                let result = self.query_current_configuration().await?;
+                Ok(to_value(result)?)
+            }
             Method::QueryConfigurationStatus => {
                 let result = self.query_configuration_status(from_value(args)?).await?;
                 Ok(to_value(result)?)

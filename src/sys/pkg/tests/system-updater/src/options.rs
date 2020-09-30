@@ -25,7 +25,7 @@ async fn uses_custom_update_package() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -34,11 +34,12 @@ async fn uses_custom_update_package() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -147,7 +148,7 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -156,11 +157,12 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,

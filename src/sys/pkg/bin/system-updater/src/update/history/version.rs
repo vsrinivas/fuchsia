@@ -190,9 +190,9 @@ async fn get_vbmeta_and_zbi_hash_from_environment(
     data_sink: &DataSinkProxy,
     boot_manager: &BootManagerProxy,
 ) -> Result<(String, String), Error> {
-    let active_configuration = paver::paver_query_active_configuration(boot_manager).await?;
+    let current_configuration = paver::query_current_configuration(boot_manager).await?;
     let configuration =
-        active_configuration.to_configuration().ok_or(anyhow!("device does not support ABR"))?;
+        current_configuration.to_configuration().ok_or(anyhow!("device does not support ABR"))?;
     let vbmeta_buffer =
         paver::paver_read_asset(data_sink, configuration, Asset::VerifiedBootMetadata).await?;
     let vbmeta_hash = sha256_hash_with_no_trailing_zeros(vbmeta_buffer)?;

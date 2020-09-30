@@ -35,6 +35,8 @@ pub enum PaverEvent {
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
     WriteFirmware { configuration: paver::Configuration, firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
+    QueryCurrentConfiguration,
+    QueryConfigurationStatus { configuration: paver::Configuration },
     SetActiveConfigurationHealthy,
     SetConfigurationActive { configuration: paver::Configuration },
     SetConfigurationUnbootable { configuration: paver::Configuration },
@@ -44,10 +46,13 @@ pub enum PaverEvent {
 
 pub struct MockPaverServiceBuilder {
     call_hook: Option<Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>>,
+    config_status_hook:
+        Option<Box<dyn Fn(&PaverEvent) -> fidl_fuchsia_paver::ConfigurationStatus + Send + Sync>>,
     firmware_hook: Option<Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>>,
     read_hook: Option<Box<dyn Fn(&PaverEvent) -> Result<Vec<u8>, Status> + Send + Sync>>,
     event_hook: Option<Box<dyn Fn(&PaverEvent) + Send + Sync>>,
     active_config: paver::Configuration,
+    current_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
 }
 
@@ -55,10 +60,12 @@ impl MockPaverServiceBuilder {
     pub fn new() -> Self {
         Self {
             call_hook: None,
+            config_status_hook: None,
             firmware_hook: None,
             read_hook: None,
             event_hook: None,
             active_config: paver::Configuration::A,
+            current_config: paver::Configuration::A,
             boot_manager_close_with_epitaph: None,
         }
     }
@@ -68,6 +75,14 @@ impl MockPaverServiceBuilder {
         F: Fn(&PaverEvent) -> Status + Send + Sync + 'static,
     {
         self.call_hook = Some(Box::new(call_hook));
+        self
+    }
+
+    pub fn config_status_hook<F>(mut self, config_status_hook: F) -> Self
+    where
+        F: Fn(&PaverEvent) -> fidl_fuchsia_paver::ConfigurationStatus + Send + Sync + 'static,
+    {
+        self.config_status_hook = Some(Box::new(config_status_hook));
         self
     }
 
@@ -102,6 +117,11 @@ impl MockPaverServiceBuilder {
         self
     }
 
+    pub fn current_config(mut self, current_config: paver::Configuration) -> Self {
+        self.current_config = current_config;
+        self
+    }
+
     pub fn boot_manager_close_with_epitaph(mut self, status: Status) -> Self {
         self.boot_manager_close_with_epitaph = Some(status);
         self
@@ -109,6 +129,9 @@ impl MockPaverServiceBuilder {
 
     pub fn build(self) -> MockPaverService {
         let call_hook = self.call_hook.unwrap_or_else(|| Box::new(|_| Status::OK));
+        let config_status_hook = self
+            .config_status_hook
+            .unwrap_or_else(|| Box::new(|_| fidl_fuchsia_paver::ConfigurationStatus::Healthy));
         let firmware_hook = self.firmware_hook.unwrap_or_else(|| {
             Box::new(|_| paver::WriteFirmwareResult::Status(Status::OK.into_raw()))
         });
@@ -117,11 +140,13 @@ impl MockPaverServiceBuilder {
 
         MockPaverService {
             events: Mutex::new(vec![]),
-            call_hook: Box::new(call_hook),
-            firmware_hook: Box::new(firmware_hook),
-            read_hook: Box::new(read_hook),
-            event_hook: Box::new(event_hook),
+            call_hook,
+            config_status_hook,
+            firmware_hook,
+            read_hook,
+            event_hook,
             active_config: self.active_config,
+            current_config: self.current_config,
             boot_manager_close_with_epitaph: self.boot_manager_close_with_epitaph,
         }
     }
@@ -130,10 +155,13 @@ impl MockPaverServiceBuilder {
 pub struct MockPaverService {
     events: Mutex<Vec<PaverEvent>>,
     call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
+    config_status_hook:
+        Box<dyn Fn(&PaverEvent) -> fidl_fuchsia_paver::ConfigurationStatus + Send + Sync>,
     firmware_hook: Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>,
     read_hook: Box<dyn Fn(&PaverEvent) -> Result<Vec<u8>, Status> + Send + Sync>,
     event_hook: Box<dyn Fn(&PaverEvent) + Send + Sync>,
     active_config: paver::Configuration,
+    current_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
 }
 
@@ -256,6 +284,27 @@ impl MockPaverService {
                     };
                     responder.send(&mut result).expect("paver response to send");
                 }
+                paver::BootManagerRequest::QueryCurrentConfiguration { responder } => {
+                    let event = PaverEvent::QueryCurrentConfiguration;
+                    let status = (*self.call_hook)(&event);
+                    self.push_event(event);
+                    let mut result = if status == Status::OK {
+                        Ok(self.current_config)
+                    } else {
+                        Err(status.into_raw())
+                    };
+                    responder.send(&mut result).expect("paver response to send");
+                }
+                paver::BootManagerRequest::QueryConfigurationStatus {
+                    configuration,
+                    responder,
+                } => {
+                    let event = PaverEvent::QueryConfigurationStatus { configuration };
+                    let config_status = (*self.config_status_hook)(&event);
+                    self.push_event(event);
+                    let mut result = Ok(config_status);
+                    responder.send(&mut result).expect("paver response to send");
+                }
                 paver::BootManagerRequest::SetActiveConfigurationHealthy { responder } => {
                     let event = PaverEvent::SetActiveConfigurationHealthy;
                     let status = (*self.call_hook)(&event);
@@ -283,7 +332,6 @@ impl MockPaverService {
                     self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
         }
 
@@ -423,6 +471,30 @@ pub mod tests {
         );
 
         assert_eq!(paver.paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_config_status_hook() -> Result<(), Error> {
+        let config_status_hook =
+            |_: &PaverEvent| fidl_fuchsia_paver::ConfigurationStatus::Unbootable;
+        let paver = MockPaverForTest::new(|p| p.config_status_hook(config_status_hook));
+
+        assert_eq!(
+            Ok(fidl_fuchsia_paver::ConfigurationStatus::Unbootable),
+            paver
+                .boot_manager
+                .query_configuration_status(fidl_fuchsia_paver::Configuration::A)
+                .await?
+        );
+
+        assert_eq!(
+            paver.paver.take_events(),
+            vec![PaverEvent::QueryConfigurationStatus {
+                configuration: fidl_fuchsia_paver::Configuration::A
+            }]
+        );
 
         Ok(())
     }

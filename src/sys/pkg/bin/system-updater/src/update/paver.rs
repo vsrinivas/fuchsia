@@ -6,8 +6,8 @@ use {
     anyhow::{anyhow, bail, Context, Error},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver::{
-        Asset, BootManagerMarker, BootManagerProxy, Configuration, DataSinkMarker, DataSinkProxy,
-        PaverMarker, WriteFirmwareResult,
+        Asset, BootManagerMarker, BootManagerProxy, Configuration, ConfigurationStatus,
+        DataSinkMarker, DataSinkProxy, PaverMarker, WriteFirmwareResult,
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon::{Status, VmoChildOptions},
@@ -16,8 +16,8 @@ use {
 };
 
 mod configuration;
-pub use configuration::InactiveConfiguration;
 use configuration::{ActiveConfiguration, TargetConfiguration};
+pub use configuration::{CurrentConfiguration, NonCurrentConfiguration};
 
 #[derive(Debug, Error)]
 enum WriteAssetError {
@@ -81,16 +81,16 @@ enum ImageTarget<'a> {
 
 fn classify_image(
     image: &Image,
-    inactive_config: InactiveConfiguration,
+    desired_config: NonCurrentConfiguration,
 ) -> Result<ImageTarget<'_>, Error> {
     let target = match image.name() {
         "zbi" | "zbi.signed" => ImageTarget::Asset {
             asset: Asset::Kernel,
-            configuration: inactive_config.to_target_configuration(),
+            configuration: desired_config.to_target_configuration(),
         },
         "fuchsia.vbmeta" => ImageTarget::Asset {
             asset: Asset::VerifiedBootMetadata,
-            configuration: inactive_config.to_target_configuration(),
+            configuration: desired_config.to_target_configuration(),
         },
         "zedboot" | "zedboot.signed" | "recovery" => ImageTarget::Asset {
             asset: Asset::Kernel,
@@ -105,7 +105,7 @@ fn classify_image(
             // handled identically to "firmware" but without subtype support.
             ImageTarget::Firmware {
                 subtype: image.subtype().unwrap_or(""),
-                configuration: inactive_config.to_target_configuration(),
+                configuration: desired_config.to_target_configuration(),
             }
         }
         _ => bail!("unrecognized image: {}", image.name()),
@@ -201,9 +201,9 @@ async fn write_image_buffer(
     data_sink: &DataSinkProxy,
     buffer: Buffer,
     image: &Image,
-    inactive_config: InactiveConfiguration,
+    desired_config: NonCurrentConfiguration,
 ) -> Result<(), Error> {
-    let target = classify_image(image, inactive_config)?;
+    let target = classify_image(image, desired_config)?;
     let payload = Payload { display_name: image.filename(), buffer };
 
     match target {
@@ -234,7 +234,7 @@ pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error
 /// Determines the active configuration which will be used as the default boot choice on a normal
 /// cold boot, which may or may not be the currently running configuration, or none if no
 /// configurations are currently bootable.
-pub async fn paver_query_active_configuration(
+pub async fn query_active_configuration(
     boot_manager: &BootManagerProxy,
 ) -> Result<ActiveConfiguration, Error> {
     match boot_manager.query_active_configuration().await {
@@ -260,31 +260,177 @@ pub async fn paver_query_active_configuration(
     }
 }
 
-/// Determines the current inactive configuration to which new kernel images should be written.
-pub async fn query_inactive_configuration(
+/// Retrieve the currently-running configuration from the paver service (the configuration the
+/// device booted from) which may be distinct from the 'active' configuration.
+pub async fn query_current_configuration(
     boot_manager: &BootManagerProxy,
-) -> Result<InactiveConfiguration, Error> {
-    let active_config = paver_query_active_configuration(boot_manager).await?;
-
-    Ok(active_config.to_inactive_configuration())
+) -> Result<CurrentConfiguration, Error> {
+    match boot_manager.query_current_configuration().await {
+        Ok(Ok(Configuration::A)) => Ok(CurrentConfiguration::A),
+        Ok(Ok(Configuration::B)) => Ok(CurrentConfiguration::B),
+        Ok(Ok(Configuration::Recovery)) => Ok(CurrentConfiguration::Recovery),
+        Ok(Err(status)) => {
+            Err(anyhow!("query_current_configuration responded with {}", Status::from_raw(status)))
+        }
+        Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
+            fx_log_warn!("device does not support ABR. Kernel image updates will not be atomic.");
+            Ok(CurrentConfiguration::NotSupported)
+        }
+        Err(err) => Err(anyhow!(err).context("while performing query_current_configuration call")),
+    }
 }
 
-/// Sets the given inactive `configuration` as active for subsequent boot attempts. If ABR is not
+async fn paver_query_configuration_status(
+    boot_manager: &BootManagerProxy,
+    configuration: Configuration,
+) -> Result<ConfigurationStatus, Error> {
+    match boot_manager.query_configuration_status(configuration.into()).await {
+        Ok(Ok(configuration_status)) => Ok(configuration_status),
+        Ok(Err(status)) => {
+            Err(anyhow!("query_configuration_status responded with {}", Status::from_raw(status)))
+        }
+        Err(err) => Err(anyhow!(err).context("while performing query_configuration_status call")),
+    }
+}
+
+async fn paver_set_active_configuration_healthy(
+    boot_manager: &BootManagerProxy,
+) -> Result<(), Error> {
+    let status = boot_manager
+        .set_active_configuration_healthy()
+        .await
+        .context("while performing set_active_configuration_healthy call")?;
+    Status::ok(status).context("set_active_configuration_healthy responded with")?;
+    Ok(())
+}
+
+/// If the current partition is either A or B, ensure that it is also the active partition.
+///
+/// This operation can fail, and it is very important that all states it can end in (by returning)
+/// don't end in a bricked device when the update continues.
+/// Some devices use BootManager's flush to flush operations, and some don't. This function needs
+/// to support both strategies.
+pub async fn ensure_current_partition_active(
+    boot_manager: &BootManagerProxy,
+    current: CurrentConfiguration,
+) -> Result<(), Error> {
+    if current == CurrentConfiguration::NotSupported {
+        fx_log_info!("ABR not supported, not setting current configuration to active");
+        return Ok(());
+    }
+
+    if !current.is_primary_configuration() {
+        fx_log_info!(
+            "Current partition is neither A nor B, not resetting the active partition to it"
+        );
+        return Ok(());
+    }
+
+    let originally_active = query_active_configuration(boot_manager)
+        .await
+        .context("while determining originally active configuration")?;
+
+    if current.same_primary_configuration_as_active(originally_active) {
+        fx_log_info!(
+            "Current partition ({:?}) is already active, not resetting active ({:?})",
+            current,
+            originally_active
+        );
+
+        return Ok(());
+    }
+
+    // Internal function because this is dangerous enough that we never want another function
+    // to call it - it arbitrarily resets active to current.
+    async fn ensure_current_partition_active_without_flush(
+        boot_manager: &BootManagerProxy,
+        current: CurrentConfiguration,
+        originally_active: ActiveConfiguration,
+    ) -> Result<(), Error> {
+        {
+            let current_configuration = if let Some(configuration) = current.to_configuration() {
+                configuration
+            } else {
+                return Ok(());
+            };
+
+            let original_status_of_current_partition =
+                paver_query_configuration_status(boot_manager, current_configuration).await?;
+
+            // This will reset the boot counter on the current partition, which could be a
+            // problem if it is PENDING, but our health check framework should prevent the
+            // system-updater from getting here on a non-healthy current partition
+            // If this operation fails and we bail out here, we'll have written nothing.
+            let () = paver_set_arbitrary_configuration_active(boot_manager, current_configuration)
+                .await
+                .context("while setting current partition active")?;
+
+            if original_status_of_current_partition == ConfigurationStatus::Healthy {
+                // If this operation fails and we bail out of the entire update, we'll have set the
+                // current configuration active, but not healthy.
+                // That will result in the next boot going into that partition and running the
+                // health check, which will set its health status appropriately.
+                let () = paver_set_active_configuration_healthy(boot_manager)
+                    .await
+                    .context("while setting current partition healthy")?;
+            }
+        }
+
+        {
+            let originally_active_configuration = if let Some(configuration) =
+                originally_active.to_configuration()
+            {
+                configuration
+            } else {
+                fx_log_info!("active partition is not transformable to a Configuration, not setting originally active unbootable");
+                return Ok(());
+            };
+
+            let () = set_configuration_unbootable(boot_manager, originally_active_configuration)
+                .await
+                .context("while setting originally active configuration unbootable")?;
+        }
+
+        Ok(())
+    }
+
+    // We need to flush the boot manager regardless, but if that operation succeeded while something
+    // in ensure_current_partition_without_flush failed, propagate that error.
+    let result =
+        ensure_current_partition_active_without_flush(boot_manager, current, originally_active)
+            .await;
+    let () = paver_flush_boot_manager(boot_manager).await.context("while flushing boot manager")?;
+
+    result
+}
+
+/// Sets an arbitrary configuration active. Not pub because it's possible to use this function to set a
+/// current partition or recovery partition active, which is almost certainly not what external users want.
+async fn paver_set_arbitrary_configuration_active(
+    boot_manager: &BootManagerProxy,
+    configuration: Configuration,
+) -> Result<(), Error> {
+    let status = boot_manager
+        .set_configuration_active(configuration)
+        .await
+        .context("while performing set_configuration_active call")?;
+    Status::ok(status).context("set_configuration_active responded with")?;
+    Ok(())
+}
+
+/// Sets the given desired `configuration` as active for subsequent boot attempts. If ABR is not
 /// supported, do nothing.
 pub async fn set_configuration_active(
     boot_manager: &BootManagerProxy,
-    configuration: InactiveConfiguration,
+    desired_configuration: NonCurrentConfiguration,
 ) -> Result<(), Error> {
-    if let Some(configuration) = configuration.to_configuration() {
-        let status = boot_manager
-            .set_configuration_active(configuration)
-            .await
-            .context("while performing set_configuration_active call")?;
-        Status::ok(status).context("set_configuration_active responded with")?;
+    if let Some(configuration) = desired_configuration.to_configuration() {
+        return paver_set_arbitrary_configuration_active(boot_manager, configuration).await;
     }
     Ok(())
 }
 
+/// Set an arbitrary configuration as unbootable. Dangerous!
 async fn set_configuration_unbootable(
     boot_manager: &BootManagerProxy,
     configuration: Configuration,
@@ -317,7 +463,7 @@ pub async fn write_image(
     data_sink: &DataSinkProxy,
     update_pkg: &UpdatePackage,
     image: &Image,
-    inactive_config: InactiveConfiguration,
+    desired_config: NonCurrentConfiguration,
 ) -> Result<(), Error> {
     let buffer = update_pkg
         .open_image(&image)
@@ -326,7 +472,7 @@ pub async fn write_image(
 
     fx_log_info!("writing {} from update package", image.filename());
 
-    let res = write_image_buffer(data_sink, buffer, image, inactive_config)
+    let res = write_image_buffer(data_sink, buffer, image, desired_config)
         .await
         .with_context(|| format!("error writing {}", image.filename()));
 
@@ -336,28 +482,33 @@ pub async fn write_image(
     res
 }
 
+async fn paver_flush_boot_manager(boot_manager: &BootManagerProxy) -> Result<(), Error> {
+    let () = Status::ok(
+        boot_manager
+            .flush()
+            .await
+            .context("while performing fuchsia.paver.BootManager/Flush call")?,
+    )
+    .context("fuchsia.paver.BootManager/Flush responded with")?;
+    Ok(())
+}
+
 /// Flush pending disk writes and boot configuration, if supported.
 pub async fn flush(
     data_sink: &DataSinkProxy,
     boot_manager: &BootManagerProxy,
-    inactive_config: InactiveConfiguration,
+    desired: NonCurrentConfiguration,
 ) -> Result<(), Error> {
     let () = Status::ok(
         data_sink.flush().await.context("while performing fuchsia.paver.DataSink/Flush call")?,
     )
     .context("fuchsia.paver.DataSink/Flush responded with")?;
 
-    match inactive_config {
-        InactiveConfiguration::A | InactiveConfiguration::B => {
-            let () = Status::ok(
-                boot_manager
-                    .flush()
-                    .await
-                    .context("while performing fuchsia.paver.BootManager/Flush call")?,
-            )
-            .context("fuchsia.paver.BootManager/Flush responded with")?;
+    match desired {
+        NonCurrentConfiguration::A | NonCurrentConfiguration::B => {
+            paver_flush_boot_manager(boot_manager).await.context("while flushing boot manager")?;
         }
-        InactiveConfiguration::NotSupported => {}
+        NonCurrentConfiguration::NotSupported => {}
     }
 
     Ok(())
@@ -389,45 +540,55 @@ mod tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn query_inactive_configuration_with_a_active() {
+    async fn query_non_current_configuration_with_a_current() {
         let paver =
-            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::A).build());
+            Arc::new(MockPaverServiceBuilder::new().current_config(Configuration::A).build());
         let boot_manager = paver.spawn_boot_manager_service();
 
         assert_eq!(
-            query_inactive_configuration(&boot_manager).await.unwrap(),
-            InactiveConfiguration::B
+            query_current_configuration(&boot_manager)
+                .await
+                .unwrap()
+                .to_non_current_configuration(),
+            NonCurrentConfiguration::B,
         );
 
-        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn query_inactive_configuration_with_b_active() {
+    async fn query_non_current_configuration_with_b_current() {
         let paver =
-            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::B).build());
+            Arc::new(MockPaverServiceBuilder::new().current_config(Configuration::B).build());
         let boot_manager = paver.spawn_boot_manager_service();
 
         assert_eq!(
-            query_inactive_configuration(&boot_manager).await.unwrap(),
-            InactiveConfiguration::A
+            query_current_configuration(&boot_manager)
+                .await
+                .unwrap()
+                .to_non_current_configuration(),
+            NonCurrentConfiguration::A,
         );
 
-        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn query_inactive_configuration_with_invalid_active() {
-        let paver =
-            Arc::new(MockPaverServiceBuilder::new().active_config(Configuration::Recovery).build());
+    async fn query_non_current_configuration_with_r_current() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new().current_config(Configuration::Recovery).build(),
+        );
         let boot_manager = paver.spawn_boot_manager_service();
 
         assert_eq!(
-            query_inactive_configuration(&boot_manager).await.unwrap(),
-            InactiveConfiguration::B
+            query_current_configuration(&boot_manager)
+                .await
+                .unwrap()
+                .to_non_current_configuration(),
+            NonCurrentConfiguration::A, // We default to A
         );
 
-        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -435,7 +596,7 @@ mod tests {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let boot_manager = paver.spawn_boot_manager_service();
 
-        set_configuration_active(&boot_manager, InactiveConfiguration::B).await.unwrap();
+        set_configuration_active(&boot_manager, NonCurrentConfiguration::B).await.unwrap();
 
         assert_eq!(
             paver.take_events(),
@@ -460,6 +621,160 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_arbitrary_configuration_active_makes_call() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        paver_set_arbitrary_configuration_active(&boot_manager, Configuration::A).await.unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![PaverEvent::SetConfigurationActive { configuration: Configuration::A }]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_configuration_status_makes_call() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        paver_query_configuration_status(&boot_manager, Configuration::B).await.unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![PaverEvent::QueryConfigurationStatus { configuration: Configuration::B }]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_active_configuration_healthy_makes_call() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        paver_set_active_configuration_healthy(&boot_manager).await.unwrap();
+
+        assert_eq!(paver.take_events(), vec![PaverEvent::SetActiveConfigurationHealthy]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn flush_boot_manager_makes_call() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        paver_flush_boot_manager(&boot_manager).await.unwrap();
+
+        assert_eq!(paver.take_events(), vec![PaverEvent::BootManagerFlush]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ensure_current_partition_active_bails_out_if_current_equals_active_with_current_a() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(Configuration::A)
+                .active_config(Configuration::A)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        ensure_current_partition_active(&boot_manager, CurrentConfiguration::A).await.unwrap();
+
+        // We should only get as far as finding out the active config.
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration,]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ensure_current_partition_active_bails_out_if_current_equals_active_with_current_b() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(Configuration::B)
+                .active_config(Configuration::B)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        ensure_current_partition_active(&boot_manager, CurrentConfiguration::B).await.unwrap();
+
+        // We should only get as far as finding out the active config.
+        assert_eq!(paver.take_events(), vec![PaverEvent::QueryActiveConfiguration,]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ensure_current_partition_active_bails_out_with_current_r() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(Configuration::Recovery)
+                .active_config(Configuration::A)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        ensure_current_partition_active(&boot_manager, CurrentConfiguration::Recovery)
+            .await
+            .unwrap();
+
+        assert_eq!(paver.take_events(), vec![]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ensure_current_partition_resets_active() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(Configuration::A)
+                .active_config(Configuration::B)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        ensure_current_partition_active(&boot_manager, CurrentConfiguration::A).await.unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::QueryActiveConfiguration,
+                PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+                PaverEvent::SetConfigurationActive { configuration: Configuration::A },
+                PaverEvent::SetActiveConfigurationHealthy,
+                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+                PaverEvent::BootManagerFlush,
+            ]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ensure_current_partition_resets_active_when_current_isnt_healthy() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .current_config(Configuration::A)
+                .active_config(Configuration::B)
+                .config_status_hook(move |event| {
+                    if let PaverEvent::QueryConfigurationStatus { configuration } = event {
+                        if *configuration == Configuration::A {
+                            // The current config is unbootable, all others should be fine.
+                            return fidl_fuchsia_paver::ConfigurationStatus::Unbootable;
+                        }
+                    }
+                    fidl_fuchsia_paver::ConfigurationStatus::Healthy
+                })
+                .build(),
+        );
+
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        ensure_current_partition_active(&boot_manager, CurrentConfiguration::A).await.unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::QueryActiveConfiguration,
+                PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+                PaverEvent::SetConfigurationActive { configuration: Configuration::A },
+                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+                PaverEvent::BootManagerFlush,
+            ]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn write_image_buffer_writes_firmware() {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let data_sink = paver.spawn_data_sink_service();
@@ -468,7 +783,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware contents"),
             &Image::new("bootloader"),
-            InactiveConfiguration::A,
+            NonCurrentConfiguration::A,
         )
         .await
         .unwrap();
@@ -477,7 +792,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware_foo contents"),
             &Image::join("firmware", "foo"),
-            InactiveConfiguration::B,
+            NonCurrentConfiguration::B,
         )
         .await
         .unwrap();
@@ -515,7 +830,7 @@ mod tests {
             &data_sink,
             make_buffer("firmware of the future!"),
             &Image::join("firmware", "unknown"),
-            InactiveConfiguration::A,
+            NonCurrentConfiguration::A,
         )
         .await
         .unwrap();
@@ -549,7 +864,7 @@ mod tests {
                 &data_sink,
                 make_buffer("oops"),
                 &Image::join("firmware", "error"),
-                InactiveConfiguration::A,
+                NonCurrentConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("firmware failed to write")
@@ -574,7 +889,7 @@ mod tests {
                 &data_sink,
                 make_buffer("unknown"),
                 &Image::new("unknown"),
-                InactiveConfiguration::A,
+                NonCurrentConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("unrecognized image")
@@ -590,7 +905,7 @@ mod tests {
                 &data_sink,
                 make_buffer("unknown"),
                 &Image::join("zbi", "2"),
-                InactiveConfiguration::A,
+                NonCurrentConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("unsupported subtype")
@@ -606,7 +921,7 @@ mod tests {
             &data_sink,
             make_buffer("zbi contents"),
             &Image::new("zbi"),
-            InactiveConfiguration::A,
+            NonCurrentConfiguration::A,
         )
         .await
         .unwrap();
@@ -638,7 +953,7 @@ mod tests {
                 &data_sink,
                 make_buffer("zbi contents"),
                 &Image::new("zbi"),
-                InactiveConfiguration::A,
+                NonCurrentConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -649,7 +964,7 @@ mod tests {
                 &data_sink,
                 make_buffer("vbmeta contents"),
                 &Image::new("fuchsia.vbmeta"),
-                InactiveConfiguration::A,
+                NonCurrentConfiguration::A,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -660,7 +975,7 @@ mod tests {
                 &data_sink,
                 make_buffer("zbi contents"),
                 &Image::new("zbi"),
-                InactiveConfiguration::B,
+                NonCurrentConfiguration::B,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -671,7 +986,7 @@ mod tests {
                 &data_sink,
                 make_buffer("vbmeta contents"),
                 &Image::new("fuchsia.vbmeta"),
-                InactiveConfiguration::B,
+                NonCurrentConfiguration::B,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
@@ -698,7 +1013,7 @@ mod tests {
                 &data_sink,
                 make_buffer(format!("{} buffer", name)),
                 &Image::new(*name),
-                InactiveConfiguration::B,
+                NonCurrentConfiguration::B,
             )
             .await
             .unwrap();
@@ -762,13 +1077,13 @@ mod tests {
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
 
-        flush(&data_sink, &boot_manager, InactiveConfiguration::A).await.unwrap();
+        flush(&data_sink, &boot_manager, NonCurrentConfiguration::A).await.unwrap();
         assert_eq!(
             paver.take_events(),
             vec![PaverEvent::DataSinkFlush, PaverEvent::BootManagerFlush,]
         );
 
-        flush(&data_sink, &boot_manager, InactiveConfiguration::B).await.unwrap();
+        flush(&data_sink, &boot_manager, NonCurrentConfiguration::B).await.unwrap();
         assert_eq!(
             paver.take_events(),
             vec![PaverEvent::DataSinkFlush, PaverEvent::BootManagerFlush,]
@@ -786,7 +1101,7 @@ mod abr_not_supported_tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn query_inactive_configuration_returns_not_supported() {
+    async fn query_non_current_configuration_returns_not_supported() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
@@ -795,8 +1110,28 @@ mod abr_not_supported_tests {
         let boot_manager = paver.spawn_boot_manager_service();
 
         assert_eq!(
-            query_inactive_configuration(&boot_manager).await.unwrap(),
-            InactiveConfiguration::NotSupported
+            query_current_configuration(&boot_manager)
+                .await
+                .unwrap()
+                .to_non_current_configuration(),
+            NonCurrentConfiguration::NotSupported
+        );
+
+        assert_eq!(paver.take_events(), vec![]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_current_configuration_returns_not_supported() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        assert_eq!(
+            query_current_configuration(&boot_manager).await.unwrap(),
+            CurrentConfiguration::NotSupported
         );
 
         assert_eq!(paver.take_events(), vec![]);
@@ -807,8 +1142,27 @@ mod abr_not_supported_tests {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let boot_manager = paver.spawn_boot_manager_service();
 
-        set_configuration_active(&boot_manager, InactiveConfiguration::NotSupported).await.unwrap();
+        set_configuration_active(&boot_manager, NonCurrentConfiguration::NotSupported)
+            .await
+            .unwrap();
 
+        assert_eq!(paver.take_events(), vec![]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ensure_current_partition_active_bails_out() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
+                .build(),
+        );
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        ensure_current_partition_active(&boot_manager, CurrentConfiguration::NotSupported)
+            .await
+            .unwrap();
+
+        // We shouldn't even get as far as finding out the active config.
         assert_eq!(paver.take_events(), vec![]);
     }
 
@@ -821,7 +1175,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("zbi.signed contents"),
             &Image::new("zbi.signed"),
-            InactiveConfiguration::NotSupported,
+            NonCurrentConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -830,7 +1184,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("the new vbmeta"),
             &Image::new("fuchsia.vbmeta"),
-            InactiveConfiguration::NotSupported,
+            NonCurrentConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -871,7 +1225,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("firmware contents"),
             &Image::new("firmware"),
-            InactiveConfiguration::NotSupported,
+            NonCurrentConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -914,7 +1268,7 @@ mod abr_not_supported_tests {
                 &data_sink,
                 make_buffer("zbi.signed contents"),
                 &Image::new("zbi.signed"),
-                InactiveConfiguration::NotSupported,
+                NonCurrentConfiguration::NotSupported,
             )
             .await,
             Err(_)
@@ -950,7 +1304,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("zbi.signed contents"),
             &Image::new("zbi.signed"),
-            InactiveConfiguration::NotSupported,
+            NonCurrentConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -992,7 +1346,7 @@ mod abr_not_supported_tests {
             &data_sink,
             make_buffer("firmware contents"),
             &Image::new("firmware"),
-            InactiveConfiguration::NotSupported,
+            NonCurrentConfiguration::NotSupported,
         )
         .await
         .unwrap();
@@ -1035,7 +1389,7 @@ mod abr_not_supported_tests {
                 &data_sink,
                 make_buffer("zbi.signed contents"),
                 &Image::new("zbi.signed"),
-                InactiveConfiguration::NotSupported,
+                NonCurrentConfiguration::NotSupported,
             )
             .await,
             Err(_)
@@ -1068,7 +1422,7 @@ mod abr_not_supported_tests {
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
 
-        flush(&data_sink, &boot_manager, InactiveConfiguration::NotSupported).await.unwrap();
+        flush(&data_sink, &boot_manager, NonCurrentConfiguration::NotSupported).await.unwrap();
         assert_eq!(paver.take_events(), vec![PaverEvent::DataSinkFlush,]);
     }
 }

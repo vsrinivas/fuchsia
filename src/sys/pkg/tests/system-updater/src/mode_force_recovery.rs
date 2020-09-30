@@ -55,7 +55,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -64,10 +64,11 @@ async fn writes_recovery_and_force_reboots_into_it() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::Kernel,
@@ -165,7 +166,7 @@ async fn rejects_zbi() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -174,6 +175,8 @@ async fn rejects_zbi() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc

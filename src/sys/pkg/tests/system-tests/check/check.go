@@ -32,16 +32,16 @@ func IsDeviceUpToDate(
 	return expectedSystemImageMerkle == remoteSystemImageMerkle, nil
 }
 
-func DetermineActiveABRConfig(
+func determineActiveABRConfig(
 	ctx context.Context,
 	rpcClient *sl4f.Client,
 ) (*sl4f.Configuration, error) {
 	if rpcClient == nil {
-		logger.Infof(ctx, "sl4f not running, cannot determine current active partition")
+		logger.Infof(ctx, "sl4f not running, cannot determine active partition")
 		return nil, nil
 	}
 
-	activeConfig, err := rpcClient.PaverQueryActiveConfiguration(ctx)
+	currentConfig, err := rpcClient.PaverQueryActiveConfiguration(ctx)
 	if err == sl4f.ErrNotSupported {
 		logger.Infof(ctx, "device does not support querying the active configuration")
 		return nil, nil
@@ -49,25 +49,55 @@ func DetermineActiveABRConfig(
 		return nil, err
 	}
 
-	logger.Infof(ctx, "device booted to slot %s", activeConfig)
+	logger.Infof(ctx, "device booted to slot %s", currentConfig)
 
-	return &activeConfig, nil
+	return &currentConfig, nil
+}
+
+func DetermineCurrentABRConfig(
+	ctx context.Context,
+	rpcClient *sl4f.Client,
+) (*sl4f.Configuration, error) {
+	if rpcClient == nil {
+		logger.Infof(ctx, "sl4f not running, cannot determine current partition")
+		return nil, nil
+	}
+
+	currentConfig, err := rpcClient.PaverQueryCurrentConfiguration(ctx)
+	if err == sl4f.ErrNotSupported {
+		logger.Infof(ctx, "device does not support querying the current configuration")
+		return nil, nil
+	} else if err == sl4f.ErrInvalidPaverMethod {
+		// The currently running version of Fuchsia doesn't support QueryCurrentConfiguration.
+		// Log a warning and fall back to using the active config.
+		// For the purposes of these OTA tests, current should always equal active.
+		// TODO(60425): once the minimum supported version of Fuchsia supports QueryCurrentConfiguration,
+		// remove this fallback.
+		logger.Warningf(ctx, "current version on target does not support QueryCurrentConfiguration, falling back to QueryActiveConfiguration")
+		return determineActiveABRConfig(ctx, rpcClient)
+	} else if err != nil {
+		return nil, err
+	}
+
+	logger.Infof(ctx, "device booted to slot %s", currentConfig)
+
+	return &currentConfig, nil
 }
 
 func DetermineTargetABRConfig(
 	ctx context.Context,
 	rpcClient *sl4f.Client,
 ) (*sl4f.Configuration, error) {
-	activeConfig, err := DetermineActiveABRConfig(ctx, rpcClient)
+	currentConfig, err := DetermineCurrentABRConfig(ctx, rpcClient)
 	if err != nil {
 		return nil, fmt.Errorf("could not determine target config when querying active config: %w", err)
 	}
-	if activeConfig == nil {
+	if currentConfig == nil {
 		return nil, nil
 	}
 
 	var targetConfig sl4f.Configuration
-	if *activeConfig == sl4f.ConfigurationA {
+	if *currentConfig == sl4f.ConfigurationA {
 		targetConfig = sl4f.ConfigurationB
 	} else {
 		targetConfig = sl4f.ConfigurationA
@@ -92,15 +122,15 @@ func CheckABRConfig(
 	}
 
 	// Ensure the device is booting from the expected boot slot.
-	activeConfig, err := DetermineActiveABRConfig(ctx, rpcClient)
+	currentConfig, err := DetermineCurrentABRConfig(ctx, rpcClient)
 	if err != nil {
-		return fmt.Errorf("unable to determine active boot configuration: %w", err)
+		return fmt.Errorf("unable to determine current boot configuration: %w", err)
 	}
 
-	if activeConfig == nil {
+	if currentConfig == nil {
 		return fmt.Errorf("expected device to boot from slot %q, got <nil>", *expectedConfig)
-	} else if *activeConfig != *expectedConfig {
-		return fmt.Errorf("expected device to boot from slot %q, got %q", *expectedConfig, *activeConfig)
+	} else if *currentConfig != *expectedConfig {
+		return fmt.Errorf("expected device to boot from slot %q, got %q", *expectedConfig, *currentConfig)
 	}
 
 	return nil

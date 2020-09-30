@@ -250,13 +250,16 @@ impl<'a> Attempt<'a> {
         // Prepare
         let state = state::Prepare::enter(co).await;
 
-        let (update_pkg, mode, packages_to_fetch) = match self.prepare(target_version).await {
-            Ok((update_pkg, mode, packages_to_fetch)) => (update_pkg, mode, packages_to_fetch),
-            Err(e) => {
-                state.fail(co).await;
-                return Err(e);
-            }
-        };
+        let (update_pkg, mode, packages_to_fetch, current_configuration) =
+            match self.prepare(target_version).await {
+                Ok((update_pkg, mode, packages_to_fetch, current_configuration)) => {
+                    (update_pkg, mode, packages_to_fetch, current_configuration)
+                }
+                Err(e) => {
+                    state.fail(co).await;
+                    return Err(e);
+                }
+            };
 
         // Fetch packages
         let mut state = state
@@ -280,13 +283,15 @@ impl<'a> Attempt<'a> {
         let mut state = state.enter_stage(co).await;
         *phase = metrics::Phase::ImageWrite;
 
-        let () = match self.stage_images(co, &mut state, &update_pkg, mode).await {
-            Ok(()) => (),
-            Err(e) => {
-                state.fail(co).await;
-                return Err(e);
-            }
-        };
+        let () =
+            match self.stage_images(co, &mut state, &update_pkg, mode, current_configuration).await
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    state.fail(co).await;
+                    return Err(e);
+                }
+            };
 
         // Success!
         let state = state.enter_wait_to_reboot(co).await;
@@ -302,7 +307,36 @@ impl<'a> Attempt<'a> {
     async fn prepare(
         &mut self,
         target_version: &mut history::Version,
-    ) -> Result<(UpdatePackage, UpdateMode, Vec<PkgUrl>), Error> {
+    ) -> Result<(UpdatePackage, UpdateMode, Vec<PkgUrl>, paver::CurrentConfiguration), Error> {
+        // Ensure that the current configuration is also the active configuration.
+        // We do this here rather than just before we write images because this location allows us
+        // to "unstage" a previously staged OS in the non-current configuration that would
+        // otherwise become active on next reboot.
+        // If we moved this to just before writing images, we would be susceptible to a bug of
+        // the form:
+        // - A is active/current running system version 1.
+        // - Stage an OTA of version 2 to B, B is now marked active. Defer reboot.
+        // - Start to stage a new OTA (version 3). Fetch packages encounters an error after
+        //   fetching half of the updated packages.
+        // - Retry the attempt for the new OTA (version 3). This GC may delete packages from the
+        //   not-yet-booted system (version 2).
+        // - Interrupt the update attempt, reboot.
+        // - System attempts to boot to B (version 2), but the packages are not all present
+        //   anymore
+
+        let current_config = paver::query_current_configuration(&self.env.boot_manager)
+            .await
+            .context("while querying current partition")?;
+        if let Err(e) =
+            paver::ensure_current_partition_active(&self.env.boot_manager, current_config).await
+        {
+            // If we continue after this error, we can no longer guarantee (in the presence of
+            // later errors) that the active configuration always contains a working system
+            // (assuming that the build itself works), but we do so anyway so that paver errors
+            // that are not critical to updating do not make a device un-updatable.
+            fx_log_err!("unable to set current partition active: {:#}", anyhow!(e));
+        }
+
         if let Err(e) = gc(&self.env.space_manager).await {
             fx_log_err!("unable to gc packages (1/2): {:#}", anyhow!(e));
         }
@@ -336,7 +370,7 @@ impl<'a> Attempt<'a> {
             UpdateMode::ForceRecovery => vec![],
         };
 
-        Ok((update_pkg, mode, packages_to_fetch))
+        Ok((update_pkg, mode, packages_to_fetch, current_config))
     }
 
     /// Fetch all base packages needed by the target OS.
@@ -369,7 +403,7 @@ impl<'a> Attempt<'a> {
         Ok(packages)
     }
 
-    /// Pave the various raw images (zbi, bootloaders, vbmeta), and configure the inactive
+    /// Pave the various raw images (zbi, bootloaders, vbmeta), and configure the non-current
     /// configuration as active for the next boot.
     async fn stage_images(
         &mut self,
@@ -377,6 +411,7 @@ impl<'a> Attempt<'a> {
         state: &mut state::Stage,
         update_pkg: &UpdatePackage,
         mode: UpdateMode,
+        current_configuration: paver::CurrentConfiguration,
     ) -> Result<(), Error> {
         let image_list = images::load_image_list().await?;
 
@@ -401,22 +436,20 @@ impl<'a> Attempt<'a> {
             });
         fx_log_info!("Images to write: {:?}", images);
 
-        let inactive_config = paver::query_inactive_configuration(&self.env.boot_manager)
-            .await
-            .context("while determining inactive configuration")?;
-        fx_log_info!("Targeting inactive configuration: {:?}", inactive_config);
+        let desired_config = current_configuration.to_non_current_configuration();
+        fx_log_info!("Targeting configuration: {:?}", desired_config);
 
-        write_images(&self.env.data_sink, &update_pkg, inactive_config, images.iter()).await?;
+        write_images(&self.env.data_sink, &update_pkg, desired_config, images.iter()).await?;
         match mode {
             UpdateMode::Normal => {
-                let () = paver::set_configuration_active(&self.env.boot_manager, inactive_config)
-                    .await?;
+                let () =
+                    paver::set_configuration_active(&self.env.boot_manager, desired_config).await?;
             }
             UpdateMode::ForceRecovery => {
                 let () = paver::set_recovery_configuration_active(&self.env.boot_manager).await?;
             }
         }
-        let () = paver::flush(&self.env.data_sink, &self.env.boot_manager, inactive_config).await?;
+        let () = paver::flush(&self.env.data_sink, &self.env.boot_manager, desired_config).await?;
 
         state.add_progress(co, 1).await;
 
@@ -427,14 +460,14 @@ impl<'a> Attempt<'a> {
 async fn write_images<'a, I>(
     data_sink: &DataSinkProxy,
     update_pkg: &UpdatePackage,
-    inactive_config: paver::InactiveConfiguration,
+    desired_config: paver::NonCurrentConfiguration,
     images: I,
 ) -> Result<(), Error>
 where
     I: Iterator<Item = &'a Image>,
 {
     for image in images {
-        paver::write_image(data_sink, update_pkg, image, inactive_config)
+        paver::write_image(data_sink, update_pkg, image, desired_config)
             .await
             .context("while writing images")?;
     }

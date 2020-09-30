@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var ErrNotSupported error = errors.New("not supported")
+var ErrInvalidPaverMethod error = errors.New("Invalid paver facade method")
 
 type Configuration string
 
@@ -37,24 +39,28 @@ const (
 	AssetVerifiedBootMetadata       = "verified_boot_metadata"
 )
 
-// PaverQueryActiveConfiguration determines the active boot configuration of the target, if supported.
-func (c *Client) PaverQueryActiveConfiguration(ctx context.Context) (Configuration, error) {
-	var raw_response json.RawMessage
+func (c *Client) paverQueryConfiguration(ctx context.Context, methodName string) (Configuration, error) {
+	var rawResponse json.RawMessage
 
-	if err := c.call(ctx, "paver.QueryActiveConfiguration", nil, &raw_response); err != nil {
+	if err := c.call(ctx, methodName, nil, &rawResponse); err != nil {
+		if strings.HasPrefix(err.Error(), "error from server: Invalid paver facade method") {
+			// TODO(60425): remove this error-string-checking hack once our
+			// min version supports all the paver methods.
+			return "", ErrInvalidPaverMethod
+		}
 		return "", err
 	}
 
-	// raw_response is either a json encoded string literal or an object
+	// rawResponse is either a json encoded string literal or an object
 	// with a single key called "Success".
-	if string(raw_response) == `"not_supported"` {
+	if string(rawResponse) == `"not_supported"` {
 		return "", ErrNotSupported
 	}
 	var response struct {
 		Success Configuration `json:"success"`
 	}
-	if err := json.Unmarshal(raw_response, &response); err != nil {
-		return "", fmt.Errorf("error unmashaling response: %s", raw_response)
+	if err := json.Unmarshal(rawResponse, &response); err != nil {
+		return "", fmt.Errorf("error unmashaling response: %s", rawResponse)
 	}
 
 	switch response.Success {
@@ -67,6 +73,17 @@ func (c *Client) PaverQueryActiveConfiguration(ctx context.Context) (Configurati
 	default:
 		return "", fmt.Errorf("Unknown configuration name: %s", response.Success)
 	}
+
+}
+
+// PaverQueryActiveConfiguration determines the active boot configuration of the target, if supported.
+func (c *Client) PaverQueryActiveConfiguration(ctx context.Context) (Configuration, error) {
+	return c.paverQueryConfiguration(ctx, "paver.QueryActiveConfiguration")
+}
+
+// PaverQueryCurrentConfiguration determines the active boot configuration of the target, if supported.
+func (c *Client) PaverQueryCurrentConfiguration(ctx context.Context) (Configuration, error) {
+	return c.paverQueryConfiguration(ctx, "paver.QueryCurrentConfiguration")
 }
 
 // PaverQueryConfigurationStatus determines the status of the given boot slot, if supported.

@@ -25,7 +25,7 @@ async fn writes_bootloader() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -34,11 +34,12 @@ async fn writes_bootloader() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
@@ -78,7 +79,7 @@ async fn writes_firmware() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -87,11 +88,12 @@ async fn writes_firmware() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
@@ -133,7 +135,7 @@ async fn writes_multiple_firmware_types() {
     // The order of files listed from a directory isn't guaranteed so the
     // firmware could be written in either order. Sort by type string so
     // we can easily validate contents.
-    interactions[8..10].sort_by_key(|event| {
+    interactions[9..11].sort_by_key(|event| {
         if let Paver(PaverEvent::WriteFirmware { configuration: _, firmware_type, payload: _ }) =
             event
         {
@@ -146,7 +148,7 @@ async fn writes_multiple_firmware_types() {
     assert_eq!(
         interactions,
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -155,11 +157,12 @@ async fn writes_multiple_firmware_types() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "a".to_string(),
@@ -210,7 +213,7 @@ async fn skips_unsupported_firmware_type() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -219,11 +222,12 @@ async fn skips_unsupported_firmware_type() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),

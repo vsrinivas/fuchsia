@@ -155,7 +155,7 @@ func doTestReboot(
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
-	expectedConfig, err := check.DetermineActiveABRConfig(ctx, *rpcClient)
+	expectedConfig, err := check.DetermineCurrentABRConfig(ctx, *rpcClient)
 	if err != nil {
 		return fmt.Errorf("error determining target config: %w", err)
 	}
@@ -245,7 +245,7 @@ func initializeDevice(
 	}
 
 	// Check if we support ABR. If so, we always boot into A after a pave.
-	expectedConfig, err := check.DetermineActiveABRConfig(ctx, rpcClient)
+	expectedConfig, err := check.DetermineCurrentABRConfig(ctx, rpcClient)
 	if err != nil {
 		rpcClient.Close()
 		return nil, err

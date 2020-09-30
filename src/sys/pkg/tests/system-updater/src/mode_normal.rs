@@ -46,7 +46,7 @@ async fn updates_the_system() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -55,12 +55,13 @@ async fn updates_the_system() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -98,7 +99,7 @@ async fn requires_zbi() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -107,6 +108,8 @@ async fn requires_zbi() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -163,7 +166,7 @@ async fn updates_the_system_no_oneshot() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::QueryCurrentConfiguration),
             Paver(PaverEvent::ReadAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::VerifiedBootMetadata
@@ -172,12 +175,13 @@ async fn updates_the_system_no_oneshot() {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel
             }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
             BlobfsSync,
-            Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,

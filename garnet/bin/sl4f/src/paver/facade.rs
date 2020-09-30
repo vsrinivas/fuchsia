@@ -5,7 +5,6 @@
 use crate::common_utils::common::get_proxy_or_connect;
 use anyhow::{bail, Error};
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
-use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -55,11 +54,29 @@ impl PaverFacade {
             Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
                 Ok(QueryActiveConfigurationResult::NotSupported)
             }
-            // FIXME(44102) The Rust fidl bindings don't seem to be handling epitaphs correctly, so
-            // also treat the channel closing as the device doesn't support ABR.
-            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. }) => {
-                fx_log_err!("channel to boot manager closed, assuming device does not support ABR");
-                Ok(QueryActiveConfigurationResult::NotSupported)
+            Err(err) => bail!("unexpected failure status: {}", err),
+        }
+    }
+
+    /// Queries the current boot configuration, if the current bootloader supports it.
+    ///
+    /// # Errors
+    ///
+    /// Returns an Err(_) if
+    ///  * connecting to the paver service fails, or
+    ///  * the paver service returns an unexpected error
+    pub(super) async fn query_current_configuration(
+        &self,
+    ) -> Result<QueryCurrentConfigurationResult, Error> {
+        let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
+
+        self.proxy()?.find_boot_manager(boot_manager_server_end)?;
+
+        match boot_manager.query_current_configuration().await {
+            Ok(Ok(config)) => Ok(QueryCurrentConfigurationResult::Success(config.into())),
+            Ok(Err(err)) => bail!("unexpected failure status: {}", err),
+            Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
+                Ok(QueryCurrentConfigurationResult::NotSupported)
             }
             Err(err) => bail!("unexpected failure status: {}", err),
         }
@@ -123,6 +140,13 @@ pub(super) enum QueryActiveConfigurationResult {
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum QueryCurrentConfigurationResult {
+    Success(Configuration),
+    NotSupported,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub(super) struct QueryConfigurationStatusRequest {
     configuration: Configuration,
 }
@@ -160,6 +184,18 @@ mod tests {
         );
         assert_value_round_trips_as(
             QueryActiveConfigurationResult::Success(Configuration::A),
+            json!({"success": "a"}),
+        );
+    }
+
+    #[test]
+    fn serde_query_current_configuration_result() {
+        assert_value_round_trips_as(
+            QueryCurrentConfigurationResult::NotSupported,
+            json!("not_supported"),
+        );
+        assert_value_round_trips_as(
+            QueryCurrentConfigurationResult::Success(Configuration::A),
             json!({"success": "a"}),
         );
     }
@@ -212,6 +248,15 @@ mod tests {
         fn expect_query_active_configuration(self, res: Result<Configuration, Status>) -> Self {
             self.push(move |req| match req {
                 BootManagerRequest::QueryActiveConfiguration { responder } => {
+                    responder.send(&mut res.map(Into::into).map_err(|e| e.into_raw())).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_query_current_configuration(self, res: Result<Configuration, Status>) -> Self {
+            self.push(move |req| match req {
+                BootManagerRequest::QueryCurrentConfiguration { responder } => {
                     responder.send(&mut res.map(Into::into).map_err(|e| e.into_raw())).unwrap()
                 }
                 req => panic!("unexpected request: {:?}", req),
@@ -384,6 +429,47 @@ mod tests {
             assert_matches!(
                 facade.query_active_configuration().await,
                 Ok(QueryActiveConfigurationResult::NotSupported)
+            );
+        };
+
+        join!(paver, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_current_configuration_ok() {
+        let (facade, paver) = MockPaverBuilder::new()
+            .expect_find_boot_manager(Some(
+                MockBootManagerBuilder::new()
+                    .expect_query_current_configuration(Ok(Configuration::A)),
+            ))
+            .expect_find_boot_manager(Some(
+                MockBootManagerBuilder::new()
+                    .expect_query_current_configuration(Ok(Configuration::B)),
+            ))
+            .build();
+
+        let test = async move {
+            assert_matches!(
+                facade.query_current_configuration().await,
+                Ok(QueryCurrentConfigurationResult::Success(Configuration::A))
+            );
+            assert_matches!(
+                facade.query_current_configuration().await,
+                Ok(QueryCurrentConfigurationResult::Success(Configuration::B))
+            );
+        };
+
+        join!(paver, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_current_configuration_not_supported() {
+        let (facade, paver) = MockPaverBuilder::new().expect_find_boot_manager(None).build();
+
+        let test = async move {
+            assert_matches!(
+                facade.query_current_configuration().await,
+                Ok(QueryCurrentConfigurationResult::NotSupported)
             );
         };
 
