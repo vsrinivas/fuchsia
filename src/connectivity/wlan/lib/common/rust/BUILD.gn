@@ -57,6 +57,7 @@ rustc_library("wlan-common") {
     "src/ie/reader.rs",
     "src/ie/rsn/akm.rs",
     "src/ie/rsn/cipher.rs",
+    "src/ie/rsn/fake_rsnes.rs",
     "src/ie/rsn/mod.rs",
     "src/ie/rsn/pmkid.rs",
     "src/ie/rsn/rsne.rs",

@@ -486,7 +486,7 @@ mod tests {
     use crate::rsna::{test_util, NegotiatedProtection, Role};
     use wlan_common::{
         assert_variant,
-        ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI},
+        ie::rsn::{akm, cipher, fake_wpa2_s_rsne, rsne::Rsne, suite_selector::OUI},
     };
 
     #[test]
@@ -509,7 +509,7 @@ mod tests {
     // interoperability,
     #[test]
     fn test_supplicant_sends_zeroed_and_non_zeroed_key_length() {
-        let protection = NegotiatedProtection::from_rsne(&test_util::get_s_rsne())
+        let protection = NegotiatedProtection::from_rsne(&fake_wpa2_s_rsne())
             .expect("could not derive negotiated RSNE");
         let mut env = test_util::FourwayTestEnv::new();
 
@@ -550,7 +550,7 @@ mod tests {
         msg2.key_frame_fields.key_len.set_from_native(29);
         test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
 
-        let protection = NegotiatedProtection::from_rsne(&test_util::get_s_rsne())
+        let protection = NegotiatedProtection::from_rsne(&fake_wpa2_s_rsne())
             .expect("could not derive negotiated RSNE");
         let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &protection, 12);
         assert!(result.is_err(), "successfully verified illegal message");

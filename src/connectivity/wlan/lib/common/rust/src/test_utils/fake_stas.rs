@@ -7,7 +7,11 @@ use fidl_fuchsia_wlan_mlme as fidl_mlme;
 
 type Ssid = Vec<u8>;
 
-pub fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
+pub fn fake_bss_description(
+    ssid: Ssid,
+    rsne_bytes: Option<Vec<u8>>,
+    vendor_ies_bytes: Option<Vec<u8>>,
+) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
         bssid: [7, 1, 2, 77, 53, 8],
         ssid,
@@ -16,11 +20,11 @@ pub fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::Bss
         dtim_period: 100,
         timestamp: 0,
         local_time: 0,
-        cap: crate::mac::CapabilityInfo(0).with_privacy(rsne.is_some()).0,
+        cap: crate::mac::CapabilityInfo(0).with_privacy(rsne_bytes.is_some()).0,
         rates: vec![],
         country: None,
-        rsne,
-        vendor_ies: None,
+        rsne: rsne_bytes,
+        vendor_ies: vendor_ies_bytes,
 
         rcpi_dbmh: 0,
         rsni_dbh: 0,
@@ -36,5 +40,5 @@ pub fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::Bss
 }
 
 pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
-    fake_bss_description(ssid, None)
+    fake_bss_description(ssid, None, None)
 }

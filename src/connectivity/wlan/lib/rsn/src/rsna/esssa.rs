@@ -474,6 +474,7 @@ mod tests {
     use crate::rsna::test_util;
     use crate::rsna::test_util::expect_eapol_resp;
     use crate::Supplicant;
+    use wlan_common::ie::{get_rsn_ie_bytes, rsn::fake_wpa2_s_rsne};
 
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];
@@ -769,8 +770,8 @@ mod tests {
         // Verify 2nd message.
         let msg2_buf = expect_eapol_resp(&updates[..]);
         let msg2 = msg2_buf.keyframe();
-        let s_rsne = test_util::get_s_rsne();
-        let s_rsne_data = test_util::get_rsne_bytes(&s_rsne);
+        let s_rsne = fake_wpa2_s_rsne();
+        let s_rsne_data = get_rsn_ie_bytes(&s_rsne);
         assert_eq!({ msg2.eapol_fields.version }, eapol::ProtocolVersion::IEEE802DOT1X2001);
         assert_eq!({ msg2.eapol_fields.packet_type }, eapol::PacketType::KEY);
         let mut buf = vec![];

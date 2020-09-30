@@ -4,12 +4,13 @@
 
 pub mod akm;
 pub mod cipher;
+mod fake_rsnes;
 mod pmkid;
 pub mod rsne;
 pub mod suite_filter;
 pub mod suite_selector;
 
-pub use suite_selector::OUI;
+pub use {fake_rsnes::*, suite_selector::OUI};
 
 use thiserror::Error;
 

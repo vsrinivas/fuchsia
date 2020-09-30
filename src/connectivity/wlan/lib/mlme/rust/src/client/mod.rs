@@ -1209,7 +1209,11 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(vec![], None),
+            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
+                vec![],
+                None,
+                None,
+            ),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],

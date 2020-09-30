@@ -18,45 +18,26 @@ use crate::{Authenticator, Supplicant};
 use eapol::KeyFrameTx;
 use hex::FromHex;
 use std::sync::{Arc, Mutex};
-use wlan_common::ie::rsn::{
-    akm::{self, Akm},
-    cipher::{self, Cipher},
-    rsne::Rsne,
-    suite_selector::OUI,
+use wlan_common::{
+    ie::{
+        fake_wpa_ie,
+        rsn::{
+            akm,
+            cipher::{self, Cipher},
+            fake_wpa2_a_rsne, fake_wpa2_s_rsne,
+            suite_selector::OUI,
+        },
+        write_wpa1_ie,
+    },
+    organization::Oui,
 };
-use wlan_common::ie::wpa::WpaIe;
-use wlan_common::ie::write_wpa1_ie;
-use wlan_common::organization::Oui;
 use zerocopy::ByteSlice;
 
 pub const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
 pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
 
-pub fn get_a_rsne() -> Rsne {
-    let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite = Some(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
-    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
-    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: cipher::TKIP });
-    rsne.akm_suites.push(Akm { oui: OUI, suite_type: akm::PSK });
-    rsne
-}
-
-pub fn get_rsne_bytes(rsne: &Rsne) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(rsne.len());
-    rsne.write_into(&mut buf).expect("error writing RSNE into buffer");
-    buf
-}
-
-pub fn get_s_rsne() -> Rsne {
-    let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite = Some(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
-    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
-    rsne.akm_suites.push(Akm { oui: OUI, suite_type: akm::PSK });
-    rsne
-}
-
 pub fn get_rsne_protection() -> NegotiatedProtection {
-    NegotiatedProtection::from_rsne(&get_s_rsne())
+    NegotiatedProtection::from_rsne(&fake_wpa2_s_rsne())
         .expect("error creating RSNE NegotiatedProtection")
 }
 
@@ -68,9 +49,9 @@ pub fn get_supplicant() -> Supplicant {
         nonce_rdr,
         auth::Config::ComputedPsk(psk),
         test_util::S_ADDR,
-        ProtectionInfo::Rsne(test_util::get_s_rsne()),
+        ProtectionInfo::Rsne(fake_wpa2_s_rsne()),
         test_util::A_ADDR,
-        ProtectionInfo::Rsne(test_util::get_a_rsne()),
+        ProtectionInfo::Rsne(fake_wpa2_a_rsne()),
     )
     .expect("could not create Supplicant")
 }
@@ -86,28 +67,21 @@ pub fn get_authenticator() -> Authenticator {
         Arc::new(Mutex::new(gtk_provider)),
         psk,
         test_util::S_ADDR,
-        ProtectionInfo::Rsne(test_util::get_s_rsne()),
+        ProtectionInfo::Rsne(fake_wpa2_s_rsne()),
         test_util::A_ADDR,
-        ProtectionInfo::Rsne(test_util::get_a_rsne()),
+        ProtectionInfo::Rsne(fake_wpa2_a_rsne()),
     )
     .expect("could not create Authenticator")
 }
 
-pub fn get_wpa1_ie() -> WpaIe {
-    let mut wpa = WpaIe::default();
-    wpa.unicast_cipher_list.push(cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP });
-    wpa.akm_list.push(akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK });
-    wpa
-}
-
 pub fn get_wpa1_protection() -> NegotiatedProtection {
-    NegotiatedProtection::from_legacy_wpa(&get_wpa1_ie())
+    NegotiatedProtection::from_legacy_wpa(&fake_wpa_ie())
         .expect("error creating WPA1 NegotiatedProtection")
 }
 
 pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
     let akm = get_akm();
-    let s_rsne = get_s_rsne();
+    let s_rsne = fake_wpa2_s_rsne();
     let cipher = s_rsne
         .pairwise_cipher_suites
         .get(0)
@@ -118,7 +92,7 @@ pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
 }
 
 pub fn get_wpa1_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
-    let wpa = get_wpa1_ie();
+    let wpa = fake_wpa_ie();
     let akm = wpa.akm_list.get(0).expect("WPA1 IE holds no AKM");
     let cipher = wpa.unicast_cipher_list.get(0).expect("WPA1 IE holds no unicast cipher");
     let pmk = get_pmk();
@@ -151,7 +125,7 @@ pub fn get_wpa1_4whs_msg1(anonce: &[u8]) -> eapol::KeyFrameBuf {
 
 pub fn get_wpa1_4whs_msg3(ptk: &Ptk, anonce: &[u8]) -> eapol::KeyFrameBuf {
     let mut wpa_ie_buf = vec![];
-    write_wpa1_ie(&mut wpa_ie_buf, &get_wpa1_ie())
+    write_wpa1_ie(&mut wpa_ie_buf, &fake_wpa_ie())
         .expect("failed to write wpa ie for wpa1 4whs msg 3");
     let frame = eapol::KeyFrameTx::new(
         eapol::ProtocolVersion::IEEE802DOT1X2001,
@@ -197,11 +171,11 @@ pub fn mic_len() -> usize {
 }
 
 pub fn get_akm() -> akm::Akm {
-    get_s_rsne().akm_suites.remove(0)
+    fake_wpa2_s_rsne().akm_suites.remove(0)
 }
 
 pub fn get_cipher() -> cipher::Cipher {
-    get_s_rsne().pairwise_cipher_suites.remove(0)
+    fake_wpa2_s_rsne().pairwise_cipher_suites.remove(0)
 }
 
 pub fn get_4whs_msg1<'a, F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrameBuf
@@ -237,7 +211,7 @@ where
 {
     let mut w = kde::Writer::new(vec![]);
     w.write_gtk(&kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
-    w.write_protection(&ProtectionInfo::Rsne(get_a_rsne())).expect("error writing RSNE");
+    w.write_protection(&ProtectionInfo::Rsne(fake_wpa2_a_rsne())).expect("error writing RSNE");
     let key_data = w.finalize_for_encryption().expect("error finalizing key data");
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &get_rsne_protection(), &key_data[..]);
 
@@ -305,9 +279,9 @@ pub fn make_fourway_cfg(role: Role) -> fourway::Config {
     fourway::Config::new(
         role,
         test_util::S_ADDR,
-        ProtectionInfo::Rsne(test_util::get_s_rsne()),
+        ProtectionInfo::Rsne(fake_wpa2_s_rsne()),
         test_util::A_ADDR,
-        ProtectionInfo::Rsne(test_util::get_a_rsne()),
+        ProtectionInfo::Rsne(fake_wpa2_a_rsne()),
         nonce_rdr,
         Some(Arc::new(Mutex::new(gtk_provider))),
     )
@@ -321,9 +295,9 @@ pub fn make_wpa1_fourway_cfg() -> fourway::Config {
     fourway::Config::new(
         Role::Supplicant,
         test_util::S_ADDR,
-        ProtectionInfo::LegacyWpa(test_util::get_wpa1_ie()),
+        ProtectionInfo::LegacyWpa(fake_wpa_ie()),
         test_util::A_ADDR,
-        ProtectionInfo::LegacyWpa(test_util::get_wpa1_ie()),
+        ProtectionInfo::LegacyWpa(fake_wpa_ie()),
         nonce_rdr,
         Some(Arc::new(Mutex::new(gtk_provider))),
     )

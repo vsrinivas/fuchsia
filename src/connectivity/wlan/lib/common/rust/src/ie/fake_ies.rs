@@ -2,7 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::ie::*, std::convert::TryInto};
+use {
+    crate::{
+        ie::{
+            rsn::{
+                akm::{Akm, PSK},
+                cipher::{Cipher, TKIP},
+                rsne::Rsne,
+            },
+            wpa::WpaIe,
+            *,
+        },
+        organization::Oui,
+    },
+    std::convert::TryInto,
+};
 
 pub fn fake_ht_cap_chanwidth(chanwidth: ChanWidthSet) -> HtCapabilities {
     let mut ht_cap = fake_ht_capabilities();
@@ -137,4 +151,17 @@ pub fn fake_vht_cap_bytes() -> [u8; std::mem::size_of::<VhtCapabilities>()] {
 pub fn fake_vht_op_bytes() -> [u8; std::mem::size_of::<VhtOperation>()] {
     // Safe to unwrap because the size matches the IE.
     fake_vht_operation().as_bytes().try_into().unwrap()
+}
+
+pub fn fake_wpa_ie() -> WpaIe {
+    let mut wpa = WpaIe::default();
+    wpa.unicast_cipher_list.push(Cipher { oui: Oui::MSFT, suite_type: TKIP });
+    wpa.akm_list.push(Akm { oui: Oui::MSFT, suite_type: PSK });
+    wpa
+}
+
+pub fn get_rsn_ie_bytes(rsne: &Rsne) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(rsne.len());
+    rsne.write_into(&mut buf).expect("error writing RSNE into buffer");
+    buf
 }
