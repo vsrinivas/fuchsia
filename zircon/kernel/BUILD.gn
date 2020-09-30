@@ -5,7 +5,43 @@
 # https://opensource.org/licenses/MIT
 
 # TODO(fxbug.dev/54160): Keep this in sync with BUILD.zircon.gn
+import("//build/config/zircon/standard.gni")
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/unification/global_variables.gni")
+import("//zircon/kernel/params.gni")
+
+# Define an empty kernel-specific toolchain suite for now.
+# This is needed for the benefit of vdso-code-header but
+# it not actually used to build anything yet due to redirections.
+if (current_toolchain == default_toolchain) {
+  # In the default toolchain, just define the kernel toolchains.
+  foreach(cpu, standard_fuchsia_cpus) {
+    zircon_toolchain_suite("kernel_$cpu") {
+      cpu = cpu
+      os = "fuchsia"
+      environment = "kernel"
+
+      toolchain_variant_args = {
+        # IMPORTANT: This definition currently lacks the appropriate
+        # `remove_common_configs` and `configs` to really build anything
+        # for the Zircon kernel per se. This will be addressed in the
+        # near future.
+        tags = [
+          "kernel",
+          "standalone",
+        ]
+      }
+
+      # NOTE: kernel artifacts currently do not build under fuzzer
+      # variants. This was also true with the Zircon build, but
+      # the Fuchsia build never invoked it with corresponding
+      # variant selectors. Using an exclude_variant_tag is
+      # enough to fix the issue.
+      exclude_variant_tags = [ "fuzzer" ]
+    }
+  }
+}
+
 if (is_kernel) {
   config("headers") {
     include_dirs = [

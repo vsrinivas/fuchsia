@@ -1,0 +1,9 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("vdso-code-header") {
+  _vdso_toolchain = "//zircon/kernel:kernel_${target_cpu}"
+  public_deps =
+      [ "//zircon/kernel/lib/userabi:vdso-code-header($_vdso_toolchain)" ]
+}

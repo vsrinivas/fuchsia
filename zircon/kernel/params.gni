@@ -4,7 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("$zx/public/gn/config/levels.gni")
+import("$zx_build_config/levels.gni")
+
+if (zx == "/") {
+  _zx_assert_level = assert_level
+} else {
+  _zx_assert_level = zx_assert_level
+}
 
 declare_args() {
   # Maximum number of CPUs the kernel will run on (others will be ignored).
@@ -54,7 +60,7 @@ declare_args() {
   #
   # TODO(fxbug.dev/41790): This value is derived from assert_level.  Decouple
   # the two and set kernel_debug_level independently.
-  kernel_debug_level = assert_level
+  kernel_debug_level = _zx_assert_level
 
   # Controls the verbosity of kernel dprintf messages. The higher the value,
   # the more dprintf messages emitted. Valid values are 0-2 (inclusive):
