@@ -105,6 +105,9 @@ type devFinderCmd struct {
 	ipv4      bool
 	ipv6      bool
 
+	// Used to visit flags after parsing, necessary for complex if-set logic.
+	flagSet *flag.FlagSet
+
 	mdnsHandler mDNSHandler
 	finders     []deviceFinder
 
@@ -151,7 +154,13 @@ func (f *fuchsiaDevice) outbound() (*fuchsiaDevice, error) {
 	}, nil
 }
 
+const (
+	mdnsFlag    = "mdns"
+	netbootFlag = "netboot"
+)
+
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
+	cmd.flagSet = f
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
 	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,ff02::fb", "[linux only] Comma separated list of addresses to issue mDNS queries to.")
 	f.StringVar(&cmd.mdnsPorts, "port", "5353", "[linux only] Comma separated list of ports to issue mDNS queries to.")
@@ -160,8 +169,8 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", true, "[linux only] Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 	f.IntVar(&cmd.ttl, "ttl", -1, "[linux only] Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
-	f.BoolVar(&cmd.netboot, "netboot", false, "Determines whether to use netboot protocol")
-	f.BoolVar(&cmd.mdns, "mdns", true, "Determines whether to use mDNS protocol")
+	f.BoolVar(&cmd.mdns, mdnsFlag, true, "Determines whether to use mDNS protocol")
+	f.BoolVar(&cmd.netboot, netbootFlag, false, "Determines whether to use netboot protocol")
 	f.BoolVar(&cmd.ignoreNAT, "ignore-nat", false, "[linux only] Determines whether to ignore possible NAT. Returns the target's address as it sees itself behind a NAT.")
 	f.BoolVar(&cmd.ipv6, "ipv6", true, "Set whether to query using IPv6. Disabling IPv6 will also disable netboot.")
 	f.BoolVar(&cmd.ipv4, "ipv4", true, "Set whether to query using IPv4")
@@ -324,6 +333,28 @@ func (cmd *devFinderCmd) close() {
 
 func (cmd *devFinderCmd) deviceFinders() ([]deviceFinder, error) {
 	if len(cmd.finders) == 0 {
+		{
+			mdnsSet := false
+			netbootSet := false
+			cmd.flagSet.Visit(func(f *flag.Flag) {
+				switch f.Name {
+				case mdnsFlag:
+					mdnsSet = true
+				case netbootFlag:
+					netbootSet = true
+				}
+			})
+			if !mdnsSet {
+				if netbootSet {
+					// Turn off the mDNS default if only netboot is specified.
+					cmd.mdns = false
+				} else if cmd.localResolve {
+					// Local resolution produces the same result regardless of protocol; default to enabling
+					// both if neither is specified.
+					cmd.netboot = true
+				}
+			}
+		}
 		if !cmd.localResolve && cmd.netboot && cmd.mdns {
 			return nil, errors.New("only one of mdns and netboot may be specified")
 		}
@@ -333,7 +364,8 @@ func (cmd *devFinderCmd) deviceFinders() ([]deviceFinder, error) {
 			} else {
 				cmd.finders = append(cmd.finders, &mdnsFinder{deviceFinderBase{cmd: cmd}})
 			}
-		} else if cmd.netboot && cmd.ipv6 {
+		}
+		if cmd.netboot && cmd.ipv6 {
 			cmd.finders = append(cmd.finders, &netbootFinder{deviceFinderBase{cmd: cmd}})
 		} else {
 			return nil, errors.New("either mdns or netboot and ipv6 must be specified")
