@@ -1755,6 +1755,7 @@ foreach(format, archive_formats) {
 }
 
 archive_deps = []
+uefi_disk_deps = []
 foreach(target, paver_targets) {
   action(target.name) {
     deps = []
@@ -1790,6 +1791,7 @@ foreach(target, paver_targets) {
     }
   }
   archive_deps += [ ":${target.name}" ]
+  uefi_disk_deps += [ ":${target.name}" ]
 }
 
 group("archives") {
@@ -2367,6 +2369,24 @@ group("archive-extras") {
   }
 }
 
+# Build the UEFI disk image.
+uefi_disk_path = "$target_out_dir/uefi_disk.img"
+compiled_action("uefi-disk") {
+  deps = uefi_disk_deps
+  testonly = true
+  tool = "//tools/make-fuchsia-vol"
+  args = [
+    "-zircon-build-dir",
+    rebase_path("$zircon_root_build_dir"),
+    "-fuchsia-build-dir",
+    rebase_path("$root_build_dir"),
+    "-resize",
+    "10000000000",  # 10GB
+    rebase_path(uefi_disk_path),
+  ]
+  outputs = [ uefi_disk_path ]
+}
+
 group("images") {
   testonly = true
   deps = [
@@ -2394,6 +2414,10 @@ group("default-images") {
     ":zedboot-script",
     recovery_label,
   ]
+
+  if (build_uefi_disk) {
+    deps += [ ":uefi-disk" ]
+  }
 
   if (enable_netboot) {
     deps += [ ":netboot-script" ]

@@ -29,6 +29,7 @@ import (
 )
 
 var (
+	verbose         = flag.Bool("verbose", false, "enable verbose logging")
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
 	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILDROOT"), "zircon build dir")
 
@@ -203,13 +204,17 @@ func main() {
 		s, err := os.Stat(disk)
 		if err == nil {
 			if s.Size() != *resize {
-				log.Printf("Resizing %q from %d to %d", disk, s.Size(), *resize)
+				if *verbose {
+					log.Printf("Resizing %q from %d to %d", disk, s.Size(), *resize)
+				}
 				if err := os.Truncate(disk, *resize); err != nil {
 					log.Fatalf("failed to truncate %q to %d: %s", disk, *resize, err)
 				}
 			}
 		} else if os.IsNotExist(err) {
-			log.Printf("Creating %q", disk)
+			if *verbose {
+				log.Printf("Creating %q", disk)
+			}
 			f, err := os.Create(disk)
 			if err != nil {
 				log.Fatalf("failed to create %q: %s", disk, err)
@@ -281,11 +286,13 @@ func main() {
 		log.Fatalf("%q is not large enough for the partition layout\n", disk)
 	}
 
-	log.Printf("Disk: %s", disk)
-	log.Printf("Disk size: %d", diskSize)
-	log.Printf("Block Size: %d", logical)
-	log.Printf("Physical block size: %d", physical)
-	log.Printf("Optimal transfer size: %d", optimal)
+	if *verbose {
+		log.Printf("Disk: %s", disk)
+		log.Printf("Disk size: %d", diskSize)
+		log.Printf("Block Size: %d", logical)
+		log.Printf("Physical block size: %d", physical)
+		log.Printf("Optimal transfer size: %d", optimal)
+	}
 
 	g, err := gpt.ReadGPT(f, logical, diskSize)
 	if err != nil {
@@ -308,9 +315,11 @@ func main() {
 	// from end, which is the last sector of the gpt partition.
 	efiEnd := efiStart + (uint64(*efiSize) / logical) - 1
 
-	log.Printf("EFI START: %d", efiStart)
-	log.Printf("EFI END: %d", efiEnd)
-	log.Printf("EFI LB SIZE: %d", efiEnd-efiStart+1)
+	if *verbose {
+		log.Printf("EFI START: %d", efiStart)
+		log.Printf("EFI END: %d", efiEnd)
+		log.Printf("EFI LB SIZE: %d", efiEnd-efiStart+1)
+	}
 
 	g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 		PartitionTypeGUID:   gpt.GUIDEFI,
@@ -395,12 +404,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("EFI size: %d", *efiSize)
-	if !*ramdiskOnly {
-		log.Printf("FVM size: %d", *fvmSize)
-	}
+	if *verbose {
+		log.Printf("EFI size: %d", *efiSize)
+		if !*ramdiskOnly {
+			log.Printf("FVM size: %d", *fvmSize)
+		}
 
-	log.Printf("Writing GPT")
+		log.Printf("Writing GPT")
+	}
 
 	f, err = os.OpenFile(disk, os.O_RDWR, 0750)
 	if err != nil {
@@ -418,7 +429,9 @@ func main() {
 	efiStart = efiStart * logical
 	fvmStart = fvmStart * logical
 
-	log.Printf("Writing EFI partition and files")
+	if *verbose {
+		log.Printf("Writing EFI partition and files")
+	}
 
 	cmd := exec.Command(fuchsiaTool("mkfs-msdosfs"),
 		"-@", strconv.FormatUint(efiStart, 10),
@@ -478,7 +491,9 @@ func main() {
 	f.Sync()
 
 	if *abr {
-		log.Print("Populating A/B/R partitions")
+		if *verbose {
+			log.Print("Populating A/B/R partitions")
+		}
 		partitionCopy(f, int64(aStart), *abrSize, *zirconA)
 		partitionCopy(f, int64(bStart), *abrSize, *zirconB)
 		partitionCopy(f, int64(rStart), *abrSize, *zirconR)
@@ -487,7 +502,9 @@ func main() {
 	f.Sync()
 
 	if !*ramdiskOnly {
-		log.Print("Populating FVM in GPT image")
+		if *verbose {
+			log.Print("Populating FVM in GPT image")
+		}
 		fvm(disk, int64(fvmStart), *fvmSize, "create", "--blob", *blob, "--data", *data)
 	}
 
@@ -496,7 +513,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("Done")
+	if *verbose {
+		log.Printf("Done")
+	}
 }
 
 func partitionCopy(f *os.File, start, size int64, path string) {
