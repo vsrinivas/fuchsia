@@ -508,16 +508,7 @@ config("default_warnings") {
     "-Wall",
     "-Wextra",
     "-Wnewline-eof",
-  ]
-
-  # TODO(shayba): fix mini_chromium host mac build issue,
-  # then always add "-Wconversion" to cflags.
-  # https://ci.chromium.org/p/fuchsia/builders/try/fuchsia-host-mac-subbuild/b8867938246335549936?
-  if (!is_host || host_os != "mac") {
-    cflags += [ "-Wconversion" ]
-  }
-
-  cflags += [
+    "-Wconversion",
     "-Wno-unused-parameter",
     "-Wno-unknown-warning-option",
     "-Wno-sign-conversion",
