@@ -1051,12 +1051,7 @@ impl Runtime {
             let (abort_client, abort_server) = AbortHandle::new_pair();
             let watcher = Abortable::new(
                 async move {
-                    if let Ok(_) = fasync::OnSignals::new(
-                        controller_clone.as_channel(),
-                        zx::Signals::CHANNEL_PEER_CLOSED,
-                    )
-                    .await
-                    {
+                    if let Ok(_) = controller_clone.on_closed().await {
                         if let Ok(realm) = realm.upgrade() {
                             let _ = ActionSet::register(realm, Action::Stop).await.await;
                         }

@@ -620,10 +620,7 @@ impl Controllable for ElfComponent {
                 .boxed()
             } else {
                 async move {
-                    let _ = fasync::OnSignals::new(
-                       lifecycle_chan.as_channel(),
-                       zx::Signals::CHANNEL_PEER_CLOSED,
-                    )
+                    let _ = lifecycle_chan.on_closed()
                     .await
                     .map_err(|e| {
                         error!(
