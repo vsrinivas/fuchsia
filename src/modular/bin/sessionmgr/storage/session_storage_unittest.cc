@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/optional.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <zircon/errors.h>
 
 #include <memory>
 
@@ -16,7 +17,6 @@
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/fidl/array_to_string.h"
-#include "zircon/system/public/zircon/errors.h"
 
 namespace modular {
 namespace {
