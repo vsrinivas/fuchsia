@@ -67,7 +67,6 @@ max_fuchsia_zbi_size = "16777216"  # 16 MiB
 max_zedboot_zbi_size = "16777216"  # 16 MiB
 
 use_vbmeta = true
-build_uefi_disk = true
 avb_key = "//zircon/third_party/tools/android/avb/test/data/testkey_atx_psk.pem"
 avb_atx_metadata =
     "//zircon/third_party/tools/android/avb/test/data/atx_metadata.bin"

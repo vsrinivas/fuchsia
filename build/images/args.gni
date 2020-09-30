@@ -17,9 +17,6 @@ declare_args() {
   # These come after synthesized arguments to configure blobfs and pkgfs.
   devmgr_config = []
 
-  # Generate a UEFI disk image
-  build_uefi_disk = false
-
   # List of kernel command line arguments to bake into the boot image.
   # See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
   # [`devmgr_config`](#devmgr_config).
