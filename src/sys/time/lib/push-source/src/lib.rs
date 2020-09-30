@@ -14,7 +14,7 @@ use fidl_fuchsia_time_external::{
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
-    channel::mpsc::{channel, Sender},
+    channel::mpsc::{channel, Receiver, Sender},
     lock::Mutex,
     StreamExt, TryStreamExt,
 };
@@ -95,8 +95,8 @@ impl<UA: UpdateAlgorithm> PushSource<UA> {
     /// Polls updates received on |update_algorithm| and pushes them to bound clients.
     pub async fn poll_updates(&self) -> Result<(), Error> {
         // Wait for timekeeper to signal network availability.
-        // TODO(fxbug.dev/59972) - move the network check to httpsdate and remove network concerns from
-        // push_source.
+        // TODO(fxbug.dev/59972) - move the network check to httpsdate and remove network concerns
+        // from push_source.
         fasync::OnSignals::new(&self.network_available_event, NETWORK_AVAILABLE_SIGNAL).await?;
 
         // Updates should be processed immediately so add no extra buffer space.
@@ -239,56 +239,58 @@ impl WatchSender<Status> for WatchStatusResponder {
     }
 }
 
+/// An UpdateAlgorithm that forwards updates produced by a test.
+pub struct TestUpdateAlgorithm {
+    /// Receiver that accepts updates pushed by a test.
+    receiver: Mutex<Option<Receiver<Update>>>,
+    /// List of received device property updates
+    device_property_updates: Mutex<Vec<Properties>>,
+}
+
+impl TestUpdateAlgorithm {
+    pub fn new() -> (Self, Sender<Update>) {
+        let (sender, receiver) = channel(0);
+        (
+            TestUpdateAlgorithm {
+                receiver: Mutex::new(Some(receiver)),
+                device_property_updates: Mutex::new(vec![]),
+            },
+            sender,
+        )
+    }
+
+    #[cfg(test)]
+    async fn assert_generate_updates_invoked(&self) {
+        assert!(self.receiver.lock().await.is_none())
+    }
+
+    #[cfg(test)]
+    async fn assert_generate_updates_not_invoked(&self) {
+        assert!(self.receiver.lock().await.is_some())
+    }
+}
+
+#[async_trait]
+impl UpdateAlgorithm for TestUpdateAlgorithm {
+    async fn update_device_properties(&self, properties: Properties) {
+        self.device_property_updates.lock().await.push(properties);
+    }
+
+    async fn generate_updates(&self, sink: Sender<Update>) -> Result<(), Error> {
+        let receiver = self.receiver.lock().await.take().unwrap();
+        receiver.map(Ok).forward(sink).await?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use fidl::{endpoints::create_proxy_and_stream, Error as FidlError};
     use fidl_fuchsia_time_external::{PushSourceMarker, PushSourceProxy};
     use fuchsia_async as fasync;
-    use futures::{channel::mpsc::Receiver, future::join, FutureExt, SinkExt};
+    use futures::{future::join, FutureExt, SinkExt};
     use matches::assert_matches;
-
-    /// An UpdateAlgorithm that forwards updates produced by a test.
-    struct TestUpdateAlgorithm {
-        /// Receiver that accepts updates pushed by a test.
-        receiver: Mutex<Option<Receiver<Update>>>,
-        /// List of received device property updates
-        device_property_updates: Mutex<Vec<Properties>>,
-    }
-
-    impl TestUpdateAlgorithm {
-        fn new() -> (Self, Sender<Update>) {
-            let (sender, receiver) = channel(0);
-            (
-                TestUpdateAlgorithm {
-                    receiver: Mutex::new(Some(receiver)),
-                    device_property_updates: Mutex::new(vec![]),
-                },
-                sender,
-            )
-        }
-
-        async fn assert_generate_updates_invoked(&self) {
-            assert!(self.receiver.lock().await.is_none())
-        }
-
-        async fn assert_generate_updates_not_invoked(&self) {
-            assert!(self.receiver.lock().await.is_some())
-        }
-    }
-
-    #[async_trait]
-    impl UpdateAlgorithm for TestUpdateAlgorithm {
-        async fn update_device_properties(&self, properties: Properties) {
-            self.device_property_updates.lock().await.push(properties);
-        }
-
-        async fn generate_updates(&self, sink: Sender<Update>) -> Result<(), Error> {
-            let receiver = self.receiver.lock().await.take().unwrap();
-            receiver.map(Ok).forward(sink).await?;
-            Ok(())
-        }
-    }
 
     struct TestHarness {
         /// The PushSource under test.
