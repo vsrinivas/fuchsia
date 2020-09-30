@@ -764,7 +764,6 @@ config("Wno-conversion") {
     "//src/devices/usb/drivers/usb-bus/*",
     "//src/devices/usb/drivers/usb-hub/*",
     "//src/devices/usb/lib/usb/*",
-    "//src/devices/usb/tests/usb-hci-test/*",
     "//src/diagnostics/dlog/*",
     "//src/diagnostics/inspect_validator/lib/cpp/*",
     "//src/firmware/lib/zbi/*",

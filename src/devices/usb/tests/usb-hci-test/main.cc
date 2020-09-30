@@ -21,8 +21,8 @@ static constexpr double BytesToGigabits(double bytes) { return (bytes / 1000 / 1
 constexpr double kTestRuntimeInSeconds = 15;
 
 TEST(UsbHciTests, BulkTests) {
-  double bytes_received = results.response().results.received_bulk_packets *
-                          results.response().results.bulk_packet_size;
+  double bytes_received = static_cast<double>(results.response().results.received_bulk_packets) *
+                          static_cast<double>(results.response().results.bulk_packet_size);
   ASSERT_GE(BytesToGigabits(bytes_received) / kTestRuntimeInSeconds, EXPECTED_BITRATE);
 }
 
