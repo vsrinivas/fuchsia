@@ -36,14 +36,14 @@ namespace gen = ::llcpp::fidl::test::llcpp::controlflow;
 
 class Server : public gen::ControlFlow::Interface {
  public:
-  void Shutdown(ShutdownCompleter::Sync& txn) final { txn.Close(ZX_OK); }
+  void Shutdown(ShutdownCompleter::Sync txn) final { txn.Close(ZX_OK); }
 
   void NoReplyMustSendAccessDeniedEpitaph(
-      NoReplyMustSendAccessDeniedEpitaphCompleter::Sync& txn) final {
+      NoReplyMustSendAccessDeniedEpitaphCompleter::Sync txn) final {
     txn.Close(ZX_ERR_ACCESS_DENIED);
   }
 
-  void MustSendAccessDeniedEpitaph(MustSendAccessDeniedEpitaphCompleter::Sync& txn) final {
+  void MustSendAccessDeniedEpitaph(MustSendAccessDeniedEpitaphCompleter::Sync txn) final {
     txn.Close(ZX_ERR_ACCESS_DENIED);
   }
 };

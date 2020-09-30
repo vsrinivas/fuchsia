@@ -29,14 +29,14 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
     loop_.StartThread("payload-stream-test-loop");
   }
 
-  void ReadSuccess(ReadDataCompleter::Sync& completer) {
+  void ReadSuccess(ReadDataCompleter::Sync completer) {
     vmo_.write(kFileData, 0, sizeof(kFileData));
 
     ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = sizeof(kFileData)};
     completer.Reply(::llcpp::fuchsia::paver::ReadResult::WithInfo(fidl::unowned_ptr(&info)));
   }
 
-  void ReadError(ReadDataCompleter::Sync& completer) {
+  void ReadError(ReadDataCompleter::Sync completer) {
     ::llcpp::fuchsia::paver::ReadResult result;
     zx_status_t status = ZX_ERR_INTERNAL;
     result.set_err(fidl::unowned_ptr(&status));
@@ -44,7 +44,7 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
     completer.Reply(std::move(result));
   }
 
-  void ReadEof(ReadDataCompleter::Sync& completer) {
+  void ReadEof(ReadDataCompleter::Sync completer) {
     ::llcpp::fuchsia::paver::ReadResult result;
     fidl::aligned<bool> eof = true;
     result.set_eof(fidl::unowned_ptr(&eof));
@@ -52,7 +52,7 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
     completer.Reply(std::move(result));
   }
 
-  void ReadData(ReadDataCompleter::Sync& completer) {
+  void ReadData(ReadDataCompleter::Sync completer) {
     if (!vmo_) {
       ::llcpp::fuchsia::paver::ReadResult result;
       zx_status_t status = ZX_ERR_BAD_STATE;
@@ -62,15 +62,15 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
     }
 
     if (return_err_) {
-      ReadError(completer);
+      ReadError(std::move(completer));
     } else if (return_eof_) {
-      ReadEof(completer);
+      ReadEof(std::move(completer));
     } else {
-      ReadSuccess(completer);
+      ReadSuccess(std::move(completer));
     }
   }
 
-  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer) {
+  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
     vmo_ = std::move(vmo);
     completer.Reply(ZX_OK);
   }

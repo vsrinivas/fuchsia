@@ -637,7 +637,7 @@ class ExampleProtocol final {
     using MethodCompleter = ::fidl::Completer<>;
 
     virtual void Method(::llcpp::exampleusing::Empty arg,
-                        MethodCompleter::Sync& _completer) = 0;
+                        MethodCompleter::Sync _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

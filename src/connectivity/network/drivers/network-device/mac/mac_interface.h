@@ -113,12 +113,12 @@ class MacClientInstance : public netdev::MacAddressing::Interface,
  public:
   explicit MacClientInstance(MacInterface* parent, mode_t default_mode);
 
-  void GetUnicastAddress(GetUnicastAddressCompleter::Sync& _completer) override;
-  void SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sync& _completer) override;
+  void GetUnicastAddress(GetUnicastAddressCompleter::Sync _completer) override;
+  void SetMode(netdev::MacFilterMode mode, SetModeCompleter::Sync _completer) override;
   void AddMulticastAddress(MacAddress address,
-                           AddMulticastAddressCompleter::Sync& _completer) override;
+                           AddMulticastAddressCompleter::Sync _completer) override;
   void RemoveMulticastAddress(MacAddress address,
-                              RemoveMulticastAddressCompleter::Sync& _completer) override;
+                              RemoveMulticastAddressCompleter::Sync _completer) override;
   // Binds the client instance to serve FIDL requests from the provided request channel.
   // All requests will be operated on the provided dispatcher.
   zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel req);

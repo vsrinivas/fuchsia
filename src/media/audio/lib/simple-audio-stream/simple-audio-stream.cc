@@ -176,7 +176,7 @@ void SimpleAudioStream::DdkSuspend(ddk::SuspendTxn txn) {
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
-void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync& completer) {
+void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   // Attempt to allocate a new driver channel and bind it to us.  If we don't
   // already have an stream_channel_, flag this channel is the privileged
@@ -255,7 +255,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
 
 void SimpleAudioStream::CreateRingBuffer(
     StreamChannel* channel, audio_fidl::Format format, zx::channel ring_buffer,
-    audio_fidl::StreamConfig::Interface::CreateRingBufferCompleter::Sync& completer) {
+    audio_fidl::StreamConfig::Interface::CreateRingBufferCompleter::Sync completer) {
   ScopedToken t(domain_token());
   zx::channel rb_channel_local;
   zx::channel rb_channel_remote;
@@ -364,7 +364,7 @@ void SimpleAudioStream::CreateRingBuffer(
 }
 
 void SimpleAudioStream::WatchGainState(StreamChannel* channel,
-                                       StreamChannel::WatchGainStateCompleter::Sync& completer) {
+                                       StreamChannel::WatchGainStateCompleter::Sync completer) {
   ZX_ASSERT(!channel->gain_completer_);
   channel->gain_completer_ = completer.ToAsync();
 
@@ -397,7 +397,7 @@ void SimpleAudioStream::WatchGainState(StreamChannel* channel,
 }
 
 void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
-                                       StreamChannel::WatchPlugStateCompleter::Sync& completer) {
+                                       StreamChannel::WatchPlugStateCompleter::Sync completer) {
   ZX_ASSERT(!channel->plug_completer_);
   channel->plug_completer_ = completer.ToAsync();
 
@@ -418,13 +418,13 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
 }
 
 void SimpleAudioStream::WatchClockRecoveryPositionInfo(
-    WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
+    WatchClockRecoveryPositionInfoCompleter::Sync completer) {
   fbl::AutoLock position_lock(&position_lock_);
   position_completer_ = completer.ToAsync();
 }
 
 void SimpleAudioStream::SetGain(audio_fidl::GainState target_state,
-                                StreamChannel::SetGainCompleter::Sync& completer) {
+                                StreamChannel::SetGainCompleter::Sync completer) {
   ScopedToken t(domain_token());
   audio_stream_cmd_set_gain_req_t req = {};
 
@@ -477,7 +477,7 @@ void SimpleAudioStream::SetGain(audio_fidl::GainState target_state,
 }
 
 void SimpleAudioStream::GetProperties(
-    audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync& completer) {
+    audio_fidl::StreamConfig::Interface::GetPropertiesCompleter::Sync completer) {
   ScopedToken t(domain_token());
   auto builder = audio_fidl::StreamProperties::UnownedBuilder();
   fidl::Array<uint8_t, audio_fidl::UNIQUE_ID_SIZE> unique_id = {};
@@ -516,7 +516,7 @@ void SimpleAudioStream::GetProperties(
 }
 
 void SimpleAudioStream::GetSupportedFormats(
-    audio_fidl::StreamConfig::Interface::GetSupportedFormatsCompleter::Sync& completer) {
+    audio_fidl::StreamConfig::Interface::GetSupportedFormatsCompleter::Sync completer) {
   ScopedToken t(domain_token());
 
   // Build formats compatible with FIDL from a vector of audio_stream_format_range_t.
@@ -615,7 +615,7 @@ void SimpleAudioStream::GetSupportedFormats(
 }
 
 // Ring Buffer GetProperties.
-void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
+void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync completer) {
   ScopedToken t(domain_token());
   auto builder = audio_fidl::RingBufferProperties::UnownedBuilder();
   fidl::aligned<uint32_t> fifo_depth = fifo_depth_;
@@ -628,7 +628,7 @@ void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
 }
 
 void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                               GetVmoCompleter::Sync& completer) {
+                               GetVmoCompleter::Sync completer) {
   ScopedToken t(domain_token());
 
   if (rb_started_) {
@@ -653,7 +653,7 @@ void SimpleAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_r
   completer.ReplySuccess(num_ring_buffer_frames, std::move(buffer));
 }
 
-void SimpleAudioStream::Start(StartCompleter::Sync& completer) {
+void SimpleAudioStream::Start(StartCompleter::Sync completer) {
   ScopedToken t(domain_token());
 
   uint64_t start_time = 0;
@@ -670,7 +670,7 @@ void SimpleAudioStream::Start(StartCompleter::Sync& completer) {
   completer.Reply(start_time);
 }
 
-void SimpleAudioStream::Stop(StopCompleter::Sync& completer) {
+void SimpleAudioStream::Stop(StopCompleter::Sync completer) {
   ScopedToken t(domain_token());
   if (!rb_started_) {
     zxlogf(ERROR, "Could not stop %s\n", __PRETTY_FUNCTION__);

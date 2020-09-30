@@ -302,7 +302,7 @@ zx_status_t AmlUsbPhy::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void AmlUsbPhy::WriteRegister(uint64_t address, uint32_t value,
-                              WriteRegisterCompleter::Sync& completer) {
+                              WriteRegisterCompleter::Sync completer) {
   if (!factory_mmio_.has_value()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;

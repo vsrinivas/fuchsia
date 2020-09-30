@@ -31,12 +31,12 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
 
   // llcpp::fuchsia::sysmem::SecureMem::Interface impl
   void GetPhysicalSecureHeaps(
-      llcpp::fuchsia::sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync&
-          completer) override;
+      llcpp::fuchsia::sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync
+          _completer) override;
   void SetPhysicalSecureHeaps(
       llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps,
-      llcpp::fuchsia::sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync&
-          completer) override;
+      llcpp::fuchsia::sysmem::SecureMem::Interface::SetPhysicalSecureHeapsCompleter::Sync
+          _completer) override;
 
  private:
   void PostToLoop(fit::closure to_run);

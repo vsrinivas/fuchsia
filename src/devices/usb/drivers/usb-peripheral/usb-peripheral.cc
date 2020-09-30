@@ -820,7 +820,7 @@ void UsbPeripheral::UsbDciInterfaceSetSpeed(usb_speed_t speed) { speed_ = speed;
 
 void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
                                      ::fidl::VectorView<ConfigurationDescriptor> config_descs,
-                                     SetConfigurationCompleter::Sync& completer) {
+                                     SetConfigurationCompleter::Sync completer) {
   zxlogf(DEBUG, "%s", __func__);
   ZX_ASSERT(!config_descs.empty());
   peripheral::Device_SetConfiguration_Result response;
@@ -905,7 +905,7 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
   }
 }
 
-void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync& completer) {
+void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync completer) {
   zxlogf(DEBUG, "%s", __func__);
   ClearFunctions();
   completer.Reply();
@@ -921,7 +921,7 @@ int UsbPeripheral::ListenerCleanupThread() {
 }
 
 void UsbPeripheral::SetStateChangeListener(zx::channel listener,
-                                           SetStateChangeListenerCompleter::Sync& completer) {
+                                           SetStateChangeListenerCompleter::Sync completer) {
   // This code is wrapped in a loop
   // to prevent a race condition in the event that multiple
   // clients try to set the handle at once.

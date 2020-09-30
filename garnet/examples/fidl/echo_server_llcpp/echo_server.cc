@@ -29,7 +29,7 @@ struct ConnectRequestContext {
 
 class Server final : public llcpp::fidl::examples::echo::Echo::Interface {
  public:
-  void EchoString(::fidl::StringView value, EchoStringCompleter::Sync& completer) override {
+  void EchoString(::fidl::StringView value, EchoStringCompleter::Sync completer) override {
     completer.Reply(std::move(value));
   }
 };

@@ -289,8 +289,7 @@ zx_status_t AddressSpaceChildDriver::Bind() {
   return DdkAdd("address-space", DEVICE_ADD_INSTANCE);
 }
 
-void AddressSpaceChildDriver::AllocateBlock(uint64_t size,
-                                            AllocateBlockCompleter::Sync& completer) {
+void AddressSpaceChildDriver::AllocateBlock(uint64_t size, AllocateBlockCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Instance::FidlAllocateBlock", "size", size);
 
   uint64_t offset;
@@ -319,7 +318,7 @@ void AddressSpaceChildDriver::AllocateBlock(uint64_t size,
 }
 
 void AddressSpaceChildDriver::DeallocateBlock(uint64_t paddr,
-                                              DeallocateBlockCompleter::Sync& completer) {
+                                              DeallocateBlockCompleter::Sync completer) {
   TRACE_DURATION("gfx", "Instance::FidlDeallocateBlock", "paddr", paddr);
 
   auto it = allocated_blocks_.find(paddr);
@@ -341,7 +340,7 @@ void AddressSpaceChildDriver::DeallocateBlock(uint64_t paddr,
 }
 
 void AddressSpaceChildDriver::ClaimSharedBlock(uint64_t offset, uint64_t size,
-                                               ClaimSharedBlockCompleter::Sync& completer) {
+                                               ClaimSharedBlockCompleter::Sync completer) {
   auto end = offset + size;
   for (const auto& entry : claimed_blocks_) {
     auto entry_start = entry.second.offset;
@@ -372,7 +371,7 @@ void AddressSpaceChildDriver::ClaimSharedBlock(uint64_t offset, uint64_t size,
 };
 
 void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
-                                                 UnclaimSharedBlockCompleter::Sync& completer) {
+                                                 UnclaimSharedBlockCompleter::Sync completer) {
   auto it = claimed_blocks_.find(offset);
   if (it == claimed_blocks_.end()) {
     zxlogf(ERROR,
@@ -388,7 +387,7 @@ void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
 
 void AddressSpaceChildDriver::Ping(
     llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
-    PingCompleter::Sync& completer) {
+    PingCompleter::Sync completer) {
   using llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage;
   AddressSpaceChildDriverPingMessage* output =
       reinterpret_cast<struct AddressSpaceChildDriverPingMessage*>(io_buffer_.virt());

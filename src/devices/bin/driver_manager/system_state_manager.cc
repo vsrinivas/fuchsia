@@ -45,7 +45,7 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
 
 void SystemStateManager::SetTerminationSystemState(
     power_fidl::statecontrol::SystemPowerState state,
-    device_manager_fidl::SystemStateTransition::Interface::SetTerminationSystemStateCompleter::Sync&
+    device_manager_fidl::SystemStateTransition::Interface::SetTerminationSystemStateCompleter::Sync
         completer) {
   if (state == power_fidl::statecontrol::SystemPowerState::FULLY_ON) {
     LOGF(INFO, "Invalid termination state");

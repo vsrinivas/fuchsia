@@ -42,12 +42,12 @@ struct DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
   std::unordered_map<std::string, zx::vmo> data;
   std::unordered_map<std::string, zx::vmo> configs;
 
-  void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync&) {
+  void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync) {
     std::string name(data_sink.data(), data_sink.size());
     data.emplace(name, std::move(vmo));
   }
 
-  void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) {
+  void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync completer) {
     std::string name(config_name.data(), config_name.size());
     if (auto it = configs.find(name); it != configs.end()) {
       completer.Reply(std::move(it->second));

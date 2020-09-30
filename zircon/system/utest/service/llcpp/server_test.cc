@@ -33,7 +33,7 @@ class EchoCommon : public Echo::Interface {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void EchoString(fidl::StringView input, EchoStringCompleter::Sync& completer) override {
+  void EchoString(fidl::StringView input, EchoStringCompleter::Sync completer) override {
     std::string reply = prefix_ + ": " + std::string(input.data(), input.size());
     completer.Reply(fidl::unowned_str(reply));
   }

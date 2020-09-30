@@ -38,11 +38,11 @@ NodeConnection::NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, Vnode
     : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::Node>(this)) {}
 
 void NodeConnection::Clone(uint32_t clone_flags, zx::channel object,
-                           CloneCompleter::Sync& completer) {
+                           CloneCompleter::Sync completer) {
   Connection::NodeClone(clone_flags, std::move(object));
 }
 
-void NodeConnection::Close(CloseCompleter::Sync& completer) {
+void NodeConnection::Close(CloseCompleter::Sync completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -51,7 +51,7 @@ void NodeConnection::Close(CloseCompleter::Sync& completer) {
   }
 }
 
-void NodeConnection::Describe(DescribeCompleter::Sync& completer) {
+void NodeConnection::Describe(DescribeCompleter::Sync completer) {
   auto result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.error());
@@ -61,13 +61,13 @@ void NodeConnection::Describe(DescribeCompleter::Sync& completer) {
   }
 }
 
-void NodeConnection::Sync(SyncCompleter::Sync& completer) {
+void NodeConnection::Sync(SyncCompleter::Sync completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     completer.Reply(sync_status);
   });
 }
 
-void NodeConnection::GetAttr(GetAttrCompleter::Sync& completer) {
+void NodeConnection::GetAttr(GetAttrCompleter::Sync completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.error(), fio::NodeAttributes());
@@ -77,7 +77,7 @@ void NodeConnection::GetAttr(GetAttrCompleter::Sync& completer) {
 }
 
 void NodeConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
-                             SetAttrCompleter::Sync& completer) {
+                             SetAttrCompleter::Sync completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -86,7 +86,7 @@ void NodeConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttribute
   }
 }
 
-void NodeConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) {
+void NodeConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync completer) {
   auto result = Connection::NodeNodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.error(), 0);
@@ -95,7 +95,7 @@ void NodeConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) {
   }
 }
 
-void NodeConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) {
+void NodeConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync completer) {
   auto result = Connection::NodeNodeSetFlags(flags);
   if (result.is_error()) {
     completer.Reply(result.error());

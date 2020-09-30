@@ -20,9 +20,9 @@ class QueryService final : public llcpp::fuchsia::fs::Query::Interface, public f
   QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs, Runner* runner);
 
   void GetInfo(llcpp::fuchsia::fs::FilesystemInfoQuery query,
-               GetInfoCompleter::Sync& completer) final;
+               GetInfoCompleter::Sync completer) final;
 
-  void IsNodeInFilesystem(zx::event token, IsNodeInFilesystemCompleter::Sync& completer) final;
+  void IsNodeInFilesystem(zx::event token, IsNodeInFilesystemCompleter::Sync completer) final;
 
  private:
   const Factoryfs* const factoryfs_;

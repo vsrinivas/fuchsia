@@ -18,7 +18,7 @@ namespace sysmem = llcpp::fuchsia::sysmem;
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
-                      SetConstraintsCompleter::Sync& _completer) override {
+                      SetConstraintsCompleter::Sync _completer) override {
     EXPECT_TRUE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
     EXPECT_EQ(64u, constraints.image_format_constraints[0].bytes_per_row_divisor);
@@ -29,7 +29,7 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
   }
 
   void SetName(uint32_t priority, fidl::StringView name,
-               SetNameCompleter::Sync& completer) override {
+               SetNameCompleter::Sync completer) override {
     EXPECT_EQ(10u, priority);
     EXPECT_EQ(std::string("Display"), std::string(name.data(), name.size()));
     set_name_called_ = true;

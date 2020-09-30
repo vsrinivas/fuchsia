@@ -18,7 +18,7 @@ zx_status_t OpteeDeviceInfo::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void OpteeDeviceInfo::DdkRelease() { delete this; }
 
-void OpteeDeviceInfo::GetOsInfo(GetOsInfoCompleter::Sync& completer) {
+void OpteeDeviceInfo::GetOsInfo(GetOsInfoCompleter::Sync completer) {
   llcpp::fuchsia::tee::Uuid uuid;
   uuid.time_low = kOpteeOsUuid.timeLow;
   uuid.time_mid = kOpteeOsUuid.timeMid;

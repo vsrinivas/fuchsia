@@ -35,8 +35,9 @@ constexpr uint32_t kResetMsDelay = 100;
 constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
 constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
-class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>,
-                          public llcpp::fuchsia::lowpan::spinel::DeviceSetup::Interface {
+class FakeOtRadioDevice
+    : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>,
+      public llcpp::fuchsia::lowpan::spinel::DeviceSetup::Interface {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
 
@@ -55,7 +56,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
  private:
   // FIDL request handlers
-  void SetChannel(zx::channel channel, SetChannelCompleter::Sync& _completer);
+  void SetChannel(zx::channel channel, SetChannelCompleter::Sync _completer);
   // Loop
   zx_status_t RadioThread();
   uint32_t GetTimeoutMs();
@@ -74,12 +75,12 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer);
-    void Close(CloseCompleter::Sync& completer);
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer);
+    void Open(OpenCompleter::Sync completer);
+    void Close(CloseCompleter::Sync completer);
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync completer);
+    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync completer);
     void ReadyToReceiveFrames(uint32_t number_of_frames,
-                              ReadyToReceiveFramesCompleter::Sync& completer);
+                              ReadyToReceiveFramesCompleter::Sync completer);
 
     FakeOtRadioDevice& ot_radio_obj_;
   };

@@ -24,7 +24,7 @@ class LifecycleServer final : public llcpp::fuchsia::process::lifecycle::Lifecyc
   static zx_status_t Create(async_dispatcher_t* dispatcher, FsManager* fs_manager,
                             zx::channel chan);
 
-  void Stop(StopCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync completer) override;
 
  private:
   FsManager* fs_manager_;

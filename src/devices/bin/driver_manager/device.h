@@ -112,27 +112,27 @@ class Device
                  ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
                  ::zx::vmo inspect, ::zx::channel client_remote,
-                 AddDeviceCompleter::Sync& _completer) override;
-  void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& _completer) override;
+                 AddDeviceCompleter::Sync _completer) override;
+  void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
   void AddCompositeDevice(::fidl::StringView name,
                           llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
-                          AddCompositeDeviceCompleter::Sync& _completer) override;
+                          AddCompositeDeviceCompleter::Sync _completer) override;
   void PublishMetadata(::fidl::StringView device_path, uint32_t key,
                        ::fidl::VectorView<uint8_t> data,
-                       PublishMetadataCompleter::Sync& _completer) override;
-  void MakeVisible(MakeVisibleCompleter::Sync& _completer) override;
-  void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync& _completer) override;
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
-  void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync& _completer) override;
-  void GetMetadata(uint32_t key, GetMetadataCompleter::Sync& _completer) override;
-  void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& _completer) override;
+                       PublishMetadataCompleter::Sync _completer) override;
+  void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
+  void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;
+  void LoadFirmware(::fidl::StringView fw_path, LoadFirmwareCompleter::Sync _completer) override;
+  void GetMetadata(uint32_t key, GetMetadataCompleter::Sync _completer) override;
+  void GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync _completer) override;
   void AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
-                   AddMetadataCompleter::Sync& _completer) override;
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& _completer) override;
+                   AddMetadataCompleter::Sync _completer) override;
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync _completer) override;
   void RunCompatibilityTests(int64_t hook_wait_time,
-                             RunCompatibilityTestsCompleter::Sync& _completer) override;
+                             RunCompatibilityTestsCompleter::Sync _completer) override;
   void DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-                      DirectoryWatchCompleter::Sync& _completer) override;
+                      DirectoryWatchCompleter::Sync _completer) override;
 
   // This iterator provides access to a list of devices that does not provide
   // mechanisms for mutating that list.  With this, a user can get mutable

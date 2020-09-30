@@ -203,7 +203,7 @@ struct Completer final {
   // It may be stored in the server implementation for delayed reply. It is okay for the handler
   // to return without replying when the Completer::Sync is converted to Completer::Async, e.g.
   //
-  //     virtual void MyMethod(Foo foo, Bar bar, MyMethodCompleter::Sync& completer) {
+  //     virtual void MyMethod(Foo foo, Bar bar, MyMethodCompleter::Sync completer) {
   //         PerformLongOperation(foo, bar).then([completer = completer.ToAsync()] () {
   //             // Here the type of |completer| is |MyMethodCompleter::Async|.
   //             completer.Reply(...);
@@ -223,7 +223,7 @@ struct Completer final {
     using Base::EnableNextDispatch;
   };
 
-  // The server handler function will be given FooCompleter::Sync&, an object tailor made for
+  // The server handler function will be given FooCompleter::Sync, an object tailor made for
   // the specific method call. It only exposes methods to send the corresponding reply type
   // given the request. The completer wraps a |fidl::Transaction|. The handler must interact
   // with the sync responder in one way or another. If the handler forgets to e.g. reply the
@@ -232,12 +232,6 @@ struct Completer final {
    public:
     explicit Sync(Transaction* borrowed_transaction)
         : Base(borrowed_transaction, false /*owned*/, kExpectingReply) {}
-
-    // The sync completer is provided to message handlers as a reference;
-    // it cannot be moved and must be used up synchronously in the case
-    // of a two-way FIDL method.
-    Sync(Sync&& other) = delete;
-    Sync& operator=(Sync&& other) = delete;
 
     // Move a sync responder to its async counterpart, such that the reply could be
     // issued asynchronously. This causes the transaction to be moved to heap.

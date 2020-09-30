@@ -71,7 +71,7 @@ class FakeUsbAx88179Function : public DeviceType,
   zx_status_t UsbFunctionInterfaceSetInterface(uint8_t interface, uint8_t alt_setting);
 
   // Hooks:
-  void SetOnline(bool online, SetOnlineCompleter::Sync& completer) override;
+  void SetOnline(bool online, SetOnlineCompleter::Sync completer) override;
 
  private:
   void RequestQueue(usb_request_t* req, const usb_request_complete_t* completion);
@@ -96,7 +96,7 @@ class FakeUsbAx88179Function : public DeviceType,
   bool configured_ = false;
 };
 
-void FakeUsbAx88179Function::SetOnline(bool online, SetOnlineCompleter::Sync& completer) {
+void FakeUsbAx88179Function::SetOnline(bool online, SetOnlineCompleter::Sync completer) {
   fbl::AutoLock lock(&mtx_);
 
   constexpr size_t kInterruptRequestSize = 8;
@@ -284,4 +284,4 @@ ZIRCON_DRIVER_BEGIN(usb_ax88179_function, fake_usb_ax88179_function::driver_ops,
   BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
   BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
 ZIRCON_DRIVER_END(fake_usb_ax88179)
-    // clang-format on
+// clang-format on

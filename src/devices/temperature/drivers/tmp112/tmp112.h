@@ -57,7 +57,7 @@ class Tmp112Device : public DdkDeviceType,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // FIDL calls
-  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) override;
 
  private:
   zx_status_t ReadReg(uint8_t addr, uint16_t* val);

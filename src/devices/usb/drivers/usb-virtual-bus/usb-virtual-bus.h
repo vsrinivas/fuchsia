@@ -76,10 +76,10 @@ class UsbVirtualBus : public UsbVirtualBusType,
   size_t UsbHciGetRequestSize();
 
   // FIDL messages
-  void Enable(EnableCompleter::Sync& completer);
-  void Disable(DisableCompleter::Sync& completer);
-  void Connect(ConnectCompleter::Sync& completer);
-  void Disconnect(DisconnectCompleter::Sync& completer);
+  void Enable(EnableCompleter::Sync completer);
+  void Disable(DisableCompleter::Sync completer);
+  void Connect(ConnectCompleter::Sync completer);
+  void Disconnect(DisconnectCompleter::Sync completer);
 
   // Public for unit tests.
   void SetConnected(bool connected);

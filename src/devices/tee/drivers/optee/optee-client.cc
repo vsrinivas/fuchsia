@@ -318,34 +318,34 @@ zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void OpteeClient::GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync& completer) {
+void OpteeClient::GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync completer) {
   auto os_info = controller_->GetOsInfo();
   completer.Reply(os_info.to_llcpp());
 }
 
 void OpteeClient::GetOsInfo(
-    fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync& completer) {
+    fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync completer) {
   auto os_info = controller_->GetOsInfo();
   completer.Reply(os_info.to_llcpp());
 }
 
 void OpteeClient::OpenSession(
     fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync& completer) {
+    fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync completer) {
   auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), std::move(parameter_set));
   completer.Reply(session_id, op_result.to_llcpp());
 }
 
 void OpteeClient::OpenSession(
     fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync& completer) {
+    fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync completer) {
   auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), std::move(parameter_set));
   completer.Reply(session_id, op_result.to_llcpp());
 }
 
 void OpteeClient::OpenSession2(
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::OpenSession2Completer::Sync& completer) {
+    fuchsia_tee::Application::Interface::OpenSession2Completer::Sync completer) {
   // TODO(fxbug.dev/44664): This check won't be necessary once transition is complete and UUID is no
   // longer optional.
   ZX_DEBUG_ASSERT(application_uuid_.has_value());
@@ -405,7 +405,7 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
 void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync& completer) {
+    fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync completer) {
   auto result = InvokeCommandInternal(session_id, command_id, std::move(parameter_set));
   completer.Reply(result.to_llcpp());
 }
@@ -413,7 +413,7 @@ void OpteeClient::InvokeCommand(
 void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync& completer) {
+    fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync completer) {
   auto result = InvokeCommandInternal(session_id, command_id, std::move(parameter_set));
   completer.Reply(result.to_llcpp());
 }
@@ -489,14 +489,14 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
 }
 
 void OpteeClient::CloseSession(
-    uint32_t session_id, fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync& completer) {
+    uint32_t session_id, fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync completer) {
   CloseSession(session_id);
   completer.Reply();
 }
 
 void OpteeClient::CloseSession(
     uint32_t session_id,
-    fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync& completer) {
+    fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync completer) {
   CloseSession(session_id);
   completer.Reply();
 }

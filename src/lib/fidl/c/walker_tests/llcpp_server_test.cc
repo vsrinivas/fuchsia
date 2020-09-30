@@ -36,8 +36,8 @@ class Server : public Simple::Interface {
 
   ~Server() override { sync_completion_signal(destroyed_); }
 
-  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
-  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+  void Echo(int32_t request, EchoCompleter::Sync completer) override { completer.Reply(request); }
+  void Close(CloseCompleter::Sync completer) override { completer.Close(ZX_OK); }
 
  private:
   sync_completion_t* destroyed_;
@@ -45,10 +45,8 @@ class Server : public Simple::Interface {
 
 TEST(BindServerTestCase, SyncReply) {
   struct SyncServer : Simple::Interface {
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
-      completer.Reply(request);
-    }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    void Echo(int32_t request, EchoCompleter::Sync completer) override { completer.Reply(request); }
   };
 
   // Server launches a thread so we can make sync client calls.
@@ -80,8 +78,8 @@ TEST(BindServerTestCase, SyncReply) {
 
 TEST(BindServerTestCase, AsyncReply) {
   struct AsyncServer : Simple::Interface {
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync()]() mutable {
         completer.Reply(request);
@@ -120,8 +118,8 @@ TEST(BindServerTestCase, AsyncReply) {
 
 TEST(BindServerTestCase, MultipleAsyncReplies) {
   struct AsyncDelayedServer : Simple::Interface {
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker->dispatcher(),
                       [request, completer = completer.ToAsync(), this]() mutable {
@@ -184,8 +182,8 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
 TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
   struct AsyncDelayedServer : Simple::Interface {
     AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops) : loops_(loops) {}
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker->dispatcher(),
                       [request, completer = completer.ToAsync(), this]() mutable {
@@ -283,7 +281,7 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
   struct ErrorServer : Simple::Interface {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction in progress.
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(),
@@ -294,7 +292,7 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
                       });
       ASSERT_OK(worker_->StartThread());
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
@@ -352,12 +350,12 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
   struct WorkingServer : Simple::Interface {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request).status());
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
   };
@@ -415,7 +413,7 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
   struct ErrorServer : Simple::Interface {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction in progress.
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(),
@@ -426,7 +424,7 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
                       });
       ASSERT_OK(worker_->StartThread());
     }
-    void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_ERR_INTERNAL); }
+    void Close(CloseCompleter::Sync completer) override { completer.Close(ZX_ERR_INTERNAL); }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
@@ -553,12 +551,12 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   struct WorkingServer : Simple::Interface {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
       completer.Reply(request);
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
   };
@@ -608,8 +606,8 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
 TEST(BindServerTestCase, ConcurrentSyncReply) {
   struct ConcurrentSyncServer : Simple::Interface {
     ConcurrentSyncServer(int max_reqs) : max_reqs_(max_reqs) {}
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Increment the request count. Yield to allow other threads to execute.
       auto i = ++req_cnt_;
       zx_nanosleep(0);
@@ -667,14 +665,14 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 
 TEST(BindServerTestCase, ConcurrentIdempotentClose) {
   struct ConcurrentSyncServer : Simple::Interface {
-    void Close(CloseCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync completer) override {
       // Add the wait back to the dispatcher. Sleep to allow another thread in.
       completer.EnableNextDispatch();
       zx_nanosleep(0);
       // Close with ZX_OK.
       completer.Close(ZX_OK);
     }
-    void Echo(int32_t, EchoCompleter::Sync&) override { ADD_FAILURE("Must not call echo"); }
+    void Echo(int32_t, EchoCompleter::Sync) override { ADD_FAILURE("Must not call echo"); }
   };
 
   zx::channel local, remote;
@@ -796,10 +794,10 @@ TEST(BindServerTestCase, ServerClose) {
 TEST(BindServerTestCase, UnbindInfoChannelError) {
   struct WorkingServer : Simple::Interface {
     WorkingServer() = default;
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request).status());
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
   };
 
   // Launches a new thread for the server so we can wait on the worker.
@@ -867,11 +865,11 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
     explicit WorkingServer(std::optional<EchoCompleter::Async>* async_completer,
                            sync_completion_t* ready)
         : async_completer_(async_completer), ready_(ready) {}
-    void Echo(int32_t request, EchoCompleter::Sync& completer) override {
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
       sync_completion_signal(ready_);
       *async_completer_ = completer.ToAsync();  // Releases ownership of the binding.
     }
-    void Close(CloseCompleter::Sync& completer) override { ADD_FAILURE("Must not call close"); }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     std::optional<EchoCompleter::Async>* async_completer_;
     sync_completion_t* ready_;
   };

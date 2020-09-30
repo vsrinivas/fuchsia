@@ -256,7 +256,7 @@ zx_status_t Device::CloseQmiChannel() {
   return ret_val;
 }
 
-void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync& completer) {
+void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) {
   zx_status_t set_channel_res = SetChannelToDevice(transport.release());
   if (set_channel_res == ZX_OK) {
     completer.ReplySuccess();
@@ -269,12 +269,12 @@ void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync& comp
   }
 }
 
-void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) {
+void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync completer) {
   QmiUpdateOnlineStatus(connected);
   completer.Reply();
 }
 
-void Device::SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync& completer) {
+void Device::SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(interface.release());
   if (set_snoop_res == ZX_OK) {
     completer.ReplySuccess();
@@ -296,7 +296,9 @@ void Device::DdkRelease() {
   Release();
 }
 
-void Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
+  txn.Reply();
+}
 
 uint32_t Device::GetMacAddr(uint8_t* buffer, uint32_t buffer_length) {
   if (buffer == nullptr) {

@@ -339,25 +339,26 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     ~StreamChannel() = default;
 
     // fuchsia hardware audio Stream Interface.
-    virtual void GetProperties(GetPropertiesCompleter::Sync& completer) override {
-      stream_.GetProperties(completer);
+    virtual void GetProperties(GetPropertiesCompleter::Sync completer) override {
+      stream_.GetProperties(std::move(completer));
     }
-    virtual void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
-      stream_.GetSupportedFormats(completer);
+    virtual void GetSupportedFormats(GetSupportedFormatsCompleter::Sync completer) override {
+      stream_.GetSupportedFormats(std::move(completer));
     }
-    virtual void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
-      stream_.WatchGainState(this, completer);
+    virtual void WatchGainState(WatchGainStateCompleter::Sync completer) override {
+      stream_.WatchGainState(this, std::move(completer));
     }
-    virtual void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
-      stream_.WatchPlugState(this, completer);
+    virtual void WatchPlugState(WatchPlugStateCompleter::Sync completer) override {
+      stream_.WatchPlugState(this, std::move(completer));
     }
     virtual void SetGain(audio_fidl::GainState target_state,
-                         SetGainCompleter::Sync& completer) override {
-      stream_.SetGain(std::move(target_state), completer);
+                         SetGainCompleter::Sync completer) override {
+      stream_.SetGain(std::move(target_state), std::move(completer));
     }
     virtual void CreateRingBuffer(audio_fidl::Format format, zx::channel ring_buffer,
-                                  CreateRingBufferCompleter::Sync& completer) override {
-      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
+                                  CreateRingBufferCompleter::Sync completer) override {
+      stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer),
+                               std::move(completer));
     }
 
    private:
@@ -385,28 +386,27 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_status_t PublishInternal();
 
   // fuchsia hardware audio Device Interface
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
-  virtual void GetProperties(GetPropertiesCompleter::Sync& completer) override;
+  virtual void GetProperties(GetPropertiesCompleter::Sync completer) override;
   virtual void GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
-                      audio_fidl::RingBuffer::Interface::GetVmoCompleter::Sync& completer) override;
-  virtual void Start(StartCompleter::Sync& completer) override;
-  virtual void Stop(StopCompleter::Sync& completer) override;
+                      audio_fidl::RingBuffer::Interface::GetVmoCompleter::Sync completer) override;
+  virtual void Start(StartCompleter::Sync completer) override;
+  virtual void Stop(StopCompleter::Sync completer) override;
   virtual void WatchClockRecoveryPositionInfo(
-      WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
+      WatchClockRecoveryPositionInfoCompleter::Sync completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
-  void GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer);
-  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
+  void GetProperties(StreamChannel::GetPropertiesCompleter::Sync completer);
+  void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync completer);
   void CreateRingBuffer(StreamChannel* channel, audio_fidl::Format format, zx::channel ring_buffer,
-                        StreamChannel::CreateRingBufferCompleter::Sync& completer);
+                        StreamChannel::CreateRingBufferCompleter::Sync completer);
   void WatchGainState(StreamChannel* channel,
-                      StreamChannel::WatchGainStateCompleter::Sync& completer);
+                      StreamChannel::WatchGainStateCompleter::Sync completer);
   void WatchPlugState(StreamChannel* channel,
-                      StreamChannel::WatchPlugStateCompleter::Sync& completer);
-  void SetGain(audio_fidl::GainState target_state,
-               StreamChannel::SetGainCompleter::Sync& completer);
+                      StreamChannel::WatchPlugStateCompleter::Sync completer);
+  void SetGain(audio_fidl::GainState target_state, StreamChannel::SetGainCompleter::Sync completer);
 
   void DeactivateStreamChannel(StreamChannel* channel) __TA_REQUIRES(domain_token(), channel_lock_);
 

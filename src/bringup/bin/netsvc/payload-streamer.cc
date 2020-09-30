@@ -16,7 +16,7 @@ PayloadStreamer::PayloadStreamer(zx::channel chan, ReadCallback callback)
   fidl::BindSingleInFlightOnly(async_get_default_dispatcher(), std::move(chan), this);
 }
 
-void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer) {
+void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
   if (vmo_) {
     completer.Reply(ZX_ERR_ALREADY_BOUND);
     return;
@@ -27,7 +27,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& compl
   completer.Reply(status);
 }
 
-void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
+void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   using ::llcpp::fuchsia::paver::ReadResult;
   ReadResult result;
   if (!vmo_) {

@@ -63,7 +63,8 @@ zx_status_t AmlogicSecureMemDevice::Bind() {
     return ZX_ERR_INTERNAL;
   }
 
-  status = ddk::PDevProtocolClient::CreateFromDevice(fragments[kFragmentPDev], &pdev_proto_client_);
+  status =
+      ddk::PDevProtocolClient::CreateFromDevice(fragments[kFragmentPDev], &pdev_proto_client_);
   if (status != ZX_OK) {
     LOG(ERROR, "Unable to get pdev protocol - status: %d", status);
     return status;
@@ -152,7 +153,7 @@ void AmlogicSecureMemDevice::DdkSuspend(ddk::SuspendTxn txn) {
 }
 
 void AmlogicSecureMemDevice::GetSecureMemoryPhysicalAddress(
-    zx::vmo secure_mem, GetSecureMemoryPhysicalAddressCompleter::Sync& completer) {
+    zx::vmo secure_mem, GetSecureMemoryPhysicalAddressCompleter::Sync completer) {
   auto result = GetSecureMemoryPhysicalAddress(std::move(secure_mem));
   if (result.is_error()) {
     completer.Reply(result.error(), static_cast<zx_paddr_t>(0));

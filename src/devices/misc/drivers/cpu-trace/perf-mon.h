@@ -155,15 +155,15 @@ class PerfmonDevice : public DeviceType, public fidl_perfmon::Controller::Interf
   void PmuStop();
 
   // FIDL server methods
-  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  void Initialize(FidlPerfmonAllocation allocation, InitializeCompleter::Sync& completer) override;
-  void Terminate(TerminateCompleter::Sync& completer) override;
-  void GetAllocation(GetAllocationCompleter::Sync& completer) override;
-  void StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync& completer) override;
-  void GetConfig(GetConfigCompleter::Sync& completer) override;
-  void GetBufferHandle(uint32_t descriptor, GetBufferHandleCompleter::Sync& completer) override;
-  void Start(StartCompleter::Sync& completer) override;
-  void Stop(StopCompleter::Sync& completer) override;
+  void GetProperties(GetPropertiesCompleter::Sync completer) override;
+  void Initialize(FidlPerfmonAllocation allocation, InitializeCompleter::Sync completer) override;
+  void Terminate(TerminateCompleter::Sync completer) override;
+  void GetAllocation(GetAllocationCompleter::Sync completer) override;
+  void StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync completer) override;
+  void GetConfig(GetConfigCompleter::Sync completer) override;
+  void GetBufferHandle(uint32_t descriptor, GetBufferHandleCompleter::Sync completer) override;
+  void Start(StartCompleter::Sync completer) override;
+  void Stop(StopCompleter::Sync completer) override;
 
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);

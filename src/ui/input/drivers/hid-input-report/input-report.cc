@@ -88,7 +88,7 @@ void InputReport::SendInitialConsumerControlReport(InputReportsReader* reader) {
 }
 
 void InputReport::GetInputReportsReader(zx::channel req,
-                                        GetInputReportsReaderCompleter::Sync& completer) {
+                                        GetInputReportsReaderCompleter::Sync completer) {
   fbl::AutoLock lock(&readers_lock_);
 
   auto reader =
@@ -104,7 +104,7 @@ void InputReport::GetInputReportsReader(zx::channel req,
   sync_completion_signal(&next_reader_wait_);
 }
 
-void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
+void InputReport::GetDescriptor(GetDescriptorCompleter::Sync completer) {
   fidl::BufferThenHeapAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
   auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
       descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
@@ -131,7 +131,7 @@ void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
 }
 
 void InputReport::SendOutputReport(fuchsia_input_report::OutputReport report,
-                                   SendOutputReportCompleter::Sync& completer) {
+                                   SendOutputReportCompleter::Sync completer) {
   uint8_t hid_report[HID_MAX_DESC_LEN];
   size_t size;
   hid_input_report::ParseResult result = hid_input_report::ParseResult::kNotImplemented;

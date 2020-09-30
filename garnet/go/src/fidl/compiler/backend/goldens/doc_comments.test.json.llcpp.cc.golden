@@ -155,8 +155,8 @@ namespace methods {
 
 void InterfaceDispatchMethod(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
-  Interface::Interface::MethodCompleter::Sync completer(txn);
-  reinterpret_cast<Interface::Interface*>(interface)->Method(completer);
+  reinterpret_cast<Interface::Interface*>(interface)->Method(
+      Interface::Interface::MethodCompleter::Sync(txn));
 }
 
 }  // namespace methods

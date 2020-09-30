@@ -47,7 +47,7 @@ class I2cChild : public I2cChildType,
   void Transfer(fidl::VectorView<bool> input_segments,
                 fidl::VectorView<fidl::VectorView<uint8_t>> input_segments_data,
                 fidl::VectorView<uint8_t> output_segments_length,
-                TransferCompleter::Sync& completer) override;
+                TransferCompleter::Sync completer) override;
 
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie);

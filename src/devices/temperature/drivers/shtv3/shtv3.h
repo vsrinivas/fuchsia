@@ -30,7 +30,7 @@ class Shtv3Device : public DeviceType,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
-  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) override;
 
   // Visible for testing.
   zx_status_t Init();

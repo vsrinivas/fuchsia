@@ -24,7 +24,7 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Factoryfs* factoryfs,
       runner_(runner) {}
 
 void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
-                           GetInfoCompleter::Sync& completer) {
+                           GetInfoCompleter::Sync completer) {
   static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::MAX_FS_NAME_LENGTH,
                 "Factoryfs name too long");
 
@@ -33,8 +33,8 @@ void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
   uint64_t total_bytes;
   if (query & fuchsia_fs::FilesystemInfoQuery::TOTAL_BYTES) {
     // Account for 1 block for superblock.
-    uint64_t num_blocks =
-        1 + factoryfs_->Info().data_blocks + factoryfs_->Info().directory_ent_blocks;
+    uint64_t num_blocks = 1 + factoryfs_->Info().data_blocks +
+                          factoryfs_->Info().directory_ent_blocks;
     total_bytes = num_blocks * factoryfs_->Info().block_size;
     builder.set_total_bytes(fidl::unowned_ptr(&total_bytes));
   }
@@ -111,7 +111,7 @@ void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
 }
 
 void QueryService::IsNodeInFilesystem(zx::event token,
-                                      IsNodeInFilesystemCompleter::Sync& completer) {
+                                      IsNodeInFilesystemCompleter::Sync completer) {
   completer.Reply(runner_->IsTokenAssociatedWithVnode(std::move(token)));
 }
 

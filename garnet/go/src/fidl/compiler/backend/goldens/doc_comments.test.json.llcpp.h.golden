@@ -678,7 +678,7 @@ class Interface final {
 
     using MethodCompleter = ::fidl::Completer<>;
 
-    virtual void Method(MethodCompleter::Sync& _completer) = 0;
+    virtual void Method(MethodCompleter::Sync _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

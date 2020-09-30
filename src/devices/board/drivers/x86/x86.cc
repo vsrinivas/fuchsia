@@ -235,7 +235,7 @@ zx_status_t X86::GetAcpiTableEntries(fbl::Vector<TableInfo>* entries) {
   return ZX_OK;
 }
 
-void X86::ListTableEntries(ListTableEntriesCompleter::Sync& completer) {
+void X86::ListTableEntries(ListTableEntriesCompleter::Sync completer) {
   ZX_DEBUG_ASSERT(acpica_initialized_);
 
   // Fetch the entries.
@@ -252,7 +252,7 @@ void X86::ListTableEntries(ListTableEntriesCompleter::Sync& completer) {
 }
 
 void X86::ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,
-                         ReadNamedTableCompleter::Sync& completer) {
+                         ReadNamedTableCompleter::Sync completer) {
   // Fetch the requested table.
   ACPI_TABLE_HEADER* table;
   if (ACPI_STATUS status = AcpiGetTable(reinterpret_cast<char*>(name.data()), instance, &table);

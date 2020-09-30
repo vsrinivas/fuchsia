@@ -35,7 +35,7 @@ class PhyServer : public llcpp::fuchsia::hardware::registers::Device::Interface 
     loop_.StartThread();
   }
   void WriteRegister(uint64_t address, uint32_t value,
-                     WriteRegisterCompleter::Sync& completer) override {
+                     WriteRegisterCompleter::Sync completer) override {
     address_ = address;
     value_ = value;
     completer.ReplySuccess();

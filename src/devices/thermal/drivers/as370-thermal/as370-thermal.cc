@@ -119,16 +119,16 @@ zx_status_t As370Thermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void As370Thermal::GetInfo(GetInfoCompleter::Sync& completer) {
+void As370Thermal::GetInfo(GetInfoCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
   ThermalDeviceInfo device_info_copy = device_info_;
   completer.Reply(ZX_OK, fidl::unowned_ptr(&device_info_copy));
 }
 
-void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
+void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync completer) {
   if (power_domain != PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   } else {
@@ -137,7 +137,7 @@ void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::S
   }
 }
 
-void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
+void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) {
   PvtCtrl::Get()
       .ReadFrom(&mmio_)
       .set_pmos_sel(0)
@@ -164,21 +164,21 @@ void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& c
   }
 }
 
-void As370Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
+void As370Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void As370Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
+void As370Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
 void As370Thermal::SetTripCelsius(uint32_t id, float temp,
-                                  SetTripCelsiusCompleter::Sync& completer) {
+                                  SetTripCelsiusCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 void As370Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
-                                         GetDvfsOperatingPointCompleter::Sync& completer) {
+                                         GetDvfsOperatingPointCompleter::Sync completer) {
   if (power_domain != PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
   } else {
@@ -187,7 +187,7 @@ void As370Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
 }
 
 void As370Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
-                                         SetDvfsOperatingPointCompleter::Sync& completer) {
+                                         SetDvfsOperatingPointCompleter::Sync completer) {
   if (power_domain != PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   } else if (op_idx >= device_info_.opps[static_cast<uint32_t>(power_domain)].count) {
@@ -197,11 +197,11 @@ void As370Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_doma
   }
 }
 
-void As370Thermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
+void As370Thermal::GetFanLevel(GetFanLevelCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void As370Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) {
+void As370Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -224,8 +224,8 @@ zx_status_t As370Thermal::SetOperatingPoint(uint16_t op_idx) {
       return status;
     }
     if (actual_voltage != opps[op_idx].volt_uv) {
-      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u", __func__, actual_voltage,
-             opps[op_idx].volt_uv);
+      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u", __func__,
+             actual_voltage, opps[op_idx].volt_uv);
       return ZX_ERR_BAD_STATE;
     }
 
@@ -244,8 +244,8 @@ zx_status_t As370Thermal::SetOperatingPoint(uint16_t op_idx) {
       return status;
     }
     if (actual_voltage != opps[op_idx].volt_uv) {
-      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u", __func__, actual_voltage,
-             opps[op_idx].volt_uv);
+      zxlogf(ERROR, "%s: Failed to set exact voltage: set %u, wanted %u", __func__,
+             actual_voltage, opps[op_idx].volt_uv);
       return ZX_ERR_BAD_STATE;
     }
   }

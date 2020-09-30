@@ -294,17 +294,17 @@ namespace methods {
 void TransitionalDispatchRequest(void* interface, void* bytes,
                                  ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Transitional::RequestRequest*>(bytes);
-  Transitional::Interface::RequestCompleter::Sync completer(txn);
   reinterpret_cast<Transitional::Interface*>(interface)->Request(
-      std::move(message->x), completer);
+      std::move(message->x),
+      Transitional::Interface::RequestCompleter::Sync(txn));
 }
 
 void TransitionalDispatchOneWay(void* interface, void* bytes,
                                 ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Transitional::OneWayRequest*>(bytes);
-  Transitional::Interface::OneWayCompleter::Sync completer(txn);
   reinterpret_cast<Transitional::Interface*>(interface)->OneWay(
-      std::move(message->x), completer);
+      std::move(message->x),
+      Transitional::Interface::OneWayCompleter::Sync(txn));
 }
 
 }  // namespace methods
@@ -749,25 +749,25 @@ namespace methods {
 void ChannelProtocolDispatchMethodA(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MethodARequest*>(bytes);
-  ChannelProtocol::Interface::MethodACompleter::Sync completer(txn);
   reinterpret_cast<ChannelProtocol::Interface*>(interface)->MethodA(
-      std::move(message->a), std::move(message->b), completer);
+      std::move(message->a), std::move(message->b),
+      ChannelProtocol::Interface::MethodACompleter::Sync(txn));
 }
 
 void ChannelProtocolDispatchMethodB(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MethodBRequest*>(bytes);
-  ChannelProtocol::Interface::MethodBCompleter::Sync completer(txn);
   reinterpret_cast<ChannelProtocol::Interface*>(interface)->MethodB(
-      std::move(message->a), std::move(message->b), completer);
+      std::move(message->a), std::move(message->b),
+      ChannelProtocol::Interface::MethodBCompleter::Sync(txn));
 }
 
 void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MutateSocketRequest*>(bytes);
-  ChannelProtocol::Interface::MutateSocketCompleter::Sync completer(txn);
   reinterpret_cast<ChannelProtocol::Interface*>(interface)->MutateSocket(
-      std::move(message->a), completer);
+      std::move(message->a),
+      ChannelProtocol::Interface::MutateSocketCompleter::Sync(txn));
 }
 
 }  // namespace methods
@@ -1535,56 +1535,55 @@ namespace methods {
 
 void WithAndWithoutRequestResponseDispatchNoRequestNoResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::Interface::NoRequestNoResponseCompleter::Sync
-      completer(txn);
   reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
-      ->NoRequestNoResponse(completer);
+      ->NoRequestNoResponse(WithAndWithoutRequestResponse::Interface::
+                                NoRequestNoResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestEmptyResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::Interface::NoRequestEmptyResponseCompleter::
-      Sync completer(txn);
   reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
-      ->NoRequestEmptyResponse(completer);
+      ->NoRequestEmptyResponse(WithAndWithoutRequestResponse::Interface::
+                                   NoRequestEmptyResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchNoRequestWithResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  WithAndWithoutRequestResponse::Interface::NoRequestWithResponseCompleter::Sync
-      completer(txn);
   reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
-      ->NoRequestWithResponse(completer);
+      ->NoRequestWithResponse(WithAndWithoutRequestResponse::Interface::
+                                  NoRequestWithResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchWithRequestNoResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestNoResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::Interface::WithRequestNoResponseCompleter::Sync
-      completer(txn);
   reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
-      ->WithRequestNoResponse(std::move(message->arg), completer);
+      ->WithRequestNoResponse(std::move(message->arg),
+                              WithAndWithoutRequestResponse::Interface::
+                                  WithRequestNoResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchWithRequestEmptyResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::Interface::WithRequestEmptyResponseCompleter::
-      Sync completer(txn);
   reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
-      ->WithRequestEmptyResponse(std::move(message->arg), completer);
+      ->WithRequestEmptyResponse(
+          std::move(message->arg),
+          WithAndWithoutRequestResponse::Interface::
+              WithRequestEmptyResponseCompleter::Sync(txn));
 }
 
 void WithAndWithoutRequestResponseDispatchWithRequestWithResponse(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       WithAndWithoutRequestResponse::WithRequestWithResponseRequest*>(bytes);
-  WithAndWithoutRequestResponse::Interface::WithRequestWithResponseCompleter::
-      Sync completer(txn);
   reinterpret_cast<WithAndWithoutRequestResponse::Interface*>(interface)
-      ->WithRequestWithResponse(std::move(message->arg), completer);
+      ->WithRequestWithResponse(
+          std::move(message->arg),
+          WithAndWithoutRequestResponse::Interface::
+              WithRequestWithResponseCompleter::Sync(txn));
 }
 
 }  // namespace methods
@@ -2134,23 +2133,20 @@ namespace methods {
 
 void WithErrorSyntaxDispatchResponseAsStruct(void* interface, void* bytes,
                                              ::fidl::Transaction* txn) {
-  WithErrorSyntax::Interface::ResponseAsStructCompleter::Sync completer(txn);
   reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ResponseAsStruct(
-      completer);
+      WithErrorSyntax::Interface::ResponseAsStructCompleter::Sync(txn));
 }
 
 void WithErrorSyntaxDispatchErrorAsPrimitive(void* interface, void* bytes,
                                              ::fidl::Transaction* txn) {
-  WithErrorSyntax::Interface::ErrorAsPrimitiveCompleter::Sync completer(txn);
   reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ErrorAsPrimitive(
-      completer);
+      WithErrorSyntax::Interface::ErrorAsPrimitiveCompleter::Sync(txn));
 }
 
 void WithErrorSyntaxDispatchErrorAsEnum(void* interface, void* bytes,
                                         ::fidl::Transaction* txn) {
-  WithErrorSyntax::Interface::ErrorAsEnumCompleter::Sync completer(txn);
   reinterpret_cast<WithErrorSyntax::Interface*>(interface)->ErrorAsEnum(
-      completer);
+      WithErrorSyntax::Interface::ErrorAsEnumCompleter::Sync(txn));
 }
 
 }  // namespace methods

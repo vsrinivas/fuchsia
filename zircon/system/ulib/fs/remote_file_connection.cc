@@ -37,7 +37,7 @@ RemoteFileConnection::RemoteFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> 
                                            VnodeProtocol protocol, VnodeConnectionOptions options)
     : FileConnection(vfs, std::move(vnode), protocol, options) {}
 
-void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) {
+void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
@@ -63,7 +63,7 @@ void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync& completer) 
 }
 
 void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
-                                  ReadAtCompleter::Sync& completer) {
+                                  ReadAtCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
@@ -87,7 +87,7 @@ void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
   completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
 }
 
-void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) {
+void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
@@ -117,7 +117,7 @@ void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter:
 }
 
 void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-                                   WriteAtCompleter::Sync& completer) {
+                                   WriteAtCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
@@ -135,7 +135,7 @@ void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
 }
 
 void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
-                                SeekCompleter::Sync& completer) {
+                                SeekCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {

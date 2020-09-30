@@ -63,9 +63,9 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   }
 
   // Implementation of InstanceDevice protocol
-  void RemoveDevice(RemoveDeviceCompleter::Sync& completer) override;
+  void RemoveDevice(RemoveDeviceCompleter::Sync completer) override;
   void SubscribeToLifecycle(zx::channel client,
-                            SubscribeToLifecycleCompleter::Sync& completer) override;
+                            SubscribeToLifecycleCompleter::Sync completer) override;
 
  private:
   // Pointer to the parent context.  It's guaranteed to outlive the instance devices.

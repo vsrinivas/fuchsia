@@ -52,9 +52,9 @@ class SerialDevice : public DeviceType,
   void StateCallback(serial_state_t state);
 
   // Fidl protocol implementation.
-  void GetClass(GetClassCompleter::Sync& completer) override;
+  void GetClass(GetClassCompleter::Sync completer) override;
   void SetConfig(llcpp::fuchsia::hardware::serial::Config config,
-                 SetConfigCompleter::Sync& completer) override;
+                 SetConfigCompleter::Sync completer) override;
 
   // The serial protocol of the device we are binding against.
   ddk::SerialImplProtocolClient serial_;

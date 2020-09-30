@@ -128,9 +128,8 @@ namespace methods {
 
 void superDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<super::fooRequest*>(bytes);
-  super::Interface::fooCompleter::Sync completer(txn);
-  reinterpret_cast<super::Interface*>(interface)->foo(std::move(message->s),
-                                                      completer);
+  reinterpret_cast<super::Interface*>(interface)->foo(
+      std::move(message->s), super::Interface::fooCompleter::Sync(txn));
 }
 
 }  // namespace methods
@@ -298,9 +297,8 @@ namespace methods {
 
 void subDispatchfoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<sub::fooRequest*>(bytes);
-  sub::Interface::fooCompleter::Sync completer(txn);
-  reinterpret_cast<sub::Interface*>(interface)->foo(std::move(message->s),
-                                                    completer);
+  reinterpret_cast<sub::Interface*>(interface)->foo(
+      std::move(message->s), sub::Interface::fooCompleter::Sync(txn));
 }
 
 }  // namespace methods

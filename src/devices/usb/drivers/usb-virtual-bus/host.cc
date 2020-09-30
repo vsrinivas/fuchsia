@@ -42,7 +42,7 @@ void Device::DdkUnbind(ddk::UnbindTxn txn) {
   });
 }
 
-void Device::RunShortPacketTest(RunShortPacketTestCompleter::Sync& completer) {
+void Device::RunShortPacketTest(RunShortPacketTestCompleter::Sync completer) {
   if (completer_.has_value()) {
     completer.Close(ZX_ERR_BAD_STATE);
     return;

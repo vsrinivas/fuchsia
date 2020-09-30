@@ -30,6 +30,7 @@
 #include "src/devices/tee/drivers/optee/optee-smc.h"
 #include "src/devices/tee/drivers/optee/tee-smc.h"
 
+
 namespace optee {
 namespace {
 
@@ -131,7 +132,7 @@ class FakeRpmb : public frpmb::Rpmb::Interface {
   using GetInfoCallback = fbl::Function<void(GetDeviceInfoCompleter::Sync &completer)>;
   FakeRpmb() {}
 
-  void GetDeviceInfo(GetDeviceInfoCompleter::Sync &completer) override {
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) override {
     if (info_callback_) {
       info_callback_(completer);
     } else {
@@ -140,7 +141,7 @@ class FakeRpmb : public frpmb::Rpmb::Interface {
   };
 
   void Request(::llcpp::fuchsia::hardware::rpmb::Request request,
-               RequestCompleter::Sync &completer) override {
+               RequestCompleter::Sync completer) override {
     if (request_callback_) {
       request_callback_(request, completer);
     } else {
@@ -414,6 +415,7 @@ TEST_F(OpteeClientTestRpmb, GetDeviceInfoWrongFrameSize) {
   RpmbReq *rpmb_req = reinterpret_cast<RpmbReq *>(GetTxBuffer());
   rpmb_req->cmd = RpmbReq::kCmdGetDevInfo;
 
+
   printf("Size of RpmbReq %zu, RpmbFrame %zu\n", sizeof(RpmbReq), sizeof(RpmbFrame));
 
   fidl::VectorView<fuchsia_tee::Parameter> parameter_set;
@@ -610,8 +612,8 @@ TEST_F(OpteeClientTestRpmb, ReadDataOk) {
 }
 
 TEST_F(OpteeClientTestRpmb, RequestReadInvalid) {
-  tx_frames_size_ =
-      sizeof(RpmbReq) + sizeof(RpmbFrame) + ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+  tx_frames_size_ = sizeof(RpmbReq) + sizeof(RpmbFrame) +
+                    ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
   rx_frames_size_ = ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
   int req_cnt = 0;
 

@@ -50,9 +50,8 @@ namespace methods {
 
 void SecondProtocolDispatchMethodOnSecond(void* interface, void* bytes,
                                           ::fidl::Transaction* txn) {
-  SecondProtocol::Interface::MethodOnSecondCompleter::Sync completer(txn);
   reinterpret_cast<SecondProtocol::Interface*>(interface)->MethodOnSecond(
-      completer);
+      SecondProtocol::Interface::MethodOnSecondCompleter::Sync(txn));
 }
 
 }  // namespace methods
@@ -132,9 +131,8 @@ namespace methods {
 
 void FirstProtocolDispatchMethodOnFirst(void* interface, void* bytes,
                                         ::fidl::Transaction* txn) {
-  FirstProtocol::Interface::MethodOnFirstCompleter::Sync completer(txn);
   reinterpret_cast<FirstProtocol::Interface*>(interface)->MethodOnFirst(
-      completer);
+      FirstProtocol::Interface::MethodOnFirstCompleter::Sync(txn));
 }
 
 }  // namespace methods

@@ -117,10 +117,10 @@ class UsbPeripheral : public UsbPeripheralType,
 
   void SetConfiguration(DeviceDescriptor desc,
                         ::fidl::VectorView<ConfigurationDescriptor> configuration_descriptors,
-                        SetConfigurationCompleter::Sync& completer) override;
-  void ClearFunctions(ClearFunctionsCompleter::Sync& completer) override;
+                        SetConfigurationCompleter::Sync completer) override;
+  void ClearFunctions(ClearFunctionsCompleter::Sync completer) override;
   void SetStateChangeListener(zx::channel listener,
-                              SetStateChangeListenerCompleter::Sync& completer) override;
+                              SetStateChangeListenerCompleter::Sync completer) override;
 
   zx_status_t SetDeviceDescriptor(DeviceDescriptor desc);
   zx_status_t SetFunctionInterface(fbl::RefPtr<UsbFunction> function,

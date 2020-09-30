@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BIN_DISK_PAVE_PAYLOAD_STREAMER_H_
-#define SRC_STORAGE_BIN_DISK_PAVE_PAYLOAD_STREAMER_H_
+#ifndef ZIRCON_SYSTEM_UAPP_DISK_PAVE_PAYLOAD_STREAMER_H_
+#define ZIRCON_SYSTEM_UAPP_DISK_PAVE_PAYLOAD_STREAMER_H_
 
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -24,9 +24,9 @@ class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface
   PayloadStreamer(PayloadStreamer&&) = delete;
   PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer);
+  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
 
-  void ReadData(ReadDataCompleter::Sync& completer);
+  void ReadData(ReadDataCompleter::Sync completer);
 
  private:
   fbl::unique_fd payload_;
@@ -37,4 +37,4 @@ class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface
 
 }  // namespace disk_pave
 
-#endif  // SRC_STORAGE_BIN_DISK_PAVE_PAYLOAD_STREAMER_H_
+#endif  // ZIRCON_SYSTEM_UAPP_DISK_PAVE_PAYLOAD_STREAMER_H_

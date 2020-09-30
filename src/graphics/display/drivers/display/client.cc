@@ -60,7 +60,7 @@ static constexpr uint64_t kMaxLayers = 65536;
 namespace display {
 
 void Client::ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
-                            ImportVmoImageCompleter::Sync& _completer) {
+                            ImportVmoImageCompleter::Sync _completer) {
   if (!single_buffer_framebuffer_stride_) {
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
     return;
@@ -99,7 +99,7 @@ void Client::ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_
 }
 
 void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
-                         ImportImageCompleter::Sync& _completer) {
+                         ImportImageCompleter::Sync _completer) {
   auto it = collection_map_.find(collection_id);
   if (it == collection_map_.end()) {
     _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
@@ -167,7 +167,7 @@ void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, 
   _completer.Reply(0, image_id);
 }
 
-void Client::ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _completer) {
+void Client::ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _completer) {
   auto image = images_.find(image_id);
   if (!image.IsValid()) {
     return;
@@ -178,7 +178,7 @@ void Client::ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _compl
   }
 }
 
-void Client::ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync& _completer) {
+void Client::ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) {
   if (id == INVALID_ID) {
     zxlogf(ERROR, "Cannot import events with an invalid ID #%i", INVALID_ID);
     TearDown();
@@ -188,7 +188,7 @@ void Client::ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::S
 }
 
 void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
-                                    ImportBufferCollectionCompleter::Sync& _completer) {
+                                    ImportBufferCollectionCompleter::Sync _completer) {
   if (!sysmem_allocator_.channel()) {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -244,7 +244,7 @@ void Client::ImportBufferCollection(uint64_t collection_id, ::zx::channel collec
 }
 
 void Client::ReleaseBufferCollection(uint64_t collection_id,
-                                     ReleaseBufferCollectionCompleter::Sync& _completer) {
+                                     ReleaseBufferCollectionCompleter::Sync _completer) {
   auto it = collection_map_.find(collection_id);
   if (it == collection_map_.end()) {
     return;
@@ -259,7 +259,7 @@ void Client::ReleaseBufferCollection(uint64_t collection_id,
 
 void Client::SetBufferCollectionConstraints(
     uint64_t collection_id, fhd::ImageConfig config,
-    SetBufferCollectionConstraintsCompleter::Sync& _completer) {
+    SetBufferCollectionConstraintsCompleter::Sync _completer) {
   auto it = collection_map_.find(collection_id);
   if (it == collection_map_.end()) {
     _completer.Reply(ZX_ERR_INVALID_ARGS);
@@ -322,11 +322,11 @@ void Client::SetBufferCollectionConstraints(
   _completer.Reply(status);
 }
 
-void Client::ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync& _completer) {
+void Client::ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) {
   fences_.ReleaseEvent(id);
 }
 
-void Client::CreateLayer(CreateLayerCompleter::Sync& _completer) {
+void Client::CreateLayer(CreateLayerCompleter::Sync _completer) {
   if (layers_.size() == kMaxLayers) {
     _completer.Reply(ZX_ERR_NO_RESOURCES, 0);
     return;
@@ -346,7 +346,7 @@ void Client::CreateLayer(CreateLayerCompleter::Sync& _completer) {
   _completer.Reply(ZX_OK, layer_id);
 }
 
-void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync& _completer) {
+void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "Tried to destroy invalid layer %ld", layer_id);
@@ -364,7 +364,7 @@ void Client::DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync& _compl
 
 void Client::ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
                               ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
-                              ImportGammaTableCompleter::Sync& _completer) {
+                              ImportGammaTableCompleter::Sync _completer) {
   fbl::AllocChecker ac;
   auto gt = fbl::AdoptRef(new (&ac) GammaTables(r, g, b));
   if (!ac.check()) {
@@ -375,12 +375,12 @@ void Client::ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256>
 }
 
 void Client::ReleaseGammaTable(uint64_t gamma_table_id,
-                               ReleaseGammaTableCompleter::Sync& _completer) {
+                               ReleaseGammaTableCompleter::Sync _completer) {
   gamma_table_map_.erase(gamma_table_id);
 }
 
 void Client::SetDisplayMode(uint64_t display_id, fhd::Mode mode,
-                            SetDisplayModeCompleter::Sync& _completer) {
+                            SetDisplayModeCompleter::Sync _completer) {
   auto config = configs_.find(display_id);
   if (!config.IsValid()) {
     return;
@@ -413,7 +413,7 @@ void Client::SetDisplayMode(uint64_t display_id, fhd::Mode mode,
 void Client::SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
                                        ::fidl::Array<float, 9> coefficients,
                                        ::fidl::Array<float, 3> postoffsets,
-                                       SetDisplayColorConversionCompleter::Sync& _completer) {
+                                       SetDisplayColorConversionCompleter::Sync _completer) {
   auto config = configs_.find(display_id);
   if (!config.IsValid()) {
     return;
@@ -443,7 +443,7 @@ void Client::SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float,
 }
 
 void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
-                              SetDisplayLayersCompleter::Sync& _completer) {
+                              SetDisplayLayersCompleter::Sync _completer) {
   auto config = configs_.find(display_id);
   if (!config.IsValid()) {
     return;
@@ -469,7 +469,7 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
 }
 
 void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
-                                  SetDisplayGammaTableCompleter::Sync& _completer) {
+                                  SetDisplayGammaTableCompleter::Sync _completer) {
   auto config = configs_.find(display_id);
   if (!config.IsValid()) {
     return;
@@ -497,7 +497,7 @@ void Client::SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
 }
 
 void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
-                                   SetLayerPrimaryConfigCompleter::Sync& /*_completer*/) {
+                                   SetLayerPrimaryConfigCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerPrimaryConfig on invalid layer");
@@ -512,7 +512,7 @@ void Client::SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_con
 
 void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform,
                                      fhd::Frame src_frame, fhd::Frame dest_frame,
-                                     SetLayerPrimaryPositionCompleter::Sync& /*_completer*/) {
+                                     SetLayerPrimaryPositionCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
     zxlogf(ERROR, "SetLayerPrimaryPosition on invalid layer");
@@ -530,7 +530,7 @@ void Client::SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform
 }
 
 void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
-                                  SetLayerPrimaryAlphaCompleter::Sync& /*_completer*/) {
+                                  SetLayerPrimaryAlphaCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_PRIMARY) {
     zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer");
@@ -549,7 +549,7 @@ void Client::SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float 
 }
 
 void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_config,
-                                  SetLayerCursorConfigCompleter::Sync& /*_completer*/) {
+                                  SetLayerCursorConfigCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerCursorConfig on invalid layer");
@@ -563,7 +563,7 @@ void Client::SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_conf
 }
 
 void Client::SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
-                                    SetLayerCursorPositionCompleter::Sync& /*_completer*/) {
+                                    SetLayerCursorPositionCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid() || layer->pending_type() != LAYER_TYPE_CURSOR) {
     zxlogf(ERROR, "SetLayerCursorPosition on invalid layer");
@@ -577,7 +577,7 @@ void Client::SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
 
 void Client::SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
                                  ::fidl::VectorView<uint8_t> color_bytes,
-                                 SetLayerColorConfigCompleter::Sync& /*_completer*/) {
+                                 SetLayerColorConfigCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerColorConfig on invalid layer");
@@ -596,7 +596,7 @@ void Client::SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
 }
 
 void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id,
-                           uint64_t signal_event_id, SetLayerImageCompleter::Sync& /*_completer*/) {
+                           uint64_t signal_event_id, SetLayerImageCompleter::Sync /*_completer*/) {
   auto layer = layers_.find(layer_id);
   if (!layer.IsValid()) {
     zxlogf(ERROR, "SetLayerImage ordinal with invalid layer %lu", layer_id);
@@ -628,7 +628,7 @@ void Client::SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_e
   // no Reply defined
 }
 
-void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
+void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) {
   fhd::ConfigResult res;
   std::vector<fhd::ClientCompositionOp> ops;
 
@@ -666,7 +666,7 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
   _completer.Reply(res, ::fidl::unowned_vec(ops));
 }
 
-void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
+void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
   if (!pending_config_valid_) {
     pending_config_valid_ = CheckConfig(nullptr, nullptr);
     if (!pending_config_valid_) {
@@ -758,12 +758,12 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
   // no Reply defined
 }
 
-void Client::EnableVsync(bool enable, EnableVsyncCompleter::Sync& /*_completer*/) {
+void Client::EnableVsync(bool enable, EnableVsyncCompleter::Sync /*_completer*/) {
   proxy_->EnableVsync(enable);
   // no Reply defined
 }
 
-void Client::SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync& /*_completer*/) {
+void Client::SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync /*_completer*/) {
   if (!is_vc_) {
     zxlogf(ERROR, "Illegal non-virtcon ownership");
     TearDown();
@@ -773,7 +773,7 @@ void Client::SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync& /*_comp
   // no Reply defined
 }
 
-void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) {
+void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) {
   zx::vmo vmo;
   uint32_t stride = 0;
   zx_status_t status = controller_->dc()->GetSingleBufferFramebuffer(&vmo, &stride);
@@ -781,13 +781,13 @@ void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Syn
   _completer.Reply(status, std::move(vmo), stride);
 }
 
-void Client::IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) {
+void Client::IsCaptureSupported(IsCaptureSupportedCompleter::Sync _completer) {
   _completer.ReplySuccess(controller_->dc_capture() != nullptr);
 }
 
 void Client::ImportImageForCapture(fhd::ImageConfig image_config, uint64_t collection_id,
                                    uint32_t index,
-                                   ImportImageForCaptureCompleter::Sync& _completer) {
+                                   ImportImageForCaptureCompleter::Sync _completer) {
   // Ensure display driver supports/implements capture.
   if (controller_->dc_capture() == nullptr) {
     _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -835,7 +835,7 @@ void Client::ImportImageForCapture(fhd::ImageConfig image_config, uint64_t colle
 }
 
 void Client::StartCapture(uint64_t signal_event_id, uint64_t image_id,
-                          StartCaptureCompleter::Sync& _completer) {
+                          StartCaptureCompleter::Sync _completer) {
   // Ensure display driver supports/implements capture.
   if (controller_->dc_capture() == nullptr) {
     _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -877,7 +877,7 @@ void Client::StartCapture(uint64_t signal_event_id, uint64_t image_id,
   current_capture_image_ = image_id;  // Is this right?
 }
 
-void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _completer) {
+void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) {
   // Ensure display driver supports/implements capture
   if (controller_->dc_capture() == nullptr) {
     _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -904,7 +904,7 @@ void Client::ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _c
   _completer.ReplySuccess();
 }
 
-void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _completer) {
+void Client::SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) {
   if (controller_->dc_clamp_rgb() == nullptr) {
     _completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -1459,7 +1459,7 @@ void Client::CleanUpCaptureImage() {
   }
 }
 
-void Client::AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync& _completer) {
+void Client::AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) {
   acked_cookie_ = cookie;
   zxlogf(TRACE, "Cookie %ld Acked\n", cookie);
 }

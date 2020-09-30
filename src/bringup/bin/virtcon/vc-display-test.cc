@@ -48,157 +48,156 @@ class StubDisplayController : public fhd::Controller::Interface {
   virtual ~StubDisplayController() {}
 
   void ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
-                      ImportVmoImageCompleter::Sync& _completer) override {
+                      ImportVmoImageCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
   void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
-                   ImportImageCompleter::Sync& _completer) override {
+                   ImportImageCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
-  void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync& _completer) override {
+  void ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _completer) override {
     images_.remove_if([image_id](uint64_t image) { return (image == image_id); });
   }
-  void ImportEvent(::zx::event event, uint64_t id,
-                   ImportEventCompleter::Sync& _completer) override {
+  void ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
-  void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync& _completer) override {
+  void ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
-  void CreateLayer(CreateLayerCompleter::Sync& _completer) override {
+  void CreateLayer(CreateLayerCompleter::Sync _completer) override {
     layers_.push_back(next_layer_);
     _completer.Reply(ZX_OK, next_layer_++);
   }
 
-  void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync& _completer) override {
+  void DestroyLayer(uint64_t layer_id, DestroyLayerCompleter::Sync _completer) override {
     layers_.remove_if([layer_id](uint64_t layer) { return (layer == layer_id); });
   }
 
   void ImportGammaTable(uint64_t gamma_table_id, ::fidl::Array<float, 256> r,
                         ::fidl::Array<float, 256> g, ::fidl::Array<float, 256> b,
-                        ImportGammaTableCompleter::Sync& _completer) override {
+                        ImportGammaTableCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void ReleaseGammaTable(uint64_t gamma_table_id,
-                         ReleaseGammaTableCompleter::Sync& _completer) override {
+                         ReleaseGammaTableCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetDisplayMode(uint64_t display_id, fhd::Mode mode,
-                      SetDisplayModeCompleter::Sync& _completer) override {
+                      SetDisplayModeCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
   void SetDisplayColorConversion(uint64_t display_id, ::fidl::Array<float, 3> preoffsets,
                                  ::fidl::Array<float, 9> coefficients,
                                  ::fidl::Array<float, 3> postoffsets,
-                                 SetDisplayColorConversionCompleter::Sync& _completer) override {
+                                 SetDisplayColorConversionCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetDisplayGammaTable(uint64_t display_id, uint64_t gamma_table_id,
-                            SetDisplayGammaTableCompleter::Sync& _completer) override {
+                            SetDisplayGammaTableCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids,
-                        SetDisplayLayersCompleter::Sync& _completer) override {
+                        SetDisplayLayersCompleter::Sync _completer) override {
     // Ignore
   }
 
   void SetLayerPrimaryConfig(uint64_t layer_id, fhd::ImageConfig image_config,
-                             SetLayerPrimaryConfigCompleter::Sync& _completer) override {
+                             SetLayerPrimaryConfigCompleter::Sync _completer) override {
     // Ignore
   }
 
   void SetLayerPrimaryPosition(uint64_t layer_id, fhd::Transform transform, fhd::Frame src_frame,
                                fhd::Frame dest_frame,
-                               SetLayerPrimaryPositionCompleter::Sync& _completer) override {
+                               SetLayerPrimaryPositionCompleter::Sync _completer) override {
     // Ignore
   }
 
   void SetLayerPrimaryAlpha(uint64_t layer_id, fhd::AlphaMode mode, float val,
-                            SetLayerPrimaryAlphaCompleter::Sync& _completer) override {
+                            SetLayerPrimaryAlphaCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetLayerCursorConfig(uint64_t layer_id, fhd::ImageConfig image_config,
-                            SetLayerCursorConfigCompleter::Sync& _completer) override {
+                            SetLayerCursorConfigCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetLayerCursorPosition(uint64_t layer_id, int32_t x, int32_t y,
-                              SetLayerCursorPositionCompleter::Sync& _completer) override {
+                              SetLayerCursorPositionCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetLayerColorConfig(uint64_t layer_id, uint32_t pixel_format,
                            ::fidl::VectorView<uint8_t> color_bytes,
-                           SetLayerColorConfigCompleter::Sync& _completer) override {
+                           SetLayerColorConfigCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void SetLayerImage(uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id,
-                     uint64_t signal_event_id, SetLayerImageCompleter::Sync& _completer) override {
+                     uint64_t signal_event_id, SetLayerImageCompleter::Sync _completer) override {
     // Ignore
   }
 
-  void CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) override {
+  void CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) override {
     _completer.Reply(fhd::ConfigResult::OK, fidl::VectorView<fhd::ClientCompositionOp>());
   }
 
-  void ApplyConfig(ApplyConfigCompleter::Sync& _completer) override {
+  void ApplyConfig(ApplyConfigCompleter::Sync _completer) override {
     // Ignore
   }
 
-  void EnableVsync(bool enable, EnableVsyncCompleter::Sync& _completer) override {
+  void EnableVsync(bool enable, EnableVsyncCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync& _completer) override {
+  void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
-                              ImportBufferCollectionCompleter::Sync& _completer) override {
+                              ImportBufferCollectionCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
   void ReleaseBufferCollection(uint64_t collection_id,
-                               ReleaseBufferCollectionCompleter::Sync& _completer) override {}
+                               ReleaseBufferCollectionCompleter::Sync _completer) override {}
 
   void SetBufferCollectionConstraints(
       uint64_t collection_id, fhd::ImageConfig config,
-      SetBufferCollectionConstraintsCompleter::Sync& _completer) override {
+      SetBufferCollectionConstraintsCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) override {
+  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) override {
+  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void ImportImageForCapture(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
-                             ImportImageForCaptureCompleter::Sync& _completer) override {
+                             ImportImageForCaptureCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
   void StartCapture(uint64_t signal_event_id, uint64_t image_id,
-                    StartCaptureCompleter::Sync& _completer) override {
+                    StartCaptureCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync& _completer) override {
+  void ReleaseCapture(uint64_t image_id, ReleaseCaptureCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync& _completer) override {
+  void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync& _completer) override {
+  void AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync _completer) override {
     EXPECT_TRUE(false);
   };
 
@@ -224,12 +223,12 @@ class StubDisplayController : public fhd::Controller::Interface {
 class StubSingleBufferDisplayController : public StubDisplayController {
  public:
   void ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
-                      ImportVmoImageCompleter::Sync& _completer) override {
+                      ImportVmoImageCompleter::Sync _completer) override {
     EXPECT_NE(ZX_HANDLE_INVALID, vmo.get());
     images_.push_back(next_image_);
     _completer.Reply(ZX_OK, next_image_++);
   }
-  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) override {
+  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override {
     zx::vmo vmo;
     zx::vmo::create(4096, 0, &vmo);
     _completer.Reply(ZX_OK, std::move(vmo), kSingleBufferStride);
@@ -238,17 +237,17 @@ class StubSingleBufferDisplayController : public StubDisplayController {
 
 class StubMultiBufferDisplayController : public StubDisplayController {
  public:
-  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync& _completer) override {
+  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) override {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::vmo(), 0);
   }
   void ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
-                   ImportImageCompleter::Sync& _completer) override {
+                   ImportImageCompleter::Sync _completer) override {
     images_.push_back(next_image_);
     _completer.Reply(ZX_OK, next_image_++);
   }
 
   void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
-                              ImportBufferCollectionCompleter::Sync& _completer) override {
+                              ImportBufferCollectionCompleter::Sync _completer) override {
     zx::channel server, client;
     ASSERT_OK(zx::channel::create(0, &server, &client));
     ASSERT_OK(get_sysmem_allocator()
@@ -260,13 +259,13 @@ class StubMultiBufferDisplayController : public StubDisplayController {
     _completer.Reply(ZX_OK);
   }
   void ReleaseBufferCollection(uint64_t collection_id,
-                               ReleaseBufferCollectionCompleter::Sync& _completer) override {
+                               ReleaseBufferCollectionCompleter::Sync _completer) override {
     buffer_collections_.erase(collection_id);
   }
 
   void SetBufferCollectionConstraints(
       uint64_t collection_id, fhd::ImageConfig config,
-      SetBufferCollectionConstraintsCompleter::Sync& _completer) override {
+      SetBufferCollectionConstraintsCompleter::Sync _completer) override {
     sysmem::BufferCollectionConstraints constraints;
     constraints.usage.cpu = sysmem::cpuUsageWriteOften | sysmem::cpuUsageRead;
     constraints.min_buffer_count = 1;

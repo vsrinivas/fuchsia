@@ -32,9 +32,9 @@ class FidlService final : public block_fidl::Ftl::Interface {
   constexpr explicit FidlService(ftl::BlockDevice* device) : device_(device) {}
   ~FidlService() final = default;
 
-  void Format(FormatCompleter::Sync& completer) final { completer.Reply(device_->Format()); }
+  void Format(FormatCompleter::Sync completer) final { completer.Reply(device_->Format()); }
 
-  void GetVmo(GetVmoCompleter::Sync& completer) final {
+  void GetVmo(GetVmoCompleter::Sync completer) final {
     completer.ReplySuccess(device_->GetInspectVmo());
   }
 

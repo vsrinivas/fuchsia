@@ -72,11 +72,11 @@ DirectoryConnection::DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vn
                  FidlProtocol::Create<fio::DirectoryAdmin>(this)) {}
 
 void DirectoryConnection::Clone(uint32_t clone_flags, zx::channel object,
-                                CloneCompleter::Sync& completer) {
+                                CloneCompleter::Sync completer) {
   Connection::NodeClone(clone_flags, std::move(object));
 }
 
-void DirectoryConnection::Close(CloseCompleter::Sync& completer) {
+void DirectoryConnection::Close(CloseCompleter::Sync completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -85,7 +85,7 @@ void DirectoryConnection::Close(CloseCompleter::Sync& completer) {
   }
 }
 
-void DirectoryConnection::Describe(DescribeCompleter::Sync& completer) {
+void DirectoryConnection::Describe(DescribeCompleter::Sync completer) {
   auto result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.error());
@@ -95,13 +95,13 @@ void DirectoryConnection::Describe(DescribeCompleter::Sync& completer) {
                         [&](fio::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
-void DirectoryConnection::Sync(SyncCompleter::Sync& completer) {
+void DirectoryConnection::Sync(SyncCompleter::Sync completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     completer.Reply(sync_status);
   });
 }
 
-void DirectoryConnection::GetAttr(GetAttrCompleter::Sync& completer) {
+void DirectoryConnection::GetAttr(GetAttrCompleter::Sync completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.error(), fio::NodeAttributes());
@@ -111,7 +111,7 @@ void DirectoryConnection::GetAttr(GetAttrCompleter::Sync& completer) {
 }
 
 void DirectoryConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
-                                  SetAttrCompleter::Sync& completer) {
+                                  SetAttrCompleter::Sync completer) {
   auto result = Connection::NodeSetAttr(flags, attributes);
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -120,7 +120,7 @@ void DirectoryConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttr
   }
 }
 
-void DirectoryConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) {
+void DirectoryConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync completer) {
   auto result = Connection::NodeNodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.error(), 0);
@@ -129,7 +129,7 @@ void DirectoryConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync& completer) {
   }
 }
 
-void DirectoryConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync& completer) {
+void DirectoryConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync completer) {
   auto result = Connection::NodeNodeSetFlags(flags);
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -139,7 +139,7 @@ void DirectoryConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sy
 }
 
 void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringView path,
-                               zx::channel channel, OpenCompleter::Sync& completer) {
+                               zx::channel channel, OpenCompleter::Sync completer) {
   auto open_options = VnodeConnectionOptions::FromIoV1Flags(open_flags);
   auto write_error = [describe = open_options.flags.describe](zx::channel channel,
                                                               zx_status_t error) {
@@ -181,7 +181,7 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
          open_options, options().rights, mode);
 }
 
-void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) {
+void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(), ", path: ", path.data());
 
   if (options().flags.node_reference) {
@@ -196,7 +196,7 @@ void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync& c
   completer.Reply(status);
 }
 
-void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync& completer) {
+void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryReadDirents] our options: ", options());
 
   if (options().flags.node_reference) {
@@ -213,7 +213,7 @@ void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sy
   completer.Reply(status, fidl::VectorView(fidl::unowned_ptr(data), actual));
 }
 
-void DirectoryConnection::Rewind(RewindCompleter::Sync& completer) {
+void DirectoryConnection::Rewind(RewindCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryRewind] our options: ", options());
 
   if (options().flags.node_reference) {
@@ -224,7 +224,7 @@ void DirectoryConnection::Rewind(RewindCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 
-void DirectoryConnection::GetToken(GetTokenCompleter::Sync& completer) {
+void DirectoryConnection::GetToken(GetTokenCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryGetToken] our options: ", options());
 
   if (!options().rights.write) {
@@ -237,7 +237,7 @@ void DirectoryConnection::GetToken(GetTokenCompleter::Sync& completer) {
 }
 
 void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_token,
-                                 fidl::StringView dst, RenameCompleter::Sync& completer) {
+                                 fidl::StringView dst, RenameCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(), ", src: ", src.data(),
                         ", dst: ", dst.data());
 
@@ -263,7 +263,7 @@ void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_tok
 }
 
 void DirectoryConnection::Link(fidl::StringView src, zx::handle dst_parent_token,
-                               fidl::StringView dst, LinkCompleter::Sync& completer) {
+                               fidl::StringView dst, LinkCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", src.data(),
                         ", dst: ", dst.data());
 
@@ -289,7 +289,7 @@ void DirectoryConnection::Link(fidl::StringView src, zx::handle dst_parent_token
 }
 
 void DirectoryConnection::Watch(uint32_t mask, uint32_t watch_options, zx::channel watcher,
-                                WatchCompleter::Sync& completer) {
+                                WatchCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryWatch] our options: ", options());
 
   if (options().flags.node_reference) {
@@ -300,7 +300,7 @@ void DirectoryConnection::Watch(uint32_t mask, uint32_t watch_options, zx::chann
   completer.Reply(status);
 }
 
-void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync& completer) {
+void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our options: ", options());
 
   if (!options().rights.admin) {
@@ -314,7 +314,7 @@ void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync& comple
 }
 
 void DirectoryConnection::MountAndCreate(zx::channel remote, fidl::StringView name, uint32_t flags,
-                                         MountAndCreateCompleter::Sync& completer) {
+                                         MountAndCreateCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our options: ", options());
 
   if (!options().rights.admin) {
@@ -327,7 +327,7 @@ void DirectoryConnection::MountAndCreate(zx::channel remote, fidl::StringView na
   completer.Reply(status);
 }
 
-void DirectoryConnection::Unmount(UnmountCompleter::Sync& completer) {
+void DirectoryConnection::Unmount(UnmountCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmount] our options: ", options());
 
   if (!options().rights.admin) {
@@ -340,7 +340,7 @@ void DirectoryConnection::Unmount(UnmountCompleter::Sync& completer) {
       });
 }
 
-void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync& completer) {
+void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmountNode] our options: ", options());
 
   if (!options().rights.admin) {
@@ -352,7 +352,7 @@ void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync& completer) {
   completer.Reply(status, std::move(c));
 }
 
-void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
+void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminQueryFilesystem] our options: ", options());
 
   fio::FilesystemInfo info;
@@ -360,7 +360,7 @@ void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& comple
   completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&info) : nullptr);
 }
 
-void DirectoryConnection::GetDevicePath(GetDevicePathCompleter::Sync& completer) {
+void DirectoryConnection::GetDevicePath(GetDevicePathCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminGetDevicePath] our options: ", options());
 
   if (!options().rights.admin) {

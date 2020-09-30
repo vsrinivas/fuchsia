@@ -18,8 +18,8 @@ namespace audio {
 namespace usb {
 
 class UsbMidiSource;
-using UsbMidiSourceBase = ddk::Device<UsbMidiSource, ddk::Unbindable, ddk::Openable, ddk::Closable,
-                                      ddk::Readable, ddk::Messageable>;
+using UsbMidiSourceBase = ddk::Device<UsbMidiSource, ddk::Unbindable, ddk::Openable,
+                                      ddk::Closable, ddk::Readable, ddk::Messageable>;
 
 class UsbMidiSource : public UsbMidiSourceBase,
                       public llcpp::fuchsia::hardware::midi::Device::Interface,
@@ -45,7 +45,7 @@ class UsbMidiSource : public UsbMidiSourceBase,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // FIDL methods.
-  void GetInfo(GetInfoCompleter::Sync& completer) final;
+  void GetInfo(GetInfoCompleter::Sync completer) final;
 
  private:
   zx_status_t Init(int index, const usb_interface_descriptor_t* intf,

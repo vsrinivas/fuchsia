@@ -268,7 +268,7 @@ class CFlavorServer : public ServerBase {
   CFlavorServer(zx::channel chan) : ServerBase(std::move(chan)) {}
 
   void CountNumDirectories(fidl::VectorView<gen::DirEnt> dirents,
-                           CountNumDirectoriesCompleter::Sync& txn) override {
+                           CountNumDirectoriesCompleter::Sync txn) override {
     count_num_directories_num_calls_.fetch_add(1);
     int64_t count = 0;
     for (const auto& dirent : dirents) {
@@ -279,7 +279,7 @@ class CFlavorServer : public ServerBase {
     txn.Reply(count);
   }
 
-  void ReadDir(ReadDirCompleter::Sync& txn) override {
+  void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
     txn.Reply(golden_dirents());
   }
@@ -287,7 +287,7 @@ class CFlavorServer : public ServerBase {
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
   // C-flavor reply API is generated.
   void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
-                          ConsumeDirectoriesCompleter::Sync& txn) override {
+                          ConsumeDirectoriesCompleter::Sync txn) override {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(dirents.count(), 3);
     txn.Reply();
@@ -295,7 +295,7 @@ class CFlavorServer : public ServerBase {
 
   // |OneWayDirents| has no return value, hence there is no reply API generated
   void OneWayDirents(fidl::VectorView<gen::DirEnt> dirents, zx::eventpair ep,
-                     OneWayDirentsCompleter::Sync& txn) override {
+                     OneWayDirentsCompleter::Sync txn) override {
     one_way_dirents_num_calls_.fetch_add(1);
     EXPECT_EQ(dirents.count(), 3);
     EXPECT_OK(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
@@ -308,7 +308,7 @@ class CallerAllocateServer : public ServerBase {
   CallerAllocateServer(zx::channel chan) : ServerBase(std::move(chan)) {}
 
   void CountNumDirectories(fidl::VectorView<gen::DirEnt> dirents,
-                           CountNumDirectoriesCompleter::Sync& txn) override {
+                           CountNumDirectoriesCompleter::Sync txn) override {
     count_num_directories_num_calls_.fetch_add(1);
     int64_t count = 0;
     for (const auto& dirent : dirents) {
@@ -320,7 +320,7 @@ class CallerAllocateServer : public ServerBase {
     txn.Reply(buffer.view(), count);
   }
 
-  void ReadDir(ReadDirCompleter::Sync& txn) override {
+  void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
     txn.Reply(buffer.view(), golden_dirents());
@@ -329,13 +329,13 @@ class CallerAllocateServer : public ServerBase {
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
   // C-flavor reply API is applicable.
   void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
-                          ConsumeDirectoriesCompleter::Sync& txn) override {
+                          ConsumeDirectoriesCompleter::Sync txn) override {
     ZX_ASSERT_MSG(false, "Never used by unit tests");
   }
 
   // |OneWayDirents| has no return value, hence there is no reply API generated
   void OneWayDirents(fidl::VectorView<gen::DirEnt> dirents, zx::eventpair ep,
-                     OneWayDirentsCompleter::Sync&) override {
+                     OneWayDirentsCompleter::Sync) override {
     ZX_ASSERT_MSG(false, "Never used by unit tests");
   }
 };
@@ -346,7 +346,7 @@ class AsyncReplyServer : public ServerBase {
   AsyncReplyServer(zx::channel chan) : ServerBase(std::move(chan)) {}
 
   void CountNumDirectories(fidl::VectorView<gen::DirEnt> dirents,
-                           CountNumDirectoriesCompleter::Sync& txn) override {
+                           CountNumDirectoriesCompleter::Sync txn) override {
     count_num_directories_num_calls_.fetch_add(1);
     int64_t count = 0;
     for (const auto& dirent : dirents) {
@@ -357,13 +357,13 @@ class AsyncReplyServer : public ServerBase {
     async::PostTask(dispatcher(), [txn = txn.ToAsync(), count]() mutable { txn.Reply(count); });
   }
 
-  void ReadDir(ReadDirCompleter::Sync& txn) override {
+  void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
     async::PostTask(dispatcher(), [txn = txn.ToAsync()]() mutable { txn.Reply(golden_dirents()); });
   }
 
   void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
-                          ConsumeDirectoriesCompleter::Sync& txn) override {
+                          ConsumeDirectoriesCompleter::Sync txn) override {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(dirents.count(), 3);
     async::PostTask(dispatcher(), [txn = txn.ToAsync()]() mutable { txn.Reply(); });
@@ -371,7 +371,7 @@ class AsyncReplyServer : public ServerBase {
 
   // |OneWayDirents| has no return value, hence there is no reply API generated
   void OneWayDirents(fidl::VectorView<gen::DirEnt> dirents, zx::eventpair ep,
-                     OneWayDirentsCompleter::Sync&) override {
+                     OneWayDirentsCompleter::Sync) override {
     ZX_ASSERT_MSG(false, "Never used by unit tests");
   }
 };

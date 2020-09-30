@@ -3149,7 +3149,7 @@ class TestProtocol final {
             StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase>;
 
     virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-        StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
+        StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync
             _completer) = 0;
 
     class FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase
@@ -3178,7 +3178,7 @@ class TestProtocol final {
             FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase>;
 
     virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
+        FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync
             _completer) = 0;
   };
 

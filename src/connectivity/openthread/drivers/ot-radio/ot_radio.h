@@ -118,7 +118,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   } thrd_status_ = {false, false};
 
   // FIDL request handlers
-  void SetChannel(zx::channel channel, SetChannelCompleter::Sync& _completer);
+  void SetChannel(zx::channel channel, SetChannelCompleter::Sync _completer);
 
   thrd_t thread_;
   async::Loop loop_;
@@ -135,12 +135,12 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
 
    private:
     // FIDL request handlers
-    void Open(OpenCompleter::Sync& completer);
-    void Close(CloseCompleter::Sync& completer);
-    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
-    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync& completer);
+    void Open(OpenCompleter::Sync completer);
+    void Close(CloseCompleter::Sync completer);
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync completer);
+    void SendFrame(::fidl::VectorView<uint8_t> data, SendFrameCompleter::Sync completer);
     void ReadyToReceiveFrames(uint32_t number_of_frames,
-                              ReadyToReceiveFramesCompleter::Sync& completer);
+                              ReadyToReceiveFramesCompleter::Sync completer);
 
     OtRadioDevice& ot_radio_obj_;
   };

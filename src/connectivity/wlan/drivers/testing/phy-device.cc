@@ -43,7 +43,7 @@ static wlanphy_protocol_ops_t wlanphy_test_ops = {
 class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
  public:
   DeviceConnector(PhyDevice* device) : device_(device) {}
-  void Connect(::zx::channel request, ConnectCompleter::Sync& _completer) override {
+  void Connect(::zx::channel request, ConnectCompleter::Sync _completer) override {
     device_->Connect(std::move(request));
   }
 

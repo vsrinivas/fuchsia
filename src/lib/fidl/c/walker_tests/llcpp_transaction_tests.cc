@@ -12,7 +12,6 @@
 #include <zircon/syscalls.h>
 
 #include <thread>
-#include <type_traits>
 
 #include <fidl/test/coding/fuchsia/llcpp/fidl.h>
 #include <fidl/test/coding/llcpp/fidl.h>
@@ -130,34 +129,5 @@ TEST(LlcppCompleter, AsyncCompleterCannotEnableNextDispatch) {
 }
 
 }  // namespace test_async_completer_deleted_methods
-
-namespace test_sync_completer_deleted_methods {
-
-template <typename T>
-T TryToMove(T t) {
-  return std::move(t);
-}
-
-template <typename T, typename = void>
-struct test : std::false_type {};
-template <typename T>
-struct test<T, std::void_t<decltype(TryToMove<T>(std::declval<T>()))>> : std::true_type {};
-
-// Invoking move construction on `FooCompleter::Sync` should be a compile-time error.
-TEST(LlcppCompleter, SyncCompleterCannotBeMoved) {
-  Transaction txn{};
-  Completer completer(&txn);
-
-  // Sync one cannot be moved.
-  static_assert(!test<decltype(completer)>::value);
-
-  // Async one can be moved.
-  static_assert(test<decltype(completer.ToAsync())>::value);
-
-  // Not relevant to the test, but required to neutralize the completer.
-  completer.Close(ZX_OK);
-}
-
-}  // namespace test_sync_completer_deleted_methods
 
 }  // namespace

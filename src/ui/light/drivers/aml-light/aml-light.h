@@ -73,55 +73,55 @@ class AmlLight : public AmlLightType,
   void DdkRelease();
 
   // FIDL messages.
-  void GetNumLights(GetNumLightsCompleter::Sync& completer);
-  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer);
-  void GetInfo(uint32_t index, GetInfoCompleter::Sync& completer);
-  void GetCurrentSimpleValue(uint32_t index, GetCurrentSimpleValueCompleter::Sync& completer);
-  void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync& completer);
+  void GetNumLights(GetNumLightsCompleter::Sync completer);
+  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync completer);
+  void GetInfo(uint32_t index, GetInfoCompleter::Sync completer);
+  void GetCurrentSimpleValue(uint32_t index, GetCurrentSimpleValueCompleter::Sync completer);
+  void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer);
   void GetCurrentBrightnessValue(uint32_t index,
-                                 GetCurrentBrightnessValueCompleter::Sync& completer);
+                                 GetCurrentBrightnessValueCompleter::Sync completer);
   void GetCurrentBrightnessValue2(uint32_t index,
-                                  GetCurrentBrightnessValue2Completer::Sync& completer);
+                                  GetCurrentBrightnessValue2Completer::Sync completer);
   void SetBrightnessValue(uint32_t index, double value,
-                          SetBrightnessValueCompleter::Sync& completer);
+                          SetBrightnessValueCompleter::Sync completer);
   void SetBrightnessValue2(uint32_t index, uint8_t value,
-                           SetBrightnessValue2Completer::Sync& completer);
-  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync& completer);
-  void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync& completer);
+                           SetBrightnessValue2Completer::Sync completer);
+  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer);
+  void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync completer);
 
-  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync& completer) {
+  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentSimpleValue(uint32_t group_id,
-                                  GetGroupCurrentSimpleValueCompleter::Sync& completer) {
+                                  GetGroupCurrentSimpleValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
-                           SetGroupSimpleValueCompleter::Sync& completer) {
+                           SetGroupSimpleValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentBrightnessValue(uint32_t group_id,
-                                      GetGroupCurrentBrightnessValueCompleter::Sync& completer) {
+                                      GetGroupCurrentBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentBrightnessValue2(uint32_t group_id,
-                                       GetGroupCurrentBrightnessValue2Completer::Sync& completer) {
+                                       GetGroupCurrentBrightnessValue2Completer::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<double> values,
-                               SetGroupBrightnessValueCompleter::Sync& completer) {
+                               SetGroupBrightnessValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void SetGroupBrightnessValue2(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
-                                SetGroupBrightnessValue2Completer::Sync& completer) {
+                                SetGroupBrightnessValue2Completer::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,
-                               GetGroupCurrentRgbValueCompleter::Sync& completer) {
+                               GetGroupCurrentRgbValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void SetGroupRgbValue(uint32_t group_id, ::fidl::VectorView<Rgb> values,
-                        SetGroupRgbValueCompleter::Sync& completer) {
+                        SetGroupRgbValueCompleter::Sync completer) {
     completer.ReplyError(LightError::NOT_SUPPORTED);
   }
 

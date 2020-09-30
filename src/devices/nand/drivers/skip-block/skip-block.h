@@ -37,7 +37,8 @@ struct PageRange {
 };
 
 class SkipBlockDevice;
-using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
+using DeviceType =
+    ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
                         public ::llcpp::fuchsia::hardware::skipblock::SkipBlock::Interface,
@@ -55,12 +56,12 @@ class SkipBlockDevice : public DeviceType,
   void DdkRelease() { delete this; }
 
   // skip-block fidl implementation.
-  void GetPartitionInfo(GetPartitionInfoCompleter::Sync& completer);
-  void Read(ReadWriteOperation op, ReadCompleter::Sync& completer);
-  void Write(ReadWriteOperation op, WriteCompleter::Sync& completer);
-  void WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync& completer);
+  void GetPartitionInfo(GetPartitionInfoCompleter::Sync completer);
+  void Read(ReadWriteOperation op, ReadCompleter::Sync completer);
+  void Write(ReadWriteOperation op, WriteCompleter::Sync completer);
+  void WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync completer);
   void WriteBytesWithoutErase(WriteBytesOperation op,
-                              WriteBytesWithoutEraseCompleter::Sync& completer);
+                              WriteBytesWithoutEraseCompleter::Sync completer);
 
  private:
   explicit SkipBlockDevice(zx_device_t* parent, ddk::NandProtocolClient nand,

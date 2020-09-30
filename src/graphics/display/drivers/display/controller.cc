@@ -929,12 +929,12 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
 }
 
 void Controller::OpenVirtconController(zx::channel device, zx::channel controller,
-                                       OpenVirtconControllerCompleter::Sync& _completer) {
+                                       OpenVirtconControllerCompleter::Sync _completer) {
   _completer.Reply(CreateClient(true /* is_vc */, std::move(device), std::move(controller)));
 }
 
 void Controller::OpenController(zx::channel device, zx::channel controller,
-                                OpenControllerCompleter::Sync& _completer) {
+                                OpenControllerCompleter::Sync _completer) {
   _completer.Reply(CreateClient(false /* is_vc */, std::move(device), std::move(controller)));
 }
 

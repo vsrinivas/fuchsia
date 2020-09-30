@@ -156,16 +156,16 @@ zx_status_t Vs680Thermal::Init() {
   return ZX_OK;
 }
 
-void Vs680Thermal::GetInfo(GetInfoCompleter::Sync& completer) {
+void Vs680Thermal::GetInfo(GetInfoCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+void Vs680Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
   // TODO(bradenkell): Implement GetDeviceInfo.
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
+void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync completer) {
   if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     OperatingPoint operating_points_copy = kOperatingPoints;
     completer.Reply(ZX_OK, fidl::unowned_ptr(&operating_points_copy));
@@ -174,27 +174,27 @@ void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::S
   }
 }
 
-void Vs680Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
+void Vs680Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) {
   completer.Reply(ZX_OK, static_cast<float>(temperature_millicelsius_) / 1000.0f);
 }
 
-void Vs680Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
+void Vs680Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
+void Vs680Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync completer) {
   // TODO(bradenkell): Implement GetStateChangePort.
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
 void Vs680Thermal::SetTripCelsius(uint32_t id, float temp,
-                                  SetTripCelsiusCompleter::Sync& completer) {
+                                  SetTripCelsiusCompleter::Sync completer) {
   // TODO(bradenkell): Implement SetTripCelsius.
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Vs680Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
-                                         GetDvfsOperatingPointCompleter::Sync& completer) {
+                                         GetDvfsOperatingPointCompleter::Sync completer) {
   if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     completer.Reply(ZX_OK, operating_point_);
   } else {
@@ -203,7 +203,7 @@ void Vs680Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
 }
 
 void Vs680Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
-                                         SetDvfsOperatingPointCompleter::Sync& completer) {
+                                         SetDvfsOperatingPointCompleter::Sync completer) {
   if (power_domain == PowerDomain::BIG_CLUSTER_POWER_DOMAIN) {
     completer.Reply(SetOperatingPoint(op_idx));
   } else {
@@ -211,11 +211,11 @@ void Vs680Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_doma
   }
 }
 
-void Vs680Thermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
+void Vs680Thermal::GetFanLevel(GetFanLevelCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void Vs680Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) {
+void Vs680Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -316,4 +316,4 @@ ZIRCON_DRIVER_BEGIN(vs680_thermal, vs680_thermal_driver_ops, "zircon", "0.1", 3)
   BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
   BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_THERMAL),
 ZIRCON_DRIVER_END(vs680_thermal)
-    // clang-format on
+// clang-format on

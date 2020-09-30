@@ -503,7 +503,7 @@ class Example final {
 
     using fooCompleter = ::fidl::Completer<fooCompleterBase>;
 
-    virtual void foo(::fidl::StringView s, fooCompleter::Sync& _completer) = 0;
+    virtual void foo(::fidl::StringView s, fooCompleter::Sync _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

@@ -29,7 +29,7 @@ namespace fuchsia = ::llcpp::fuchsia;
 // Handles outstanding calls to fuchsia.device.manager.DeviceController/BindDriver
 // and fuchsia.device.Controller/Bind.
 void BindReply(const fbl::RefPtr<zx_device_t>& dev,
-               DeviceControllerConnection::BindDriverCompleter::Sync& completer, zx_status_t status,
+               DeviceControllerConnection::BindDriverCompleter::Sync completer, zx_status_t status,
                zx::channel test_output = zx::channel()) {
   completer.Reply(status, std::move(test_output));
 
@@ -57,13 +57,13 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 
 void DeviceControllerConnection::CompleteCompatibilityTests(
     llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
-    CompleteCompatibilityTestsCompleter::Sync& _completer) {
+    CompleteCompatibilityTestsCompleter::Sync _completer) {
   if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
     compat_conn(static_cast<zx_status_t>(status));
   }
 }
 
-void DeviceControllerConnection::Init(InitCompleter::Sync& completer) {
+void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->init_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "init");
@@ -73,7 +73,7 @@ void DeviceControllerConnection::Init(InitCompleter::Sync& completer) {
   driver_host_context_->DeviceInit(this->dev());
 }
 
-void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync& completer) {
+void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->suspend_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "suspend");
@@ -89,7 +89,7 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync&
 }
 
 void DeviceControllerConnection::Resume(uint32_t target_system_state,
-                                        ResumeCompleter::Sync& completer) {
+                                        ResumeCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->resume_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "resume");
@@ -113,7 +113,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
 }
 
 void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
-                                              ConnectProxyCompleter::Sync& _completer) {
+                                              ConnectProxyCompleter::Sync _completer) {
   VLOGD(1, *dev(), "Connected to proxy for device %p", dev().get());
   dev()->ops()->rxrpc(dev()->ctx, ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
@@ -122,7 +122,7 @@ void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
 }
 
 void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
-                                            BindDriverCompleter::Sync& completer) {
+                                            BindDriverCompleter::Sync completer) {
   const auto& dev = this->dev();
   std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
 
@@ -132,7 +132,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   fbl::RefPtr<zx_driver_t> drv;
   if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, *dev, "Cannot bind to removed device");
-    BindReply(dev, completer, ZX_ERR_IO_NOT_PRESENT);
+    BindReply(dev, std::move(completer), ZX_ERR_IO_NOT_PRESENT);
     return;
   }
 
@@ -140,7 +140,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   if (r != ZX_OK) {
     LOGD(ERROR, *dev, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
          driver_path.data(), zx_status_get_string(r));
-    BindReply(dev, completer, r);
+    BindReply(dev, std::move(completer), r);
     return;
   }
 
@@ -155,7 +155,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     if (!tests_passed) {
       FX_LOGF(ERROR, "unit-tests", "[  FAILED  ] %s", drv->name());
       drv->set_status(ZX_ERR_BAD_STATE);
-      BindReply(dev, completer, ZX_ERR_BAD_STATE, std::move(test_output));
+      BindReply(dev, std::move(completer), ZX_ERR_BAD_STATE, std::move(test_output));
       return;
     }
     FX_LOGF(INFO, "unit-tests", "[  PASSED  ] %s", drv->name());
@@ -175,7 +175,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
       LOGD(WARNING, *dev, "Driver '%.*s' did not add a child device in bind()",
            static_cast<int>(driver_path.size()), driver_path.data());
     }
-    BindReply(dev, completer, r, std::move(test_output));
+    BindReply(dev, std::move(completer), r, std::move(test_output));
     return;
   }
 
@@ -183,10 +183,10 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     LOGD(ERROR, *dev, "Neither create() nor bind() are implemented for driver '%.*s'",
          static_cast<int>(driver_path.size()), driver_path.data());
   }
-  BindReply(dev, completer, ZX_ERR_NOT_SUPPORTED, std::move(test_output));
+  BindReply(dev, std::move(completer), ZX_ERR_NOT_SUPPORTED, std::move(test_output));
 }
 
-void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
+void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->unbind_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "unbind");
@@ -210,7 +210,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
   driver_host_context_->DeviceUnbind(this->dev());
 }
 
-void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync& completer) {
+void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result;
@@ -256,7 +256,7 @@ zx_status_t DeviceControllerConnection::Create(DriverHostContext* ctx, fbl::RefP
 
 // Handler for when a io.fidl open() is called on a device
 void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
-                                      ::zx::channel object, OpenCompleter::Sync& completer) {
+                                      ::zx::channel object, OpenCompleter::Sync completer) {
   if (path.size() != 1 && path.data()[0] != '.') {
     LOGD(ERROR, *dev(), "Attempt to open path '%.*s'", static_cast<int>(path.size()), path.data());
   }

@@ -47,7 +47,7 @@ std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* 
   return reader;
 }
 
-void InputReportsReader::ReadInputReports(ReadInputReportsCompleter::Sync& completer) {
+void InputReportsReader::ReadInputReports(ReadInputReportsCompleter::Sync completer) {
   fbl::AutoLock lock(&readers_lock_);
 
   if (waiting_read_) {

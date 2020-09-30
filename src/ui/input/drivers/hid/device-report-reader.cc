@@ -52,7 +52,7 @@ zx_status_t DeviceReportsReader::ReadReportFromFifo(uint8_t* buf, size_t buf_siz
   return ZX_OK;
 }
 
-void DeviceReportsReader::ReadReports(ReadReportsCompleter::Sync& completer) {
+void DeviceReportsReader::ReadReports(ReadReportsCompleter::Sync completer) {
   fbl::AutoLock lock(&reader_lock_);
   if (waiting_read_) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

@@ -608,7 +608,7 @@ class EmptyProtocol final {
     using SendCompleter = ::fidl::Completer<>;
 
     virtual void Send(::llcpp::fidl::test::json::Empty e,
-                      SendCompleter::Sync& _completer) = 0;
+                      SendCompleter::Sync _completer) = 0;
 
     class SendAndReceiveCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -634,7 +634,7 @@ class EmptyProtocol final {
         ::fidl::Completer<SendAndReceiveCompleterBase>;
 
     virtual void SendAndReceive(::llcpp::fidl::test::json::Empty e,
-                                SendAndReceiveCompleter::Sync& _completer) = 0;
+                                SendAndReceiveCompleter::Sync _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

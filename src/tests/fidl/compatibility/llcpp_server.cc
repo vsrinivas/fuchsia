@@ -142,7 +142,7 @@ class EchoConnection final : public Echo::Interface {
   explicit EchoConnection(zx::unowned_channel channel) : channel_(channel) {}
 
   void EchoStruct(Struct value, ::fidl::StringView forward_to_server,
-                  EchoStructCompleter::Sync& completer) override {
+                  EchoStructCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
     } else {
@@ -155,7 +155,7 @@ class EchoConnection final : public Echo::Interface {
 
   void EchoStructWithError(Struct value, default_enum err, ::fidl::StringView forward_to_server,
                            RespondWith result_variant,
-                           EchoStructWithErrorCompleter::Sync& completer) override {
+                           EchoStructWithErrorCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       if (result_variant == RespondWith::ERR) {
         completer.ReplyError(err);
@@ -171,7 +171,7 @@ class EchoConnection final : public Echo::Interface {
   }
 
   void EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
-                          EchoStructNoRetValCompleter::Sync&) override {
+                          EchoStructNoRetValCompleter::Sync) override {
     if (forward_to_server.empty()) {
       auto status = Echo::SendEchoEventEvent(zx::unowned_channel(channel_), std::move(value));
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
@@ -196,7 +196,7 @@ class EchoConnection final : public Echo::Interface {
   }
 
   void EchoArrays(ArraysStruct value, ::fidl::StringView forward_to_server,
-                  EchoArraysCompleter::Sync& completer) override {
+                  EchoArraysCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
     } else {
@@ -214,7 +214,7 @@ class EchoConnection final : public Echo::Interface {
 
   void EchoArraysWithError(ArraysStruct value, default_enum err,
                            ::fidl::StringView forward_to_server, RespondWith result_variant,
-                           EchoArraysWithErrorCompleter::Sync& completer) override {
+                           EchoArraysWithErrorCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       if (result_variant == RespondWith::ERR) {
         completer.ReplyError(err);
@@ -231,7 +231,7 @@ class EchoConnection final : public Echo::Interface {
   }
 
   void EchoVectors(VectorsStruct value, ::fidl::StringView forward_to_server,
-                   EchoVectorsCompleter::Sync& completer) override {
+                   EchoVectorsCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
     } else {
@@ -246,7 +246,7 @@ class EchoConnection final : public Echo::Interface {
 
   void EchoVectorsWithError(VectorsStruct value, default_enum err,
                             ::fidl::StringView forward_to_server, RespondWith result_variant,
-                            EchoVectorsWithErrorCompleter::Sync& completer) override {
+                            EchoVectorsWithErrorCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       if (result_variant == RespondWith::ERR) {
         completer.ReplyError(err);
@@ -263,7 +263,7 @@ class EchoConnection final : public Echo::Interface {
   }
 
   void EchoTable(AllTypesTable value, ::fidl::StringView forward_to_server,
-                 EchoTableCompleter::Sync& completer) override {
+                 EchoTableCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
     } else {
@@ -282,7 +282,7 @@ class EchoConnection final : public Echo::Interface {
 
   void EchoTableWithError(AllTypesTable value, default_enum err,
                           ::fidl::StringView forward_to_server, RespondWith result_variant,
-                          EchoTableWithErrorCompleter::Sync& completer) override {
+                          EchoTableWithErrorCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       if (result_variant == RespondWith::ERR) {
         completer.ReplyError(err);
@@ -304,7 +304,7 @@ class EchoConnection final : public Echo::Interface {
   }
 
   void EchoXunions(::fidl::VectorView<AllTypesXunion> value, ::fidl::StringView forward_to_server,
-                   EchoXunionsCompleter::Sync& completer) override {
+                   EchoXunionsCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       completer.Reply(std::move(value));
     } else {
@@ -318,7 +318,7 @@ class EchoConnection final : public Echo::Interface {
 
   void EchoXunionsWithError(::fidl::VectorView<AllTypesXunion> value, default_enum err,
                             ::fidl::StringView forward_to_server, RespondWith result_variant,
-                            EchoXunionsWithErrorCompleter::Sync& completer) override {
+                            EchoXunionsWithErrorCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
       if (result_variant == RespondWith::ERR) {
         completer.ReplyError(err);

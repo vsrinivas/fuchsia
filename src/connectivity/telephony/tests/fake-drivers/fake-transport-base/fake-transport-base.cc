@@ -24,7 +24,7 @@ namespace tel_fake {
 Device::Device(zx_device_t* device) : parent_(device) {}
 
 void Device::SetChannel(::zx::channel transport,
-                        fidl_tel_transport::Qmi::Interface::SetChannelCompleter::Sync& completer) {
+                        fidl_tel_transport::Qmi::Interface::SetChannelCompleter::Sync completer) {
   zx_status_t status = ZX_OK;
   zx_status_t set_channel_res = SetChannelToDevice(std::move(transport));
   if (set_channel_res == ZX_OK) {
@@ -46,14 +46,14 @@ done:
 }
 
 void Device::SetNetwork(bool connected,
-                        fidl_tel_transport::Qmi::Interface::SetNetworkCompleter::Sync& completer) {
+                        fidl_tel_transport::Qmi::Interface::SetNetworkCompleter::Sync completer) {
   SetNetworkStatusToDevice(connected);
   completer.Reply();
 }
 
 void Device::SetSnoopChannel(
     ::zx::channel interface,
-    fidl_tel_transport::Qmi::Interface::SetSnoopChannelCompleter::Sync& completer) {
+    fidl_tel_transport::Qmi::Interface::SetSnoopChannelCompleter::Sync completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
   fidl_tel_transport::Qmi_SetSnoopChannel_Result result;
   if (set_snoop_res == ZX_OK) {

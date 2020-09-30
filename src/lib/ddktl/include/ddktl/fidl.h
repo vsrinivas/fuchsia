@@ -77,7 +77,7 @@ inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
 //     fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
 //     return transaction.Status();
 // }
-// void DdkFidlDevice::GetClass(GetClassCompleter::Sync& completer) {
+// void DdkFidlDevice::GetClass(GetClassCompleter::Sync completer) {
 //     completer.Reply(fuchsia::hardware::serial::Class::CONSOLE);
 // }
 //
@@ -89,7 +89,7 @@ inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
 //   return ZX_ERR_AYSNC; // Ownership of transaction was taken, can't use transaction.Status()
 //   here.
 // }
-// void DdkFidlDevice::GetClass(GetClassCompleter::Sync& completer) {
+// void DdkFidlDevice::GetClass(GetClassCompleter::Sync completer) {
 //   auto async_completer = new Wrapper(completer.ToAsync());
 //   DdkScheduleWork([](void* ctx) {
 //     auto* wrapper = reinterpret_cast<Wrapper*>(ctx);

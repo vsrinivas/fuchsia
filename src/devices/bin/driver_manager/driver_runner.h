@@ -23,8 +23,8 @@ class DriverComponent : public llcpp::fuchsia::component::runner::ComponentContr
 
  private:
   // llcpp::fuchsia::component::runner::ComponentController::Interface
-  void Stop(StopCompleter::Sync& completer) override;
-  void Kill(KillCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync completer) override;
+  void Kill(KillCompleter::Sync completer) override;
 
   zx::channel exposed_dir_;
   zx::channel driver_;
@@ -69,10 +69,10 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
 
  private:
   // llcpp::fuchsia::driver::framework::NodeController::Interface
-  void Remove(RemoveCompleter::Sync& completer) override;
+  void Remove(RemoveCompleter::Sync completer) override;
   // llcpp::fuchsia::driver::framework::Node::Interface
   void AddChild(llcpp::fuchsia::driver::framework::NodeAddArgs args, zx::channel controller,
-                zx::channel node, AddChildCompleter::Sync& completer) override;
+                zx::channel node, AddChildCompleter::Sync completer) override;
 
   Node* parent_;
   DriverBinder* driver_binder_;
@@ -119,7 +119,7 @@ class DriverRunner : public llcpp::fuchsia::component::runner::ComponentRunner::
  private:
   // llcpp::fuchsia::component::runner::ComponentRunner::Interface
   void Start(llcpp::fuchsia::component::runner::ComponentStartInfo start_info,
-             zx::channel controller, StartCompleter::Sync& completer) override;
+             zx::channel controller, StartCompleter::Sync completer) override;
   // DriverBinder
   zx::status<> Bind(Node* node, llcpp::fuchsia::driver::framework::NodeAddArgs args) override;
 

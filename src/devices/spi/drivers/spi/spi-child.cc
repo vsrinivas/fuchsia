@@ -9,13 +9,13 @@
 
 namespace spi {
 
-void SpiChild::Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync& completer) {
+void SpiChild::Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync completer) {
   size_t actual;
   spi_.Exchange(cs_, data.data(), data.count(), nullptr, 0, &actual);
   completer.Reply(ZX_OK);
 }
 
-void SpiChild::Receive(uint32_t size, ReceiveCompleter::Sync& completer) {
+void SpiChild::Receive(uint32_t size, ReceiveCompleter::Sync completer) {
   fbl::Vector<uint8_t> rxdata;
   rxdata.reserve(size);
   size_t actual;
@@ -24,7 +24,7 @@ void SpiChild::Receive(uint32_t size, ReceiveCompleter::Sync& completer) {
   completer.Reply(ZX_OK, std::move(rx_vector));
 }
 
-void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync& completer) {
+void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync completer) {
   fbl::Vector<uint8_t> rxdata;
   size_t size = txdata.count();
   rxdata.reserve(size);

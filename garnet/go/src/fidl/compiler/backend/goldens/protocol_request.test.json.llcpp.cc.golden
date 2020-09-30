@@ -304,30 +304,29 @@ namespace methods {
 
 void ParentDispatchGetChild(void* interface, void* bytes,
                             ::fidl::Transaction* txn) {
-  Parent::Interface::GetChildCompleter::Sync completer(txn);
-  reinterpret_cast<Parent::Interface*>(interface)->GetChild(completer);
+  reinterpret_cast<Parent::Interface*>(interface)->GetChild(
+      Parent::Interface::GetChildCompleter::Sync(txn));
 }
 
 void ParentDispatchGetChildRequest(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
-  Parent::Interface::GetChildRequestCompleter::Sync completer(txn);
-  reinterpret_cast<Parent::Interface*>(interface)->GetChildRequest(completer);
+  reinterpret_cast<Parent::Interface*>(interface)->GetChildRequest(
+      Parent::Interface::GetChildRequestCompleter::Sync(txn));
 }
 
 void ParentDispatchTakeChild(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Parent::TakeChildRequest*>(bytes);
-  Parent::Interface::TakeChildCompleter::Sync completer(txn);
   reinterpret_cast<Parent::Interface*>(interface)->TakeChild(
-      std::move(message->c), completer);
+      std::move(message->c), Parent::Interface::TakeChildCompleter::Sync(txn));
 }
 
 void ParentDispatchTakeChildRequest(void* interface, void* bytes,
                                     ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Parent::TakeChildRequestRequest*>(bytes);
-  Parent::Interface::TakeChildRequestCompleter::Sync completer(txn);
   reinterpret_cast<Parent::Interface*>(interface)->TakeChildRequest(
-      std::move(message->r), completer);
+      std::move(message->r),
+      Parent::Interface::TakeChildRequestCompleter::Sync(txn));
 }
 
 }  // namespace methods

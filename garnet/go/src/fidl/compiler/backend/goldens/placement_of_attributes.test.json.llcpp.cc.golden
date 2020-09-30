@@ -71,9 +71,9 @@ namespace methods {
 void ExampleProtocolDispatchMethod(void* interface, void* bytes,
                                    ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ExampleProtocol::MethodRequest*>(bytes);
-  ExampleProtocol::Interface::MethodCompleter::Sync completer(txn);
   reinterpret_cast<ExampleProtocol::Interface*>(interface)->Method(
-      std::move(message->arg), completer);
+      std::move(message->arg),
+      ExampleProtocol::Interface::MethodCompleter::Sync(txn));
 }
 
 }  // namespace methods

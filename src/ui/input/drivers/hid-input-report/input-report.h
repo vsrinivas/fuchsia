@@ -46,15 +46,15 @@ class InputReport : public DeviceType,
 
   // FIDL functions.
   void GetInputReportsReader(zx::channel req,
-                             GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
+                             GetInputReportsReaderCompleter::Sync completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync completer) override;
   void SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
-                        SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override {
+                        SendOutputReportCompleter::Sync completer) override;
+  void GetFeatureReport(GetFeatureReportCompleter::Sync completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void SetFeatureReport(::llcpp::fuchsia::input::report::FeatureReport report,
-                        SetFeatureReportCompleter::Sync& completer) override {
+                        SetFeatureReportCompleter::Sync completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 

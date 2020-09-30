@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
-#define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
-
-#include <fuchsia/hardware/sdio/llcpp/fidl.h>
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
 
 #include <atomic>
 #include <memory>
@@ -13,6 +11,7 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/sdio.h>
+#include <fuchsia/hardware/sdio/llcpp/fidl.h>
 
 namespace sdmmc {
 
@@ -62,22 +61,22 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   }
 
   // FIDL methods
-  void GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) override;
-  void EnableFn(EnableFnCompleter::Sync& completer) override;
-  void DisableFn(DisableFnCompleter::Sync& completer) override;
-  void EnableFnIntr(EnableFnIntrCompleter::Sync& completer) override;
-  void DisableFnIntr(DisableFnIntrCompleter::Sync& completer) override;
+  void GetDevHwInfo(GetDevHwInfoCompleter::Sync completer) override;
+  void EnableFn(EnableFnCompleter::Sync completer) override;
+  void DisableFn(DisableFnCompleter::Sync completer) override;
+  void EnableFnIntr(EnableFnIntrCompleter::Sync completer) override;
+  void DisableFnIntr(DisableFnIntrCompleter::Sync completer) override;
   void UpdateBlockSize(uint16_t blk_sz, bool deflt,
-                       UpdateBlockSizeCompleter::Sync& completer) override;
-  void GetBlockSize(GetBlockSizeCompleter::Sync& completer) override;
-  void DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync& completer) override;
+                       UpdateBlockSizeCompleter::Sync completer) override;
+  void GetBlockSize(GetBlockSizeCompleter::Sync completer) override;
+  void DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync completer) override;
   void DoRwByte(bool write, uint32_t addr, uint8_t write_byte,
-                DoRwByteCompleter::Sync& completer) override;
-  void GetInBandIntr(GetInBandIntrCompleter::Sync& completer) override;
-  void IoAbort(IoAbortCompleter::Sync& completer) override;
-  void IntrPending(IntrPendingCompleter::Sync& completer) override;
+                DoRwByteCompleter::Sync completer) override;
+  void GetInBandIntr(GetInBandIntrCompleter::Sync completer) override;
+  void IoAbort(IoAbortCompleter::Sync completer) override;
+  void IntrPending(IntrPendingCompleter::Sync completer) override;
   void DoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
-                             DoVendorControlRwByteCompleter::Sync& completer) override;
+                             DoVendorControlRwByteCompleter::Sync completer) override;
 
  private:
   uint8_t function_ = SDIO_MAX_FUNCS;
@@ -86,4 +85,4 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
 
 }  // namespace sdmmc
 
-#endif  // SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_FUNCTION_DEVICE_H_

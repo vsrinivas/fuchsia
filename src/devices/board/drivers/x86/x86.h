@@ -37,9 +37,9 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
   zx_status_t DdkMessage(fidl_msg*, fidl_txn*);
 
   // ACPI protocol FIDL interface implementation.
-  void ListTableEntries(ListTableEntriesCompleter::Sync& completer) override;
+  void ListTableEntries(ListTableEntriesCompleter::Sync completer) override;
   void ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,
-                      ReadNamedTableCompleter::Sync& completer) override;
+                      ReadNamedTableCompleter::Sync completer) override;
 
   // Performs ACPICA initialization.
   zx_status_t EarlyAcpiInit();

@@ -61,7 +61,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
     return MAGMA_STATUS_OK;
   }
 
-  void Query(uint64_t query_id, QueryCompleter::Sync& _completer) override {
+  void Query(uint64_t query_id, QueryCompleter::Sync _completer) override {
     uint64_t result;
     magma::Status status = Query(query_id, &result);
     if (!status.ok()) {
@@ -71,7 +71,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
     _completer.Reply(result);
   }
 
-  void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override {
+  void Query2(uint64_t query_id, Query2Completer::Sync _completer) override {
     uint64_t result;
     magma::Status status = Query(query_id, &result);
     if (!status.ok()) {
@@ -96,7 +96,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
   }
 
   void QueryReturnsBuffer(uint64_t query_id,
-                          QueryReturnsBufferCompleter::Sync& _completer) override {
+                          QueryReturnsBufferCompleter::Sync _completer) override {
     zx::vmo buffer;
     magma::Status status = QueryReturnsBuffer(query_id, &buffer);
     if (!status.ok()) {
@@ -106,7 +106,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
     _completer.ReplySuccess(std::move(buffer));
   }
 
-  void Connect(uint64_t client_id, ConnectCompleter::Sync& _completer) override {
+  void Connect(uint64_t client_id, ConnectCompleter::Sync _completer) override {
     DLOG("gpu_device::Connect");
 
     // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
@@ -144,7 +144,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
     this->magma_system_device->StartConnectionThread(std::move(connection));
   }
 
-  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync& _completer) override {
+  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) override {
     DLOG("gpu_device::DumpState");
     if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
                       MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
@@ -157,7 +157,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
       this->magma_system_device->DumpStatus(dump_type);
   }
 
-  void TestRestart(TestRestartCompleter::Sync& _completer) override {
+  void TestRestart(TestRestartCompleter::Sync _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("gpu_device::TestRestart");
     std::unique_lock<std::mutex> lock(this->magma_mutex);
@@ -173,7 +173,7 @@ struct gpu_device : public llcpp::fuchsia::gpu::magma::Device::Interface {
 #endif
   }
 
-  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override {
+  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("gpu_device::GetUnitTestStatus");
     std::unique_lock<std::mutex> lock(this->magma_mutex);

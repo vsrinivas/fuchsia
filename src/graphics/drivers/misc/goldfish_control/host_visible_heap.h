@@ -32,14 +32,14 @@ class HostVisibleHeap : public Heap {
   ~HostVisibleHeap() override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override;
+  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
   void CreateResource(::zx::vmo vmo, llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
-                      CreateResourceCompleter::Sync& completer) override;
+                      CreateResourceCompleter::Sync completer) override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) override;
+  void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync completer) override;
 
   // |Heap|
   void Bind(zx::channel server_request) override;

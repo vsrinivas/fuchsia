@@ -36,7 +36,7 @@ class Instance : public InstanceType,
   zx_status_t Bind();
 
   // |llcpp::fuchsia::hardware::goldfish::PipeDevice::Interface|
-  void OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync& completer) override;
+  void OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync completer) override;
 
   // FIDL interface
   zx_status_t FidlOpenPipe(zx_handle_t pipe_request_handle);

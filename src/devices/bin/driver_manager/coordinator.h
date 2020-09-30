@@ -435,9 +435,9 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
 
   // Bind debugger interface
   void GetBindProgram(::fidl::StringView driver_path,
-                      GetBindProgramCompleter::Sync& completer) override;
+                      GetBindProgramCompleter::Sync completer) override;
   void GetDeviceProperties(::fidl::StringView name,
-                           GetDevicePropertiesCompleter::Sync& completer) override;
+                           GetDevicePropertiesCompleter::Sync completer) override;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);

@@ -907,7 +907,7 @@ class Parent final {
 
     using GetChildCompleter = ::fidl::Completer<GetChildCompleterBase>;
 
-    virtual void GetChild(GetChildCompleter::Sync& _completer) = 0;
+    virtual void GetChild(GetChildCompleter::Sync _completer) = 0;
 
     class GetChildRequestCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -931,18 +931,17 @@ class Parent final {
     using GetChildRequestCompleter =
         ::fidl::Completer<GetChildRequestCompleterBase>;
 
-    virtual void GetChildRequest(
-        GetChildRequestCompleter::Sync& _completer) = 0;
+    virtual void GetChildRequest(GetChildRequestCompleter::Sync _completer) = 0;
 
     using TakeChildCompleter = ::fidl::Completer<>;
 
     virtual void TakeChild(::zx::channel c,
-                           TakeChildCompleter::Sync& _completer) = 0;
+                           TakeChildCompleter::Sync _completer) = 0;
 
     using TakeChildRequestCompleter = ::fidl::Completer<>;
 
     virtual void TakeChildRequest(
-        ::zx::channel r, TakeChildRequestCompleter::Sync& _completer) = 0;
+        ::zx::channel r, TakeChildRequestCompleter::Sync _completer) = 0;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

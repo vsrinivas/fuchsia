@@ -159,9 +159,9 @@ class Controller : public ControllerParent,
   zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
 
   void OpenVirtconController(zx::channel device, zx::channel controller,
-                             OpenVirtconControllerCompleter::Sync& _completer) override;
+                             OpenVirtconControllerCompleter::Sync _completer) override;
   void OpenController(zx::channel device, zx::channel controller,
-                      OpenControllerCompleter::Sync& _completer) override;
+                      OpenControllerCompleter::Sync _completer) override;
 
   // mtx_ is a global lock on state shared among clients.
   mutable mtx_t mtx_;

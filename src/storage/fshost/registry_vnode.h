@@ -30,7 +30,7 @@ class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::Interface
 
   // FIDL method from |fuchsia.fshost.Registry|.
   void RegisterFilesystem(zx::channel public_export,
-                          RegisterFilesystemCompleter::Sync& completer) final;
+                          RegisterFilesystemCompleter::Sync completer) final;
 
  private:
   // All registered filesystems known to the fshost.

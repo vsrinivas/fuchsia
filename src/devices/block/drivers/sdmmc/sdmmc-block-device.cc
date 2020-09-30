@@ -140,7 +140,7 @@ void RpmbDevice::RpmbConnectServer(zx::channel server) {
   }
 }
 
-void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
   using DeviceInfo = ::llcpp::fuchsia::hardware::rpmb::DeviceInfo;
   using EmmcDeviceInfo = ::llcpp::fuchsia::hardware::rpmb::EmmcDeviceInfo;
 
@@ -156,7 +156,7 @@ void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
 }
 
 void RpmbDevice::Request(::llcpp::fuchsia::hardware::rpmb::Request request,
-                         RequestCompleter::Sync& completer) {
+                         RequestCompleter::Sync completer) {
   RpmbRequestInfo info = {
       .tx_frames = std::move(request.tx_frames),
       .completer = completer.ToAsync(),

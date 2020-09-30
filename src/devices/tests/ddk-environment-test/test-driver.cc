@@ -37,7 +37,7 @@ class TestEnvironmentDriver : public DeviceType, public TestDevice::Interface {
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void GetServiceList(GetServiceListCompleter::Sync& completer) override;
+  void GetServiceList(GetServiceListCompleter::Sync completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -46,7 +46,7 @@ class TestEnvironmentDriver : public DeviceType, public TestDevice::Interface {
   }
 };
 
-void TestEnvironmentDriver::GetServiceList(GetServiceListCompleter::Sync& completer) {
+void TestEnvironmentDriver::GetServiceList(GetServiceListCompleter::Sync completer) {
   files::Glob glob("/svc/*");
   std::vector<fidl::StringView> services;
   for (const char* file : glob) {

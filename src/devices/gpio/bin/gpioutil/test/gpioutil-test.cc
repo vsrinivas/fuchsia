@@ -25,7 +25,7 @@ class FakeGpio : public Gpio::Interface {
   }
 
   void ConfigIn(::llcpp::fuchsia::hardware::gpio::GpioFlags flags,
-                ConfigInCompleter::Sync& completer) {
+                ConfigInCompleter::Sync completer) {
     if (flags != ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
@@ -33,7 +33,7 @@ class FakeGpio : public Gpio::Interface {
     mock_config_in_.Call();
     completer.ReplySuccess();
   }
-  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync& completer) {
+  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync completer) {
     if (initial_value != 3) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
@@ -41,11 +41,11 @@ class FakeGpio : public Gpio::Interface {
     mock_config_out_.Call();
     completer.ReplySuccess();
   }
-  void Read(ReadCompleter::Sync& completer) {
+  void Read(ReadCompleter::Sync completer) {
     mock_read_.Call();
     completer.ReplySuccess(5);
   }
-  void Write(uint8_t value, WriteCompleter::Sync& completer) {
+  void Write(uint8_t value, WriteCompleter::Sync completer) {
     if (value != 7) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
@@ -53,7 +53,7 @@ class FakeGpio : public Gpio::Interface {
     mock_write_.Call();
     completer.ReplySuccess();
   }
-  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync& completer) {
+  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync completer) {
     if (ds_ua != 2000) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;

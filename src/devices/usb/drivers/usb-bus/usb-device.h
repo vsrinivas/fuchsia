@@ -95,20 +95,20 @@ class UsbDevice : public UsbDeviceType,
   size_t UsbGetRequestSize();
 
   // FIDL messages.
-  void GetDeviceSpeed(GetDeviceSpeedCompleter::Sync& completer);
-  void GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync& completer);
+  void GetDeviceSpeed(GetDeviceSpeedCompleter::Sync completer);
+  void GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync completer);
   void GetConfigurationDescriptorSize(uint8_t config,
-                                      GetConfigurationDescriptorSizeCompleter::Sync& completer);
+                                      GetConfigurationDescriptorSizeCompleter::Sync completer);
   void GetConfigurationDescriptor(uint8_t config,
-                                  GetConfigurationDescriptorCompleter::Sync& completer);
+                                  GetConfigurationDescriptorCompleter::Sync completer);
   void GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
-                           GetStringDescriptorCompleter::Sync& completer);
+                           GetStringDescriptorCompleter::Sync completer);
   void SetInterface(uint8_t interface_number, uint8_t alt_setting,
-                    SetInterfaceCompleter::Sync& completer);
-  void GetDeviceId(GetDeviceIdCompleter::Sync& completer);
-  void GetHubDeviceId(GetHubDeviceIdCompleter::Sync& completer);
-  void GetConfiguration(GetConfigurationCompleter::Sync& completer);
-  void SetConfiguration(uint8_t configuration, SetConfigurationCompleter::Sync& completer);
+                    SetInterfaceCompleter::Sync completer);
+  void GetDeviceId(GetDeviceIdCompleter::Sync completer);
+  void GetHubDeviceId(GetHubDeviceIdCompleter::Sync completer);
+  void GetConfiguration(GetConfigurationCompleter::Sync completer);
+  void SetConfiguration(uint8_t configuration, SetConfigurationCompleter::Sync completer);
 
   // Hub support.
   void SetHubInterface(const usb_hub_interface_protocol_t* hub_intf);

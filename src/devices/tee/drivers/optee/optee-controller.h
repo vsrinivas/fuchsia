@@ -43,14 +43,14 @@ class OpteeControllerBase {
   virtual uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
   virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
-  virtual zx_status_t RpmbConnectServer(::zx::channel server) const = 0;
+  virtual zx_status_t RpmbConnectServer(::zx::channel server) const  = 0;
   virtual const GetOsRevisionResult& os_revision() const = 0;
   virtual zx_device_t* GetDevice() const = 0;
 };
 
 class OpteeController;
-using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::Suspendable,
-                               ddk::Unbindable>;
+using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
+                                              ddk::Suspendable, ddk::Unbindable>;
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
@@ -75,15 +75,15 @@ class OpteeController : public OpteeControllerBase,
 
   // `DeviceConnector` FIDL protocol
   void ConnectTee(zx::channel service_provider, zx::channel tee_request,
-                  ConnectTeeCompleter::Sync& _completer) override;
+                  ConnectTeeCompleter::Sync _completer) override;
   void ConnectToDeviceInfo(::zx::channel device_info_request,
-                           ConnectToDeviceInfoCompleter::Sync& _completer) override;
+                           ConnectToDeviceInfoCompleter::Sync _completer) override;
   void ConnectToApplication(llcpp::fuchsia::tee::Uuid application_uuid,
                             zx::channel service_provider, zx::channel application_request,
-                            ConnectToApplicationCompleter::Sync& _completer) override;
+                            ConnectToApplicationCompleter::Sync _completer) override;
 
-  // TODO(fxbug.dev/44664): Once all clients are transitioned off of the old TEE connection model,
-  // remove this function.
+  // TODO(fxbug.dev/44664): Once all clients are transitioned off of the old TEE connection model, remove this
+  // function.
   OsInfo GetOsInfo() const override;
 
   uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
@@ -96,11 +96,13 @@ class OpteeController : public OpteeControllerBase,
     return shared_memory_manager_->client_pool();
   }
 
-  zx_device_t* GetDevice() const override { return zxdev(); }
+  zx_device_t* GetDevice() const override {
+    return zxdev();
+  }
 
   zx_status_t RpmbConnectServer(::zx::channel server) const override {
     if (!server.is_valid()) {
-      return ZX_ERR_INVALID_ARGS;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (!rpmb_protocol_client_.is_valid()) {

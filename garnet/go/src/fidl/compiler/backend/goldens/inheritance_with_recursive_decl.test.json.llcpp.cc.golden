@@ -73,9 +73,9 @@ namespace methods {
 void ParentDispatchFirst(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Parent::FirstRequest*>(bytes);
-  Parent::Interface::FirstCompleter::Sync completer(txn);
   reinterpret_cast<Parent::Interface*>(interface)->First(
-      std::move(message->request), completer);
+      std::move(message->request),
+      Parent::Interface::FirstCompleter::Sync(txn));
 }
 
 }  // namespace methods
@@ -216,17 +216,16 @@ namespace methods {
 void ChildDispatchFirst(void* interface, void* bytes,
                         ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Child::FirstRequest*>(bytes);
-  Child::Interface::FirstCompleter::Sync completer(txn);
   reinterpret_cast<Child::Interface*>(interface)->First(
-      std::move(message->request), completer);
+      std::move(message->request), Child::Interface::FirstCompleter::Sync(txn));
 }
 
 void ChildDispatchSecond(void* interface, void* bytes,
                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<Child::SecondRequest*>(bytes);
-  Child::Interface::SecondCompleter::Sync completer(txn);
   reinterpret_cast<Child::Interface*>(interface)->Second(
-      std::move(message->request), completer);
+      std::move(message->request),
+      Child::Interface::SecondCompleter::Sync(txn));
 }
 
 }  // namespace methods

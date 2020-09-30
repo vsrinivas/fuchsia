@@ -25,10 +25,9 @@ void {{ .LLProps.ProtocolName }}Dispatch{{ .Name }}(void* interface, void* bytes
   {{- if .Request }}
   auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
   {{- end }}
-  {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync completer(txn);
   reinterpret_cast<{{ .LLProps.ProtocolName }}::Interface*>(interface)
       ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .Request }}{{ if .Request }},{{ end }}
-                    completer);
+                    {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync(txn));
 }
   {{- end }}
 {{- end }}

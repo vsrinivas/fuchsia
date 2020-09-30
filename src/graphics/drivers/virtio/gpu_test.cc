@@ -23,12 +23,12 @@ namespace {
 class StubBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
-                      SetConstraintsCompleter::Sync& _completer) override {
+                      SetConstraintsCompleter::Sync _completer) override {
     auto& image_constraints = constraints.image_format_constraints[0];
     EXPECT_EQ(sysmem::PixelFormatType::BGRA32, image_constraints.pixel_format.type);
     EXPECT_EQ(4u, image_constraints.bytes_per_row_divisor);
   }
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync _completer) override {
     sysmem::BufferCollectionInfo_2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;

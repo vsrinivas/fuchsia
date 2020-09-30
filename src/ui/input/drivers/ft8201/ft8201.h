@@ -53,7 +53,7 @@ class Ft8201InputReportsReader : public fuchsia_input_report::InputReportsReader
   explicit Ft8201InputReportsReader(Ft8201Device* const base) : base_(base) {}
   ~Ft8201InputReportsReader() override = default;
 
-  void ReadInputReports(ReadInputReportsCompleter::Sync& completer) TA_EXCL(&report_lock_) override;
+  void ReadInputReports(ReadInputReportsCompleter::Sync completer) TA_EXCL(&report_lock_) override;
 
   void ReceiveReport(const Ft8201InputReport& report) TA_EXCL(&report_lock_);
 
@@ -102,13 +102,13 @@ class Ft8201Device : public DeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
 
   void GetInputReportsReader(zx::channel server,
-                             GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
+                             GetInputReportsReaderCompleter::Sync completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync completer) override;
   void SendOutputReport(fuchsia_input_report::OutputReport report,
-                        SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
+                        SendOutputReportCompleter::Sync completer) override;
+  void GetFeatureReport(GetFeatureReportCompleter::Sync completer) override;
   void SetFeatureReport(fuchsia_input_report::FeatureReport report,
-                        SetFeatureReportCompleter::Sync& completer) override;
+                        SetFeatureReportCompleter::Sync completer) override;
 
   void RemoveReaderFromList(Ft8201InputReportsReader* reader) TA_EXCL(readers_lock_);
 

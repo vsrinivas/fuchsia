@@ -503,14 +503,14 @@ void PerfmonDevice::PmuStop() {
 
 // Fidl interface.
 
-void PerfmonDevice::GetProperties(GetPropertiesCompleter::Sync& completer) {
+void PerfmonDevice::GetProperties(GetPropertiesCompleter::Sync completer) {
   FidlPerfmonProperties props{};
   PmuGetProperties(&props);
   completer.Reply(std::move(props));
 }
 
 void PerfmonDevice::Initialize(FidlPerfmonAllocation allocation,
-                               InitializeCompleter::Sync& completer) {
+                               InitializeCompleter::Sync completer) {
   zx_status_t status = PmuInitialize(&allocation);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -519,18 +519,18 @@ void PerfmonDevice::Initialize(FidlPerfmonAllocation allocation,
   }
 }
 
-void PerfmonDevice::Terminate(TerminateCompleter::Sync& completer) {
+void PerfmonDevice::Terminate(TerminateCompleter::Sync completer) {
   PmuTerminate();
   completer.Reply();
 }
 
-void PerfmonDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
+void PerfmonDevice::GetAllocation(GetAllocationCompleter::Sync completer) {
   FidlPerfmonAllocation alloc{};
   zx_status_t status = PmuGetAllocation(&alloc);
   completer.Reply(status != ZX_OK ? nullptr : fidl::unowned_ptr(&alloc));
 }
 
-void PerfmonDevice::StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync& completer) {
+void PerfmonDevice::StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync completer) {
   zx_status_t status = PmuStageConfig(&config);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -539,20 +539,19 @@ void PerfmonDevice::StageConfig(FidlPerfmonConfig config, StageConfigCompleter::
   }
 }
 
-void PerfmonDevice::GetConfig(GetConfigCompleter::Sync& completer) {
+void PerfmonDevice::GetConfig(GetConfigCompleter::Sync completer) {
   FidlPerfmonConfig config{};
   zx_status_t status = PmuGetConfig(&config);
   completer.Reply(status != ZX_OK ? nullptr : fidl::unowned_ptr(&config));
 }
 
-void PerfmonDevice::GetBufferHandle(uint32_t descriptor,
-                                    GetBufferHandleCompleter::Sync& completer) {
+void PerfmonDevice::GetBufferHandle(uint32_t descriptor, GetBufferHandleCompleter::Sync completer) {
   zx_handle_t handle;
   zx_status_t status = PmuGetBufferHandle(descriptor, &handle);
   completer.Reply(zx::vmo(status != ZX_OK ? ZX_HANDLE_INVALID : handle));
 }
 
-void PerfmonDevice::Start(StartCompleter::Sync& completer) {
+void PerfmonDevice::Start(StartCompleter::Sync completer) {
   zx_status_t status = PmuStart();
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -561,7 +560,7 @@ void PerfmonDevice::Start(StartCompleter::Sync& completer) {
   }
 }
 
-void PerfmonDevice::Stop(StopCompleter::Sync& completer) {
+void PerfmonDevice::Stop(StopCompleter::Sync completer) {
   PmuStop();
   completer.Reply();
 }

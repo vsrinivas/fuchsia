@@ -25,7 +25,7 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runne
       runner_(runner) {}
 
 void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
-                           GetInfoCompleter::Sync& completer) {
+                           GetInfoCompleter::Sync completer) {
   static_assert(fbl::constexpr_strlen(kFsName) < fuchsia_fs::MAX_FS_NAME_LENGTH,
                 "Blobfs name too long");
 
@@ -109,7 +109,7 @@ void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
 }
 
 void QueryService::IsNodeInFilesystem(zx::event token,
-                                      IsNodeInFilesystemCompleter::Sync& completer) {
+                                      IsNodeInFilesystemCompleter::Sync completer) {
   completer.Reply(runner_->IsTokenAssociatedWithVnode(std::move(token)));
 }
 

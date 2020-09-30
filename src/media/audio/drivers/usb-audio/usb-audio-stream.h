@@ -85,7 +85,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
   // Device FIDL implementation
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelCompleter::Sync completer) override;
 
   // Thunks for dispatching stream channel events.
   zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);

@@ -20,8 +20,8 @@ class __EXPORT EventWatcher
     fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
-  void FunctionRegistered(FunctionRegisteredCompleter::Sync& completer);
-  void FunctionsCleared(FunctionsClearedCompleter::Sync& completer);
+  void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);
+  void FunctionsCleared(FunctionsClearedCompleter::Sync completer);
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
   bool all_functions_cleared() { return all_functions_cleared_; }

@@ -422,20 +422,19 @@ namespace methods {
 
 void TestProtocolDispatchStrictXUnionHenceResponseMayBeStackAllocated(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  TestProtocol::Interface::
-      StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync completer(
-          txn);
   reinterpret_cast<TestProtocol::Interface*>(interface)
-      ->StrictXUnionHenceResponseMayBeStackAllocated(completer);
+      ->StrictXUnionHenceResponseMayBeStackAllocated(
+          TestProtocol::Interface::
+              StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync(txn));
 }
 
 void TestProtocolDispatchFlexibleXUnionHenceResponseMustBeHeapAllocated(
     void* interface, void* bytes, ::fidl::Transaction* txn) {
-  TestProtocol::Interface::
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync completer(
-          txn);
   reinterpret_cast<TestProtocol::Interface*>(interface)
-      ->FlexibleXUnionHenceResponseMustBeHeapAllocated(completer);
+      ->FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          TestProtocol::Interface::
+              FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync(
+                  txn));
 }
 
 }  // namespace methods

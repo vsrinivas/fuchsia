@@ -51,11 +51,11 @@ class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
   void DdkRelease() { delete this; }
 
   void ScheduleWork(uint32_t batch_size, uint32_t num_work_items,
-                    ScheduleWorkCompleter::Sync& completer) override;
-  void ScheduleWorkDifferentThread(ScheduleWorkDifferentThreadCompleter::Sync& completer) override;
-  void GetDoneEvent(GetDoneEventCompleter::Sync& completer) override;
-  void ScheduledWorkRan(ScheduledWorkRanCompleter::Sync& completer) override;
-  void GetChannel(zx::channel request, GetChannelCompleter::Sync& completer) override;
+                    ScheduleWorkCompleter::Sync completer) override;
+  void ScheduleWorkDifferentThread(ScheduleWorkDifferentThreadCompleter::Sync completer) override;
+  void GetDoneEvent(GetDoneEventCompleter::Sync completer) override;
+  void ScheduledWorkRan(ScheduledWorkRanCompleter::Sync completer) override;
+  void GetChannel(zx::channel request, GetChannelCompleter::Sync completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -122,7 +122,7 @@ class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
     }
 
     void ScheduleWork(uint32_t batch_size, uint32_t num_work_items,
-                      ScheduleWorkCompleter::Sync& completer) override;
+                      ScheduleWorkCompleter::Sync completer) override;
 
     static void DoWork(void* ctx) {
       auto context = std::unique_ptr<WorkItemCtx>(static_cast<WorkItemCtx*>(ctx));
@@ -193,7 +193,7 @@ zx_status_t TestScheduleWorkDriver::Bind() {
 }
 
 void TestScheduleWorkDriver::ScheduleWork(uint32_t batch_size, uint32_t num_work_items,
-                                          ScheduleWorkCompleter::Sync& completer) {
+                                          ScheduleWorkCompleter::Sync completer) {
   batch_size = std::min(batch_size, num_work_items);
 
   work_items_left_ = num_work_items - batch_size;
@@ -216,7 +216,7 @@ void TestScheduleWorkDriver::ScheduleWork(uint32_t batch_size, uint32_t num_work
 }
 
 void TestScheduleWorkDriver::ScheduleWorkDifferentThread(
-    ScheduleWorkDifferentThreadCompleter::Sync& completer) {
+    ScheduleWorkDifferentThreadCompleter::Sync completer) {
   work_items_left_ = 0;
   work_items_expected_ = 1;
 
@@ -240,7 +240,7 @@ void TestScheduleWorkDriver::ScheduleWorkDifferentThread(
   }
 }
 
-void TestScheduleWorkDriver::GetDoneEvent(GetDoneEventCompleter::Sync& completer) {
+void TestScheduleWorkDriver::GetDoneEvent(GetDoneEventCompleter::Sync completer) {
   zx::event dup;
   zx_status_t status = done_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &dup);
   if (status != ZX_OK) {
@@ -250,7 +250,7 @@ void TestScheduleWorkDriver::GetDoneEvent(GetDoneEventCompleter::Sync& completer
   }
 }
 
-void TestScheduleWorkDriver::ScheduledWorkRan(ScheduledWorkRanCompleter::Sync& completer) {
+void TestScheduleWorkDriver::ScheduledWorkRan(ScheduledWorkRanCompleter::Sync completer) {
   completer.Reply(work_items_ran_, histogram_);
 
   ZX_ASSERT(done_event_.signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);
@@ -258,7 +258,7 @@ void TestScheduleWorkDriver::ScheduledWorkRan(ScheduledWorkRanCompleter::Sync& c
   histogram_ = {};
 }
 
-void TestScheduleWorkDriver::GetChannel(zx::channel request, GetChannelCompleter::Sync& completer) {
+void TestScheduleWorkDriver::GetChannel(zx::channel request, GetChannelCompleter::Sync completer) {
   auto connection = std::make_unique<Connection>(this);
   auto status = connection->Connect(loop_.dispatcher(), std::move(request));
   if (status == ZX_OK) {
@@ -270,7 +270,7 @@ void TestScheduleWorkDriver::GetChannel(zx::channel request, GetChannelCompleter
 }
 
 void TestScheduleWorkDriver::Connection::ScheduleWork(uint32_t batch_size, uint32_t num_work_items,
-                                                      ScheduleWorkCompleter::Sync& completer) {
+                                                      ScheduleWorkCompleter::Sync completer) {
   batch_size = std::min(batch_size, num_work_items);
 
   work_items_left_ = num_work_items - batch_size;

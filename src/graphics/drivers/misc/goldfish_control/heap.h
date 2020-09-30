@@ -32,14 +32,14 @@ class Heap : public HeapInterface, public fbl::DoublyLinkedListable<std::unique_
   ~Heap() override;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync& completer) override = 0;
+  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync completer) override = 0;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
   void CreateResource(::zx::vmo vmo, llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings,
-                      CreateResourceCompleter::Sync& completer) override = 0;
+                      CreateResourceCompleter::Sync completer) override = 0;
 
   // |llcpp::fuchsia::sysmem2::Heap::Interface|
-  void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync& completer) override = 0;
+  void DestroyResource(uint64_t id, DestroyResourceCompleter::Sync completer) override = 0;
 
   // Bind the server to a FIDL channel.
   // The server should not be bound to any channel when Bind() is called.

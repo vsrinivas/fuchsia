@@ -37,7 +37,7 @@ class TestInspectDriver : public DeviceType,
   }
 
   // Device message ops implementation.
-  void ModifyInspect(ModifyInspectCompleter::Sync& completer) override;
+  void ModifyInspect(ModifyInspectCompleter::Sync completer) override;
 
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
 
@@ -45,7 +45,7 @@ class TestInspectDriver : public DeviceType,
   inspect::Inspector inspect_;
 };
 
-void TestInspectDriver::ModifyInspect(ModifyInspectCompleter::Sync& completer) {
+void TestInspectDriver::ModifyInspect(ModifyInspectCompleter::Sync completer) {
   inspect_.GetRoot().CreateString("testModify", "OK", &inspect_);
   completer.ReplySuccess();
 }

@@ -118,8 +118,8 @@ std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
 namespace methods {
 
 void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  Top::Interface::GetFooCompleter::Sync completer(txn);
-  reinterpret_cast<Top::Interface*>(interface)->GetFoo(completer);
+  reinterpret_cast<Top::Interface*>(interface)->GetFoo(
+      Top::Interface::GetFooCompleter::Sync(txn));
 }
 
 }  // namespace methods

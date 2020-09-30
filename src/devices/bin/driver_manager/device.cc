@@ -818,7 +818,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
                        ::fidl::StringView driver_path_view, ::fidl::StringView args_view,
                        llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
                        bool has_init, ::zx::vmo inspect, ::zx::channel client_remote,
-                       AddDeviceCompleter::Sync& completer) {
+                       AddDeviceCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
@@ -854,7 +854,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
 
 void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
                              ::fidl::VectorView<uint8_t> data,
-                             PublishMetadataCompleter::Sync& completer) {
+                             PublishMetadataCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   memcpy(path, device_path.data(), device_path.size());
@@ -872,7 +872,7 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
   }
 }
 
-void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& completer) {
+void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
 
   VLOGF(1, "Scheduling remove of device %p '%s'", dev.get(), dev->name().data());
@@ -880,7 +880,7 @@ void Device::ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync& com
   dev->coordinator->ScheduleDriverHostRequestedRemove(dev, unbind_self);
 }
 
-void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) {
+void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
 
   VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
@@ -888,7 +888,7 @@ void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& compl
   dev->coordinator->ScheduleDriverHostRequestedUnbindChildren(dev);
 }
 
-void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
+void Device::MakeVisible(MakeVisibleCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result response;
   if (dev->coordinator->InSuspend()) {
@@ -907,7 +907,7 @@ void Device::MakeVisible(MakeVisibleCompleter::Sync& completer) {
   completer.Reply(std::move(response));
 }
 
-void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter::Sync& completer) {
+void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
 
@@ -932,7 +932,7 @@ void Device::BindDevice(::fidl::StringView driver_path_view, BindDeviceCompleter
   }
 }
 
-void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
+void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   zx_status_t status;
@@ -949,7 +949,7 @@ void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   completer.Reply(std::move(response));
 }
 
-void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter::Sync& completer) {
+void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
 
   char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
@@ -974,7 +974,7 @@ void Device::LoadFirmware(::fidl::StringView fw_path_view, LoadFirmwareCompleter
   completer.Reply(std::move(response));
 }
 
-void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
+void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   uint8_t data[fuchsia_device_manager_METADATA_BYTES_MAX];
   size_t actual = 0;
@@ -992,7 +992,7 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync& completer) {
   completer.Reply(std::move(response));
 }
 
-void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& completer) {
+void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   size_t size;
   llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result response;
@@ -1008,7 +1008,7 @@ void Device::GetMetadataSize(uint32_t key, GetMetadataSizeCompleter::Sync& compl
 }
 
 void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
-                         AddMetadataCompleter::Sync& completer) {
+                         AddMetadataCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   zx_status_t status =
       dev->coordinator->AddMetadata(dev, key, data.data(), static_cast<uint32_t>(data.count()));
@@ -1023,7 +1023,7 @@ void Device::AddMetadata(uint32_t key, ::fidl::VectorView<uint8_t> data,
   }
 }
 void Device::RunCompatibilityTests(int64_t hook_wait_time,
-                                   RunCompatibilityTestsCompleter::Sync& completer) {
+                                   RunCompatibilityTestsCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   fbl::RefPtr<Device>& real_parent = dev;
   zx_status_t status = ZX_OK;
@@ -1046,7 +1046,7 @@ void Device::RunCompatibilityTests(int64_t hook_wait_time,
 }
 
 void Device::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-                            DirectoryWatchCompleter::Sync& completer) {
+                            DirectoryWatchCompleter::Sync completer) {
   llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result response;
   if (mask & (~fuchsia_io_WATCH_MASK_ALL) || options != 0) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
@@ -1069,7 +1069,7 @@ void Device::DirectoryWatch(uint32_t mask, uint32_t options, ::zx::channel watch
 void Device::AddCompositeDevice(
     ::fidl::StringView name_view,
     llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc,
-    AddCompositeDeviceCompleter::Sync& completer) {
+    AddCompositeDeviceCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
   zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));

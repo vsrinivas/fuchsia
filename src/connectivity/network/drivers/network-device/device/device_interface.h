@@ -49,8 +49,8 @@ class DeviceInterface : public netdev::Device::Interface,
   // the number of buffers on device is less than or equal to the threshold, we should attempt to
   // fetch more buffers.
   uint32_t rx_notify_threshold() const {
-    // TODO(fxbug.dev/44835): This threshold should be negotiated as part of the device info in the
-    // banjo protocol.
+    // TODO(fxbug.dev/44835): This threshold should be negotiated as part of the device info in the banjo
+    // protocol.
     return device_info_.rx_depth / 2;
   }
 
@@ -106,12 +106,12 @@ class DeviceInterface : public netdev::Device::Interface,
                               DataVmoStore::StoredVmo** out_stored_vmo);
 
   // Fidl protocol implementation.
-  void GetInfo(GetInfoCompleter::Sync& completer) override;
-  void GetStatus(GetStatusCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync completer) override;
+  void GetStatus(GetStatusCompleter::Sync completer) override;
   void OpenSession(::fidl::StringView session_name, netdev::SessionInfo session_info,
-                   OpenSessionCompleter::Sync& completer) override;
+                   OpenSessionCompleter::Sync completer) override;
   void GetStatusWatcher(zx::channel watcher, uint32_t buffer,
-                        GetStatusWatcherCompleter::Sync& completer) override;
+                        GetStatusWatcherCompleter::Sync completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.
   zx_status_t OpenSession(fidl::StringView name, netdev::SessionInfo session_info,

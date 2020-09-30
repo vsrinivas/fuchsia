@@ -34,16 +34,16 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     ASSERT_OK(peer_.signal(0, ZX_USER_SIGNAL_3));
   }
 
-  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync& completer) override {
+  void Clone(uint32_t flags, ::zx::channel object, CloneCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync completer) override {
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync completer) override {
     llcpp::fuchsia::io::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
@@ -55,75 +55,75 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     completer.Reply(std::move(info));
   }
 
-  void Sync(SyncCompleter::Sync& completer) override {
+  void Sync(SyncCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
-               SetAttrCompleter::Sync& completer) override {
+               SetAttrCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Bind(::llcpp::fuchsia::net::SocketAddress addr, BindCompleter::Sync& completer) override {
+  void Bind(::llcpp::fuchsia::net::SocketAddress addr, BindCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Bind2(::llcpp::fuchsia::net::SocketAddress addr, Bind2Completer::Sync& completer) override {
+  void Bind2(::llcpp::fuchsia::net::SocketAddress addr, Bind2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Connect(::llcpp::fuchsia::net::SocketAddress addr,
-               ConnectCompleter::Sync& completer) override {
+               ConnectCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void Connect2(::llcpp::fuchsia::net::SocketAddress addr,
-                Connect2Completer::Sync& completer) override {
+                Connect2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Listen(int16_t backlog, ListenCompleter::Sync& completer) override {
+  void Listen(int16_t backlog, ListenCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Accept(bool want_addr, AcceptCompleter::Sync& completer) override {
+  void Accept(bool want_addr, AcceptCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Accept2(Accept2Completer::Sync& completer) override {
+  void Accept2(Accept2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetSockName(GetSockNameCompleter::Sync& completer) override {
+  void GetSockName(GetSockNameCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetSockName2(GetSockName2Completer::Sync& completer) override {
+  void GetSockName2(GetSockName2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetPeerName(GetPeerNameCompleter::Sync& completer) override {
+  void GetPeerName(GetPeerNameCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetPeerName2(GetPeerName2Completer::Sync& completer) override {
+  void GetPeerName2(GetPeerName2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void SetSockOpt(int16_t level, int16_t optname, fidl::VectorView<uint8_t> optval,
-                  SetSockOptCompleter::Sync& completer) override {
+                  SetSockOptCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetSockOpt(int16_t level, int16_t optname, GetSockOptCompleter::Sync& completer) override {
+  void GetSockOpt(int16_t level, int16_t optname, GetSockOptCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Disconnect(DisconnectCompleter::Sync& completer) override {
+  void Disconnect(DisconnectCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_CONNECTED);
   }
 
@@ -295,7 +295,7 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   const char buf[] = "hello";
   char rcv_buf[4096] = {0};
   std::array<struct iovec, 1> iov = {{{
-      .iov_base = (void*)buf,
+      .iov_base = (void *)buf,
       .iov_len = sizeof(buf),
   }}};
 

@@ -29,9 +29,9 @@ class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface
   PayloadStreamer(PayloadStreamer&&) = delete;
   PayloadStreamer& operator=(PayloadStreamer&&) = delete;
 
-  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& completer);
+  void RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer);
 
-  void ReadData(ReadDataCompleter::Sync& completer);
+  void ReadData(ReadDataCompleter::Sync completer);
 
  private:
   ReadCallback read_;

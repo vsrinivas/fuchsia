@@ -41,7 +41,7 @@ class TestPowerDriver : public DeviceType,
     return transaction.Status();
   }
 
-  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync& completer) override {
+  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync completer) override {
     zx::event complete;
     zx_status_t status =
         suspend_complete_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &complete);
@@ -55,14 +55,14 @@ class TestPowerDriver : public DeviceType,
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                               ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
                               bool add_invisible,
-                              AddDeviceWithPowerArgsCompleter::Sync& completer) override;
+                              AddDeviceWithPowerArgsCompleter::Sync completer) override;
 
-  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync& completer) override;
-  void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) override;
+  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
+  void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
-      GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
+      GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) override;
   void SetTestStatusInfo(llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
-                         SetTestStatusInfoCompleter::Sync& completer) override;
+                         SetTestStatusInfoCompleter::Sync completer) override;
 
  private:
   DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
@@ -84,30 +84,30 @@ zx_status_t TestPowerDriver::Bind() {
 void TestPowerDriver::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,
     ::fidl::VectorView<DevicePerformanceStateInfo> perf_states, bool add_invisible,
-    AddDeviceWithPowerArgsCompleter::Sync& completer) {
+    AddDeviceWithPowerArgsCompleter::Sync completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void TestPowerDriver::GetCurrentDevicePowerState(
-    GetCurrentDevicePowerStateCompleter::Sync& completer) {
+    GetCurrentDevicePowerStateCompleter::Sync completer) {
   completer.ReplySuccess(current_power_state_);
 }
 
 void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
-    GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) {
+    GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) {
   completer.ReplySuccess(
       auto_suspend_enabled_,
       static_cast<llcpp::fuchsia::device::DevicePowerState>(deepest_autosuspend_sleep_state_));
 }
 void TestPowerDriver::SetTestStatusInfo(
     llcpp::fuchsia::device::power::test::TestStatusInfo status_info,
-    SetTestStatusInfoCompleter::Sync& completer) {
+    SetTestStatusInfoCompleter::Sync completer) {
   reply_suspend_status_ = status_info.suspend_status;
   reply_resume_status_ = status_info.resume_status;
   completer.ReplySuccess();
 }
 
-void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) {
+void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

@@ -53,7 +53,7 @@ class DeviceNameProviderServer final : public llcpp::fuchsia::device::NameProvid
 
  public:
   DeviceNameProviderServer(const char* device_name, size_t size) : name(device_name), size(size) {}
-  void GetDeviceName(GetDeviceNameCompleter::Sync& completer) override {
+  void GetDeviceName(GetDeviceNameCompleter::Sync completer) override {
     completer.ReplySuccess(fidl::unowned_str(name, size));
   }
 };
