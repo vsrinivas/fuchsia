@@ -563,7 +563,8 @@ TEST_F(AgentRunnerTest, TerminateOnTeardown) {
   RunLoopUntil([&is_torn_down] { return is_torn_down; });
 
   // The agent should have been terminated.
-  EXPECT_FALSE(test_agent->controller_connected());
+  RunLoopUntil([&] { return !test_agent->controller_connected(); });
+
   // Closing a channel is akin to sending a final message on that channel.
   // Run the run loop until that message is received to see that the
   // AgentController was indeed closed.
