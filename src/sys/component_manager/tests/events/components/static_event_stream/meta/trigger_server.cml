@@ -15,10 +15,10 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
+            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",

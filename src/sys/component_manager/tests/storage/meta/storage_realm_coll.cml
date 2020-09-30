@@ -33,7 +33,7 @@
             from: "framework",
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
         },
     ],
@@ -44,7 +44,7 @@
             to: [ "#coll" ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
                 "#coll",

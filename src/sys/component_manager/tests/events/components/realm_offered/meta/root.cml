@@ -11,7 +11,7 @@
     // Route Echo service from server to client.
     offer: [
         {
-            protocol: "/svc/fuchsia.sys2.BlockingEventSource",
+            protocol: "fuchsia.sys2.BlockingEventSource",
             from: "parent",
             to: [ "#nested_realm" ],
         },

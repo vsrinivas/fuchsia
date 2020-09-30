@@ -15,7 +15,7 @@
     ],
     offer: [
         {
-            protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
+            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
             from: "parent",
             to: [ "#trigger_server" ],
         },

@@ -11,8 +11,8 @@
         // Offered by the parent realm "nested"
         {
             protocol: [
-                "/svc/fuchsia.sys2.BlockingEventSource",
                 "fidl.test.components.Trigger",
+                "fuchsia.sys2.BlockingEventSource",
             ],
         },
         {

@@ -47,6 +47,20 @@
         },
     ],
     offer: [
+        // Offer name-based capabilities LogSink to tests.
+        // TODO(56604): Stop offering the path-based capabilities once tests have converted to
+        // name-based.
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.BlockingEventSource",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#tests" ],
+        },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "parent",

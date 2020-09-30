@@ -9,6 +9,6 @@
         { runner: "elf" },
         { protocol: "fuchsia.time.Maintenance" },
         { protocol: "componentmanager.test.TestOutcomeReport" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

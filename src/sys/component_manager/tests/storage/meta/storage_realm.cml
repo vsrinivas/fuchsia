@@ -25,7 +25,7 @@
             to: [ "#storage_user" ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
                 "#memfs",

@@ -11,8 +11,8 @@
     offer: [
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
                 "fidl.examples.routing.echo.Echo",
+                "fuchsia.logger.LogSink",
             ],
             from: "parent",
             to: [ "#trigger" ],

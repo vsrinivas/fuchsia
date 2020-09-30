@@ -1,0 +1,48 @@
+{
+    debug: true,
+    maintain_utc_clock: false,
+    use_builtin_process_launcher: false,
+    namespace_capabilities: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.process.Launcher",
+            ],
+        },
+        // For route_directories_from_component_manager_namespace test
+        {
+            directory: "read_only",
+            path: "/read_only",
+            rights: [ "r*" ],
+        },
+        {
+            directory: "read_write",
+            path: "/read_write",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "read_write_dup",
+            path: "/read_write_dup",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "read_exec",
+            path: "/read_exec",
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "read_admin",
+            path: "/read_admin",
+            rights: [
+                "admin",
+                "r*",
+            ],
+        },
+        {
+            directory: "read_only_after_scoped",
+            path: "/read_only_after_scoped",
+            rights: [ "r*" ],
+        },
+    ],
+}

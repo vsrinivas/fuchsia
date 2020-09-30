@@ -23,8 +23,8 @@
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.sys2.BlockingEventSource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.BlockingEventSource",
             ],
         },
         {

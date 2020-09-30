@@ -14,8 +14,8 @@
         { protocol: "fuchsia.sys2.EventSource" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
                 "fidl.examples.routing.echo.Echo",
+                "fuchsia.logger.LogSink",
                 "fuchsia.sys2.Realm",
             ],
             from: "framework",

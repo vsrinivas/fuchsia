@@ -11,7 +11,7 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

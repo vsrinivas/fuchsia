@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
@@ -114,19 +115,23 @@ rustc_binary("use_storage") {
   sources = [ "use_storage.rs" ]
 }
 
+component_config("component_manager_rights_test_config") {
+  sources = [ "rights_test_config.json" ]
+}
+
 test_package("rights_integration_test") {
   deps = [
     ":component_manager_for_rights_test",
+    ":component_manager_rights_test_config",
     ":expose_dir_rights",
     ":rights_integration_test_bin",
     ":use_dir_rights",
     ":use_storage",
-    "//src/sys/component_manager:component_manager_test_config",
   ]
 
   resources = [
     {
-      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
+      path = "${root_gen_dir}/src/sys/component_manager/tests/rights/component_manager_rights_test_config"
       dest = "component_manager_config"
     },
   ]
@@ -139,10 +144,6 @@ test_package("rights_integration_test") {
     {
       path = rebase_path("meta/use_dir_rights.cml")
       dest = "use_dir_rights.cm"
-    },
-    {
-      path = rebase_path("meta/use_dir_rights_path_based.cml")
-      dest = "use_dir_rights_path_based.cm"
     },
     {
       path = rebase_path("meta/expose_dir_rights.cml")
