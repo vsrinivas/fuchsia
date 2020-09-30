@@ -88,5 +88,5 @@ int main(void) {
     return status;
   }
 
-  return info.return_code;
+  return (int)info.return_code;
 }

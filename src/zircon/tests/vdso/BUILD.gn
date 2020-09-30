@@ -35,9 +35,6 @@ test("vdso-variant") {
   deps = [ "//sdk/lib/fdio" ]
   data_deps = [ ":vdso-variant-helper" ]
   libs = [ "zircon" ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("vdso-variant-helper") {
