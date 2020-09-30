@@ -13,6 +13,7 @@ group("tests") {
   testonly = true
   deps = [
     "driver_host:tests",
+    "driver_host2:tests",
     "driver_manager:tests",
     "register-util:tests",
   ]
