@@ -7,6 +7,8 @@
 
 #include <zircon/types.h>
 
+#include <optional>
+
 #include <fvm/format.h>
 
 namespace fvm {
@@ -16,6 +18,9 @@ namespace fvm {
 // keeping the Header a plain struct to ensure it stays PoD.
 //
 // This class is copyable assignable, and moveable.
+//
+// TODO(brettw) this class is deprecated and should be removed. All functionality should now be
+// on the Header structure directly.
 class FormatInfo {
  public:
   FormatInfo() = default;
@@ -91,10 +96,14 @@ void UpdateHash(void* metadata, size_t metadata_size);
 // Validate the FVM header information, and identify which copy of metadata (primary or backup)
 // should be used for initial reading, if either.
 //
-// "out" is an optional output parameter which is equal to a valid copy of either metadata or backup
-// on success.
-zx_status_t ValidateHeader(const void* metadata, const void* backup, size_t metadata_size,
-                           const void** out);
+// The two copies of the metadata block from the beginning of the device is passed in, along with
+// their length (they should be the same size). These blocks should include both primary and
+// secondary copies of the metadata.
+//
+// On success, the superblock type which is valid is returned. If both copies are invalid, a null
+// optional is returned.
+std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
+                                             const void* secondary_metadata, size_t metadata_size);
 
 }  // namespace fvm
 

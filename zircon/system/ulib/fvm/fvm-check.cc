@@ -71,46 +71,64 @@ bool Checker::LoadFVM(FvmInfo* out) const {
     return false;
   }
   const fvm::Header* superblock = reinterpret_cast<fvm::Header*>(header.get());
-  const fvm::FormatInfo format_info(*superblock);
-  if (format_info.slice_size() % block_size_ != 0) {
+  if (superblock->slice_size % block_size_ != 0) {
     logger_.Error("Slice size not divisible by block size\n");
     return false;
-  } else if (format_info.slice_size() == 0) {
+  } else if (superblock->slice_size == 0) {
     logger_.Error("Slice size cannot be zero\n");
     return false;
   }
-  std::unique_ptr<uint8_t[]> metadata(new uint8_t[format_info.metadata_allocated_size() * 2]);
-  if (pread(fd_.get(), metadata.get(), format_info.metadata_allocated_size() * 2, 0) !=
-      static_cast<ssize_t>(format_info.metadata_allocated_size() * 2)) {
+
+  // Validate sizes to prevent allocating overlarge buffers for the metadata. Check the table
+  // sizes separately to prevent numeric overflow when combining them.
+  if (superblock->GetAllocationTableAllocatedByteSize() > fvm::kMaxAllocationTableByteSize) {
+    logger_.Error("Slice allocation table is too large.");
+    return false;
+  }
+  if (superblock->GetPartitionTableByteSize() > fvm::kMaxPartitionTableByteSize) {
+    logger_.Error("FVM header partition table is too large.");
+    return false;
+  }
+
+  size_t metadata_allocated_bytes = superblock->GetMetadataAllocatedBytes();
+  if (metadata_allocated_bytes > fvm::kMaxMetadataByteSize) {
+    logger_.Error("FVM metadata size exceeds maximum limit.");
+    return false;
+  }
+
+  // The metadata buffer holds both primary and secondary copies of the metadata.
+  size_t metadata_buffer_size = metadata_allocated_bytes * 2;
+  std::unique_ptr<uint8_t[]> metadata(new uint8_t[metadata_buffer_size]);
+  if (pread(fd_.get(), metadata.get(), metadata_buffer_size, 0) !=
+      static_cast<ssize_t>(metadata_buffer_size)) {
     logger_.Error("Could not read metadata\n");
     return false;
   }
 
-  const void* metadata1 = metadata.get();
-  const void* metadata2 =
-      reinterpret_cast<const void*>(metadata.get() + format_info.metadata_allocated_size());
-
-  const void* valid_metadata;
-  zx_status_t status =
-      ValidateHeader(metadata1, metadata2, format_info.metadata_size(), &valid_metadata);
-  if (status != ZX_OK) {
+  std::optional<fvm::SuperblockType> use_superblock = fvm::ValidateHeader(
+      metadata.get(), metadata.get() + metadata_allocated_bytes, metadata_allocated_bytes);
+  if (!use_superblock) {
     logger_.Error("Invalid FVM metadata\n");
     return false;
   }
 
-  const void* invalid_metadata = (metadata1 == valid_metadata) ? metadata2 : metadata1;
-  const size_t valid_metadata_offset = format_info.GetSuperblockOffset(
-      metadata1 == valid_metadata ? SuperblockType::kPrimary : SuperblockType::kSecondary);
+  fvm::SuperblockType invalid_superblock = *use_superblock == fvm::SuperblockType::kPrimary
+                                               ? fvm::SuperblockType::kSecondary
+                                               : fvm::SuperblockType::kPrimary;
+
+  const uint8_t* valid_metadata = metadata.get() + superblock->GetSuperblockOffset(*use_superblock);
+  const uint8_t* invalid_metadata =
+      metadata.get() + superblock->GetSuperblockOffset(invalid_superblock);
 
   FvmInfo info = {
-      fbl::Array<uint8_t>(metadata.release(), format_info.metadata_allocated_size() * 2),
-      valid_metadata_offset,
-      static_cast<const uint8_t*>(valid_metadata),
-      static_cast<const uint8_t*>(invalid_metadata),
+      fbl::Array<uint8_t>(metadata.release(), superblock->GetMetadataAllocatedBytes() * 2),
+      superblock->GetSuperblockOffset(*use_superblock),
+      valid_metadata,
+      invalid_metadata,
       block_size_,
       block_count,
       static_cast<size_t>(device_size),
-      format_info.slice_size(),
+      superblock->slice_size,
   };
 
   *out = std::move(info);
@@ -224,7 +242,6 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
 bool Checker::CheckFVM(const FvmInfo& info) const {
   auto superblock = reinterpret_cast<const fvm::Header*>(info.valid_metadata);
   auto invalid_superblock = reinterpret_cast<const fvm::Header*>(info.invalid_metadata);
-  fvm::FormatInfo format_info(*superblock);
 
   logger_.Log("[  FVM Info  ]\n");
   logger_.Log("Version: %" PRIu64 "\n", superblock->version);
@@ -240,7 +257,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   logger_.Log("%-15s %10zu\n", "Slice count:", slice_count);
   logger_.Log("\n");
 
-  const size_t metadata_size = format_info.metadata_allocated_size();
+  const size_t metadata_size = superblock->GetMetadataAllocatedBytes();
   const size_t metadata_count = 2;
   const size_t metadata_end = metadata_size * metadata_count;
   logger_.Log("[  Metadata  ]\n");

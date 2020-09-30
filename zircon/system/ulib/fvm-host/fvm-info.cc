@@ -122,17 +122,17 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
 }
 
 zx_status_t FvmInfo::Validate() const {
-  const void* primary = nullptr;
-  const void* backup =
+  const void* secondary_metadata =
       reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(metadata_.get()) + metadata_size_);
-  zx_status_t status = fvm::ValidateHeader(metadata_.get(), backup, metadata_size_, &primary);
 
-  if (status != ZX_OK) {
-    fprintf(stderr, "Header validation failed with status %d\n", status);
-    return status;
+  std::optional<fvm::SuperblockType> use_type =
+      fvm::ValidateHeader(metadata_.get(), secondary_metadata, metadata_size_);
+  if (!use_type) {
+    fprintf(stderr, "Header validation failed\n");
+    return ZX_ERR_BAD_STATE;
   }
 
-  if (primary != metadata_.get()) {
+  if (*use_type != fvm::SuperblockType::kPrimary) {
     fprintf(stderr, "Can only update FVM with valid primary as first copy\n");
     return ZX_ERR_NOT_SUPPORTED;
   }

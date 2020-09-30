@@ -116,16 +116,39 @@ struct block_alignment {
 };
 }  // namespace internal
 
+// Defines the type of superblocks of an FVM. The key difference is how the offset from the
+// beginning is calculated. They both share the same format.
+enum class SuperblockType {
+  kPrimary,
+  kSecondary,
+};
+
 // FVM header which describes the contents and layout of the volume manager.
 struct Header {
-  // The partition table and slice tables are both one larger than the number of usable entries,
-  // rounded up to the next block size.
+  Header() = default;
+
+  // Creates headers representing structures with the given information. FVM allows for growth, so
+  // the "growable" variants takes the initial size as well as the max size that the metadata tables
+  // can represent to allow for future growth up until that limit. FromDiskSize()/FromSliceCount()
+  // will not necessarily allow for future growth (table padding up to a block boundary may allow
+  // some growth).
+  //
+  // The partition and slice tables will end up both being one larger than the number of usable
+  // entries passed in to this function. So don't pass even numbers to make the tables
+  // nicely aligned, pass one less.
   // TODO(fxb/59980) make table_size == usable_count.
   //
   // Currently the partition table size is fixed, so usable_partitions must be kMaxUsablePartitions
   // or it will assert.
   // TODO(fxb/40192): Allow usable partitions to vary.
+  static Header FromDiskSize(size_t usable_partitions, size_t disk_size, size_t slice_size);
+  static Header FromGrowableDiskSize(size_t usable_partitions, size_t initial_disk_size,
+                                     size_t max_disk_size, size_t slice_size);
   static Header FromSliceCount(size_t usable_partitions, size_t usable_slices, size_t slice_size);
+  static Header FromGrowableSliceCount(size_t usable_partitions, size_t initial_usable_slices,
+                                       size_t max_usable_slices, size_t slice_size);
+
+  // Getters ---------------------------------------------------------------------------------------
 
   // The partition table always starts at a block offset, and is always a multiple of blocks
   // long in bytes.
@@ -167,6 +190,13 @@ struct Header {
   size_t GetMetadataUsedBytes() const;
   size_t GetMetadataAllocatedBytes() const;
 
+  // Returns the offset in bytes of the given superblock from the beginning of the device.
+  size_t GetSuperblockOffset(SuperblockType type) const;
+
+  // Returns the offset in the device (counting both copies of the metadata) where the first slice
+  // data starts.
+  size_t GetDataStartOffset() const;
+
   // Byte offset from the beginning of the device to the slice data. Physical slice IDs are 1-based
   // so valid input is:
   //   1 <= pslice <= pslice_count
@@ -189,8 +219,8 @@ struct Header {
   // Physical slices are 1-indexed (0 means "none"). Therefore:
   //   1 <= |maximum valid pslice| <= pslice_count
   //
-  // IMPORTANT NOTE: Due to fxbug.dev/59980, this value is one less than the number of entries worth of
-  // space in the allocation table because there is an unused 0 entry. Always compute with
+  // IMPORTANT NOTE: Due to fxbug.dev/59980, this value is one less than the number of entries worth
+  // of space in the allocation table because there is an unused 0 entry. Always compute with
   // UsableSlicesCountOrZero() in fvm.cc to account for some edge conditions. See also
   // allocation_table_size below.
   uint64_t pslice_count = 0;
@@ -413,12 +443,14 @@ constexpr size_t SlicesToBlocks(size_t slice_size, size_t block_size, size_t sli
   return slice_count * slice_size / block_size;
 }
 
-// Defines the type of superblocks of an FVM. The key difference is how the offset from the
-// beginning is calculated. They both share the same format.
-enum class SuperblockType {
-  kPrimary,
-  kSecondary,
-};
+// Limits on the maximum metadata sizes. These value are to prevent overallocating buffers if
+// the metadata is corrupt. The metadata size counts one copy of the metadata only (there will
+// actually be two copies at the beginning of the device.
+static constexpr uint64_t kMaxPartitionTableByteSize = PartitionTableLength(kMaxVPartitions);
+static constexpr uint64_t kMaxAllocationTableByteSize =
+    fbl::round_up(sizeof(SliceEntry) * kMaxVSlices, fvm::kBlockSize);
+static constexpr uint64_t kMaxMetadataByteSize =
+    kBlockSize + kMaxPartitionTableByteSize + kMaxAllocationTableByteSize;
 
 inline size_t Header::GetPartitionTableOffset() const {
   // The partition table starts at the first block after the header.
@@ -491,9 +523,18 @@ inline size_t Header::GetMetadataAllocatedBytes() const {
   return GetAllocationTableOffset() + GetAllocationTableAllocatedByteSize();
 }
 
+inline size_t Header::GetSuperblockOffset(SuperblockType type) const {
+  return (type == SuperblockType::kPrimary) ? 0 : GetMetadataAllocatedBytes();
+}
+
+inline size_t Header::GetDataStartOffset() const {
+  // The slice data starts after the two copies of metadata at beginning of device.
+  return 2 * GetMetadataAllocatedBytes();
+}
+
 inline size_t Header::GetSliceDataOffset(size_t pslice) const {
-  return 2 * GetMetadataAllocatedBytes() +  // Skip two copies of metadata at beginning of device.
-         (pslice - 1) * slice_size;         // pslice is 1-based and starts after the 2x metadata.
+  // The pslice is 1-based and the array starts at the "data start".
+  return GetDataStartOffset() + (pslice - 1) * slice_size;
 }
 
 }  // namespace fvm

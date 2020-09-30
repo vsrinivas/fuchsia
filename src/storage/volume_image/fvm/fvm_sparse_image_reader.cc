@@ -258,15 +258,10 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   fvm::Header* header_ptr = reinterpret_cast<fvm::Header*>(metadata.data());
   memcpy(header_ptr->hash, digest.Hash(metadata.data(), metadata.size()), sizeof(header_ptr->hash));
 
-  zx_status_t status =
-      fvm::ValidateHeader(metadata.data(), metadata.data(), metadata.size(), nullptr);
-  if (status != ZX_OK) {
-    return fit::error(std::string("Generated header is unexpectedly bad: ") +
-#ifdef __Fuchsia__
-                      zx_status_get_string(status));
-#else
-                      "error: " + std::to_string(status));
-#endif
+  // We only have one copy of the metadata so pass it for both primary and secondary copies. We
+  // aren't trying to pick which one to use, only make sure the one we have is valid.
+  if (!fvm::ValidateHeader(metadata.data(), metadata.data(), metadata.size())) {
+    return fit::error("Generated header is unexpectedly bad.");
   }
 
   // Build the address mappings now.

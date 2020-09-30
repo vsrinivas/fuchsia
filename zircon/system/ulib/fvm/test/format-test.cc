@@ -29,6 +29,31 @@ TEST(FvmFormat, DefaultInitializedGetterValues) {
   EXPECT_EQ(0u, header.GetMetadataAllocatedBytes());
 }
 
+TEST(FvmFormat, Constructors) {
+  constexpr size_t kInitialSliceCount = 2;
+  constexpr size_t kMaxSliceCount = 4096;
+  constexpr size_t kSmallSliceSize = kBlockSize;
+  Header header = Header::FromGrowableSliceCount(kMaxUsablePartitions, kInitialSliceCount,
+                                                 kMaxSliceCount, kSmallSliceSize);
+  EXPECT_EQ(kInitialSliceCount, header.GetAllocationTableUsedEntryCount());
+  // The constructor guarantees only that the table is "big enough" to handle the required slices,
+  // but it could be larger depending on padding.
+  EXPECT_LT(kMaxSliceCount, header.GetAllocationTableAllocatedEntryCount());
+  EXPECT_EQ(kSmallSliceSize, header.slice_size);
+  EXPECT_EQ(header.GetSliceDataOffset(1) + kSmallSliceSize * kInitialSliceCount,
+            header.fvm_partition_size);
+
+  constexpr size_t kInitialDiskSize = 1024;
+  constexpr size_t kMaxDiskSize = static_cast<size_t>(1024) * 1024 * 1024 * 1024;  // 1TB
+  constexpr size_t kBigSliceSize = 1024 * 1024;
+  header = Header::FromGrowableDiskSize(kMaxUsablePartitions, kInitialDiskSize, kMaxDiskSize,
+                                        kBigSliceSize);
+  EXPECT_EQ(1, header.GetAllocationTableUsedEntryCount());  // 1 slice is enough for 1024 bytes.
+  EXPECT_LT(kMaxDiskSize / kBigSliceSize, header.GetAllocationTableAllocatedEntryCount());
+  EXPECT_EQ(kBigSliceSize, header.slice_size);
+  EXPECT_EQ(header.GetSliceDataOffset(1) + kBigSliceSize, header.fvm_partition_size);
+}
+
 TEST(FvmFormat, Getters) {
   constexpr size_t kUsedSlices = 5;
   Header header{

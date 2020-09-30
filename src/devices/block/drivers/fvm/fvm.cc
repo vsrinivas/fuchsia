@@ -224,9 +224,9 @@ zx_status_t VPartitionManager::Load() {
   format_info_ = FormatInfo(sb);
 
   // Validate the superblock, confirm the slice size
-  if ((format_info_.slice_size() * VSliceMax()) / VSliceMax() != format_info_.slice_size()) {
-    zxlogf(ERROR, "Slice Size (%zu), VSliceMax (%lu) overflow block address space",
-           format_info_.slice_size(), VSliceMax());
+  if ((sb.slice_size * VSliceMax()) / VSliceMax() != sb.slice_size) {
+    zxlogf(ERROR, "Slice Size (%zu), VSliceMax (%lu) overflow block address space", sb.slice_size,
+           VSliceMax());
     return ZX_ERR_BAD_STATE;
   }
   if (info_.block_size == 0 || SliceSize() % info_.block_size) {
@@ -236,12 +236,11 @@ zx_status_t VPartitionManager::Load() {
 
   // TODO(fxb/40192) Allow the partition table to be different lengths (aligned to blocks):
   //   size_t kMinPartitionTableSize = kBlockSize;
-  //   size_t kMaxPartitionTableSize = sizeof(VPartitionEntry) * kMaxVPartitions;
   //   if (sb.vpartition_table_size < kMinPartitionTableSize ||
-  //       sb.vpartition_table_size > kMaxPartitionTableSize ||
+  //       sb.vpartition_table_size > kMaxPartitionTableByteSize ||
   //       sb.vpartition_table_size % sizeof(VPartitionEntry) != 0) {
   //     zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu-%zu, multiple of %zu)",
-  //            sb.vpartition_table_size, kMinPartitionTableSize, kMaxPartitionTableSize,
+  //            sb.vpartition_table_size, kMinPartitionTableSize, kMaxPartitionTableByteSize,
   //            sizeof(VPartitionEntry));
   //     return ZX_ERR_BAD_STATE;
   //
@@ -254,7 +253,8 @@ zx_status_t VPartitionManager::Load() {
   }
 
   size_t required_alloc_table_len = AllocTableLengthForUsableSliceCount(sb.pslice_count);
-  if (sb.allocation_table_size % kBlockSize != 0 ||
+  if (sb.allocation_table_size > kMaxAllocationTableByteSize ||
+      sb.allocation_table_size % kBlockSize != 0 ||
       sb.allocation_table_size < required_alloc_table_len) {
     zxlogf(ERROR, "Bad allocation table size %zu (expected at least %zu, multiple of %zu)",
            sb.allocation_table_size, required_alloc_table_len, kBlockSize);
@@ -269,7 +269,7 @@ zx_status_t VPartitionManager::Load() {
   }
 
   // Allocate a buffer big enough for the allocated metadata.
-  size_t metadata_vmo_size = format_info_.metadata_allocated_size();
+  size_t metadata_vmo_size = sb.GetMetadataAllocatedBytes();
 
   // Now that the slice size is known, read the rest of the metadata
   auto make_metadata_vmo = [&](size_t offset, fzl::OwnedVmoMapper* out_mapping) {
@@ -290,27 +290,27 @@ zx_status_t VPartitionManager::Load() {
   };
 
   fzl::OwnedVmoMapper mapper;
-  if ((status = make_metadata_vmo(format_info_.GetSuperblockOffset(SuperblockType::kPrimary),
-                                  &mapper)) != ZX_OK) {
+  if ((status = make_metadata_vmo(sb.GetSuperblockOffset(SuperblockType::kPrimary), &mapper)) !=
+      ZX_OK) {
     zxlogf(ERROR, "Failed to load metadata vmo: %d", status);
     return status;
   }
   fzl::OwnedVmoMapper mapper_backup;
-  if ((status = make_metadata_vmo(format_info_.GetSuperblockOffset(SuperblockType::kSecondary),
+  if ((status = make_metadata_vmo(sb.GetSuperblockOffset(SuperblockType::kSecondary),
                                   &mapper_backup)) != ZX_OK) {
     zxlogf(ERROR, "Failed to load backup metadata vmo: %d", status);
     return status;
   }
 
   // Validate metadata headers before growing and pick the correct one.
-  const void* metadata;
-  if ((status = ValidateHeader(mapper.start(), mapper_backup.start(),
-                               format_info_.metadata_allocated_size(), &metadata)) != ZX_OK) {
-    zxlogf(ERROR, "Header validation failure: %d", status);
-    return status;
+  std::optional<SuperblockType> use_type =
+      ValidateHeader(mapper.start(), mapper_backup.start(), sb.GetMetadataAllocatedBytes());
+  if (!use_type) {
+    zxlogf(ERROR, "Header validation failure.");
+    return ZX_ERR_BAD_STATE;
   }
 
-  if (metadata == mapper.start()) {
+  if (*use_type == SuperblockType::kPrimary) {
     first_metadata_is_primary_ = true;
     metadata_ = std::move(mapper);
   } else {

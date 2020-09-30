@@ -50,7 +50,23 @@ static_assert(kSliceEntryVPartitionBits + kSliceEntryVSliceBits + kSliceEntryRes
 
 }  // namespace
 
+Header Header::FromDiskSize(size_t usable_partitions, size_t disk_size, size_t slice_size) {
+  return FromGrowableDiskSize(usable_partitions, disk_size, disk_size, slice_size);
+}
+
+Header Header::FromGrowableDiskSize(size_t usable_partitions, size_t initial_disk_size,
+                                    size_t max_disk_size, size_t slice_size) {
+  return FromGrowableSliceCount(usable_partitions,
+                                (initial_disk_size + (slice_size - 1)) / slice_size,
+                                (max_disk_size + (slice_size - 1)) / slice_size, slice_size);
+}
+
 Header Header::FromSliceCount(size_t usable_partitions, size_t usable_slices, size_t slice_size) {
+  return FromGrowableSliceCount(usable_partitions, usable_slices, usable_slices, slice_size);
+}
+
+Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_usable_slices,
+                                      size_t max_usable_slices, size_t slice_size) {
   // Slice size must be a multiple of the block size.
   ZX_ASSERT(slice_size % kBlockSize == 0);
 
@@ -59,17 +75,17 @@ Header Header::FromSliceCount(size_t usable_partitions, size_t usable_slices, si
   Header result{
       .magic = kMagic,
       .version = kVersion,
-      .pslice_count = usable_slices,
+      .pslice_count = initial_usable_slices,
       .slice_size = slice_size,
       .fvm_partition_size = kBlockSize,  // Will be set properly below.
       .vpartition_table_size =
           fbl::round_up((usable_partitions + 1) * sizeof(VPartitionEntry), kBlockSize),
-      .allocation_table_size = AllocTableLengthForUsableSliceCount(usable_slices),
+      .allocation_table_size = AllocTableLengthForUsableSliceCount(max_usable_slices),
       .generation = 0,
   };
 
   // Fix up the partition size now that we know the metadata size. Slices count from 1.
-  result.fvm_partition_size = result.GetSliceDataOffset(1) + usable_slices * slice_size;
+  result.fvm_partition_size = result.GetDataStartOffset() + result.pslice_count * slice_size;
 
   return result;
 }

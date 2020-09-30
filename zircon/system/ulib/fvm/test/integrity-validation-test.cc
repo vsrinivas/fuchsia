@@ -7,6 +7,7 @@
 #include <limits>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <fvm/fvm.h>
 #include <zxtest/zxtest.h>
@@ -21,185 +22,161 @@ constexpr uint64_t kSliceSize = 1lu << 20;
 constexpr uint64_t kPartitionSize = 4lu << 30;
 
 struct Metadata {
-  std::unique_ptr<uint8_t[]> superblock;
-  size_t size;
-  size_t capacity;
+  std::vector<uint8_t> primary_buffer;
+  std::vector<uint8_t> secondary_buffer;
+
+  // Pointers to the beginnings the buffers for easier access.
+  Header* primary = nullptr;
+  Header* secondary = nullptr;
+
+  void UpdateHash(SuperblockType type) {
+    if (type == fvm::SuperblockType::kPrimary)
+      ::fvm::UpdateHash(primary_buffer.data(), primary->GetMetadataUsedBytes());
+    else
+      ::fvm::UpdateHash(secondary_buffer.data(), secondary->GetMetadataUsedBytes());
+  }
+
+  std::optional<fvm::SuperblockType> ValidateHeader() const {
+    return ::fvm::ValidateHeader(primary_buffer.data(), secondary_buffer.data(),
+                                 primary_buffer.size());
+  }
 };
 
-Metadata CreateSuperblock(uint64_t initial_disk_size, uint64_t maximum_disk_capacity) {
-  FormatInfo info =
-      FormatInfo::FromPreallocatedSize(initial_disk_size, maximum_disk_capacity, kSliceSize);
+// Creates the metadata for the beginning of the device including both primary and secondary
+// copies of the metadata. Both copies will be identical.
+//
+// The hashes will NOT be filled in (tests will generally set some values before doing the hash).
+// Call Metadata::UpdateHash to fill these in.
+Metadata CreateMetadata(uint64_t initial_disk_size, uint64_t maximum_disk_capacity) {
+  Header header = Header::FromGrowableDiskSize(kMaxUsablePartitions, initial_disk_size,
+                                               maximum_disk_capacity, kSliceSize);
 
-  Metadata metadata;
-  metadata.superblock = std::make_unique<uint8_t[]>(info.metadata_allocated_size());
-  metadata.size = info.metadata_size();
-  metadata.capacity = info.metadata_allocated_size();
-  memset(metadata.superblock.get(), 0, metadata.capacity);
-  memcpy(metadata.superblock.get(), &info.header(), sizeof(Header));
-  return metadata;
+  Metadata result;
+
+  result.primary_buffer.resize(header.GetMetadataAllocatedBytes());
+  memcpy(result.primary_buffer.data(), &header, sizeof(Header));
+  result.secondary_buffer = result.primary_buffer;
+
+  result.primary = reinterpret_cast<Header*>(result.primary_buffer.data());
+  result.secondary = reinterpret_cast<Header*>(result.secondary_buffer.data());
+
+  return result;
 }
 
 TEST(IntegrityValidationTest, BothHashesAreOkPickLatest) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->generation =
-      reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->generation + 1;
-  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
-  UpdateHash(metadata_2.superblock.get(), metadata_2.size);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.secondary->generation = metadata.primary->generation + 1;
+  metadata.UpdateHash(SuperblockType::kPrimary);
+  metadata.UpdateHash(SuperblockType::kSecondary);
 
-  const void* picked_metadata;
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, &picked_metadata));
-  EXPECT_EQ(picked_metadata, metadata_2.superblock.get());
+  auto result = metadata.ValidateHeader();
+  ASSERT_TRUE(result);
+  EXPECT_EQ(SuperblockType::kSecondary, *result);
 }
 
 TEST(IntegrityValidationTest, PrimaryIsOkAndSecondaryIsCorruptedPicksPrimary) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->fvm_partition_size = 0;
-  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.secondary->fvm_partition_size = 0;
+  metadata.UpdateHash(SuperblockType::kPrimary);
 
-  const void* picked_metadata;
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, &picked_metadata));
-  EXPECT_EQ(picked_metadata, metadata_1.superblock.get());
+  auto result = metadata.ValidateHeader();
+  ASSERT_TRUE(result);
+  EXPECT_EQ(SuperblockType::kPrimary, *result);
 }
 
 TEST(IntegrityValidationTest, PrimaryIsCorruptedAndSecondaryIsOkPicksSecondary) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->fvm_partition_size = 0;
-  UpdateHash(metadata_2.superblock.get(), metadata_2.size);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.primary->fvm_partition_size = 0;
+  metadata.UpdateHash(SuperblockType::kSecondary);
 
-  const void* picked_metadata;
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, &picked_metadata));
-  EXPECT_EQ(picked_metadata, metadata_2.superblock.get());
+  auto result = metadata.ValidateHeader();
+  ASSERT_TRUE(result);
+  EXPECT_EQ(SuperblockType::kSecondary, *result);
 }
 
 TEST(IntegrityValidationTest, BothAreCorruptedIsBadState) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->fvm_partition_size = 0;
-  reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->fvm_partition_size = 0;
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.primary->fvm_partition_size = 0;
+  metadata.secondary->fvm_partition_size = 0;
 
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_EQ(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, nullptr),
-            ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(metadata.ValidateHeader());
 }
 
 TEST(IntegrityValidationTest, ReportedMetadataSizeIsTooSmallOnPrimaryPicksSecondary) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->allocation_table_size = 0;
-  UpdateHash(metadata_2.superblock.get(), metadata_2.size);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.primary->allocation_table_size = 0;
+  metadata.UpdateHash(SuperblockType::kSecondary);
 
-  const void* picked_metadata;
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, &picked_metadata));
-  EXPECT_EQ(picked_metadata, metadata_2.superblock.get());
+  auto result = metadata.ValidateHeader();
+  ASSERT_TRUE(result);
+  EXPECT_EQ(SuperblockType::kSecondary, *result);
 }
 
 TEST(IntegrityValidationTest, ReportedMetadataSizeIsTooSmallOnSecondaryPicksPrimary) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->allocation_table_size = 0;
-  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.secondary->allocation_table_size = 0;
+  metadata.UpdateHash(SuperblockType::kPrimary);
 
-  const void* picked_metadata;
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, &picked_metadata));
-  EXPECT_EQ(picked_metadata, metadata_1.superblock.get());
+  auto result = metadata.ValidateHeader();
+  ASSERT_TRUE(result);
+  EXPECT_EQ(SuperblockType::kPrimary, *result);
 }
 
 TEST(IntegrityValidationTest, ReportedMetadataSizeIsTooSmallOnBothIsBadState) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  reinterpret_cast<fvm::Header*>(metadata_1.superblock.get())->allocation_table_size = 0;
-  reinterpret_cast<fvm::Header*>(metadata_2.superblock.get())->allocation_table_size = 0;
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.primary->allocation_table_size = 0;
+  metadata.secondary->allocation_table_size = 0;
 
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_EQ(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, nullptr),
-            ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(metadata.ValidateHeader());
 }
 
 TEST(IntegrityValidationTest, ValidatesMetadataSizeNotCapacity) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  UpdateHash(metadata_1.superblock.get(), metadata_1.size);
-  // This is not taken into account when validating the metadata header, we only check the data
-  // we are actually using.
-  memset(metadata_1.superblock.get() + metadata_1.size, 1, metadata_1.capacity - metadata_1.size);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.UpdateHash(SuperblockType::kPrimary);
 
-  const void* picked_metadata;
-  ASSERT_EQ(metadata_1.size, metadata_2.size);
-  ASSERT_EQ(metadata_1.capacity, metadata_2.capacity);
-  ASSERT_OK(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, &picked_metadata));
-  EXPECT_EQ(picked_metadata, metadata_1.superblock.get());
+  // Set the unused portions of the primary partition to 1. This is not taken into account when
+  // validating the metadata header, we only check the data we are actually using.
+  std::fill(metadata.primary_buffer.begin() + metadata.primary->GetMetadataUsedBytes(),
+            metadata.primary_buffer.end(), 1);
+
+  auto result = metadata.ValidateHeader();
+  ASSERT_TRUE(result);
+  EXPECT_EQ(SuperblockType::kPrimary, *result);
 }
 
 TEST(IntegrityValidationTest, ZeroedHeaderIsBadState) {
-  Metadata metadata_1 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  memset(metadata_1.superblock.get(), 0, metadata_1.capacity);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  std::fill(metadata.primary_buffer.begin(), metadata.primary_buffer.end(), 0);
+  std::fill(metadata.secondary_buffer.begin(), metadata.secondary_buffer.end(), 0);
 
-  Metadata metadata_2 = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  memset(metadata_2.superblock.get(), 0, metadata_2.capacity);
-
-  ASSERT_EQ(ValidateHeader(metadata_1.superblock.get(), metadata_2.superblock.get(),
-                           metadata_1.capacity, nullptr),
-            ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(metadata.ValidateHeader());
 }
 
 TEST(IntegrityValidationTest, MetadataHasOverflowInCalculatedSizeIsBadState) {
-  Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  auto* header = reinterpret_cast<fvm::Header*>(metadata.superblock.get());
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.primary->allocation_table_size =
+      std::numeric_limits<uint64_t>::max() - metadata.primary->GetAllocationTableOffset() + 1;
 
-  header->allocation_table_size =
-      std::numeric_limits<uint64_t>::max() - header->GetAllocationTableOffset() + 1;
-
-  ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
-                           nullptr),
-            ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(metadata.ValidateHeader());
 }
 
 TEST(IntegrityValidationTest, FvmPartitionNotBigForBothCopiesOfMetadataIsBadState) {
-  Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Header* header = reinterpret_cast<Header*>(metadata.superblock.get());
-  FormatInfo info(*header);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
+  metadata.primary->fvm_partition_size = metadata.primary->GetDataStartOffset() - 1;
+  metadata.secondary->fvm_partition_size = metadata.primary->fvm_partition_size;
 
-  header->fvm_partition_size = 2 * info.metadata_allocated_size() - 1;
-
-  ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
-                           nullptr),
-            ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(metadata.ValidateHeader());
 }
 
 TEST(IntegrityValidationTest, LastSliceOutOfFvmPartitionIsBadState) {
-  Metadata metadata = CreateSuperblock(kPartitionSize, 2 * kPartitionSize);
-  Header* header = reinterpret_cast<Header*>(metadata.superblock.get());
-  FormatInfo info(*header);
+  Metadata metadata = CreateMetadata(kPartitionSize, 2 * kPartitionSize);
 
   // Now the last slice ends past the fvm partition and would trigger a Page Fault, probably.
-  header->fvm_partition_size = info.GetSliceStart(0) + info.slice_count() * info.slice_size() - 1;
+  metadata.primary->fvm_partition_size = metadata.primary->GetSliceDataOffset(
+      metadata.primary->GetAllocationTableUsedEntryCount() - 1);
+  metadata.secondary->fvm_partition_size = metadata.primary->fvm_partition_size;
 
-  ASSERT_EQ(ValidateHeader(metadata.superblock.get(), metadata.superblock.get(), metadata.capacity,
-                           nullptr),
-            ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(metadata.ValidateHeader());
 }
 
 }  // namespace

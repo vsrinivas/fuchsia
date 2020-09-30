@@ -156,13 +156,13 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
 
   fvm::UpdateHash(mvmo.get(), format_info.metadata_size());
 
+  // Copy the new primary metadata to the backup copy.
   void* backup = mvmo.get() + format_info.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
   memcpy(backup, mvmo.get(), format_info.metadata_size());
 
-  zx_status_t status =
-      fvm::ValidateHeader(mvmo.get(), backup, format_info.metadata_size(), nullptr);
-  if (status != ZX_OK) {
-    return status;
+  // Validate our new state.
+  if (!fvm::ValidateHeader(mvmo.get(), backup, format_info.metadata_size())) {
+    return ZX_ERR_BAD_STATE;
   }
 
   if (lseek(fd, 0, SEEK_SET) < 0) {
