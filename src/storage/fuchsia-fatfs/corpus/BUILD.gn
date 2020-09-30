@@ -3,7 +3,7 @@
 import("//build/dist/resource.gni")
 
 # Generated using `fx fuzz update fuchsia-fatfs-fuzzer/fat-fuzzer`.
-resource("fat-fuzzer_corpus") {
+resource("corpus") {
   sources = [
     "fat.img",
     "invalid_cluster_number.img",
@@ -11,5 +11,5 @@ resource("fat-fuzzer_corpus") {
     "many_sectors_per_fat.img",
     "utf16_unpaired_surrogates.img",
   ]
-  outputs = [ "data/fat-fuzzer/{{source_file_part}}" ]
+  outputs = [ "data/corpus/{{source_file_part}}" ]
 }

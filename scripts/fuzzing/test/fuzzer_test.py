@@ -472,6 +472,76 @@ class FuzzerTest(TestCaseWithFuzzer):
         # Round to the nearest microsecond
         self.assertEqual(round(self.host.elapsed, 6), 70)
 
+    def test_add_corpus_to_buildfile_no_matching_target(self):
+        # Missing BUILD.gn file and/or fuzzer target.
+        label_parts = self.fuzzer.label.split(':')
+        build_gn = self.buildenv.abspath(label_parts[0], 'BUILD.gn')
+        self.assertFalse(self.fuzzer.add_corpus_to_buildfile('corpus/label'))
+        self.assertLogged('No such file: ' + build_gn)
+
+        lines_out = [
+            '# No targets here',
+        ]
+        with self.host.open(build_gn, 'w') as f:
+            f.write('\n'.join(lines_out))
+
+        self.assertFalse(self.fuzzer.add_corpus_to_buildfile('corpus/label'))
+        self.assertLogged(
+            'Unable to find \'fuzzer("{}")\' in {}'.format(
+                label_parts[1], build_gn))
+
+    def test_add_corpus_to_buildfile_add_new(self):
+        # Add a new 'corpus = "..."' to a fuzzer declaration.
+        label_parts = self.fuzzer.label.split(':')
+        build_gn = self.buildenv.abspath(label_parts[0], 'BUILD.gn')
+        lines_out = [
+            'fuzzer("{}") {{'.format(label_parts[1]),
+            '  sources = [ "fuzzer.cc" ]',
+            '  deps = [ ":my-lib" ]',
+            '}',
+        ]
+        with self.host.open(build_gn, 'w') as f:
+            f.write('\n'.join(lines_out))
+
+        self.assertTrue(self.fuzzer.add_corpus_to_buildfile('corpus/label'))
+
+        with self.host.open(build_gn) as f:
+            self.assertEqual(
+                f.read().split('\n'), [
+                    'fuzzer("{}") {{'.format(label_parts[1]),
+                    '  sources = [ "fuzzer.cc" ]',
+                    '  deps = [ ":my-lib" ]',
+                    '  corpus = "//corpus/label"',
+                    '}',
+                ])
+
+    def test_add_corpus_to_buildfile_replace_existing(self):
+        # Replace an existing 'corpus = "..."'.in a fuzzer declaration.
+        label_parts = self.fuzzer.label.split(':')
+        build_gn = self.buildenv.abspath(label_parts[0], 'BUILD.gn')
+        lines_out = [
+            'fuzzer("{}") {{'.format(label_parts[1]),
+            '  sources = [ "fuzzer.cc" ]',
+            '  deps = [ ":my-lib" ]',
+            '  corpus = "//corpus/label"',
+            '}',
+        ]
+        with self.host.open(build_gn, 'w') as f:
+            f.write('\n'.join(lines_out))
+
+        self.host.cwd = os.path.dirname(build_gn)
+        self.assertTrue(self.fuzzer.add_corpus_to_buildfile('relative/path'))
+
+        with self.host.open(build_gn) as f:
+            self.assertEqual(
+                f.read().split('\n'), [
+                    'fuzzer("{}") {{'.format(label_parts[1]),
+                    '  sources = [ "fuzzer.cc" ]',
+                    '  deps = [ ":my-lib" ]',
+                    '  corpus = "relative/path"',
+                    '}',
+                ])
+
 
 if __name__ == '__main__':
     unittest.main()

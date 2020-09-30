@@ -13,7 +13,7 @@
     },
     {
         "label": "//src/fake/package1:target2",
-        "corpus": "//src/fake/package1/target2-corpus"
+        "corpus": "//src/fake/package1/target2-corpus:corpus"
     },
     {
         "_COMMENT": "Simulate fuzzer('target3') in //src/fake/package1/BUILD.gn",
@@ -54,10 +54,6 @@
         "label": "//src/fake/package1:target5",
         "fuzzer_test": "fake-target5_test",
         "test_manifest": "fake-target5_test.cmx"
-    },
-    {
-        "label": "//src/fake/package1:target5",
-        "corpus": "//src/fake/package1/target5-corpus"
     },
     {
         "_COMMENT": "Simulate fuzzers_package('package1') in //src/fake/package1/BUILD.gn",

@@ -148,7 +148,7 @@ template("fuzzer") {
         fuzz_spec = [
           {
             label = _label
-            corpus = get_path_info(invoker.corpus, "abspath")
+            corpus = get_label_info(invoker.corpus, "label_no_toolchain")
           },
         ]
       }

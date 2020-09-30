@@ -55,10 +55,10 @@ class Fuzzer(object):
     def __init__(self, factory, fuzz_spec):
         assert factory, 'Factory not set.'
         self._factory = factory
+        self._label = fuzz_spec['label']
         self._package = fuzz_spec['package']
         self._package_url = fuzz_spec['package_url']
         self._package_path = None
-
         if 'fuzzer' in fuzz_spec:
             self._executable = fuzz_spec['fuzzer']
             manifest = fuzz_spec['manifest']
@@ -103,6 +103,11 @@ class Fuzzer(object):
     def host(self):
         """Alias for device.buildenv.host."""
         return self._factory.host
+
+    @property
+    def label(self):
+        """The GN fuzzer label."""
+        return self._label
 
     @property
     def package(self):
@@ -498,3 +503,64 @@ class Fuzzer(object):
         self.host.echo('')
         proc.wait()
         self.monitor()
+
+    def add_corpus_to_buildfile(self, corpus_label):
+        """Modifies this fuzzer's BUILD.gn to add or replace a corpus definition.
+
+        Parameters:
+            corpus_label    A GN label to a corpus.
+
+        Returns:
+            True if the fuzzer's BUILD.gn file and was updated with the corpus, else False.
+        """
+        if self._label.startswith('//generated'):
+            self.host.echo(
+                'Fuzzer metadata out of date; please re-run `fx set`.')
+            return False
+        parts = self._label.split(':')
+        build_gn_dir = self.buildenv.abspath(parts[0])
+        build_gn = os.path.join(build_gn_dir, 'BUILD.gn')
+        if not self.host.isfile(build_gn):
+            self.host.echo('No such file: ' + build_gn)
+            return False
+
+        corpus_dir = self.buildenv.abspath(corpus_label)
+        if corpus_dir.startswith(build_gn_dir):
+            corpus_dir = os.path.relpath(corpus_dir, build_gn_dir)
+        else:
+            corpus_dir = '//' + os.path.relpath(
+                corpus_dir, self.buildenv.fuchsia_dir)
+
+        found = False
+        matching_target = False
+        fuzzer_target = 'fuzzer("{}")'.format(parts[1])
+        lines_out = []
+        nested_scopes = 0
+        with self.host.open(build_gn, 'r') as gn:
+            for line in gn:
+                line = line.rstrip()
+                if not found and fuzzer_target in line:
+                    matching_target = True
+                if not matching_target:
+                    lines_out.append(line)
+                    continue
+                nested_scopes += line.count('{')
+                nested_scopes -= line.count('}')
+                if nested_scopes == 0:
+                    indent = len(line) - len(line.lstrip(' '))
+                    indent = ' ' * indent
+                    lines_out.append(
+                        '{}  corpus = "{}"'.format(indent, corpus_dir))
+                    matching_target = False
+                    found = True
+                if 'corpus =' not in line:
+                    lines_out.append(line)
+
+        if found:
+            with self.host.open(build_gn, 'w') as gn:
+                gn.write('\n'.join(lines_out))
+            return True
+        else:
+            self.host.echo(
+                'Unable to find \'{}\' in {}'.format(fuzzer_target, build_gn))
+            return False

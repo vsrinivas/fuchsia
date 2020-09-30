@@ -142,7 +142,9 @@ def update_corpus(args, factory):
     """Implementation of "fx fuzz update"."""
     # Factory.create_fuzzer interprets args.output as the place to store logs, which is not what we
     # want here.
-    build_gn = args.output
+    build_gn = None
+    if args.output:
+        build_gn = os.path.abspath(args.output)
     args.output = None
     fuzzer = factory.create_fuzzer(args, include_tests=True)
     elems = fuzzer.corpus.generate_buildfile(build_gn=build_gn)
@@ -152,7 +154,13 @@ def update_corpus(args, factory):
         factory.host.echo('Added:')
         for elem in elems:
             factory.host.echo('  ' + elem)
-    factory.host.echo('', '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
+    if not build_gn:
+        build_gn = '{}/BUILD.gn'.format(fuzzer.corpus.srcdir)
+    else:
+        build_gn = factory.buildenv.path(build_gn)
+        build_gn = '//' + os.path.relpath(
+            build_gn, factory.buildenv.fuchsia_dir)
+    factory.host.echo('', build_gn + ' updated.')
 
 
 def _run_tests(pattern, factory):
