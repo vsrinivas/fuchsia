@@ -69,19 +69,6 @@ executable("selecttest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("udptest") {
-  testonly = true
-
-  sources = [ "udptest.c" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
 executable("sockopttest") {
   testonly = true
 
@@ -119,7 +106,6 @@ package("netstack-manual-tests") {
     ":polltest",
     ":selecttest",
     ":sockopttest",
-    ":udptest",
   ]
 
   binaries = [
@@ -149,10 +135,6 @@ package("netstack-manual-tests") {
     },
     {
       name = "sockopttest"
-      shell = true
-    },
-    {
-      name = "udptest"
       shell = true
     },
   ]
