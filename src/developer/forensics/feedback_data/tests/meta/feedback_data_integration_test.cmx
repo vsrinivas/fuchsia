@@ -4,7 +4,7 @@
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.diagnostics.FeedbackArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx",
                 "fuchsia.factory.MiscFactoryStoreProvider": [
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/misc.cmx",
                     "--config=/config/data/fuchsia.factory.MiscFactoryStoreProvider.config"
@@ -15,7 +15,7 @@
                 "fuchsia.feedback.LastRebootInfoProvider": "fuchsia-pkg://fuchsia.com/fake-last-reboot-info-provider#meta/fake_last_reboot_info_provider.cmx",
                 "fuchsia.hwinfo.Board": "fuchsia-pkg://fuchsia.com/fake_hwinfo#meta/hwinfo.cmx",
                 "fuchsia.hwinfo.Product": "fuchsia-pkg://fuchsia.com/fake_hwinfo#meta/hwinfo.cmx",
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.update.channel.Provider": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"

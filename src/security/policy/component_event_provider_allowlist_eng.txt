@@ -1,5 +1,6 @@
 fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
 fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx
+fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx
 fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/archive_path_test_archivist.cmx
 fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/data_stats_test_archivist.cmx
 fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/unified_reader_test_archivist.cmx

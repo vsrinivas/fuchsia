@@ -157,6 +157,14 @@ fuchsia_component("archivist-v1") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("archivist-with-klog") {
+  manifest = "meta/archivist-with-klog.cmx"
+  deps = [
+    ":bin",
+    ":embedding-config-file",
+  ]
+}
+
 fuchsia_component("archivist-for-embedding-v1") {
   component_name = "archivist-for-embedding"
   manifest = "meta/archivist-for-embedding.cmx"
@@ -215,6 +223,7 @@ fuchsia_package("archivist-for-embedding") {
   deps = [
     ":archivist-for-embedding-v1",
     ":archivist-for-embedding-v2",
+    ":archivist-with-klog",
   ]
 }
 

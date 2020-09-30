@@ -21,8 +21,10 @@ namespace netemul {
 namespace {
 // Start the Log and LogSink service (the same component publishses both
 // services))
-constexpr const char* kLogServiceURL = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
-constexpr const char* kLogServiceNoKLogOption = "--disable-klog";
+constexpr const char* kLogServiceURLNoKlog =
+    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
+constexpr const char* kLogServiceURLWithKlog =
+    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx";
 constexpr const char* kLogServices[] = {fuchsia::logger::LogSink::Name_,
                                         fuchsia::logger::Log::Name_,
                                         fuchsia::diagnostics::ArchiveAccessor::Name_};
@@ -119,8 +121,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         sandbox_env_->ConnectNetworkTun(std::move(request));
       }));
 
-  bool disable_klog = !LogListener::IsKlogsEnabled(options);
-  if (!disable_klog) {
+  bool enable_klog = LogListener::IsKlogsEnabled(options);
+  if (enable_klog) {
     services->AddService(fidl::InterfaceRequestHandler<fuchsia::boot::ReadOnlyLog>(
         [this](fidl::InterfaceRequest<fuchsia::boot::ReadOnlyLog> request) {
           // Connect the sandbox to our namespace rather than its sandbox parent.
@@ -128,19 +130,23 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         }));
   }
 
+  const char* log_service_url;
+  if (enable_klog) {
+    log_service_url = kLogServiceURLWithKlog;
+  } else {
+    log_service_url = kLogServiceURLNoKlog;
+  }
+
   // Inject all services provided by LogService.
   for (const auto* svc : kLogServices) {
     // Inject Log service
     services->AddServiceWithLaunchInfo(
-        kLogServiceURL,
-        [this, disable_klog]() {
+        log_service_url,
+        [this, log_service_url]() {
           fuchsia::sys::LaunchInfo linfo;
-          linfo.url = kLogServiceURL;
-          if (disable_klog) {
-            linfo.arguments.emplace({kLogServiceNoKLogOption});
-          }
-          linfo.out = loggers_->CreateLogger(kLogServiceURL, false);
-          linfo.err = loggers_->CreateLogger(kLogServiceURL, true);
+          linfo.url = log_service_url;
+          linfo.out = loggers_->CreateLogger(log_service_url, false);
+          linfo.err = loggers_->CreateLogger(log_service_url, true);
           loggers_->IncrementCounter();
           return linfo;
         },

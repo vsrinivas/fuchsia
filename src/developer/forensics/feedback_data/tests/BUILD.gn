@@ -683,7 +683,7 @@ group("tests") {
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/developer/forensics:copy-pkg",
     "//src/developer/forensics/testing/fakes:fake-last-reboot-info-provider",
-    "//src/diagnostics/archivist",
+    "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/graphics/bin/vulkan_loader",
     "//src/hwinfo:tests",
     "//src/sys/pkg/bin/system-update-checker",

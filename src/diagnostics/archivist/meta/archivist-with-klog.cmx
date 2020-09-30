@@ -1,0 +1,19 @@
+{
+    "program": {
+        "args": [
+            "--install-controller",
+            "--disable-event-source",
+            "--config-path",
+            "/pkg/data/embedding-config.json"
+        ],
+        "binary": "bin/archivist"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.ReadOnlyLog",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.internal.ComponentEventProvider",
+            "fuchsia.sys.internal.LogConnector"
+        ]
+    }
+}

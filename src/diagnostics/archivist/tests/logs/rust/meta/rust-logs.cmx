@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
-                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx"
             },
             "system-services": [
                 "fuchsia.boot.ReadOnlyLog",
