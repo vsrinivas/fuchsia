@@ -46,7 +46,9 @@ usage () {
   echo "    If neither --device-name nor --device-ip are specified, the device-name configured using fconfig.sh is used."
   echo "  [--device-ip <device ip>]"
   echo "    Only serves packages to a device with the given device ip address. Cannot be used with --device-name."
- echo "     If neither --device-name nor --device-ip are specified, the device-ip configured using fconfig.sh is used."
+  echo "    If neither --device-name nor --device-ip are specified, the device-ip configured using fconfig.sh is used."
+  echo "  [--sshconfig <sshconfig file>]"
+  echo "    Use the specified sshconfig file instead of fssh's version."
   echo "  [--kill]"
   echo "    Kills any existing package manager server"
   echo "  [--prepare]"
@@ -58,52 +60,57 @@ PRIVATE_KEY_FILE=""
 PREPARE_ONLY=""
 DEVICE_NAME_FILTER=""
 DEVICE_IP_ADDR=""
+SSHCONFIG_FILE=""
 
 # Parse command line
 while (( "$#" )); do
 case $1 in
     --work-dir)
-    shift
-    FUCHSIA_IMAGE_WORK_DIR="${1:-.}"
+      shift
+      FUCHSIA_IMAGE_WORK_DIR="${1:-.}"
     ;;
     --bucket)
-    shift
-    FUCHSIA_BUCKET="${1}"
+      shift
+      FUCHSIA_BUCKET="${1}"
     ;;
     --image)
-    shift
-    IMAGE_NAME="${1}"
+      shift
+      IMAGE_NAME="${1}"
     ;;
     --private-key)
-    shift
-    PRIVATE_KEY_FILE="${1}"
+      shift
+      PRIVATE_KEY_FILE="${1}"
     ;;
     --server-port)
-    shift
-    FUCHSIA_SERVER_PORT="${1}"
+      shift
+      FUCHSIA_SERVER_PORT="${1}"
     ;;
     --device-name)
-    shift
-    DEVICE_NAME_FILTER="${1}"
+      shift
+      DEVICE_NAME_FILTER="${1}"
     ;;
     --device-ip)
-    shift
-    DEVICE_IP_ADDR="${1}"
+      shift
+      DEVICE_IP_ADDR="${1}"
+    ;;
+    --sshconfig)
+      shift
+      SSHCONFIG_FILE="${1}"
     ;;
     --kill)
-    kill-running-pm
-    exit 0
+      kill-running-pm
+      exit 0
     ;;
     --prepare)
-    PREPARE_ONLY="yes"
+      PREPARE_ONLY="yes"
     ;;
     -x)
-    set -x
+      set -x
     ;;
     *)
-    # unknown option
-    usage
-    exit 1
+      # unknown option
+      usage
+      exit 1
     ;;
 esac
 shift
@@ -229,9 +236,18 @@ if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
   exit 2
 fi
 
+base_ssh_args=()
+if [[ "${SSHCONFIG_FILE}" != "" ]]; then
+  base_ssh_args+=("-F" "${SSHCONFIG_FILE}")
+fi
+if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
+  base_ssh_args+=( "-i" "${PRIVATE_KEY_FILE}")
+fi
+base_ssh_args+=("${DEVICE_IP}")
+
 # get the host address as seen by the device.
-ssh_args=("${DEVICE_IP}" echo "\$SSH_CONNECTION")
-if ! connection_str="$(ssh-cmd "${ssh_args[@]}")"; then
+cmd_args=(echo "\$SSH_CONNECTION")
+if ! connection_str="$(ssh-cmd "${base_ssh_args[@]}" "${cmd_args[@]}")"; then
   fx-error "unable to determine host address as seen from the target.  Is the target up?"
   exit 1
 fi
@@ -259,17 +275,14 @@ echo "** Starting package server in the background**"
 # this is similar to serving on [::]:54321 or 0.0.0.0:54321.
 "$(get-fuchsia-sdk-tools-dir)/pm" serve -repo "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -l ":${FUCHSIA_SERVER_PORT}"&
 
-SSH_ARGS=()
-if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
-  SSH_ARGS+=( "-i" "${PRIVATE_KEY_FILE}")
-fi
-SSH_ARGS+=( "${DEVICE_IP}" amber_ctl add_src -f "http://${HOST_IP}:${FUCHSIA_SERVER_PORT}/config.json" )
+
+cmd_args=( amber_ctl add_src -f "http://${HOST_IP}:${FUCHSIA_SERVER_PORT}/config.json" )
 
 # Update the device to point to the server.
 # Because the URL to config.json contains an IPv6 address, the address needs
 # to be escaped in square brackets. This is not necessary for the ssh target,
 # since that's just an address and not a full URL.
-if ! ssh-cmd "${SSH_ARGS[@]}" ; then
+if ! ssh-cmd "${base_ssh_args[@]}" "${cmd_args[@]}" ; then
   fx-error "Error: could not update device"
   exit 1
 fi

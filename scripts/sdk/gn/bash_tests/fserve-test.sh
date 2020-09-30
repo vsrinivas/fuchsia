@@ -283,6 +283,24 @@ TEST_fserve_with_all_props() {
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
+TEST_fserve_custom_sshconfig(){
+  set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+
+  BT_EXPECT "${FSERVE_CMD}" --sshconfig my_custom_config --device-ip 192.1.1.1 > "${BT_TEMP_DIR}/fserve_custom_sshconfig.txt" 2>&1
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "my_custom_config" 192.1.1.1 "echo" _ANY_ )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "my_custom_config" 192.1.1.1  amber_ctl _ANY_ _ANY_ _ANY_)
+  gn-test-check-mock-args "${expected_args[@]}"
+  }
+
 # Test initialization.
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
