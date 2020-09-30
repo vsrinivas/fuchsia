@@ -69,3 +69,14 @@ impl std::ops::Deref for TestUpdatePackage {
         &self.update_pkg
     }
 }
+
+/// Provided a list of strings representing fuchsia-pkg URLs, constructs
+/// a `packages.json` representing those packages and returns the JSON as a
+/// string.
+pub fn make_packages_json<'a>(urls: impl AsRef<[&'a str]>) -> String {
+    json!({
+      "version": "1",
+      "content": urls.as_ref(),
+    })
+    .to_string()
+}

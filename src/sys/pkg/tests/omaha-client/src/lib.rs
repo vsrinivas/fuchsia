@@ -22,7 +22,7 @@ use {
     fuchsia_inspect::{
         assert_inspect_tree, reader::NodeHierarchy, testing::TreeAssertion, tree_assertion,
     },
-    fuchsia_pkg_testing::get_inspect_hierarchy,
+    fuchsia_pkg_testing::{get_inspect_hierarchy, make_packages_json},
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::oneshot, prelude::*},
     matches::assert_matches,
@@ -353,8 +353,8 @@ async fn test_omaha_client_update() {
             .resolver
             .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
             .add_file(
-                "packages",
-                "system_image/0=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead\n",
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
             )
             .add_file("zbi", "fake zbi"),
     );
