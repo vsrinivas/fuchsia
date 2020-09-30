@@ -275,6 +275,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
       switch (message->type) {
         case OperationType::kUsbRequestQueue:
           message->completion.callback(message->completion.ctx, message->request);
+          pending_requests_--;
           break;
         case OperationType::kExitEventLoop:
           Complete(std::move(message));
@@ -345,7 +346,12 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
           break;
         case OperationType::kUsbCancelAll:
           message->status = UsbCancelAllDispatch(message->ep_address);
-          Complete(std::move(message));
+          if (pending_requests_) {
+            // TODO(fxb/60981): Make CancelAll async
+            queue_.Insert(std::move(message));
+          } else {
+            Complete(std::move(message));
+          }
           break;
         case OperationType::kUsbEnableEndpoint:
           message->status =
@@ -567,6 +573,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     request->request->response.actual = actual;
     if (synthetic_) {
       request->completion.callback(request->completion.ctx, request->request);
+      pending_requests_--;
       return;
     }
     request_completion_.Insert(std::move(request));
@@ -626,6 +633,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
       return;
     }
     auto entry = MakeSyncEntry(OperationType::kUsbRequestQueue);
+    pending_requests_++;
     entry->request = request;
     entry->completion = *completion;
     queue_.Insert(std::move(entry));
@@ -691,6 +699,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     if (request_ && ep_address) {
       auto req = std::move(request_);
       usb_request_complete(req->request, ZX_ERR_CANCELED, 0, &req->completion);
+      pending_requests_--;
     }
     return ZX_OK;
   }
@@ -854,6 +863,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
   }
 
  private:
+  std::atomic_size_t pending_requests_ = 0;
   // State change queue which is read from by a test
   IOQueue state_change_queue_;
   // Incoming request queue
