@@ -70,8 +70,8 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(const FramePtr& frame,
   // Scenic checks this in Session::ApplySetCameraPoseBufferCmd().
   FX_DCHECK(latch_time >= pose_buffer.base_time);
 
-  uint32_t latch_index =
-      ((latch_time - pose_buffer.base_time) / pose_buffer.time_interval) % pose_buffer.num_entries;
+  uint32_t latch_index = static_cast<uint32_t>(
+      ((latch_time - pose_buffer.base_time) / pose_buffer.time_interval) % pose_buffer.num_entries);
 
   FX_DCHECK(vp_matrices_buffer->host_ptr() != nullptr);
   glm::mat4* vp_matrices = reinterpret_cast<glm::mat4*>(vp_matrices_buffer->host_ptr());
