@@ -507,6 +507,10 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 
   TRACE_DURATION("audio", "MixStage::ReconcileClocksAndSetStepSize");
 
+  // Right upfront, capture current states for the source and destination clocks.
+  auto source_ref_to_clock_mono = stream.reference_clock().ref_clock_to_clock_mono();
+  auto dest_ref_to_mono = reference_clock().ref_clock_to_clock_mono();
+
   // UpdateSourceTrans
   //
   // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
@@ -522,14 +526,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     return;
   }
 
-  FX_DCHECK(stream.reference_clock().is_valid());
-  FX_DCHECK(reference_clock().is_valid());
-
   // Ensure the mappings from source-frame to monotonic-time is up-to-date.
-  auto source_ref_clock_to_clock_mono = stream.reference_clock().ref_clock_to_clock_mono();
   auto frac_source_frame_to_clock_mono =
-      source_ref_clock_to_clock_mono * info.source_ref_clock_to_frac_source_frames.Inverse();
+      source_ref_to_clock_mono * info.source_ref_clock_to_frac_source_frames.Inverse();
   info.clock_mono_to_frac_source_frames = frac_source_frame_to_clock_mono.Inverse();
+
   // Assert we can map from local monotonic-time to fractional source frames.
   FX_DCHECK(info.clock_mono_to_frac_source_frames.rate().reference_delta());
 
@@ -547,41 +548,44 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     return;
   }
 
-  auto dest_frames_to_dest_ref_clock =
+  auto dest_frames_to_dest_ref =
       ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame).Inverse();
 
   // Compose our transformation from local monotonic-time to dest frames.
   auto dest_frames_to_clock_mono =
-      reference_clock().ref_clock_to_clock_mono() * dest_frames_to_dest_ref_clock;
+      TimelineFunction::Compose(dest_ref_to_mono, dest_frames_to_dest_ref, true);
 
   // ComposeDestToSource
-  //
   // Compose our transformation from destination frames to source fractional frames.
   //
   // Combine the job-supplied dest transformation, with the renderer-supplied mapping of
   // monotonic-to-source-subframe, to produce a transformation which maps from dest frames to
   // fractional source frames.
+
   info.dest_frames_to_frac_source_frames =
       info.clock_mono_to_frac_source_frames * dest_frames_to_clock_mono;
+  FX_LOGS(TRACE) << clock::TimelineRateToString(info.dest_frames_to_frac_source_frames.rate(),
+                                                "dest-to-frac-src");
 
   // ComputeFrameRateConversionRatio
   //
-  // Determine the appropriate TimelineRate for step_size. This based exclusively on the frame rates
-  // of the source and destination. If we happen to be applying "micro-SRC" for this source, then
-  // that will be included subsequently as a correction factor.
+  // Determine the appropriate TimelineRate for step_size. This based exclusively on the frame
+  // rates of the source and destination. If we happen to be applying "micro-SRC" for this
+  // source, then that will be included subsequently as a correction factor.
   TimelineRate frac_src_frames_per_dest_frame =
-      dest_frames_to_dest_ref_clock.rate() * info.source_ref_clock_to_frac_source_frames.rate();
+      dest_frames_to_dest_ref.rate() * info.source_ref_clock_to_frac_source_frames.rate();
+  FX_LOGS(TRACE) << clock::TimelineRateToString(frac_src_frames_per_dest_frame,
+                                                "dest-to-frac-src rate");
 
   // SynchronizeClocks
   //
   // If client clock and device clock differ, reconcile them.
-  // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix. Do this
+  // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix. Do so
   // even if clocks are same on both sides, as this allows us to perform an initial sync-up between
-  // running position accounting and the initial clock transforms (even those with offsets).
+  // running position accounting and the initial clock transforms -- even those with offsets.
   auto curr_dest_frame = cur_mix_job_.dest_start_frame;
   if (info.next_dest_frame != curr_dest_frame || !info.running_pos_established) {
     info.running_pos_established = true;
-
     // Set new running positions, based on the E2E clock (not just from step_size)
     auto prev_running_dest_frame = info.next_dest_frame;
     auto prev_running_frac_src_frame = info.next_frac_source_frame;
@@ -651,15 +655,23 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       FX_LOGS(TRACE) << "frac_source_error: tuning reference clock at dest " << curr_dest_frame
                      << " for " << info.frac_source_error.raw_value();
       if (client_clock.is_flexible()) {
-        // Adjust client_clock, the 'flexible' clock that we have provided to the client
+        // Adjust the 'flexible' client clock to match the device clock
       } else if (device_clock.is_tuneable() && client_clock.controls_tuneable_clock()) {
         // Adjust device_clock's hardware clock rate based on the frac_source_error
       } else {
+        // Synchronize two non-adjustable clocks using micro-SRC
+
         client_clock.TuneRateForError(curr_dest_frame, info.frac_source_error);
 
-        // Using this rate adjustment factor, adjust step_size, so future src_positions converge to
-        // what these two clocks require. The product might exceed uint64/uint64: allow reduction.
-        TimelineRate micro_src_factor = client_clock.rate_adjustment();
+        // With this factor, set the rate that determines step_size, so future src_pos converges to
+        // what the two clocks require.
+        TimelineRate micro_src_factor = client_clock.adjustment_rate();
+        FX_LOGS(TRACE) << "Inserting micro-SRC: " << micro_src_factor.subject_delta() << " / "
+                       << micro_src_factor.reference_delta();
+
+        // Product might exceed uint64/uint64, so allow reduction. Less-than-perfect precision is
+        // acceptable here because micro-SRC does not determine the stream's absolute position.
+        // Rather, it sets SRC factors accordingly, to chase that absolute position.
         frac_src_frames_per_dest_frame =
             TimelineRate::Product(frac_src_frames_per_dest_frame, micro_src_factor, false);
       }

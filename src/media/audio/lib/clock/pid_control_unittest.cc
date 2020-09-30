@@ -16,7 +16,7 @@ namespace {
 class PidControlTest : public testing::Test {
  protected:
   static void VerifyProportionalOnly(const double pFactor) {
-    auto control = PidControl(pFactor, 0, 0);
+    auto control = PidControl({.proportional_factor = pFactor});
     control.Start(100);
 
     control.TuneForError(110, 50);
@@ -30,7 +30,7 @@ class PidControlTest : public testing::Test {
   }
 
   static void VerifyIntegralOnly(const double iFactor) {
-    auto control = PidControl(0, iFactor, 0);
+    auto control = PidControl({.integral_factor = iFactor});
     auto expected = 0.0;
 
     int64_t previous_time = 0;
@@ -65,7 +65,7 @@ class PidControlTest : public testing::Test {
   }
 
   static void VerifyDerivativeOnly(double dFactor) {
-    auto control = PidControl(0, 0, dFactor);
+    auto control = PidControl({.derivative_factor = dFactor});
     double error, previous_error;
     double error_rate;
 
@@ -114,7 +114,9 @@ class PidControlTest : public testing::Test {
     constexpr double kIfactor = kPfactor * 2 / ZX_MSEC(20);
     constexpr double kDfactor = kPfactor * ZX_MSEC(20) / 16;
 
-    auto control = PidControl(kPfactor, kIfactor, kDfactor);
+    auto control = PidControl({.proportional_factor = kPfactor,
+                               .integral_factor = kIfactor,
+                               .derivative_factor = kDfactor});
 
     constexpr zx_duration_t kIterationTimeslice = ZX_MSEC(10);
     const double ref_rate = (1'000'000 + rate_adjust_ppm) / 1'000'000.0;
@@ -201,7 +203,7 @@ TEST_F(PidControlTest, Derivative) {
 
 // Start sets the control's initial time, resetting other vlaues to zero.
 TEST_F(PidControlTest, NoStart) {
-  auto control = PidControl(0, 0, 1.0);
+  auto control = PidControl({.derivative_factor = 1.0});
 
   // start_time is implicitly 0, so control.Read will base its extrapolation(time=300)
   // across the previous tuning which had a duration of 150, thus control=(150-0)/(150-0) = 1.
@@ -217,7 +219,7 @@ TEST_F(PidControlTest, NoStart) {
 
 // Briefly validate PI with literal values
 TEST_F(PidControlTest, ProportionalIntegral) {
-  auto control = PidControl(1.0, 1.0, 0);
+  auto control = PidControl({.proportional_factor = 1.0, .integral_factor = 1.0});
 
   control.Start(0);
   // Expect 0, was 50: curr_err_=50, dur=10: accum_err+=500 (now 500)
@@ -241,7 +243,8 @@ TEST_F(PidControlTest, ProportionalIntegral) {
 
 // Briefly validate full PID with literal values
 TEST_F(PidControlTest, FullPid) {
-  auto control = PidControl(1.0, 1.0, 1.0);
+  auto control =
+      PidControl({.proportional_factor = 1.0, .integral_factor = 1.0, .derivative_factor = 1.0});
 
   control.Start(0);
   // curr_err_=50, dur=10: accum_err+=500 (now 500)

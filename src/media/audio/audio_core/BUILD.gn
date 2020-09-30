@@ -239,6 +239,7 @@ executable("unittest_bin") {
     "effects_stage_unittest.cc",
     "link_matrix_unittest.cc",
     "loudness_transform_unittest.cc",
+    "mix_stage_clock_unittest.cc",
     "mix_stage_unittest.cc",
     "output_pipeline_unittest.cc",
     "packet_queue_unittest.cc",

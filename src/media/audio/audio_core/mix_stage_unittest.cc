@@ -6,6 +6,7 @@
 
 #include <zircon/syscalls.h>
 
+#include <fbl/string_printf.h>
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/audio_clock.h"
@@ -24,8 +25,7 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
-// When tuning a new set of PID coefficients, set this to enable additional logging.
-constexpr bool kDisplayForNewPidCoefficientsTuning = false;
+enum class ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 constexpr uint32_t kDefaultNumChannels = 2;
 constexpr uint32_t kDefaultFrameRate = 48000;
@@ -36,8 +36,6 @@ const Format kDefaultFormat =
                        .frames_per_second = kDefaultFrameRate,
                    })
         .take_value();
-
-enum ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 class MixStageTest : public testing::ThreadingModelFixture {
  protected:
@@ -75,7 +73,6 @@ class MixStageTest : public testing::ThreadingModelFixture {
   void TestMixStageTrim(ClockMode clock_mode);
   void TestMixStageUniformFormats(ClockMode clock_mode);
   void TestMixStageSingleInput(ClockMode clock_mode);
-  void TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm = 0);
 
   void ValidateIsPointSampler(std::shared_ptr<Mixer> should_be_point) {
     EXPECT_LT(should_be_point->pos_filter_width(), Fixed(1))
@@ -648,163 +645,6 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   EXPECT_EQ(bookkeeping.denominator, 1u);
 }
 
-// Test the accuracy of long-running position maintained by MixStage across ReadLock calls. No
-// source audio is needed: source position is determined by clocks and the change in dest position.
-//
-// Because a feedback control is used to resolve rate adjustment, we run the mix for a significant
-// interval (2.5 sec), measuring worst-case source position error during that time. We also note the
-// worst-case source position error during the final 50 msec. The overall worst-case error observed
-// should be proportional to the magnitude of rate change, whereas once we settle back to steady
-// state (in final 50 msec) our position desync error should have a ripple of much less than 1 usec.
-//
-// Note, this test uses a custom client clock, with the MixStageTest default non-adjustable device
-// clock. This combination forces AudioCore to use "micro-SRC" to reconcile any rate differences.
-void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm) {
-  // Set properties for the requested clock, and create it.
-  clock::testing::ClockProperties clock_props;
-  if (clock_mode == ClockMode::WITH_OFFSET) {
-    clock_props = {.start_val = zx::clock::get_monotonic() - zx::sec(2)};
-  } else if (clock_mode == ClockMode::RATE_ADJUST) {
-    clock_props = {.start_val = zx::time(0) + zx::sec(3), .rate_adjust_ppm = rate_adjust_ppm};
-  }
-
-  auto custom_clock_result = clock::testing::CreateCustomClock(clock_props);
-  EXPECT_TRUE(custom_clock_result.is_ok()) << "CreateCustomClk err:" << custom_clock_result.error();
-  zx::clock raw_clock = custom_clock_result.take_value();
-  EXPECT_TRUE(raw_clock.is_valid());
-
-  // Determine our clock's offset from CLOCK_MONOTONIC; create a packet factory that starts there.
-  auto offset_result = clock::testing::GetOffsetFromMonotonic(raw_clock);
-  EXPECT_TRUE(offset_result.is_ok()) << "GetOffsetFromMonotonic err:" << offset_result.error();
-  auto clock_offset = offset_result.take_value();
-  auto seek_frac_frame =
-      Fixed::FromRaw(round(static_cast<double>(clock_offset.get()) * Fixed(1).raw_value() *
-                           kDefaultFormat.frames_per_second() / ZX_SEC(1)));
-  testing::PacketFactory packet_factory(
-      dispatcher(), kDefaultFormat,
-      kDefaultFormat.frames_per_second() * kDefaultFormat.bytes_per_frame());
-  packet_factory.SeekToFrame(seek_frac_frame.Round());
-
-  // Create our audio clock and format transform; pass those to a packet queue
-  AudioClock audio_clock = AudioClock::CreateAsCustom(std::move(raw_clock));
-  EXPECT_TRUE(audio_clock.is_valid());
-  auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  std::shared_ptr<PacketQueue> packet_queue =
-      std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(audio_clock));
-
-  // Connect packet queue to mix stage; we inspect running position & error via Mixer::Bookkeeping.
-  auto& info = mix_stage_->AddInput(packet_queue)->source_info();
-
-  // Set the limits for worst-case source position error during this mix interval
-  //
-  // Based on current PID coefficients (thus may need adjusting as we tune coefficients), our
-  // worst-case position error deviation for each ppm of rate change is ~16 frac frames on the
-  // "major" (immediate response) side after about 5000 frames, and ~8 frac frames on the "minor"
-  // (correct for overshoot) side after about 17000 frames. At 48kHz, these errors equate to about
-  // 40nsec-per-ppm and 20nsec-per-ppm, respectively. Thus a sudden change of 1000ppm in clock rate
-  // should cause a worst-case desync position error of about 16000 fractional frames (about 2
-  // frames), or about 40 microsec at a frame rate of 48kHz.
-  //
-  // Note: these are liable to change as we tune the PID coefficients for optimal performance.
-  //
-  Fixed upper_limit, lower_limit;
-  // If clock runs fast, our initial error is negative (position too low), followed by smaller
-  // positive error (position too high). These are reversed if clock runs slow.
-  if (rate_adjust_ppm > 0) {
-    upper_limit = Fixed::FromRaw(rate_adjust_ppm * 8);
-    lower_limit = Fixed::FromRaw(rate_adjust_ppm * -16);
-  } else {
-    upper_limit = Fixed::FromRaw(rate_adjust_ppm * -16);
-    lower_limit = Fixed::FromRaw(rate_adjust_ppm * 8);
-  }
-
-  // Once we've settled back to steady state, our desync ripple is +/-20nsec (8 fractional frames).
-  constexpr Fixed kUpperLimitLastTen = Fixed::FromRaw(8);
-  constexpr Fixed kLowerLimitLastTen = Fixed::FromRaw(-8);
-
-  // We will measure long-running position across 150 mixes of 5ms each.
-  constexpr int kTotalMixCount = 150;
-  constexpr zx::duration kMixDuration = zx::msec(5);
-  constexpr uint32_t dest_frames_per_mix = kBlockSizeFrames;
-
-  // We measure worst-case desync (both ahead and behind [positive and negative]), as well as
-  // "desync ripple" measured during the final 10 mixes, after synch should have converged.
-  Fixed max_frac_error{0}, max_frac_error_last_ten{0};
-  Fixed min_frac_error{0}, min_frac_error_last_ten{0};
-  int mix_count_of_max_error = 0, mix_count_of_min_error = 0;
-
-  for (auto mix_count = 0; mix_count < kTotalMixCount; ++mix_count) {
-    zx_nanosleep(zx_deadline_after(kMixDuration.get()));
-    mix_stage_->ReadLock(Fixed(dest_frames_per_mix * mix_count), dest_frames_per_mix);
-    EXPECT_EQ(info.next_dest_frame, dest_frames_per_mix * (mix_count + 1));
-
-    // Track the worst-case position error, and track worst-case in the last ten mixes separately.
-    if (info.frac_source_error > max_frac_error) {
-      max_frac_error = info.frac_source_error;
-      mix_count_of_max_error = mix_count;
-    }
-    if (info.frac_source_error < min_frac_error) {
-      min_frac_error = info.frac_source_error;
-      mix_count_of_min_error = mix_count;
-    }
-    if (mix_count >= kTotalMixCount - 10) {
-      max_frac_error_last_ten = std::max(info.frac_source_error, max_frac_error_last_ten);
-      min_frac_error_last_ten = std::min(info.frac_source_error, min_frac_error_last_ten);
-    }
-
-    if constexpr (kDisplayForNewPidCoefficientsTuning) {
-      FX_LOGS(INFO) << rate_adjust_ppm << ": [" << mix_count << "], error "
-                    << info.frac_source_error.raw_value();
-    }
-  }
-
-  EXPECT_LE(max_frac_error.raw_value(), upper_limit.raw_value())
-      << "for rate_adjust_ppm " << rate_adjust_ppm << " at mix_count " << mix_count_of_max_error
-      << " (" << mix_count_of_max_error * kMixDuration.to_msecs() << " msec)";
-  EXPECT_GE(min_frac_error, lower_limit)
-      << "for rate_adjust_ppm " << rate_adjust_ppm << " at mix_count " << mix_count_of_min_error
-      << " (" << mix_count_of_min_error * kMixDuration.to_msecs() << " msec)";
-
-  if (rate_adjust_ppm != 0) {
-    EXPECT_LE(max_frac_error_last_ten.raw_value(), kUpperLimitLastTen.raw_value())
-        << "for rate_adjust_ppm " << rate_adjust_ppm;
-    EXPECT_GE(min_frac_error_last_ten.raw_value(), kLowerLimitLastTen.raw_value())
-        << "for rate_adjust_ppm " << rate_adjust_ppm;
-  }
-
-  if constexpr (kDisplayForNewPidCoefficientsTuning) {
-    FX_LOGS(INFO) << rate_adjust_ppm << ":max at [" << mix_count_of_max_error << "] ("
-                  << mix_count_of_max_error * kMixDuration.to_msecs() << " msec), "
-                  << max_frac_error.raw_value();
-    FX_LOGS(INFO) << rate_adjust_ppm << ":min at [" << mix_count_of_min_error << "] ("
-                  << mix_count_of_min_error * kMixDuration.to_msecs() << " msec), "
-                  << min_frac_error.raw_value();
-
-    if (rate_adjust_ppm != 0) {
-      FX_LOGS(INFO) << rate_adjust_ppm << ":settled max " << max_frac_error_last_ten.raw_value();
-      FX_LOGS(INFO) << rate_adjust_ppm << ":settled min " << min_frac_error_last_ten.raw_value();
-    }
-  }
-}
-
-TEST_F(MixStageTest, MicroSrc_Basic) { TestMixPosition(ClockMode::SAME); }
-TEST_F(MixStageTest, MicroSrc_Offset) { TestMixPosition(ClockMode::WITH_OFFSET); }
-
-TEST_F(MixStageTest, MicroSrc_AdjustUp1) { TestMixPosition(ClockMode::RATE_ADJUST, 1); }
-TEST_F(MixStageTest, MicroSrc_AdjustDown1) { TestMixPosition(ClockMode::RATE_ADJUST, -1); }
-
-TEST_F(MixStageTest, MicroSrc_AdjustUp5) { TestMixPosition(ClockMode::RATE_ADJUST, 5); }
-TEST_F(MixStageTest, MicroSrc_AdjustDown5) { TestMixPosition(ClockMode::RATE_ADJUST, -5); }
-
-TEST_F(MixStageTest, MicroSrc_AdjustUp10) { TestMixPosition(ClockMode::RATE_ADJUST, 10); }
-TEST_F(MixStageTest, MicroSrc_AdjustDown10) { TestMixPosition(ClockMode::RATE_ADJUST, -10); }
-
-TEST_F(MixStageTest, MicroSrc_AdjustUp100) { TestMixPosition(ClockMode::RATE_ADJUST, 100); }
-TEST_F(MixStageTest, MicroSrc_AdjustDown100) { TestMixPosition(ClockMode::RATE_ADJUST, -100); }
-
-TEST_F(MixStageTest, MicroSrc_AdjustUp1000) { TestMixPosition(ClockMode::RATE_ADJUST, 1000); }
-TEST_F(MixStageTest, MicroSrc_AdjustDown1000) { TestMixPosition(ClockMode::RATE_ADJUST, -1000); }
-
 }  // namespace
+
 }  // namespace media::audio

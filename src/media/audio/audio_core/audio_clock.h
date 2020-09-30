@@ -135,8 +135,8 @@ class AudioClock {
     return domain_;
   }
 
-  const TimelineFunction& ref_clock_to_clock_mono();
-  const TimelineFunction& quick_ref_clock_to_clock_mono() const { return ref_clock_to_clock_mono_; }
+  // Return a transform based on a snapshot of the underlying zx::clock
+  TimelineFunction ref_clock_to_clock_mono() const;
 
   // Because 1) AudioClock objects are not copyable, and 2) AudioClock 'consumes' the zx::clock
   // provided to it, and 3) handle values are unique across the system, and 4) even duplicate
@@ -163,12 +163,12 @@ class AudioClock {
   // current position error at the given time; the PID provides the rate adjustment to be applied.
   //
   // At a given dest_frame, the source position error is provided (in fractional frames). This is
-  // used to maintain a rate_adjustment() factor that eliminates the error over time.
+  // used to maintain an adjustment_rate() factor that eliminates the error over time.
   void TuneRateForError(int64_t dest_frame, Fixed frac_src_error);
 
   // This returns the current rate adjustment factor (a rate close to 1.0) that should be applied,
   // to chase the actual source in an optimal manner.
-  const TimelineRate& rate_adjustment() const { return rate_adjustment_; }
+  const TimelineRate& adjustment_rate() const { return adjustment_rate_; }
 
   // Clear any internal running state (except the PID coefficients themselves), and restart the
   // feedback loop at the given destination frame.
@@ -188,15 +188,18 @@ class AudioClock {
   zx::clock clock_;
   Source source_;
   Type type_;
-  uint32_t domain_;  // Only really used for device clocks.
+  uint32_t domain_;  // Will only be used with device clocks.
 
-  // Only used for non-adjustable client clocks. Consider moving to a subclass structure
+  // Only used for non-adjustable client clocks.
   bool controls_tuneable_clock_ = false;
 
-  TimelineFunction ref_clock_to_clock_mono_;
+  TimelineRate adjustment_rate_;
+  audio::clock::PidControl feedback_control_loop_;
 
-  TimelineRate rate_adjustment_;
-  audio::clock::PidControl rate_adjuster_;
+  // Only used for adjustable client clocks.
+  int32_t adjustment_ppm_ = 0;
+
+  // TODO(fxbug.dev/58541): Refactor to use subclasses for different clock types
 };
 
 }  // namespace media::audio

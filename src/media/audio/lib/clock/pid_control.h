@@ -24,14 +24,19 @@ class PidControl {
   friend class PidControlTest;
 
  public:
-  using Coefficients = std::array<double, 3>;
+  struct Coefficients {
+    double proportional_factor = 0;
+    double integral_factor = 0;
+    double derivative_factor = 0;
+  };
 
-  explicit PidControl(const Coefficients& vals) : PidControl(vals[0], vals[1], vals[2]) {}
-  PidControl(double p_val, double i_val, double d_val)
-      : proportional_factor_(p_val), integral_factor_(i_val), derivative_factor_(d_val) {
+  explicit PidControl(const Coefficients& vals)
+      : proportional_factor_(vals.proportional_factor),
+        integral_factor_(vals.integral_factor),
+        derivative_factor_(vals.derivative_factor) {
     Start(0);
   }
-  PidControl() : PidControl(0.0, 0.0, 0.0) {}
+  PidControl() : PidControl(Coefficients{}) {}
 
   void Start(int64_t start_time);
 
