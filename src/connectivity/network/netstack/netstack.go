@@ -961,7 +961,18 @@ func (ns *Netstack) addLoopback() error {
 	ifs.mu.Unlock()
 
 	// Loopback interfaces do not need NDP.
-	if err := ns.stack.SetNDPConfigurations(nicid, stack.NDPConfigurations{}); err != nil {
+	if err := func() *tcpip.Error {
+		ep, err := ns.stack.GetNetworkEndpoint(nicid, ipv6.ProtocolNumber)
+		if err != nil {
+			return err
+		}
+
+		// Must never fail, but the compiler can't tell.
+		ipv6EP := ep.(ipv6.NDPEndpoint)
+		ipv6EP.SetNDPConfigurations(ipv6.NDPConfigurations{})
+
+		return nil
+	}(); err != nil {
 		return fmt.Errorf("error setting NDP configurations to NIC ID %d: %s", nicid, err)
 	}
 

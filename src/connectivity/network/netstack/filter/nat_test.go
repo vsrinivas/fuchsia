@@ -97,12 +97,12 @@ func (e *syncEndpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.
 
 func createTestStackLAN(t *testing.T) (*stack.Stack, *syncEndpoint) {
 	s := stack.New(stack.Options{
-		NetworkProtocols: []stack.NetworkProtocol{
-			ipv4.NewProtocol(),
+		NetworkProtocols: []stack.NetworkProtocolFactory{
+			ipv4.NewProtocol,
 		},
-		TransportProtocols: []stack.TransportProtocol{
-			tcp.NewProtocol(),
-			udp.NewProtocol(),
+		TransportProtocols: []stack.TransportProtocolFactory{
+			tcp.NewProtocol,
+			udp.NewProtocol,
 		},
 	})
 	var linkEP syncEndpoint
@@ -132,12 +132,12 @@ func createTestStackLAN(t *testing.T) (*stack.Stack, *syncEndpoint) {
 
 func createTestStackWAN(t *testing.T) (*stack.Stack, *syncEndpoint) {
 	s := stack.New(stack.Options{
-		NetworkProtocols: []stack.NetworkProtocol{
-			ipv4.NewProtocol(),
+		NetworkProtocols: []stack.NetworkProtocolFactory{
+			ipv4.NewProtocol,
 		},
-		TransportProtocols: []stack.TransportProtocol{
-			tcp.NewProtocol(),
-			udp.NewProtocol(),
+		TransportProtocols: []stack.TransportProtocolFactory{
+			tcp.NewProtocol,
+			udp.NewProtocol,
 		},
 	})
 	var linkEP syncEndpoint
@@ -163,12 +163,12 @@ func createTestStackWAN(t *testing.T) (*stack.Stack, *syncEndpoint) {
 
 func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *syncEndpoint, *syncEndpoint) {
 	s := stack.New(stack.Options{
-		NetworkProtocols: []stack.NetworkProtocol{
-			ipv4.NewProtocol(),
+		NetworkProtocols: []stack.NetworkProtocolFactory{
+			ipv4.NewProtocol,
 		},
-		TransportProtocols: []stack.TransportProtocol{
-			tcp.NewProtocol(),
-			udp.NewProtocol(),
+		TransportProtocols: []stack.TransportProtocolFactory{
+			tcp.NewProtocol,
+			udp.NewProtocol,
 		},
 	})
 

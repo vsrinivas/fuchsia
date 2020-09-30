@@ -25,7 +25,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
@@ -880,7 +879,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -898,8 +897,8 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6ManagedAddress)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -922,7 +921,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -934,7 +933,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -952,8 +951,8 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(0, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
 					},
 					want: []cobalt.CobaltEvent{
 						{
@@ -992,7 +991,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6NoConfiguration)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
 					want: []cobalt.CobaltEvent{
@@ -1005,7 +1004,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				},
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6OtherConfigurations)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6OtherConfigurations)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
 					want: []cobalt.CobaltEvent{
@@ -1098,7 +1097,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
 					want: []cobalt.CobaltEvent{
@@ -1112,8 +1111,8 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 				// Only the last configuration should be used.
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
 					want: []cobalt.CobaltEvent{
@@ -1132,7 +1131,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
 						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr2.AddressWithPrefix)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},
@@ -1152,7 +1151,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 			steps: []step{
 				{
 					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(nicID1, stack.DHCPv6ManagedAddress)
+						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
 						ndpDisp.OnAutoGenAddress(nicID2, testProtocolAddr2.AddressWithPrefix)
 						ndpDisp.dynamicAddressSourceObs.hasEvents()
 					},

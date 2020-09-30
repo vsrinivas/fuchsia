@@ -20,7 +20,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
 const (
@@ -113,9 +113,9 @@ type ndpRecursiveDNSServerEvent struct {
 // isNDPEvent implements ndpEvent.isNDPEvent.
 func (*ndpRecursiveDNSServerEvent) isNDPEvent() {}
 
-var _ stack.NDPDispatcher = (*ndpDispatcher)(nil)
+var _ ipv6.NDPDispatcher = (*ndpDispatcher)(nil)
 
-// ndpDispatcher is a type that implements stack.NDPDispatcher to handle the
+// ndpDispatcher is a type that implements ipv6.NDPDispatcher to handle the
 // discovery and invaldiation of default routers, on-link prefixes and
 // auto-generated addresses; and reception of recursive DNS server lists for
 // IPv6.
@@ -166,7 +166,7 @@ type ndpDispatcher struct {
 }
 
 // OnDuplicateAddressDetectionStatus implements
-// stack.NDPDispatcher.OnDuplicateAddressDetectionStatus.
+// ipv6.NDPDispatcher.OnDuplicateAddressDetectionStatus.
 func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err *tcpip.Error) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDuplicateAddressDetectionStatus(%d, %s, %t, %v)", nicID, addr, resolved, err)
 	n.addEvent(&ndpDuplicateAddressDetectionEvent{
@@ -179,7 +179,7 @@ func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, add
 	})
 }
 
-// OnDefaultRouterDiscovered implements stack.NDPDispatcher.OnDefaultRouterDiscovered.
+// OnDefaultRouterDiscovered implements ipv6.NDPDispatcher.OnDefaultRouterDiscovered.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered default router.
@@ -189,13 +189,13 @@ func (n *ndpDispatcher) OnDefaultRouterDiscovered(nicID tcpip.NICID, addr tcpip.
 	return true
 }
 
-// OnDefaultRouterInvalidated implements stack.NDPDispatcher.OnDefaultRouterInvalidated.
+// OnDefaultRouterInvalidated implements ipv6.NDPDispatcher.OnDefaultRouterInvalidated.
 func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip.Address) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDefaultRouterInvalidated(%d, %s)", nicID, addr)
 	n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
 }
 
-// OnOnLinkPrefixDiscovered implements stack.NDPDispatcher.OnOnLinkPrefixDiscovered.
+// OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.OnOnLinkPrefixDiscovered.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered on-link prefix.
@@ -205,13 +205,13 @@ func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip
 	return true
 }
 
-// OnOnLinkPrefixInvalidated implements stack.NDPDispatcher.OnOnLinkPrefixInvalidated.
+// OnOnLinkPrefixInvalidated implements ipv6.NDPDispatcher.OnOnLinkPrefixInvalidated.
 func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpip.Subnet) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOnLinkPrefixInvalidated(%d, %s)", nicID, prefix)
 	n.addEvent(&ndpInvalidatedPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
 }
 
-// OnAutoGenAddress implements stack.NDPDispatcher.OnAutoGenAddress.
+// OnAutoGenAddress implements ipv6.NDPDispatcher.OnAutoGenAddress.
 //
 // Adds the event to the event queue and returns true so Stack adds the
 // auto-generated address.
@@ -229,14 +229,14 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 }
 
 // OnAutoGenAddressDeprecated implements
-// stack.NDPDispatcher.OnAutoGenAddressDeprecated.
+// ipv6.NDPDispatcher.OnAutoGenAddressDeprecated.
 func (*ndpDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithPrefix) {
 	// No need to do anything with this as deprecated addresses are still usable.
 	// stack.Stack will handle not returning deprecated addresses if more
 	// preferred addresses exist.
 }
 
-// OnAutoGenAddressInvalidated implements stack.NDPDispatcher.OnAutoGenAddressInvalidated.
+// OnAutoGenAddressInvalidated implements ipv6.NDPDispatcher.OnAutoGenAddressInvalidated.
 func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpInvalidatedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
@@ -248,13 +248,13 @@ func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithP
 	}
 }
 
-// OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
+// OnRecursiveDNSServerOption implements ipv6.NDPDispatcher.OnRecursiveDNSServerOption.
 func (n *ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tcpip.Address, lifetime time.Duration) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnRecursiveDNSServerOption(%d, %s, %s)", nicID, addrs, lifetime)
 	n.addEvent(&ndpRecursiveDNSServerEvent{nicID: nicID, addrs: addrs, lifetime: lifetime})
 }
 
-// OnDNSSearchListOption implements stack.NDPDispatcher.OnDNSSearchListOption.
+// OnDNSSearchListOption implements ipv6.NDPDispatcher.OnDNSSearchListOption.
 func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []string, lifetime time.Duration) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
@@ -281,7 +281,7 @@ var (
 
 type byNICAvailableDynamicIPv6AddressConfig map[tcpip.NICID]struct {
 	globalSLAAC uint32
-	lastDHCPv6  stack.DHCPv6ConfigurationFromNDPRA
+	lastDHCPv6  ipv6.DHCPv6ConfigurationFromNDPRA
 }
 
 type availableDynamicIPv6AddressConfigObservation struct {
@@ -346,7 +346,7 @@ func (o *availableDynamicIPv6AddressConfigObservation) decGlobalSLAAC(nicID tcpi
 	o.mu.obs[nicID] = nic
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) setLastDHCPv6(nicID tcpip.NICID, v stack.DHCPv6ConfigurationFromNDPRA) {
+func (o *availableDynamicIPv6AddressConfigObservation) setLastDHCPv6(nicID tcpip.NICID, v ipv6.DHCPv6ConfigurationFromNDPRA) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	nic := o.mu.obs[nicID]
@@ -366,7 +366,7 @@ func (o *availableDynamicIPv6AddressConfigObservation) events() []cobalt.CobaltE
 			v |= 1
 		}
 
-		if nic.lastDHCPv6 == stack.DHCPv6ManagedAddress {
+		if nic.lastDHCPv6 == ipv6.DHCPv6ManagedAddress {
 			v |= 2
 		}
 
@@ -404,7 +404,7 @@ var _ cobaltEventProducer = (*dhcpV6Observation)(nil)
 type dhcpV6Observation struct {
 	mu struct {
 		sync.Mutex
-		seen      map[stack.DHCPv6ConfigurationFromNDPRA]int
+		seen      map[ipv6.DHCPv6ConfigurationFromNDPRA]int
 		hasEvents func()
 	}
 }
@@ -423,14 +423,14 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 	for c, count := range o.mu.seen {
 		var code networking_metrics.NetworkingMetricDimensionConfigurationFromNdpra
 		switch c {
-		case stack.DHCPv6NoConfiguration:
+		case ipv6.DHCPv6NoConfiguration:
 			code = networking_metrics.NoConfiguration
-		case stack.DHCPv6ManagedAddress:
+		case ipv6.DHCPv6ManagedAddress:
 			code = networking_metrics.ManagedAddress
-		case stack.DHCPv6OtherConfigurations:
+		case ipv6.DHCPv6OtherConfigurations:
 			code = networking_metrics.OtherConfigurations
 		default:
-			_ = syslog.Warnf("ndp: unknown stack.DHCPv6ConfigurationFromNDPRA: %s", c)
+			_ = syslog.Warnf("ndp: unknown ipv6.DHCPv6ConfigurationFromNDPRA: %s", c)
 		}
 		for i := 0; i < count; i++ {
 			res = append(res, cobalt.CobaltEvent{
@@ -444,13 +444,13 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 	return res
 }
 
-// OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
-func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration stack.DHCPv6ConfigurationFromNDPRA) {
+// OnDHCPv6Configuration implements ipv6.NDPDispatcher.OnDHCPv6Configuration.
+func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration ipv6.DHCPv6ConfigurationFromNDPRA) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDHCPv6Configuration(%d, %s)", nicID, configuration)
 
 	n.dhcpv6Obs.mu.Lock()
 	if n.dhcpv6Obs.mu.seen == nil {
-		n.dhcpv6Obs.mu.seen = make(map[stack.DHCPv6ConfigurationFromNDPRA]int)
+		n.dhcpv6Obs.mu.seen = make(map[ipv6.DHCPv6ConfigurationFromNDPRA]int)
 	}
 	n.dhcpv6Obs.mu.seen[configuration] += 1
 	hasEvents := n.dhcpv6Obs.mu.hasEvents

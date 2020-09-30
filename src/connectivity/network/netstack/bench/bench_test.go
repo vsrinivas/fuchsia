@@ -74,11 +74,11 @@ func BenchmarkWritePacket(b *testing.B) {
 	} {
 		b.Run(test.name, func(b *testing.B) {
 			stk := stack.New(stack.Options{
-				NetworkProtocols: []stack.NetworkProtocol{
-					ipv4.NewProtocol(),
+				NetworkProtocols: []stack.NetworkProtocolFactory{
+					ipv4.NewProtocol,
 				},
-				TransportProtocols: []stack.TransportProtocol{
-					udp.NewProtocol(),
+				TransportProtocols: []stack.TransportProtocolFactory{
+					udp.NewProtocol,
 				},
 			})
 			if err := stk.CreateNIC(nicid, eth.NewLinkEndpoint(test.ep)); err != nil {

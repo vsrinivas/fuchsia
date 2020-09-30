@@ -502,12 +502,13 @@ func TestBridgeRouting(t *testing.T) {
 
 func TestBridge(t *testing.T) {
 	for _, testCase := range []struct {
-		name        string
-		protocol    stack.NetworkProtocol
-		addressSize int
+		name            string
+		protocolFactory stack.NetworkProtocolFactory
+		protocolNumber  tcpip.NetworkProtocolNumber
+		addressSize     int
 	}{
-		{name: "ipv4", protocol: ipv4.NewProtocol(), addressSize: header.IPv4AddressSize},
-		{name: "ipv6", protocol: ipv6.NewProtocol(), addressSize: header.IPv6AddressSize},
+		{name: "ipv4", protocolFactory: ipv4.NewProtocol, protocolNumber: ipv4.ProtocolNumber, addressSize: header.IPv4AddressSize},
+		{name: "ipv6", protocolFactory: ipv6.NewProtocol, protocolNumber: ipv6.ProtocolNumber, addressSize: header.IPv6AddressSize},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			// payload should be unique enough that it won't accidentally appear
@@ -525,14 +526,14 @@ func TestBridge(t *testing.T) {
 			ep5, ep6 := pipe(linkAddr5, linkAddr6)
 			s1addr := tcpip.Address(bytes.Repeat([]byte{1}, testCase.addressSize))
 			s1subnet := util.PointSubnet(s1addr)
-			s1, err := makeStackWithEndpoint(ep1, testCase.protocol, s1addr)
+			s1, err := makeStackWithEndpoint(ep1, testCase.protocolFactory, testCase.protocolNumber, s1addr)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			baddr := tcpip.Address(bytes.Repeat([]byte{2}, testCase.addressSize))
 			bsubnet := util.PointSubnet(baddr)
-			sb, b := makeStackWithBridgedEndpoints(t, testCase.protocol, baddr, ep5, ep2, ep3)
+			sb, b := makeStackWithBridgedEndpoints(t, testCase.protocolFactory, testCase.protocolNumber, baddr, ep5, ep2, ep3)
 
 			const ep2nicid = 2
 
@@ -547,7 +548,7 @@ func TestBridge(t *testing.T) {
 
 			s2addr := tcpip.Address(bytes.Repeat([]byte{3}, testCase.addressSize))
 			s2subnet := util.PointSubnet(s2addr)
-			s2, err := makeStackWithEndpoint(ep4, testCase.protocol, s2addr)
+			s2, err := makeStackWithEndpoint(ep4, testCase.protocolFactory, testCase.protocolNumber, s2addr)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -560,7 +561,7 @@ func TestBridge(t *testing.T) {
 			if err := sb.AddAddress(ep2nicid, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
-			if err := sb.AddAddress(ep2nicid, testCase.protocol.Number(), bcaddr); err != nil {
+			if err := sb.AddAddress(ep2nicid, testCase.protocolNumber, bcaddr); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
 
@@ -615,7 +616,7 @@ func TestBridge(t *testing.T) {
 
 			for addr, toStack := range addrs {
 				t.Run(fmt.Sprintf("ConnectAndWrite_%s", addr), func(t *testing.T) {
-					recvd, err := connectAndWrite(s1, toStack, testCase.protocol, addr, payload)
+					recvd, err := connectAndWrite(s1, toStack, testCase.protocolFactory, testCase.protocolNumber, addr, payload)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -693,14 +694,14 @@ func TestBridge(t *testing.T) {
 			for addr, toStack := range noLongerConnectable {
 				t.Run(addr.String(), func(t *testing.T) {
 					senderWaitQueue := new(waiter.Queue)
-					sender, err := s1.NewEndpoint(tcp.ProtocolNumber, testCase.protocol.Number(), senderWaitQueue)
+					sender, err := s1.NewEndpoint(tcp.ProtocolNumber, testCase.protocolNumber, senderWaitQueue)
 					if err != nil {
 						t.Fatalf("NewEndpoint failed: %s", err)
 					}
 					defer sender.Close()
 
 					receiverWaitQueue := new(waiter.Queue)
-					receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, testCase.protocol.Number(), receiverWaitQueue)
+					receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, testCase.protocolNumber, receiverWaitQueue)
 					if err != nil {
 						t.Fatalf("NewEndpoint failed: %s", err)
 					}
@@ -725,7 +726,7 @@ func TestBridge(t *testing.T) {
 			}
 
 			for addr, toStack := range stillConnectable {
-				recvd, err := connectAndWrite(s1, toStack, testCase.protocol, addr, payload)
+				recvd, err := connectAndWrite(s1, toStack, testCase.protocolFactory, testCase.protocolNumber, addr, payload)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -864,18 +865,18 @@ func (*endpoint) ARPHardwareType() header.ARPHardwareType {
 func (*endpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
-func makeStackWithEndpoint(ep stack.LinkEndpoint, protocol stack.NetworkProtocol, addr tcpip.Address) (*stack.Stack, error) {
+func makeStackWithEndpoint(ep stack.LinkEndpoint, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address) (*stack.Stack, error) {
 	if testing.Verbose() {
 		ep = sniffer.New(ep)
 	}
 
 	s := stack.New(stack.Options{
-		NetworkProtocols: []stack.NetworkProtocol{
-			arp.NewProtocol(),
-			protocol,
+		NetworkProtocols: []stack.NetworkProtocolFactory{
+			arp.NewProtocol,
+			protocolFactory,
 		},
-		TransportProtocols: []stack.TransportProtocol{
-			tcp.NewProtocol(),
+		TransportProtocols: []stack.TransportProtocolFactory{
+			tcp.NewProtocol,
 		},
 	})
 	if err := s.CreateNIC(1, ep); err != nil {
@@ -884,13 +885,13 @@ func makeStackWithEndpoint(ep stack.LinkEndpoint, protocol stack.NetworkProtocol
 	if err := s.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
-	if err := s.AddAddress(1, protocol.Number(), addr); err != nil {
+	if err := s.AddAddress(1, protocolNumber, addr); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 	return s, nil
 }
 
-func makeStackWithBridgedEndpoints(t *testing.T, protocol stack.NetworkProtocol, baddr tcpip.Address, eps ...stack.LinkEndpoint) (*stack.Stack, *bridge.Endpoint) {
+func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, baddr tcpip.Address, eps ...stack.LinkEndpoint) (*stack.Stack, *bridge.Endpoint) {
 	t.Helper()
 	if testing.Verbose() {
 		for i := range eps {
@@ -899,12 +900,12 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocol stack.NetworkProtocol,
 	}
 
 	stk := stack.New(stack.Options{
-		NetworkProtocols: []stack.NetworkProtocol{
-			arp.NewProtocol(),
-			protocol,
+		NetworkProtocols: []stack.NetworkProtocolFactory{
+			arp.NewProtocol,
+			protocolFactory,
 		},
-		TransportProtocols: []stack.TransportProtocol{
-			tcp.NewProtocol(),
+		TransportProtocols: []stack.TransportProtocolFactory{
+			tcp.NewProtocol,
 		},
 	})
 
@@ -926,7 +927,7 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocol stack.NetworkProtocol,
 	if err := stk.CreateNIC(bID, bridgeLinkEP); err != nil {
 		t.Fatalf("CreateNIC failed: %s", err)
 	}
-	if err := stk.AddAddress(bID, protocol.Number(), baddr); err != nil {
+	if err := stk.AddAddress(bID, protocolNumber, baddr); err != nil {
 		t.Fatalf("AddAddress failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
@@ -936,16 +937,16 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocol stack.NetworkProtocol,
 	return stk, bridgeEP
 }
 
-func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocol stack.NetworkProtocol, addr tcpip.Address, payload string) ([]byte, error) {
+func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address, payload string) ([]byte, error) {
 	senderWaitQueue := new(waiter.Queue)
-	sender, err := fromStack.NewEndpoint(tcp.ProtocolNumber, protocol.Number(), senderWaitQueue)
+	sender, err := fromStack.NewEndpoint(tcp.ProtocolNumber, protocolNumber, senderWaitQueue)
 	if err != nil {
 		return nil, fmt.Errorf("NewEndpoint failed: %s", err)
 	}
 	defer sender.Close()
 
 	receiverWaitQueue := new(waiter.Queue)
-	receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, protocol.Number(), receiverWaitQueue)
+	receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, protocolNumber, receiverWaitQueue)
 	if err != nil {
 		return nil, fmt.Errorf("NewEndpoint failed: %s", err)
 	}

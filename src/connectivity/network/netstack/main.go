@@ -214,54 +214,55 @@ func Main() {
 	ndpDisp := newNDPDispatcher()
 
 	stk := tcpipstack.New(tcpipstack.Options{
-		NetworkProtocols: []tcpipstack.NetworkProtocol{
-			arp.NewProtocol(),
-			ipv4.NewProtocol(),
-			ipv6.NewProtocol(),
+		NetworkProtocols: []tcpipstack.NetworkProtocolFactory{
+			arp.NewProtocol,
+			ipv4.NewProtocol,
+			ipv6.NewProtocolWithOptions(ipv6.Options{
+				NDPConfigs: ipv6.NDPConfigurations{
+					DupAddrDetectTransmits:        dadTransmits,
+					RetransmitTimer:               dadRetransmitTimer,
+					MaxRtrSolicitations:           maxRtrSolicitations,
+					RtrSolicitationInterval:       rtrSolicitationInterval,
+					MaxRtrSolicitationDelay:       maxRtrSolicitationDelay,
+					HandleRAs:                     true,
+					DiscoverDefaultRouters:        true,
+					DiscoverOnLinkPrefixes:        true,
+					AutoGenGlobalAddresses:        true,
+					AutoGenAddressConflictRetries: autoGenAddressConflictRetries,
+					AutoGenTempGlobalAddresses:    true,
+					MaxTempAddrValidLifetime:      maxTempAddrValidLifetime,
+					MaxTempAddrPreferredLifetime:  maxTempAddrPreferredLifetime,
+					RegenAdvanceDuration:          regenAdvanceDuration,
+				},
+				AutoGenIPv6LinkLocal: true,
+				NDPDisp:              ndpDisp,
+				OpaqueIIDOpts: ipv6.OpaqueInterfaceIdentifierOptions{
+					NICNameFromID: func(nicID tcpip.NICID, nicName string) string {
+						// As of writing, Netstack creates NICs with names so we return the name
+						// the NIC was created with. Just in case, we have a default NIC name
+						// format for NICs that were not created with a name.
+						if nicName != "" {
+							return nicName
+						}
+						return fmt.Sprintf("opaqueIIDNIC%d", nicID)
+					},
+					SecretKey: secretKeyForOpaqueIID,
+				},
+				TempIIDSeed: tempIIDSeed,
+			}),
 		},
-		TransportProtocols: []tcpipstack.TransportProtocol{
-			icmp.NewProtocol4(),
-			icmp.NewProtocol6(),
-			tcp.NewProtocol(),
-			udp.NewProtocol(),
+		TransportProtocols: []tcpipstack.TransportProtocolFactory{
+			icmp.NewProtocol4,
+			icmp.NewProtocol6,
+			tcp.NewProtocol,
+			udp.NewProtocol,
 		},
 		HandleLocal: true,
 
-		NDPConfigs: tcpipstack.NDPConfigurations{
-			DupAddrDetectTransmits:        dadTransmits,
-			RetransmitTimer:               dadRetransmitTimer,
-			MaxRtrSolicitations:           maxRtrSolicitations,
-			RtrSolicitationInterval:       rtrSolicitationInterval,
-			MaxRtrSolicitationDelay:       maxRtrSolicitationDelay,
-			HandleRAs:                     true,
-			DiscoverDefaultRouters:        true,
-			DiscoverOnLinkPrefixes:        true,
-			AutoGenGlobalAddresses:        true,
-			AutoGenAddressConflictRetries: autoGenAddressConflictRetries,
-			AutoGenTempGlobalAddresses:    true,
-			MaxTempAddrValidLifetime:      maxTempAddrValidLifetime,
-			MaxTempAddrPreferredLifetime:  maxTempAddrPreferredLifetime,
-			RegenAdvanceDuration:          regenAdvanceDuration,
-		},
-		NDPDisp:              ndpDisp,
-		AutoGenIPv6LinkLocal: true,
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
 		RawFactory: nil,
-		OpaqueIIDOpts: tcpipstack.OpaqueInterfaceIdentifierOptions{
-			NICNameFromID: func(nicID tcpip.NICID, nicName string) string {
-				// As of writing, Netstack creates NICs with names so we return the name
-				// the NIC was created with. Just in case, we have a default NIC name
-				// format for NICs that were not created with a name.
-				if nicName != "" {
-					return nicName
-				}
-				return fmt.Sprintf("opaqueIIDNIC%d", nicID)
-			},
-			SecretKey: secretKeyForOpaqueIID,
-		},
-		TempIIDSeed: tempIIDSeed,
 	})
 
 	delayEnabled := tcpip.TCPDelayEnabled(true)

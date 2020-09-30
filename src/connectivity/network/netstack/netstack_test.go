@@ -501,7 +501,7 @@ func (*testNDPDispatcher) OnDNSSearchListOption(tcpip.NICID, []string, time.Dura
 }
 
 // OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
-func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, tcpipstack.DHCPv6ConfigurationFromNDPRA) {
+func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, ipv6.DHCPv6ConfigurationFromNDPRA) {
 }
 
 // Test that NICs get an IPv6 link-local address using the same algorithm that
@@ -808,26 +808,27 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 	return ns
 }
 
-func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispatcher) *Netstack {
+func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp ipv6.NDPDispatcher) *Netstack {
 	t.Helper()
 	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, ndpDisp, &noopNicRemovedHandler{})
 }
 
-func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp tcpipstack.NDPDispatcher, h nicRemovedHandler) *Netstack {
+func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp ipv6.NDPDispatcher, h nicRemovedHandler) *Netstack {
 	t.Helper()
 
 	// TODO(fxbug.dev/57075): Use a fake clock
 	stk := tcpipstack.New(tcpipstack.Options{
-		NetworkProtocols: []tcpipstack.NetworkProtocol{
-			arp.NewProtocol(),
-			ipv4.NewProtocol(),
-			ipv6.NewProtocol(),
+		NetworkProtocols: []tcpipstack.NetworkProtocolFactory{
+			arp.NewProtocol,
+			ipv4.NewProtocol,
+			ipv6.NewProtocolWithOptions(ipv6.Options{
+				NDPDisp: ndpDisp,
+			}),
 		},
-		TransportProtocols: []tcpipstack.TransportProtocol{
-			tcp.NewProtocol(),
-			udp.NewProtocol(),
+		TransportProtocols: []tcpipstack.TransportProtocolFactory{
+			tcp.NewProtocol,
+			udp.NewProtocol,
 		},
-		NDPDisp: ndpDisp,
 	})
 	ns := &Netstack{
 		stack: stk,
