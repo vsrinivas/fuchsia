@@ -99,9 +99,6 @@ type devFinderCmd struct {
 	netboot bool
 	// If set to true, uses mdns protocol.
 	mdns bool
-	// If set to true, uses the netsvc address instead of the netstack
-	// address.
-	useNetsvcAddress bool
 	// If set to true, ignores NAT and instead uses the additional records
 	// section of the mDNS response to determine the device address.
 	ignoreNAT bool
@@ -165,7 +162,6 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.IntVar(&cmd.ttl, "ttl", -1, "[linux only] Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
 	f.BoolVar(&cmd.netboot, "netboot", false, "Determines whether to use netboot protocol")
 	f.BoolVar(&cmd.mdns, "mdns", true, "Determines whether to use mDNS protocol")
-	f.BoolVar(&cmd.useNetsvcAddress, "netsvc-address", false, "Determines whether to use the Fuchsia netsvc address. Ignored if |netboot| is set to false.")
 	f.BoolVar(&cmd.ignoreNAT, "ignore-nat", false, "[linux only] Determines whether to ignore possible NAT. Returns the target's address as it sees itself behind a NAT.")
 	f.BoolVar(&cmd.ipv6, "ipv6", true, "Set whether to query using IPv6. Disabling IPv6 will also disable netboot.")
 	f.BoolVar(&cmd.ipv4, "ipv4", true, "Set whether to query using IPv4")
@@ -328,20 +324,8 @@ func (cmd *devFinderCmd) close() {
 
 func (cmd *devFinderCmd) deviceFinders() ([]deviceFinder, error) {
 	if len(cmd.finders) == 0 {
-		if !cmd.localResolve {
-			if cmd.useNetsvcAddress {
-				if cmd.mdns {
-					return nil, errors.New("netsvc-address is incompatible with mdns")
-				}
-			} else {
-				if cmd.netboot {
-					return nil, errors.New("netboot must be used with netsvc-address")
-				}
-			}
-		} else {
-			if cmd.useNetsvcAddress {
-				return nil, errors.New("netsvc-address is incompatible with local")
-			}
+		if !cmd.localResolve && cmd.netboot && cmd.mdns {
+			return nil, errors.New("only one of mdns and netboot may be specified")
 		}
 		if cmd.mdns {
 			if runtime.GOOS == "darwin" {
