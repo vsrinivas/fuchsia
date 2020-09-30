@@ -19,29 +19,6 @@ namespace fdf = llcpp::fuchsia::driver::framework;
 namespace frunner = llcpp::fuchsia::component::runner;
 namespace fsys = llcpp::fuchsia::sys2;
 
-namespace {
-
-template <typename T>
-zx::status<> add_entry(async_dispatcher_t* dispatcher, DriverRunner* runner,
-                       const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service = [dispatcher, runner](zx::channel request) {
-    auto result = fidl::BindServer<typename T::Interface>(dispatcher, std::move(request), runner);
-    if (result.is_error()) {
-      LOGF(ERROR, "Failed to bind channel to '%s': %s", T::Name,
-           zx_status_get_string(result.error()));
-      return result.error();
-    }
-    return ZX_OK;
-  };
-  zx_status_t status = svc_dir->AddEntry(T::Name, fbl::MakeRefCounted<fs::Service>(service));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s", T::Name, zx_status_get_string(status));
-  }
-  return zx::make_status(status);
-}
-
-}  // namespace
-
 DriverComponent::DriverComponent(zx::channel exposed_dir, zx::channel driver)
     : exposed_dir_(std::move(exposed_dir)), driver_(std::move(driver)) {}
 
@@ -174,7 +151,22 @@ DriverRunner::DriverRunner(zx::channel realm, DriverIndex* driver_index,
       root_node_(nullptr, this, dispatcher) {}
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  return add_entry<frunner::ComponentRunner>(dispatcher_, this, svc_dir);
+  const auto service = [this](zx::channel request) {
+    auto result = fidl::BindServer(dispatcher_, std::move(request), this);
+    if (result.is_error()) {
+      LOGF(ERROR, "Failed to bind channel to '%s': %s", frunner::ComponentRunner::Name,
+           zx_status_get_string(result.error()));
+      return result.error();
+    }
+    return ZX_OK;
+  };
+  zx_status_t status =
+      svc_dir->AddEntry(frunner::ComponentRunner::Name, fbl::MakeRefCounted<fs::Service>(service));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to add directory entry '%s': %s", frunner::ComponentRunner::Name,
+         zx_status_get_string(status));
+  }
+  return zx::make_status(status);
 }
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
