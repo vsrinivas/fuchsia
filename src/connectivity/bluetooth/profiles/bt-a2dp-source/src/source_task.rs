@@ -130,12 +130,12 @@ impl ConfiguredSourceTask {
                 trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
                 if let Err(e) = media_stream.write(&packet).await {
                     info!("Failed sending packet to peer: {}", e);
-                    let _ = data_stream_inspect.try_lock().map(|mut l| {
-                        l.record_transferred(packet.len(), fasync::Time::now());
-                    });
                     trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
                     return Ok(());
                 }
+                let _ = data_stream_inspect.try_lock().map(|mut l| {
+                    l.record_transferred(packet.len(), fasync::Time::now());
+                });
                 trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
             }
         }

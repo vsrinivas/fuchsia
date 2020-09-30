@@ -391,10 +391,10 @@ impl StreamEndpoint {
 
         *stream_held = true;
 
-        Some(MediaStream {
-            in_use: self.stream_held.clone(),
-            channel: Arc::downgrade(self.transport.as_ref().unwrap()),
-        })
+        Some(MediaStream::new(
+            self.stream_held.clone(),
+            Arc::downgrade(self.transport.as_ref().unwrap()),
+        ))
     }
 }
 
@@ -407,6 +407,10 @@ pub struct MediaStream {
 }
 
 impl MediaStream {
+    pub fn new(in_use: Arc<Mutex<bool>>, channel: Weak<RwLock<Channel>>) -> Self {
+        Self { in_use, channel }
+    }
+
     fn try_upgrade(&self) -> Result<Arc<RwLock<Channel>>, io::Error> {
         self.channel
             .upgrade()
