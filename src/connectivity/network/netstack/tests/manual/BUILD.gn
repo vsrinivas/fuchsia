@@ -30,19 +30,6 @@ executable("nbiotest") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("polltest") {
-  testonly = true
-
-  sources = [ "polltest.c" ]
-
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
 executable("selecttest") {
   testonly = true
 
@@ -89,7 +76,6 @@ package("netstack-manual-tests") {
     ":gethostbyname_test",
     ":keepalivetest",
     ":nbiotest",
-    ":polltest",
     ":selecttest",
     ":sockopttest",
   ]
@@ -105,10 +91,6 @@ package("netstack-manual-tests") {
     },
     {
       name = "nbiotest"
-      shell = true
-    },
-    {
-      name = "polltest"
       shell = true
     },
     {
