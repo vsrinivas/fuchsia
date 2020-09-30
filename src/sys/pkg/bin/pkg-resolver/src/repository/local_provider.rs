@@ -24,7 +24,6 @@ pub struct LocalMirrorRepositoryProvider {
 }
 
 impl LocalMirrorRepositoryProvider {
-    #[cfg(test)] // TODO(fxb/59827) use this.
     pub fn new(proxy: LocalMirrorProxy, url: RepoUrl) -> Self {
         Self { proxy, url }
     }

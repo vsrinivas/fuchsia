@@ -12,6 +12,7 @@ use {
     },
     anyhow::{anyhow, format_err},
     cobalt_sw_delivery_registry as metrics,
+    fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryKey},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, Property},
@@ -26,7 +27,7 @@ use {
         error::Error as TufError,
         interchange::Json,
         metadata::{MetadataVersion, TargetPath},
-        repository::{EphemeralRepository, HttpRepositoryBuilder},
+        repository::{EphemeralRepository, HttpRepositoryBuilder, RepositoryProvider},
     },
 };
 
@@ -34,6 +35,7 @@ mod updating_tuf_client;
 use updating_tuf_client::UpdateResult;
 
 mod local_provider;
+use local_provider::LocalMirrorRepositoryProvider;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTargetMetadata {
@@ -78,16 +80,40 @@ impl Repository {
         config: &RepositoryConfig,
         mut cobalt_sender: CobaltSender,
         node: inspect::Node,
+        local_mirror: Option<LocalMirrorProxy>,
     ) -> Result<Self, anyhow::Error> {
         let local = EphemeralRepository::<Json>::new();
-        let mirror_config = config
-            .mirrors()
-            .get(0)
-            .ok_or_else(|| format_err!("Repo config has no mirrors: {:?}", config))?;
-        let remote_url = mirror_config.mirror_url().to_owned();
-        let remote =
-            HttpRepositoryBuilder::new_with_uri(remote_url, fuchsia_hyper::new_https_client())
-                .build();
+
+        if config.use_local_mirror() && !config.mirrors().is_empty() {
+            return Err(format_err!("Cannot have a local mirror and remote mirrors!"));
+        }
+
+        let mirror_config = config.mirrors().get(0);
+
+        let remote: Box<dyn RepositoryProvider<Json> + Send> =
+            match (local_mirror, config.use_local_mirror(), mirror_config.as_ref()) {
+                (Some(local_mirror), true, _) => Box::new(LocalMirrorRepositoryProvider::new(
+                    local_mirror,
+                    config.repo_url().clone(),
+                )),
+                (_, false, Some(mirror_config)) => {
+                    let remote_url = mirror_config.mirror_url().to_owned();
+                    Box::new(
+                        HttpRepositoryBuilder::new_with_uri(
+                            remote_url,
+                            fuchsia_hyper::new_https_client(),
+                        )
+                        .build(),
+                    )
+                }
+                (local_mirror, _, _) => {
+                    return Err(format_err!(
+                "Repo config has invalid mirror configuration: config={:?}, use_local_mirror={}",
+                config,
+                local_mirror.is_some()
+            ))
+                }
+            };
 
         let mut root_keys = vec![];
 
@@ -238,6 +264,7 @@ mod tests {
                 config,
                 cobalt_sender,
                 inspect::Inspector::new().root().create_child("inner-node"),
+                None,
             )
             .await
         }
@@ -509,6 +536,7 @@ mod inspect_tests {
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),
+            None,
         )
         .await
         .expect("created Repository");
@@ -558,6 +586,7 @@ mod inspect_tests {
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),
+            None,
         )
         .await
         .expect("created Repository");
@@ -614,6 +643,7 @@ mod inspect_tests {
             &repo_config,
             dummy_sender(),
             inspector.root().create_child("repo-node"),
+            None,
         )
         .await
         .expect("created opened repo");

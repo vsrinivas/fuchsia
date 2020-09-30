@@ -495,8 +495,8 @@ async fn use_cached_package() {
     let package_dir = env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
-    served_repository.stop().await;
     env.stop().await;
+    served_repository.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -919,12 +919,7 @@ async fn resolve_local_mirror() {
         .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
         .build()
         .await;
-    // TODO(fxbug.dev/59827): don't serve a repository, use the below line instead.
-    // let repo_config = repo.make_repo_config("fuchsia-pkg://test".parse().unwrap(), None, false, true);
-    let served = repo.clone().server().start().unwrap();
-    let repo_config =
-        served.make_repo_config_with_local_mirror("fuchsia-pkg://test".parse().unwrap());
-
+    let repo_config = repo.make_repo_config("fuchsia-pkg://test".parse().unwrap(), None, true);
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());

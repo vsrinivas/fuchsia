@@ -5,7 +5,7 @@ use {
     anyhow::{anyhow, Context as _, Error},
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::{LocalMirrorMarker, PackageCacheMarker},
+    fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
@@ -129,6 +129,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         experiments,
         &config,
         cobalt_sender.clone(),
+        local_mirror.clone(),
     )));
     let rewrite_manager = Arc::new(RwLock::new(
         load_rewrite_manager(
@@ -269,6 +270,7 @@ fn load_repo_manager(
     experiments: Experiments,
     config: &Config,
     mut cobalt_sender: CobaltSender,
+    local_mirror: Option<LocalMirrorProxy>,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
@@ -279,6 +281,7 @@ fn load_repo_manager(
             fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
         })
+        .with_local_mirror(local_mirror)
         .inspect_node(node)
         .load_static_configs_dir(STATIC_REPO_DIR)
     {

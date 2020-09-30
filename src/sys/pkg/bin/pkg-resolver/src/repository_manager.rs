@@ -11,6 +11,7 @@ use {
     },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
+    fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
@@ -38,6 +39,7 @@ pub struct RepositoryManager {
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
+    local_mirror: Option<LocalMirrorProxy>,
 }
 
 #[derive(Debug)]
@@ -249,6 +251,7 @@ impl RepositoryManager {
             url.repo(),
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
+            self.local_mirror.clone(),
         );
 
         let cobalt_sender = self.cobalt_sender.clone();
@@ -280,6 +283,7 @@ impl RepositoryManager {
             url.repo(),
             self.cobalt_sender.clone(),
             Arc::clone(&self.inspect.repos_node),
+            self.local_mirror.clone(),
         );
 
         let cobalt_sender = self.cobalt_sender.clone();
@@ -301,6 +305,7 @@ async fn open_cached_or_new_repository(
     url: &RepoUrl,
     cobalt_sender: CobaltSender,
     inspect_node: Arc<inspect::Node>,
+    local_mirror: Option<LocalMirrorProxy>,
 ) -> Result<Arc<AsyncMutex<Repository>>, OpenRepoError> {
     // Exit early if we've already connected to this repository.
     if let Some(conn) = repositories.read().get(url) {
@@ -311,9 +316,14 @@ async fn open_cached_or_new_repository(
     // create the client first, even if it proves to be redundant because we lost the race with
     // another thread.
     let mut repo = Arc::new(futures::lock::Mutex::new(
-        Repository::new(&config, cobalt_sender, inspect_node.create_child(url.host()))
-            .await
-            .map_err(|e| OpenRepoError { repo_url: config.repo_url().clone(), source: e })?,
+        Repository::new(
+            &config,
+            cobalt_sender,
+            inspect_node.create_child(url.host()),
+            local_mirror,
+        )
+        .await
+        .map_err(|e| OpenRepoError { repo_url: config.repo_url().clone(), source: e })?,
     ));
 
     // It's still possible we raced with some other connection attempt
@@ -338,6 +348,7 @@ pub struct RepositoryManagerBuilder<S, N> {
     experiments: Experiments,
     cobalt_sender: S,
     inspect_node: N,
+    local_mirror: Option<LocalMirrorProxy>,
 }
 
 impl<S, N> RepositoryManagerBuilder<S, N> {
@@ -400,6 +411,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
             experiments,
             cobalt_sender: UnsetCobaltSender,
             inspect_node: UnsetInspectNode,
+            local_mirror: None,
         };
 
         if let Some(err) = err {
@@ -407,6 +419,11 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
         } else {
             Ok(builder)
         }
+    }
+
+    pub fn with_local_mirror(mut self, proxy: Option<LocalMirrorProxy>) -> Self {
+        self.local_mirror = proxy;
+        self
     }
 
     /// Create a new builder with no enabled experiments.
@@ -444,6 +461,7 @@ impl<S> RepositoryManagerBuilder<S, UnsetInspectNode> {
             experiments: self.experiments,
             cobalt_sender: self.cobalt_sender,
             inspect_node,
+            local_mirror: self.local_mirror,
         }
     }
 }
@@ -461,6 +479,7 @@ impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
             experiments: self.experiments,
             cobalt_sender,
             inspect_node: self.inspect_node,
+            local_mirror: self.local_mirror,
         }
     }
 }
@@ -527,6 +546,7 @@ impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
             repositories: Arc::new(RwLock::new(HashMap::new())),
             cobalt_sender: self.cobalt_sender,
             inspect,
+            local_mirror: self.local_mirror,
         }
     }
 }

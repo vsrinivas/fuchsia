@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_pkg_ext::MirrorConfig,
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -20,13 +19,12 @@ use {
         stream::StreamExt,
     },
     http_uri_ext::HttpUriExt as _,
-    hyper_rustls::HttpsConnector,
     std::sync::{Arc, Weak},
     tuf::{
         error::Error as TufError,
         interchange::Json,
         metadata::{TargetDescription, TargetPath},
-        repository::{HttpRepository, RepositoryProvider, RepositoryStorage},
+        repository::{RepositoryProvider, RepositoryStorage},
     },
 };
 
@@ -37,7 +35,7 @@ where
     client: tuf::client::Client<
         Json,
         L,
-        HttpRepository<HttpsConnector<HyperConnector>, Json>,
+        Box<dyn RepositoryProvider<Json> + Send>,
         tuf::client::DefaultTranslator,
     >,
 
@@ -122,20 +120,21 @@ where
         client: tuf::client::Client<
             Json,
             L,
-            HttpRepository<HttpsConnector<HyperConnector>, Json>,
+            Box<dyn RepositoryProvider<Json> + Send>,
             tuf::client::DefaultTranslator,
         >,
-        config: &MirrorConfig,
+        config: Option<&MirrorConfig>,
         node: inspect::Node,
         cobalt_sender: CobaltSender,
     ) -> Arc<AsyncMutex<Self>> {
-        let (auto_client_aborter, auto_client_node_and_registration) = if config.subscribe() {
-            let (aborter, registration) = AbortHandle::new_pair();
-            let auto_client_node = node.create_child("auto_client");
-            (Some(aborter.into()), Some((auto_client_node, registration)))
-        } else {
-            (None, None)
-        };
+        let (auto_client_aborter, auto_client_node_and_registration) =
+            if config.map_or(false, |c| c.subscribe()) {
+                let (aborter, registration) = AbortHandle::new_pair();
+                let auto_client_node = node.create_child("auto_client");
+                (Some(aborter.into()), Some((auto_client_node, registration, config.unwrap())))
+            } else {
+                (None, None)
+            };
         let root_version = client.root_version();
 
         let ret = Arc::new(AsyncMutex::new(Self {
@@ -165,12 +164,12 @@ where
             cobalt_sender,
         }));
 
-        if let Some((node, registration)) = auto_client_node_and_registration {
+        if let Some((node, registration, mirror_config)) = auto_client_node_and_registration {
             fasync::Task::local(
                 Abortable::new(
                     AutoClient::from_updating_client_and_auto_url(
                         Arc::downgrade(&ret),
-                        config
+                        mirror_config
                             .mirror_url()
                             .to_owned()
                             .extend_dir_with_path("auto")
