@@ -30,6 +30,7 @@
 #include "../input_copier.h"
 #include "../use_video_decoder.h"
 #include "../util.h"
+#include "openssl/base.h"
 
 namespace {
 
@@ -39,6 +40,21 @@ constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 constexpr uint64_t kMaxBufferBytes = 8 * 1024 * 1024;
 
 std::mutex tags_lock;
+
+std::string GetSha256SoFar(const SHA256_CTX* sha256_ctx) {
+  uint8_t md[SHA256_DIGEST_LENGTH] = {};
+  // struct copy so caller can keep hashing more data into sha256_ctx
+  SHA256_CTX sha256_ctx_copy = *sha256_ctx;
+  ZX_ASSERT(SHA256_Final(md, &sha256_ctx_copy));
+  char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
+  char* actual_sha256_ptr = actual_sha256;
+  for (uint8_t byte : md) {
+    // Writes the terminating 0 each time, returns 2 each time.
+    actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "%02x", byte);
+  }
+  FX_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
+  return std::string(actual_sha256, SHA256_DIGEST_LENGTH * 2);
+}
 
 }  // namespace
 
@@ -115,6 +131,8 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
         if (i420_data) {
           got_output_data = true;
           SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+          std::string sha256_so_far = GetSha256SoFar(&sha256_ctx);
+          LOGF("frame_index: %u SHA256 so far: %s", frame_index, sha256_so_far.c_str());
         }
         // ~increment_frame_index
       };
@@ -170,19 +188,11 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   }
 
   if (got_output_data) {
-    uint8_t md[SHA256_DIGEST_LENGTH] = {};
-    ZX_ASSERT(SHA256_Final(md, &sha256_ctx));
-    char actual_sha256[SHA256_DIGEST_LENGTH * 2 + 1];
-    char* actual_sha256_ptr = actual_sha256;
-    for (uint8_t byte : md) {
-      // Writes the terminating 0 each time, returns 2 each time.
-      actual_sha256_ptr += snprintf(actual_sha256_ptr, 3, "%02x", byte);
-    }
-    FX_CHECK(actual_sha256_ptr == actual_sha256 + SHA256_DIGEST_LENGTH * 2);
-    printf("Done decoding - computed sha256 is: %s\n", actual_sha256);
-    if (strcmp(actual_sha256, golden_sha256.c_str())) {
+    std::string actual_sha256 = GetSha256SoFar(&sha256_ctx);
+    printf("Done decoding - computed sha256 is: %s\n", actual_sha256.c_str());
+    if (strcmp(actual_sha256.c_str(), golden_sha256.c_str())) {
       printf("The sha256 doesn't match - expected: %s actual: %s\n", golden_sha256.c_str(),
-             actual_sha256);
+             actual_sha256.c_str());
       return -1;
     }
     printf("The computed sha256 matches golden sha256.  Yay!\nPASS\n");
