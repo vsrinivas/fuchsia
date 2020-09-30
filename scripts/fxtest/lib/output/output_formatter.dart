@@ -138,7 +138,7 @@ abstract class OutputFormatter {
       // We do nothing with time events during realtime output -- the user is
       // already getting constant updates
       if (hasRealTimeOutput) return;
-      if (event.timeElapsed >= slowTestThreshold) {
+      if (slowTestThreshold != null && event.timeElapsed >= slowTestThreshold) {
         if (!_currentTestIsSlow) {
           _currentTestIsSlow = true;
           _handleSlowTest(event);
