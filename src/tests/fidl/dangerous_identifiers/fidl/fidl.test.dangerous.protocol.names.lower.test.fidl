@@ -768,6 +768,19 @@ protocol union {
     JustOneMethod();
 };
 
+protocol unknown {
+    JustOneMethod();
+};
+
+protocol unknown_bytes {
+    JustOneMethod();
+};
+
+[BindingsDenylist = "dart"]
+protocol unknown_data {
+    JustOneMethod();
+};
+
 protocol unsafe {
     JustOneMethod();
 };

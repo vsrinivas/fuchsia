@@ -196,6 +196,10 @@ protocol DangerousMethods {
     UINT64();
     UINT8();
     UNION();
+    UNKNOWN();
+    UNKNOWN_BYTES();
+    [BindingsDenylist = "dart"]
+    UNKNOWN_DATA();
     UNSAFE();
     UNSIGNED();
     UNSIZED();

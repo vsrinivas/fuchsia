@@ -196,6 +196,10 @@ table DangerousMembers {
     188: uint32 UINT64;
     189: uint32 UINT8;
     190: uint32 UNION;
+    216: uint32 UNKNOWN;
+    217: uint32 UNKNOWN_BYTES;
+    [BindingsDenylist = "dart"]
+    218: uint32 UNKNOWN_DATA;
     191: uint32 UNSAFE;
     192: uint32 UNSIGNED;
     193: uint32 UNSIZED;

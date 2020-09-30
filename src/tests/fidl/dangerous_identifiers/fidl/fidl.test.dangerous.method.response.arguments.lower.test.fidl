@@ -197,6 +197,10 @@ protocol DangerousResponseArguments {
     Method187() -> (argtype uint64);
     Method188() -> (argtype uint8);
     Method189() -> (argtype union);
+    Method215() -> (argtype unknown);
+    Method216() -> (argtype unknown_bytes);
+    [BindingsDenylist = "dart"]
+    Method217() -> (argtype unknown_data);
     Method190() -> (argtype unsafe);
     Method191() -> (argtype unsigned);
     Method192() -> (argtype unsized);

@@ -768,6 +768,19 @@ enum UNION {
     MEMBER = 1;
 };
 
+enum UNKNOWN {
+    MEMBER = 1;
+};
+
+enum UNKNOWN_BYTES {
+    MEMBER = 1;
+};
+
+[BindingsDenylist = "dart"]
+enum UNKNOWN_DATA {
+    MEMBER = 1;
+};
+
 enum UNSAFE {
     MEMBER = 1;
 };
@@ -1056,6 +1069,10 @@ enum DangerousMembers {
     UINT64 = 187;
     UINT8 = 188;
     UNION = 189;
+    UNKNOWN = 215;
+    UNKNOWN_BYTES = 216;
+    [BindingsDenylist = "dart"]
+    UNKNOWN_DATA = 217;
     UNSAFE = 190;
     UNSIGNED = 191;
     UNSIZED = 192;

@@ -765,6 +765,19 @@ table union {
     1: membertype member;
 };
 
+table unknown {
+    1: membertype member;
+};
+
+table unknown_bytes {
+    1: membertype member;
+};
+
+[BindingsDenylist = "dart"]
+table unknown_data {
+    1: membertype member;
+};
+
 table unsafe {
     1: membertype member;
 };
@@ -1053,6 +1066,10 @@ table DangerousMembers {
     188: uint64 f187;
     189: uint8 f188;
     190: union f189;
+    216: unknown f215;
+    217: unknown_bytes f216;
+    [BindingsDenylist = "dart"]
+    218: unknown_data f217;
     191: unsafe f190;
     192: unsigned f191;
     193: unsized f192;

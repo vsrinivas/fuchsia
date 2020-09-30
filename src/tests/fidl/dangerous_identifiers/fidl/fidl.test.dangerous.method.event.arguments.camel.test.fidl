@@ -197,6 +197,10 @@ protocol DangerousResponseArguments {
     -> Event187(argtype Uint64);
     -> Event188(argtype Uint8);
     -> Event189(argtype Union);
+    -> Event215(argtype Unknown);
+    -> Event216(argtype UnknownBytes);
+    [BindingsDenylist = "dart"]
+    -> Event217(argtype UnknownData);
     -> Event190(argtype Unsafe);
     -> Event191(argtype Unsigned);
     -> Event192(argtype Unsized);

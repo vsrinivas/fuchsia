@@ -5,8 +5,13 @@
 # Each line is either:
 # - a comment prefixed with # or
 # - a lower_camel_case identifier, a colon, and a unique numerical tag
+#   optionally, a BindingsDenylist mention can be added
 #
-# Note: last tag used is 215
+# Examples:
+#    coding_traits:32
+#    unknown_data:218 BindingsDenylist=dart
+#
+# Note: last tag used is 218
 abstract:1
 alignas:2
 alignof:3
@@ -198,6 +203,10 @@ uint32:187
 uint64:188
 uint8:189
 union:190
+unknown:216
+unknown_bytes:217
+# TODO(fxb/60495): Remedy identifier clashes.
+unknown_data:218 BindingsDenylist=dart
 unsafe:191
 unsigned:192
 unsized:193

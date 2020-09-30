@@ -197,6 +197,10 @@ protocol DangerousRequestArguments {
     Method187(argtype Uint64);
     Method188(argtype Uint8);
     Method189(argtype Union);
+    Method215(argtype Unknown);
+    Method216(argtype UnknownBytes);
+    [BindingsDenylist = "dart"]
+    Method217(argtype UnknownData);
     Method190(argtype Unsafe);
     Method191(argtype Unsigned);
     Method192(argtype Unsized);

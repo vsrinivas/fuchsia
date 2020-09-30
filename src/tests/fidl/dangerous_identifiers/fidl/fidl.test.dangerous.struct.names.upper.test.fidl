@@ -196,6 +196,10 @@ struct DangerousMembers {
     uint32 UINT64;
     uint32 UINT8;
     uint32 UNION;
+    uint32 UNKNOWN;
+    uint32 UNKNOWN_BYTES;
+    [BindingsDenylist = "dart"]
+    uint32 UNKNOWN_DATA;
     uint32 UNSAFE;
     uint32 UNSIGNED;
     uint32 UNSIZED;

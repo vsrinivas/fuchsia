@@ -45,16 +45,18 @@ FIDL_FORMAT = os.path.join(ZIRCON_TOOLS_DIR, 'fidl-format')
 # has three parts [my, super, identifer] and tag 8.
 class IdentifierDef:
 
-    def __init__(self, parts: List[str], tag: int):
+    def __init__(self, parts: List[str], tag: int, bindings_denylist: str):
         self.parts = parts
         self.tag = tag
+        self.bindings_denylist = bindings_denylist
 
 
 class Identifier:
 
-    def __init__(self, ident: str, tag: int):
+    def __init__(self, ident: str, tag: int, bindings_denylist: str):
         self.ident = ident
         self.tag = tag
+        self.bindings_denylist = bindings_denylist
 
 
 # Define ways that identifiers may be rendered
@@ -96,12 +98,16 @@ def constants(f, idents: List[Identifier]):
         # "const uint32 uint32 = 1;" will fail with an includes-cycle fidlc error.
         if ident.ident == "uint32":
             continue
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('const uint32 %s = 1;\n' % ident.ident)
 
 
 @use
 def using(f, idents: List[Identifier]):
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('using %s = vector;\n' % ident.ident)
 
 
@@ -117,11 +123,15 @@ def using(f, idents: List[Identifier]):
 def enums(f, idents: List[Identifier]):
     # enums with every dangerous name
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('enum %s { MEMBER = 1; };\n' % ident.ident)
 
     # enum with every dangerous field name
     f.write('enum DangerousMembers {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  %s = %d;\n' % (ident.ident, ident.tag - 1))
     f.write('};\n')
 
@@ -135,12 +145,16 @@ def struct_types(f, idents: List[Identifier]):
         # aliased causes a cycle.
         if ident.ident == "uint32":
             continue
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('struct %s { membertype member = 1; };\n' % ident.ident)
 
     # a struct with every dangerous name as the field type
     f.write('struct DangerousMembers {\n')
     for ident in idents:
         # dangerous field type
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  %s f%d;\n' % (ident.ident, ident.tag - 1))
     f.write('};\n')
 
@@ -150,6 +164,8 @@ def struct_names(f, idents: List[Identifier]):
     # a struct with every dangerous name as the field name
     f.write('struct DangerousMembers {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  uint32 %s;\n' % ident.ident)
     f.write('};\n')
 
@@ -193,11 +209,15 @@ def table_names(f, idents: List[Identifier]):
         # aliased causes a cycle.
         if ident.ident == "uint32":
             continue
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('table %s { 1: membertype member; };\n' % ident.ident)
     # a table with every dangerous name as the field type
     f.write('table DangerousMembers {\n')
     for ident in idents:
         # dangerous field type
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  %s: %s f%s;\n' % (ident.tag, ident.ident, ident.tag - 1))
     f.write('};\n')
 
@@ -207,6 +227,8 @@ def table_fields(f, idents: List[Identifier]):
     # a table with every dangerous name as the field name
     f.write('table DangerousMembers {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  %d: uint32 %s;\n' % (ident.tag, ident.ident))
     f.write('};\n')
 
@@ -215,6 +237,8 @@ def table_fields(f, idents: List[Identifier]):
 def protocol_names(f, idents: List[Identifier]):
     # a protocols with every dangerous name
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('protocol %s { JustOneMethod(); };\n' % ident.ident)
 
 
@@ -223,6 +247,8 @@ def method_names(f, idents: List[Identifier]):
     # a protocol with every dangerous name as a method name
     f.write('protocol DangerousMethods {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  %s();\n' % ident.ident)
     f.write('};\n')
 
@@ -232,6 +258,8 @@ def event_names(f, idents: List[Identifier]):
     # a protocol with every dangerous name as an event name
     f.write('protocol DangerousEvents {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  -> %s();\n' % ident.ident)
     f.write('};\n')
 
@@ -242,6 +270,8 @@ def method_request_arguments(f, idents: List[Identifier]):
     f.write('using argtype = uint32;\n')
     f.write('protocol DangerousRequestArguments {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  Method%d(argtype %s);\n' % (ident.tag - 1, ident.ident))
     f.write('};\n')
 
@@ -252,6 +282,8 @@ def method_response_arguments(f, idents: List[Identifier]):
     f.write('using argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write(
             '  Method%d() -> (argtype %s);\n' % (ident.tag - 1, ident.ident))
     f.write('};\n')
@@ -263,6 +295,8 @@ def method_event_arguments(f, idents: List[Identifier]):
     f.write('using argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
     for ident in idents:
+        if ident.bindings_denylist:
+            f.write('[BindingsDenylist="%s"]\n' % ident.bindings_denylist)
         f.write('  -> Event%d(argtype %s);\n' % (ident.tag - 1, ident.ident))
     f.write('};\n')
 
@@ -298,13 +332,17 @@ def dangerous_identifiers() -> List[IdentifierDef]:
     idents = []
     tags_seen = set()
     for line in lines:
-        line_search = re.match(r'^([a-z0-9_]+):([0-9]+)$', line)
+        line_search = re.match(
+            r'^([a-z0-9_]+):([0-9]+)(\s+BindingsDenylist=(.+))?$', line)
         if line_search:
             parts = line_search.group(1).split('_')
             tag = int(line_search.group(2))
+            bindings_denylist = ""
+            if line_search.group(4):
+                bindings_denylist = line_search.group(4)
             if tag not in tags_seen:
                 tags_seen.add(tag)
-                idents.append(IdentifierDef(parts, tag))
+                idents.append(IdentifierDef(parts, tag, bindings_denylist))
             else:
                 failed = True
                 print("line '%s' has duplicate tag" % line)
@@ -336,7 +374,8 @@ def generate_fidl(identifier_defs: List[IdentifierDef]) -> List[str]:
                 f.write('library %s;\n' % library_name)
                 use_func(
                     f, [
-                        Identifier(style_func(r.parts), r.tag)
+                        Identifier(
+                            style_func(r.parts), r.tag, r.bindings_denylist)
                         for r in identifier_defs
                     ])
             subprocess.check_output([FIDL_FORMAT, '-i', fidl_file])

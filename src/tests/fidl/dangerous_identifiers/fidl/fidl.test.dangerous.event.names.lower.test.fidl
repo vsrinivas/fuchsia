@@ -196,6 +196,10 @@ protocol DangerousEvents {
     -> uint64();
     -> uint8();
     -> union();
+    -> unknown();
+    -> unknown_bytes();
+    [BindingsDenylist = "dart"]
+    -> unknown_data();
     -> unsafe();
     -> unsigned();
     -> unsized();

@@ -769,6 +769,19 @@ struct Union {
     membertype member = 1;
 };
 
+struct Unknown {
+    membertype member = 1;
+};
+
+struct UnknownBytes {
+    membertype member = 1;
+};
+
+[BindingsDenylist = "dart"]
+struct UnknownData {
+    membertype member = 1;
+};
+
 struct Unsafe {
     membertype member = 1;
 };
@@ -1057,6 +1070,10 @@ struct DangerousMembers {
     Uint64 f187;
     Uint8 f188;
     Union f189;
+    Unknown f215;
+    UnknownBytes f216;
+    [BindingsDenylist = "dart"]
+    UnknownData f217;
     Unsafe f190;
     Unsigned f191;
     Unsized f192;

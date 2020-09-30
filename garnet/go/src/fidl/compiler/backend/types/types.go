@@ -935,43 +935,106 @@ func (r *Root) ForBindings(language string) Root {
 	}
 	for _, v := range r.Bits {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Bits = append(res.Bits, v)
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				}
+			}
+			res.Bits = append(res.Bits, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
 	for _, v := range r.Enums {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Enums = append(res.Enums, v)
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				}
+			}
+			res.Enums = append(res.Enums, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
 	for _, v := range r.Protocols {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Protocols = append(res.Protocols, v)
+			newV := v
+			newV.Methods = nil
+			for _, m := range v.Methods {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Methods = append(newV.Methods, m)
+				}
+			}
+			res.Protocols = append(res.Protocols, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
 	for _, v := range r.Services {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Services = append(res.Services, v)
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				}
+			}
+			res.Services = append(res.Services, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
 	for _, v := range r.Structs {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Structs = append(res.Structs, v)
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				}
+			}
+			res.Structs = append(res.Structs, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
 	for _, v := range r.Tables {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Tables = append(res.Tables, v)
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				} else {
+					newV.Members = append(newV.Members, TableMember{
+						Attributes: m.Attributes,
+						Reserved:   true,
+						Name:       m.Name,
+						Ordinal:    m.Ordinal,
+					})
+				}
+			}
+			res.Tables = append(res.Tables, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
 	for _, v := range r.Unions {
 		if !v.BindingsDenylistIncludes(language) {
-			res.Unions = append(res.Unions, v)
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				} else {
+					newV.Members = append(newV.Members, UnionMember{
+						Attributes: m.Attributes,
+						Reserved:   true,
+						Name:       m.Name,
+						Ordinal:    m.Ordinal,
+					})
+				}
+			}
+			res.Unions = append(res.Unions, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	}
