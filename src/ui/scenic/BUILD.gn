@@ -94,7 +94,7 @@ test_package("scenic_tests") {
     },
     {
       name = "gfx_swapchain_tests"
-      environments = magma_libvulkan_hardware_envs
+      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_unittests"
