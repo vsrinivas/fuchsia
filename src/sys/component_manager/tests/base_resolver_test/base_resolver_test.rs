@@ -26,7 +26,7 @@ async fn base_resolver_test() {
         .add_dir_handle("/boot", pkg_channel.into())
         .build().await.unwrap();
 
-    let event_source = &test.connect_to_event_source().await.unwrap();
+    let event_source = test.connect_to_event_source().await.unwrap();
 
     // Subscribe to events and begin execution of component manager
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await.unwrap();

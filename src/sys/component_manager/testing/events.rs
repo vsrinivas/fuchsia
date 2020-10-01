@@ -10,7 +10,7 @@ use {
     fuchsia_component::client::{connect_channel_to_service, connect_to_service},
     fuchsia_zircon as zx,
     futures::StreamExt,
-    std::{convert::TryFrom, sync::atomic::AtomicBool},
+    std::convert::TryFrom,
     thiserror::Error,
 };
 
@@ -36,7 +36,6 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
 /// Refer to events.fidl for a detailed description of this protocol.
 pub struct EventSource {
     proxy: fsys::BlockingEventSourceProxy,
-    running: AtomicBool,
 }
 
 impl EventSource {
@@ -58,15 +57,10 @@ impl EventSource {
 
     /// Wraps a provided BlockingEventSource proxy
     pub fn from_proxy(proxy: fsys::BlockingEventSourceProxy) -> Self {
-        Self { proxy, running: AtomicBool::new(false) }
+        Self { proxy }
     }
 
     pub async fn subscribe(&self, event_names: Vec<impl AsRef<str>>) -> Result<EventStream, Error> {
-        if self.running.load(std::sync::atomic::Ordering::SeqCst) {
-            return Err(format_err!(
-                "The component tree is already running! Subscribing to new events is racy!"
-            ));
-        }
         let (client_end, stream) = create_request_stream::<fsys::EventStreamMarker>()?;
         let subscription =
             self.proxy.subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end);
@@ -75,12 +69,8 @@ impl EventSource {
         Ok(EventStream::new(stream))
     }
 
-    pub async fn start_component_tree(&self) {
-        let was_running =
-            self.running.compare_and_swap(false, true, std::sync::atomic::Ordering::SeqCst);
-        if !was_running {
-            self.proxy.start_component_tree().await.unwrap();
-        }
+    pub async fn start_component_tree(self) {
+        self.proxy.start_component_tree().await.unwrap();
     }
 }
 

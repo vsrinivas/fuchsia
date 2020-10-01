@@ -19,7 +19,6 @@ pub struct TestRunner {
     external_hub_v2_path: PathBuf,
     hub_report_capability: Arc<HubReportCapability>,
     channel_close_rx: mpsc::Receiver<()>,
-    _event_source: EventSource,
 }
 
 impl TestRunner {
@@ -37,7 +36,7 @@ impl TestRunner {
 
         let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 
-        let (event_source, event_stream) = {
+        let event_stream = {
             // Subscribe to temporary event streams for Started and CapabilityRouted.
             // These events are subscribed to separately because the events do not happen
             // in predictable orders. There is a possibility for the CapabilityRouted event
@@ -76,18 +75,12 @@ impl TestRunner {
             }
 
             // Return the event_stream to be used later
-            (event_source, event_stream)
+            event_stream
         };
 
         let external_hub_v2_path = test.get_component_manager_path().join("out/hub");
 
-        let runner = Self {
-            test,
-            external_hub_v2_path,
-            hub_report_capability,
-            channel_close_rx,
-            _event_source: event_source,
-        };
+        let runner = Self { test, external_hub_v2_path, hub_report_capability, channel_close_rx };
 
         (runner, event_stream)
     }
