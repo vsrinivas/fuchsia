@@ -106,7 +106,8 @@ TEST_F(AudioRendererPipelineTestInt16, RenderWithPts) {
 // If we issue DiscardAllPackets during Playback, PTS should not change.
 TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   auto min_lead_time = renderer_->GetMinLeadTime();
-  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxbug.dev/52410.
+  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See
+  // fxbug.dev/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
   const auto min_lead_time_in_packets =
       (min_lead_time / zx::msec(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
@@ -557,7 +558,8 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   // packets at least "min_lead_time" after the last audio frame previously written to the ring
   // buffer.
   auto min_lead_time = renderer_->GetMinLeadTime();
-  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See fxbug.dev/52410.
+  // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See
+  // fxbug.dev/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
   const auto min_lead_time_in_packets =
       (min_lead_time / zx::msec(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;

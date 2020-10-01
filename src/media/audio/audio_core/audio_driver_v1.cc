@@ -1181,8 +1181,8 @@ void AudioDriverV1::SetUpClocks() {
     return;
   }
 
-  // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should be
-  // DeviceAdjustable instead of DeviceStatic, to articulate that it has hardware controls.
+  // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
+  // be DeviceAdjustable instead of DeviceStatic, to articulate that it has hardware controls.
   auto clone = AudioClock::CreateAsDeviceStatic(read_only_clock_result.take_value(), clock_domain_);
   if (!clone.is_valid()) {
     FX_LOGS(ERROR) << "CreateAsDeviceStatic (read_only) failed, will not recover a device clock!";

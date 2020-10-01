@@ -15,7 +15,8 @@ namespace media::audio {
 // An interface for a volume settings. Calls are made on the FIDL thread.
 class VolumeSetting {
  public:
-  // TODO(fxbug.dev/35581): Add a callback here to support devices with low volume setting granularity.
+  // TODO(fxbug.dev/35581): Add a callback here to support devices with low volume setting
+  // granularity.
   virtual void SetVolume(float volume) = 0;
 };
 

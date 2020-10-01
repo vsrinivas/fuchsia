@@ -38,8 +38,8 @@ class BaseCapturer : public AudioObject,
  public:
   AudioClock& reference_clock() { return audio_clock_; }
 
-  // TODO(fxbug.dev/43507): This is a temporary flag to ease the transition. This will be exposed as a command
-  // line flag for audio_core. This has no effect in DynamicallyAllocated mode.
+  // TODO(fxbug.dev/43507): This is a temporary flag to ease the transition. This will be exposed as
+  // a command line flag for audio_core. This has no effect in DynamicallyAllocated mode.
   //
   // When false (the default), packets are automatically recycled after each call to Push.
   // This gives equivalent behavior to the "current" code, i.e., before the bug fix.
