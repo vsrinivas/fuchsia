@@ -255,7 +255,7 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
 
 constexpr BlockDeviceSizes kDefaultBlockDeviceSizes = {8192, 1 << 13};
 
-constexpr const char kDefaultMinfsMountPath[] = "/tmp/minfs_micro_benchmark_test";
+constexpr const char kDefaultMinfsMountPath[] = "/memfs/minfs_micro_benchmark_test";
 constexpr const minfs::Superblock kMinfsZeroedSuperblock = {};
 constexpr const mkfs_options_t kMinfsDefaultMkfsOptions = {
     .fvm_data_slices = 1,
@@ -303,3 +303,7 @@ TEST_F(MinfsMicroBenchmark, WriteCosts) {
 
 }  // namespace
 }  // namespace minfs_micro_benchmanrk
+
+int main(int argc, char** argv) {
+  return fs_test_utils::RunWithMemFs([argc, argv]() { return RUN_ALL_TESTS(argc, argv); });
+}

@@ -14,6 +14,7 @@ group("tests") {
     "dash",
     "fs-recovery:tests",
     "fvm:tests",
+    "minfs-micro-benchmark:tests",
     "service:tests",
     "stdio:stdio-test-package",
   ]

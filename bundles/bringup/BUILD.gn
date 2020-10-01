@@ -209,7 +209,6 @@ group("tests") {
     "//zircon/system/utest/log:log-bootfs-test",
     "//zircon/system/utest/logger:logger-bootfs-test",
     "//zircon/system/utest/memfs:memfs-bootfs-test",
-    "//zircon/system/utest/minfs-micro-benchmark:minfs-micro-benchmark-bootfs-test",
     "//zircon/system/utest/miscsvc:miscsvc-bootfs-test",
     "//zircon/system/utest/namespace:namespace-bootfs-test",
     "//zircon/system/utest/posixio:posixio-bootfs-test",

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("minfs-micro-benchmark") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -57,7 +57,21 @@ test("minfs-micro-benchmark") {
   ]
 }
 
-bootfs_test("minfs-micro-benchmark-bootfs-test") {
-  name = "minfs-micro-benchmark"
-  deps = [ ":minfs-micro-benchmark" ]
+isolated_devmgr_unittest_package("minfs-micro-benchmark-test") {
+  executable_path = "test/minfs-micro-benchmark"
+
+  deps = [
+    ":minfs-micro-benchmark",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/storage/bin/minfs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":minfs-micro-benchmark-test" ]
 }
