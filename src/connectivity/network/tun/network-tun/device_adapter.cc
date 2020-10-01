@@ -209,7 +209,10 @@ zx_status_t DeviceAdapter::WriteRxFrame(fuchsia::hardware::network::FrameType fr
   id = buff.id();
   rx_buffers_.pop();
 
-  EnqueueRx(frame_type, id, data.size(), meta);
+  // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with a
+  // static assertion.
+  static_assert(fuchsia::net::tun::MAX_MTU <= std::numeric_limits<uint32_t>::max());
+  EnqueueRx(frame_type, id, static_cast<uint32_t>(data.size()), meta);
   CommitRx();
 
   *out_avail = rx_buffers_.size();
@@ -243,7 +246,11 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
         if (meta) {
           meta->flags = 0;
         }
-        other->EnqueueRx(tx_buff.frame_type(), rx_buff.id(), actual, meta.get());
+        // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with
+        // a static assertion.
+        static_assert(fuchsia::net::tun::MAX_MTU <= std::numeric_limits<uint32_t>::max());
+        other->EnqueueRx(tx_buff.frame_type(), rx_buff.id(), static_cast<uint32_t>(actual),
+                         meta.get());
         EnqueueTx(tx_buff.id(), ZX_OK);
 
         other->rx_buffers_.pop();

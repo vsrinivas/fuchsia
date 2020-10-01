@@ -44,9 +44,6 @@ source_set("src") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/syslog",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -85,9 +82,6 @@ executable("network_tun_unittest") {
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("network-tun-test") {
