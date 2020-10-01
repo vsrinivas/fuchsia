@@ -81,7 +81,7 @@ fn duration_to_formatted_seconds(duration: zx::Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_helpers::traits::PollExt;
+    use async_utils::PollExt;
     use fuchsia_async::DurationExt;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect_derive::WithInspect;

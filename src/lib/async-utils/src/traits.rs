@@ -5,20 +5,10 @@
 //! Traits that are useful for working with async code, but do not fit into a more specific
 //! category. These are often extension traits for types that are not defined by `async_helpers`.
 
-use {
-    std::{fmt, task::Poll},
-    thiserror::Error,
-};
+use core::task::Poll;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Error)]
-pub struct StillPendingError;
-
-impl fmt::Display for StillPendingError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Future or Task is still Pending")
-    }
-}
-
+/// An extension trait for `core::task::Poll` that provides convenient adapters for extracting
+/// output values.
 pub trait PollExt<T> {
     /// Returns the value contained in a Poll::Ready value or panics.
     fn unwrap(self) -> T;
@@ -27,8 +17,14 @@ pub trait PollExt<T> {
     fn expect(self, msg: &str) -> T;
 
     /// Turns a Poll into a Result, mapping Poll::Ready(value) to Ok(value) and
-    /// Poll::Pending to Err(StillPendingError)
-    fn ready_or_err(self) -> Result<T, StillPendingError>;
+    /// Poll::Pending to Err(error)
+    fn ready_or<E>(self, error: E) -> Result<T, E>;
+
+    /// Turns a Poll into a Result, mapping Poll::Ready(value) to Ok(value) and
+    /// Poll::Pending to Err(error())
+    fn ready_or_else<E, F>(self, error: F) -> Result<T, E>
+    where
+        F: FnOnce() -> E;
 }
 
 impl<T> PollExt<T> for Poll<T> {
@@ -50,10 +46,17 @@ impl<T> PollExt<T> for Poll<T> {
         }
     }
 
-    fn ready_or_err(self) -> Result<T, StillPendingError> {
+    fn ready_or<E>(self, error: E) -> Result<T, E> {
+        self.ready_or_else(|| error)
+    }
+
+    fn ready_or_else<E, F>(self, error: F) -> Result<T, E>
+    where
+        F: FnOnce() -> E,
+    {
         match self {
             Poll::Ready(val) => Ok(val),
-            Poll::Pending => Err(StillPendingError),
+            Poll::Pending => Err(error()),
         }
     }
 }
@@ -89,14 +92,26 @@ mod tests {
     }
 
     #[test]
-    fn poll_ready_or_err_ready_returns_ok() {
+    fn poll_ready_or_ready_returns_ok() {
         let p = Poll::Ready("value");
-        assert_eq!(p.ready_or_err(), Ok("value"));
+        assert_eq!(p.ready_or(()), Ok("value"));
     }
 
     #[test]
-    fn poll_ready_or_err_pending_returns_error() {
+    fn poll_ready_or_pending_returns_error() {
         let p: Poll<()> = Poll::Pending;
-        assert_eq!(p.ready_or_err(), Err(StillPendingError));
+        assert_eq!(p.ready_or(()), Err(()));
+    }
+
+    #[test]
+    fn poll_ready_or_else_ready_returns_ok() {
+        let p = Poll::Ready("value");
+        assert_eq!(p.ready_or_else(|| ()), Ok("value"));
+    }
+
+    #[test]
+    fn poll_ready_or_else_pending_returns_error() {
+        let p: Poll<()> = Poll::Pending;
+        assert_eq!(p.ready_or_else(|| ()), Err(()));
     }
 }

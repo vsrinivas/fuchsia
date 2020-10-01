@@ -39,7 +39,6 @@ rustc_library("async-helpers") {
     "src/lib.rs",
     "src/responding_channel.rs",
     "src/stream.rs",
-    "src/traits.rs",
   ]
 }
 

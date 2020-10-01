@@ -15,6 +15,7 @@ rustc_library("async-utils") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
@@ -24,6 +25,7 @@ rustc_library("async-utils") {
     "src/hanging_get/mod.rs",
     "src/lib.rs",
     "src/stream_epitaph.rs",
+    "src/traits.rs",
   ]
 }
 

@@ -9,4 +9,3 @@ pub mod hanging_get;
 pub mod responding_channel;
 /// Additional Useful Stream Combinators and Utilities
 pub mod stream;
-pub mod traits;

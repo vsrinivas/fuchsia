@@ -291,7 +291,7 @@ async fn main() {
 mod tests {
     use {
         super::{test_util::*, *},
-        async_helpers::traits::PollExt,
+        async_utils::PollExt,
         fidl::endpoints::RequestStream as _,
         fidl_fuchsia_bluetooth_a2dp::AudioModeMarker,
         fidl_fuchsia_sys::LauncherMarker,

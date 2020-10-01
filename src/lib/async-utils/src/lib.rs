@@ -6,7 +6,10 @@
 
 //! A library
 
+pub use traits::PollExt;
+
 pub mod event;
 pub mod fold;
 pub mod hanging_get;
 pub mod stream_epitaph;
+pub mod traits;

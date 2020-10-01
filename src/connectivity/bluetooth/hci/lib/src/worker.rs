@@ -401,7 +401,7 @@ fn log_responder_error<E: std::fmt::Debug>(e: E) {
 mod tests {
     use super::*;
     use crate::{test_utils::*, transport::IncomingPacket};
-    use async_helpers::traits::PollExt;
+    use async_utils::PollExt;
     use futures::future;
 
     #[fasync::run_until_stalled(test)]
