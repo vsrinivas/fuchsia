@@ -193,9 +193,9 @@ function is_remote_a_tree {
 #   4-*: Additional args for `ssh`
 
 function verify_default_keys {
-  readonly local_fuchsia_dir="$1"
-  readonly host="$2"
-  readonly remote_fuchsia_dir="$3"
+  local -r local_fuchsia_dir="$1"
+  local -r host="$2"
+  local -r remote_fuchsia_dir="$3"
   shift 3
   local temp_ssh_args=()
   while [[ $# -gt 0 ]]; do
@@ -211,14 +211,14 @@ function verify_default_keys {
     shift
   done
 
-  readonly ssh_base_args=( "${temp_ssh_args[@]}" )
+  local -r ssh_base_args=( "${temp_ssh_args[@]}" )
 
   local has_local_key=false
   local has_remote_key=false
 
   # keep in sync with //tools/ssh-keys/gen-ssh-keys.sh
-  readonly _ERROR_NO_KEY=112
-  readonly _ERROR_MISMATCHED_KEYS=113
+  local -r _ERROR_NO_KEY=112
+  local -r _ERROR_MISMATCHED_KEYS=113
   # // keep in sync with //tools/ssh-keys/gen-ssh-keys.sh
 
 

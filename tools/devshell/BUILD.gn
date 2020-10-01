@@ -125,6 +125,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/log",
         "//tools/devshell/metrics",
         "//tools/devshell/mkzedboot",
+        "//tools/devshell/pave-remote",
         "//tools/devshell/run-test",
         "//tools/devshell/serve-remote",
         "//tools/devshell/serve-updates",

@@ -8,6 +8,7 @@
 BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/serve-remote"
+  "tools/devshell/pave-remote"
   "tools/devshell/lib/fvm.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
@@ -86,29 +87,23 @@ readonly _ERROR_NO_KEY=112
 readonly _ERROR_MISMATCHED_KEYS=113
 # // keep in sync with //tools/ssh-keys/gen-ssh-keys.sh
 
-# test if remote keys are copied to local if necessary
-TEST_fx-remote-remotehas-localdoesnt() {
-  # key exists in remote
-  echo 0 > "${remote_gensshkeys_mock}.mock_status"
-  # key doesn't exist in local
-  echo $_ERROR_NO_KEY > "${local_gensshkeys_mock}.mock_status"
-
- 
-}
-
-# test if the given host is used even when there's a cache file, and that the
-# cache file is updated with the given host
-TEST_fx-remote-args-given() {
+# test pave-remote if the given host is used even when there's a cache file,
+# and that the cache file is updated with the given host
+TEST_fx-pave-remote-args-given() {
   local testhost=myhostname.my.server.com
   local testdir=~/myfuchsia/directory
   local anotherhost=myhostname.my.server.com
   local out="${BT_TEMP_DIR}/output.log"
 
-  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
-  BT_EXPECT ${fx} serve-remote "$anotherhost" "${testdir}" >>${out} 2>&1
-  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
-  btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$anotherhost"
-}
+  {
+    echo "function fetch_remote_build_artifacts { :; }"
+    echo "function fetch_or_build_tool { :; }"
+  } >> "${BT_TEMP_DIR}/tools/devshell/lib/fx-remote.sh"
 
+  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
+  BT_EXPECT ${fx} pave-remote --no-pave "$anotherhost" "${testdir}" >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
+  btf::does-mock-args-contain "${ssh_mock}.mock_state" "$anotherhost"
+}
 
 BT_RUN_TESTS "$@"
