@@ -22,7 +22,7 @@ group("tests") {
     "fuchsia-fatfs:tests",
     "host_fs_test:tests",
     "lib:tests",
-    "minfs/test",
+    "minfs:tests",
     "volume_image:tests",
   ]
 }

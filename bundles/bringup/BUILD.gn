@@ -33,9 +33,6 @@ group("tests") {
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-bootfs-test",  # HW-required.
     "//src/media/audio/tools/audio-driver-ctl:test-bootfs-test",
     "//src/storage/minfs/allocator/test:minfs-allocator-unit-bootfs-test",
-    "//src/storage/minfs/test:minfs-integration-bootfs-test",
-    "//src/storage/minfs/test:minfs-power-bootfs-test",
-    "//src/storage/minfs/test:minfs-unit-bootfs-test",
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-bootfs-test",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-bootfs-test",
     "//src/ui/backlight/tests:backlight-test-bootfs-test",

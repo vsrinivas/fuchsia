@@ -25,6 +25,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fs-test-utils/fixture.h>
+#include <fs/test_support/environment.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
@@ -40,9 +41,11 @@ template <bool repairable>
 class MountTestTemplate : public zxtest::Test {
  public:
   void SetUp() final {
-    ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk_), ZX_OK);
-    ramdisk_path_ = ramdisk_get_path(ramdisk_);
-    ASSERT_OK(mkfs(ramdisk_path_, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options));
+    ASSERT_EQ(ramdisk_create_at(fs::g_environment->devfs_root().get(), 512, 1 << 16, &ramdisk_),
+              ZX_OK);
+    ramdisk_path_ = std::string("/fake/dev/") + ramdisk_get_path(ramdisk_);
+    ASSERT_OK(
+        mkfs(ramdisk_path_.c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options));
 
     int ramdisk_block_fd = ramdisk_get_block_fd(ramdisk_);
     zx::channel block_channel;
@@ -58,7 +61,7 @@ class MountTestTemplate : public zxtest::Test {
   }
 
   void ReadSuperblock(minfs::Superblock* out) {
-    fbl::unique_fd fd(open(ramdisk_path_, O_RDONLY));
+    fbl::unique_fd fd(open(ramdisk_path_.c_str(), O_RDONLY));
     EXPECT_TRUE(fd);
 
     EXPECT_EQ(pread(fd.get(), out, sizeof(*out), minfs::kSuperblockStart * minfs::kMinfsBlockSize),
@@ -84,7 +87,7 @@ class MountTestTemplate : public zxtest::Test {
  protected:
   ramdisk_client_t* ramdisk() const { return ramdisk_; }
 
-  const char* ramdisk_path() const { return ramdisk_path_; }
+  const char* ramdisk_path() const { return ramdisk_path_.c_str(); }
 
   std::unique_ptr<minfs::Bcache> bcache() { return std::move(bcache_); }
 
@@ -129,7 +132,7 @@ class MountTestTemplate : public zxtest::Test {
  private:
   bool unmounted_ = false;
   ramdisk_client_t* ramdisk_ = nullptr;
-  const char* ramdisk_path_ = nullptr;
+  std::string ramdisk_path_;
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
   zx::channel root_client_end_ = {};
   zx::channel root_server_end_ = {};

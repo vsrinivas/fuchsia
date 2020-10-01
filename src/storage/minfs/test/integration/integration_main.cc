@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
     printf("%s\n%s\n", kHelp, config.HelpMessage());
   }
 
-  config.is_packaged = false;  // This test has not been converted to packages yet.
+  config.is_packaged = true;
   config.mount_path = kMountPath;
   config.ramdisk_block_count = 1 << 20;  // 1M blocks.
   config.format_type = DISK_FORMAT_MINFS;
