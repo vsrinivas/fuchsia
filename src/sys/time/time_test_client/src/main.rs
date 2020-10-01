@@ -43,6 +43,16 @@ async fn main() {
     future::join_all(futures).await;
 }
 
+/// Returns a standard format timestamp for a zx::Time.
+fn zx_timestamp(time: &zx::Time) -> String {
+    chrono_timestamp(&Utc.timestamp_nanos(time.into_nanos()))
+}
+
+/// Returns a standard format timestamp for a chrono::DateTime.
+fn chrono_timestamp(time: &DateTime<Utc>) -> String {
+    (&time.to_rfc3339()[0..23]).to_string()
+}
+
 /// A monitor for UTC as reported by the runtime.
 struct RuntimeUtcMonitor {
     /// The UTC time when this monitor was initialized.
@@ -53,7 +63,7 @@ impl RuntimeUtcMonitor {
     /// Creates a new `RuntimeUtcMonitor`, logging the initial state.
     pub fn new() -> Self {
         let initial = Utc::now();
-        info!("Runtime UTC at initialization: {}", initial.to_rfc2822());
+        info!("Runtime UTC at initialization: {}", chrono_timestamp(&initial));
         RuntimeUtcMonitor { initial }
     }
 
@@ -65,7 +75,7 @@ impl RuntimeUtcMonitor {
             // Only log UTC when we reach a new minute.
             let current = Utc::now();
             if current.hour() != last_logged.hour() || current.minute() != last_logged.minute() {
-                info!("Runtime UTC: {}", current.to_rfc2822());
+                info!("Runtime UTC: {}", chrono_timestamp(&current));
                 last_logged = current;
             }
         }
@@ -78,8 +88,7 @@ struct KernelUtcMonitor {}
 impl KernelUtcMonitor {
     /// Creates a new `KernelUtcMonitor`, logging the initial state.
     pub fn new() -> Self {
-        let initial = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
-        info!("ZX_CLOCK_UTC at initialization: {}", initial.to_rfc2822());
+        info!("ZX_CLOCK_UTC at initialization: {}", zx_timestamp(&zx::Time::get(zx::ClockId::UTC)));
         KernelUtcMonitor {}
     }
 
@@ -105,20 +114,14 @@ impl ClockMonitor {
 
         // Log the time reported by the clock.
         match clock.read() {
-            Ok(time) => info!(
-                "UTC zx::Clock at initialization: {}",
-                Utc.timestamp_nanos(time.into_nanos()).to_rfc2822()
-            ),
+            Ok(time) => info!("UTC zx::Clock at initialization: {}", zx_timestamp(&time)),
             Err(stat) => warn!("Error reading UTC zx::Clock initial time {}", stat),
         }
 
         // Log the initial details and backstop time on creation
         match clock.get_details() {
             Ok(details) => {
-                info!(
-                    "UTC zx::Clock backstop time: {}",
-                    Utc.timestamp_nanos(details.backstop.into_nanos()).to_rfc2822()
-                );
+                info!("UTC zx::Clock backstop time: {}", zx_timestamp(&details.backstop));
                 info!(
                     "UTC zx::Clock details at initialization: {}",
                     Self::describe_clock_details(&details)
