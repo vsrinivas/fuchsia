@@ -300,6 +300,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define EXPECT_EQ_LL(expected, actual, ...) UTCHECK_EQ_LL(expected, actual, false, __VA_ARGS__)
 #define EXPECT_NULL(actual, ...) UTCHECK_NULL(actual, false, __VA_ARGS__)
 #define EXPECT_NONNULL(actual, ...) UTCHECK_NONNULL(actual, false, __VA_ARGS__)
+#define EXPECT_OK(actual, ...) UTCHECK_EQ(ZX_OK, actual, false, __VA_ARGS__)
 
 /* ASSERT_* macros check the condition and will print a message and immediately
  * abort a test with a filure status if the condition fails.
@@ -319,6 +320,7 @@ static inline constexpr const char* unittest_get_msg(const char* msg = "") { ret
 #define ASSERT_EQ_LL(expected, actual, ...) UTCHECK_EQ_LL(expected, actual, true, __VA_ARGS__)
 #define ASSERT_NULL(actual, ...) UTCHECK_NULL(actual, true, __VA_ARGS__)
 #define ASSERT_NONNULL(actual, ...) UTCHECK_NONNULL(actual, true, __VA_ARGS__)
+#define ASSERT_OK(actual, ...) UTCHECK_EQ(ZX_OK, actual, true, __VA_ARGS__)
 
 /*
  * Returns false if expected does or does not equal actual (based on expect_eq).
