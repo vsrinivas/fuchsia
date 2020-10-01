@@ -23,13 +23,18 @@ type stringInLogCheck struct {
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
 	// ExceptBlocks will cause Check() to return false if the string is only within these blocks.
-	ExceptBlocks   []*logBlock
-	Type           logType
-	swarmingResult *SwarmingRpcsTaskResult
+	ExceptBlocks []*logBlock
+	// ExceptSuccessfulSwarmingResult will cause Check() to return false if the Swarming task succeeded.
+	ExceptSuccessfulSwarmingResult bool
+	Type                           logType
+	swarmingResult                 *SwarmingRpcsTaskResult
 }
 
 func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 	c.swarmingResult = to.SwarmingSummary.Results
+	if c.ExceptSuccessfulSwarmingResult && !c.swarmingResult.Failure && c.swarmingResult.State == "COMPLETED" {
+		return false
+	}
 	var toCheck []byte
 	switch c.Type {
 	case serialLogType:
@@ -124,7 +129,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/44779.
 	ret = append(ret, &stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType})
 	// For fxbug.dev/51015.
-	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType, ExceptSuccessfulSwarmingResult: true})
 	// For fxbug.dev/43188.
 	ret = append(ret, &stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
 	// For fxbug.dev/57463.

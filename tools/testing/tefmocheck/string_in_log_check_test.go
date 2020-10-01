@@ -20,7 +20,13 @@ func TestStringInLogCheck(t *testing.T) {
 		startString: "block_start",
 		endString:   "block_end",
 	}
-	c := stringInLogCheck{String: killerString, ExceptString: exceptString, ExceptBlocks: []*logBlock{exceptBlock, exceptBlock2}, Type: serialLogType}
+	c := stringInLogCheck{
+		String:                         killerString,
+		ExceptString:                   exceptString,
+		ExceptBlocks:                   []*logBlock{exceptBlock, exceptBlock2},
+		ExceptSuccessfulSwarmingResult: true,
+		Type:                           serialLogType,
+	}
 	gotName := c.Name()
 	wantName := "string_in_log/serial_log.txt/KILLER_STRING"
 	if gotName != wantName {
@@ -28,9 +34,10 @@ func TestStringInLogCheck(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name           string
-		testingOutputs TestingOutputs
-		shouldMatch    bool
+		name                string
+		testingOutputs      TestingOutputs
+		swarmingResultState string
+		shouldMatch         bool
 	}{
 		{
 			name: "should match if string in serial",
@@ -38,6 +45,14 @@ func TestStringInLogCheck(t *testing.T) {
 				SerialLog: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
 			},
 			shouldMatch: true,
+		},
+		{
+			name: "exceptSuccessfulSwarmingResult",
+			testingOutputs: TestingOutputs{
+				SerialLog: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
+			},
+			swarmingResultState: "COMPLETED",
+			shouldMatch:         false,
 		}, {
 			name: "should not match if string in other log",
 			testingOutputs: TestingOutputs{
@@ -87,7 +102,7 @@ func TestStringInLogCheck(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// It accesses this field for DebugText().
-			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{Results: &SwarmingRpcsTaskResult{TaskId: "abc"}}
+			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{Results: &SwarmingRpcsTaskResult{TaskId: "abc", State: tc.swarmingResultState}}
 			if c.Check(&tc.testingOutputs) != tc.shouldMatch {
 				t.Errorf("c.Check(%q) returned %v, expected %v", string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
 			}
