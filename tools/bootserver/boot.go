@@ -153,7 +153,7 @@ func downloadAndOpenImage(ctx context.Context, dest string, img Image) (*os.File
 	defer ticker.Stop()
 	go func() {
 		for range ticker.C {
-			logger.Infof(ctx, "transferring %s...\n", filepath.Base(dest))
+			logger.Debugf(ctx, "transferring %s...", filepath.Base(dest))
 		}
 	}()
 
@@ -252,7 +252,7 @@ func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
 	// Attempt to read a file. If the server tells us we need to wait, then try
 	// again as long as it keeps telling us this. ErrShouldWait implies the server
 	// is still responding and will eventually be able to handle our request.
-	logger.Infof(ctx, "attempting to read %s...\n", constants.BoardInfoNetsvcName)
+	logger.Debugf(ctx, "attempting to read %s...", constants.BoardInfoNetsvcName)
 	for {
 		if ctx.Err() != nil {
 			return nil
@@ -264,7 +264,7 @@ func ValidateBoard(ctx context.Context, t tftp.Client, boardName string) error {
 			// The target is busy, so let's sleep for a bit before
 			// trying again, otherwise we'll be wasting cycles and
 			// printing too often.
-			logger.Infof(ctx, "target is busy, retrying in one second\n")
+			logger.Debugf(ctx, "target is busy, retrying in one second")
 			time.Sleep(time.Second)
 			continue
 		default:
@@ -340,7 +340,7 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 			// Attempt to send a file. If the server tells us we need to wait, then try
 			// again as long as it keeps telling us this. ErrShouldWait implies the server
 			// is still responding and will eventually be able to handle our request.
-			logger.Infof(ctx, "attempting to send %s (%d)...\n", f.name, f.size)
+			logger.Debugf(ctx, "attempting to send %s (%d)...", f.name, f.size)
 			for {
 				if ctx.Err() != nil {
 					return nil
@@ -352,20 +352,20 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 					// The target is busy, so let's sleep for a bit before
 					// trying again, otherwise we'll be wasting cycles and
 					// printing too often.
-					logger.Infof(ctx, "target is busy, retrying in one second\n")
+					logger.Debugf(ctx, "target is busy, retrying in one second")
 					time.Sleep(time.Second)
 					continue
 				default:
 					if skipOnTransferError(f.name) {
-						logger.Infof(ctx, "%s; skipping and continuing: %v\n", constants.FailedToSendErrMsg(f.name), err)
+						logger.Debugf(ctx, "%s; skipping and continuing: %v", constants.FailedToSendErrMsg(f.name), err)
 					} else {
-						logger.Infof(ctx, "%s; starting from the top: %v\n", constants.FailedToSendErrMsg(f.name), err)
+						logger.Debugf(ctx, "%s; starting from the top: %v", constants.FailedToSendErrMsg(f.name), err)
 						return err
 					}
 				}
 				break
 			}
-			logger.Infof(ctx, "done\n")
+			logger.Debugf(ctx, "successfully sent %s", f.name)
 		}
 		return nil
 	}, nil)
