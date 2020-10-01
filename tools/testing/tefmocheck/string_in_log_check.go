@@ -160,6 +160,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			ExceptBlocks: []*logBlock{
 				{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
 				{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
+				{startString: "RUN   TestKernelLockupDetector", endString: ": TestKernelLockupDetector"},
 			},
 		})
 		ret = append(ret, &stringInLogCheck{String: "ZIRCON KERNEL PANIC", Type: lt, ExceptBlocks: []*logBlock{

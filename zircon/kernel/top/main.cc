@@ -16,6 +16,7 @@
 #include <lib/counters.h>
 #include <lib/debuglog.h>
 #include <lib/heap.h>
+#include <lib/lockup_detector.h>
 #include <platform.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -103,6 +104,10 @@ void lk_main() {
   dprintf(SPEW, "initializing vm\n");
   vm_init();
   lk_primary_cpu_init_level(LK_INIT_LEVEL_VM, LK_INIT_LEVEL_TOPOLOGY - 1);
+
+  // Initialize the lockup detector, after the platform timer has been
+  // configured, but before the topology subsystem has brought up other CPUs.
+  lockup_init();
 
   // initialize the system topology
   dprintf(SPEW, "initializing system topology\n");

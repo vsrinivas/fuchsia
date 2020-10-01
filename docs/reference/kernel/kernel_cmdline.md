@@ -357,6 +357,13 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
+## kernel.lockup-detector.threshold-ms=\<num>
+
+When this threshold is exceeded, the kernel will emit a KERNEL
+OOPS. See also `k lockup status`.
+
+When 0, the lockup detector is disabled.
+
 ## kernel.memory-limit-dbg=\<bool>
 
 This option enables verbose logging from the memory limit library.

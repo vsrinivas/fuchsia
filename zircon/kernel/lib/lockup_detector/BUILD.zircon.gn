@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+zx_library("lockup_detector") {
+  kernel = true
+  sources = [ "lockup_detector.cc" ]
+  deps = [
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/console",
+    "$zx/system/ulib/affine",
+  ]
+  public_deps = [ "$zx/kernel/lib/ktl:headers" ]
+}

@@ -8,6 +8,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SPINLOCK_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SPINLOCK_H_
 
+#include <lib/lockup_detector.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
 
@@ -25,14 +26,24 @@ class TA_CAP("mutex") SpinLock {
   void Acquire() TA_ACQ() {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(!arch_spin_lock_held(&spinlock_));
+    LOCKUP_BEGIN();
     arch_spin_lock(&spinlock_);
   }
 
   // Returns false when the lock is acquired, and true when the lock is not acquired.
-  bool TryAcquire() TA_TRY_ACQ(false) { return arch_spin_trylock(&spinlock_); }
+  bool TryAcquire() TA_TRY_ACQ(false) {
+    bool failed_to_acquire = arch_spin_trylock(&spinlock_);
+    if (!failed_to_acquire) {
+      LOCKUP_BEGIN();
+    }
+    return failed_to_acquire;
+  }
 
   // Interrupts must already be disabled.
-  void Release() TA_REL() { arch_spin_unlock(&spinlock_); }
+  void Release() TA_REL() {
+    arch_spin_unlock(&spinlock_);
+    LOCKUP_END();
+  }
 
   // Returns true if held by the calling CPU.
   //

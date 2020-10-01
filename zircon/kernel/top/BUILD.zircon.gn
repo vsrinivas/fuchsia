@@ -18,6 +18,7 @@ source_set("top") {
     "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/io",
+    "$zx/kernel/lib/lockup_detector",
     "$zx/kernel/lib/userabi",
     "$zx/kernel/lib/version",
     "$zx/kernel/platform",

@@ -8,6 +8,7 @@
 
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/load_balancer_percpu.h>
+#include <lib/lockup_detector.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -77,6 +78,9 @@ struct percpu {
   // When reading, use |ForEachPreemptDisable|. Although it is not possible to guarantee a
   // consistent snapshot of these counters, it should be good enough for diagnostic uses.
   vm_page_counts_t vm_page_counts;
+
+  // Used to detect if this CPU has locked up.
+  LockupDetectorState lockup_detector_state;
 
   // Returns a reference to the percpu instance for given CPU number.
   static percpu& Get(cpu_num_t cpu_num) {

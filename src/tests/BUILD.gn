@@ -26,6 +26,7 @@ group("tests") {
     "end_to_end/time_sync:test",
     "intl:tests",
     "kernel_crashlog:tests",
+    "kernel_lockup_detector:tests",
     "kernel_panic:tests",
     "limited_netsvc:tests",
     "microbenchmarks:tests",

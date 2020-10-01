@@ -41,6 +41,9 @@ if (current_toolchain == default_toolchain) {
         # <percpu.h> has #include <lib/load-balancer.h>.
         "$zx/kernel/lib/load_balancer:headers.config",
 
+        # <lib/lockup_detector.h> is included by some "low-level" headers.
+        "$zx/kernel/lib/lockup_detector:headers.config",
+
         # <kernel/percpu.h> has #include <lib/lazy_init/lazy_init.h>.
         "$zx/system/ulib/lazy_init:headers.config",
 
