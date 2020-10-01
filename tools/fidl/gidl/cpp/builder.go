@@ -84,7 +84,25 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 			panic(fmt.Sprintf("uint64 value has non-integer decl: %T", decl))
 		}
 	case float64:
-		return fmt.Sprintf("%g", value)
+		switch decl := decl.(type) {
+		case *gidlmixer.FloatDecl:
+			switch decl.Subtype() {
+			case fidlir.Float32:
+				s := fmt.Sprintf("%g", value)
+				if strings.Contains(s, ".") {
+					return fmt.Sprintf("%sf", s)
+				} else {
+					return s
+				}
+			case fidlir.Float64:
+				return fmt.Sprintf("%g", value)
+			default:
+				panic(fmt.Sprintf("unexpected floating point subtype %s", decl.Subtype()))
+			}
+		default:
+			panic(fmt.Sprintf("float64 value has non-floating-point decl: %T", decl))
+
+		}
 	case string:
 		return fmt.Sprintf("%s(%s, %d)", typeName(decl), escapeStr(value), len(value))
 	case gidlir.Handle:

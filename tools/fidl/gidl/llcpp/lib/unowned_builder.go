@@ -63,7 +63,25 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 		}
 		return fmt.Sprintf("%s(%dll)", typeName(decl), value)
 	case float64:
-		return fmt.Sprintf("%g", value)
+		switch decl := decl.(type) {
+		case *gidlmixer.FloatDecl:
+			switch decl.Subtype() {
+			case fidlir.Float32:
+				s := fmt.Sprintf("%g", value)
+				if strings.Contains(s, ".") {
+					return fmt.Sprintf("%sf", s)
+				} else {
+					return s
+				}
+			case fidlir.Float64:
+				return fmt.Sprintf("%g", value)
+			default:
+				panic(fmt.Sprintf("unexpected floating point subtype %s", decl.Subtype()))
+			}
+		default:
+			panic(fmt.Sprintf("float64 value has non-floating-point decl: %T", decl))
+
+		}
 	case string:
 		return fmt.Sprintf("fidl::StringView(%s, %d)", strconv.Quote(value), len(value))
 	case gidlir.Handle:

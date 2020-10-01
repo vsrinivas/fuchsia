@@ -141,9 +141,6 @@ template("gidl_single_file_source_set") {
                              "fidl",
                              "deps",
                            ])
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
@@ -321,9 +318,6 @@ template("gidl_multiple_file_source_set") {
                              "fidl",
                              "deps",
                            ])
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
