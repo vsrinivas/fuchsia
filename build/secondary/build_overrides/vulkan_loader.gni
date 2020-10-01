@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 
 vulkan_loader_extra_defines = []
-vulkan_loader_shared = true
+vulkan_loader_shared = current_toolchain == shlib_toolchain
 vulkan_headers_dir = "//third_party/Vulkan-Headers"
