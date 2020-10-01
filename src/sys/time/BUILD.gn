@@ -19,5 +19,6 @@ group("tests") {
     "lib/push-source:tests",
     "network_time_service:tests",
     "timekeeper:tests",
+    "timekeeper_integration",
   ]
 }

@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.time;
+
+using fuchsia.time.external;
+
+/// A control protocol implemented by a test component. During an integration test, Timekeeper
+/// launches and establishes a time source channel to the dev time source. This protocol allows
+/// the dev time source to pass a channel to delegate the implementation of the connection to the
+/// test component.
+[Discoverable]
+protocol TimeSourceControl {
+    /// Forward a PushSource connection.
+    /// TODO(satsukiu): possibly add an enum signifying the role (primary, monitor) of the
+    /// connecting PushSource.
+    ConnectPushSource(request<fuchsia.time.external.PushSource> push_source);
+};

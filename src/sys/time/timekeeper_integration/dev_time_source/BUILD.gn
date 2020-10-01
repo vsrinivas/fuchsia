@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  name = "dev_time_source"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/time/timekeeper_integration:test.time-rustc",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("dev_time_source") {
+  testonly = true
+  component_name = "dev_time_source"
+  manifest = "meta/service.cmx"
+  deps = [ ":bin" ]
+}

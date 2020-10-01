@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/dev_time_source"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "test.time.TimeSourceControl"
+        ]
+    }
+}

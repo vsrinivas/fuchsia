@@ -42,11 +42,23 @@ use {
 /// URL of the primary time source. In the future, this value belongs in a config file.
 const PRIMARY_SOURCE: &str =
     "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx";
+/// URL of the dev time source used as the primary source for integ tests.
+const INTEG_DEV_TIME_SOURCE: &str =
+    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cmx";
+
+/// Command line arguments supplied to Timekeeper.
+#[derive(argh::FromArgs)]
+struct Options {
+    /// flag indicating to use the dev time sources.
+    #[argh(switch)]
+    dev_time_sources: bool,
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging").unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
+    let options = argh::from_env::<Options>();
 
     info!("retrieving UTC clock handle");
     let time_maintainer =
@@ -81,7 +93,11 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let primary_source = PushTimeSource::new(PRIMARY_SOURCE.to_string());
+    let primary_source_url = match options.dev_time_sources {
+        true => INTEG_DEV_TIME_SOURCE,
+        false => PRIMARY_SOURCE,
+    };
+    let primary_source = PushTimeSource::new(primary_source_url.to_string());
     let interface_state_service =
         fuchsia_component::client::connect_to_service::<finterfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;

@@ -32,6 +32,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",

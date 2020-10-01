@@ -1,0 +1,80 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+group("timekeeper_integration") {
+  testonly = true
+  deps = [
+    ":timekeeper-integration",
+    "//src/cobalt/bin/testing/mock_cobalt",
+  ]
+}
+
+rustc_test("test_bin") {
+  name = "timekeeper_integration_test"
+  edition = "2018"
+
+  sources = [ "tests/timekeeper_integration.rs" ]
+
+  source_root = "tests/timekeeper_integration.rs"
+
+  deps = [
+    ":test.time-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
+    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//src/lib/fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/time/lib/push-source",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+  ]
+}
+
+fuchsia_component("timekeeper_integration_test") {
+  testonly = true
+  component_name = "timekeeper_integration_test"
+  manifest = "meta/timekeeper_integration_test.cmx"
+  deps = [ ":test_bin" ]
+}
+
+fuchsia_component("timekeeper_for_integration") {
+  testonly = true
+  component_name = "timekeeper_for_integration"
+  manifest = "meta/timekeeper_for_integration.cmx"
+  deps = [ "//src/sys/time/timekeeper:bin" ]
+}
+
+fidl("test.time") {
+  testonly = true
+  sources = [ "fidl/test.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.time.external" ]
+}
+
+fuchsia_test_package("timekeeper-integration") {
+  test_components = [ ":timekeeper_integration_test" ]
+  deps = [
+    ":timekeeper_for_integration",
+    "dev_time_source",
+  ]
+}

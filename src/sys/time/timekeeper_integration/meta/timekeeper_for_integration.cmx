@@ -1,0 +1,18 @@
+{
+    "program": {
+        "args": [
+            "--dev-time-sources"
+        ],
+        "binary": "bin/timekeeper"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.interfaces.State",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Launcher",
+            "fuchsia.time.Maintenance"
+        ]
+    }
+}
