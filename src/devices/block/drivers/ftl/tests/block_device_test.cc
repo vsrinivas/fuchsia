@@ -123,6 +123,11 @@ class FakeVolume final : public ftl::Volume {
     return ZX_OK;
   }
 
+  zx_status_t GetCounters(Counters* counters) final {
+    counters->wear_count = kWearCount;
+    return ZX_OK;
+  }
+
  private:
   ftl::BlockDevice* device_;
   uint32_t first_page_ = 0;
@@ -497,7 +502,7 @@ TEST_F(BlockDeviceTest, Format) {
   EXPECT_FALSE(GetVolume()->leveled());
 }
 
-TEST_F(BlockDeviceTest, GetInspectVmo) {
+TEST_F(BlockDeviceTest, GetInspectVmoContainsCountersAndWearCount) {
   ftl::BlockDevice* device = GetDevice();
   ASSERT_TRUE(device);
 
@@ -505,6 +510,14 @@ TEST_F(BlockDeviceTest, GetInspectVmo) {
   auto hierarchy = inspect::ReadFromVmo(vmo).take_value();
   auto* wear_count = hierarchy.node().get_property<inspect::UintPropertyValue>("wear_count");
   EXPECT_EQ(kWearCount, wear_count->value());
+
+  auto* block_operation_count_prop =
+      hierarchy.node().get_property<inspect::UintPropertyValue>("block_operation_count");
+  ASSERT_NOT_NULL(block_operation_count_prop);
+
+  auto* nand_operation_count_prop =
+      hierarchy.node().get_property<inspect::UintPropertyValue>("nand_operation_count");
+  ASSERT_NOT_NULL(nand_operation_count_prop);
 }
 
 TEST_F(BlockDeviceTest, Suspend) {

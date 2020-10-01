@@ -21,7 +21,7 @@ namespace {
 
 namespace block_fidl = ::llcpp::fuchsia::hardware::block;
 
-TEST(FtlFidlTest, GetVmoReturnsVmoWithWearCount) {
+TEST(FtlFidlTest, GetVmoReturnsVmoWithCounters) {
   std::string path_to_device(kTestDevice);
   size_t length = path_to_device.rfind("/block");
   ASSERT_GT(length, 0);
@@ -35,8 +35,17 @@ TEST(FtlFidlTest, GetVmoReturnsVmoWithWearCount) {
   zx::vmo inspect_vmo(std::move(r->result.mutable_response().vmo));
   ASSERT_TRUE(inspect_vmo.is_valid());
   auto hierarchy = inspect::ReadFromVmo(inspect_vmo).take_value();
+
   auto* wear_count_prop = hierarchy.node().get_property<inspect::UintPropertyValue>("wear_count");
   ASSERT_NOT_NULL(wear_count_prop);
+
+  auto* block_operation_count_prop =
+      hierarchy.node().get_property<inspect::UintPropertyValue>("block_operation_count");
+  ASSERT_NOT_NULL(block_operation_count_prop);
+
+  auto* nand_operation_count_prop =
+      hierarchy.node().get_property<inspect::UintPropertyValue>("nand_operation_count");
+  ASSERT_NOT_NULL(nand_operation_count_prop);
 }
 
 }  // namespace

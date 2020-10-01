@@ -5,6 +5,7 @@
 #include <lib/ftl/volume.h>
 #include <zircon/assert.h>
 
+#include "ftl.h"
 #include "ftl_private.h"
 
 namespace ftl {
@@ -107,6 +108,15 @@ zx_status_t VolumeImpl::GetStats(Stats* stats) {
   stats->garbage_level = buffer.garbage_level;
   memcpy(stats->wear_histogram, buffer.wear_histogram, sizeof(stats->wear_histogram));
   stats->num_blocks = buffer.num_blocks;
+  return ZX_OK;
+}
+
+zx_status_t VolumeImpl::GetCounters(Counters* counters) {
+  FtlCounters ftl_counters = {};
+  if (report_(vol_, FS_COUNTERS, &ftl_counters) != 0) {
+    return ZX_ERR_BAD_STATE;
+  }
+  counters->wear_count = ftl_counters.wear_count;
   return ZX_OK;
 }
 

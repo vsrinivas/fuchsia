@@ -299,6 +299,8 @@ bool BlockDevice::InitFtl() {
   if (volume_->GetStats(&stats) == ZX_OK) {
     zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%", stats.wear_count, stats.garbage_level);
     wear_count_ = inspector_.GetRoot().CreateUint("wear_count", stats.wear_count);
+    operation_count_ = inspector_.GetRoot().CreateUint("block_operation_count", 0);
+    nand_operation_count_ = inspector_.GetRoot().CreateUint("nand_operation_count", 0);
   }
 
   zxlogf(INFO, "FTL: InitFtl ok");
@@ -360,7 +362,7 @@ int BlockDevice::WorkerThread() {
     {
       TRACE_DURATION_BEGIN("block:ftl", "Operation", "opcode", operation->op.command, "offset_dev",
                            operation->op.rw.offset_dev, "length", operation->op.rw.length);
-
+      operation_count_.Add(1);
       g_nand_op_count = 0;
       switch (operation->op.command) {
         case BLOCK_OP_WRITE:
@@ -382,10 +384,14 @@ int BlockDevice::WorkerThread() {
         default:
           ZX_DEBUG_ASSERT(false);  // Unexpected.
       }
-
+      nand_operation_count_.Add(g_nand_op_count);
       TRACE_DURATION_END("block:ftl", "Operation", "nand_ops", g_nand_op_count);
     }
 
+    Volume::Counters counters;
+    if (volume_->GetCounters(&counters) == ZX_OK) {
+      wear_count_.Set(counters.wear_count);
+    }
     operation->completion_cb(operation->cookie, status, &operation->op);
   }
 }

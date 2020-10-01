@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/ftl-mtd/ftl-volume-wrapper.h>
 #include <string.h>
 
 #include <algorithm>
@@ -10,8 +11,9 @@
 #include <memory>
 #include <vector>
 
-#include <lib/ftl-mtd/ftl-volume-wrapper.h>
 #include <zxtest/zxtest.h>
+
+#include "zircon/types.h"
 
 using namespace ftl_mtd;
 
@@ -74,6 +76,7 @@ class FakeVolume final : public ftl::Volume {
   zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final { return ZX_OK; }
   zx_status_t GarbageCollect() final { return ZX_OK; }
   zx_status_t GetStats(Stats* stats) final { return ZX_OK; }
+  zx_status_t GetCounters(Counters* counters) final { return ZX_OK; }
 
  private:
   ftl::FtlInstance* ftl_instance_;

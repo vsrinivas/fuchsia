@@ -133,6 +133,8 @@ class BlockDevice : public DeviceType,
   // Diagnostics.
   inspect::Inspector inspector_;
   inspect::UintProperty wear_count_;
+  inspect::UintProperty operation_count_;
+  inspect::UintProperty nand_operation_count_;
 };
 
 }  // namespace ftl

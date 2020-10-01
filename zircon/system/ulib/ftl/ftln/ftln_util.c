@@ -7,6 +7,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include "ftl.h"
 #include "ftlnp.h"
 
 //
@@ -392,6 +393,16 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       memset(&ftl->stats, 0, sizeof(ftl_ndm_stats));
 
       // Return success.
+      return 0;
+    }
+
+    // Similar to vstat but only counters are exported.
+    case FS_COUNTERS: {
+      // First argument should be a pointer towards a counter struct.
+      va_start(ap, msg);
+      FtlCounters* counters = (FtlCounters*)va_arg(ap, void*);
+      va_end(ap);
+      counters->wear_count = ftl->high_wc;
       return 0;
     }
 

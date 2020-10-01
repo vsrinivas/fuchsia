@@ -146,6 +146,7 @@ typedef enum {
   FS_SYNC,
   FS_FLUSH_PAGE,
   FS_VSTAT,
+  FS_COUNTERS,
   FS_UNFORMAT,
   FS_FORMAT_RESET_WC,
 } FS_EVENTS;
@@ -153,6 +154,11 @@ typedef enum {
 //
 // Type Declarations.
 //
+
+// Counters exported through |FS_COUNTERS|.
+typedef struct FtlCounters {
+  uint32_t wear_count;
+} FtlCounters;
 
 // NDM Partition Information.
 typedef struct {

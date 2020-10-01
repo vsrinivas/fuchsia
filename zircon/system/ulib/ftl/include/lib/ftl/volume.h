@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FTL_VOLUME_H_
+#define LIB_FTL_VOLUME_H_
+
+#include <lib/ftl/ndm-driver.h>
+#include <zircon/types.h>
 
 #include <cstdint>
 #include <memory>
 
 #include <fbl/macros.h>
-#include <lib/ftl/ndm-driver.h>
-#include <zircon/types.h>
 
 struct XfsVol;
 
@@ -42,6 +44,10 @@ class __EXPORT Volume {
     uint32_t wear_histogram[20];
     uint32_t num_blocks;
     int garbage_level;  // Percentage of free space that can be garbage-collected.
+  };
+
+  struct Counters {
+    uint32_t wear_count = 0;
   };
 
   Volume() {}
@@ -86,6 +92,9 @@ class __EXPORT Volume {
 
   // Returns basic stats about the device.
   virtual zx_status_t GetStats(Stats* stats) = 0;
+
+  // Returns basic counters about the device.
+  virtual zx_status_t GetCounters(Counters* stats) = 0;
 };
 
 // Implementation of the Volume interface.
@@ -107,6 +116,7 @@ class __EXPORT VolumeImpl final : public Volume {
   zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final;
   zx_status_t GarbageCollect() final;
   zx_status_t GetStats(Stats* stats) final;
+  zx_status_t GetCounters(Counters* counters) final;
 
   // Internal notification of added volumes. This is forwarded to
   // FtlInstance::OnVolumeAdded.
@@ -134,3 +144,5 @@ class __EXPORT VolumeImpl final : public Volume {
 };
 
 }  // namespace ftl
+
+#endif  // LIB_FTL_VOLUME_H_
