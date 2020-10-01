@@ -6,7 +6,7 @@
 
 import("//build/config.gni")
 
-# Groups all configurations.
+# Groups main runtime configurations.
 group("config") {
   deps = [ ":sysmgr" ]
 }
@@ -16,4 +16,17 @@ config_data("sysmgr") {
   for_pkg = "sysmgr"
   outputs = [ "intl_services.config" ]
   sources = [ "sysmgr_config.json" ]
+}
+
+# Groups the "small" configurations.  Never include both ":config" and ":small"
+# at the same time.
+group("small") {
+  deps = [ ":sysmgr_small" ]
+}
+
+# Sysmgr configuration where intl coexists with a11y
+config_data("sysmgr_small") {
+  for_pkg = "sysmgr"
+  outputs = [ "intl_services.config" ]
+  sources = [ "sysmgr_config_small.json" ]
 }
