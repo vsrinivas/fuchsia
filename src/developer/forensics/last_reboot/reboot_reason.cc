@@ -94,35 +94,6 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
   }
 }
 
-cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reason) {
-  switch (reason) {
-    case RebootReason::kNotParseable:
-      return cobalt::LegacyRebootReason::kKernelPanic;
-    case RebootReason::kGenericGraceful:
-    case RebootReason::kUserRequest:
-    case RebootReason::kSystemUpdate:
-    case RebootReason::kHighTemperature:
-    case RebootReason::kSessionFailure:
-    case RebootReason::kSystemFailure:
-    case RebootReason::kFdr:
-      return cobalt::LegacyRebootReason::kClean;
-    case RebootReason::kCold:
-      return cobalt::LegacyRebootReason::kCold;
-    case RebootReason::kSpontaneous:
-      return cobalt::LegacyRebootReason::kUnknown;
-    case RebootReason::kKernelPanic:
-      return cobalt::LegacyRebootReason::kKernelPanic;
-    case RebootReason::kOOM:
-      return cobalt::LegacyRebootReason::kOOM;
-    case RebootReason::kHardwareWatchdogTimeout:
-      return cobalt::LegacyRebootReason::kHardwareWatchdog;
-    case RebootReason::kSoftwareWatchdogTimeout:
-      return cobalt::LegacyRebootReason::kSoftwareWatchdog;
-    case RebootReason::kBrownout:
-      return cobalt::LegacyRebootReason::kBrownout;
-  }
-}
-
 cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
   switch (reason) {
     case RebootReason::kNotParseable:

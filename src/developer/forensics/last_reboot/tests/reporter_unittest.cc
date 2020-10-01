@@ -45,7 +45,6 @@ struct UngracefulRebootTestParam {
 
   std::string output_crash_signature;
   std::optional<zx::duration> output_uptime;
-  cobalt::LegacyRebootReason output_reboot_reason;
   cobalt::LastRebootReason output_last_reboot_reason;
 };
 
@@ -53,7 +52,6 @@ struct GracefulRebootTestParam {
   std::string test_name;
   std::optional<std::string> graceful_reboot_log;
 
-  cobalt::LegacyRebootReason output_reboot_reason;
   cobalt::LastRebootReason output_last_reboot_reason;
 };
 
@@ -134,7 +132,6 @@ TEST_F(GenericReporterTest, Succeed_WellFormedRebootLog) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::LegacyRebootReason::kKernelPanic),
                   cobalt::Event(cobalt::LastRebootReason::kKernelPanic, uptime.to_usecs()),
               }));
   EXPECT_TRUE(files::IsFile(kHasReportedOnPath));
@@ -156,7 +153,6 @@ TEST_F(GenericReporterTest, Succeed_NoUptime) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::LegacyRebootReason::kKernelPanic),
                   cobalt::Event(cobalt::LastRebootReason::kKernelPanic, /*duration=*/0u),
               }));
 }
@@ -173,7 +169,6 @@ TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::LegacyRebootReason::kClean),
                   cobalt::Event(cobalt::LastRebootReason::kGenericGraceful, uptime.to_usecs()),
               }));
 }
@@ -188,7 +183,6 @@ TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledColdReboot) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::LegacyRebootReason::kCold),
                   cobalt::Event(cobalt::LastRebootReason::kCold, /*duration=*/0u),
               }));
 }
@@ -205,7 +199,6 @@ TEST_F(GenericReporterTest, Fail_CrashReporterFailsToFile) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::LegacyRebootReason::kKernelPanic),
                   cobalt::Event(cobalt::LastRebootReason::kKernelPanic, uptime.to_usecs()),
               }));
 }
@@ -234,7 +227,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-kernel-panic",
                                  zx::msec(65487494),
-                                 cobalt::LegacyRebootReason::kKernelPanic,
                                  cobalt::LastRebootReason::kKernelPanic,
                              },
                              {
@@ -242,7 +234,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "ZIRCON REBOOT REASON (OOM)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-oom",
                                  zx::msec(65487494),
-                                 cobalt::LegacyRebootReason::kOOM,
                                  cobalt::LastRebootReason::kSystemOutOfMemory,
                              },
                              {
@@ -250,7 +241,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "ZIRCON REBOOT REASON (UNKNOWN)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-brief-power-loss",
                                  zx::msec(65487494),
-                                 cobalt::LegacyRebootReason::kUnknown,
                                  cobalt::LastRebootReason::kBriefPowerLoss,
                              },
                              {
@@ -258,7 +248,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "ZIRCON REBOOT REASON (SW WATCHDOG)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-sw-watchdog-timeout",
                                  zx::msec(65487494),
-                                 cobalt::LegacyRebootReason::kSoftwareWatchdog,
                                  cobalt::LastRebootReason::kSoftwareWatchdogTimeout,
                              },
                              {
@@ -266,7 +255,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "ZIRCON REBOOT REASON (HW WATCHDOG)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-hw-watchdog-timeout",
                                  zx::msec(65487494),
-                                 cobalt::LegacyRebootReason::kHardwareWatchdog,
                                  cobalt::LastRebootReason::kHardwareWatchdogTimeout,
                              },
                              {
@@ -274,7 +262,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "ZIRCON REBOOT REASON (BROWNOUT)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-brownout",
                                  zx::msec(65487494),
-                                 cobalt::LegacyRebootReason::kBrownout,
                                  cobalt::LastRebootReason::kBrownout,
                              },
                              {
@@ -282,7 +269,6 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  "NOT PARSEABLE",
                                  "fuchsia-reboot-log-not-parseable",
                                  std::nullopt,
-                                 cobalt::LegacyRebootReason::kKernelPanic,
                                  cobalt::LastRebootReason::kUnknown,
                              },
                          })),
@@ -308,7 +294,6 @@ TEST_P(UngracefulReporterTest, Succeed) {
       (param.output_uptime.has_value()) ? param.output_uptime.value() : zx::usec(0);
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(param.output_reboot_reason),
                   cobalt::Event(param.output_last_reboot_reason, expected_uptime.to_usecs()),
               }));
 }
@@ -320,37 +305,31 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulReporterTest,
                              {
                                  "UserRequest",
                                  "USER REQUEST",
-                                 cobalt::LegacyRebootReason::kClean,
                                  cobalt::LastRebootReason::kUserRequest,
                              },
                              {
                                  "SystemUpdate",
                                  "SYSTEM UPDATE",
-                                 cobalt::LegacyRebootReason::kClean,
                                  cobalt::LastRebootReason::kSystemUpdate,
                              },
                              {
                                  "HighTemperature",
                                  "HIGH TEMPERATURE",
-                                 cobalt::LegacyRebootReason::kClean,
                                  cobalt::LastRebootReason::kHighTemperature,
                              },
                              {
                                  "NotSupported",
                                  "NOT SUPPORTED",
-                                 cobalt::LegacyRebootReason::kClean,
                                  cobalt::LastRebootReason::kGenericGraceful,
                              },
                              {
                                  "kNotParseable",
                                  "NOT PARSEABLE",
-                                 cobalt::LegacyRebootReason::kClean,
                                  cobalt::LastRebootReason::kGenericGraceful,
                              },
                              {
                                  "None",
                                  std::nullopt,
-                                 cobalt::LegacyRebootReason::kClean,
                                  cobalt::LastRebootReason::kGenericGraceful,
                              },
                          })),
@@ -374,7 +353,6 @@ TEST_P(GracefulReporterTest, Succeed) {
   const zx::duration expected_uptime = zx::msec(65487494);
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(param.output_reboot_reason),
                   cobalt::Event(param.output_last_reboot_reason, expected_uptime.to_usecs()),
               }));
 }
@@ -392,7 +370,6 @@ TEST_P(GracefulReporterTest, Succeed_FDR) {
   EXPECT_THAT(
       ReceivedCobaltEvents(),
       UnorderedElementsAreArray({
-          cobalt::Event(cobalt::LegacyRebootReason::kClean),
           cobalt::Event(cobalt::LastRebootReason::kFactoryDataReset, expected_uptime.to_usecs()),
       }));
 }
@@ -442,7 +419,6 @@ TEST_P(GracefulWithCrashReporterTest, Succeed) {
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::LegacyRebootReason::kClean),
                   cobalt::Event(param.output_last_reboot_reason, param.output_uptime.to_usecs()),
               }));
 }

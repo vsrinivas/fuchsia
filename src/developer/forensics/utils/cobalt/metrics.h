@@ -12,17 +12,6 @@ namespace cobalt {
 
 constexpr auto kProjectId = cobalt_registry::kProjectId;
 
-enum class LegacyRebootReason {
-  kKernelPanic = cobalt_registry::RebootMetricDimensionReason::KernelPanic,
-  kOOM = cobalt_registry::RebootMetricDimensionReason::Oom,
-  kCold = cobalt_registry::RebootMetricDimensionReason::Cold,
-  kClean = cobalt_registry::RebootMetricDimensionReason::Clean,
-  kUnknown = cobalt_registry::RebootMetricDimensionReason::Unknown,
-  kHardwareWatchdog = cobalt_registry::RebootMetricDimensionReason::HardwareWatchdog,
-  kSoftwareWatchdog = cobalt_registry::RebootMetricDimensionReason::SoftwareWatchdog,
-  kBrownout = cobalt_registry::RebootMetricDimensionReason::Brownout,
-};
-
 enum class CrashState {
   kUnknown = cobalt_registry::CrashMetricDimensionState::Unknown,
   kFiled = cobalt_registry::CrashMetricDimensionState::Filed,
@@ -126,10 +115,6 @@ inline constexpr uint32_t MetricIDForEventCode(const TimedOutData data) {
   return cobalt_registry::kFeedbackDataCollectionTimeoutMetricId;
 }
 
-inline constexpr uint32_t MetricIDForEventCode(const LegacyRebootReason reason) {
-  return cobalt_registry::kRebootMetricId;
-}
-
 inline constexpr uint32_t MetricIDForEventCode(const CrashState state) {
   return cobalt_registry::kCrashMetricId;
 }
@@ -196,10 +181,6 @@ inline constexpr EventType EventTypeForEventCode(const SnapshotGenerationFlow sn
 }
 
 inline constexpr EventType EventTypeForEventCode(const TimedOutData data) {
-  return EventType::kOccurrence;
-}
-
-inline constexpr EventType EventTypeForEventCode(const LegacyRebootReason reason) {
   return EventType::kOccurrence;
 }
 

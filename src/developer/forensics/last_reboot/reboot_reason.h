@@ -46,7 +46,6 @@ bool IsCrash(RebootReason reason);
 std::optional<bool> OptionallyGraceful(RebootReason reason);
 
 cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason);
-cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(RebootReason reason);
 std::string ToCrashSignature(RebootReason reason);
 std::string ToCrashProgramName(RebootReason reason);
 std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reason);

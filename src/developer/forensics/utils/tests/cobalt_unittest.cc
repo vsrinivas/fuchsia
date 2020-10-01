@@ -27,8 +27,8 @@ namespace cobalt {
 namespace {
 
 constexpr uint32_t kMaxQueueSize = 500u;
-constexpr LegacyRebootReason kEventCode = LegacyRebootReason::kOOM;
-constexpr LegacyRebootReason kAnotherEventCode = LegacyRebootReason::kKernelPanic;
+constexpr CrashState kEventCode = CrashState::kFiled;
+constexpr CrashState kAnotherEventCode = CrashState::kUploaded;
 constexpr uint64_t kCount = 2u;
 constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 

@@ -24,7 +24,6 @@ cobalt::EventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_co
       return cobalt::EventType::kCount;
     case MetricIDForEventCode(cobalt::PreviousBootEncodingVersion::kUnknown):
       return cobalt::EventType::kCount;
-    case MetricIDForEventCode(cobalt::LegacyRebootReason::kOOM):
     case MetricIDForEventCode(cobalt::CrashState::kUnknown):
     case MetricIDForEventCode(cobalt::TimedOutData::kUnknown):
     default:
