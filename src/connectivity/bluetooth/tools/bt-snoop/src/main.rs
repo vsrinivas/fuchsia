@@ -13,15 +13,14 @@ use {
     fidl_fuchsia_io, fuchsia_async as fasync,
     fuchsia_bluetooth::bt_fidl_status,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect as inspect,
-    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
-    fuchsia_trace as trace,
+    fuchsia_inspect as inspect, fuchsia_trace as trace,
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     futures::{
         future::{join, ready, Join, Ready},
         select,
         stream::{FusedStream, FuturesUnordered, Stream, StreamExt, StreamFuture},
     },
+    log::{debug, error, info, trace, warn},
     std::{
         fmt,
         fs::File,
@@ -108,7 +107,7 @@ fn handle_hci_device_event(
 
     match message.event {
         WatchEvent::ADD_FILE | WatchEvent::EXISTING => {
-            fx_log_info!("Opening snoop channel for hci device \"{}\"", path.display());
+            info!("Opening snoop channel for hci device \"{}\"", path.display());
             println!("Getting vfs event");
             match Snooper::new(path.clone()) {
                 Ok(snooper) => {
@@ -120,12 +119,12 @@ fn handle_hci_device_event(
                 }
                 Err(e) => {
                     println!("failed");
-                    fx_log_warn!("Failed to open snoop channel for \"{}\": {}", path.display(), e);
+                    warn!("Failed to open snoop channel for \"{}\": {}", path.display(), e);
                 }
             }
         }
         WatchEvent::REMOVE_FILE => {
-            fx_log_info!("Removing snoop channel for hci device: \"{}\"", path.display());
+            info!("Removing snoop channel for hci device: \"{}\"", path.display());
             // TODO(belgum): What should be done with the logged packets in this case?
             //               Find out how to remove snooper from ConcurrentTask (perhaps cancel
             //               and wake)
@@ -143,7 +142,7 @@ fn register_new_client(
     client_id: ClientId,
 ) {
     client_stream.push(join(ready(client_id), stream.into_future()));
-    fx_log_info!("New client connection: {}", client_id);
+    info!("New client connection: {}", client_id);
 }
 
 /// Handle a client request to dump the packet log, subscribe to future events or do both.
@@ -166,7 +165,7 @@ fn handle_client_request(
                 return Ok(());
             }
 
-            fx_vlog!(1, "Request received from client {}.", id);
+            debug!("Request received from client {}.", id);
 
             let control_handle = responder.control_handle().clone();
 
@@ -197,18 +196,18 @@ fn handle_client_request(
                     .register(id, control_handle, host_device)
                     .expect("A client `Start` request should never be processed more than once");
                 client_requests.push(join(ready(id), client_stream.into_future()));
-                fx_vlog!(2, "Client {} subscribed and waiting", id);
+                trace!("Client {} subscribed and waiting", id);
             } else {
-                fx_vlog!(2, "Client {} shutting down", id);
+                trace!("Client {} shutting down", id);
                 control_handle.shutdown();
             }
         }
         Some(Err(e)) => {
-            fx_log_warn!("Client returned error: {:?}", e);
+            warn!("Client returned error: {:?}", e);
             subscribers.deregister(&id);
         }
         None => {
-            fx_vlog!(1, "Client disconnected");
+            debug!("Client disconnected");
             subscribers.deregister(&id);
         }
     }
@@ -226,7 +225,7 @@ fn handle_packet(
     truncate_payload: Option<usize>,
 ) {
     if let Some((device, mut packet)) = packet {
-        fx_vlog!(2, "Received packet from {:?}.", snooper.device_path);
+        trace!("Received packet from {:?}.", snooper.device_path);
         if let Some(len) = truncate_payload {
             packet.payload.truncate(len);
         }
@@ -234,7 +233,7 @@ fn handle_packet(
         packet_logs.log_packet(&device, packet);
         snoopers.push(snooper.into_future());
     } else {
-        fx_log_info!("Snoop channel closed for device: {}", snooper.device_name);
+        info!("Snoop channel closed for device: {}", snooper.device_name);
     }
 }
 
@@ -319,7 +318,7 @@ struct Args {
     /// maximum number of bytes to keep in the payload of incoming packets. Defaults to no limit.
     truncate_payload: Option<usize>,
     #[argh(switch, short = 'v')]
-    /// enable verbose log output. Additional occurrences of the flag will raise verbosity.
+    /// enable verbose log output. Using twice will increase verbosity.
     verbosity: u16,
 }
 
@@ -351,7 +350,7 @@ async fn run(
         inspect,
     );
 
-    fx_vlog!(1, "Capturing snoop packets...");
+    debug!("Capturing snoop packets...");
 
     loop {
         select! {
@@ -372,7 +371,7 @@ async fn run(
                     }
                     Err(e) => {
                         // Attempt to recreate watcher in the event of an error.
-                        fx_log_warn!("VFS Watcher has died with error: {:?}", e);
+                        warn!("VFS Watcher has died with error: {:?}", e);
                         hci_device_events = Watcher::new(io_util::clone_directory(
                             &directory,
                             fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
@@ -388,7 +387,7 @@ async fn run(
                 if let Err(e) = handle_client_request(request, &mut client_requests,
                     &mut subscribers, &mut packet_logs)
                 {
-                    fx_vlog!(1, "Unable to handle client request: {:?}", e);
+                    debug!("Unable to handle client request: {:?}", e);
                 }
             },
 
@@ -406,11 +405,13 @@ async fn run(
 ///
 /// Panics if syslog logger cannot be initialized
 fn init_logging(verbosity: u16) {
-    syslog::init_with_tags(&["bt-snoop"]).expect("Can't init logger");
-    if verbosity > 0 {
-        syslog::set_verbosity(verbosity);
+    fuchsia_syslog::init_with_tags(&["bt-snoop"]).expect("Can't init logger");
+    if verbosity > 1 {
+        fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
+    } else if verbosity > 0 {
+        fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
     }
-    fx_log_info!("Starting bt-snoop.");
+    info!("Starting bt-snoop.");
 }
 
 /// Parse program arguments, call the main loop, and log any unrecoverable errors.
@@ -425,7 +426,7 @@ async fn main() {
 
     let inspector = inspect::Inspector::new();
     inspector.serve(&mut fs).unwrap_or_else(|e| {
-        fx_log_err!("Failed to serve the inspect tree: {:?}", e);
+        error!("Failed to serve the inspect tree: {:?}", e);
     });
 
     let config_inspect = inspector.root().create_child("configuration");
@@ -438,7 +439,7 @@ async fn main() {
     fs.take_and_serve_directory_handle().expect("serve ServiceFS directory");
 
     match run(config, fs.fuse(), runtime_inspect).await {
-        Err(err) => fx_log_err!("Failed with critical error: {:?}", err),
+        Err(err) => error!("Failed with critical error: {:?}", err),
         _ => {}
     };
 }

@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_snoop::{SnoopControlHandle, SnoopPacket},
-    fuchsia_syslog::{fx_log_warn, fx_vlog},
+    log::{trace, warn},
     std::{collections::HashMap, iter},
 };
 
@@ -99,7 +99,7 @@ impl SubscriptionManager {
         // Send events to all clients that have registered interest in this device
         for (id, handle) in subscribers {
             if let Err(e) = handle.send_on_packet(device, packet) {
-                fx_log_warn!("Subscriber {} failed with {}. Removing.", id, e);
+                warn!("Subscriber {} failed with {}. Removing.", id, e);
                 to_cleanup.push(*id);
             } else {
                 success_count += 1;
@@ -110,7 +110,7 @@ impl SubscriptionManager {
         for id in to_cleanup {
             self.deregister(&id);
         }
-        fx_vlog!(2, "Notified {} clients.", success_count);
+        trace!("Notified {} clients.", success_count);
     }
 
     #[allow(dead_code)] // Used in test assertions.
