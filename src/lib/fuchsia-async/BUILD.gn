@@ -47,6 +47,7 @@ rustc_library("fuchsia-async") {
       "src/handle/zircon/rwhandle.rs",
       "src/handle/zircon/socket.rs",
       "src/runtime/fuchsia/executor.rs",
+      "src/runtime/fuchsia/instrumentation.rs",
       "src/runtime/fuchsia/mod.rs",
       "src/runtime/fuchsia/task.rs",
       "src/runtime/fuchsia/timer.rs",

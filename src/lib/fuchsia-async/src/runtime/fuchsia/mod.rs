@@ -5,3 +5,7 @@
 pub mod executor;
 pub mod task;
 pub mod timer;
+
+// TODO(fxbug.dev/58578): Remove this annotation
+#[allow(dead_code)]
+mod instrumentation;
