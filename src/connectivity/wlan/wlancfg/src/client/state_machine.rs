@@ -585,7 +585,7 @@ mod tests {
         pin_mut!(save_fut);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
         process_stash_write(&mut exec, &mut stash_server);
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {

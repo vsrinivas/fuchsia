@@ -305,12 +305,13 @@ impl SavedNetworksManager {
 
     /// Save a network by SSID and password. If the SSID and password have been saved together
     /// before, do not modify the saved config. Update the legacy storage to keep it consistent
-    /// with what it did before the new version.
+    /// with what it did before the new version. If a network is pushed out because of the newly
+    /// saved network, this will return the removed config.
     pub async fn store(
         &self,
         network_id: NetworkIdentifier,
         credential: Credential,
-    ) -> Result<(), NetworkConfigError> {
+    ) -> Result<Option<NetworkConfig>, NetworkConfigError> {
         let mut saved_networks = self.saved_networks.lock().await;
         let network_entry = saved_networks.entry(network_id.clone());
 
@@ -320,13 +321,13 @@ impl SavedNetworksManager {
                     "Saving a previously saved network with same password: {}",
                     String::from_utf8_lossy(&network_id.ssid)
                 );
-                return Ok(());
+                return Ok(None);
             }
         }
         let network_config =
             NetworkConfig::new(network_id.clone(), credential.clone(), false, false)?;
         let network_configs = network_entry.or_default();
-        evict_if_needed(network_configs);
+        let evicted_config = evict_if_needed(network_configs);
         network_configs.push(network_config);
 
         self.stash
@@ -342,7 +343,7 @@ impl SavedNetworksManager {
         // Write saved networks to the legacy store only if they are WPA2 or Open, as legacy store
         // does not support more types. Do not write PSK to legacy storage.
         if let Credential::Psk(_) = credential {
-            return Ok(());
+            return Ok(evicted_config);
         }
         if network_id.security_type == SecurityType::Wpa2
             || network_id.security_type == SecurityType::None
@@ -352,7 +353,7 @@ impl SavedNetworksManager {
                 .store(network_id.ssid, ess)
                 .map_err(|_| NetworkConfigError::LegacyWriteError)?;
         }
-        Ok(())
+        Ok(evicted_config)
     }
 
     /// Update the specified saved network with the result of an attempted connect.  If the
@@ -455,21 +456,20 @@ fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
 /// use this to make a better decision what to forget if all networks have connected before.
 /// TODO(fxbug.dev/41626) - make sure that we disconnect from the network if we evict a network config
 /// for a network we are currently connected to.
-fn evict_if_needed(configs: &mut Vec<NetworkConfig>) {
+fn evict_if_needed(configs: &mut Vec<NetworkConfig>) -> Option<NetworkConfig> {
     if configs.len() < MAX_CONFIGS_PER_SSID {
-        return;
+        return None;
     }
 
     for i in 0..configs.len() {
         if let Some(config) = configs.get(i) {
             if !config.has_ever_connected {
-                configs.remove(i);
-                return;
+                return Some(configs.remove(i));
             }
         }
     }
     // If all saved networks have connected, remove the first network
-    configs.remove(0);
+    return Some(configs.remove(0));
 }
 
 /// Record Cobalt metrics related to Saved Networks
@@ -946,9 +946,9 @@ mod tests {
         let mut connected_config = unconnected_config.clone();
         connected_config.has_ever_connected = false;
         let mut network_configs = vec![connected_config; MAX_CONFIGS_PER_SSID - 1];
-        network_configs.insert(MAX_CONFIGS_PER_SSID / 2, unconnected_config);
+        network_configs.insert(MAX_CONFIGS_PER_SSID / 2, unconnected_config.clone());
 
-        evict_if_needed(&mut network_configs);
+        assert_eq!(evict_if_needed(&mut network_configs), Some(unconnected_config));
         assert_eq!(MAX_CONFIGS_PER_SSID - 1, network_configs.len());
         // check that everything left has been connected to before, only one removed is
         // the one that has never been connected to
@@ -960,13 +960,13 @@ mod tests {
     #[test]
     fn evict_if_needed_already_has_space() {
         let mut configs = vec![];
-        evict_if_needed(&mut configs);
+        assert_eq!(evict_if_needed(&mut configs), None);
         let expected_cfgs: Vec<NetworkConfig> = vec![];
         assert_eq!(expected_cfgs, configs);
 
         if MAX_CONFIGS_PER_SSID > 1 {
             let mut configs = vec![network_config("foo", "password")];
-            evict_if_needed(&mut configs);
+            assert_eq!(evict_if_needed(&mut configs), None);
             // if MAX_CONFIGS_PER_SSID is 1, this wouldn't be true
             assert_eq!(vec![network_config("foo", "password")], configs);
         }
@@ -1293,7 +1293,7 @@ mod tests {
                 responder.send(&mut Ok(())).expect("failed to send stash response");
             }
         );
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
     }
 
     /// Create a saved networks manager and clear the contents. Stash ID should be different for

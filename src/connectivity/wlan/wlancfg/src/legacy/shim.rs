@@ -258,7 +258,7 @@ async fn connect(
     let credential = legacy_config_to_policy_credential(&legacy_req);
     info!("Automatically (re-)saving network used in legacy connect request");
     match saved_networks.store(network_id.clone(), credential.clone()).await {
-        Ok(()) => {}
+        Ok(_) => {}
         Err(e) => {
             error!("failed to store connect config: {:?}", e);
             return internal_error();
@@ -542,7 +542,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
         // Process stash write for saved network
         process_stash_write(&mut exec, &mut stash_server);
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Send the request to clear saved networks.
         let clear_fut = wlan_proxy.clear_saved_networks();

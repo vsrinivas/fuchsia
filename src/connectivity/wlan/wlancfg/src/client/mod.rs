@@ -331,12 +331,24 @@ async fn handle_client_request_save_network(
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
-    saved_networks.store(NetworkIdentifier::from(net_id.clone()), credential.clone()).await?;
+    let evicted_config =
+        saved_networks.store(NetworkIdentifier::from(net_id.clone()), credential.clone()).await?;
+
+    // If a config was removed, disconnect from that network.
+    let mut iface_manager = iface_manager.lock().await;
+    if let Some(config) = evicted_config {
+        let net_id = fidl_policy::NetworkIdentifier {
+            ssid: config.ssid,
+            type_: config.security_type.into(),
+        };
+        match iface_manager.disconnect(net_id).await {
+            Ok(()) => {}
+            Err(e) => error!("failed to disconnect from network: {}", e),
+        }
+    }
 
     // Attempt to connect to the new network if there is an idle client interface.
     let connect_req = client_fsm::ConnectRequest { network: net_id, credential: credential };
-    let mut iface_manager = iface_manager.lock().await;
-
     match iface_manager.has_idle_client().await {
         Ok(true) => {
             info!("Idle interface available, will attempt connection to new saved network");
@@ -540,20 +552,32 @@ mod tests {
         wlan_common::assert_variant,
     };
 
+    /// Only used to tell us what disconnect request was given to the IfaceManager so that we
+    /// don't need to worry about the implementation logic in the FakeIfaceManager.
+    #[derive(Debug)]
+    enum IfaceManagerRequest {
+        Disconnect(fidl_policy::NetworkIdentifier),
+    }
+
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
         pub connect_succeeds: bool,
         pub client_connections_enabled: bool,
         pub disconnected_ifaces: Vec<u16>,
+        command_sender: mpsc::Sender<IfaceManagerRequest>,
     }
 
     impl FakeIfaceManager {
-        pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
+        pub fn new(
+            proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+            command_sender: mpsc::Sender<IfaceManagerRequest>,
+        ) -> Self {
             FakeIfaceManager {
                 sme_proxy: proxy,
                 connect_succeeds: true,
                 client_connections_enabled: false,
                 disconnected_ifaces: Vec::new(),
+                command_sender: command_sender,
             }
         }
     }
@@ -562,9 +586,17 @@ mod tests {
     impl IfaceManagerApi for FakeIfaceManager {
         async fn disconnect(
             &mut self,
-            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
         ) -> Result<(), Error> {
-            Ok(())
+            self.command_sender.try_send(IfaceManagerRequest::Disconnect(network_id)).map_err(|e| {
+                error!(
+                    "Failed to send disconnect: commands_sender's reciever may have
+                        been dropped. FakeIfaceManager should be created manually with a sender
+                        assigned: {:?}",
+                    e
+                );
+                format_err!("failed to send disconnect: {:?}", e)
+            })
         }
 
         async fn connect(
@@ -729,7 +761,8 @@ mod tests {
 
         let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
-        let mut iface_manager = FakeIfaceManager::new(proxy.clone());
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let mut iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
         iface_manager.connect_succeeds = connect_succeeds;
         let iface_manager = Arc::new(Mutex::new(iface_manager));
         let sme_stream = server.into_stream().expect("failed to create ClientSmeRequestStream");
@@ -1344,6 +1377,81 @@ mod tests {
     }
 
     #[test]
+    fn save_network_overwrite_disconnects() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+
+        // Need to create this here so that the temp files will be in scope here.
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks = Arc::new(saved_networks);
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            Arc::clone(&saved_networks),
+            create_mock_cobalt_sender(),
+        ));
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
+
+        // Create a fake IfaceManager to handle client requests.
+        let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let (req_sender, mut req_recvr) = mpsc::channel(1);
+        let mut iface_manager = FakeIfaceManager::new(proxy, req_sender);
+        iface_manager.connect_succeeds = true;
+        let iface_manager = Arc::new(Mutex::new(iface_manager));
+
+        let serve_fut = serve_provider_requests(
+            iface_manager,
+            update_sender,
+            Arc::clone(&saved_networks),
+            network_selector,
+            requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+
+        // Save the network directly.
+        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let credential = Credential::Password(b"password".to_vec());
+        let save_fut = saved_networks.store(network_id.clone(), credential.clone());
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
+
+        // Save a network with the same identifier but a different password
+        let network_config = fidl_policy::NetworkConfig {
+            id: Some(fidl_policy::NetworkIdentifier::from(network_id.clone())),
+            credential: Some(fidl_policy::Credential::Password(b"other-password".to_vec())),
+        };
+        let mut save_fut = controller.save_network(network_config);
+
+        // Process the remove request on the server side and handle requests to stash on the way.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that the iface manager was asked to disconnect from some network
+        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id))) => {
+            assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
+        });
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
+    }
+
+    #[test]
     fn save_bad_network_should_fail() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let stash_id = "save_bad_network_should_fail";
@@ -1420,18 +1528,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_not_connected() {
-        let is_connected = false;
-        test_remove_a_network(is_connected);
-    }
-
-    #[test]
-    fn test_remove_connected() {
-        let is_connected = true;
-        test_remove_a_network(is_connected);
-    }
-
-    fn test_remove_a_network(is_connected: bool) {
+    fn test_remove_a_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(rand_string());
@@ -1454,7 +1551,8 @@ mod tests {
         // Create a fake IfaceManager to handle client requests.
         let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
-        let mut iface_manager = FakeIfaceManager::new(proxy.clone());
+        let (req_sender, mut req_recvr) = mpsc::channel(1);
+        let mut iface_manager = FakeIfaceManager::new(proxy, req_sender);
         iface_manager.connect_succeeds = true;
         let iface_manager = Arc::new(Mutex::new(iface_manager));
 
@@ -1482,19 +1580,7 @@ mod tests {
         pin_mut!(save_fut);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
         process_stash_write(&mut exec, &mut stash_server);
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(())));
-
-        // If testing a connected network, first connect to it in order to test that we will
-        // disconnect.
-        if is_connected {
-            let connect_fut =
-                controller.connect(&mut fidl_policy::NetworkIdentifier::from(network_id.clone()));
-            pin_mut!(connect_fut);
-
-            // Process connect request and verify connect response.
-            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-            assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
-        }
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Request to remove some network
         let network_config = fidl_policy::NetworkConfig {
@@ -1508,7 +1594,14 @@ mod tests {
         process_stash_remove(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
+        // Removing a network should always request a disconnect from IfaceManager, which will
+        // know whether we are connected to the network to disconnect from. This checks that the
+        // IfaceManager is told to disconnect (if connected).
+        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id))) => {
+            assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
+        });
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert!(exec.run_singlethreaded(saved_networks.lookup(network_id)).is_empty());
     }
 
@@ -2101,7 +2194,8 @@ mod tests {
 
         let (sme_proxy, _sme_server_end) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
-        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(sme_proxy)));
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(sme_proxy, req_sender)));
 
         {
             let iface_manager = iface_manager.clone();
@@ -2157,7 +2251,8 @@ mod tests {
 
         let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
-        let iface_manager = FakeIfaceManager::new(proxy.clone());
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
         let iface_manager = Arc::new(Mutex::new(iface_manager));
 
         // Issue the scan request.
@@ -2200,7 +2295,8 @@ mod tests {
 
         let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
-        let iface_manager = FakeIfaceManager::new(proxy.clone());
+        let (req_sender, _req_recvr) = mpsc::channel(1);
+        let iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
         let iface_manager = Arc::new(Mutex::new(iface_manager));
 
         // Issue the scan request.
