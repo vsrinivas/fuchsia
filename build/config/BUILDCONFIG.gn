@@ -450,6 +450,73 @@ set_defaults("rustc_staticlib") {
   configs = default_common_binary_configs
 }
 
+# This wraps the GN built-in shared_library() target and adds a few more features:
+#
+# - Redirecting from the current toolchain to its shared-library-compatible
+#   companion.
+#
+#   On ELF systems, a toolchain like //toolchain:fuchsia_x64 may have a
+#   companion/secondary toolchain, like //toolchain:fuchsia_x64-shared, which
+#   will be used to build shared_library() targets and their dependencies.
+#
+#   This is useful because ELF requires the machine code in shared objects to
+#   be compiled and linked with the `-fPIC` flag. This however generates a kind
+#   of relocatable code that is slower and larger.
+#
+#   For performance reason, it is best to build executable() targets, and their
+#   static dependencies, in a non-PIC toolchain, while using a PIC-enabled one
+#   for shared_library() targets they depend on.
+#
+#   Note that these companion toolchains are named with a -shared suffix,
+#   applied to a "base" toolchain name. This also applies to variant toolchains,
+#   i.e. //toolchain:foo-asan-shared would be the companion for
+#   //toolchain:foo-asan, which is itself a variant of //toolchain:foo.
+#
+#   This templates detect when a shared_library() target is being built in a
+#   base toolchain, and in this case, it will create a redirection target to the
+#   same target in the companion toolchain. This is logically equivalent to:
+#
+#      if (_in_base_toolchain) {
+#        group("mylib") {
+#          public_deps = [ ":mylib(//toolchain:foo-shared" ]
+#        }
+#      } else {   # in -shared toolchain
+#        shared_library("mylib") {
+#          ....
+#        }
+#     }
+#
+#   Note that not all toolchains need a companion toolchain though (e.g. those
+#   for non-ELF systems, or even some Zircon-specific ones).
+#
+# - If not specified by the caller, will use `root_out_dir` as the default output
+#   directory. So building '//some/dir:mylib(//toolchain:tc)' will build
+#   `${BUILD_DIR}/tc-shared/libmylib.so` instead of
+#   `${BUILD_DIR}/tc/obj/some/dir/libmylib.so` as the built-in shared_library()
+#   would. Notice the `tc-shared` sub-directory, instead of `tc` due to the
+#   companion toolchain.
+#
+# - Builds both the unstripped and stripped version of the library. For example
+#   `//some/dir:mylib(//toolchain:tc)` will generate both:
+#
+#     `${BUILD_DIR}/tc/libmylib.so`
+#     `${BUILD_DIR}/tc/lib.unstripped/libmylib.so`
+#
+#   As a special case, when built with a Zircon-specific toolchain, the unstripped
+#   library will be `${BUILD_DIR}/tc/libmylib.so.debug` instead. The `.debug` prefix
+#   simply means that the library contains debug symbols.
+#
+# - Add an entry for the library to the `binaries.json` build API file.
+#
+# - Use metadata to add a distribution_manifest() entry that would install the
+#   stripped shared library binary to `lib/$output_name`, or
+#   `lib/<variant>/$output_name` if this is being built in a variant toolchain
+#   instance.
+#
+# - Add metadata entry for link_output_rspfile(). See its documentation for details.
+#
+# This takes the same arguments as the built-in shared_library().
+#
 if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
   if (!toolchain_variant.is_pic_default) {
     # In the main toolchain, shared_library just redirects to the same
@@ -1277,7 +1344,68 @@ if (in_default_toolchain) {
   }
 }
 
+# This template is used internally by the Fuchsia build system to perform variant
+# toolchain selection for 'final' linkable targets, i.e. executable(), loadable_module(),
+# but not shared_library().
+#
+# Its purpose is to redirect to a specific GN toolchain() instance based on the current
+# variant selectors list (see documentation for `select_variant` above). For example,
+# if building the //foo:bar target in the //toolchain:zoo toolchain which supports an
+# Address-sanitizer variant, among others:
+#
+# - If no variant is selected by the developer, then this will just build
+#   //foo:bar(//toolchain:zoo) directly. Let's assume this generates an executable
+#   ${BUILD_DIR}/zoo/bar.
+#
+# - If the 'asan' variant is selected (e.g. `select_variant = [ 'asan' ]`), then this will
+#   instead build //foo:bar(//toolchain:zoo-asan), which will generate
+#   ${BUILD_DIR}/zoo-asan/bar. Additionally, a copy() rule will be used to copy this
+#   result to ${BUILD_DIR}/zoo/bar.
+#
+#   This is important because other build rules need to find the generated binary at its
+#   original location, even if it was really built in a variant toolchain.
+#
+# Arguments are the same as the one passed to the final target type, plus:
+#
+#  exclude_toolchain_tags (optional)
+#    [strings] An optional list of toolchain or variant tags that must be excluded from
+#    this redirection. This is useful if, for some reason, a specific target doesn't want
+#    to be built with a specific set of variants or toolchains.
+#
+#  variant_selector_target_type (optional)
+#    [string] A target type name that is compared with a variant selector's optional
+#    `target_type` list of target type names (see `select_variant` documentation above).
+#    If not defined, this defaults to the target type carried through `target_name`.
+#
+#  _variant_shared (required)
+#    [boolean] If true, this will also redirect to the -shlib companion toolchain
+#    associated with the current one. In practice, this should only be true for
+#    loadable_module(), or equivalent, which require to be built in that toolchain.
+#
+#    In the examples above, this would redirect to //foo:bar(//toolchain:zoo-shlib)
+#    and //foo:bar(//toolchain:zoo-asan-shlib) respectively.
+#
+#    Note that shared_library() does not use variant_target() and does its own
+#    redirection to the shlib companion toolchain by itself.
+#
+# NOTE: This template assumes that `target_name` will be the name of a final target type,
+# like "executable", and that invoker.target_name is the name of the real final target that
+# needs to be built. In other words, this is suppoed to be called by a wrapper class as
+# in the following example:
+#
+#     template("my_executable") {
+#       variant_target("executable") {
+#         forward_variables_from*invoker, "*", ....)
+#         ...
+#         selector_target_type = "my_executable"
+#       }
+#     }
+#
+# NOTE: The Fuchsia build sets the default `output_dir` value for final linkable
+# targets to `root_out_dir`.
+#
 template("variant_target") {
+  # NOTE: See technical note above to understand these three definitions.
   target_type = target_name
   target_name = invoker.target_name
   target_invoker = {
@@ -1576,6 +1704,48 @@ template("variant_target") {
   }
 }
 
+# This wraps the built-in GN executable() template, adding a few more features:
+#
+# - Perform variant-based toolchain selection using variant_target(). See its
+#   documentation for more details.
+#
+# - The default `output_dir` value is set to `root_out_dir`, which means
+#   that building //some/dir:foo(//toolchain:bar) will generate
+#   `${BUILD_DIR}/bar/foo` instead of `${BUILD_DIR]/bar/obj/some/dir/bar`.
+#
+# - This builds both an unstripped executable, and its stripped version,
+#   under `${BUILD_DIR}/bar/exe.unstripped/foo` and `${BUILD_DIR}/bar/foo`
+#   respectively.
+#
+#   As a special case, when using a zircon-specific toolchain, the unstripped
+#   executable will be `${BUILD_DIR}/bar/foo.debug` instead. The `.debug` suffix
+#   simply means the executable contains debug symbol information.
+#
+# - Misc default dependencies are added to the target depending on the current
+#   toolchain and some of the configs that apply to the target (see below for
+#   details).
+#
+# - Metadata is used to add an entry for the executable to the `binaries.json`
+#   build API file.
+#
+# - For executable instances built with host toolchains, metadata is used to add an
+#   entry to the `tool_paths.json` build API file.
+#
+# - Metadata is used to add an distribution manifest entry describing how to
+#   copy the stripped executable binary to 'bin/$output_name'. NOTE: This
+#   only happens if the invoker hasn't already set this entry.
+#
+# - Metadata is added for link_output_rspfile(). See its documentation for details.
+#
+# This accepts all arguments from the built-in GN executable() template,
+# as well as:
+#
+#   exclude_toolchain_tags (optional)
+#     [strings] A list of tags that corresponds to toolchain variants that
+#     this target should not be built with. E.g. this is useful to prevent
+#     a target being built in ASan mode because it makes it too slow to
+#     run.
+#
 template("executable") {
   _executable_name = target_name
   _variant_shared = false
@@ -1734,6 +1904,34 @@ template("executable") {
   }
 }
 
+# This wraps the GN built-in loadable_module() template, adding a few more features.
+# See the documentation for executable() to see them.
+#
+# NOTE: The GN documentation is not very clear about the distinction between a
+# loadable_module() and a shared_library(). Both will generate the same
+# .so / .dylib / .dll based on the platform, but the difference is how they are
+# handled by their dependents at link time.
+#
+# Let's consider an executable("foo") that depends on both a shared_library("bar")
+# and a loadable_module("zoo"):
+#
+# - If `foo` needs to be built, then both `bar` and `zoo` will be built before it
+#   (e.g. generating `libbar.so` and `libzoo.so` on ELF systems).
+#
+# - When `foo` is linked, only `libbar.so` will be listed on its final link command.
+#   This ends up creating an import directive inside the `foo` executable (e.g. a
+#   DT_NEEDED entry on ELF systems).
+#
+# The end result is a `foo` executable that requires a `libbar.so` to start
+# properly. While it may choose to load `libzoo.so` or not, at runtime, using
+# dlopen(), LoadLibrary() or any other platform-specific mechanism.
+#
+# This accepts all arguments from the built-in loadable_module(), as well as:
+#
+#   exclude_toolchain_tags (optional)
+#     [strings] List of toolchain or variant tags. See variant_target() or
+#     executable() documentation for details.
+#
 template("loadable_module") {
   _module_name = target_name
 
