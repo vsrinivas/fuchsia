@@ -202,7 +202,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
     // The tolerance is somewhat large to reduce flakes on debug builds.
     zx::duration min_lead_time;
     for (auto& r : renderers) {
-      min_lead_time = std::max(min_lead_time, r.renderer->GetMinLeadTime());
+      min_lead_time = std::max(min_lead_time, r.renderer->min_lead_time());
     }
     const auto tolerance = zx::msec(70);
     auto start_time = zx::clock::get_monotonic() + min_lead_time + tolerance;

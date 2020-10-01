@@ -135,7 +135,7 @@ zx_duration_t AudioAdminTest::GetMinLeadTime(
     // Get the minimum duration after submitting a packet to when we can start
     // capturing what we sent on the loopback interface.  We use the longest
     // latency of any of the renderers, but they should all have the same value.
-    max_min_lead_time = std::max(max_min_lead_time, renderer->GetMinLeadTime().get());
+    max_min_lead_time = std::max(max_min_lead_time, renderer->min_lead_time().get());
   }
   return max_min_lead_time;
 }

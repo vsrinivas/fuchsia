@@ -45,7 +45,7 @@ class RendererShimImpl {
   size_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
 
   // Minimum lead time for the AudioRenderer.
-  zx::duration GetMinLeadTime() const { return min_lead_time_.value(); }
+  zx::duration min_lead_time() const { return min_lead_time_.value(); }
 
   // Sets the units used by the presentation (media) timeline.
   // By default, we use format.frames_per_second / 1, which means 1 PTS tick = 1 frame.
@@ -100,7 +100,10 @@ class RendererShimImpl {
 
   void ResetEvents();
   void WatchEvents();
+  VmoBackedBuffer& payload_buffer() { return payload_buffer_; }
+  bool has_min_lead_time() const { return min_lead_time_.has_value(); }
 
+ private:
   const Format format_;
   const size_t payload_frame_count_;
   const size_t inspect_id_;
@@ -125,24 +128,24 @@ class AudioRendererShim : public RendererShimImpl {
 
   // Don't call this directly. Use HermeticAudioTest::CreateAudioRenderer so the object is
   // appropriately bound into the test environment.
-  AudioRendererShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format format,
+  AudioRendererShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format fmt,
                     size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
                     size_t inspect_id)
-      : RendererShimImpl(format, payload_frame_count, inspect_id) {
-    audio_core->CreateAudioRenderer(fidl_.NewRequest());
-    fixture->AddErrorHandler(fidl_, "AudioRenderer");
+      : RendererShimImpl(fmt, payload_frame_count, inspect_id) {
+    audio_core->CreateAudioRenderer(fidl().NewRequest());
+    fixture->AddErrorHandler(fidl(), "AudioRenderer");
     WatchEvents();
 
-    fidl_->SetUsage(usage);
-    fidl_->SetPcmStreamType({.sample_format = format_.sample_format(),
-                             .channels = format_.channels(),
-                             .frames_per_second = format_.frames_per_second()});
+    fidl()->SetUsage(usage);
+    fidl()->SetPcmStreamType({.sample_format = format().sample_format(),
+                              .channels = format().channels(),
+                              .frames_per_second = format().frames_per_second()});
 
-    SetPtsUnits(format_.frames_per_second(), 1);
-    fidl_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
+    SetPtsUnits(format().frames_per_second(), 1);
+    fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
   }
 
-  bool created() const { return min_lead_time_.has_value(); }
+  bool created() const { return has_min_lead_time(); }
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -160,29 +163,29 @@ class UltrasoundRendererShim : public RendererShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateUltrasoundRenderer so the object is
   // appropriately bound into the test environment.
   UltrasoundRendererShim(TestFixture* fixture, fuchsia::ultrasound::FactoryPtr& ultrasound_factory,
-                         Format format, size_t payload_frame_count, size_t inspect_id)
-      : RendererShimImpl(format, payload_frame_count, inspect_id), fixture_(fixture) {
+                         Format fmt, size_t payload_frame_count, size_t inspect_id)
+      : RendererShimImpl(fmt, payload_frame_count, inspect_id), fixture_(fixture) {
     ultrasound_factory->CreateRenderer(
-        fidl_.NewRequest(), [this](auto ref_clock, auto stream_type) {
+        fidl().NewRequest(), [this](auto ref_clock, auto stream_type) {
           created_ = true;
           reference_clock_ = std::move(ref_clock);
-          EXPECT_EQ(stream_type.sample_format, format_.sample_format());
-          EXPECT_EQ(stream_type.channels, format_.channels());
-          EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
+          EXPECT_EQ(stream_type.sample_format, format().sample_format());
+          EXPECT_EQ(stream_type.channels, format().channels());
+          EXPECT_EQ(stream_type.frames_per_second, format().frames_per_second());
         });
-    fixture->AddErrorHandler(fidl_, "UltrasoundRenderer");
+    fixture->AddErrorHandler(fidl(), "UltrasoundRenderer");
 
     WatchEvents();
-    SetPtsUnits(format_.frames_per_second(), 1);
-    fidl_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(false));
+    SetPtsUnits(format().frames_per_second(), 1);
+    fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
   }
 
   void WaitForDevice() {
     fixture_->RunLoopUntil(
-        [this] { return (created_ && min_lead_time_.has_value()) || fixture_->ErrorOccurred(); });
+        [this] { return (created_ && has_min_lead_time()) || fixture_->ErrorOccurred(); });
   }
 
-  bool created() const { return created_ && min_lead_time_; }
+  bool created() const { return created_ && has_min_lead_time(); }
 
  private:
   bool created_ = false;

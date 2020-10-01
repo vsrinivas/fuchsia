@@ -62,7 +62,7 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
   // the driver must wake up at least once every MinLeadTime. Therefore, we return enough
   // packets to exceed one MinLeadTime.
   size_t NumPacketsPerBatch() {
-    auto min_lead_time = renderer_->GetMinLeadTime();
+    auto min_lead_time = renderer_->min_lead_time();
     FX_CHECK(min_lead_time.get() > 0);
     // In exceptional cases, min_lead_time might be smaller than one packet.
     // Ensure we have at least a handful of packets.
@@ -105,7 +105,7 @@ TEST_F(AudioRendererPipelineTestInt16, RenderWithPts) {
 
 // If we issue DiscardAllPackets during Playback, PTS should not change.
 TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
-  auto min_lead_time = renderer_->GetMinLeadTime();
+  auto min_lead_time = renderer_->min_lead_time();
   // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See
   // fxbug.dev/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
@@ -557,7 +557,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   // Send second set of packets through new OutputPipeline (with inversion effect disabled); play
   // packets at least "min_lead_time" after the last audio frame previously written to the ring
   // buffer.
-  auto min_lead_time = renderer_->GetMinLeadTime();
+  auto min_lead_time = renderer_->min_lead_time();
   // Add extra packets to allow for scheduling delay to reduce flakes in debug mode. See
   // fxbug.dev/52410.
   constexpr auto kSchedulingDelayInPackets = 10;
@@ -597,7 +597,7 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
 
   ExpectCallback();
 
-  auto min_lead_time = renderer_->GetMinLeadTime();
+  auto min_lead_time = renderer_->min_lead_time();
   auto num_packets = min_lead_time / zx::msec(RendererShimImpl::kPacketMs);
   auto num_frames = num_packets * kPacketFrames;
 

@@ -199,7 +199,7 @@ void HermeticGoldenTest::RunWaveformTest(
   // the first frame of the ring buffer. We need to synchronize with the ring buffer, then
   // leave some silence to account for ring in.
   auto packets = renderer->AppendPackets({&input});
-  auto min_start_time = zx::clock::get_monotonic() + renderer->GetMinLeadTime() + zx::msec(20);
+  auto min_start_time = zx::clock::get_monotonic() + renderer->min_lead_time() + zx::msec(20);
   auto start_time =
       device->NextSynchronizedTimestamp(min_start_time) +
       zx::nsec(renderer->format().frames_per_ns().Inverse().Scale(tc.pipeline.neg_filter_width));
