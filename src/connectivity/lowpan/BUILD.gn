@@ -3,14 +3,17 @@
 # found in the LICENSE file.
 
 group("lowpan") {
-  testonly = true
   deps = [
     "config",
     "drivers",
     "lib",
     "service",
-    "tools",
   ]
+}
+
+group("tools") {
+  testonly = true
+  deps = [ "tools" ]
 }
 
 group("tests") {

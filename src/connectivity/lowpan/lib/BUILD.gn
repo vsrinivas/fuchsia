@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("lib") {
-  testonly = true
   deps = [
     "lowpan_driver_common",
     "spinel_pack",
