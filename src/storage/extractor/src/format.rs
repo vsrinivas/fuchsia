@@ -14,7 +14,7 @@
 //! | +---------------------+ |
 //! | | ExtentClusterHeader | |
 //! | +---------------------+ |
-//! | | Extent []           | |
+//! | | ExtentInfo []       | |
 //! | +---------------------+ |
 //! | | Extent Data []      | |
 //! | +---------------------+ |
@@ -298,11 +298,28 @@ impl From<DataKind> for DataKindInfo {
 #[repr(C)]
 #[derive(Debug, Clone, AsBytes, FromBytes)]
 pub struct ExtentInfo {
+    /// Start offset, in bytes, where this extent maps into the disk.
+    /// This is not an offset within the image file.
     pub start: u64,
+
+    /// End offset, in bytes, where this extent maps into the disk.
+    /// This is not an offset within the image file.
     pub end: u64,
+
+    /// ExtentKind describes the type of the extent.
+    ///
+    /// ExtentKind may mean different things based on the storage software.
+    /// ExtentKind priority is Unmapped<Unused<Data<Pii.
+    /// See [`ExtentKind`]
     pub extent: ExtentKindInfo,
+
+    /// DataKind describes the type of the data within an extent.
+    /// DataKind priority is Skipped<Zeroes<Unmodified<Modified.
+    /// See [`DataKind`]
     pub data: DataKindInfo,
-    pub _padding: [u8; 6],
+
+    // Make zerocopy happy. zerocopy expects packed, aligned structure.
+    _padding: [u8; 6],
 }
 
 impl From<Extent> for ExtentInfo {

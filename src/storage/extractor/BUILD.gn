@@ -27,8 +27,10 @@ rustc_library("disk_extractor_lib") {
   sources = [
     "src/error.rs",
     "src/extent.rs",
+    "src/extent_cluster.rs",
     "src/format.rs",
     "src/lib.rs",
+    "src/options.rs",
     "src/properties.rs",
     "src/utils.rs",
   ]
