@@ -93,6 +93,7 @@ rustc_library("lib") {
     "src/agent/earcons/sound_ids.rs",
     "src/agent/earcons/utils.rs",
     "src/agent/earcons/volume_change_handler.rs",
+    "src/agent/media_buttons.rs",
     "src/agent/restore_agent.rs",
     "src/audio.rs",
     "src/audio/audio_controller.rs",

@@ -102,9 +102,16 @@ enum Runtime {
     Nested(&'static str),
 }
 
+/// Represents each agent that can be run.
 #[derive(Eq, PartialEq, Hash, Debug, Copy, Clone, Deserialize)]
 pub enum AgentType {
+    /// Plays earcons in response to certain events. If MediaButtons is
+    /// enabled, then it will also handle some media buttons events.
     Earcons,
+    /// Responsible for managing the connection to media buttons. It will
+    /// broadcast events to the controllers and agents.
+    MediaButtons,
+    /// Responsible for initializing all of the controllers.
     Restore,
 }
 
@@ -120,6 +127,7 @@ pub struct AgentConfiguration {
 impl From<AgentType> for AgentBlueprintHandle {
     fn from(agent_type: AgentType) -> AgentBlueprintHandle {
         match agent_type {
+            AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
             AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
         }

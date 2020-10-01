@@ -6,6 +6,9 @@
 /// to participate in different lifespans.
 pub mod base;
 
+/// Agent for handling media button input.
+pub mod media_buttons;
+
 /// This mod provides a concrete implementation of the agent authority.
 pub mod authority_impl;
 
