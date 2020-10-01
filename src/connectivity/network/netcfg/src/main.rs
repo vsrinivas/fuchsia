@@ -877,8 +877,8 @@ impl<'a> NetCfg<'a> {
                 };
 
                 info!(
-                    "host interface {} (id={}) up with a link-local address so starting DHCPv6 client using socketaddr {:?}",
-                    name, id, sockaddr,
+                    "host interface {} (id={}) up with a link-local address so starting DHCPv6 client on {}",
+                    name, id, fnet_ext::SocketAddress::from(fnet::SocketAddress::Ipv6(sockaddr)),
                 );
 
                 match dhcpv6::start_client(dhcpv6_client_provider, id, sockaddr, watchers) {

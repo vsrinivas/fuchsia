@@ -4,7 +4,7 @@
 
 //! Extensions for types in the `fidl_fuchsia_net` crate.
 
-use std::convert::TryInto;
+use std::convert::TryInto as _;
 
 use fidl_fuchsia_net as fidl;
 
@@ -254,6 +254,22 @@ impl std::str::FromStr for MacAddress {
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct SocketAddress(pub std::net::SocketAddr);
+
+impl std::fmt::Display for SocketAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self(socket_addr) = self;
+        match socket_addr {
+            std::net::SocketAddr::V4(v4) => std::fmt::Display::fmt(v4, f),
+            std::net::SocketAddr::V6(v6) => {
+                match v6.scope_id() {
+                    0 => std::fmt::Display::fmt(v6, f),
+                    // TODO(https://github.com/rust-lang/rust/pull/77426): remove this.
+                    scope_id => write!(f, "[{}%{}]:{}", v6.ip(), scope_id, v6.port()),
+                }
+            }
+        }
+    }
+}
 
 impl From<fidl::SocketAddress> for SocketAddress {
     fn from(f: fidl::SocketAddress) -> Self {
