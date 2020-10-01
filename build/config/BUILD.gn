@@ -653,7 +653,6 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/tools/bt-hci-tool/*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool/*",
     "//src/connectivity/management/reachability/core/*",
-    "//src/connectivity/network/netstack/tests/manual/*",
     "//src/connectivity/openthread/drivers/ot-radio/*",
     "//src/connectivity/openthread/ot-stack/*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/*",

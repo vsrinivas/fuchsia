@@ -12,9 +12,6 @@ executable("selecttest") {
   libs = [ "zircon" ]
 
   deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("sockopttest") {
@@ -25,9 +22,6 @@ executable("sockopttest") {
   libs = [ "zircon" ]
 
   deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("gethostbyname_test") {
@@ -38,9 +32,6 @@ executable("gethostbyname_test") {
   libs = [ "zircon" ]
 
   deps = [ "//sdk/lib/fdio" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 package("netstack-manual-tests") {

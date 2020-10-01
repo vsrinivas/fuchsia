@@ -13,20 +13,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-const char* sa_to_str(const struct sockaddr* sa, char* str, size_t strlen) {
-  if (sa->sa_family == AF_INET) {
-    struct sockaddr_in* sin = (struct sockaddr_in*)sa;
-    return inet_ntop(AF_INET, &sin->sin_addr, str, strlen);
-  } else if (sa->sa_family == AF_INET6) {
-    struct sockaddr_in6* sin6 = (struct sockaddr_in6*)sa;
-    return inet_ntop(AF_INET6, &sin6->sin6_addr, str, strlen);
-  } else {
-    return NULL;
-  }
-}
-
 int server(const char* service) {
-  int16_t port = atoi(service);
+  int port = atoi(service);
   printf("listen on port %d\n", port);
 
   int s = socket(AF_INET6, SOCK_STREAM, 0);
@@ -39,7 +27,7 @@ int server(const char* service) {
   memset(&addr, 0, sizeof(addr));
   addr.sin6_family = AF_INET6;
   addr.sin6_addr = in6addr_any;  // works with IPv4
-  addr.sin6_port = htons(port);
+  addr.sin6_port = htons((uint16_t)port);
 
   if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
     printf("bind failed (errno = %d)\n", errno);
@@ -86,8 +74,8 @@ int server(const char* service) {
         goto end;
       }
       char str[INET6_ADDRSTRLEN];
-      printf("connected from %s\n",
-             sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
+      struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&addr;
+      printf("connected from %s\n", inet_ntop(AF_INET6, &sin6->sin6_addr, str, sizeof(str)));
 
       FD_SET(conn, &active_readfds);
       if (nwatch < (conn + 1))
@@ -104,21 +92,20 @@ int server(const char* service) {
       if (FD_ISSET(fd, &readfds)) {
         --nready;
         // data is ready to read
-        int nread;
         char buf[128];
         int done = 0;
-        nread = read(fd, buf, sizeof(buf));
+        ssize_t nread = read(fd, buf, sizeof(buf));
         if (nread == 0) {
           done = 1;
         } else if (nread < 0) {
-          printf("read failed on fd %d (%d)\n", fd, nread);
+          printf("read failed on fd %d (%zd)\n", fd, nread);
           done = 1;
         } else {
           int nwrite = 0;
           while (nwrite < nread) {
-            int n = write(fd, buf + nwrite, nread - nwrite);
+            ssize_t n = write(fd, buf + nwrite, nread - nwrite);
             if (n < 0) {
-              printf("write failed on fd %d (%d)\n", fd, n);
+              printf("write failed on fd %d (%zd)\n", fd, n);
               done = 1;
               break;
             }
