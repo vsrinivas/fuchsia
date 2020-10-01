@@ -248,6 +248,7 @@ executable("unit_tests") {
     ":test_lib",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/debug/ipc:tests",
+    "//src/developer/debug/shared:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

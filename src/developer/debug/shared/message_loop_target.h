@@ -163,6 +163,9 @@ struct MessageLoopTarget::WatchInfo {
 
   WatchType type = WatchType::kFdio;
 
+  // Used when the type is FDIO or socket.
+  WatchMode mode = WatchMode::kReadWrite;
+
   // FDIO-specific watcher parameters.
   int fd = -1;
   fdio_t* fdio = nullptr;

@@ -44,7 +44,8 @@ class SystemSymbols {
 
   BuildIDIndex& build_id_index() { return build_id_index_; }
 
-  // Whether to create index on ModuleSymbols. It should only be false in Symbolizer.
+  // Whether to create index on ModuleSymbols. The index is used during symbol name to address
+  // lookups. If you don't need this feature, disabling it will accelerate the loading time.
   void set_create_index(bool val) { create_index_ = val; }
 
   // Injects a ModuleSymbols object for the given build ID. Used for testing. Normally the test

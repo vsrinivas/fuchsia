@@ -120,6 +120,7 @@ zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id, zx_handle_t ob
 MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWatcher* watcher) {
   WatchInfo info;
   info.type = WatchType::kFdio;
+  info.mode = mode;
   info.fd_watcher = watcher;
   info.fd = fd;
   info.fdio = fdio_unsafe_fd_to_io(fd);
@@ -164,6 +165,7 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_ha
                                            SocketWatcher* watcher, MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kSocket;
+  info.mode = mode;
   info.socket_watcher = watcher;
   info.socket_handle = socket_handle;
 
@@ -341,7 +343,7 @@ void MessageLoopTarget::RunImpl() {
     time = zx::deadline_after(zx::nsec(delay));
   }
 
-  for (;;) {
+  while (!should_quit()) {
     status = loop_.ResetQuit();
     FX_DCHECK(status != ZX_ERR_BAD_STATE);
     status = loop_.Run(time);
@@ -418,8 +420,10 @@ void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info, zx_sig
     return;
   }
 
-  bool readable = !!(events & POLLIN);
-  bool writable = !!(events & POLLOUT);
+  // observed is a bitmap of ALL of the signals asserted on the file descripter, which could be a
+  // superset of what we expected. Check the watch mode so we don't notify unwanted events.
+  bool readable = !!(events & POLLIN) && (info.mode != WatchMode::kWrite);
+  bool writable = !!(events & POLLOUT) && (info.mode != WatchMode::kRead);
   info.fd_watcher->OnFDReady(info.fd, readable, writable, false);
 }
 
@@ -489,20 +493,25 @@ void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info, zx_s
     return;
   }
 
+  // observed is a bitmap of ALL of the signals asserted on the socket, which could be a
+  // superset of what we expected. Check the watch mode so we don't notify unwanted events.
+  bool readable = !!(observed & ZX_SOCKET_READABLE) && (info.mode != WatchMode::kWrite);
+  bool writable = !!(observed & ZX_SOCKET_WRITABLE) && (info.mode != WatchMode::kRead);
+
   // Dispatch readable signal.
-  if (observed & ZX_SOCKET_READABLE)
+  if (readable)
     info.socket_watcher->OnSocketReadable(info.socket_handle);
 
   // When signaling both readable and writable, make sure the readable handler
   // didn't remove the watch.
-  if ((observed & ZX_SOCKET_READABLE) && (observed & ZX_SOCKET_WRITABLE)) {
+  if (readable && writable) {
     std::lock_guard<std::mutex> guard(mutex_);
     if (watches_.find(watch_id) == watches_.end())
       return;
   }
 
   // Dispatch writable signal.
-  if (observed & ZX_SOCKET_WRITABLE)
+  if (writable)
     info.socket_watcher->OnSocketWritable(info.socket_handle);
 }
 
