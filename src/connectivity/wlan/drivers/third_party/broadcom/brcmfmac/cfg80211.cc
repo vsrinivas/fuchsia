@@ -136,7 +136,7 @@ static const struct brcmf_tlv* brcmf_parse_tlvs(const void* buf, int buflen, uin
     totlen -= (len + TLV_HDR_LEN);
   }
 
-  return NULL;
+  return nullptr;
 }
 
 static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
@@ -392,7 +392,7 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
     err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_AP, &vif);
     if (err != ZX_OK) {
       if (dev_out) {
-        *dev_out = NULL;
+        *dev_out = nullptr;
       }
       return err;
     }
@@ -416,7 +416,7 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
     // Else reuse the existing IF itself but change its type
     vif = ifp->vif;
     vif->ifp = ifp;
-    err = brcmf_cfg80211_change_iface(cfg, ifp->ndev, WLAN_INFO_MAC_ROLE_AP, NULL);
+    err = brcmf_cfg80211_change_iface(cfg, ifp->ndev, WLAN_INFO_MAC_ROLE_AP, nullptr);
     if (err != ZX_OK) {
       BRCMF_ERR("Unable to change IF type err: %u", err);
       err = ZX_ERR_IO;
@@ -454,7 +454,7 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
 fail:
   brcmf_free_vif(vif);
   if (dev_out) {
-    *dev_out = NULL;
+    *dev_out = nullptr;
   }
   return err;
 }
@@ -587,7 +587,8 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       // AP mode is turned off when setting it up as Client (just in case it was
       // previously operating as an AP.
       if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
-        err = brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT, NULL);
+        err = brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT,
+                                          nullptr);
         if (err != ZX_OK) {
           BRCMF_ERR("Unable to change iface to client");
           return err;
@@ -682,7 +683,7 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
   args.txn_id = txn_id;
   args.code = scan_result_code;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping signal scan end callback");
   } else {
     BRCMF_DBG(SCAN, "Signaling on_scan_end with txn_id %ld and code %d", args.txn_id, args.code);
@@ -715,7 +716,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
   /* clear scan request, because the FW abort can cause a second call */
   /* to this function and might cause a double signal_scan_end        */
   scan_request = cfg->scan_request;
-  cfg->scan_request = NULL;
+  cfg->scan_request = nullptr;
 
   // Canceling if it's inactive is OK. Checking if it's active just invites race conditions.
   cfg->escan_timer->Stop();
@@ -784,7 +785,7 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct brcmf_cfg80211_info* cfg,
   if (ndev)
     ifp = ndev_to_if(ndev);
   else {
-    BRCMF_ERR("Net device is NULL");
+    BRCMF_ERR("Net device is nullptr");
     return ZX_ERR_IO;
   }
 
@@ -795,7 +796,7 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct brcmf_cfg80211_info* cfg,
   }
   brcmf_cfg80211_arm_vif_event(cfg, ifp->vif, BRCMF_E_IF_DEL);
 
-  err = brcmf_fil_bsscfg_data_set(ifp, "interface_remove", NULL, 0);
+  err = brcmf_fil_bsscfg_data_set(ifp, "interface_remove", nullptr, 0);
   if (err != ZX_OK) {
     BRCMF_ERR("interface_remove interface %d failed %d", ifp->ifidx, err);
     goto err_unarm;
@@ -972,7 +973,7 @@ static size_t brcmf_escan_params_size(size_t num_channels, size_t num_ssids) {
 
 static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                    const wlanif_scan_req_t* request) {
-  if (request == NULL) {
+  if (request == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1120,7 +1121,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
 scan_out:
   BRCMF_ERR("scan error (%d)", err);
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
-  cfg->scan_request = NULL;
+  cfg->scan_request = nullptr;
   return err;
 }
 
@@ -1153,7 +1154,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event
                                   bool locally_initiated) {
   struct net_device* ndev = vif->wdev.netdev;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping link down callback");
     return;
   }
@@ -1184,7 +1185,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reaso
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state)) {
     BRCMF_DBG(INFO, "Call WLC_DISASSOC to stop excess roaming\n ");
     bcme_status_t fwerr = BCME_OK;
-    err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, NULL, 0, &fwerr);
+    err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, nullptr, 0, &fwerr);
     if (err != ZX_OK) {
       BRCMF_ERR("WLC_DISASSOC failed: %s, fw err %s\n", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fwerr));
@@ -1198,7 +1199,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reaso
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
   brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
   if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_NONE) {
-    brcmf_set_pmk(vif->ifp, NULL, 0);
+    brcmf_set_pmk(vif->ifp, nullptr, 0);
     vif->profile.use_fwsup = BRCMF_PROFILE_FWSUP_NONE;
   }
   BRCMF_DBG(TRACE, "Exit");
@@ -1256,7 +1257,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
   uint32_t mfp;
 
   BRCMF_DBG(TRACE, "Enter");
-  if (wpa_ie == NULL) {
+  if (wpa_ie == nullptr) {
     goto exit;
   }
 
@@ -1594,7 +1595,7 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
   set_assoc_conf_wmm_param(cfg, &conf);
 
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping association callback");
     return;
   }
@@ -1666,7 +1667,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
 
   // TODO(fxbug.dev/29354): We should be getting the IEs from SME. Passing a null entry seems
   // to work for now, presumably because the firmware uses its defaults.
-  err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, NULL, 0);
+  err = brcmf_vif_set_mgmt_ie(ifp->vif, BRCMF_VNDR_IE_ASSOCREQ_FLAG, nullptr, 0);
   if (err != ZX_OK) {
     BRCMF_ERR("Set Assoc REQ IE Failed");
   } else {
@@ -1722,7 +1723,7 @@ static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_
   memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
 
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth confirm callback");
     return;
   }
@@ -1738,7 +1739,7 @@ static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
   resp.status = status;
 
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc confirm callback");
     return;
   }
@@ -1806,7 +1807,7 @@ static void cfg80211_signal_ind(net_device* ndev) {
       ndev->last_known_rssi_dbm = rssi;
       ndev->last_known_snr_db = snr;
       std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-      if (ndev->if_proto.ops == NULL) {
+      if (ndev->if_proto.ops == nullptr) {
         BRCMF_DBG(WLANIF, "interface stopped -- skipping signal report indication callback");
         return;
       }
@@ -2078,7 +2079,7 @@ done:
 void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping eapol frame callback");
     return;
   }
@@ -2102,7 +2103,7 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
                                   std::min<size_t>(size, 64u),
                                   "Data received (%zu bytes, max 64 shown):", size));
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping data recv");
     return;
   }
@@ -2268,7 +2269,7 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
                                      uint8_t* ie, size_t ie_len, int16_t rssi_dbm) {
   wlanif_scan_result_t result = {};
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping scan result callback");
     return;
   }
@@ -2393,7 +2394,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
 
   escan_result_le = static_cast<decltype(escan_result_le)>(data);
   if (!escan_result_le) {
-    BRCMF_ERR("Invalid escan result (NULL pointer)");
+    BRCMF_ERR("Invalid escan result (nullptr)");
     goto chk_scan_end;
   }
 
@@ -2554,7 +2555,7 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
                                                    const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = cfg_to_ndev(cfg);
-  wlanif_scan_req_t* req = NULL;
+  wlanif_scan_req_t* req = nullptr;
   struct brcmf_pno_net_info_le* netinfo;
   struct brcmf_pno_net_info_le* netinfo_start;
   int i;
@@ -2686,7 +2687,7 @@ static zx_status_t brcmf_parse_vndr_ies(const uint8_t* vndr_ie_buf, uint32_t vnd
   next:
     remaining_len -= (ie->len + TLV_HDR_LEN);
     if (remaining_len <= TLV_HDR_LEN) {
-      ie = NULL;
+      ie = nullptr;
     } else {
       ie = (struct brcmf_tlv*)(((uint8_t*)ie) + ie->len + TLV_HDR_LEN);
     }
@@ -2715,7 +2716,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
   zx_status_t err = ZX_OK;
   uint8_t* iovar_ie_buf;
   uint8_t* curr_ie_buf;
-  uint8_t* mgmt_ie_buf = NULL;
+  uint8_t* mgmt_ie_buf = nullptr;
   int mgmt_ie_buf_len;
   uint32_t* mgmt_ie_len;
   uint32_t del_add_ie_buf_len = 0;
@@ -2860,7 +2861,7 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
   int i;
 
   for (i = 0; i < (int)countof(pktflags); i++) {
-    brcmf_vif_set_mgmt_ie(vif, pktflags[i], NULL, 0);
+    brcmf_vif_set_mgmt_ie(vif, pktflags[i], nullptr, 0);
   }
 
   memset(&vif->saved_ie, 0, sizeof(vif->saved_ie));
@@ -3195,7 +3196,7 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   }
 
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping join callback");
     return;
   }
@@ -3243,7 +3244,7 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
     response.result_code = WLAN_AUTH_RESULT_REJECTED;
   }
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping auth callback");
     return;
   }
@@ -3431,7 +3432,7 @@ void brcmf_if_start_conf(net_device* ndev, uint8_t result) {
 
   cfg->ap_start_timer->Stop();
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping AP start callback");
     return;
   }
@@ -3487,7 +3488,7 @@ void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req) {
 
   uint8_t result_code = brcmf_cfg80211_stop_ap(ndev, req);
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping AP stop callback");
     return;
   }
@@ -3541,7 +3542,7 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
   confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping EAPOL xmit callback");
     return;
   }
@@ -3844,7 +3845,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  struct brcmf_chanspec_list* list = NULL;
+  struct brcmf_chanspec_list* list = nullptr;
   uint32_t nmode = 0;
   uint32_t vhtmode = 0;
   uint32_t rxchain = 0, nchain = 0;
@@ -3876,8 +3877,8 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
     return;
   }
 
-  wlanif_band_capabilities_t* band_2ghz = NULL;
-  wlanif_band_capabilities_t* band_5ghz = NULL;
+  wlanif_band_capabilities_t* band_2ghz = nullptr;
+  wlanif_band_capabilities_t* band_5ghz = nullptr;
 
   /* first entry in bandlist is number of bands */
   info->num_bands = bandlist[0];
@@ -3904,7 +3905,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
 
   // channels
   uint8_t* pbuf = static_cast<decltype(pbuf)>(calloc(BRCMF_DCMD_MEDLEN, 1));
-  if (pbuf == NULL) {
+  if (pbuf == nullptr) {
     BRCMF_ERR("unable to allocate memory for channel information");
     return;
   }
@@ -3922,7 +3923,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
     cfg->d11inf.decchspec(&ch);
 
     // Find the appropriate band
-    wlanif_band_capabilities_t* band = NULL;
+    wlanif_band_capabilities_t* band = nullptr;
     if (ch.band == BRCMU_CHAN_BAND_2G) {
       band = band_2ghz;
     } else if (ch.band == BRCMU_CHAN_BAND_5G) {
@@ -3931,7 +3932,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
       BRCMF_ERR("unrecognized band for channel %d", ch.control_ch_num);
       continue;
     }
-    if (band == NULL) {
+    if (band == nullptr) {
       continue;
     }
 
@@ -4214,7 +4215,7 @@ void brcmf_if_stats_query_req(net_device* ndev) {
   BRCMF_DBG(TRACE, "Enter");
 
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping stats query response");
     return;
   }
@@ -4375,7 +4376,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
   vif = static_cast<decltype(vif)>(calloc(1, sizeof(*vif)));
   if (!vif) {
     if (vif_out) {
-      *vif_out = NULL;
+      *vif_out = nullptr;
     }
     return ZX_ERR_NO_MEMORY;
   }
@@ -4439,10 +4440,10 @@ static void brcmf_clear_assoc_ies(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_connect_info* conn_info = cfg_to_conn(cfg);
 
   free(conn_info->req_ie);
-  conn_info->req_ie = NULL;
+  conn_info->req_ie = nullptr;
   conn_info->req_ie_len = 0;
   free(conn_info->resp_ie);
-  conn_info->resp_ie = NULL;
+  conn_info->resp_ie = nullptr;
   conn_info->resp_ie_len = 0;
 }
 
@@ -4475,12 +4476,12 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     conn_info->req_ie_len = req_len;
     conn_info->req_ie = static_cast<decltype(conn_info->req_ie)>(
         brcmu_alloc_and_copy(cfg->extra_buf, conn_info->req_ie_len));
-    if (conn_info->req_ie == NULL) {
+    if (conn_info->req_ie == nullptr) {
       conn_info->req_ie_len = 0;
     }
   } else {
     conn_info->req_ie_len = 0;
-    conn_info->req_ie = NULL;
+    conn_info->req_ie = nullptr;
   }
   if (resp_len) {
     err =
@@ -4493,12 +4494,12 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     conn_info->resp_ie_len = resp_len;
     conn_info->resp_ie = static_cast<decltype(conn_info->resp_ie)>(
         brcmu_alloc_and_copy(cfg->extra_buf, conn_info->resp_ie_len));
-    if (conn_info->resp_ie == NULL) {
+    if (conn_info->resp_ie == nullptr) {
       conn_info->resp_ie_len = 0;
     }
   } else {
     conn_info->resp_ie_len = 0;
-    conn_info->resp_ie = NULL;
+    conn_info->resp_ie = nullptr;
   }
   BRCMF_DBG(CONN, "req len (%d) resp len (%d)", conn_info->req_ie_len, conn_info->resp_ie_len);
   return err;
@@ -4555,7 +4556,7 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
 
   // Inform wlanif of the channel switch.
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops != NULL) {
+  if (ndev->if_proto.ops != nullptr) {
     wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
   } else {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping channel switch callback");
@@ -4643,7 +4644,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
                                           void* data) {
   struct net_device* ndev = ifp->ndev;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == NULL) {
+  if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping assoc ind callback");
     return ZX_OK;
   }
@@ -4657,13 +4658,13 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
     return ZX_OK;
   }
 
-  if (data == NULL || e->datalen == 0) {
+  if (data == nullptr || e->datalen == 0) {
     BRCMF_ERR("Received ASSOC_IND with no IEs\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
   const struct brcmf_tlv* ssid_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_SSID);
-  if (ssid_ie == NULL) {
+  if (ssid_ie == nullptr) {
     BRCMF_ERR("Received ASSOC_IND with no SSID IE\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -4698,7 +4699,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   memcpy(assoc_ind_params.ssid.data, ssid_ie->data, ssid_ie->len);
 
   // Extract the RSN information from the IEs
-  if (rsn_ie != NULL) {
+  if (rsn_ie != nullptr) {
     assoc_ind_params.rsne_len = rsn_ie->len + TLV_HDR_LEN;
     memcpy(assoc_ind_params.rsne, rsn_ie, assoc_ind_params.rsne_len);
   }
@@ -4721,7 +4722,7 @@ static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
   if (e->reason == BRCMF_E_STATUS_SUCCESS) {
     struct net_device* ndev = ifp->ndev;
     std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-    if (ndev->if_proto.ops == NULL) {
+    if (ndev->if_proto.ops == nullptr) {
       BRCMF_DBG(WLANIF, "interface stopped -- skipping auth ind callback");
       return ZX_OK;
     }
@@ -4842,7 +4843,7 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
   if (brcmf_is_apmode(ifp->vif)) {
     struct net_device* ndev = ifp->ndev;
     std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-    if (ndev->if_proto.ops == NULL) {
+    if (ndev->if_proto.ops == nullptr) {
       BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth indication callback");
       return ZX_OK;
     }
@@ -4881,7 +4882,7 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
   if (brcmf_is_apmode(ifp->vif)) {
     struct net_device* ndev = ifp->ndev;
     std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-    if (ndev->if_proto.ops == NULL) {
+    if (ndev->if_proto.ops == nullptr) {
       BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc indication callback");
       return ZX_OK;
     }
@@ -4943,7 +4944,7 @@ static zx_status_t brcmf_notify_mic_status(struct brcmf_if* ifp, const struct br
     key_type = NL80211_KEYTYPE_PAIRWISE;
   }
 
-  cfg80211_michael_mic_failure(ifp->ndev, (uint8_t*)&e->addr, key_type, -1, NULL);
+  cfg80211_michael_mic_failure(ifp->ndev, (uint8_t*)&e->addr, key_type, -1, nullptr);
 
   return ZX_OK;
 }
@@ -5031,13 +5032,13 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
 
 static void brcmf_deinit_cfg_mem(struct brcmf_cfg80211_info* cfg) {
   free(cfg->conf);
-  cfg->conf = NULL;
+  cfg->conf = nullptr;
   free(cfg->extra_buf);
-  cfg->extra_buf = NULL;
+  cfg->extra_buf = nullptr;
   free(cfg->wowl.nd);
-  cfg->wowl.nd = NULL;
+  cfg->wowl.nd = nullptr;
   free(cfg->wowl.nd_info);
-  cfg->wowl.nd_info = NULL;
+  cfg->wowl.nd_info = nullptr;
   delete cfg->disconnect_timer;
   delete cfg->escan_timer;
   delete cfg->signal_report_timer;
@@ -5075,7 +5076,7 @@ init_priv_mem_out:
 static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
   zx_status_t err = ZX_OK;
 
-  cfg->scan_request = NULL;
+  cfg->scan_request = nullptr;
   cfg->pwr_save = false;  // FIXME #37793: should be set per-platform
   cfg->dongle_up = false; /* dongle is not up yet */
   err = brcmf_init_cfg_mem(cfg);
@@ -5257,7 +5258,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   if (err != ZX_OK) {
     goto default_conf_out;
   }
-  err = brcmf_cfg80211_change_iface(cfg, ndev, wdev->iftype, NULL);
+  err = brcmf_cfg80211_change_iface(cfg, ndev, wdev->iftype, nullptr);
   if (err != ZX_OK) {
     goto default_conf_out;
   }
@@ -5357,7 +5358,7 @@ void brcmf_cfg80211_disarm_vif_event(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_cfg80211_vif_event* event = &cfg->vif_event;
 
   mtx_lock(&event->vif_event_lock);
-  event->vif = NULL;
+  event->vif = nullptr;
   event->action = 0;
   mtx_unlock(&event->vif_event_lock);
 }
@@ -5367,7 +5368,7 @@ bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg) {
   bool armed;
 
   mtx_lock(&event->vif_event_lock);
-  armed = event->vif != NULL;
+  armed = event->vif != nullptr;
   mtx_unlock(&event->vif_event_lock);
 
   return armed;
@@ -5396,7 +5397,7 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
 
   ifp = ndev_to_if(ndev);
   cfg = static_cast<decltype(cfg)>(calloc(1, sizeof(struct brcmf_cfg80211_info)));
-  if (cfg == NULL) {
+  if (cfg == nullptr) {
     goto cfg80211_info_out;
   }
 
@@ -5466,7 +5467,7 @@ unreg_out:
 cfg_out:
   brcmf_deinit_cfg(cfg);
   brcmf_free_vif(vif);
-  ifp->vif = NULL;
+  ifp->vif = nullptr;
 cfg80211_info_out:
   free(cfg);
   return err;
