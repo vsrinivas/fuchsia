@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <fs-management/mount.h>
+#include <fs-test-utils/fixture.h>
 #include <fs/test_support/environment.h>
 #include <zxtest/zxtest.h>
 
@@ -12,8 +13,7 @@ fs::Environment* fs::g_environment;
 
 int main(int argc, char** argv) {
   fs::Environment::TestConfig config = {};
-  config.is_packaged = false;
-  config.mount_path = "/tmp/foo";
+  config.mount_path = "/memfs/foo";
   config.format_type = DISK_FORMAT_BLOBFS;
   config.ramdisk_block_count = 1 << 16;  // 32 MB.
 
@@ -22,5 +22,5 @@ int main(int argc, char** argv) {
 
   zxtest::Runner::GetInstance()->AddGlobalTestEnvironment(std::move(parent));
 
-  return RUN_ALL_TESTS(argc, argv);
+  return fs_test_utils::RunWithMemFs([argc, argv]() { return RUN_ALL_TESTS(argc, argv); });
 }

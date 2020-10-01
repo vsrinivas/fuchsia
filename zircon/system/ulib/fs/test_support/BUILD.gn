@@ -58,3 +58,8 @@ zx_library("test_support") {
     "//zircon/system/ulib/storage/buffer",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:fs-test-support-test" ]
+}
