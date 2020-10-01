@@ -112,11 +112,11 @@ TEST(DeclarationOrderTest, nullable_ref_breaks_dependency) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-struct #Request# {
+resource struct #Request# {
   array<#Element#?>:4 req;
 };
 
-struct #Element# {
+resource struct #Element# {
   #Protocol# prot;
 };
 
@@ -159,7 +159,7 @@ TEST(DeclarationOrderTest, request_type_breaks_dependency_graph) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-struct #Request# {
+resource struct #Request# {
   request<#Protocol#> req;
 };
 
@@ -184,7 +184,7 @@ TEST(DeclarationOrderTest, nonnullable_union) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-union #Xunion# {
+resource union #Xunion# {
   1: request<#Protocol#> req;
   2: #Payload# foo;
 };
@@ -215,7 +215,7 @@ TEST(DeclarationOrderTest, nullable_union) {
     auto source = namer.mangle(R"FIDL(
 library example;
 
-union #Xunion# {
+resource union #Xunion# {
   1: request<#Protocol#> req;
   2: #Payload# foo;
 };

@@ -372,7 +372,7 @@ resource_definition handle : uint32 {
     };
 };
 
-struct MyStruct {
+resource struct MyStruct {
     handle:<VMO, 1> h;
 };
 
@@ -642,7 +642,7 @@ union SimpleUnion {
     1: int64 a;
 };
 
-struct OuterStruct {
+resource struct OuterStruct {
   InnerStruct a;
   handle? opt_handle;
   SimpleUnion? opt_union;
@@ -703,7 +703,8 @@ struct badlookup {
   ASSERT_NOT_NULL(the_coded_type);
   auto the_struct_coded_type = static_cast<const fidl::coded::StructType*>(the_coded_type);
   ASSERT_EQ(the_struct_coded_type->elements.size(), 2);
-  EXPECT_EQ(0xffffffffffffff00, std::get<uint64_t>(padding(the_struct_coded_type->elements[0]).mask));
+  EXPECT_EQ(0xffffffffffffff00,
+            std::get<uint64_t>(padding(the_struct_coded_type->elements[0]).mask));
   EXPECT_EQ(fidl::coded::Type::Kind::kVector, field(the_struct_coded_type->elements[1]).type->kind);
 }
 

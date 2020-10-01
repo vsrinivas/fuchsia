@@ -35,7 +35,7 @@ resource_definition handle : uint32 {
     };
 };
 
-struct MyStruct {
+resource struct MyStruct {
     handle:<VMO, 1> h;
 };
 )FIDL",
@@ -74,7 +74,7 @@ resource_definition handle : uint32 {
     };
 };
 
-struct MyStruct {
+resource struct MyStruct {
     handle:VMO h;
 };
 )FIDL",
@@ -128,7 +128,7 @@ TEST(HandleTests, plain_handle_test) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct MyStruct {
+resource struct MyStruct {
     handle h;
 };
 )FIDL",
@@ -162,7 +162,7 @@ resource_definition handle : uint32 {
     };
 };
 
-struct MyStruct {
+resource struct MyStruct {
   handle:THREAD a;
   handle:<PROCESS> b;
   handle:<VMO, 45> c;

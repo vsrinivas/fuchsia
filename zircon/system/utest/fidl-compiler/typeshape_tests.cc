@@ -266,16 +266,16 @@ struct BoolAndU64 {
 
 TEST(TypeshapeTests, simple_structs_with_handles) {
   TestLibrary test_library(kPrologWithHandleDefinition + R"FIDL(
-struct OneHandle {
+resource struct OneHandle {
   handle h;
 };
 
-struct TwoHandles {
+resource struct TwoHandles {
   handle:CHANNEL h1;
   handle:PORT h2;
 };
 
-struct ThreeHandlesOneOptional {
+resource struct ThreeHandlesOneOptional {
   handle:CHANNEL h1;
   handle:PORT h2;
   handle:TIMER? opt_h3;
@@ -536,7 +536,7 @@ TEST(TypeshapeTests, simple_tables_with_handles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
-table TableWithOneHandle {
+resource table TableWithOneHandle {
   1: handle h;
 };
 
@@ -941,13 +941,13 @@ TEST(TypeshapeTests, unions_with_handles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
-union OneHandleUnion {
+resource union OneHandleUnion {
   1: handle one_handle;
   2: bool one_bool;
   3: uint32 one_int;
 };
 
-union ManyHandleUnion {
+resource union ManyHandleUnion {
   1: handle one_handle;
   2: array<handle>:8 handle_array;
   3: vector<handle>:8 handle_vector;
@@ -1176,43 +1176,43 @@ TEST(TypeshapeTests, vectors_with_handles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
-struct HandleVector {
+resource struct HandleVector {
   vector<handle>:8 hv;
 };
 
-struct HandleNullableVector {
+resource struct HandleNullableVector {
   vector<handle>:8? hv;
 };
 
-table TableWithHandleVector {
+resource table TableWithHandleVector {
   1: vector<handle>:8 hv;
 };
 
-struct UnboundedHandleVector {
+resource struct UnboundedHandleVector {
   vector<handle> hv;
 };
 
-table TableWithUnboundedHandleVector {
+resource table TableWithUnboundedHandleVector {
   1: vector<handle> hv;
 };
 
-struct OneHandle {
+resource struct OneHandle {
   handle h;
 };
 
-struct HandleStructVector {
+resource struct HandleStructVector {
   vector<OneHandle>:8 sv;
 };
 
-table TableWithOneHandle {
+resource table TableWithOneHandle {
   1: handle h;
 };
 
-struct HandleTableVector {
+resource struct HandleTableVector {
   vector<TableWithOneHandle>:8 sv;
 };
 
-table TableWithHandleStructVector {
+resource table TableWithHandleStructVector {
   1: vector<OneHandle>:8 sv;
 };
 
@@ -1453,19 +1453,19 @@ TEST(TypeshapeTests, arrays_with_handles) {
   TestLibrary test_library(R"FIDL(
 library example;
 
-struct HandleArray {
+resource struct HandleArray {
   array<handle>:8 ha;
 };
 
-table TableWithHandleArray {
+resource table TableWithHandleArray {
   1: array<handle>:8 ha;
 };
 
-struct NullableHandleArray {
+resource struct NullableHandleArray {
   array<handle?>:8 ha;
 };
 
-table TableWithNullableHandleArray {
+resource table TableWithNullableHandleArray {
   1: array<handle?>:8 ha;
 };
 
@@ -1885,19 +1885,19 @@ library example;
 
 protocol SomeProtocol {};
 
-struct UsingSomeProtocol {
+resource struct UsingSomeProtocol {
   SomeProtocol value;
 };
 
-struct UsingOptSomeProtocol {
+resource struct UsingOptSomeProtocol {
   SomeProtocol? value;
 };
 
-struct UsingRequestSomeProtocol {
+resource struct UsingRequestSomeProtocol {
   request<SomeProtocol> value;
 };
 
-struct UsingOptRequestSomeProtocol {
+resource struct UsingOptRequestSomeProtocol {
   request<SomeProtocol>? value;
 };
 
@@ -1954,7 +1954,7 @@ struct ExternalStringSizeStruct {
     string:EXTERNAL_SIZE_DEF a;
 };
 
-struct ExternalVectorSizeStruct {
+resource struct ExternalVectorSizeStruct {
     vector<handle>:EXTERNAL_SIZE_DEF a;
 };
 
@@ -2013,7 +2013,7 @@ TEST(TypeshapeTests, recursive_request) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct WebMessage {
+resource struct WebMessage {
   request<MessagePort> message_port_req;
 };
 
@@ -2071,7 +2071,7 @@ TEST(TypeshapeTests, recursive_opt_request) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct WebMessage {
+resource struct WebMessage {
   request<MessagePort>? opt_message_port_req;
 };
 
@@ -2124,7 +2124,7 @@ TEST(TypeshapeTests, recursive_protocol) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct WebMessage {
+resource struct WebMessage {
   MessagePort message_port;
 };
 
@@ -2177,7 +2177,7 @@ TEST(TypeshapeTests, recursive_opt_protocol) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct WebMessage {
+resource struct WebMessage {
   MessagePort? opt_message_port;
 };
 
@@ -2252,7 +2252,7 @@ struct TheStruct {
 
 TEST(TypeshapeTests, recursive_struct_with_handles) {
   TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
-struct TheStruct {
+resource struct TheStruct {
   handle:VMO some_handle;
   TheStruct? opt_one_more;
 };
@@ -2321,12 +2321,12 @@ TEST(TypeshapeTests, co_recursive_struct_with_handles) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct A {
+resource struct A {
     handle a;
     B? foo;
 };
 
-struct B {
+resource struct B {
     handle b;
     A? bar;
 };
@@ -2399,7 +2399,7 @@ struct Bar {
 
 TEST(TypeshapeTests, struct_two_deep) {
   TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
-struct DiffEntry {
+resource struct DiffEntry {
     vector<uint8>:256 key;
 
     Value? base;
@@ -2407,12 +2407,12 @@ struct DiffEntry {
     Value? right;
 };
 
-struct Value {
+resource struct Value {
     Buffer? value;
     Priority priority;
 };
 
-struct Buffer {
+resource struct Buffer {
     handle:VMO vmo;
     uint64 size;
 };
@@ -2771,7 +2771,7 @@ TEST(TypeshapeTests, zero_size_vector) {
   TestLibrary library(R"FIDL(
 library example;
 
-struct A {
+resource struct A {
     vector<handle>:0 zero_size;
 };
 

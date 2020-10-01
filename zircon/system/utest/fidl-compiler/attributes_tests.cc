@@ -662,7 +662,7 @@ TEST(AttributesTests, max_handles) {
 library fidl.test;
 
 [MaxHandles = "2"]
-union MyUnion {
+resource union MyUnion {
   1: uint8 hello;
   2: array<uint8>:8 world;
   3: vector<handle>:6 foo;

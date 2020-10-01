@@ -209,7 +209,7 @@ constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceS
         "value of {} member '{}' conflicts with previously declared member '{}' at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateResourcePropertyName(
     "multiple resource properties with the same name; previous was at {}");
-constexpr WarningDef<flat::Name, std::string_view, std::string_view, flat::Name>
+constexpr ErrorDef<flat::Name, std::string_view, std::string_view, flat::Name>
     ErrTypeMustBeResource(
         "'{}' may contain handles (due to member '{}'), so it must "
         "be declared with the `resource` modifier: `resource {} {}`");

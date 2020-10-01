@@ -129,7 +129,7 @@ resource_definition handle : uint32 {
     };
 };
 
-struct Handles {
+resource struct Handles {
     handle plain_handle;
 
     handle:BTI bti_handle;
@@ -182,7 +182,7 @@ resource_definition handle : uint32 {
     };
 };
 
-struct Handles {
+resource struct Handles {
     handle plain_handle;
     handle:VMO subtype_handle;
     handle:<VMO, 1> rights_handle;

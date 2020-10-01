@@ -18,7 +18,6 @@ void invalid_resource_modifier(const std::string& type, const std::string& defin
   std::string fidl_library = "library example;\n\n" + definition + "\n";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -95,7 +94,6 @@ TEST(ResourcenessTests, good_resource_struct) {
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_TRUE(library.Compile(), "%s", fidl_library.c_str());
     EXPECT_EQ(library.LookupStruct("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
@@ -112,7 +110,6 @@ TEST(ResourcenessTests, good_resource_table) {
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_TRUE(library.Compile(), "%s", fidl_library.c_str());
     EXPECT_EQ(library.LookupTable("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
@@ -128,7 +125,6 @@ TEST(ResourcenessTests, good_resource_union) {
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_TRUE(library.Compile(), "%s", fidl_library.c_str());
     EXPECT_EQ(library.LookupUnion("Foo")->resourceness, fidl::types::Resourceness::kResource, "%s",
               fidl_library.c_str());
@@ -145,7 +141,6 @@ TEST(ResourcenessTests, bad_handles_in_value_struct) {
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -165,7 +160,6 @@ TEST(ResourcenessTests, bad_handles_in_value_table) {
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -185,7 +179,6 @@ TEST(ResourcenessTests, bad_handles_in_value_union) {
        }) {
     std::string fidl_library = "library example;\n\n" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -210,7 +203,6 @@ protocol Protocol {};
 
 )FIDL" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -238,7 +230,6 @@ resource union ResourceUnion { 1: bool b; };
 
 )FIDL" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -273,7 +264,6 @@ resource union ResourceUnion { 1: bool b; };
 
 )FIDL" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -304,7 +294,6 @@ resource union ResourceUnion { 1: bool b; };
 
 )FIDL" + definition + "\n";
     TestLibrary library(fidl_library);
-    library.set_warnings_as_errors(true);
     ASSERT_FALSE(library.Compile(), "%s", fidl_library.c_str());
 
     const auto& errors = library.errors();
@@ -329,7 +318,6 @@ resource struct ResourceStruct {};
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -362,7 +350,6 @@ resource struct Bottom {};
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupStruct("Top")->resourceness, fidl::types::Resourceness::kResource);
 }
@@ -381,7 +368,6 @@ resource struct Bottom {};
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -412,7 +398,6 @@ struct Boros {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
 }
 
@@ -430,7 +415,6 @@ resource struct Boros {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
 }
 
@@ -448,7 +432,6 @@ struct Boros {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
@@ -467,7 +450,6 @@ resource strict union RS { 1: bool b; };
 )FIDL";
 
   TestLibrary library(fidl_library);
-  library.set_warnings_as_errors(true);
   ASSERT_TRUE(library.Compile());
 
   const auto strict_resource = library.LookupUnion("SR");
