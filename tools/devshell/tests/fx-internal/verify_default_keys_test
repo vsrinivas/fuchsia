@@ -147,4 +147,56 @@ TEST_sshkeys-nokeys() {
   btf::expect-mock-args "${ssh_mock}" myhost cat .ssh/fuchsia_authorized_keys
 }
 
+# test if scp is executed with the expected "-o ControlPath" if "-S" is
+# specified in the ssh_args argument. "-S" is the equivalent of
+# "-o ControlPath" for "ssh", but it is not supported in "scp", so
+# verify_default_keys converts it.
+TEST_sshkeys-controlpath-scp() {
+  # key exists in remote
+  echo 0 > "${normalize_remote_intree_key_mock}.mock_status"
+  # key does not exist in local
+  echo 1 > "${normalize_local_intree_key_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  # check if verify_default_keys executes with success status
+  BT_EXPECT verify_default_keys "$BT_TEMP_DIR" myhost fuchsia -S mycontrolfile >>${out} 2>&1
+
+  # check if scp was executed as expected, with "-o ControlPath" instead of "-S"
+  btf::expect-mock-args "${scp_mock}" -o ControlPath=mycontrolfile -q -p \
+    "myhost:.ssh/fuchsia_ed25519" "myhost:.ssh/fuchsia_ed25519.pub" "$HOME/.ssh"
+  # check if ssh was executed as expected, with "-o ControlPath" instead of "-S"
+  btf::expect-mock-args "${ssh_mock}" -o ControlPath=mycontrolfile myhost cat .ssh/fuchsia_authorized_keys
+}
+
+
+# test if the code path executes fine with an empty ssh_args. If not
+# handled properly, empty arrays crash the old bash version that comes
+# with Mac if "set -u" is used, like it is used by GN SDK, so if this
+# test passes, the ssh_args array is being handled correctly.
+TEST_sshkeys-empty-ssharg() {
+  # key exists in remote
+  echo 0 > "${normalize_remote_intree_key_mock}.mock_status"
+  # key exists in local
+  echo 0 > "${normalize_local_intree_key_mock}.mock_status"
+  # keys match
+  echo 0 > "${compare_remote_and_local_mock}.mock_status"
+
+  local out="${BT_TEMP_DIR}/output.log"
+
+  # check if verify_default_keys executes with success status
+  (
+    set -u
+    verify_default_keys "$BT_TEMP_DIR" myhost fuchsia >>${out} 2>&1
+    status=$?
+  )
+  BT_EXPECT_GOOD_STATUS $status "verify_default_keys failed"
+
+  # no output is expected. If empty ssh_args is not handled properly,
+  # on old Bash scripts the code above will print an error ("Unbound variable")
+  # although the exit code will still be valid.
+  BT_EXPECT_FILE_CONTAINS ${out} ""
+}
+
+
 BT_RUN_TESTS "$@"

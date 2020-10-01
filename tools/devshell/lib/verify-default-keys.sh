@@ -211,7 +211,7 @@ function verify_default_keys {
     shift
   done
 
-  local -r ssh_base_args=( "${temp_ssh_args[@]}" )
+  local -r ssh_base_args=( "${temp_ssh_args[@]+"${temp_ssh_args[@]}"}" )
 
   local has_local_key=false
   local has_remote_key=false
