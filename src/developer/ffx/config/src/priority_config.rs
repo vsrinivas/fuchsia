@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::api::query::SelectMode,
     crate::{ConfigLevel, ConfigQuery},
     anyhow::{anyhow, bail, Result},
     config_macros::include_default,
@@ -219,9 +220,24 @@ impl Priority {
                 };
                 Priority::nested_get(config, key_vec[0], key_vec[1..].to_vec(), mapper)
             } else {
-                self.iter().find_map(|c| {
-                    Priority::nested_get(c, key_vec[0], key_vec[1..].to_vec(), mapper)
-                })
+                match key.select {
+                    SelectMode::First => self.iter().find_map(|c| {
+                        Priority::nested_get(c, key_vec[0], key_vec[1..].to_vec(), mapper)
+                    }),
+                    SelectMode::All => {
+                        let result: Vec<Value> = self
+                            .iter()
+                            .filter_map(|c| {
+                                Priority::nested_get(c, key_vec[0], key_vec[1..].to_vec(), mapper)
+                            })
+                            .collect();
+                        if result.len() > 0 {
+                            Some(Value::Array(result))
+                        } else {
+                            None
+                        }
+                    }
+                }
             }
         } else {
             if let Some(level) = key.level {
@@ -787,6 +803,30 @@ mod test {
         test.remove(&("name.nested", &ConfigLevel::User).into())?;
         let value = test.get(&"name".into(), &identity);
         assert_eq!(value, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_additive_mode() -> Result<()> {
+        let test = Priority {
+            user: Some(serde_json::from_str(USER)?),
+            build: Some(serde_json::from_str(BUILD)?),
+            global: Some(serde_json::from_str(GLOBAL)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: Some(serde_json::from_str(RUNTIME)?),
+        };
+        let value = test.get(&("name", &SelectMode::All).into(), &identity);
+        match value {
+            Some(Value::Array(v)) => {
+                assert_eq!(v.len(), 5);
+                assert_eq!(v[0], Value::String("Runtime".to_string()));
+                assert_eq!(v[1], Value::String("User".to_string()));
+                assert_eq!(v[2], Value::String("Build".to_string()));
+                assert_eq!(v[3], Value::String("Global".to_string()));
+                assert_eq!(v[4], Value::String("Default".to_string()));
+            }
+            _ => bail!("additive mode should return a Value::Array full of all values."),
+        }
         Ok(())
     }
 }

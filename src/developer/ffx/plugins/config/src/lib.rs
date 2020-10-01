@@ -5,11 +5,12 @@
 use {
     anyhow::{anyhow, Result},
     ffx_config::{
-        add, env_file, environment::Environment, get, print_config, raw, remove, set, ConfigLevel,
+        add, api::query::ConfigQuery, env_file, environment::Environment, get, print_config, raw,
+        remove, set, ConfigLevel,
     },
     ffx_config_plugin_args::{
         AddCommand, ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
-        ProcessMode, RemoveCommand, SetCommand, SubCommand,
+        MappingMode, RemoveCommand, SetCommand, SubCommand,
     },
     ffx_core::{ffx_bail, ffx_plugin},
     serde_json::Value,
@@ -30,17 +31,23 @@ pub async fn exec_config(config: ConfigCommand) -> Result<()> {
 }
 
 async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, mut writer: W) -> Result<()> {
+    let query = ConfigQuery::new(
+        get_cmd.name.as_ref().map(|s| s.as_str()),
+        None,
+        get_cmd.build_dir.as_ref().map(|s| s.as_str()),
+        get_cmd.select,
+    );
     match get_cmd.name.as_ref() {
         Some(name) => match get_cmd.process {
-            ProcessMode::Raw => {
-                let value: Option<Value> = raw(name).await?;
+            MappingMode::Raw => {
+                let value: Option<Value> = raw(query).await?;
                 match value {
                     Some(v) => writeln!(writer, "{}: {}", name, v)?,
                     None => writeln!(writer, "{}: none", name)?,
                 }
             }
-            ProcessMode::Substitute => {
-                let value: std::result::Result<Vec<Value>, _> = get(name).await;
+            MappingMode::Substitute => {
+                let value: std::result::Result<Vec<Value>, _> = get(query).await;
                 match value {
                     Ok(v) => {
                         if v.len() == 1 {
@@ -52,8 +59,8 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, mut writer: W) -> Resul
                     Err(_) => writeln!(writer, "{}: none", name)?,
                 }
             }
-            ProcessMode::SubstituteAndFlatten => {
-                let value: Option<Value> = get(name).await?;
+            MappingMode::SubstituteAndFlatten => {
+                let value: Option<Value> = get(query).await?;
                 match value {
                     Some(v) => writeln!(writer, "{}: {}", name, v)?,
                     None => writeln!(writer, "{}: none", name)?,

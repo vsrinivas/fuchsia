@@ -3,18 +3,24 @@
 // found in the LICENSE file.
 
 use {
+    crate::api::{
+        get_config,
+        query::ConfigQuery,
+        validate_type,
+        value::{ConfigValue, ValueStrategy},
+        ConfigError,
+    },
     crate::cache::load_config,
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
     crate::mapping::{
-        config::config, data::data, env_var::env_var, file_check::file_check, filter::filter,
-        flatten::flatten, home::home, identity::identity,
+        config::config, data::data, env_var::env_var, file_check::file_check, home::home,
+        identity::identity,
     },
     anyhow::{anyhow, bail, Context, Result},
     serde_json::Value,
     std::{
         convert::{From, TryFrom, TryInto},
-        default::Default,
         env::var,
         fs::{create_dir_all, File},
         io::Write,
@@ -25,6 +31,7 @@ use {
 #[cfg(test)]
 use tempfile::NamedTempFile;
 
+pub mod api;
 pub mod constants;
 pub mod environment;
 pub mod logging;
@@ -47,73 +54,48 @@ pub enum ConfigLevel {
     Runtime,
 }
 
-pub type ConfigResult = Result<ConfigValue>;
-pub struct ConfigValue(Option<Value>);
-pub struct ConfigError(anyhow::Error);
-
-pub struct ConfigQuery<'a> {
-    name: Option<&'a str>,
-    level: Option<ConfigLevel>,
-    build_dir: Option<&'a str>,
-}
-
-pub trait HandleArrays {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a>;
-}
-
-impl<'a> Default for ConfigQuery<'a> {
-    fn default() -> Self {
-        Self { name: None, level: None, build_dir: None }
-    }
-}
-
 pub async fn raw<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
 where
-    T: TryFrom<ConfigValue>,
+    T: TryFrom<ConfigValue> + ValueStrategy,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     U: Into<ConfigQuery<'a>>,
 {
-    get_config(query.into(), &validate_type::<T>).await.map_err(|e| e.into())?.try_into()
+    let converted_query = query.into();
+    T::validate_query(&converted_query)?;
+    get_config(converted_query, &validate_type::<T>).await.map_err(|e| e.into())?.try_into()
 }
 
 pub async fn get<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
 where
-    T: TryFrom<ConfigValue> + HandleArrays,
+    T: TryFrom<ConfigValue> + ValueStrategy,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     U: Into<ConfigQuery<'a>>,
 {
+    let converted_query = query.into();
+    T::validate_query(&converted_query)?;
     let env_var_mapper = env_var(&validate_type::<T>);
     let home_mapper = home(&env_var_mapper);
     let config_mapper = config(&home_mapper);
     let data_mapper = data(&config_mapper);
-    let flatten_env_var_mapper = T::handle(&data_mapper);
-    get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
+    let array_env_var_mapper = T::handle_arrays(&data_mapper);
+    get_config(converted_query, &array_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
 pub async fn file<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
 where
-    T: TryFrom<ConfigValue> + HandleArrays,
+    T: TryFrom<ConfigValue> + ValueStrategy,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     U: Into<ConfigQuery<'a>>,
 {
+    let converted_query = query.into();
+    T::validate_query(&converted_query)?;
     let file_check_mapper = file_check(&identity);
     let env_var_mapper = env_var(&file_check_mapper);
     let home_mapper = home(&env_var_mapper);
     let config_mapper = config(&home_mapper);
     let data_mapper = data(&config_mapper);
-    let flatten_env_var_mapper = T::handle(&data_mapper);
-    get_config(query.into(), &flatten_env_var_mapper).await.map_err(|e| e.into())?.try_into()
-}
-
-async fn get_config<'a, T: Fn(Value) -> Option<Value>>(
-    query: ConfigQuery<'a>,
-    mapper: &T,
-) -> ConfigResult {
-    let config = load_config(&query.build_dir.map(String::from)).await?;
-    let read_guard = config.read().await;
-    Ok((*read_guard).get(&query, mapper).into())
+    let array_env_var_mapper = T::handle_arrays(&data_mapper);
+    get_config(converted_query, &array_env_var_mapper).await.map_err(|e| e.into())?.try_into()
 }
 
 pub(crate) fn get_config_base_path() -> Result<PathBuf> {
@@ -147,282 +129,6 @@ pub(crate) fn get_data_base_path() -> Result<PathBuf> {
     path.push("ffx");
     create_dir_all(&path)?;
     Ok(path)
-}
-
-pub(crate) fn validate_type<T>(value: Value) -> Option<Value>
-where
-    T: TryFrom<ConfigValue>,
-    <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
-{
-    let result: std::result::Result<T, T::Error> = ConfigValue(Some(value.clone())).try_into();
-    match result {
-        Ok(_) => Some(value),
-        Err(_) => None,
-    }
-}
-
-impl<'a> From<&'a str> for ConfigQuery<'a> {
-    fn from(value: &'a str) -> Self {
-        ConfigQuery { name: Some(value), ..Default::default() }
-    }
-}
-
-impl<'a> From<&'a String> for ConfigQuery<'a> {
-    fn from(value: &'a String) -> Self {
-        ConfigQuery { name: Some(&value), ..Default::default() }
-    }
-}
-
-impl<'a> From<ConfigLevel> for ConfigQuery<'a> {
-    fn from(value: ConfigLevel) -> Self {
-        ConfigQuery { level: Some(value), ..Default::default() }
-    }
-}
-
-impl<'a> From<(&'a str, ConfigLevel)> for ConfigQuery<'a> {
-    fn from(value: (&'a str, ConfigLevel)) -> Self {
-        ConfigQuery { name: Some(value.0), level: Some(value.1), ..Default::default() }
-    }
-}
-
-impl<'a> From<(&'a str, &ConfigLevel)> for ConfigQuery<'a> {
-    fn from(value: (&'a str, &ConfigLevel)) -> Self {
-        ConfigQuery { name: Some(value.0), level: Some(*value.1), ..Default::default() }
-    }
-}
-
-impl<'a> From<(&'a str, &'a str)> for ConfigQuery<'a> {
-    fn from(value: (&'a str, &'a str)) -> Self {
-        ConfigQuery { name: Some(value.0), build_dir: Some(value.1), ..Default::default() }
-    }
-}
-
-impl<'a> From<(&'a str, &ConfigLevel, &'a str)> for ConfigQuery<'a> {
-    fn from(value: (&'a str, &ConfigLevel, &'a str)) -> Self {
-        ConfigQuery { name: Some(value.0), level: Some(*value.1), build_dir: Some(value.2) }
-    }
-}
-
-impl<'a> From<(&'a str, &'a ConfigLevel, &'a Option<String>)> for ConfigQuery<'a> {
-    fn from(value: (&'a str, &'a ConfigLevel, &'a Option<String>)) -> Self {
-        ConfigQuery {
-            name: Some(value.0),
-            level: Some(*value.1),
-            build_dir: value.2.as_ref().map(|s| s.as_str()),
-        }
-    }
-}
-
-impl<'a> From<(&'a String, &'a ConfigLevel, &'a Option<String>)> for ConfigQuery<'a> {
-    fn from(value: (&'a String, &'a ConfigLevel, &'a Option<String>)) -> Self {
-        ConfigQuery {
-            name: Some(value.0.as_str()),
-            level: Some(*value.1),
-            build_dir: value.2.as_ref().map(|s| s.as_str()),
-        }
-    }
-}
-
-impl From<anyhow::Error> for ConfigError {
-    fn from(value: anyhow::Error) -> Self {
-        ConfigError(value)
-    }
-}
-
-impl From<ConfigError> for anyhow::Error {
-    fn from(value: ConfigError) -> Self {
-        value.0
-    }
-}
-
-impl From<ConfigError> for std::convert::Infallible {
-    fn from(_value: ConfigError) -> Self {
-        panic!("never going to happen")
-    }
-}
-
-impl From<ConfigValue> for Option<Value> {
-    fn from(value: ConfigValue) -> Self {
-        value.0
-    }
-}
-
-impl From<Option<Value>> for ConfigValue {
-    fn from(value: Option<Value>) -> Self {
-        ConfigValue(value)
-    }
-}
-
-impl HandleArrays for Value {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl TryFrom<ConfigValue> for Value {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        value.0.ok_or(anyhow!("no value").into())
-    }
-}
-
-impl HandleArrays for Option<Value> {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl HandleArrays for String {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl TryFrom<ConfigValue> for String {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        value
-            .0
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .ok_or(anyhow!("no configuration String value found").into())
-    }
-}
-
-impl HandleArrays for Option<String> {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl TryFrom<ConfigValue> for Option<String> {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        Ok(value.0.and_then(|v| v.as_str().map(|s| s.to_string())))
-    }
-}
-
-impl HandleArrays for u64 {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl TryFrom<ConfigValue> for u64 {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        value
-            .0
-            .and_then(|v| {
-                v.as_u64().or_else(|| {
-                    if let Value::String(s) = v {
-                        let parsed: Result<u64, _> = s.parse();
-                        match parsed {
-                            Ok(b) => Some(b),
-                            Err(_) => None,
-                        }
-                    } else {
-                        None
-                    }
-                })
-            })
-            .ok_or(anyhow!("no configuration Number value found").into())
-    }
-}
-
-impl HandleArrays for bool {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl TryFrom<ConfigValue> for bool {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        value
-            .0
-            .and_then(|v| {
-                v.as_bool().or_else(|| {
-                    if let Value::String(s) = v {
-                        let parsed: Result<bool, _> = s.parse();
-                        match parsed {
-                            Ok(b) => Some(b),
-                            Err(_) => None,
-                        }
-                    } else {
-                        None
-                    }
-                })
-            })
-            .ok_or(anyhow!("no configuration Boolean value found").into())
-    }
-}
-
-impl HandleArrays for PathBuf {
-    fn handle<'a, T: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a T,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        flatten(next)
-    }
-}
-
-impl TryFrom<ConfigValue> for PathBuf {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        value
-            .0
-            .and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string())))
-            .ok_or(anyhow!("no configuration value found").into())
-    }
-}
-
-impl<T: TryFrom<ConfigValue>> HandleArrays for Vec<T> {
-    fn handle<'a, F: Fn(Value) -> Option<Value> + Sync>(
-        next: &'a F,
-    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
-        filter(next)
-    }
-}
-
-impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
-    type Error = ConfigError;
-
-    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
-        value
-            .0
-            .and_then(|val| match val.as_array() {
-                Some(v) => {
-                    let result: Vec<T> = v
-                        .iter()
-                        .filter_map(|i| ConfigValue(Some(i.clone())).try_into().ok())
-                        .collect();
-                    if result.len() > 0 {
-                        Some(result)
-                    } else {
-                        None
-                    }
-                }
-                None => ConfigValue(Some(val)).try_into().map(|x| vec![x]).ok(),
-            })
-            .ok_or(anyhow!("no configuration value found").into())
-    }
 }
 
 pub async fn set<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result<()> {
