@@ -22,9 +22,6 @@ in the normal flow, but can be built manually as follows:
 
 1. Find the resulting SDK archive at `<build_dir>/sdk/archive/firmware.tar.gz`
 
-   Note: this archive contains some relative paths, so requires the `-P` flag
-   when unpacking with `tar`.
-
 ## Porting
 
 Firmware development is usually pretty device-specific so it's not expected
