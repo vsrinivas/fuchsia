@@ -93,7 +93,7 @@ From //public/gn/config/levels.gni:47
 Defines the `//:default` target: what `ninja` with no arguments does.
 TODO(fxbug.dev/3156): This must be set by the controlling Fuchsia GN build.
 
-**Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_host_targets-linux-x64", "//:legacy_unification-x64"]`
+**Current value for `target_cpu = `:** `["//:legacy_unification-x64"]`
 
 From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:12
 
@@ -107,11 +107,11 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:13
 
 **Overridden from the default:** `false`
 
-From //kernel/params.gni:45
+From //kernel/params.gni:51
 
 ### enable_acpi_debug
 Enable debug output in the ACPI library (used by the ACPI bus driver).
@@ -125,7 +125,7 @@ Enable kernel lock dependency tracking.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:28
+From //kernel/params.gni:34
 
 ### enable_lock_dep_tests
 Enable kernel lock dependency tracking tests.  By default this is
@@ -135,7 +135,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:72
+From //kernel/params.gni:78
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -271,7 +271,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value for `target_cpu = `:** `"/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:14
 
 **Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
@@ -289,7 +289,7 @@ From //public/gn/toolchain/goma.gni:17
 
 **Current value (from the default):** `"0xffffffff00000000"`
 
-From //kernel/params.gni:22
+From //kernel/params.gni:28
 
 ### kernel_debug_level
 Enables various kernel debugging and diagnostic features.  Valid
@@ -301,7 +301,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:57
+From //kernel/params.gni:63
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -312,7 +312,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:64
+From //kernel/params.gni:70
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -320,7 +320,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:49
+From //kernel/params.gni:55
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -383,7 +383,7 @@ Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:15
 
 **Overridden from the default:** `false`
 
@@ -409,7 +409,7 @@ prebuilt.
 
 **Current value for `target_cpu = `:** `"0v1jaeyeb9K3EGyl_O56bQ02Nt1CCd3_JeANRsXANBUC"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:20
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:16
 
 **Overridden from the default:** `""`
 
@@ -421,7 +421,7 @@ analysis.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:41
+From //kernel/params.gni:47
 
 ### scheduler_tracing_level
 The level of detail for scheduler traces when enabled. Values greater than
@@ -434,13 +434,13 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //kernel/params.gni:37
+From //kernel/params.gni:43
 
 ### smp_max_cpus
 
 **Current value (from the default):** `16`
 
-From //kernel/params.gni:14
+From //kernel/params.gni:20
 
 ### sysroot
 The `--sysroot` directory for host compilations.
@@ -527,7 +527,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:21
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `false`
 
@@ -538,7 +538,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:22
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:18
 
 **Overridden from the default:** `false`
 
@@ -782,7 +782,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:23
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
 
 **Overridden from the default:** `[]`
 
@@ -801,7 +801,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:24
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:20
 
 **Overridden from the default:** `"zstd"`
 
@@ -843,7 +843,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:25
+From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:21
 
 **Overridden from the default:** `0`
 
