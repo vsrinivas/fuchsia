@@ -612,7 +612,6 @@ config("Wno-conversion") {
     "//garnet/lib/trace_converters/*",
     "//garnet/public/lib/fostr/*",
     "//garnet/public/lib/test_runner/cpp/*",
-    "//garnet/tests/fdio_spawn/*",
     "//sdk/lib/fidl/cpp/*",
     "//sdk/lib/media/audio/cpp/*",
     "//sdk/lib/media/cpp/*",

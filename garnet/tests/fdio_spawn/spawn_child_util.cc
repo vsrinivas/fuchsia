@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     if (!strcmp(action, "add-handle"))
       return has_arg(PA_USER0) && !has_arg(PA_USER1) ? 75 : -5;
     if (!strcmp(action, "add-handle-clock-utc"))
-      return koid_of_global_utc_clock();
+      return static_cast<int>(koid_of_global_utc_clock());
   }
   if (!strcmp(cmd, "--stat")) {
     if (argc != 3)

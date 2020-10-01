@@ -17,7 +17,8 @@ int main(int argc, const char* const* argv) {
   const char* name = "launcher-child";
   zx::process proc;
   zx::vmar vmar;
-  zx_status_t status = proc.create(*zx::job::default_job(), name, strlen(name), 0, &proc, &vmar);
+  zx_status_t status = proc.create(*zx::job::default_job(), name,
+                                   static_cast<uint32_t>(strlen(name)), 0, &proc, &vmar);
   if (status == ZX_OK) {
     proc.kill();
   }

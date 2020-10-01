@@ -24,9 +24,6 @@ executable("fdio-spawn-tests-bin") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("fdio-spawn-tests-component") {
@@ -45,9 +42,6 @@ executable("spawn-child-util-bin") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("spawn-child-util-component") {
@@ -69,9 +63,6 @@ executable("fake-launcher-util-bin") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_component("fake-launcher-util-component") {
