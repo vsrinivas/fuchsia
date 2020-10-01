@@ -9,6 +9,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioDeviceEnumerator",
             "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]
     }

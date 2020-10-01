@@ -16,6 +16,7 @@ rustc_library("fuchsia-audio-codec") {
   deps = [
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
     "//src/lib/fuchsia-async",
@@ -26,6 +27,7 @@ rustc_library("fuchsia-audio-codec") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
   ]
@@ -38,6 +40,7 @@ rustc_library("fuchsia-audio-codec") {
   ]
 
   sources = [
+    "src/buffer_collection_constraints.rs",
     "src/lib.rs",
     "src/stream_processor.rs",
   ]

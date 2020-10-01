@@ -71,3 +71,5 @@ tasks.
 /// Interface to CodecFactory
 pub mod stream_processor;
 pub use stream_processor::{StreamProcessor, StreamProcessorOutputStream};
+
+mod buffer_collection_constraints;

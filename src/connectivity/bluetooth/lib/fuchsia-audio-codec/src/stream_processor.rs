@@ -4,28 +4,33 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    fidl::client::QueryResponseFut,
     fidl::encoding::Decodable,
     fidl_fuchsia_media::*,
     fidl_fuchsia_mediacodec::*,
+    fidl_fuchsia_sysmem::*,
     fuchsia_stream_processors::*,
-    fuchsia_syslog::fx_vlog,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, zx_status_t},
     futures::{
+        future::MapOk,
         io::{self, AsyncWrite},
         ready,
-        stream::{FusedStream, Stream},
+        stream::{FusedStream, FuturesUnordered, Stream},
         task::{Context, Poll, Waker},
-        StreamExt,
+        StreamExt, TryFutureExt,
     },
+    log::*,
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{HashMap, HashSet, VecDeque},
-        convert::TryFrom,
+        convert::{TryFrom, TryInto},
         mem,
         pin::Pin,
         sync::Arc,
     },
 };
+
+use crate::buffer_collection_constraints::*;
 
 fn fidl_error_to_io_error(e: fidl::Error) -> io::Error {
     io::Error::new(io::ErrorKind::Other, format_err!("Fidl Error: {}", e))
@@ -126,15 +131,36 @@ impl Stream for OutputQueue {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+enum StreamPort {
+    Input,
+    Output,
+}
+
+// The minimum specified by codec is too small to contain the typical pcm frame chunk size for the
+// encoder case (1024). Increase to a reasonable amount.
+const MIN_INPUT_BUFFER_SIZE: u32 = 4096;
+// Go with codec default for output, for frame alignment.
+const MIN_OUTPUT_BUFFER_SIZE: u32 = 0;
+
 /// Index of an input buffer to be shared between the client and the StreamProcessor.
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct InputBufferIndex(u32);
+
+/// A collection of futures representing an async step in the sysmem buffer allocation process.
+/// `Input` is the parameter type passed in to the completion callback of the step on success.
+/// `Output` is the final output type of the future on success.
+type BufferCompletionFutures<Input, Output> = FuturesUnordered<
+    MapOk<QueryResponseFut<Input>, Box<dyn FnOnce(Input) -> Output + Sync + Send>>,
+>;
 
 /// The StreamProcessorInner handles the events that come from the StreamProcessor, mostly related to setup
 /// of the buffers and handling the output packets as they arrive.
 struct StreamProcessorInner {
     /// The proxy to the stream processor.
     processor: StreamProcessorProxy,
+    /// The proxy to the sysmem allocator.
+    sysmem_client: AllocatorProxy,
     /// The event stream from the StreamProcessor.  We handle these internally.
     events: StreamProcessorEventStream,
     /// Set of buffers that are used for input
@@ -146,6 +172,10 @@ struct StreamProcessorInner {
     client_owned: HashSet<InputBufferIndex>,
     /// A cursor on the next input buffer location to be written to when new input data arrives.
     input_cursor: Option<(InputBufferIndex, u64)>,
+    /// Input buffer settings to be sent to stream processor
+    input_settings: Option<StreamBufferPartialSettings>,
+    /// The proxy to the input buffer collection
+    input_collection: Option<BufferCollectionProxy>,
     /// The encoded/decoded data - a set of output buffers that will be written by the server.
     output_buffers: Vec<zx::Vmo>,
     /// The size of each output packet
@@ -153,6 +183,18 @@ struct StreamProcessorInner {
     /// An queue of the indexes of output buffers that have been filled by the processor and a
     /// waiter if someone is waiting on it.
     output_queue: Mutex<OutputQueue>,
+    /// Output buffer settings to be sent to stream processor
+    output_settings: Option<StreamBufferPartialSettings>,
+    /// The proxy to the output buffer collection
+    output_collection: Option<BufferCollectionProxy>,
+    /// The collection of futures for any outstanding buffer collection sync requests
+    sync_buffers_futures: BufferCompletionFutures<(), StreamPort>,
+    /// The collection of futures for any oustanding buffer allocation requests, with a followup
+    /// callback that will be passed the results of the allocation
+    allocate_buffers_futures: BufferCompletionFutures<
+        (zx_status_t, BufferCollectionInfo2),
+        (zx_status_t, BufferCollectionInfo2, StreamPort),
+    >,
 }
 
 impl StreamProcessorInner {
@@ -163,45 +205,17 @@ impl StreamProcessorInner {
         match evt {
             StreamProcessorEvent::OnInputConstraints { input_constraints } => {
                 let input_constraints = ValidStreamBufferConstraints::try_from(input_constraints)?;
-                let mut settings = input_constraints.default_settings;
-                // Lifetime ordinal will always be set to 0 in the default settings.
-                // We only have one stream, so we set this to 1 and accept the default settings.
-                settings.buffer_lifetime_ordinal = 1;
-                self.processor.set_input_buffer_settings(settings.into())?;
-
-                let packet_count =
-                    settings.packet_count_for_client + settings.packet_count_for_server;
-                self.input_packet_size = settings.per_packet_buffer_bytes as u64;
-                for idx in 0..packet_count {
-                    // TODO(fxbug.dev/41553): look into letting sysmem allocate these buffers
-                    let (stream_buffer, vmo) = make_buffer(self.input_packet_size, 1, idx)?;
-                    self.input_buffers.insert(InputBufferIndex(idx), vmo);
-                    self.client_owned.insert(InputBufferIndex(idx));
-                    self.processor.add_input_buffer(stream_buffer)?;
-                }
-                self.setup_input_cursor();
+                self.create_buffer_collection(input_constraints, StreamPort::Input)?;
             }
             StreamProcessorEvent::OnOutputConstraints { output_config } => {
-                let output_config = ValidStreamOutputConstraints::try_from(output_config)?;
-                if !output_config.buffer_constraints_action_required {
+                let output_constraints = ValidStreamOutputConstraints::try_from(output_config)?;
+                if !output_constraints.buffer_constraints_action_required {
                     return Ok(());
                 }
-
-                let mut settings = output_config.buffer_constraints.default_settings;
-                // We just accept the new output constraints and rebuild our buffers.
-                // This is always set to zero in the defaults. We only have one buffer lifetime for
-                // this client.
-                settings.buffer_lifetime_ordinal = 1;
-
-                self.processor.set_output_buffer_settings(settings.into())?;
-                let packet_count =
-                    settings.packet_count_for_client + settings.packet_count_for_server;
-                self.output_packet_size = settings.per_packet_buffer_bytes as u64;
-                for idx in 0..packet_count {
-                    let (stream_buffer, vmo) = make_buffer(self.output_packet_size, 1, idx)?;
-                    self.output_buffers.push(vmo);
-                    self.processor.add_output_buffer(stream_buffer)?;
-                }
+                self.create_buffer_collection(
+                    output_constraints.buffer_constraints,
+                    StreamPort::Output,
+                )?;
             }
             StreamProcessorEvent::OnOutputPacket { output_packet, .. } => {
                 let mut lock = self.output_queue.lock();
@@ -218,7 +232,7 @@ impl StreamProcessorInner {
                 let mut lock = self.output_queue.lock();
                 lock.mark_ended();
             }
-            e => fx_vlog!(1, "Unhandled stream processor event: {:#?}", e),
+            e => trace!("Unhandled stream processor event: {:#?}", e),
         }
         Ok(())
     }
@@ -234,24 +248,205 @@ impl StreamProcessorInner {
         }
     }
 
-    /// Process all the events that are currently available from the StreamProcessor, and set the
-    /// waker of `cx` to be woken when another event arrives.
-    fn process_events(&mut self, cx: &mut Context<'_>) -> Result<usize, Error> {
-        let mut processed = 0;
-        loop {
-            match self.process_event(cx) {
-                Poll::Pending => return Ok(processed),
-                Poll::Ready(Err(e)) => return Err(e.into()),
-                Poll::Ready(Ok(())) => processed = processed + 1,
+    /// Connect to sysmem Allocator service and create a shared buffer collection for the requested
+    /// `direction` of this stream processor. On success, will have queued a future to
+    /// `sync_buffers_futures` which will complete when sysmem notifies that the buffer collection
+    /// can be shared.
+    ///
+    /// TODO(fxbug.dev/61166) Abstract out all this sysmem allocation code and state into own
+    /// struct/Future
+    fn create_buffer_collection(
+        &mut self,
+        constraints: ValidStreamBufferConstraints,
+        direction: StreamPort,
+    ) -> Result<(), Error> {
+        let (client_token, client_token_request) =
+            fidl::endpoints::create_proxy::<BufferCollectionTokenMarker>()?;
+        let (codec_token, codec_token_request) =
+            fidl::endpoints::create_endpoints::<BufferCollectionTokenMarker>()?;
+
+        self.sysmem_client
+            .allocate_shared_collection(client_token_request)
+            .context("Allocating shared collection")?;
+        client_token.duplicate(std::u32::MAX, codec_token_request)?;
+
+        let (collection_client, collection_request) =
+            fidl::endpoints::create_proxy::<BufferCollectionMarker>()?;
+        self.sysmem_client.bind_shared_collection(
+            fidl::endpoints::ClientEnd::new(client_token.into_channel().unwrap().into_zx_channel()),
+            collection_request,
+        )?;
+
+        let mut collection_constraints = BUFFER_COLLECTION_CONSTRAINTS_DEFAULT;
+
+        collection_constraints.min_buffer_count =
+            constraints.default_settings.packet_count_for_client
+                + constraints.default_settings.packet_count_for_server;
+
+        collection_constraints.has_buffer_memory_constraints = true;
+        collection_constraints.buffer_memory_constraints.min_size_bytes = match direction {
+            StreamPort::Input => MIN_INPUT_BUFFER_SIZE,
+            StreamPort::Output => MIN_OUTPUT_BUFFER_SIZE,
+        };
+
+        let has_constraints = true;
+        collection_client
+            .set_constraints(has_constraints, &mut collection_constraints)
+            .context("Sending buffer constraints to sysmem")?;
+
+        let settings = StreamBufferPartialSettings {
+            buffer_lifetime_ordinal: Some(1),
+            buffer_constraints_version_ordinal: Some(1),
+            single_buffer_mode: Some(constraints.default_settings.single_buffer_mode),
+            packet_count_for_server: Some(constraints.default_settings.packet_count_for_server),
+            packet_count_for_client: Some(constraints.default_settings.packet_count_for_client),
+            sysmem_token: Some(codec_token),
+        };
+
+        // Sync collection so server knows about duplicated token before we send it to stream
+        // processor and wait for allocation ourselves.
+        let sync_fut = collection_client.sync();
+
+        match direction {
+            StreamPort::Input => {
+                self.input_collection = Some(collection_client);
+                self.input_settings = Some(settings);
+            }
+            StreamPort::Output => {
+                self.output_collection = Some(collection_client);
+                self.output_settings = Some(settings);
             }
         }
+
+        self.sync_buffers_futures.push(sync_fut.map_ok(Box::new(move |_| direction)));
+
+        Ok(())
+    }
+
+    /// Called after a future in `sync_buffers_futures` completes. Proceeds to the next step in
+    /// buffer setup by notifying the stream processor of the buffer collection.
+    ///
+    /// Upon success, will have queued a future to `allocate_buffers_futures` that will complete
+    /// when sysmem notifies all parties that the buffers are allocated.
+    fn process_sync_completion(&mut self, direction: StreamPort) -> Result<(), Error> {
+        let collection = match direction {
+            StreamPort::Input => {
+                let settings =
+                    self.input_settings.take().ok_or(format_err!("No input settings"))?;
+                self.processor.set_input_buffer_partial_settings(settings)?;
+                self.input_collection.as_ref().ok_or(format_err!("No collection"))?
+            }
+            StreamPort::Output => {
+                let settings =
+                    self.output_settings.take().ok_or(format_err!("No output settings"))?;
+                self.processor.set_output_buffer_partial_settings(settings)?;
+                self.output_collection.as_ref().ok_or(format_err!("No collection"))?
+            }
+        };
+
+        let wait_fut = collection.wait_for_buffers_allocated();
+        self.allocate_buffers_futures.push(wait_fut.map_ok(Box::new(
+            move |(status, buffer_collection_info)| (status, buffer_collection_info, direction),
+        )));
+
+        Ok(())
+    }
+
+    /// Called when a future in `allocate_buffers_futures` completes. This indicates data is ready
+    /// to start flowing, so input/output packet sizes are populated here.
+    fn process_allocation_completion(
+        &mut self,
+        status: zx_status_t,
+        buffer_collection_info: BufferCollectionInfo2,
+        direction: StreamPort,
+    ) -> Result<(), Error> {
+        let mut collection_info = zx::Status::ok(status).map(|_| buffer_collection_info)?;
+
+        match direction {
+            StreamPort::Input => {
+                for (i, buffer) in collection_info.buffers
+                    [0..collection_info.buffer_count.try_into()?]
+                    .iter_mut()
+                    .enumerate()
+                {
+                    self.input_buffers.insert(
+                        InputBufferIndex(i.try_into()?),
+                        buffer.vmo.take().ok_or(format_err!("No vmo"))?,
+                    );
+                    self.client_owned.insert(InputBufferIndex(i.try_into()?));
+                }
+                self.input_packet_size =
+                    collection_info.settings.buffer_settings.size_bytes.try_into()?;
+                self.setup_input_cursor();
+            }
+            StreamPort::Output => {
+                self.processor
+                    .complete_output_buffer_partial_settings(/*buffer_lifetime_ordinal=*/ 1)?;
+                for buffer in
+                    collection_info.buffers[0..collection_info.buffer_count.try_into()?].iter_mut()
+                {
+                    self.output_buffers.push(buffer.vmo.take().ok_or(format_err!("No vmo"))?);
+                }
+                self.output_packet_size =
+                    collection_info.settings.buffer_settings.size_bytes.try_into()?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Process all the futures on the buffer allocation future queues and handle any that are
+    /// ready.
+    fn process_buffer_allocation(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+        if !self.sync_buffers_futures.is_empty() {
+            if let Poll::Ready(Some(Ok(direction))) = self.sync_buffers_futures.poll_next_unpin(cx)
+            {
+                return Poll::Ready(self.process_sync_completion(direction));
+            }
+        }
+
+        if !self.allocate_buffers_futures.is_empty() {
+            if let Poll::Ready(Some(Ok((status, buffer_collection_info, direction)))) =
+                self.allocate_buffers_futures.poll_next_unpin(cx)
+            {
+                return Poll::Ready(self.process_allocation_completion(
+                    status,
+                    buffer_collection_info,
+                    direction,
+                ));
+            }
+        }
+
+        Poll::Pending
+    }
+
+    /// Process all the events that are currently available from the StreamProcessor and Allocator, and set the
+    /// waker of `cx` to be woken when another event arrives.
+    fn process_events(&mut self, cx: &mut Context<'_>) -> Result<(), Error> {
+        loop {
+            match self.process_event(cx) {
+                Poll::Pending => break,
+                Poll::Ready(Err(e)) => return Err(e.into()),
+                Poll::Ready(Ok(())) => (),
+            }
+        }
+
+        loop {
+            match self.process_buffer_allocation(cx) {
+                Poll::Pending => break,
+                Poll::Ready(Err(e)) => return Err(e.into()),
+                Poll::Ready(Ok(())) => (),
+            }
+        }
+
+        Ok(())
     }
 
     /// If there is an output waker, process all the events in the queue with the output
     /// waker to be woken up next.
-    fn process_events_output(&mut self) -> Result<usize, Error> {
+    fn process_events_output(&mut self) -> Result<(), Error> {
         let waker = match self.output_queue.lock().listener.waker() {
-            None => return Ok(0),
+            None => return Ok(()),
             Some(waker) => waker.clone(),
         };
         self.process_events(&mut Context::from_waker(&waker))
@@ -288,29 +483,6 @@ impl StreamProcessorInner {
     }
 }
 
-fn make_buffer(
-    size_bytes: u64,
-    ordinal: u64,
-    index: u32,
-) -> Result<(StreamBuffer, zx::Vmo), Error> {
-    let vmo = zx::Vmo::create(size_bytes)?;
-    let vmo_copy = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
-
-    let data = StreamBufferData::Vmo(StreamBufferDataVmo {
-        vmo_handle: Some(vmo),
-        vmo_usable_start: Some(0),
-        vmo_usable_size: Some(size_bytes),
-    });
-    Ok((
-        StreamBuffer {
-            buffer_lifetime_ordinal: Some(ordinal),
-            buffer_index: Some(index),
-            data: Some(data),
-        },
-        vmo_copy,
-    ))
-}
-
 /// Struct representing a CodecFactory .
 /// Input sent to the encoder via `StreamProcessor::write_bytes` is queued for delivery, and delivered
 /// whenever a packet is full or `StreamProcessor::send_packet` is called.  Output can be retrieved using
@@ -328,19 +500,26 @@ pub struct StreamProcessorOutputStream {
 impl StreamProcessor {
     /// Create a new StreamProcessor given the proxy.
     /// Takes the event stream of the proxy.
-    fn create(processor: StreamProcessorProxy) -> Self {
+    fn create(processor: StreamProcessorProxy, sysmem_client: AllocatorProxy) -> Self {
         let events = processor.take_event_stream();
         Self {
             inner: Arc::new(RwLock::new(StreamProcessorInner {
                 processor,
+                sysmem_client,
                 events,
                 input_buffers: HashMap::new(),
                 input_packet_size: 0,
                 client_owned: HashSet::new(),
                 input_cursor: None,
+                input_settings: None,
+                input_collection: None,
                 output_buffers: Vec::new(),
                 output_packet_size: 0,
                 output_queue: Default::default(),
+                output_settings: None,
+                output_collection: None,
+                sync_buffers_futures: FuturesUnordered::new(),
+                allocate_buffers_futures: FuturesUnordered::new(),
             })),
         }
     }
@@ -352,6 +531,9 @@ impl StreamProcessor {
         input_domain: DomainFormat,
         encoder_settings: EncoderSettings,
     ) -> Result<StreamProcessor, Error> {
+        let sysmem_client = fuchsia_component::client::connect_to_service::<AllocatorMarker>()
+            .context("Connecting to sysmem")?;
+
         let format_details = FormatDetails {
             domain: Some(input_domain),
             encoder_settings: Some(encoder_settings),
@@ -368,13 +550,11 @@ impl StreamProcessor {
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
             .context("Failed to connect to Codec Factory")?;
 
-        let (stream_processor_client, stream_processor_serverend) =
-            fidl::endpoints::create_endpoints()?;
-        let processor = stream_processor_client.into_proxy()?;
+        let (processor, stream_processor_serverend) = fidl::endpoints::create_proxy()?;
 
         codec_svc.create_encoder(encoder_params, stream_processor_serverend)?;
 
-        Ok(StreamProcessor::create(processor))
+        Ok(StreamProcessor::create(processor, sysmem_client))
     }
 
     /// Create a new StreamProcessor decoder, with the given `mime_type` and optional `oob_bytes`.  See
@@ -384,6 +564,9 @@ impl StreamProcessor {
         mime_type: &str,
         oob_bytes: Option<Vec<u8>>,
     ) -> Result<StreamProcessor, Error> {
+        let sysmem_client = fuchsia_component::client::connect_to_service::<AllocatorMarker>()
+            .context("Connecting to sysmem")?;
+
         let format_details = FormatDetails {
             mime_type: Some(mime_type.to_string()),
             oob_bytes: oob_bytes,
@@ -403,13 +586,11 @@ impl StreamProcessor {
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
             .context("Failed to connect to Codec Factory")?;
 
-        let (stream_processor_client, stream_processor_serverend) =
-            fidl::endpoints::create_endpoints()?;
-        let processor = stream_processor_client.into_proxy()?;
+        let (processor, stream_processor_serverend) = fidl::endpoints::create_proxy()?;
 
         codec_svc.create_decoder(decoder_params, stream_processor_serverend)?;
 
-        Ok(StreamProcessor::create(processor))
+        Ok(StreamProcessor::create(processor, sysmem_client))
     }
 
     /// Take a stream object which will produce the output of the processor.
@@ -504,9 +685,20 @@ impl StreamProcessor {
     fn poll_writable(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         let mut write = self.inner.write();
         while write.input_cursor.is_none() {
-            if let Err(e) = ready!(write.process_event(cx)) {
-                return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e)));
-            }
+            match write.process_event(cx) {
+                Poll::Pending => {
+                    if write.input_cursor.is_some() {
+                        break;
+                    }
+                    if let Err(e) = ready!(write.process_buffer_allocation(cx)) {
+                        return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e)));
+                    }
+                }
+                Poll::Ready(Err(e)) => {
+                    return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e)));
+                }
+                Poll::Ready(Ok(())) => (),
+            };
         }
         // The input cursor is set now.
         Poll::Ready(Ok(()))
