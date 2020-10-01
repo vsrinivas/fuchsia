@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver_host.h"
+#include "src/devices/bin/driver_host2/driver_host.h"
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/loop.h>

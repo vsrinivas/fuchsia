@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "driver_runner.h"
+#include "src/devices/bin/driver_manager/driver_runner.h"
 
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>

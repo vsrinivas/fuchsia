@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "start_args.h"
+#include "src/devices/lib/driver2/start_args.h"
 
 namespace fdf = llcpp::fuchsia::driver::framework;
 
