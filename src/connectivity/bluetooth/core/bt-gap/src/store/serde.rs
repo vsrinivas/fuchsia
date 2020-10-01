@@ -628,7 +628,7 @@ mod tests {
                      },
                      "value": [9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]
                  },
-                 "services":[
+                 "services": [
                     "0000110a-0000-1000-8000-00805f9b34fb",
                     "0000110b-0000-1000-8000-00805f9b34fb"
                  ]
@@ -695,6 +695,40 @@ mod tests {
 
         let deserialized = BondingDataDeserializer::from_json(json_input).unwrap();
         assert!(deserialized.bredr().unwrap().services.is_empty());
+    }
+
+    #[test]
+    fn deserialize_malformed_bredr_services() {
+        let json_input = r#"{
+             "identifier": 1234,
+             "address":{
+                "type": "public",
+                "value": [6,5,4,3,2,1]
+             },
+             "hostAddress":{
+                "type": "public",
+                "value": [255,238,221,204,187,170]
+             },
+             "name": "Device Name",
+             "le": null,
+             "bredr": {
+                 "rolePreference": "follower",
+                 "linkKey": {
+                     "security": {
+                         "authenticated": true,
+                         "secureConnections": true,
+                         "encryptionKeySize": 16
+                     },
+                     "value": [9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]
+                 },
+                 "services": ["0123456789abcdef"]
+             }
+        }"#;
+
+        assert_eq!(
+            "invalid length: expected one of [36, 32], found 16 at line 23 column 48",
+            BondingDataDeserializer::from_json(json_input).unwrap_err().to_string()
+        );
     }
 
     #[test]
