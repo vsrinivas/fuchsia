@@ -16,7 +16,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
-    log::{info, warn},
+    log::{debug, info, warn},
     std::path::PathBuf,
 };
 
@@ -78,10 +78,13 @@ fn main() -> Result<(), Error> {
         Ok(config) => config,
         Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
     };
+    debug!("Configuration parsed.");
 
     let num_threads = archivist_configuration.num_threads;
 
     let mut archivist = archivist::Archivist::new(archivist_configuration)?;
+    debug!("Archivist initialized from configuration.");
+
     archivist.install_logger_services().add_event_source("v1", Box::new(legacy_event_provider));
 
     if !opt.disable_event_source {
@@ -124,5 +127,9 @@ fn main() -> Result<(), Error> {
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
             .ok_or(MissingStartupHandle)?;
 
-    executor.run(archivist.run(zx::Channel::from(startup_handle)), num_threads)
+    debug!("Running executor with {} threads.", num_threads);
+    executor.run(archivist.run(zx::Channel::from(startup_handle)), num_threads)?;
+
+    debug!("Exiting.");
+    Ok(())
 }

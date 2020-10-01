@@ -25,7 +25,7 @@ use {
         prelude::*,
     },
     io_util,
-    log::{error, warn},
+    log::{debug, error, warn},
     parking_lot::RwLock,
     std::{
         path::{Path, PathBuf},
@@ -130,6 +130,7 @@ impl Archivist {
             .dir("svc")
             .add_fidl_service(move |stream| spawn_controller(stream, stop_sender.clone()));
         self.stop_recv = Some(stop_recv);
+        debug!("Controller services initialized.");
         self
     }
 
@@ -146,9 +147,11 @@ impl Archivist {
         self.fs
             .dir("svc")
             .add_fidl_service(move |stream| {
+                debug!("fuchsia.logger.Log connection");
                 fasync::Task::spawn(log_manager_1.clone().handle_log(stream)).detach()
             })
             .add_fidl_service(move |stream| {
+                debug!("fuchsia.logger.LogSink connection");
                 let source = Arc::new(SourceIdentity::empty());
                 fasync::Task::spawn(log_manager_2.clone().handle_log_sink(
                     stream,
@@ -158,11 +161,13 @@ impl Archivist {
                 .detach();
             })
             .add_fidl_service(move |stream| {
+                debug!("fuchsia.sys.EventStream connection");
                 fasync::Task::spawn(
                     log_manager_3.clone().handle_event_stream(stream, log_sender2.clone()),
                 )
                 .detach()
             });
+        debug!("Log services initialized.");
         self
     }
 
@@ -172,6 +177,8 @@ impl Archivist {
         name: impl Into<String>,
         source: Box<dyn EventSource>,
     ) -> &mut Self {
+        let name = name.into();
+        debug!("{} event source initialized", &name);
         self.event_stream.add_source(name, source);
         self
     }
@@ -291,6 +298,7 @@ impl Archivist {
 
         fs.dir("svc")
             .add_fidl_service(move |stream| {
+                debug!("fuchsia.diagnostics.ArchiveAccessor connection");
                 let all_archive_accessor = ArchiveAccessor::new(
                     all_inspect_repository.clone(),
                     all_accessor_stats.clone(),
@@ -298,6 +306,7 @@ impl Archivist {
                 all_archive_accessor.spawn_archive_accessor_server(stream)
             })
             .add_fidl_service_at(constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME, move |chan| {
+                debug!("fuchsia.diagnostics.FeedbackArchiveAccessor connection");
                 let feedback_archive_accessor = ArchiveAccessor::new(
                     feedback_inspect_repository.clone(),
                     feedback_accessor_stats.clone(),
@@ -305,6 +314,7 @@ impl Archivist {
                 feedback_archive_accessor.spawn_archive_accessor_server(chan)
             })
             .add_fidl_service_at(constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME, move |chan| {
+                debug!("fuchsia.diagnostics.LegacyMetricsAccessor connection");
                 let legacy_archive_accessor = ArchiveAccessor::new(
                     legacy_metrics_inspect_repository.clone(),
                     legacy_accessor_stats.clone(),
@@ -340,6 +350,8 @@ impl Archivist {
     /// # Arguments:
     /// * `outgoing_channel`- channel to serve outgoing directory on.
     pub async fn run(mut self, outgoing_channel: zx::Channel) -> Result<(), Error> {
+        debug!("Running Archivist.");
+
         self.fs.serve_connection(outgoing_channel)?;
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
@@ -366,6 +378,7 @@ impl Archivist {
             None => future::ready(()).right_future(),
         };
 
+        debug!("Entering core loop.");
         // Combine all three futures into a main future.
         future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
     }

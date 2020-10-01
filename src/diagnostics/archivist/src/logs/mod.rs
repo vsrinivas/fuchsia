@@ -20,7 +20,7 @@ use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, future::FutureObj, lock::Mutex, prelude::*};
-use log::{error, warn};
+use log::{debug, error, warn};
 use std::sync::Arc;
 
 mod buffer;
@@ -89,6 +89,7 @@ impl LogManager {
     where
         K: debuglog::DebugLog + Send + Sync + 'static,
     {
+        debug!("Draining debuglog.");
         let mut source = SourceIdentity::empty();
         source.component_name = Some("(klog)".to_string());
         source.component_url = Some("fuchsia-boot://klog".to_string());
@@ -145,6 +146,7 @@ impl LogManager {
         connector: LogConnectorProxy,
         sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
     ) {
+        debug!("Handling LogSink connections from appmgr.");
         match connector.take_log_connection_listener().await {
             Ok(Some(listener)) => {
                 let mut connections =
@@ -468,6 +470,7 @@ impl LogManager {
             }
         })
         .detach();
+        debug!("Log forwarding initialized.");
     }
 
     async fn init_forwarders(self) -> Result<(), Error> {

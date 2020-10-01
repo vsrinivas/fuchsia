@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_diagnostics::Selector,
     fuchsia_inspect as inspect,
     selectors::parse_selector_file,
@@ -147,10 +147,11 @@ impl PipelineConfig {
     }
 }
 
-pub fn parse_config(path: impl Into<PathBuf>) -> Result<Config, Error> {
-    let path: PathBuf = path.into();
-    let json_string: String = fs::read_to_string(path)?;
-    let config: Config = serde_json5::from_str(&json_string)?;
+pub fn parse_config(path: impl AsRef<Path>) -> Result<Config, Error> {
+    let path = path.as_ref();
+    let json_string: String =
+        fs::read_to_string(path).with_context(|| format!("parsing config: {}", path.display()))?;
+    let config: Config = serde_json5::from_str(&json_string).context("parsing json config")?;
     if let Some(summarized_dirs) = &config.summarized_dirs {
         if summarized_dirs.iter().any(|(dir, _)| dir == "archive") {
             return Err(format_err!("Invalid name 'archive' in summarized dirs"));

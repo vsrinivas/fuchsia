@@ -19,7 +19,7 @@ use {
     futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
-    log::{error, warn},
+    log::{debug, error, warn},
     parking_lot::{Mutex, RwLock},
     regex::Regex,
     serde::{Deserialize, Serialize},
@@ -686,6 +686,10 @@ async fn process_event(
     match event {
         ComponentEvent::Start(start) => {
             let archived_metadata = start.metadata.clone();
+            debug!(
+                "Adding new component. id={:?} url={}",
+                &start.metadata.component_id, &start.metadata.component_url
+            );
             add_new_component(
                 &state,
                 start.metadata.component_id,
@@ -697,6 +701,7 @@ async fn process_event(
         }
         ComponentEvent::Running(running) => {
             let archived_metadata = running.metadata.clone();
+            debug!("Component is running. id={:?}", &running.metadata.component_id,);
             add_new_component(
                 &state,
                 running.metadata.component_id,
@@ -709,10 +714,15 @@ async fn process_event(
         ComponentEvent::Stop(stop) => {
             // TODO(fxbug.dev/53939): Get inspect data from repository before removing
             // for post-mortem inspection.
+            debug!("Component stopped. id={:?}", &stop.metadata.component_id);
             remove_from_inspect_repo(&state, &stop.metadata.component_id);
             archive_event(&state, "STOP", stop.metadata).await
         }
         ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
+            debug!(
+                "Diagnostics directory is ready. id={:?}",
+                &diagnostics_ready.metadata.component_id
+            );
             populate_inspect_repo(&state, diagnostics_ready).await;
             Ok(())
         }
