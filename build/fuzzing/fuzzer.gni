@@ -70,7 +70,7 @@ template("fuzzer") {
     # Explicitly forward visibility for nested scopes.
     forward_variables_from(invoker, [ "visibility" ])
     testonly = true
-    _target_type = "fuzzed_executable"
+    variant_selector_target_type = "fuzzed_executable"
   }
 
   # Generate the fuzzer component manifest

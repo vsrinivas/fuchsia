@@ -22,7 +22,7 @@
 #          output_extension, public, sources, testonly, visibility
 template("driver_module") {
   loadable_module(target_name) {
-    _target_type = "driver_module"
+    variant_selector_target_type = "driver_module"
 
     # Save the target name as forward_variables_from below might override it.
     _target_name = target_name

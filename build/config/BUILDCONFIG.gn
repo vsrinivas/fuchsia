@@ -1288,8 +1288,8 @@ template("variant_target") {
                            "*",
                            [
                              "exclude_toolchain_tags",
-                             "_target_type",
                              "target_name",
+                             "variant_selector_target_type",
                              "visibility",
                            ])
 
@@ -1300,8 +1300,8 @@ template("variant_target") {
 
   # target_type is the real GN target type that builds the thing.
   # selector_target_type is the name matched against target_type selectors.
-  if (defined(invoker._target_type)) {
-    selector_target_type = invoker._target_type
+  if (defined(invoker.variant_selector_target_type)) {
+    selector_target_type = invoker.variant_selector_target_type
   } else {
     selector_target_type = target_type
   }
@@ -1593,12 +1593,6 @@ template("executable") {
       disable_syslog_backend = true
     }
 
-    # TODO(aarongreen): This shouldn't be required, but without it the
-    # fuzzers fail to link.  Investigate and remove when resolved.
-    if (defined(invoker._target_type)) {
-      _target_type = invoker._target_type
-    }
-
     # Explicitly forward visibility, implicitly forward everything else
     # (except metadata, handled below).
     # See comment in template("shared_library") above for details.
@@ -1748,9 +1742,6 @@ template("loadable_module") {
 
   variant_target("loadable_module") {
     target_name = _module_name
-    if (defined(invoker._target_type)) {
-      _target_type = invoker._target_type
-    }
 
     # Explicitly forward visibility, implicitly forward everything else
     # (except metadata, handled below).
