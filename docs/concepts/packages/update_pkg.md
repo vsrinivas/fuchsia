@@ -38,19 +38,10 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
 *   `/bootloader`
     Image of the bootloader firmware.
 
-*   `/packages`
-    Line separated list of the packages to install of the form “package-name/0=hash”.
-    Deprecated in favor of `packages.json`, if that file is present.
-    For example:
-        ```
-        component_index/0=40da91deffd7531391dd067ed89a19703a73d4fdf19fe72651ff30e414c4ef0a
-        system_image/0=c391b60a35f680b1cf99107309ded12a8219aedb4d296b7fa8a9c5e95ade5e85
-        ```
 *   `/packages.json`
     Json formatted list of merkle pinned package urls that belong to the base package set
-    of the target OS image. The update package looks at either the `/packages` file or 
-    `/packages.json` to determine what (and in what order) needs to be updated, giving priority
-    to `packages.json`, if it is present.
+    of the target OS image. The update package looks at `/packages.json` to determine what
+    (and in what order) needs to be updated.
     For example:
         ```
         {
