@@ -5,78 +5,76 @@
 #![cfg(test)]
 
 use {
-    anyhow::{Context as _, Error},
-    fidl::{endpoints::RequestStream, handle::fuchsia_handles::Channel},
-    fidl_fuchsia_net_http as http, fuchsia_async as fasync,
-    fuchsia_component::client::{launch, launcher, App},
-    fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::prelude::*,
-    rouille::{self, router, Request, Response},
-    std::{thread, time},
+    fidl_fuchsia_net_http as http, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::StreamExt as _,
 };
 
-const SERVER_IP: &str = "[::]";
 const ROOT_DOCUMENT: &str = "Root document\n";
-const BIG_STREAM_SIZE: usize = 32usize * 1024 * 1024;
 
-pub fn serve_request(request: &Request) -> Response {
-    router!(request,
-        (GET) (/) => {
-            rouille::Response::text(ROOT_DOCUMENT)
-        },
-        (GET) (/trigger_301) => {
-            rouille::Response::redirect_301("/")
-        },
-        (POST) (/see_other) => {
-            rouille::Response::redirect_303("/")
-        },
-        (GET) (/loop1) => {
-            rouille::Response::redirect_301("/loop2")
-        },
-        (GET) (/loop2) => {
-            rouille::Response::redirect_301("/loop1")
-        },
-        (GET) (/responds_in_10_minutes) => {
-            thread::sleep(time::Duration::from_millis(600_000));
-            rouille::Response::text(ROOT_DOCUMENT)
-        },
-        (GET) (/big_stream) => {
-            let mut big_vec: Vec<u8> = Vec::with_capacity(BIG_STREAM_SIZE);
-            for n in 0..BIG_STREAM_SIZE {
-                big_vec.push((n % 256usize) as u8);
-            }
-            rouille::Response::from_data("application/octet-stream", big_vec)
-        },
-        _ => {
-            rouille::Response::text("File not found\n").with_status_code(404)
-        }
-    )
+fn big_vec() -> Vec<u8> {
+    (0..(32usize << 20)).map(|n| n as u8).collect()
 }
 
-fn setup() -> Result<(u16, App, http::LoaderProxy), Error> {
-    let address = format!("{}:0", SERVER_IP);
-    let server =
-        rouille::Server::new(address, serve_request).expect("failed to create rouille server");
-    let server_port = server.server_addr().port();
-    thread::Builder::new().name("test-server".into()).spawn(move || {
-        server.run();
-    })?;
+async fn run<F: futures::Future<Output = ()>>(
+    func: impl Fn(http::LoaderProxy, std::net::SocketAddr) -> F,
+) {
+    use {
+        futures::{select, FutureExt as _},
+        rouille::router,
+    };
 
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let http_client = launch(
+    let server = rouille::Server::new("[::]:0", |request| {
+        router!(request,
+                (GET) (/) => {
+                    rouille::Response::text(ROOT_DOCUMENT)
+                },
+                (GET) (/trigger_301) => {
+                    rouille::Response::redirect_301("/")
+                },
+                (POST) (/see_other) => {
+                    rouille::Response::redirect_303("/")
+                },
+                (GET) (/loop1) => {
+                    rouille::Response::redirect_301("/loop2")
+                },
+                (GET) (/loop2) => {
+                    rouille::Response::redirect_301("/loop1")
+                },
+                (GET) (/responds_in_10_minutes) => {
+                    std::thread::sleep(std::time::Duration::from_secs(600));
+                    rouille::Response::text(ROOT_DOCUMENT)
+                },
+                (GET) (/big_stream) => {
+                    rouille::Response::from_data("application/octet-stream", big_vec())
+                },
+                _ => {
+                    rouille::Response::empty_404()
+                }
+        )
+    })
+    .expect("failed to create rouille server");
+    let launcher = fuchsia_component::client::launcher().expect("failed to open launcher service");
+    let http_client = fuchsia_component::client::launch(
         &launcher,
         "fuchsia-pkg://fuchsia.com/http-client-integration-test#meta/http-client.cmx".to_string(),
         None,
     )
-    .context("Failed to launch http_client")?;
+    .expect("failed to launch http client");
+    let loader = http_client
+        .connect_to_service::<http::LoaderMarker>()
+        .expect("failed to connect to http client");
 
-    let loader = http_client.connect_to_service::<http::LoaderMarker>()?;
-
-    Ok((server_port, http_client, loader))
-}
-
-fn make_url(port: u16, path: &str) -> String {
-    format!("http://127.0.0.1:{}{}", port, path)
+    select! {
+        () = func(loader, server.server_addr()).fuse() => (),
+        () = async {
+            loop {
+                let () = server.poll();
+                // rouille isn't async, so we need to poll it until the test function completes.
+                // Sleep every now and again to avoid scorching the CPU.
+                let () = fasync::Timer::new(std::time::Duration::from_millis(10)).await;
+            }
+        }.fuse() => (),
+    }
 }
 
 fn make_request(method: &str, url: String) -> http::Request {
@@ -90,18 +88,28 @@ fn make_request(method: &str, url: String) -> http::Request {
 }
 
 fn check_response_common(response: &http::Response, expected_header_names: &[&str]) {
-    assert_eq!(response.status_code.unwrap(), 200);
+    assert_eq!(response.status_code, Some(200));
     // If the webserver started above ever returns different headers, or changes the order, this
     // assertion will fail. Note that case doesn't matter, and can vary across HTTP client
     // implementations, so we lowercase all the header keys before checking.
-    let response_headers: Vec<String> = response
+    let response_header_names = response
         .headers
         .as_ref()
-        .unwrap()
-        .iter()
-        .map(|h| std::str::from_utf8(&h.name).unwrap().to_lowercase())
-        .collect();
-    assert_eq!(&response_headers, &expected_header_names);
+        .map(|headers| {
+            headers
+                .iter()
+                .map(|http::Header { name, value: _ }| {
+                    std::str::from_utf8(name).map(str::to_lowercase)
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .transpose();
+    let response_header_names = response_header_names.as_ref().map(|option| {
+        option.as_ref().map(|vec| vec.iter().map(std::string::String::as_str).collect::<Vec<_>>())
+    });
+    let response_header_names =
+        response_header_names.as_ref().map(|option| option.as_ref().map(|vec| vec.as_slice()));
+    assert_eq!(response_header_names, Ok(Some(expected_header_names)));
 }
 
 fn check_response(response: &http::Response) {
@@ -112,303 +120,325 @@ fn check_response_big(response: &http::Response) {
     check_response_common(response, &["server", "date", "content-type", "transfer-encoding"]);
 }
 
-fn check_body(body: Option<zx::Socket>) {
-    let body = body.unwrap();
+async fn check_body(body: Option<zx::Socket>, mut expected: &[u8]) {
+    use futures::AsyncReadExt as _;
 
-    // Temporary check until we can use const fn when defining buf below.
-    assert_eq!(ROOT_DOCUMENT.len(), 14);
-    let mut buf = [0; 14];
-    loop {
-        match body.read(&mut buf) {
-            Ok(_) => break,
-            Err(zx::Status::SHOULD_WAIT) => {}
-            _ => panic!("This state should not be reachable"),
-        }
-    }
-    assert_eq!(&buf, ROOT_DOCUMENT.as_bytes());
-}
+    let body = body.expect("response did not include body socket");
+    let mut body = fasync::Socket::from_socket(body).expect("failed to create async socket");
 
-fn check_body_big(body: Option<zx::Socket>) {
-    let body = body.unwrap();
-    let mut c: u8 = 0;
-    let mut buf_count = 0;
-    const BUF_SIZE: usize = 1024;
-    let mut buf = [0u8; BUF_SIZE];
-    const MIN_SLEEPS: usize = 16;
-    loop {
-        if buf_count % (BIG_STREAM_SIZE / BUF_SIZE / MIN_SLEEPS) == 0 {
-            // Don't read too fast - let the sender be forced to see some partial writes.
-            thread::sleep(time::Duration::from_millis(100));
-        }
-        buf_count += 1;
-        match body.read(&mut buf) {
-            Ok(bytes_read) => {
-                for n in 0..bytes_read {
-                    assert_eq!(c, buf[n]);
-                    c = ((c as u32) + 1) as u8;
-                }
-            }
-            Err(zx::Status::SHOULD_WAIT) => {
-                match body.wait_handle(
-                    zx::Signals::SOCKET_READABLE | zx::Signals::SOCKET_PEER_CLOSED,
-                    zx::Time::INFINITE,
-                ) {
-                    Err(status) => {
-                        // complain about the specific status
-                        assert_eq!(zx::Status::OK, status);
-                    }
-                    Ok(_) => {}
-                };
-            }
-            Err(zx::Status::PEER_CLOSED) => {
-                break;
-            }
-            Err(status) => {
-                // unexpected error
-                assert_eq!(zx::Status::OK, status);
-            }
-        }
+    let mut buf = [0; 1024];
+    while !expected.is_empty() {
+        let n = body.read(&mut buf).await.expect("failed to read from response body socket");
+        assert_eq!(buf[..n], expected[..n]);
+        expected = &expected[n..];
     }
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_http() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
-
-    let response = loader.fetch(make_request("GET", make_url(server_port, "/"))).await?;
-
-    check_response(&response);
-    check_body(response.body);
-
-    Ok(())
+async fn test_fetch_http() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch(make_request("GET", format!("http://{}", addr)))
+            .await
+            .expect("failed to fetch");
+        let () = check_response(&response);
+        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_past_deadline() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_fetch_past_deadline() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch({
+                let mut req = make_request("GET", format!("http://{}", addr));
 
-    let response = loader
-        .fetch({
-            let mut req = make_request("GET", make_url(server_port, "/"));
+                // Deadline expired 10 minutes ago!
+                req.deadline = Some(zx::Time::after(zx::Duration::from_minutes(-10)).into_nanos());
+                req
+            })
+            .await
+            .expect("failed to fetch");
 
-            // Deadline expired 10 minutes ago!
-            req.deadline = Some(zx::Time::after(zx::Duration::from_minutes(-10)).into_nanos());
-            req
-        })
-        .await?;
-
-    assert_eq!(response.error, Some(http::Error::DeadlineExceeded));
-    assert!(response.body.is_none());
-
-    Ok(())
+        assert_eq!(response.error, Some(http::Error::DeadlineExceeded));
+        assert!(response.body.is_none());
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_response_too_slow() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_fetch_response_too_slow() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch({
+                let mut req =
+                    make_request("GET", format!("http://{}/responds_in_10_minutes", addr));
+                // Deadline expires 100ms from now.
+                req.deadline = Some(zx::Time::after(zx::Duration::from_millis(100)).into_nanos());
+                req
+            })
+            .await
+            .expect("failed to fetch");
 
-    // But it doesn't when the deadline is 100ms in the future.
-    let response = loader
-        .fetch({
-            let mut req = make_request("GET", make_url(server_port, "/responds_in_10_minutes"));
-            // Deadline expires 100ms from now.
-            req.deadline = Some(zx::Time::after(zx::Duration::from_millis(100)).into_nanos());
-            req
-        })
-        .await?;
-
-    assert_eq!(response.error.unwrap(), http::Error::DeadlineExceeded);
-    assert!(response.body.is_none());
-
-    Ok(())
+        assert_eq!(response.error, Some(http::Error::DeadlineExceeded));
+        assert!(response.body.is_none());
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_https() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_fetch_https() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch(make_request("GET", format!("https://{}", addr)))
+            .await
+            .expect("failed to fetch");
 
-    let response =
-        loader.fetch(make_request("GET", format!("https://127.0.0.1:{}", server_port))).await?;
-
-    // Using fhyper::new_client, the request will actually ignore the https:// completely and make
-    // the request successfully anyway (Since rouille doesn't care about https either). However,
-    // when we use fhyper::new_https_client, the request will be dropped with a Connect error
-    // because this isn't a valid https request.
-    assert_eq!(response.error.unwrap(), http::Error::Connect);
-    assert!(response.body.is_none());
-
-    Ok(())
+        assert_eq!(response.error, Some(http::Error::Connect));
+        assert!(response.body.is_none());
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_start_http() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_start_http() {
+    run(|loader, addr| async move {
+        let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
-    let (tx, rx) = Channel::create()?;
-    let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
+        let () = loader
+            .start(make_request("GET", format!("http://{}", addr)), tx)
+            .expect("failed to start");
 
-    loader.start(make_request("GET", make_url(server_port, "/")), tx.into())?;
+        let mut rx = rx.into_stream().expect("failed to convert to stream");
 
-    let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    check_response(&response);
-    check_body(response.body);
+        let (response, responder) = rx
+            .next()
+            .await
+            .expect("stream error")
+            .expect("request error")
+            .into_on_response()
+            .expect("failed to convert to event stream");
 
-    responder.send()?;
+        let () = check_response(&response);
+        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
 
-    Ok(())
+        let () = responder.send().expect("failed to respond");
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_redirect() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
-
-    let response = loader.fetch(make_request("GET", make_url(server_port, "/trigger_301"))).await?;
-
-    check_response(&response);
-
-    assert_eq!(response.final_url.unwrap(), make_url(server_port, "/"));
-
-    check_body(response.body);
-
-    Ok(())
+async fn test_fetch_redirect() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch(make_request("GET", format!("http://{}/trigger_301", addr)))
+            .await
+            .expect("failed to fetch");
+        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
+        let () = check_response(&response);
+        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_start_redirect() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_start_redirect() {
+    run(|loader, addr| async move {
+        let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
-    let (tx, rx) = Channel::create()?;
-    let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
+        let () = loader
+            .start(make_request("GET", format!("http://{}/trigger_301", addr)), tx)
+            .expect("failed to start");
 
-    loader.start(make_request("GET", make_url(server_port, "/trigger_301")), tx.into())?;
+        let mut rx = rx.into_stream().expect("failed to convert to stream");
 
-    let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    assert_eq!(response.status_code.unwrap(), 301);
+        let (response, responder) = rx
+            .next()
+            .await
+            .expect("stream error")
+            .expect("request error")
+            .into_on_response()
+            .expect("failed to convert to event stream");
 
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-    assert_eq!(redirect.url.unwrap(), make_url(server_port, "/"));
+        assert_eq!(response.status_code, Some(301));
+        assert_eq!(
+            response.redirect,
+            Some(http::RedirectTarget {
+                method: Some("GET".to_string()),
+                url: Some(format!("http://{}/", addr)),
+                referrer: None,
+            })
+        );
 
-    responder.send()?;
+        let () = responder.send().expect("failed to respond");
 
-    let (response, _) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    check_response(&response);
-    assert_eq!(response.final_url.unwrap(), make_url(server_port, "/"));
-    check_body(response.body);
+        let (response, responder) = rx
+            .next()
+            .await
+            .expect("stream error")
+            .expect("request error")
+            .into_on_response()
+            .expect("failed to convert to event stream");
 
-    Ok(())
+        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
+        let () = check_response(&response);
+        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+
+        let () = responder.send().expect("failed to respond");
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_see_other() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
-
-    let response = loader.fetch(make_request("POST", make_url(server_port, "/see_other"))).await?;
-
-    check_response(&response);
-
-    assert_eq!(response.final_url.unwrap(), make_url(server_port, "/"));
-
-    check_body(response.body);
-
-    Ok(())
+async fn test_fetch_see_other() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch(make_request("POST", format!("http://{}/see_other", addr)))
+            .await
+            .expect("failed to fetch");
+        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
+        let () = check_response(&response);
+        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_start_see_other() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_start_see_other() {
+    run(|loader, addr| async move {
+        let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
-    let (tx, rx) = Channel::create()?;
-    let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
+        let () = loader
+            .start(make_request("POST", format!("http://{}/see_other", addr)), tx)
+            .expect("failed to start");
 
-    loader.start(make_request("POST", make_url(server_port, "/see_other")), tx.into())?;
+        let mut rx = rx.into_stream().expect("failed to convert to stream");
 
-    let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    assert_eq!(response.status_code.unwrap(), 303);
+        let (response, responder) = rx
+            .next()
+            .await
+            .expect("stream error")
+            .expect("request error")
+            .into_on_response()
+            .expect("failed to convert to event stream");
 
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-    assert_eq!(redirect.url.unwrap(), make_url(server_port, "/"));
+        assert_eq!(response.status_code, Some(303));
+        assert_eq!(
+            response.redirect,
+            Some(http::RedirectTarget {
+                method: Some("GET".to_string()),
+                url: Some(format!("http://{}/", addr)),
+                referrer: None,
+            })
+        );
 
-    responder.send()?;
+        let () = responder.send().expect("failed to respond");
 
-    let (response, _) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    check_response(&response);
-    assert_eq!(response.final_url.unwrap(), make_url(server_port, "/"));
-    check_body(response.body);
+        let (response, responder) = rx
+            .next()
+            .await
+            .expect("stream error")
+            .expect("request error")
+            .into_on_response()
+            .expect("failed to convert to event stream");
 
-    Ok(())
+        assert_eq!(response.final_url, Some(format!("http://{}/", addr)));
+        let () = check_response(&response);
+        let () = check_body(response.body, ROOT_DOCUMENT.as_bytes()).await;
+
+        let () = responder.send().expect("failed to respond");
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_max_redirect() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
-
-    let response = loader.fetch(make_request("GET", make_url(server_port, "/loop1"))).await?;
-
-    // The last request in the redirect loop will always return status code 301
-    assert_eq!(response.status_code.unwrap(), 301);
-
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-
-    Ok(())
+async fn test_fetch_max_redirect() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch(make_request("GET", format!("http://{}/loop1", addr)))
+            .await
+            .expect("failed to fetch");
+        // The last request in the redirect loop will always return status code 301
+        assert_eq!(response.status_code, Some(301));
+        assert_eq!(
+            response.redirect,
+            Some(http::RedirectTarget {
+                method: Some("GET".to_string()),
+                url: Some(format!("http://{}/loop2", addr)),
+                referrer: None,
+            })
+        );
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_start_redirect_loop() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_start_redirect_loop() {
+    run(|loader, addr| async move {
+        let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
-    let (tx, rx) = Channel::create()?;
-    let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
+        let () = loader
+            .start(make_request("GET", format!("http://{}/loop1", addr)), tx)
+            .expect("failed to start");
 
-    loader.start(make_request("GET", make_url(server_port, "/loop1")), tx.into())?;
+        let mut rx = rx.into_stream().expect("failed to convert to stream");
 
-    let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    assert_eq!(response.status_code.unwrap(), 301);
+        for () in std::iter::repeat(()).take(3) {
+            let (response, responder) = rx
+                .next()
+                .await
+                .expect("stream error")
+                .expect("request error")
+                .into_on_response()
+                .expect("failed to convert to event stream");
 
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-    assert_eq!(redirect.url.unwrap(), make_url(server_port, "/loop2"));
+            assert_eq!(response.status_code, Some(301));
+            assert_eq!(
+                response.redirect,
+                Some(http::RedirectTarget {
+                    method: Some("GET".to_string()),
+                    url: Some(format!("http://{}/loop2", addr)),
+                    referrer: None,
+                })
+            );
 
-    responder.send()?;
+            let () = responder.send().expect("failed to respond");
 
-    let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    assert_eq!(response.status_code.unwrap(), 301);
+            let (response, responder) = rx
+                .next()
+                .await
+                .expect("stream error")
+                .expect("request error")
+                .into_on_response()
+                .expect("failed to convert to event stream");
 
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-    assert_eq!(redirect.url.unwrap(), make_url(server_port, "/loop1"));
+            assert_eq!(response.status_code, Some(301));
+            assert_eq!(
+                response.redirect,
+                Some(http::RedirectTarget {
+                    method: Some("GET".to_string()),
+                    url: Some(format!("http://{}/loop1", addr)),
+                    referrer: None,
+                })
+            );
 
-    responder.send()?;
-
-    let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    assert_eq!(response.status_code.unwrap(), 301);
-
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-    assert_eq!(redirect.url.unwrap(), make_url(server_port, "/loop2"));
-
-    responder.send()?;
-
-    let (response, _) = rs.next().await.unwrap()?.into_on_response().unwrap();
-    assert_eq!(response.status_code.unwrap(), 301);
-
-    let redirect = response.redirect.unwrap();
-    assert_eq!(redirect.method.unwrap(), "GET");
-    assert_eq!(redirect.url.unwrap(), make_url(server_port, "/loop1"));
-
-    Ok(())
+            let () = responder.send().expect("failed to respond");
+        }
+    })
+    .await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_fetch_http_big_stream() -> Result<(), Error> {
-    let (server_port, _http_client, loader) = setup()?;
+async fn test_fetch_http_big_stream() {
+    run(|loader, addr| async move {
+        let response = loader
+            .fetch(make_request("GET", format!("http://{}/big_stream", addr)))
+            .await
+            .expect("failed to fetch");
 
-    let response = loader.fetch(make_request("GET", make_url(server_port, "/big_stream"))).await?;
-
-    check_response_big(&response);
-    check_body_big(response.body);
-
-    Ok(())
+        let () = check_response_big(&response);
+        let () = check_body(response.body, &big_vec()).await;
+    })
+    .await
 }
