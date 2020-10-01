@@ -12,12 +12,16 @@ use {
         GraphicalPresenterProxy, ViewControllerMarker, ViewControllerProxy, ViewSpec,
     },
     fidl_fuchsia_ui_app::ViewProviderMarker,
-    fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_zircon as zx,
+    fuchsia_async::{self as fasync, DurationExt, Timer},
+    fuchsia_scenic as scenic,
+    fuchsia_zircon::{self as zx, Duration},
     fuchsia_zircon::AsHandleRef,
     futures::{select, stream::StreamExt, FutureExt, TryStreamExt},
     std::{cell::RefCell, rc::Rc},
 };
+
+// Timeout duration for a ViewControllerProxy to close, in seconds.
+static PROXY_TIMEOUT: Duration = Duration::from_seconds(3_i64);
 
 /// A trait which is used by the ElementRepository to respond to incoming events.
 pub trait EventHandler {
@@ -129,8 +133,8 @@ async fn run_until_closed(
                 // the view so we tell it to dismiss and then wait for
                 // the view controller stream to close.
                 let _ = proxy.dismiss();
-                //TODO(47925) introdue a timeout here
-                wait_for_view_controller_close(proxy).await;
+                let timeout = fuchsia_async::Timer::new(PROXY_TIMEOUT.after_now());
+                wait_for_view_controller_close_or_timeout(proxy, timeout).await;
             }
         },
         _ = wait_for_optional_view_controller_close(view_controller_proxy.clone()).fuse() =>  {
@@ -145,8 +149,8 @@ async fn run_until_closed(
                 // the view so we tell it to dismiss and then wait for
                 // the view controller stream to close.
                 let _ = proxy.dismiss();
-                //TODO(47925) introdue a timeout here
-                wait_for_view_controller_close(proxy).await;
+                let timeout = fuchsia_async::Timer::new(PROXY_TIMEOUT.after_now());
+                wait_for_view_controller_close_or_timeout(proxy, timeout).await;
             }
         }
     );
@@ -177,6 +181,11 @@ async fn wait_for_optional_view_controller_close(proxy: Option<ViewControllerPro
 async fn wait_for_view_controller_close(proxy: ViewControllerProxy) {
     let stream = proxy.take_event_stream();
     let _ = stream.collect::<Vec<_>>().await;
+}
+
+/// Waits for this view controller to close.
+async fn wait_for_view_controller_close_or_timeout(proxy: ViewControllerProxy, timeout: Timer) {
+    let _ = futures::future::select(timeout, Box::pin(wait_for_view_controller_close(proxy))).await;
 }
 
 /// watches the element controller request stream and responds to requests.
@@ -277,6 +286,23 @@ mod tests {
         let mut fut = Box::pin(wait_for_optional_view_controller_close(None));
 
         assert_eq!(Poll::Pending, executor.run_until_stalled(&mut fut));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn stalling_proxy_ends_wait() {
+        init_logger();
+        let (proxy, _) =
+            create_proxy_and_stream::<ViewControllerMarker>().expect("failed to create proxy");
+        let timeout = fuchsia_async::Timer::new(PROXY_TIMEOUT.after_now());
+        let proxy_close_fut = Box::pin(wait_for_view_controller_close_or_timeout(proxy, timeout));
+
+        let timeout2 = fuchsia_async::Timer::new(PROXY_TIMEOUT.after_now());
+        let either = futures::future::select(timeout2, proxy_close_fut);
+        let resolved = either.await;
+        match resolved {
+            Either::Left(_) => panic!("view controller stalled beyond alloted time"),
+            Either::Right(_) => (),
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
