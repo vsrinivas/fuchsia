@@ -25,6 +25,7 @@ executable("miscsvc") {
   deps = [
     "//sdk/lib/fdio",
     "//src/storage/lib/paver",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

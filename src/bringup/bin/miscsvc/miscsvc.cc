@@ -13,6 +13,8 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
+
 // An instance of a zx_service_provider_t.
 //
 // Includes the |ctx| pointer for the zx_service_provider_t.
@@ -87,11 +89,15 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
 }
 
 int main(int argc, char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    printf("Failed to redirect stdout to debuglog, assuming test environment and continuing\n");
+  }
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   svc::Outgoing outgoing(dispatcher);
 
-  zx_status_t status = outgoing.ServeFromStartupInfo();
+  status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
     fprintf(stderr, "miscsvc: error: Failed to serve outgoing directory: %d (%s).\n", status,
             zx_status_get_string(status));
