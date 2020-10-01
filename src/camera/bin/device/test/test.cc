@@ -710,7 +710,7 @@ TEST_F(DeviceTest, SoftwareMuteState) {
   allocator_->BindSharedCollection(std::move(received_token), collection.NewRequest());
   collection->SetConstraints(
       true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
-             .min_buffer_count_for_camping = 5,
+             .min_buffer_count_for_camping = 3,
              .image_format_constraints_count = 1,
              .image_format_constraints{
                  {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},

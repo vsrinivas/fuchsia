@@ -384,8 +384,11 @@ void DeviceImpl::OnStreamRequested(
   oss << "camera_c" << current_configuration_index_ << "_s" << index;
   constexpr uint32_t kNamePriority = 30;  // Higher than Scenic but below the maximum.
   collection->SetName(kNamePriority, oss.str());
-  collection->SetConstraints(
-      true, configs_[current_configuration_index_].stream_configs[index].constraints);
+  // TODO(fxbug.dev/61088): tie contiguous memory budget to max buffer constraints
+  constexpr uint32_t kMaxClientBuffers = 3;
+  auto constraints = configs_[current_configuration_index_].stream_configs[index].constraints;
+  constraints.max_buffer_count = constraints.min_buffer_count_for_camping + kMaxClientBuffers;
+  collection->SetConstraints(true, std::move(constraints));
   collection->WaitForBuffersAllocated(
       [this, index, format_index, request = std::move(request),
        max_camping_buffers_callback = std::move(max_camping_buffers_callback),
