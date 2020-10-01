@@ -11,15 +11,19 @@ Future<void> main(List<String> args) async {
   // size and device_pixel_ratio to zero, which causes flutter framework to
   // crash with a runtime exception. The workaround is to wait for window size
   // to be correctly initialized inside [ui.window.onMetricsChanged].
-  await Future(() {
-    final completer = Completer();
-    ui.window.onMetricsChanged = () {
-      if (!ui.window.physicalSize.isEmpty) {
-        completer.complete();
-      }
-    };
-    return completer.future;
-  });
+  if (ui.window.physicalSize.isEmpty) {
+    print('Awaiting window.onMetricsChanged...');
+    await Future(() {
+      final completer = Completer();
+      ui.window.onMetricsChanged = () {
+        if (!ui.window.physicalSize.isEmpty) {
+          completer.complete();
+        }
+      };
+      return completer.future;
+    });
+    print('Received window.onMetricsChanged: ${ui.window.physicalSize}');
+  }
 
   final app = TestApp();
   runApp(app);
