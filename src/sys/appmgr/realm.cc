@@ -707,9 +707,11 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
 
   NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(), path);
   builder.AddServices(std::move(svc));
-  builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
-
   zx_status_t status;
+  status = builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
+  if (status != ZX_OK)
+    return;
+
   zx::vmo executable;
   fbl::unique_fd fd;
   status = fdio_open_fd(path.c_str(),
@@ -973,13 +975,17 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
     builder.AddConfigData(sandbox, fp.package_name());
 
-    builder.AddSandbox(
+    zx_status_t status = builder.AddSandbox(
         sandbox,
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
         /*isolated_data_path_factory=*/
-        [&] { return IsolatedPathForComponentInstance(fp, internal::StorageType::DATA); },
-        [&] { return IsolatedPathForComponentInstance(fp, internal::StorageType::CACHE); },
-        [&] { return IsolatedPathForComponentInstance(fp, internal::StorageType::TEMP); });
+        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::DATA); },
+        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::CACHE); },
+        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::TEMP); });
+    if (status != ZX_OK) {
+      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::ACCESS_DENIED);
+      return;
+    }
 
     // It is critical that if nothing is returned the component does not lanuch.
     PolicyChecker policy_checker(appmgr_config_dir_.duplicate());
@@ -1170,8 +1176,8 @@ zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
 //
 // If a component is assigned an instance ID while it already has a storage
 // directory under (b), its storage directory is moved to (a).
-std::string Realm::IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
-                                                    internal::StorageType storage_type) {
+fit::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentInstance(
+    const FuchsiaPkgUrl& fp, internal::StorageType storage_type) {
   // The subdirectory of the root data directory to use persistent storage
   // This applies only to components with an instance ID.
   constexpr char kInstanceIdPersistentSubdir[] = "persistent";
@@ -1225,14 +1231,26 @@ std::string Realm::IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
       }
     }
   }
+  if (!instance_id && storage_type == internal::StorageType::DATA) {
+    if (component_id_index_->restrict_isolated_persistent_storage()) {
+      FX_LOGS(ERROR) << "Component " << fp.ToString()
+                     << " cannot be created because it is using isolated-persistent-storage, but "
+                        "is not listed in the component instance ID index.";
+      return fit::error(ZX_ERR_ACCESS_DENIED);
+    } else {
+      FX_LOGS(WARNING) << "Component " << fp.ToString()
+                       << " is using isolated-persistent-storage, but is not listed in the "
+                          "component instance ID index.";
+    }
+  }
 
   // Ensure directory path exists.
   if (!files::IsDirectory(path) && !files::CreateDirectory(path)) {
     FX_LOGS(ERROR) << "Failed to create data directory " << path;
-    return "";
+    return fit::ok("");
   }
 
-  return path;
+  return fit::ok(path);
 }
 
 void Realm::NotifyComponentStarted(const std::string& component_url,

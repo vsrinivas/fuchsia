@@ -25,6 +25,8 @@ enum TerminationReason {
     UNSUPPORTED = 8;
     /// Attempted to create a component in a realm which is shutting down.
     REALM_SHUTTING_DOWN = 9;
+    /// Insufficient privilege to start the component.
+    ACCESS_DENIED = 10;
 };
 
 /// An interface for controlling components.

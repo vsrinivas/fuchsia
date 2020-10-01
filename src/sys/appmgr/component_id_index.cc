@@ -89,14 +89,56 @@ fit::result<std::pair<Moniker, ComponentIdIndex::InstanceId>, ComponentIdIndex::
 }
 }  // namespace
 
-ComponentIdIndex::ComponentIdIndex(ComponentIdIndex::MonikerToInstanceId moniker_to_id)
-    : moniker_to_id_(std::move(moniker_to_id)) {}
+ComponentIdIndex::ComponentIdIndex(ComponentIdIndex::MonikerToInstanceId moniker_to_id,
+                                   bool restrict_isolated_persistent_storage)
+    : moniker_to_id_(std::move(moniker_to_id)),
+      restrict_isolated_persistent_storage_(restrict_isolated_persistent_storage) {}
 
-fit::result<ComponentIdIndex::MonikerToInstanceId, ComponentIdIndex::Error> Parse(
-    const rapidjson::Document& doc) {
+// static
+fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
+ComponentIdIndex::CreateFromAppmgrConfigDir(const fxl::UniqueFD& appmgr_config_dir) {
+  if (!files::IsFileAt(appmgr_config_dir.get(), kIndexFilePath)) {
+    return fit::ok(fbl::AdoptRef(new ComponentIdIndex({}, false)));
+  }
+
+  std::string file_contents;
+  if (!files::ReadFileToStringAt(appmgr_config_dir.get(), kIndexFilePath, &file_contents)) {
+    FX_LOGS(ERROR) << "Could not read instance ID index file.";
+    return fit::error(Error::INVALID_JSON);
+  }
+
+  return CreateFromIndexContents(file_contents);
+}
+
+// static
+fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
+ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
+  rapidjson::Document doc;
+  doc.Parse(index_contents.c_str());
+  if (doc.HasParseError()) {
+    FX_LOGS(ERROR) << "Could not json-parse instance ID index file.";
+    return fit::error(Error::INVALID_JSON);
+  }
+
   if (!doc.IsObject()) {
     FX_LOGS(ERROR) << "Index must be a valid object.";
     return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+  }
+
+  constexpr char kRestrictIsolatedPersistentStorage[] =
+      "appmgr_restrict_isolated_persistent_storage";
+  // `appmgr_restrict_isolated_persistent_storage` is an optional bool.
+  // By default, it is `false`.
+  bool restrict_isolated_persistent_storage = false;
+  if (doc.HasMember(kRestrictIsolatedPersistentStorage) &&
+      // We check that the field is not null, because the compile-time `component_id_index` tool
+      // outputs a 'null' valued field when it serializes JSON when it is absent.
+      !doc[kRestrictIsolatedPersistentStorage].IsNull()) {
+    if (!doc[kRestrictIsolatedPersistentStorage].IsBool()) {
+      FX_LOGS(ERROR) << "appmgr_restrict_isolated_persistent_storage must be bool";
+      return fit::error(ComponentIdIndex::Error::INVALID_SCHEMA);
+    }
+    restrict_isolated_persistent_storage = doc[kRestrictIsolatedPersistentStorage].GetBool();
   }
 
   // `instances` must be an array.
@@ -129,40 +171,8 @@ fit::result<ComponentIdIndex::MonikerToInstanceId, ComponentIdIndex::Error> Pars
     }
   }
 
-  return fit::ok(moniker_to_id);
-}
-
-// static
-fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
-ComponentIdIndex::CreateFromAppmgrConfigDir(const fxl::UniqueFD& appmgr_config_dir) {
-  if (!files::IsFileAt(appmgr_config_dir.get(), kIndexFilePath)) {
-    return fit::ok(fbl::AdoptRef(new ComponentIdIndex({})));
-  }
-
-  std::string file_contents;
-  if (!files::ReadFileToStringAt(appmgr_config_dir.get(), kIndexFilePath, &file_contents)) {
-    FX_LOGS(ERROR) << "Could not read instance ID index file.";
-    return fit::error(Error::INVALID_JSON);
-  }
-
-  return CreateFromIndexContents(file_contents);
-}
-
-// static
-fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
-ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
-  rapidjson::Document doc;
-  doc.Parse(index_contents.c_str());
-  if (doc.HasParseError()) {
-    FX_LOGS(ERROR) << "Could not json-parse instance ID index file.";
-    return fit::error(Error::INVALID_JSON);
-  }
-
-  auto parse_retval = Parse(doc);
-  if (parse_retval.is_error()) {
-    return fit::error(parse_retval.take_error());
-  }
-  return fit::ok(fbl::AdoptRef(new ComponentIdIndex(parse_retval.take_value())));
+  return fit::ok(
+      fbl::AdoptRef(new ComponentIdIndex(moniker_to_id, restrict_isolated_persistent_storage)));
 }
 
 std::optional<ComponentIdIndex::InstanceId> ComponentIdIndex::LookupMoniker(

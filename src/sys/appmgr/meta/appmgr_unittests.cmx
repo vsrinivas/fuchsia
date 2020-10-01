@@ -9,7 +9,8 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.process.Resolver"
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Loader"
         ]
     }
 }

@@ -207,7 +207,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   bool HasComponentEventListenerBound();
 
   // Given a component url |fp|, initializes and returns the component's absolute storage
-  // directory for the given |storage_path|. Returns an empty string on failure.
+  // directory for the given |storage_path|. Returns an error if the directory could not be made.
   //
   // A component instance's storage directory is in one of two places:
   //  (a) A directory keyed using component instance ID, if it has one.
@@ -218,8 +218,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   //
   // Note: This method is public only for the purposes for testing storage paths and migration
   // logic.
-  std::string IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
-                                               internal::StorageType storage_type);
+  fit::result<std::string, zx_status_t> InitIsolatedPathForComponentInstance(
+      const FuchsiaPkgUrl& fp, internal::StorageType storage_type);
 
   // Shutdown realm's namespace processing all pending messages.
   void ShutdownNamespace(ShutdownNamespaceCallback callback = nullptr);

@@ -58,12 +58,17 @@ enum MergeError {
     MissingInstanceIds { entries: GenerateInstanceIds },
     #[error("The following entry's instance_id is invalid (must be 64 lower-cased hex chars): {:?}", .entry)]
     InvalidInstanceId { entry: InstanceIdEntry },
+    #[error("appmgr_restrict_isolated_persistent_storage has already been set to {} and cannot be set twice.", .previous_val)]
+    MultipleStorageRestrictions { previous_val: bool },
 }
 
 impl MergeContext {
     fn new() -> MergeContext {
         MergeContext {
-            output_index: Index { instances: vec![] },
+            output_index: Index {
+                appmgr_restrict_isolated_persistent_storage: None,
+                instances: vec![],
+            },
             accumulated_instance_ids: HashMap::new(),
         }
     }
@@ -96,6 +101,15 @@ impl MergeContext {
                     }
                     self.output_index.instances.push(entry.clone());
                 }
+            }
+        }
+        if let Some(val) = index.appmgr_restrict_isolated_persistent_storage {
+            if let Some(previous_val) =
+                self.output_index.appmgr_restrict_isolated_persistent_storage
+            {
+                return Err(MergeError::MultipleStorageRestrictions { previous_val });
+            } else {
+                self.output_index.appmgr_restrict_isolated_persistent_storage = Some(val);
             }
         }
         if missing_instance_ids.len() > 0 {
@@ -156,6 +170,7 @@ mod tests {
 
     fn gen_index(num_instances: u32) -> Index {
         Index {
+            appmgr_restrict_isolated_persistent_storage: None,
             instances: (0..num_instances)
                 .map(|i| InstanceIdEntry {
                     instance_id: Some(gen_instance_id(&mut rand::thread_rng())),
@@ -207,6 +222,23 @@ mod tests {
                 source2: source2.to_string()
             }
         );
+    }
+
+    #[test]
+    fn multiple_appmgr_restrict_isolated_persistent_storage() {
+        let source1 = "/a/b/c";
+        let source2 = "/d/e/f";
+
+        let mut index1 = gen_index(0);
+        index1.appmgr_restrict_isolated_persistent_storage = Some(true);
+        let mut index2 = index1.clone();
+        index2.appmgr_restrict_isolated_persistent_storage = Some(false);
+
+        let mut ctx = MergeContext::new();
+        ctx.merge(source1, &index1).unwrap();
+        let err = ctx.merge(source2, &index2).unwrap_err();
+
+        assert_eq!(err, MergeError::MultipleStorageRestrictions { previous_val: true });
     }
 
     #[test]

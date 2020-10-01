@@ -87,7 +87,24 @@ TEST_F(ComponentIdIndexTest, LookupMonikerNotExists) {
   EXPECT_FALSE(index->LookupMoniker(moniker).has_value());
 }
 
-TEST_F(ComponentIdIndexTest, Parse) {
+TEST_F(ComponentIdIndexTest, ShouldNotRestrictIsolatedPersistentStorage) {
+  auto config_dir = MakeAppmgrConfigDirWithIndex(R"({"instances" : []})");
+  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+  auto index = result.take_value();
+  EXPECT_FALSE(index->restrict_isolated_persistent_storage());
+}
+
+TEST_F(ComponentIdIndexTest, ShouldRestrictIsolatedPersistentStorage) {
+  auto config_dir = MakeAppmgrConfigDirWithIndex(
+      R"({"appmgr_restrict_isolated_persistent_storage": true, "instances" : []})");
+  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+  auto index = result.take_value();
+  EXPECT_TRUE(index->restrict_isolated_persistent_storage());
+}
+
+TEST_F(ComponentIdIndexTest, ParseErrors) {
   struct TestCase {
     std::string name;
     std::string index;
@@ -170,6 +187,12 @@ TEST_F(ComponentIdIndexTest, Parse) {
                   ]
                 })",
                .expected = ComponentIdIndex::Error::DUPLICATE_MONIKER},
+      TestCase{.name = "restrict_isolated_persistent_storage must be bool",
+               .index = R"({
+        "appmgr_restrict_isolated_persistent_storage": "should not be a string",
+        "instances": []
+      })",
+               .expected = ComponentIdIndex::Error::INVALID_SCHEMA},
   };
 
   for (auto& test_case : test_cases) {

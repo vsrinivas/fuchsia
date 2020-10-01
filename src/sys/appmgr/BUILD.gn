@@ -238,12 +238,36 @@ group("unittests") {
   ]
 }
 
+executable("test_component_using_storage") {
+  output_name = "test_component_using_storage"
+  sources = [ "test/test_component_using_storage.cc" ]
+}
+
 test_package("appmgr_unittests") {
-  deps = [ ":unittest_bin" ]
+  deps = [
+    ":test_component_using_storage",
+    ":unittest_bin",
+  ]
   tests = [
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "appmgr_unittests"
       environments = basic_envs
+    },
+  ]
+
+  binaries = [
+    {
+      name = "test_component_using_storage"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/test_component_using_storage.cmx")
+      dest = "test_component_using_storage.cmx"
     },
   ]
 }

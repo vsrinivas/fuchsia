@@ -39,7 +39,8 @@ TEST(NamespaceBuilder, SystemData) {
 
   fxl::UniqueFD dir(open(".", O_RDONLY));
   NamespaceBuilder builder = NamespaceBuilder(std::move(dir), "test_namespace");
-  builder.AddSandbox(sandbox, [] { return zx::channel(); });
+  zx_status_t status = builder.AddSandbox(sandbox, [] { return zx::channel(); });
+  EXPECT_EQ(ZX_OK, status);
 
   fdio_flat_namespace_t* ns = builder.Build();
   EXPECT_EQ(0u, ns->count);

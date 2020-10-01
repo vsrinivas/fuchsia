@@ -22,6 +22,7 @@ pub struct InstanceIdEntry {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Index {
+    pub appmgr_restrict_isolated_persistent_storage: Option<bool>,
     pub instances: Vec<InstanceIdEntry>,
 }
 
@@ -81,6 +82,7 @@ mod tests {
 
     fn gen_index(num_instances: u32) -> Index {
         Index {
+            appmgr_restrict_isolated_persistent_storage: None,
             instances: (0..num_instances)
                 .map(|i| InstanceIdEntry {
                     instance_id: Some(gen_instance_id(&mut rand::thread_rng())),

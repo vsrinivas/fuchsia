@@ -71,26 +71,26 @@ void NamespaceBuilder::AddHub(const HubDirectoryFactory& hub_directory_factory) 
   PushDirectoryFromChannel("/hub", hub_directory_factory());
 }
 
-void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
-                                  const HubDirectoryFactory& hub_directory_factory) {
-  AddSandbox(
+zx_status_t NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
+                                         const HubDirectoryFactory& hub_directory_factory) {
+  return AddSandbox(
       sandbox, hub_directory_factory,
       [] {
         FX_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
-        return "";
+        return fit::ok("");
       },
       [] {
         FX_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
-        return "";
+        return fit::ok("");
       },
-      [] { return "/tmp"; });
+      [] { return fit::ok("/tmp"); });
 }
 
-void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
-                                  const HubDirectoryFactory& hub_directory_factory,
-                                  const IsolatedDataPathFactory& isolated_data_path_factory,
-                                  const IsolatedCachePathFactory& isolated_cache_path_factory,
-                                  const IsolatedTempPathFactory& isolated_temp_path_factory) {
+zx_status_t NamespaceBuilder::AddSandbox(
+    const SandboxMetadata& sandbox, const HubDirectoryFactory& hub_directory_factory,
+    const IsolatedDataPathFactory& isolated_data_path_factory,
+    const IsolatedCachePathFactory& isolated_cache_path_factory,
+    const IsolatedTempPathFactory& isolated_temp_path_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
       FX_LOGS(WARNING) << "Ignoring request for all device classes";
@@ -121,7 +121,12 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   // Prioritize isolated persistent storage over shell feature, if both are
   // present.
   if (sandbox.HasFeature("isolated-persistent-storage")) {
-    PushDirectoryFromPathAs(isolated_data_path_factory(), "/data");
+    auto data_path = isolated_data_path_factory();
+    if (data_path.is_ok()) {
+      PushDirectoryFromPathAs(data_path.value(), "/data");
+    } else {
+      return data_path.error();
+    }
   }
 
   for (const auto& feature : sandbox.features()) {
@@ -152,9 +157,9 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
                               "/config/vulkan/icd.d");
     } else if (feature == "isolated-cache-storage") {
-      PushDirectoryFromPathAs(isolated_cache_path_factory(), "/cache");
+      PushDirectoryFromPathAs(isolated_cache_path_factory().value(), "/cache");
     } else if (feature == "isolated-temp") {
-      PushDirectoryFromPathAs(isolated_temp_path_factory(), "/tmp");
+      PushDirectoryFromPathAs(isolated_temp_path_factory().value(), "/tmp");
     } else if (feature == "hub") {
       AddHub(hub_directory_factory);
     } else if (feature == "factory-data") {
@@ -190,6 +195,8 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
 
   for (const auto& path : sandbox.boot())
     PushDirectoryFromPath("/boot/" + path);
+
+  return ZX_OK;
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {

@@ -57,12 +57,18 @@ class ComponentIdIndex : public fbl::RefCounted<ComponentIdIndex> {
   // Returns the instance ID of the given moniker if it exists.
   std::optional<InstanceId> LookupMoniker(const Moniker& moniker) const;
 
+  bool restrict_isolated_persistent_storage() const {
+    return restrict_isolated_persistent_storage_;
+  }
+
  private:
   // Initialize a ComponentIdIndex with a Moniker->InstanceID mapping. No validation is performed on
   // the supplied |moniker_to_id|. Use the CreateFromAppmgrConfigDir() factory instead.
-  explicit ComponentIdIndex(MonikerToInstanceId moniker_to_id);
+  ComponentIdIndex(MonikerToInstanceId moniker_to_id, bool restrict_isolated_persistent_storage);
 
   MonikerToInstanceId moniker_to_id_;
+
+  bool restrict_isolated_persistent_storage_;
 };
 
 // Error space used by ComponentIdIndex.
