@@ -6,21 +6,6 @@ import("//build/rust/toolchain.gni")
 import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
-declare_args() {
-  # Maximum number of Rust processes to run in parallel.
-  #
-  # We run multiple rustc jobs in parallel, each of which can cause significant
-  # amount of memory, especially when using LTO. To avoid out-of-memory errors
-  # we explicitly reduce the number of jobs.
-  concurrent_rust_jobs = default_concurrent_jobs.rust
-}
-
-if (current_toolchain == default_toolchain) {
-  pool("pool") {
-    depth = concurrent_rust_jobs
-  }
-}
-
 group("disable_strict_sources_check_allowlist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \
@@ -34,13 +19,6 @@ group("disable_strict_sources_check_allowlist") {
   # are listed in `source`. This is only intended to be used as a temporary
   # allowlist during soft migrations.
   visibility = []
-}
-
-# A toolchain dedicated to processing Rust code.
-# The only targets in this toolchain are action() targets, so it
-# has no real tools.  But every toolchain needs stamp and copy.
-basic_toolchain("rustlang") {
-  expected_label = rust_toolchain
 }
 
 cargo_toml_gen_desc_out = "$target_out_dir/cargo_toml_gen_desc.json"

@@ -180,7 +180,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_bin") {
-      pool = "//build/rust:pool($default_toolchain)"
+      pool = "//build/rust/toolchain:pool($default_toolchain)"
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -250,7 +250,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_rlib") {
-      pool = "//build/rust:pool($default_toolchain)"
+      pool = "//build/rust/toolchain:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
@@ -266,7 +266,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_staticlib") {
-      pool = "//build/rust:pool($default_toolchain)"
+      pool = "//build/rust/toolchain:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
@@ -283,7 +283,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_cdylib") {
-      pool = "//build/rust:pool($default_toolchain)"
+      pool = "//build/rust/toolchain:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
       ld_location_env = ""
@@ -338,7 +338,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_dylib") {
-      pool = "//build/rust:pool($default_toolchain)"
+      pool = "//build/rust/toolchain:pool($default_toolchain)"
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -409,7 +409,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_macro") {
-      pool = "//build/rust:pool($default_toolchain)"
+      pool = "//build/rust/toolchain:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
