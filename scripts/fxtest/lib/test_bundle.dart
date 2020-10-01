@@ -5,7 +5,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:io/ansi.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:path/path.dart' as p;
 import 'package:meta/meta.dart';
@@ -171,11 +170,7 @@ class TestBundle {
     var testType = testDefinition.testType;
     var executionHandle = testDefinition.createExecutionHandle();
     if (testType == TestType.unsupportedDeviceTest) {
-      var greyTestName = wrapWith(executionHandle.handle, [styleBold]);
-      yield TestInfo(
-        'Skipping unrunnable legacy test: "$greyTestName". '
-        'All device tests must be component-tests, but this is a binary',
-      );
+      yield UnrunnableTestEvent(executionHandle.handle);
       return;
     }
     var flags = [...runnerFlags];

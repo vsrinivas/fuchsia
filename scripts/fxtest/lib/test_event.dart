@@ -75,6 +75,13 @@ class TestInfo extends TestEvent {
   String toString() => '<TestInfo $message>';
 }
 
+/// An event indicating that a test was legacy and not runnable.
+class UnrunnableTestEvent extends TestEvent {
+  final String testName;
+
+  UnrunnableTestEvent(this.testName);
+}
+
 /// Specialized version of [TestInfo] that users can opt-in to via the "-o"
 /// flag.
 class TestOutputEvent extends TestInfo {

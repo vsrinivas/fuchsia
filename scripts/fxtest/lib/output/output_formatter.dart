@@ -22,18 +22,19 @@ abstract class OutputFormatter {
   final bool simpleOutput;
   final bool hasRealTimeOutput;
   final Duration slowTestThreshold;
-  final List<TestInfo> _infoEvents;
-  final List<TestStarted> _testStartedEvents;
-  final List<TestResult> _testResultEvents;
+  final List<TestInfo> _infoEvents = [];
+  final List<TestStarted> _testStartedEvents = [];
+  final List<TestResult> _testResultEvents = [];
+  final List<UnrunnableTestEvent> _unrunnableTestEvents = [];
   final OutputBuffer buffer;
   final Stylizer wrapWith;
   DateTime _testSuiteStartTime;
   DateTime _lastTestStartTime;
-  bool _hasStartedTests;
-  bool _currentTestIsSlow;
-  bool _lastTestHadOutput;
-  int _numPassed;
-  int _numFailed;
+  bool _hasStartedTests = false;
+  bool _currentTestIsSlow = false;
+  bool _lastTestHadOutput = false;
+  int _numPassed = 0;
+  int _numFailed = 0;
 
   OutputFormatter({
     @required this.isVerbose,
@@ -42,15 +43,7 @@ abstract class OutputFormatter {
     @required this.wrapWith,
     this.simpleOutput = false,
     OutputBuffer buffer,
-  })  : buffer = buffer ?? OutputBuffer.realIO(),
-        _testResultEvents = [],
-        _infoEvents = [],
-        _testStartedEvents = [],
-        _numPassed = 0,
-        _numFailed = 0,
-        _currentTestIsSlow = false,
-        _hasStartedTests = false,
-        _lastTestHadOutput = false;
+  })  : buffer = buffer ?? OutputBuffer.realIO();
 
   factory OutputFormatter.fromConfig(
     TestsConfig testsConfig, {
@@ -151,6 +144,8 @@ abstract class OutputFormatter {
       _handleFatalError(event);
     } else if (event is AllTestsCompleted) {
       _finalizeOutput();
+    } else if (event is UnrunnableTestEvent) {
+      _handleUnrunnableTest(event);
     }
   }
 
@@ -193,6 +188,11 @@ abstract class OutputFormatter {
   /// Handles the event that fires as each test completes execution.
   void _handleTestResult(TestResult event);
 
+  /// Handles a single unrunnable legacy test.
+  void _handleUnrunnableTest(UnrunnableTestEvent event) {
+    _unrunnableTestEvents.add(event);
+  }
+
   /// Produces summarizing content for the user. Called once.
   void _finalizeOutput();
 
@@ -215,6 +215,12 @@ abstract class OutputFormatter {
       ])} ${addEmoji(Emoji.party)}';
     }
     buffer.addLines([summary]);
+    if (_unrunnableTestEvents.isNotEmpty) {
+      buffer.addLines([
+        'Skipped ${_unrunnableTestEvents.length} unrunnable legacy tests. All device tests must be component-tests, but these are binaries.',
+        ..._unrunnableTestEvents.map((e) => '  ${e.testName}')
+      ]);
+    }
   }
 
   bool get cleanEndOfOutput =>
