@@ -53,6 +53,11 @@ impl PackageDataResponse {
     }
 }
 
+/// The PackageDataCollector is a core collector in Scrutiny that is
+/// responsible for extracting data from Fuchsia Archives (.far). This collector
+/// scans every single package and extracts all of the manifests and files.
+/// Using this raw data it constructs all the routes and components in the
+/// model.
 pub struct PackageDataCollector {
     package_reader: Box<dyn PackageReader>,
 }
@@ -84,6 +89,10 @@ impl PackageDataCollector {
         Ok(pkgs)
     }
 
+    /// Currently Scrutiny is unable to connect V1 and V2 components. To temporarily
+    /// address this in the graph a builtin.json is used to inform Scrutiny about
+    /// components it cannot see.
+    // TODO(benwright) - Remove this once CV2 components are fully parsed.
     fn get_builtins(&self) -> Result<(Vec<PackageDefinition>, ServiceMapping)> {
         let builtins = self.package_reader.read_builtins()?;
 
@@ -104,8 +113,8 @@ impl PackageDataCollector {
         Ok((packages, builtins.services))
     }
 
-    // Combine service name->url mappings from builtins and those defined in config-data.
-    // This consumes the builtins ServiceMapping as part of building the combined map.
+    /// Combine service name->url mappings from builtins and those defined in config-data.
+    /// This consumes the builtins ServiceMapping as part of building the combined map.
     fn merge_services(
         &self,
         served: &Vec<PackageDefinition>,
