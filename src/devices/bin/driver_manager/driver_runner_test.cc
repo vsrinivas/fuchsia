@@ -338,6 +338,41 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
   Unbind();
 }
 
+// Start the root driver, and add a child node with duplicate symbols. The child
+// node is unowned, so if we did not have duplicate symbols, the second driver
+// would bind to it.
+TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
+  auto driver_index = CreateDriverIndex();
+  DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
+  fdf::NodeControllerPtr node_controller;
+  driver_host().SetStartHandler([this, &node_controller](fdf::DriverStartArgs start_args,
+                                                         auto driver) {
+    auto& entries = start_args.program().entries();
+    EXPECT_EQ(2u, entries.size());
+    EXPECT_EQ("binary", entries[0].key);
+    EXPECT_EQ("driver/root-driver.so", entries[0].value->str());
+    EXPECT_EQ("colocate", entries[1].key);
+    EXPECT_EQ("false", entries[1].value->str());
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("second");
+    args.mutable_symbols()->emplace_back(
+        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xfeed)));
+    args.mutable_symbols()->emplace_back(
+        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xf00d)));
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
+  });
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
+
+  loop().RunUntilIdle();
+  ASSERT_FALSE(node_controller.is_bound());
+
+  Unbind();
+}
+
 // Start an unknown driver.
 TEST_F(DriverRunnerTest, StartRootDriver_UnknownDriver) {
   auto driver_index = CreateDriverIndex();

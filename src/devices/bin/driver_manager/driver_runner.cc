@@ -8,6 +8,8 @@
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/status.h>
 
+#include <unordered_set>
+
 #include <fbl/string_printf.h>
 #include <fs/service.h>
 
@@ -110,10 +112,19 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
   Symbols symbols;
   if (args.has_symbols()) {
     symbols.reserve(args.symbols().count());
+    std::unordered_set<std::string_view> names;
     for (auto& symbol : args.symbols()) {
+      auto& name = symbol.name();
+      auto inserted = names.emplace(name.data(), name.size()).second;
+      if (!inserted) {
+        LOGF(ERROR, "Failed to add Node '%.*s', duplicate symbol '%.*s'", args.name().size(),
+             args.name().data(), name.size(), name.data());
+        completer.Close(ZX_ERR_INVALID_ARGS);
+        return;
+      }
       symbols.emplace_back(
           fdf::DriverSymbol::Builder(std::make_unique<fdf::DriverSymbol::Frame>())
-              .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(symbol.name())))
+              .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(name)))
               .set_address(std::make_unique<zx_vaddr_t>(symbol.address()))
               .build());
     }
@@ -123,7 +134,7 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
   auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
       dispatcher_, std::move(controller), child.get());
   if (bind_controller.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to NodeController for node '%.*s': %s", args.name().size(),
+    LOGF(ERROR, "Failed to bind channel to NodeController '%.*s': %s", args.name().size(),
          args.name().data(), zx_status_get_string(bind_controller.error()));
     completer.Close(bind_controller.error());
     return;
