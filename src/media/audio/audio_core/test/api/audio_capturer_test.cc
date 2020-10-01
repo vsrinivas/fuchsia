@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/media/audio/cpp/types.h>
 #include <lib/zx/clock.h>
 #include <zircon/device/audio.h>
 
-#include "lib/media/audio/cpp/types.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
@@ -43,11 +44,16 @@ class AudioCapturerTestOldAPI : public HermeticAudioTest {
     audio_capturer_->SetPcmStreamType(t);
   }
 
-  void SetUpPayloadBuffer(size_t num_frames = 16000) {
+  void SetUpPayloadBuffer(size_t num_frames = 16000, zx::vmo* vmo_out = nullptr) {
     zx::vmo audio_capturer_vmo;
 
     auto status = zx::vmo::create(num_frames * sizeof(int16_t), 0, &audio_capturer_vmo);
     ASSERT_EQ(status, ZX_OK) << "Failed to create payload buffer";
+
+    if (vmo_out) {
+      status = audio_capturer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, vmo_out);
+      ASSERT_EQ(status, ZX_OK);
+    }
 
     audio_capturer_->AddPayloadBuffer(0, std::move(audio_capturer_vmo));
   }
@@ -533,6 +539,40 @@ TEST_F(AudioCapturerTest, NoCrashOnChannelCloseAfterStopAsync) {
   capturer->fidl()->StopAsyncCaptureNoReply();
   Unbind(capturer);
   RunLoopUntilIdle();
+}
+
+// Test capturing when there's no input device. We expect this to work with all the audio captured
+// being completely silent.
+TEST_F(AudioCapturerTest, CaptureAsyncNoDevice) {
+  auto format = Format::Create<ASF::SIGNED_16>(1, 16000).take_value();
+  auto capturer = CreateAudioCapturer(format, 16000,
+                                      fuchsia::media::AudioCapturerConfiguration::WithInput(
+                                          fuchsia::media::InputAudioCapturerConfiguration()));
+
+  // Initialize capture buffers to non-silent values.
+  capturer->payload().Memset<ASF::SIGNED_16>(0xff);
+
+  // Capture a packet and retain it.
+  std::optional<fuchsia::media::StreamPacket> capture_packet;
+  capturer->fidl().events().OnPacketProduced = AddCallback(
+      "OnPacketProduced", [&capture_packet](auto packet) { capture_packet = std::move(packet); });
+  capturer->fidl()->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  capturer->fidl()->StopAsyncCapture(AddCallback("StopAsyncCapture"));
+  ExpectCallback();
+
+  // Expect the packet to be silent. Since we initialized the buffer to non-silence we know that
+  // this silence was populated by audio_core.
+  EXPECT_TRUE(capture_packet);
+  EXPECT_EQ(capture_packet->payload_buffer_id, 0u);
+  EXPECT_NE(capture_packet->payload_size, 0u);
+  auto buffer = capturer->payload().SnapshotSlice<ASF::SIGNED_16>(capture_packet->payload_offset,
+                                                                  capture_packet->payload_size);
+  ASSERT_EQ(1u, buffer.format().channels());
+  for (size_t frame = 0; frame < buffer.NumFrames(); ++frame) {
+    ASSERT_EQ(buffer.SampleAt(frame, 0), 0) << "at frame " << frame;
+  }
 }
 
 }  // namespace media::audio::test

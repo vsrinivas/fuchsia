@@ -603,19 +603,16 @@ zx_status_t BaseCapturer::Process() {
 
     // Mix the requested number of frames.
     auto buf = mix_stage_->ReadLock(Fixed(frame_pointer_), mix_state->frames);
-    FX_DCHECK(buf);
-    FX_DCHECK(buf->start().Floor() == frame_pointer_);
-    FX_DCHECK(buf->length().Floor() > 0);
-    FX_DCHECK(static_cast<size_t>(buf->length().Floor()) == mix_state->frames);
-    if (!buf) {
-      ShutdownFromMixDomain();
-      return ZX_ERR_INTERNAL;
+    if (buf) {
+      FX_DCHECK(buf->start().Floor() == frame_pointer_);
+      FX_DCHECK(buf->length().Floor() > 0);
+      FX_DCHECK(static_cast<size_t>(buf->length().Floor()) == mix_state->frames);
+      output_producer_->ProduceOutput(reinterpret_cast<float*>(buf->payload()), mix_state->target,
+                                      mix_state->frames);
+    } else {
+      // If we didn't get a buffer from the mix stage then we only have silence.
+      output_producer_->FillWithSilence(mix_state->target, mix_state->frames);
     }
-
-    FX_CHECK(output_producer_);
-    FX_CHECK(mix_state->target);
-    output_producer_->ProduceOutput(reinterpret_cast<float*>(buf->payload()), mix_state->target,
-                                    mix_state->frames);
 
     // Complete this mix job.
     switch (pq->FinishMixerJob(*mix_state)) {
