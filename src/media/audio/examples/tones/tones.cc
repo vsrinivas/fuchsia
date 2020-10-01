@@ -79,6 +79,9 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
     Quit();
   });
 
+  // Use AudioRenderer's 'optimal' clock, to synchronize with the output device.
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+
   // Configure the stream_type of the AudioRenderer.
   fuchsia::media::AudioStreamType stream_type;
   stream_type.sample_format = kSampleFormat;
@@ -187,9 +190,6 @@ void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
 
     // Assign our lone shared payload buffer to the AudioRenderer.
     audio_renderer_->AddPayloadBuffer(0, std::move(payload_vmo));
-
-    // Use AudioRenderer's 'optimal' clock, to synchronize with the output device.
-    audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
 
     // Configure the renderer to use input frames of audio as its PTS units.
     audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
