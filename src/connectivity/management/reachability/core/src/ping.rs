@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use std::ffi::CString;
-use std::os::raw;
 
 /// trait that can ping.
 pub trait Pinger {
@@ -12,7 +11,7 @@ pub trait Pinger {
 
 #[link(name = "ext_ping", kind = "static")]
 extern "C" {
-    fn c_ping(url: *const raw::c_char) -> raw::c_int;
+    fn c_ping(url: *const libc::c_char) -> libc::ssize_t;
 }
 
 pub struct IcmpPinger;

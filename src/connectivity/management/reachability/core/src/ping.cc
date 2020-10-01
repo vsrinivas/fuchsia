@@ -30,7 +30,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int c_ping(const char* url);
+ssize_t c_ping(const char* url);
 #ifdef __cplusplus
 }
 #endif
@@ -104,7 +104,7 @@ bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size
   return true;
 }
 
-int c_ping(const char* url) {
+ssize_t c_ping(const char* url) {
   constexpr char ping_message[] = "This is an echo message!";
   long message_size = static_cast<long>(strlen(ping_message) + 1);
   Options options(url, message_size);
@@ -163,7 +163,7 @@ int c_ping(const char* url) {
     switch (poll(&fd, 1, static_cast<int>(options.timeout_msec))) {
       case 1:
         if (fd.revents & POLLIN) {
-          int recvd = recvfrom(s, &received_packet, sizeof(received_packet), 0, NULL, NULL);
+          ssize_t recvd = recvfrom(s, &received_packet, sizeof(received_packet), 0, NULL, NULL);
           if (recvd < 0) {
             r = ERR_SYSTEM_RECVFROM;
           } else if (!ValidateReceivedPacket(packet, sent_packet_size, received_packet, recvd,

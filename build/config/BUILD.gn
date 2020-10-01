@@ -652,7 +652,6 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/hci/vendor/broadcom/*",
     "//src/connectivity/bluetooth/tools/bt-hci-tool/*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool/*",
-    "//src/connectivity/management/reachability/core/*",
     "//src/connectivity/openthread/drivers/ot-radio/*",
     "//src/connectivity/openthread/ot-stack/*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/*",
