@@ -703,6 +703,7 @@ build_api_module("tool_paths") {
     ":tool_paths.llvm-tools",
     ":tool_paths.metadata",
     "//build/images:packages",
+    "//tools/doc_checker($host_toolchain)",
     "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)",
     "//zircon/tools/blobfs($host_toolchain)",
     "//zircon/tools/fidl:tools($host_toolchain)",

@@ -53,6 +53,16 @@ TEST_fx-config-read() {
   BT_EXPECT_EQ "${HOST_OUT_DIR}" "${EXPECT_HOST_OUT}"
 }
 
+TEST_fx-info() {
+  BT_ASSERT_FUNCTION_EXISTS fx-info
+
+  # Capture stderr.
+  local result
+  result=$( fx-info some info 2>&1 )
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "some info"
+}
+
+
 TEST_fx-warn() {
   BT_ASSERT_FUNCTION_EXISTS fx-warn
 
