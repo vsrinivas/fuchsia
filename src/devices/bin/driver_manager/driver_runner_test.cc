@@ -372,12 +372,15 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
+    args.mutable_symbols()->emplace_back(
+        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xfeed)));
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
   ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
+    EXPECT_TRUE(start_args.symbols().empty());
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
     EXPECT_EQ("binary", entries[0].key);
@@ -422,12 +425,18 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("second");
+    args.mutable_symbols()->emplace_back(
+        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xfeed)));
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
   ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
+    auto& symbols = start_args.symbols();
+    EXPECT_EQ(1u, symbols.size());
+    EXPECT_EQ("sym", symbols[0].name());
+    EXPECT_EQ(0xfeedu, symbols[0].address());
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
     EXPECT_EQ("binary", entries[0].key);

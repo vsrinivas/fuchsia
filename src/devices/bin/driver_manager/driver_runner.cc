@@ -33,7 +33,7 @@ DriverHostComponent::DriverHostComponent(
                    [this, driver_hosts](auto) { driver_hosts->erase(*this); }) {}
 
 zx::status<zx::channel> DriverHostComponent::Start(
-    zx::channel node, fdata::Dictionary program,
+    zx::channel node, fidl::VectorView<fdf::DriverSymbol> symbols, fdata::Dictionary program,
     fidl::VectorView<frunner::ComponentNamespaceEntry> ns, zx::channel outgoing_dir) {
   zx::channel client_end, server_end;
   zx_status_t status = zx::channel::create(0, &client_end, &server_end);
@@ -43,6 +43,7 @@ zx::status<zx::channel> DriverHostComponent::Start(
 
   auto args = fdf::DriverStartArgs::UnownedBuilder()
                   .set_node(fidl::unowned_ptr(&node))
+                  .set_symbols(fidl::unowned_ptr(&symbols))
                   .set_program(fidl::unowned_ptr(&program))
                   .set_ns(fidl::unowned_ptr(&ns))
                   .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir));
@@ -55,8 +56,12 @@ zx::status<zx::channel> DriverHostComponent::Start(
   return zx::ok(std::move(client_end));
 }
 
-Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher)
-    : parent_(parent), driver_binder_(driver_binder), dispatcher_(dispatcher) {}
+Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+           Symbols symbols)
+    : parent_(parent),
+      driver_binder_(driver_binder),
+      dispatcher_(dispatcher),
+      symbols_(std::move(symbols)) {}
 
 Node::~Node() {
   if (controller_binding_.has_value()) {
@@ -66,6 +71,8 @@ Node::~Node() {
     binding_->Unbind();
   }
 }
+
+fidl::VectorView<fdf::DriverSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
 
 DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_host_; }
 
@@ -100,7 +107,18 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
 
 void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel node,
                     AddChildCompleter::Sync& completer) {
-  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_);
+  Symbols symbols;
+  if (args.has_symbols()) {
+    symbols.reserve(args.symbols().count());
+    for (auto& symbol : args.symbols()) {
+      symbols.emplace_back(
+          fdf::DriverSymbol::Builder(std::make_unique<fdf::DriverSymbol::Frame>())
+              .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(symbol.name())))
+              .set_address(std::make_unique<zx_vaddr_t>(symbol.address()))
+              .build());
+    }
+  }
+  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, std::move(symbols));
 
   auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
       dispatcher_, std::move(controller), child.get());
@@ -148,7 +166,7 @@ DriverRunner::DriverRunner(zx::channel realm, DriverIndex* driver_index,
     : realm_(std::move(realm), dispatcher),
       driver_index_(driver_index),
       dispatcher_(dispatcher),
-      root_node_(nullptr, this, dispatcher) {}
+      root_node_(nullptr, this, dispatcher, {}) {}
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
@@ -187,6 +205,7 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
   }
   auto driver_args = std::move(it->second);
   driver_args_.erase(it);
+  auto symbols = driver_args.node->symbols();
 
   // Launch a driver host, or use an existing driver host.
   DriverHostComponent* driver_host;
@@ -199,6 +218,9 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
     }
     driver_host = driver_args.node->parent_driver_host();
   } else {
+    // Do not pass symbols across driver hosts.
+    symbols.set_count(0);
+
     auto result = StartDriverHost();
     if (result.is_error()) {
       completer.Close(result.error_value());
@@ -216,8 +238,9 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
     completer.Close(status);
     return;
   }
-  auto start = driver_host->Start(std::move(client_end), std::move(start_info.program()),
-                                  std::move(start_info.ns()), std::move(start_info.outgoing_dir()));
+  auto start =
+      driver_host->Start(std::move(client_end), std::move(symbols), std::move(start_info.program()),
+                         std::move(start_info.ns()), std::move(start_info.outgoing_dir()));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;
