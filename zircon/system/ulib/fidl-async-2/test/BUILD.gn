@@ -30,9 +30,6 @@ test("fidl-struct-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-async-2",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 unittest_package("fidl-struct-test-package") {

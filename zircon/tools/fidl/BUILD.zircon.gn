@@ -77,9 +77,6 @@ zx_library("fidl") {
   }
   configs += [ ":fidlc_config" ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
-
   # TODO(fxbug.dev/60442): remove this once UB in fidl is fixed
   configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
 }
