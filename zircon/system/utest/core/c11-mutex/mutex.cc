@@ -10,7 +10,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-#include <zircon/utc.h>
 
 #include <array>
 #include <cinttypes>
@@ -171,20 +170,6 @@ TEST(C11MutexTest, TimeoutElapsed) {
     std::atomic<zx_status_t> wait_one_result = ZX_ERR_INTERNAL;
   };
 
-  // Create and start a local kernel clock. This will be used as the test
-  // UTC clock.
-  zx::clock local_utc_clock;
-  ASSERT_OK(zx::clock::create(ZX_CLOCK_OPT_MONOTONIC, nullptr, &local_utc_clock));
-  ASSERT_OK(local_utc_clock.update(zx::clock::update_args().set_value(zx::time(0))));
-
-  // Install the local clock as the process-global UTC clock.
-  // NOTE: This will cause flakes if more than one test is doing this in the same process.
-  zx::clock prev_clock;
-  ASSERT_OK(zx_utc_reference_swap(local_utc_clock.release(), prev_clock.reset_and_get_address()));
-  auto reinstall_clock = fbl::MakeAutoCall([&]() {
-    ASSERT_OK(zx_utc_reference_swap(prev_clock.release(), local_utc_clock.reset_and_get_address()));
-  });
-
   auto TestTimeoutHelper = [](void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS -> int {
     ThreadTimeoutArgs* args = static_cast<ThreadTimeoutArgs*>(ctx);
 
@@ -232,14 +217,12 @@ TEST(C11MutexTest, TimeoutElapsed) {
   // Wait for the helper thread to acquire the lock.
   ASSERT_OK(args.start_event.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr));
 
-  zx::unowned_clock utc_clock(zx_utc_reference_get());
-
   for (int i = 0; i < 5; ++i) {
-    zx_time_t now;
-    ASSERT_OK(utc_clock->read(&now));
+    zx::time_utc now;
+    ASSERT_OK(zx::clock::get(&now));
     struct timespec then = {
-        .tv_sec = now / ZX_SEC(1),
-        .tv_nsec = now % ZX_SEC(1),
+        .tv_sec = now.get() / ZX_SEC(1),
+        .tv_nsec = now.get() % ZX_SEC(1),
     };
     then.tv_nsec += kRelativeDeadline.get();
     if (then.tv_nsec > reinterpret_cast<long>(ZX_SEC(1))) {
@@ -248,11 +231,10 @@ TEST(C11MutexTest, TimeoutElapsed) {
     }
     int rc = mtx_timedlock(&args.lock, &then);
     ASSERT_EQ(rc, thrd_timedout, "wait should time out");
+    zx::time_utc later;
 
-    zx_time_t later;
-    ASSERT_OK(utc_clock->read(&later));
-    zx_duration_t elapsed = later - now;
-
+    ASSERT_OK(zx::clock::get(&later));
+    zx_duration_t elapsed = later.get() - now.get();
     // Since the wait is based on the UTC clock which can be adjusted while
     // the wait proceeds, it is important to check that the mutex does not
     // return early.
