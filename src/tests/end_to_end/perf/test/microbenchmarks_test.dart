@@ -35,7 +35,7 @@ void main() {
     // (swarming_io_timeout_secs -- the amount of time that a task is
     // allowed to run without producing log output).
     final result = await helper.sl4fDriver.ssh
-        .run('/bin/fuchsia_microbenchmarks -p --quiet --runs 500'
+        .run('/bin/fuchsia_microbenchmarks -p --quiet --runs 400'
             ' --out $resultsFile');
     expect(result.exitCode, equals(0));
     // This makes the results visible to both perfcompare and Catapult.
@@ -46,7 +46,7 @@ void main() {
       // each test case.  This reduces the cost of these extra process
       // runs.
       final result = await helper.sl4fDriver.ssh
-          .run('/bin/fuchsia_microbenchmarks -p --quiet --runs 100'
+          .run('/bin/fuchsia_microbenchmarks -p --quiet --runs 80'
               ' --out $resultsFile');
       expect(result.exitCode, equals(0));
       // This makes the results visible to perfcompare but not Catapult.
