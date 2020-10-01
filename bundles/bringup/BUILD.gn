@@ -200,8 +200,6 @@ group("tests") {
     "//zircon/system/utest/fidl-utils:fidl-utils-bootfs-test",
     "//zircon/system/utest/fpu:fpu-bootfs-test",
     "//zircon/system/utest/fs-bench:fs-bench-bootfs-test",
-    "//zircon/system/utest/fs-management:fs-management-bootfs-test",
-    "//zircon/system/utest/fs-test-utils:fs-test-utils-bootfs-test",
     "//zircon/system/utest/getentropy:getentropy-bootfs-test",
     "//zircon/system/utest/inspector:inspector-bootfs-test",
     "//zircon/system/utest/int-types:int-types-bootfs-test",

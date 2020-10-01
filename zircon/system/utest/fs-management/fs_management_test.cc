@@ -8,6 +8,9 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/namespace.h>
 #include <limits.h>
 #include <stdalign.h>
 #include <stdio.h>
@@ -50,7 +53,7 @@ fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {
   options.use_fvm = true;
   options.fs_format = false;
   options.fs_mount = false;
-  options.isolated_devmgr = true;
+  options.isolated_devmgr = false;
   return options;
 }
 
@@ -72,7 +75,7 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
 
 void MountUnmountShared(size_t block_size) {
   ramdisk_client_t* ramdisk = nullptr;
-  const char* mount_path = "/tmp/mount_unmount";
+  const char* mount_path = "/memfs/mount_unmount";
 
   ASSERT_EQ(ramdisk_create(block_size, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -98,7 +101,7 @@ TEST(MountUnmountLargeBlockCase, MountUnmountLargeBlock) {
 }
 
 TEST(MountMkdirUnmountCase, MountMkdirUnmount) {
-  const char* mount_path = "/tmp/mount_mkdir_unmount";
+  const char* mount_path = "/memfs/mount_mkdir_unmount";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -117,7 +120,7 @@ TEST(MountMkdirUnmountCase, MountMkdirUnmount) {
 }
 
 TEST(FmountFunmountCase, FmountFunmount) {
-  const char* mount_path = "/tmp/mount_unmount";
+  const char* mount_path = "/memfs/mount_unmount";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -246,12 +249,12 @@ void DoMountEvil(const char* parentfs_name, const char* mount_path) {
 
 // TODO(fxbug.dev/8478): Re-enable once deflaked.
 // TEST(MountEvilMemfsCase, MountEvilMemfs) {
-//   const char* mount_path = "/tmp/mount_evil";
+//   const char* mount_path = "/memfs/mount_evil";
 //   ASSERT_NO_FATAL_FAILURES(DoMountEvil("memfs", mount_path));
 // }
 
 TEST(UnmountTestEvilCase, UnmountTestEvil) {
-  const char* mount_path = "/tmp/umount_test_evil";
+  const char* mount_path = "/memfs/umount_test_evil";
 
   // Create a ramdisk, mount minfs
   ramdisk_client_t* ramdisk = nullptr;
@@ -297,7 +300,7 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
 }
 
 TEST(DoubleMountRootCase, DoubleMountRoot) {
-  const char* mount_path = "/tmp/double_mount_root";
+  const char* mount_path = "/memfs/double_mount_root";
 
   // Create a ramdisk, mount minfs
   ramdisk_client_t* ramdisk = nullptr;
@@ -347,7 +350,7 @@ TEST(DoubleMountRootCase, DoubleMountRoot) {
 }
 
 TEST(MountRemountCase, MountRemount) {
-  const char* mount_path = "/tmp/mount_remount";
+  const char* mount_path = "/memfs/mount_remount";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -368,7 +371,7 @@ TEST(MountRemountCase, MountRemount) {
 }
 
 TEST(MountFsckCase, MountFsck) {
-  const char* mount_path = "/tmp/mount_fsck";
+  const char* mount_path = "/memfs/mount_fsck";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -387,7 +390,7 @@ TEST(MountFsckCase, MountFsck) {
 }
 
 TEST(MountGetDeviceCase, MountGetDevice) {
-  const char* mount_path = "/tmp/mount_get_device";
+  const char* mount_path = "/memfs/mount_get_device";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -479,7 +482,7 @@ void CreateTestFile(const char* ramdisk_path, const char* mount_path, const char
 
 // Tests that setting read-only on the mount options works as expected.
 TEST(MountReadonlyCase, MountReadonly) {
-  const char* mount_path = "/tmp/mount_readonly";
+  const char* mount_path = "/memfs/mount_readonly";
   const char file_name[] = "some_file";
 
   ramdisk_client_t* ramdisk = nullptr;
@@ -522,7 +525,7 @@ TEST(MountReadonlyCase, MountReadonly) {
 
 // Test that when a block device claims to be read-only, the filesystem is mounted as read-only.
 TEST(MountBlockReadonlyCase, MountBlockReadonly) {
-  const char* mount_path = "/tmp/mount_readonly";
+  const char* mount_path = "/memfs/mount_readonly";
   const char file_name[] = "some_file";
 
   ramdisk_client_t* ramdisk = nullptr;
@@ -556,7 +559,7 @@ TEST(MountBlockReadonlyCase, MountBlockReadonly) {
 }
 
 TEST(StatfsTestCase, StatfsTest) {
-  const char* mount_path = "/tmp/mount_unmount";
+  const char* mount_path = "/memfs/mount_unmount";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -591,7 +594,7 @@ TEST(StatfsTestCase, StatfsTest) {
 }
 
 TEST(StatvfsTestCase, StatvfsTest) {
-  const char* mount_path = "/tmp/mount_unmount";
+  const char* mount_path = "/memfs/mount_unmount";
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
@@ -702,3 +705,35 @@ TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
 }
 
 }  // namespace
+
+int main(int argc, char** argv) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return EXIT_FAILURE;
+  }
+
+  status = fdio_service_connect("/svc/fuchsia.test.IsolatedDevmgr", remote.release());
+  if (status != ZX_OK) {
+    return EXIT_FAILURE;
+  }
+  int fd;
+  status = fdio_fd_create(local.release(), &fd);
+  if (status != ZX_OK) {
+    return EXIT_FAILURE;
+  }
+  fbl::unique_fd devfs(fd);
+
+  fdio_ns_t* ns;
+  status = fdio_ns_get_installed(&ns);
+  if (status != ZX_OK) {
+    return EXIT_FAILURE;
+  }
+
+  status = fdio_ns_bind_fd(ns, "/dev", devfs.get());
+  if (status != ZX_OK) {
+    return EXIT_FAILURE;
+  }
+
+  return fs_test_utils::RunWithMemFs([argc, argv]() { return RUN_ALL_TESTS(argc, argv); });
+}

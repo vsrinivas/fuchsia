@@ -281,8 +281,8 @@ bool RunTestCasesPreservesOrderWithMultipleSamples() {
 bool RunTestCasesWritesResultsAndStatistics() {
   BEGIN_TEST;
   PerformanceTestOptions p_options = PerformanceTestOptions::PerformanceTest();
-  p_options.result_path = "/data/results.json";
-  p_options.summary_path = "/data/summary.txt";
+  p_options.result_path = "/tmp/results.json";
+  p_options.summary_path = "/tmp/summary.txt";
   p_options.print_statistics = true;
 
   FixtureOptions f_options = FixtureOptions::Default(DISK_FORMAT_MINFS);

@@ -12,7 +12,9 @@ group("tests") {
   deps = [
     "cmdline($host_toolchain)",
     "dash",
+    "fs-management:tests",
     "fs-recovery:tests",
+    "fs-test-utils:tests",
     "fvm:tests",
     "minfs-micro-benchmark:tests",
     "service:tests",

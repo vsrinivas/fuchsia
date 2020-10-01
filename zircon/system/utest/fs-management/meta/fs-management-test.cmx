@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/fs-management-test-package#meta/fs-management-devmgr.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/fs-management"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.test.IsolatedDevmgr"
+        ]
+    }
+}

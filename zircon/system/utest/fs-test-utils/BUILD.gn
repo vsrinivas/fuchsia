@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("fs-test-utils") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -57,7 +57,24 @@ test("fs-test-utils") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-bootfs_test("fs-test-utils-bootfs-test") {
-  name = "fs-test-utils"
-  deps = [ ":fs-test-utils" ]
+isolated_devmgr_unittest_package("fs-test-utils-test") {
+  executable_path = "test/fs-test-utils"
+
+  features = [ "isolated-temp" ]
+
+  deps = [
+    ":fs-test-utils",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/storage/bin/minfs",
+    "//src/storage/blobfs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fs-test-utils-test" ]
 }

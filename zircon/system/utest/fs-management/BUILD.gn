@@ -13,7 +13,8 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
 
 test("fs-management") {
   configs += [
@@ -50,7 +51,41 @@ test("fs-management") {
   ]
 }
 
-bootfs_test("fs-management-bootfs-test") {
-  name = "fs-management"
-  deps = [ ":fs-management" ]
+isolated_devmgr_component("fs-management-devmgr") {
+  args = [
+    "--svc_name=fuchsia.test.IsolatedDevmgr",
+    "--load_driver=/boot/driver/ramdisk.so",
+    "--search_driver=/boot/driver",
+    "--search_driver=/boot/driver/test",
+    "--wait_for=misc/ramctl",
+    "--enable_block_watcher",
+  ]
+
+  deps = [
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+fuchsia_component("fs-management-test") {
+  testonly = true
+  manifest = "meta/fs-management-test.cmx"
+  deps = [
+    ":fs-management",
+    ":fs-management-devmgr",
+    "//src/storage/bin/minfs",
+    "//src/storage/blobfs",
+  ]
+}
+
+fuchsia_test_package("fs-management-test-package") {
+  test_components = [ ":fs-management-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fs-management-test-package" ]
 }

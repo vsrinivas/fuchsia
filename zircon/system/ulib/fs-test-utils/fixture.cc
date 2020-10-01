@@ -242,6 +242,7 @@ zx_status_t Fixture::Mount() {
   mount_options_t mount_options = default_mount_options;
   mount_options.create_mountpoint = true;
   mount_options.wait_until_ready = true;
+  mount_options.register_fs = false;
   if (options_.use_pager) {
     mount_options.enable_pager = true;
   }
@@ -339,6 +340,7 @@ zx_status_t Fixture::SetUpTestCase() {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
+    args.path_prefix = "/pkg/";
     result = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_);
 
     if (result != ZX_OK) {
