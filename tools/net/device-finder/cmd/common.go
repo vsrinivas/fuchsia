@@ -367,7 +367,7 @@ func (cmd *devFinderCmd) deviceFinders() ([]deviceFinder, error) {
 		}
 		if cmd.netboot && cmd.ipv6 {
 			cmd.finders = append(cmd.finders, &netbootFinder{deviceFinderBase{cmd: cmd}})
-		} else {
+		} else if !cmd.mdns {
 			return nil, errors.New("either mdns or netboot and ipv6 must be specified")
 		}
 	}
