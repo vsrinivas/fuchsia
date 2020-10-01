@@ -116,8 +116,9 @@ async fn set_adapter_device_class<'a>(
 }
 
 fn match_peer<'a>(pattern: &'a str, peer: &Peer) -> bool {
-    peer.id.to_string().contains(pattern)
-        || peer.address.to_string().to_uppercase().contains(&pattern.to_uppercase())
+    let pattern_upper = &pattern.to_uppercase();
+    peer.id.to_string().to_uppercase().contains(pattern_upper)
+        || peer.address.to_string().to_uppercase().contains(pattern_upper)
         || peer.name.as_ref().map_or(false, |p| p.contains(pattern))
 }
 
@@ -686,6 +687,7 @@ mod tests {
 
         assert!(match_peer("cd", &nameless_peer));
         assert!(match_peer("bee", &named_peer));
+        assert!(match_peer("BEE", &named_peer));
 
         assert!(!match_peer("Sapphire", &nameless_peer));
         assert!(match_peer("Sapphire", &named_peer));
