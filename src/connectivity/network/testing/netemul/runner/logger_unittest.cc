@@ -24,7 +24,10 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;
     ret.url = kLoggerUrl;
-    // TODO(fxbug.dev/56438): remove --consume-own-logs
+    // --consume-own-logs is necessary so that the archivist will shut down; without the flag
+    // it will connect to the environment's LogSink which in this case is itself, which is
+    // fine until it's time to shut down the archivist. At that point it still sees a live client,
+    // itself.
     ret.arguments =
         std::vector{std::string{"--disable-log-connector"}, std::string{"--consume-own-logs"}};
     return ret;
