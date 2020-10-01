@@ -801,7 +801,6 @@ config("Wno-conversion") {
     "//src/lib/fxl/*",
     "//src/lib/icu/tools/extractor/*",
     "//src/lib/inet/*",
-    "//src/lib/isolated_devmgr/v2_component/*",
     "//src/lib/json_parser/*",
     "//src/lib/line_input/*",
     "//src/lib/listnode/*",
