@@ -39,7 +39,7 @@ func TestLicensesNew(t *testing.T) {
 		t.Fatal(err)
 	}
 	prohibitedLicenseTypes := []string{"gcc"}
-	if _, err := NewLicenses(folder, prohibitedLicenseTypes); err != nil {
+	if _, _, err := NewLicenses(folder, prohibitedLicenseTypes); err != nil {
 		t.Error("error: NewLicenses(...)")
 	}
 }

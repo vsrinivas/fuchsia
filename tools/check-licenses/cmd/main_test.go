@@ -15,7 +15,7 @@ import (
 
 func TestMainLoadConfig(t *testing.T) {
 	path := filepath.Join(mkDir(t), "config.json")
-	json := `{"filesRegex":[],"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"separatorWidth":80,"outputFilePrefix":"NOTICE","outputFileExtension":"txt","product":"astro","singleLicenseFiles":["LICENSE"],"goldenLicenses":"golden","licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}], "prohibitedLicenseTypes": ["gnu"], "exitOnProhibitedLicenseTypes": false}`
+	json := `{"filesRegex":[],"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"separatorWidth":80,"outputFilePrefix":"NOTICE","outputFileExtension":"txt","product":"astro","singleLicenseFiles":["LICENSE"],"goldenLicenses":"golden","licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}], "prohibitedLicenseTypes": ["gnu"], "exitOnProhibitedLicenseTypes": false, "exitOnUnlicensedFiles": false}`
 	if err := ioutil.WriteFile(path, []byte(json), 0644); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}

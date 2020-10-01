@@ -22,6 +22,10 @@ type Licenses struct {
 	licenses []*License
 }
 
+type UnlicensedFiles struct {
+	files []string
+}
+
 type copyrightRegex struct {
 	regex      string
 	multi_line bool
@@ -29,13 +33,14 @@ type copyrightRegex struct {
 }
 
 // NewLicenses returns a Licenses object with each license pattern loaded from the .lic folder location specified in Config
-func NewLicenses(root string, prohibitedLicenseTypes []string) (*Licenses, error) {
+func NewLicenses(root string, prohibitedLicenseTypes []string) (*Licenses, *UnlicensedFiles, error) {
 	licenses := Licenses{}
 	if err := licenses.Init(root, prohibitedLicenseTypes); err != nil {
 		fmt.Println("error initializing licenses")
-		return nil, err
+		return nil, nil, err
 	}
-	return &licenses, nil
+	unlicensedFiles := UnlicensedFiles{}
+	return &licenses, &unlicensedFiles, nil
 }
 
 // LicenseWorker reads an aassociated .lic file into memory to be used as a License

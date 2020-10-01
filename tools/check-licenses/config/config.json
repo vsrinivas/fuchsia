@@ -22,7 +22,12 @@
     ".cipd",
     "testdata",
     "prebuilt/third_party/sysroot/linux",
-    "prebuilt/third_party/gcc"
+    "prebuilt/third_party/gcc",
+    "tools/check-licenses/golden",
+    "prebuilt/ml/tests",
+    "prebuilt/third_party/qemu",
+    "prebuilt/gputest",
+    "prebuilt/gputest-on-scenic"
   ],
   "textExtensionList": [
     "ac",
@@ -33,6 +38,9 @@
     "cc",
     "cpp",
     "dart",
+    "dill",
+    "d",
+    "dat",
     "bin",
     "far",
     "gn",
@@ -51,7 +59,9 @@
     "py",
     "rs",
     "sh",
-    "txt"
+    "snapshot",
+    "txt",
+    "merkle"
   ],
   "maxReadSize": 6144,
   "separatorWidth": 80,
@@ -61,6 +71,7 @@
     "redhat"
   ],
   "exitOnProhibitedLicenseTypes": true,
+  "exitOnUnlicensedFiles": true,
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "html.gz",
   "product": "astro",

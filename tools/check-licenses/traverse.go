@@ -14,7 +14,7 @@ func Walk(config *Config) error {
 	metrics := new(Metrics)
 	metrics.Init()
 	file_tree := NewFileTree(config, metrics)
-	licenses, err := NewLicenses(config.LicensePatternDir, config.ProhibitedLicenseTypes)
+	licenses, unlicensedFiles, err := NewLicenses(config.LicensePatternDir, config.ProhibitedLicenseTypes)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func Walk(config *Config) error {
 		}
 	}
 	for path := range file_tree.getFileIterator() {
-		if err := processFile(path, metrics, licenses, config, file_tree); err != nil {
+		if err := processFile(path, metrics, licenses, unlicensedFiles, config, file_tree); err != nil {
 			// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
 			fmt.Printf("warning: %s. Skipping file: %s.\n", err, path)
 		}
@@ -39,6 +39,11 @@ func Walk(config *Config) error {
 			files := strings.Join(filesWithProhibitedLicenses, "\n")
 			return fmt.Errorf("Encountered prohibited license types. File paths are:\n%v", files)
 		}
+	}
+
+	if config.ExitOnUnlicensedFiles && len(unlicensedFiles.files) > 0 {
+		files := strings.Join(unlicensedFiles.files, "\n")
+		return fmt.Errorf("Encountered files that are missing licenses. File paths are:\n%v", files)
 	}
 
 	file, err := createOutputFile(config)
@@ -62,7 +67,7 @@ func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses,
 	return nil
 }
 
-func processFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
+func processFile(path string, metrics *Metrics, licenses *Licenses, unlicensedFiles *UnlicensedFiles, config *Config, file_tree *FileTree) error {
 	fmt.Printf("visited file or dir: %q\n", path)
 	data, err := readFromFile(path, config.MaxReadSize)
 	if err != nil {
@@ -73,6 +78,7 @@ func processFile(path string, metrics *Metrics, licenses *Licenses, config *Conf
 		project := file_tree.getProjectLicense(path)
 		if project == nil {
 			metrics.increment("num_unlicensed")
+			unlicensedFiles.files = append(unlicensedFiles.files, path)
 			fmt.Printf("File license: missing. Project license: missing. path: %s\n", path)
 		} else {
 			metrics.increment("num_with_project_license")
