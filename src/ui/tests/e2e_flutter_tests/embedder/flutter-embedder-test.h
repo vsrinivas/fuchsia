@@ -177,6 +177,7 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
                                 is_rendering = view_state.is_rendering;
                               });
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kCallTimeout));
+    FX_LOGS(INFO) << "Launched component: " << component_url;
   }
 
   scenic::Screenshot TakeScreenshot() {
@@ -186,6 +187,7 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
+    FX_LOGS(INFO) << "Taking screenshot... ";
     fuchsia::ui::scenic::ScreenshotData screenshot_out;
     scenic->TakeScreenshot(
         [this, &screenshot_out](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
@@ -194,6 +196,8 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
           QuitLoop();
         });
     EXPECT_FALSE(RunLoopWithTimeout(kScreenshotTimeout)) << "Timed out waiting for screenshot.";
+    FX_LOGS(INFO) << "Screenshot captured.";
+
     return scenic::Screenshot(screenshot_out);
   }
 
@@ -223,6 +227,7 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
                    .y = {.range = {.min = -1000, .max = 1000}},
                    .max_finger_id = 10};
 
+    FX_LOGS(INFO) << "Injecting input... ";
     // Register it against Root Presenter.
     fuchsia::ui::input::DeviceDescriptor device{.touchscreen = std::move(parameters)};
     auto registry = environment()->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
@@ -244,6 +249,7 @@ class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
     }
+    FX_LOGS(INFO) << "Input dispatched.";
   }
 
  private:
