@@ -253,8 +253,24 @@ func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 	return cmdErr
 }
 
+// Return this error when the test is skipped.
+type TestSkippedError struct{}
+
+func (e *TestSkippedError) Error() string {
+	return "test skipped"
+}
+
+func isTestSkippedErr(err error) bool {
+	_, ok := err.(*TestSkippedError)
+	return ok
+}
+
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
+	// runtests doesn't support v2 coverage data. fxbug.dev/61180 tracks an alternative for v2.
+	if t.useRuntests && strings.HasSuffix(test.PackageURL, componentV2Suffix) {
+		return nil, &TestSkippedError{}
+	}
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	if err != nil {
 		return nil, err
@@ -366,6 +382,11 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 }
 
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
+	// runtests doesn't support v2 coverage data. fxbug.dev/61180 tracks an alternative for v2.
+	if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
+		return nil, &TestSkippedError{}
+	}
+
 	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
 	if err != nil {
 		return nil, err

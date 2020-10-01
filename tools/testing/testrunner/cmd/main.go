@@ -248,6 +248,10 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 
 		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir)
 		if err != nil {
+			if isTestSkippedErr(err) {
+				// test was skipped intentionally, don't return error.
+				continue
+			}
 			return err
 		}
 		for _, result := range results {
@@ -331,6 +335,9 @@ func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex 
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
 	if err != nil {
 		result = runtests.TestFailure
+		if isTestSkippedErr(err) {
+			return nil, err
+		}
 		logger.Errorf(ctx, err.Error())
 		if sshutil.IsConnectionError(err) {
 			return nil, err

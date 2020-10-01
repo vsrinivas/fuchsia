@@ -331,6 +331,34 @@ func TestSSHTester(t *testing.T) {
 	}
 }
 
+// test that v2 tests are skipped when runtests binary is used.
+func TestRunTestsWithV2Tests(t *testing.T) {
+
+	tester := fuchsiaSSHTester{
+		client: &fakeSSHClient{
+			runErrs: []error{nil},
+		},
+		copier:                      &fakeDataSinkCopier{},
+		connectionErrorRetryBackoff: &retry.ZeroBackoff{},
+		useRuntests:                 true,
+	}
+	defer func() {
+		if err := tester.Close(); err != nil {
+			t.Errorf("Close returned error: %v", err)
+		}
+	}()
+
+	test := testsharder.Test{
+		Test:         build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"},
+		Runs:         1,
+		RunAlgorithm: testsharder.StopOnSuccess,
+	}
+	_, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
+	if !isTestSkippedErr(err) {
+		t.Errorf("expected test to be skipped, got %v", err)
+	}
+}
+
 // Creates pair of ReadWriteClosers that mimics the relationship between serial
 // and socket i/o. Implemented with in-memory pipes, the input of one can
 // synchronously by read as the output of the other.
