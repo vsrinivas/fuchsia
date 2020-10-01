@@ -5,14 +5,13 @@
 use {crate::ast::BanjoAst, anyhow::Error, std::io};
 
 pub use self::{
-    ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, fidlcat::FidlcatBackend,
-    rust::RustBackend, syzkaller::SyzkallerBackend,
+    ast::AstBackend, c::CBackend, cpp::CppBackend, cpp::CppSubtype, rust::RustBackend,
+    syzkaller::SyzkallerBackend,
 };
 
 mod ast;
 mod c;
 mod cpp;
-mod fidlcat;
 mod rust;
 mod syzkaller;
 mod util;

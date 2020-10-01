@@ -372,21 +372,6 @@ mod cpp {
     );
 }
 
-mod fidlcat {
-    use super::*;
-
-    // Note that .fidlcat.out is used to avoid unnecessarily requiring an "API
-    // Review" bit on Gerrit.
-
-    codegen_test!(empty, FidlcatBackend, ["banjo/empty.test.banjo"], "fidlcat/empty.fidlcat.out");
-    codegen_test!(
-        simple,
-        FidlcatBackend,
-        ["../zx.banjo", "banjo/api.test.banjo"],
-        "fidlcat/api.fidlcat.out"
-    );
-}
-
 mod syzkaller {
     use super::*;
 

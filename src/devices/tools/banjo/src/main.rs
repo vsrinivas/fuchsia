@@ -26,7 +26,6 @@ enum BackendName {
     Rust,
     Json,
     Ast,
-    Fidlcat,
     Syzkaller,
 }
 
@@ -42,11 +41,10 @@ impl FromStr for BackendName {
             "rust" => Ok(BackendName::Rust),
             "json" => Ok(BackendName::Json),
             "ast" => Ok(BackendName::Ast),
-            "fidlcat" => Ok(BackendName::Fidlcat),
             "syzkaller" => Ok(BackendName::Syzkaller),
             _ => Err(format!(
                 "Unrecognized backend for banjo. Current valid ones are: \
-                 C, Cpp, CppMock, Rust, Ast, Fidlcat"
+                 C, Cpp, CppMock, Rust, Ast"
             )),
         }
     }
@@ -174,7 +172,6 @@ fn main() -> Result<(), Error> {
         BackendName::C => Box::new(CBackend::new(&mut output)),
         BackendName::Cpp(subtype) => Box::new(CppBackend::new(&mut output, subtype)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
-        BackendName::Fidlcat => Box::new(FidlcatBackend::new(&mut output)),
         BackendName::Syzkaller => Box::new(SyzkallerBackend::new(&mut output)),
         BackendName::Rust => Box::new(RustBackend::new(&mut output)),
         e => {
