@@ -120,7 +120,7 @@ template <class T>
 void GetCallData<T>::TryRead() {
   GetResponse get_response;
   char data_chunk[CHUNK_SIZE];
-  int32_t data_read = platform_interface_.ReadFile(fd_, data_chunk, CHUNK_SIZE);
+  ssize_t data_read = platform_interface_.ReadFile(fd_, data_chunk, CHUNK_SIZE);
 
   if (data_read < 0) {
     if (-data_read == EAGAIN || -data_read == EWOULDBLOCK) {
@@ -393,7 +393,7 @@ void ExecReadCallData<T>::Proceed(bool ok) {
   // The command, arguments, and environment variables can only be used
   // when initially forking the child process, so they are meaningless
   // when the child process is running.  Only handle the stdin here.
-  int32_t write_status =
+  ssize_t write_status =
       platform_interface_.WriteFile(stdin_fd_, request_.std_in().c_str(), request_.std_in().size());
 
   if (write_status < 0) {
@@ -479,7 +479,7 @@ template <class T>
 std::string ExecWriteCallData<T>::ReadFd(int32_t fd) {
   std::string out_string;
   char read_buf[CHUNK_SIZE / 2];
-  int32_t bytes_read = platform_interface_.ReadFile(fd, read_buf, CHUNK_SIZE / 2 - 1);
+  ssize_t bytes_read = platform_interface_.ReadFile(fd, read_buf, CHUNK_SIZE / 2 - 1);
 
   if (bytes_read < 0) {
     read_buf[0] = '\0';

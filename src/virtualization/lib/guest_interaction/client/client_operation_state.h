@@ -187,15 +187,12 @@ void PutCallData<T>::Proceed(bool ok) {
     return;
   }
 
-  PutRequest req;
-  req.set_destination(destination_);
-  char read_buf[CHUNK_SIZE];
-  int32_t data_read;
-
   switch (status_) {
-    case TRANSFER:
-      data_read = platform_interface_.ReadFile(fd_, read_buf, CHUNK_SIZE);
-
+    case TRANSFER: {
+      PutRequest req;
+      req.set_destination(destination_);
+      char read_buf[CHUNK_SIZE];
+      ssize_t data_read = platform_interface_.ReadFile(fd_, read_buf, CHUNK_SIZE);
       if (data_read < 0) {
         if (data_read != -EAGAIN && data_read != -EWOULDBLOCK) {
           // Read failed.
@@ -208,17 +205,18 @@ void PutCallData<T>::Proceed(bool ok) {
         req.clear_data();
         writer_->Write(req, this);
         return;
-      } else if (data_read == 0) {
+      }
+      if (data_read == 0) {
         // Read hit EOF.
         status_ = END_TRANSFER;
         req.clear_data();
         writer_->WritesDone(this);
         return;
-      } else {
-        req.set_data(read_buf, data_read);
-        writer_->Write(req, this);
-        return;
       }
+      req.set_data(read_buf, data_read);
+      writer_->Write(req, this);
+      return;
+    }
     case END_TRANSFER:
       writer_->Finish(&finish_status_, this);
       status_ = FINISH;
@@ -371,7 +369,7 @@ void ExecWriteCallData<T>::Proceed(bool ok) {
   }
 
   char read_buf[CHUNK_SIZE];
-  int32_t read_status = platform_interface_.ReadFile(stdin_, read_buf, CHUNK_SIZE);
+  ssize_t read_status = platform_interface_.ReadFile(stdin_, read_buf, CHUNK_SIZE);
   if (read_status == -EAGAIN || read_status == -EWOULDBLOCK) {
     // Reading would have caused blocking, so send back an empty message.
     ExecRequest exec_request;

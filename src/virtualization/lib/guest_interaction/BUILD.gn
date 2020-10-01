@@ -56,9 +56,6 @@ source_set("platform_interface_posix") {
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("client_lib") {
@@ -73,9 +70,6 @@ source_set("client_lib") {
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("server_lib") {
@@ -89,9 +83,6 @@ source_set("server_lib") {
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("operation_test_lib") {
@@ -260,9 +251,6 @@ executable("server_daemon_test") {
   ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 fidl("fuchsia.netemul.guest") {

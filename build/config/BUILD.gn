@@ -918,7 +918,6 @@ config("Wno-conversion") {
     "//src/virtualization/bin/vmm/*",
     "//src/virtualization/bin/vmm/device/*",
     "//src/virtualization/buildtools/*",
-    "//src/virtualization/lib/guest_interaction/*",
     "//src/virtualization/lib/vsh/*",
     "//src/virtualization/tests/*",
     "//src/virtualization/third_party/fdt/*",

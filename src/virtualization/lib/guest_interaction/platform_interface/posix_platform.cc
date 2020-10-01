@@ -18,7 +18,7 @@
 #include "platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 
-int32_t PosixPlatform::OpenFile(std::string file_path, FileOpenMode mode) {
+int PosixPlatform::OpenFile(std::string file_path, FileOpenMode mode) {
   int32_t flags = O_NONBLOCK;
   if (mode == WRITE) {
     flags |= O_WRONLY | O_TRUNC | O_CREAT;
@@ -26,17 +26,16 @@ int32_t PosixPlatform::OpenFile(std::string file_path, FileOpenMode mode) {
     flags |= O_RDONLY;
   }
 
-  int32_t fd = open(file_path.c_str(), flags);
+  int fd = open(file_path.c_str(), flags);
   if (fd < 0) {
     return -errno;
   }
   return fd;
 }
 
-int32_t PosixPlatform::WriteFile(int32_t fd, const char* file_contents, uint32_t write_size) {
+ssize_t PosixPlatform::WriteFile(int fd, const char* file_contents, size_t write_size) {
   ssize_t bytes_written = 0;
-
-  while (bytes_written < write_size) {
+  while (static_cast<size_t>(bytes_written) < write_size) {
     ssize_t curr_bytes_written =
         write(fd, file_contents + bytes_written, write_size - bytes_written);
     if (curr_bytes_written < 0) {
@@ -48,7 +47,7 @@ int32_t PosixPlatform::WriteFile(int32_t fd, const char* file_contents, uint32_t
   return bytes_written;
 }
 
-int32_t PosixPlatform::ReadFile(int32_t fd, char* file_buf, uint32_t read_size) {
+ssize_t PosixPlatform::ReadFile(int fd, char* file_buf, size_t read_size) {
   ssize_t bytes_read = read(fd, file_buf, read_size);
   if (bytes_read < 0) {
     return -errno;
@@ -56,8 +55,8 @@ int32_t PosixPlatform::ReadFile(int32_t fd, char* file_buf, uint32_t read_size) 
   return bytes_read;
 }
 
-int32_t PosixPlatform::CloseFile(int32_t fd) {
-  int32_t close_status = close(fd);
+int PosixPlatform::CloseFile(int fd) {
+  int close_status = close(fd);
 
   if (close_status < 0) {
     return -errno;
@@ -84,7 +83,7 @@ bool PosixPlatform::DirectoryExists(std::string dir_path) {
 }
 
 bool PosixPlatform::CreateDirectory(std::string dir_path) {
-  if (dir_path.size() == 0) {
+  if (dir_path.empty()) {
     return false;
   }
   if (DirectoryExists(dir_path)) {
@@ -104,7 +103,7 @@ bool PosixPlatform::CreateDirectory(std::string dir_path) {
   return true;
 }
 
-int32_t PosixPlatform::GetStubFD(uint32_t cid, uint32_t port) {
+int PosixPlatform::GetStubFD(uint32_t cid, uint32_t port) {
   int sockfd = socket(AF_VSOCK, SOCK_STREAM | SOCK_NONBLOCK, 0);
   sockaddr_vm addr = {
       .svm_family = AF_VSOCK,
@@ -113,10 +112,10 @@ int32_t PosixPlatform::GetStubFD(uint32_t cid, uint32_t port) {
       .svm_cid = cid,
       .svm_zero = {0},
   };
-  return connect(sockfd, (sockaddr*)&addr, sizeof(sockaddr_vm));
+  return connect(sockfd, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_vm));
 }
 
-int32_t PosixPlatform::GetServerFD(uint32_t cid, uint32_t port) {
+int PosixPlatform::GetServerFD(uint32_t cid, uint32_t port) {
   int sockfd = socket(AF_VSOCK, SOCK_STREAM | SOCK_NONBLOCK, 0);
   sockaddr_vm addr = {
       .svm_family = AF_VSOCK,
@@ -125,7 +124,7 @@ int32_t PosixPlatform::GetServerFD(uint32_t cid, uint32_t port) {
       .svm_cid = cid,
       .svm_zero = {0},
   };
-  if (bind(sockfd, (sockaddr*)&addr, sizeof(sockaddr_vm)) != 0) {
+  if (bind(sockfd, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_vm)) != 0) {
     return errno;
   }
   if (listen(sockfd, 100) != 0) {
@@ -199,8 +198,8 @@ int32_t PosixPlatform::WaitPid(int32_t pid, int32_t* status, int32_t flags) {
   return poll_pid;
 }
 
-int32_t PosixPlatform::KillPid(int32_t pid, int32_t signal) {
-  int32_t ret = kill(pid, signal);
+int PosixPlatform::KillPid(int32_t pid, int32_t signal) {
+  int ret = kill(pid, signal);
 
   if (ret < 0) {
     return -errno;
@@ -208,7 +207,7 @@ int32_t PosixPlatform::KillPid(int32_t pid, int32_t signal) {
   return ret;
 }
 
-void PosixPlatform::SetFileNonblocking(int32_t fd) {
+void PosixPlatform::SetFileNonblocking(int fd) {
   int flags = fcntl(fd, F_GETFL, 0);
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
