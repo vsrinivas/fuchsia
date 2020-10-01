@@ -69,17 +69,18 @@ impl PackageDataCollector {
         })
     }
 
+    /// Retrieves the set of packages from the current target build returning
+    /// them sorted by package url.
     fn get_packages(&self) -> Result<Vec<PackageDefinition>> {
-        // Retrieve the json packages definition from the package server.
+        // Retrieve the JSON packages definition from the package server.
         let targets = self.package_reader.read_targets()?;
-
         let mut pkgs: Vec<PackageDefinition> = Vec::new();
         for (name, target) in targets.signed.targets.iter() {
             let pkg_def =
                 self.package_reader.read_package_definition(&name, &target.custom.merkle)?;
             pkgs.push(pkg_def);
         }
-
+        pkgs.sort_by(|lhs, rhs| lhs.url.cmp(&rhs.url));
         Ok(pkgs)
     }
 
@@ -1048,5 +1049,45 @@ mod tests {
 
         let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
         assert_eq!(None, response.zbi);
+    }
+
+    #[test]
+    fn test_packages_sorted() {
+        let mock_reader = MockPackageReader::new();
+        let (_, model) = create_model();
+        mock_reader.append_builtin(BuiltinsJson { packages: Vec::new(), services: HashMap::new() });
+
+        let mut targets = HashMap::new();
+        targets.insert(
+            String::from("123"),
+            FarPackageDefinition { custom: Custom { merkle: String::from("123") } },
+        );
+        targets.insert(
+            String::from("456"),
+            FarPackageDefinition { custom: Custom { merkle: String::from("456") } },
+        );
+
+        mock_reader.append_target(TargetsJson { signed: Signed { targets: targets } });
+
+        let sb_0 = create_test_sandbox(vec![String::from("fuchsia.test.foo")]);
+        let cms_0 = create_test_cmx_map(vec![(String::from("meta/foo.cmx"), sb_0)]);
+        let pkg_0 =
+            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms_0);
+        mock_reader.append_pkg_def(pkg_0);
+
+        let sb_1 = create_test_sandbox(vec![String::from("fuchsia.test.bar")]);
+        let cms_1 = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb_1)]);
+        let pkg_1 =
+            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/bar"), cms_1);
+        mock_reader.append_pkg_def(pkg_1);
+
+        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
+        collector.collect(Arc::clone(&model)).unwrap();
+
+        // Test that the packages are in sorted order.
+        let packages = model.packages().read().unwrap();
+        assert_eq!(packages.len(), 2);
+        assert_eq!(packages[0].url, "fuchsia-pkg://fuchsia.com/bar");
+        assert_eq!(packages[1].url, "fuchsia-pkg://fuchsia.com/foo");
     }
 }
