@@ -149,12 +149,21 @@ protocol Flatland {
     /// return an error. Operations that produce errors are ignored. Future operations are still
     /// executed.
     ///
-    /// Flatland will not access any content or shared buffers created since the previous
-    /// Present() until the caller signals all acquire_fences. As a result, the updates associated
-    /// with a Present() will not be visible to the user until the caller signals all
-    /// acquire_fences.
+    /// `requested_presentation_time` specifies the time on or after which the results of the
+    /// Present() should take visible effect, expressed in nanoseconds in the `CLOCK_MONOTONIC`
+    /// timebase. A `requested_presentation_time` in the present or past (such as 0) schedules the
+    /// Present() to take visible effect as soon as possible (i.e. during the next frame). A
+    /// `requested_presentation_time` in the future schedules the Present() to take visible effect
+    /// as closely as possible to or after the stated time, but no earlier. Times must be
+    /// monotonically increasing.
     ///
-    /// Flatland will signal all release_fences when the resources and shared buffers from this
+    /// Flatland will not access any content or shared buffers created since the previous
+    /// Present() until the caller signals all `acquire_fences`. As a result, the updates
+    /// associated with a Present() will not be visible to the user until the caller signals all
+    /// `acquire_fences`. If the `acquire_fences` are not signalled before the
+    /// `requested_presentation_time` is reached, the Present() will be delayed.
+    ///
+    /// Flatland will signal all `release_fences` when the resources and shared buffers from this
     /// Present() are no longer in use. Callers should not modify shared resources, such as
     /// BufferCollections, until after these fences are signaled.
     ///
@@ -169,7 +178,7 @@ protocol Flatland {
     ///
     /// num_presents_remaining will always be >= 1. Present() will not return until the client is
     /// allowed to call Present() again.
-    Present(vector<zx.handle:EVENT>:16 acquire_fences,
+    Present(zx.time requested_presentation_time, vector<zx.handle:EVENT>:16 acquire_fences,
             vector<zx.handle:EVENT>:16 release_fences)
         -> (uint32 num_presents_remaining) error Error;
 

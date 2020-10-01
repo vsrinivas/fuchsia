@@ -32,7 +32,8 @@ class FlatlandPresenter {
   //
   // Flatland should not call this function until it has reached the acquire fences and queued an
   // UberStruct for the associated |id_pair|.
-  virtual void ScheduleUpdateForSession(scheduling::SchedulingIdPair id_pair) = 0;
+  virtual void ScheduleUpdateForSession(zx::time requested_presentation_time,
+                                        scheduling::SchedulingIdPair id_pair) = 0;
 };
 
 }  // namespace flatland

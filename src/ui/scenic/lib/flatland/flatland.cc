@@ -52,8 +52,8 @@ Flatland::~Flatland() {
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
-void Flatland::Present(std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
-                       PresentCallback callback) {
+void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
+                       std::vector<zx::event> release_fences, PresentCallback callback) {
   auto root_handle = GetRoot();
 
   // TODO(fxbug.dev/40818): Decide on a proper limit on compute time for topological sorting.
@@ -142,13 +142,14 @@ void Flatland::Present(std::vector<zx::event> acquire_fences, std::vector<zx::ev
     // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
     fence_queue_->QueueTask(
-        [this, present_id, uber_struct = std::move(uber_struct),
+        [this, present_id, requested_presentation_time, uber_struct = std::move(uber_struct),
          link_operations = std::move(pending_link_operations_),
          release_fences = std::move(release_fences)]() mutable {
           // Push the UberStruct, then schedule the associated Present that will eventually publish
           // it to the InstanceMap used for rendering.
           uber_struct_queue_->Push(present_id, std::move(uber_struct));
-          flatland_presenter_->ScheduleUpdateForSession({session_id_, present_id});
+          flatland_presenter_->ScheduleUpdateForSession(zx::time(requested_presentation_time),
+                                                        {session_id_, present_id});
 
           // Finalize Link destruction operations after publishing the new UberStruct. This
           // ensures that any local Transforms referenced by the to-be-deleted Links are already

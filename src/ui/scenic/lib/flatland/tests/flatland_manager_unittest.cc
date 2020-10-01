@@ -44,15 +44,17 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 #define PRESENT(flatland, session_id, expect_success)                                           \
   {                                                                                             \
     bool processed_callback = false;                                                            \
-    flatland->Present({}, {}, [&](Flatland_Present_Result result) {                             \
-      EXPECT_EQ(!expect_success, result.is_err());                                              \
-      if (expect_success) {                                                                     \
-        EXPECT_EQ(1u, result.response().num_presents_remaining);                                \
-      } else {                                                                                  \
-        EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, result.err());           \
-      }                                                                                         \
-      processed_callback = true;                                                                \
-    });                                                                                         \
+    flatland->Present(/*requested_presentation_time=*/0, /*acquire_fences=*/{},                 \
+                      /*release_fences=*/{}, [&](Flatland_Present_Result result) {              \
+                        EXPECT_EQ(!expect_success, result.is_err());                            \
+                        if (expect_success) {                                                   \
+                          EXPECT_EQ(1u, result.response().num_presents_remaining);              \
+                        } else {                                                                \
+                          EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION,        \
+                                    result.err());                                              \
+                        }                                                                       \
+                        processed_callback = true;                                              \
+                      });                                                                       \
     /* Wait for the worker thread to process the request. */                                    \
     RunLoopUntil(                                                                               \
         [this, session_id] { return mock_flatland_presenter_->HasSessionUpdate(session_id); }); \

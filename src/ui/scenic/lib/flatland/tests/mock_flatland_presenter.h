@@ -32,7 +32,8 @@ class MockFlatlandPresenter : public FlatlandPresenter {
   }
 
   // |FlatlandPresenter|
-  void ScheduleUpdateForSession(scheduling::SchedulingIdPair id_pair) override {
+  void ScheduleUpdateForSession(zx::time requested_presentation_time,
+                                scheduling::SchedulingIdPair id_pair) override {
     // The ID must be already registered.
     ASSERT_TRUE(pending_release_fences_.find(id_pair) != pending_release_fences_.end());
 
@@ -43,6 +44,9 @@ class MockFlatlandPresenter : public FlatlandPresenter {
 
     // Only save the latest PresentId: the UberStructSystem will flush all Presents prior to it.
     pending_session_updates_[id_pair.session_id] = id_pair.present_id;
+
+    // Store all requested presentation times to verify in test.
+    requested_presentation_times_[id_pair] = requested_presentation_time;
   }
 
   // Applies the most recently scheduled session update for each session and signals the release
@@ -63,6 +67,7 @@ class MockFlatlandPresenter : public FlatlandPresenter {
     }
 
     pending_session_updates_.clear();
+    requested_presentation_times_.clear();
   }
 
   // Gets the list of registered PresentIds for a particular |session_id|.
@@ -83,9 +88,17 @@ class MockFlatlandPresenter : public FlatlandPresenter {
     return pending_session_updates_.count(session_id);
   }
 
+  // Returns the requested presentation time for a particular |id_pair|, or zx::time(0) if that
+  // pair has not had a presentation scheduled for it.
+  zx::time GetRequestedPresentationTime(scheduling::SchedulingIdPair id_pair) {
+    auto iter = requested_presentation_times_.find(id_pair);
+    return iter == requested_presentation_times_.end() ? zx::time(0) : iter->second;
+  }
+
  private:
   UberStructSystem* uber_struct_system_;
   std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> pending_release_fences_;
+  std::map<scheduling::SchedulingIdPair, zx::time> requested_presentation_times_;
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> pending_session_updates_;
 };
 

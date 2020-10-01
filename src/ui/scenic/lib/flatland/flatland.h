@@ -62,8 +62,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   Flatland& operator=(Flatland&&) = delete;
 
   // |fuchsia::ui::scenic::internal::Flatland|
-  void Present(std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
-               PresentCallback callback) override;
+  void Present(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
+               std::vector<zx::event> release_fences, PresentCallback callback) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void LinkToParent(
       fuchsia::ui::scenic::internal::GraphLinkToken token,

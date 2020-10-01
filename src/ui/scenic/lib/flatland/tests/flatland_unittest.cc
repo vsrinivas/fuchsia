@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
+#include <lib/async/time.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -63,6 +64,7 @@ namespace {
 // Convenience struct for the PRESENT_WITH_ARGS macro to avoid having to update it every time
 // a new argument is added to Flatland::Present().
 struct PresentArgs {
+  zx::time requested_presentation_time;
   std::vector<zx::event> acquire_fences;
   std::vector<zx::event> release_fences;
 };
@@ -81,24 +83,24 @@ struct PresentArgs {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                               \
-  {                                                                                     \
-    bool processed_callback = false;                                                    \
-    flatland.Present(std::move(args.acquire_fences), std::move(args.release_fences),    \
-                     [&](Flatland_Present_Result result) {                              \
-                       EXPECT_EQ(!expect_success, result.is_err());                     \
-                       if (expect_success) {                                            \
-                         EXPECT_EQ(1u, result.response().num_presents_remaining);       \
-                       } else {                                                         \
-                         EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, \
-                                   result.err());                                       \
-                       }                                                                \
-                       processed_callback = true;                                       \
-                     });                                                                \
-    EXPECT_TRUE(processed_callback);                                                    \
-    /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */     \
-    RunLoopUntilIdle();                                                                 \
-    mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();                     \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                    \
+  {                                                                                          \
+    bool processed_callback = false;                                                         \
+    flatland.Present(args.requested_presentation_time.get(), std::move(args.acquire_fences), \
+                     std::move(args.release_fences), [&](Flatland_Present_Result result) {   \
+                       EXPECT_EQ(!expect_success, result.is_err());                          \
+                       if (expect_success) {                                                 \
+                         EXPECT_EQ(1u, result.response().num_presents_remaining);            \
+                       } else {                                                              \
+                         EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION,      \
+                                   result.err());                                            \
+                       }                                                                     \
+                       processed_callback = true;                                            \
+                     });                                                                     \
+    EXPECT_TRUE(processed_callback);                                                         \
+    /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */          \
+    RunLoopUntilIdle();                                                                      \
+    mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();                          \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -367,13 +369,13 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   // Signal the second fence and ensure the Present is still registered, the UberStructSystem
   // doesn't update, and the release fence isn't signaled.
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
-  EXPECT_EQ(registered_presents.size(), 1ul);
-
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
 
@@ -393,6 +395,44 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   EXPECT_NE(GetUberStruct(flatland), nullptr);
 
   EXPECT_TRUE(IsEventSignaled(release_copy, ZX_EVENT_SIGNALED));
+}
+
+TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
+  Flatland flatland = CreateFlatland();
+
+  // Create an event to serve as an acquire fence.
+  const zx::time requested_presentation_time = zx::time(123);
+
+  PresentArgs args;
+  args.requested_presentation_time = requested_presentation_time;
+  args.acquire_fences = CreateEventArray(1);
+  auto acquire_copy = CopyEvent(args.acquire_fences[0]);
+
+  // Because the Present includes acquire fences, it should only be registered with the
+  // FlatlandPresenter. There should be no requested presentation time.
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+
+  auto registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
+
+  const auto id_pair = scheduling::SchedulingIdPair({
+      .session_id = flatland.GetRoot().GetInstanceId(),
+      .present_id = registered_presents[0],
+  });
+  EXPECT_EQ(mock_flatland_presenter_->GetRequestedPresentationTime(id_pair), zx::time(0));
+
+  // Signal the fence and ensure the Present is still registered, but now with a requested
+  // presentation time.
+  acquire_copy.signal(0, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+
+  registered_presents =
+      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_EQ(registered_presents.size(), 1ul);
+
+  EXPECT_EQ(mock_flatland_presenter_->GetRequestedPresentationTime(id_pair),
+            requested_presentation_time);
 }
 
 TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
