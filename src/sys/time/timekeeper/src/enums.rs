@@ -23,6 +23,7 @@ pub enum InitializeRtcOutcome {
     NoDevices,
     MultipleDevices,
     ConnectionFailed,
+    ReadNotAttempted,
     ReadFailed,
     InvalidBeforeBackstop,
     Succeeded,
@@ -45,6 +46,8 @@ impl Into<CobaltRtcEventType> for InitializeRtcOutcome {
             Self::MultipleDevices => CobaltRtcEventType::MultipleDevices,
             Self::ConnectionFailed => CobaltRtcEventType::ConnectionFailed,
             Self::ReadFailed => CobaltRtcEventType::ReadFailed,
+            // TODO(jsankey): Define a better Cobalt enum for this case
+            Self::ReadNotAttempted => CobaltRtcEventType::ReadSucceeded,
             Self::InvalidBeforeBackstop => CobaltRtcEventType::ReadInvalidBeforeBackstop,
             Self::Succeeded => CobaltRtcEventType::ReadSucceeded,
         }

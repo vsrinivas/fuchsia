@@ -205,7 +205,7 @@ pub struct InspectDiagnostics {
 impl InspectDiagnostics {
     /// Construct a new `InspectDiagnostics` exporting at the supplied `Node` using data from
     /// the supplied clock.
-    pub fn new(node: &Node, clock: Arc<zx::Clock>) -> Self {
+    pub fn new(node: &Node, clock: zx::Clock) -> Self {
         // Record fixed data directly into the node without retaining any references.
         node.record_child("initialization", |child| TimeSet::now(&clock).record(child));
         node.record_int(
@@ -213,17 +213,20 @@ impl InspectDiagnostics {
             clock.get_details().map_or(FAILED_TIME, |details| details.backstop.into_nanos()),
         );
 
+        // Arc-wrapping the clock is necessary to support the potential multiple invocations of the
+        // lazy child node.
+        let arc_clock = Arc::new(clock);
         let diagnostics = InspectDiagnostics {
             network_available_monotonic: Mutex::new(None),
             rtc: Mutex::new(None),
             last_update: Mutex::new(None),
-            clock: Arc::clone(&clock),
+            clock: Arc::clone(&arc_clock),
             node: node.clone_weak(),
             health: Mutex::new(fuchsia_inspect::health::Node::new(node)),
         };
         diagnostics.health.lock().set_starting_up();
         node.record_lazy_child("current", move || {
-            let clock_clone = Arc::clone(&clock);
+            let clock_clone = Arc::clone(&arc_clock);
             async move {
                 let inspector = Inspector::new();
                 TimeSet::now(&clock_clone).record(inspector.root());
@@ -293,6 +296,7 @@ mod tests {
     use {
         super::*,
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
+        fuchsia_zircon::HandleBased as _,
     };
 
     const BACKSTOP_TIME: i64 = 111111111;
@@ -326,12 +330,10 @@ mod tests {
         padding1: [0, 0, 0, 0],
     };
 
-    /// Creates a new arc wrapped clock set to backstop time.
-    fn create_clock() -> Arc<zx::Clock> {
-        Arc::new(
-            zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(BACKSTOP_TIME)))
-                .unwrap(),
-        )
+    /// Creates a new wrapped clock set to backstop time.
+    fn create_clock() -> zx::Clock {
+        zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(BACKSTOP_TIME)))
+            .unwrap()
     }
 
     #[test]
@@ -385,8 +387,9 @@ mod tests {
     #[test]
     fn after_update() {
         let clock = create_clock();
+        let clock_duplicate = clock.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
         let inspector = &Inspector::new();
-        let inspect_diagnostics = InspectDiagnostics::new(inspector.root(), Arc::clone(&clock));
+        let inspect_diagnostics = InspectDiagnostics::new(inspector.root(), clock_duplicate);
 
         // Record the time at which the network became available.
         inspect_diagnostics.record(Event::NetworkAvailable);

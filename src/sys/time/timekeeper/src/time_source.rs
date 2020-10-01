@@ -22,6 +22,14 @@ pub struct Sample {
     pub monotonic: zx::Time,
 }
 
+#[cfg(test)]
+impl Sample {
+    /// Constructs a new `Sample`.
+    pub fn new(utc: zx::Time, monotonic: zx::Time) -> Sample {
+        Sample { utc, monotonic }
+    }
+}
+
 /// An event that may be observed from a source of time.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Event {
@@ -42,9 +50,9 @@ impl From<Sample> for Event {
 
 /// A definition of a time source that may subsequently be launched to create a stream of update
 /// events.
-pub trait TimeSource {
+pub trait TimeSource: Send + Sync {
     /// The type of `Stream` produced when launching the `TimeSource`.
-    type EventStream: Stream<Item = Result<Event, Error>> + Unpin;
+    type EventStream: Stream<Item = Result<Event, Error>> + Unpin + Send;
 
     /// Attempts to launch the time source and return a stream of its time output and status
     /// change events.

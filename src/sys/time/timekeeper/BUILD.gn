@@ -44,12 +44,14 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/clock_manager.rs",
     "src/diagnostics/cobalt.rs",
     "src/diagnostics/composite.rs",
     "src/diagnostics/fake.rs",
     "src/diagnostics/inspect.rs",
     "src/diagnostics/mod.rs",
     "src/enums.rs",
+    "src/estimator.rs",
     "src/main.rs",
     "src/network.rs",
     "src/notifier.rs",
@@ -63,6 +65,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",
+    "//src/lib/test_util",
   ]
 }
 
