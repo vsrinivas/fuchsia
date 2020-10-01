@@ -20,7 +20,7 @@ recovery system.
 ## Running the recovery image
 
 After building the recovery image, you can run the image in QEMU using the
-follosing command:
+following command:
 
 ```sh
 $ fx run-recovery -g
@@ -30,8 +30,13 @@ The easiest way to run recovery on hardware is to netboot a device into a newly
 built recovery image:
 
 ```sh
-$ out/default/host-tools/bootserver --board_name pc --boot out/default/obj/build/images/recovery/recovery-eng.zbi
+$ out/default/host-tools/bootserver --board-name device-name --boot out/default/obj/build/images/recovery/recovery-eng.zbi
 ```
+where `device-name` can be found with `fx list-devices`.
+
+**NB** If you only have one device or have used the `fx set-device` command
+you can omit the `--board-name` argument.
+
 
 ## Testing
 
@@ -42,14 +47,14 @@ $ fx set core.x64 --with //src/recovery
 $ fx build
 ```
 
-The system you've just built onto your device.
+Load the system you've just built onto your device.
 
 ### Unit
 
 Run the recovery integration test:
 
 ```sh
-$ fx run-test system_recovery_tests
+$ fx test -s 5 system_recovery_tests
 ```
 
 ### Integration
@@ -57,7 +62,7 @@ $ fx run-test system_recovery_tests
 Run the recovery integration test:
 
 ```sh
-$ fx run-test recovery_integration_test
+$ fx test -s 5 recovery_integration_test
 ```
 
 ### End-to-end
