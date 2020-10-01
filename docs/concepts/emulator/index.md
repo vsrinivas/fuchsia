@@ -11,7 +11,7 @@ You can call FEMU with `fx` using the `fx emu` command, or from the Fuchsia IDK 
 
 FEMU is the default emulator for Fuchsia. FEMU is based on the
 [Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator), which is a fork of
-[QEMU](https://www.qemu.org/). Due to legacy issues, there may be references to AEMU and QEMU in the code and documentation.
+[QEMU](https://www.qemu.org/). Due to legacy issues, there may be references to AEMU in the code and documentation.
 
 In some instances, such as [emulating Zircon](#emulating-zircon), you must use QEMU instead.
 
@@ -24,7 +24,7 @@ FEMU features include:
 
 *   **GUI Support:** You can run Fuchsia with the GUI (by default) or without the GUI
     (using the `--headless` argument with the [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu) command)
-*   **GPU Support: **You can run with the host’s GPU (by default) with full
+*   **GPU Support:** You can run with the host’s GPU (by default) with full
     [Vulkan](/docs/concepts/graphics/magma/vulkan.md) support, or you can choose
     software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/).
 *   **Remote Development:** You can use a remote desktop with FEMU, either with Chrome Remote Desktop
