@@ -126,6 +126,8 @@ FUCHSIA_TARGET_IMAGE="$(get-image-src-path "${SDK_ID}" "${IMAGE_NAME}")"
 # .tar.gz extension for packages vs .tgz extension for images.
 IMAGE_FILENAME="${SDK_ID}_${IMAGE_NAME}.tgz"
 
+echo "Paving ${IMAGE_NAME} system image for SDK version $(get-sdk-version) from ${FUCHSIA_TARGET_IMAGE}"
+
 # Validate the image is found
 if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" ]] ; then
   if ! run-gsutil ls "${FUCHSIA_TARGET_IMAGE}" >/dev/null 2>&1; then

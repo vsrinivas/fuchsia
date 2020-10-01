@@ -194,17 +194,17 @@ TEST_fpave_switch_types() {
  set_up_device_finder
 
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1.txt 2>&1
- BT_EXPECT_FILE_CONTAINS pave_image1.txt ""
+ BT_EXPECT_FILE_CONTAINS pave_image1.txt "Paving image1 system image for SDK version 8890373976687374912 from gs://fuchsia/development/8890373976687374912/images/image1.tgz"
  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image1.tgz"
 
  # Same command, should skip download
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1_again.txt 2>&1
- BT_EXPECT_FILE_CONTAINS pave_image1_again.txt "Skipping download, image exists."
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING pave_image1_again.txt "Skipping download, image exists."
  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image1.tgz"
 
  # Switch images, should delete old file.
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image2 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image2.txt 2>&1
- BT_EXPECT_FILE_CONTAINS  "pave_image2.txt" "WARNING: Removing old image files."
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING pave_image2.txt "WARNING: Removing old image files."
  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image2.tgz"
 }
 TEST_fpave_default_keys() {
