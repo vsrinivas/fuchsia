@@ -26,6 +26,7 @@
 #include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/third_party/enum_utils/enum_utils.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
@@ -39,20 +40,20 @@
 
 namespace escher {
 
-#define ASSERT_NUM_STATE_BITS(BIT_COUNT, VALUE_COUNT)                                     \
-  static_assert(                                                                          \
-      (1 << CommandBufferPipelineState::StaticState::BIT_COUNT) - 1 >= (VALUE_COUNT - 1), \
-      "not enough bits for " #VALUE_COUNT);
+#define ASSERT_NUM_STATE_BITS(BIT_COUNT, MAX_VALUE)                                           \
+  static_assert((1 << CommandBufferPipelineState::StaticState::BIT_COUNT) - 1 >= (MAX_VALUE), \
+                "not enough bits for " #MAX_VALUE);
 
-ASSERT_NUM_STATE_BITS(kNumCompareOpBits, VK_COMPARE_OP_RANGE_SIZE);
-ASSERT_NUM_STATE_BITS(kNumStencilOpBits, VK_STENCIL_OP_RANGE_SIZE);
-ASSERT_NUM_STATE_BITS(kNumBlendFactorBits, VK_BLEND_FACTOR_RANGE_SIZE);
-ASSERT_NUM_STATE_BITS(kNumBlendOpBits, VK_BLEND_OP_RANGE_SIZE);
-ASSERT_NUM_STATE_BITS(kNumFrontFaceBits, VK_FRONT_FACE_RANGE_SIZE);
-ASSERT_NUM_STATE_BITS(kNumPrimitiveTopologyBits, VK_PRIMITIVE_TOPOLOGY_RANGE_SIZE);
+ASSERT_NUM_STATE_BITS(kNumCompareOpBits, *enum_utils::MaxEnumElementValue<vk::CompareOp>());
+ASSERT_NUM_STATE_BITS(kNumStencilOpBits, *enum_utils::MaxEnumElementValue<vk::StencilOp>());
+ASSERT_NUM_STATE_BITS(kNumBlendFactorBits, *enum_utils::MaxEnumElementValue<vk::BlendFactor>());
+ASSERT_NUM_STATE_BITS(kNumBlendOpBits, *enum_utils::MaxEnumElementValue<vk::BlendOp>());
+ASSERT_NUM_STATE_BITS(kNumFrontFaceBits, *enum_utils::MaxEnumElementValue<vk::FrontFace>());
+ASSERT_NUM_STATE_BITS(kNumPrimitiveTopologyBits,
+                      *enum_utils::MaxEnumElementValue<vk::PrimitiveTopology>());
 
 // Must adjust this in the unlikely case that more cull modes are added.
-ASSERT_NUM_STATE_BITS(kNumCullModeBits, VK_CULL_MODE_FRONT_AND_BACK - VK_CULL_MODE_NONE + 1);
+ASSERT_NUM_STATE_BITS(kNumCullModeBits, VK_CULL_MODE_FRONT_AND_BACK);
 
 #undef ASSERT_NUM_STATE_BITS
 

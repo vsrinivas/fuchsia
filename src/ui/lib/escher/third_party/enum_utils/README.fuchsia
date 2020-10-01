@@ -1,0 +1,12 @@
+Source: https://github.com/Neargye/magic_enum
+Git Commit: 7063621bce226c8925905c5643650b680e3a4b3b
+License: MIT
+
+enum_utils.h is a header-only library adding support to get count / maximum /
+minimum values of an enum or enum class type using gcc / clang's
+__PRETTY_FUNCTION__ feature. It iterates over a range of values and finds all
+valid enum values within that range.
+
+This library is modified from the original magic_enum library and only keeps
+the functions mentioned above.
+

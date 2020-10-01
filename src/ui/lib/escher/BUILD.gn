@@ -275,6 +275,7 @@ template("escher_library") {
       "shape/rounded_rect.cc",
       "shape/rounded_rect.h",
       "status.h",
+      "third_party/enum_utils/enum_utils.h",
       "third_party/granite/vk/command_buffer.cc",
       "third_party/granite/vk/command_buffer.h",
       "third_party/granite/vk/command_buffer_pipeline_state.cc",
