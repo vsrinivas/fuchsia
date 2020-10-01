@@ -32,12 +32,8 @@ class FakeStreamProcessor : public fuchsia::media::StreamProcessor {
 
   // fuchsia::media::StreamProcessor implementation.
   void EnableOnStreamFailed() override {}
-  void SetInputBufferSettings(fuchsia::media::StreamBufferSettings input_settings) override {}
-  void AddInputBuffer(fuchsia::media::StreamBuffer buffer) override {}
   void SetInputBufferPartialSettings(
       fuchsia::media::StreamBufferPartialSettings input_settings) override {}
-  void SetOutputBufferSettings(fuchsia::media::StreamBufferSettings output_settings) override {}
-  void AddOutputBuffer(fuchsia::media::StreamBuffer buffer) override {}
   void SetOutputBufferPartialSettings(
       fuchsia::media::StreamBufferPartialSettings output_settings) override {}
   void CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ordinal) override {}

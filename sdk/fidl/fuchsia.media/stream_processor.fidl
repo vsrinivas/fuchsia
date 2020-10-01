@@ -5,7 +5,6 @@
 library fuchsia.media;
 
 using fuchsia.sysmem;
-using zx;
 
 /// This struct helps ensure that packet count and buffer space are sufficient
 /// to avoid major problems.  For example, a video decoder needs sufficient
@@ -322,14 +321,6 @@ table StreamOutputFormat {
     2: FormatDetails format_details;
 };
 
-[Deprecated = "Use StreamOutputFormat instead."]
-table StreamOutputConfig {
-    1: uint64 stream_lifetime_ordinal;
-    2: bool buffer_constraints_action_required;
-    3: StreamBufferConstraints buffer_constraints;
-    4: FormatDetails format_details;
-};
-
 /// Default values for input and output
 /// StreamBufferConstraints.default_settings.packet_count_for_server.
 ///
@@ -566,80 +557,6 @@ resource table StreamBufferPartialSettings {
     6: fuchsia.sysmem.BufferCollectionToken sysmem_token;
 };
 
-/// The StreamBuffer struct represents a pre-configured buffer.
-///
-/// Both input and output uses StreamBuffer(s), but the two sets of buffers are
-/// separate.
-///
-/// The client uses SetInputBufferSettings() + AddInputBuffer() * N to inform
-/// the stream processor about all the input buffers.
-///
-/// The client uses SetOutputBufferSettings() + AddOutputBuffer() * N to inform
-/// the stream processor about all the output buffers.
-///
-/// When `single_buffer_mode` is true, there is only buffer_index 0 shared by all
-/// packet(s) of the relevant input or output.
-resource table StreamBuffer {
-    /// When using AddOutputBuffer()/AddInputBuffer(), this must match the
-    /// buffer_lifetime_ordinal of the most recent
-    /// SetOutputBufferSettings()/SetInputBufferSettings().
-    1: uint64 buffer_lifetime_ordinal;
-
-    /// Buffers must be added via AddOutputBuffer() / AddInputBuffer() in order
-    /// by buffer_index. The buffer_index is always equal to 0 if
-    /// `single_buffer_mode` is true.
-    2: uint32 buffer_index;
-
-    /// For each new buffer_lifetime_ordinal, a client must use new low-level
-    /// buffers.  This rule exists for multiple very good reasons, and is
-    /// relevant to mid-stream changes, changes on stream boundaries, and both
-    /// input and output buffers.  A new buffer_lifetime_ordinal needs new
-    /// low-level buffers, not just new StreamBuffer(s).  If you find yourself
-    /// copying compressed input data into new low-level input buffers solely
-    /// due to this rule, consider asking the source of the data for the ability
-    /// to directly fill new VMOs.  The rule exists for good reasons, even for
-    /// input buffers.
-    ///
-    /// The previous paragraph does not prohibit carving up VMOs into sub-pieces
-    /// and using different sub-pieces as different StreamBuffer(s), with some
-    /// VMOs used for more than one StreamBuffer and possibly others used for
-    /// only one StreamBuffer.  While this is permitted and enables some
-    /// optimizations, it's not expected to be particularly common.
-    3: StreamBufferData data;
-};
-
-/// For the moment, a VMO per buffer is the only type of buffer.
-///
-/// This is extremely likely to change significantly when adding gralloc stuff,
-/// but the idea with this union is to have a struct per logical way of storing
-/// the data.  Any multi-domain storage within a gralloc buffer will likely be
-/// only indirectly represented here.
-resource union StreamBufferData {
-    1: StreamBufferDataVmo vmo;
-
-    // TODO(dustingreen): add the gralloc way
-};
-
-/// StreamBufferDataVmo
-///
-/// Details for a buffer backed by a VMO.
-resource table StreamBufferDataVmo {
-    /// The same VMO can be used by more than one StreamBuffer (only of the same
-    /// buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
-    1: zx.handle:VMO vmo_handle;
-
-    /// Offset within the VMO of the first usable byte.  Must be < the VMO's size
-    /// in bytes.
-    2: uint64 vmo_usable_start;
-
-    /// VMO-relative offset that's one past the last usable byte.  This can point
-    /// one byte beyond the end of the VMO if desired.  In other words, this can
-    /// be equal to the VMO's size, to indicate that the last byte of the VMO is
-    /// usable (and possibly many byte before that, depending on
-    /// vmo_usable_start).
-    3: uint64 vmo_usable_size;
-};
-
 /// PacketHeader
 ///
 /// When referring to a free packet, we use PacketHeader alone instead of
@@ -842,8 +759,7 @@ table Packet {
 ///   * OnInputConstraints() - sent unsolicited by stream processor shortly after
 ///     stream processor creation.
 /// 3. Provide input buffers
-///   * SetInputBufferPartialSettings() (current way)
-///   * SetInputBufferSettings() / AddInputBuffer() (old deprecated way)
+///   * SetInputBufferPartialSettings()
 /// 4. Deliver input data
 ///   * QueueInputPacket() + OnFreeInputPacket(), for as long as it takes,
 ///     possibly working through all input packets repeatedly before...
@@ -861,9 +777,6 @@ table Packet {
 ///   * This message can arrive more than once before the first output data.
 /// 6. Provide output buffers
 ///   * SetOutputBufferPartialSettings() / CompleteOutputBufferPartialSettings()
-///     (current way)
-///   * SetOutputBufferSettings() / AddOutputBuffer()
-///     (old deprecated way)
 /// 7. Data flows, with optional EndOfStream
 ///   * OnOutputPacket() / RecycleOutputPacket() / QueueInputPacket() /
 ///     OnFreeInputPacket() / QueueInputEndOfStream() / OnOutputEndOfStream()
@@ -979,47 +892,6 @@ protocol StreamProcessor {
     // this event, to keep things simpler for simpler clients.  Maybe separate
     // the recommendations from the constraints.
     -> OnInputConstraints(StreamBufferConstraints input_constraints);
-
-    /// Clients should use SetInputBufferPartialSettings() instead.
-    ///
-    /// Configuring input buffers (the old way) consists of calling
-    /// SetInputBufferSettings() followed by a number of calls to
-    /// AddInputBuffer() equal to the number of buffers set via
-    /// SetInputBufferSettings().  In buffer-per-packet mode, this is the same as
-    /// the number of packets.  In single-buffer mode, this is 1.
-    ///
-    /// After OnInputConstraints(), the client uses these two methods to set up
-    /// input buffers and packets.
-    ///
-    /// Configuring input buffers is required before QueueInputPacket().
-    ///
-    /// The client can also re-set-up input buffers any time there is no current
-    /// stream.  The client need not wait until all previously-set-up input
-    /// buffers are with the client via OnFreeInputPacket().  The old
-    /// buffer_lifetime_ordinal just ends.
-    ///
-    /// The recommended way to de-overlap resource usage (when/if the client
-    /// wants to) is to send CloseCurrentStream() with release_input_buffers
-    /// true then send Sync() and wait for its response before allocating any
-    /// new buffers. How to cause other parts of the system to release their
-    /// references on low-level buffers is outside the scope of this interface.
-    ///
-    /// This call ends any previous buffer_lifetime_ordinal, and starts a new
-    /// one.
-    [Deprecated = "Use SetInputBufferPartialSettings instead."]
-    SetInputBufferSettings(StreamBufferSettings input_settings);
-
-    /// The client is required to add all the input buffers before sending any
-    /// message that starts a new stream else the stream processor will close
-    /// the StreamProcessor channel.
-    ///
-    /// When the last buffer is added with this message, all the input packets
-    /// effectively jump from non-existent to free with the client.  The
-    /// StreamProcessor will not generate an OnFreeInputPacket() for each new
-    /// input packet.  The client can immediately start sending
-    /// QueueInputPacket() after sending the last AddInputBuffer().
-    [Deprecated = "Use SetInputBufferPartialSettings instead."]
-    AddInputBuffer(StreamBuffer buffer);
 
     /// This is the replacement for SetInputBufferSettings().
     ///
@@ -1174,32 +1046,6 @@ protocol StreamProcessor {
     /// client (by configuring output buffers using
     /// SetOutputBufferPartialSettings() etc).
     -> OnOutputFormat(StreamOutputFormat output_format);
-
-    /// These are not permitted until after the first OnOutputConstraints().
-    ///
-    /// Roughly speaking, these messages are sent in response to
-    /// OnOutputConstraints() with buffer_constraints_action_required true.
-    ///
-    /// Configuring output buffers consists of calling SetOutputBufferSettings()
-    /// followed by a number of calls to AddOutputBuffer() equal to the number
-    /// of buffers set via SetOutputBufferSettings().  In buffer-per-packet
-    /// mode, this is the same as the number of packets.  In single-buffer mode,
-    /// this is 1.
-    ///
-    /// Configuring output buffers is _required_ after OnOutputConstraints() is
-    /// received by the client with buffer_constraints_action_required true and
-    /// stream_lifetime_ordinal equal to the client's current
-    /// stream_lifetime_ordinal (even if there is an active stream), and is
-    /// _permitted_ any time there is no current stream.
-    ///
-    /// Closing the current stream occurs on the StreamControl ordering domain,
-    /// so after a CloseCurrentStream() or FlushEndOfStreamAndCloseStream(), a
-    /// subsequent Sync() completion must be received by the client before the
-    /// client knows that there's no longer a current stream.
-    [Deprecated = "Use SetOutputBufferPartialSettings instead."]
-    SetOutputBufferSettings(StreamBufferSettings output_settings);
-    [Deprecated = "Use SetOutputBufferPartialSettings instead."]
-    AddOutputBuffer(StreamBuffer buffer);
 
     /// This is the replacement for SetOutputBufferSettings().
     ///

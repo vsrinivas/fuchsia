@@ -311,66 +311,6 @@ void CodecImpl::EnableOnStreamFailed() {
   is_on_stream_failed_enabled_ = true;
 }
 
-void CodecImpl::SetInputBufferSettings(fuchsia::media::StreamBufferSettings input_settings) {
-  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  PostToStreamControl([this, input_settings = std::move(input_settings)]() mutable {
-    SetInputBufferSettings_StreamControl(std::move(input_settings));
-  });
-}
-
-void CodecImpl::SetInputBufferSettings_StreamControl(
-    fuchsia::media::StreamBufferSettings input_settings) {
-  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
-    if (IsStoppingLocked()) {
-      return;
-    }
-    SetInputBufferSettingsCommon(lock, &input_settings, nullptr);
-  }  // ~lock
-}
-
-void CodecImpl::AddInputBuffer(fuchsia::media::StreamBuffer buffer) {
-  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  if (!ValidateStreamBuffer(buffer)) {
-    // If invalid, the channel will already be closed by ValidateStreamBuffer() and there is no more
-    // to do.
-    return;
-  }
-  PostToStreamControl([this, buffer = std::move(buffer)]() mutable {
-    AddInputBuffer_StreamControl(std::move(buffer));
-  });
-}
-
-void CodecImpl::AddInputBuffer_StreamControl(fuchsia::media::StreamBuffer buffer) {
-  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  ZX_DEBUG_ASSERT(buffer.has_buffer_lifetime_ordinal());
-  ZX_DEBUG_ASSERT(buffer.has_buffer_index());
-  ZX_DEBUG_ASSERT(buffer.has_data());
-  ZX_DEBUG_ASSERT(buffer.data().is_vmo());
-  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_handle());
-  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_start());
-  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_size());
-
-  {
-    std::unique_lock<std::mutex> lock(lock_);
-    if (port_settings_[kInputPort]->is_partial_settings()) {
-      Fail("AddOutputBuffer() not permitted when using sysmem");
-      return;
-    }
-  }
-
-  auto& vmo = buffer.mutable_data()->vmo();
-
-  AddInputBuffer_StreamControl(
-      CodecBuffer::Info{.port = kInputPort,
-                        .lifetime_ordinal = buffer.buffer_lifetime_ordinal(),
-                        .index = buffer.buffer_index(),
-                        .is_secure = false},
-      CodecVmoRange(std::move(*vmo.mutable_vmo_handle()), vmo.vmo_usable_start(),
-                    vmo.vmo_usable_size()));
-}
-
 void CodecImpl::AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info,
                                              CodecVmoRange vmo_range) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
@@ -421,15 +361,6 @@ void CodecImpl::SetInputBufferSettingsCommon(
                           *input_constraints_);
 }
 
-void CodecImpl::SetOutputBufferSettings(fuchsia::media::StreamBufferSettings output_settings) {
-  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  VLOGF("CodecImpl::SetOutputBufferSettings");
-  {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
-    SetOutputBufferSettingsCommon(lock, &output_settings, nullptr);
-  }  // ~lock
-}
-
 void CodecImpl::SetOutputBufferSettingsCommon(
     std::unique_lock<std::mutex>& lock, fuchsia::media::StreamBufferSettings* output_settings,
     fuchsia::media::StreamBufferPartialSettings* output_partial_settings) {
@@ -468,44 +399,6 @@ void CodecImpl::SetOutputBufferSettingsCommon(
 
   SetBufferSettingsCommon(lock, kOutputPort, output_settings, output_partial_settings,
                           output_constraints_->buffer_constraints());
-}
-
-void CodecImpl::AddOutputBuffer(fuchsia::media::StreamBuffer buffer) {
-  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  if (!ValidateStreamBuffer(buffer)) {
-    // If invalid, the channel will already be closed by ValidateStreamBuffer() and there is no more
-    // to do.
-    return;
-  }
-  AddOutputBufferInternal(std::move(buffer));
-}
-
-void CodecImpl::AddOutputBufferInternal(fuchsia::media::StreamBuffer buffer) {
-  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  ZX_DEBUG_ASSERT(buffer.has_buffer_lifetime_ordinal());
-  ZX_DEBUG_ASSERT(buffer.has_buffer_index());
-  ZX_DEBUG_ASSERT(buffer.has_data());
-  ZX_DEBUG_ASSERT(buffer.data().is_vmo());
-  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_handle());
-  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_start());
-  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_size());
-
-  {
-    std::unique_lock<std::mutex> lock(lock_);
-    if (port_settings_[kOutputPort]->is_partial_settings()) {
-      Fail("AddOutputBuffer() not permitted when using sysmem");
-      return;
-    }
-  }
-
-  auto& vmo = buffer.mutable_data()->vmo();
-
-  AddOutputBufferInternal(CodecBuffer::Info{.port = kOutputPort,
-                                            .lifetime_ordinal = buffer.buffer_lifetime_ordinal(),
-                                            .index = buffer.buffer_index(),
-                                            .is_secure = false},
-                          CodecVmoRange(std::move(*vmo.mutable_vmo_handle()),
-                                        vmo.vmo_usable_start(), vmo.vmo_usable_size()));
 }
 
 void CodecImpl::AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range) {
@@ -2150,43 +2043,6 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
       FailLocked("packet_count_for_client > packet_count_for_client_max");
       return false;
     }
-  }
-  return true;
-}
-
-bool CodecImpl::ValidateStreamBuffer(const fuchsia::media::StreamBuffer& buffer) {
-  // Validate that all required fields are present.
-  if (!buffer.has_buffer_lifetime_ordinal()) {
-    Fail("Client sent a StreamBuffer without a buffer_lifetime_ordinal field");
-    return false;
-  }
-  if (!buffer.has_buffer_index()) {
-    Fail("Client sent StreamBuffer without a buffer_index field");
-    return false;
-  }
-  if (!buffer.has_data()) {
-    Fail("Client sent a StreamBuffer without a data field");
-    return false;
-  }
-  if (!buffer.data().is_vmo()) {
-    Fail("Client sent a StreamBufferData without a vmo field");
-    return false;
-  }
-  if (!buffer.data().vmo().has_vmo_handle()) {
-    Fail("Client sent a StreamBufferDataVmo without a vmo_handle field");
-    return false;
-  }
-  if (!buffer.data().vmo().has_vmo_usable_start()) {
-    Fail("Client sent a StreamBufferDataVmo without a vmo_usable_start field");
-    return false;
-  }
-  if (!buffer.data().vmo().has_vmo_usable_size()) {
-    Fail("Client sent a StreamBufferDataVmo without a vmo_usable_size field");
-    return false;
-  }
-  if (!buffer.data().vmo().vmo_handle().is_valid()) {
-    Fail("Client sent a StreamBuffer with an invalid VMO");
-    return false;
   }
   return true;
 }

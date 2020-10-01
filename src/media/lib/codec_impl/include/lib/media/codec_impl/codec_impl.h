@@ -137,12 +137,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Codec interface
   //
   void EnableOnStreamFailed() override;
-  void SetInputBufferSettings(fuchsia::media::StreamBufferSettings input_settings) override;
-  void AddInputBuffer(fuchsia::media::StreamBuffer buffer) override;
   void SetInputBufferPartialSettings(
       fuchsia::media::StreamBufferPartialSettings input_settings) override;
-  void SetOutputBufferSettings(fuchsia::media::StreamBufferSettings output_settings) override;
-  void AddOutputBuffer(fuchsia::media::StreamBuffer buffer) override;
   void SetOutputBufferPartialSettings(
       fuchsia::media::StreamBufferPartialSettings output_settings) override;
   void CompleteOutputBufferPartialSettings(uint64_t buffer_lifetime_ordinal) override;
@@ -544,9 +540,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // Some of the FIDL messages get handled or partly handled on the
   // StreamControl thread.
-  void SetInputBufferSettings_StreamControl(fuchsia::media::StreamBufferSettings input_settings);
-  // Temporary until StreamProcessor.AddInputBuffer is removed.
-  void AddInputBuffer_StreamControl(fuchsia::media::StreamBuffer buffer);
   void AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
   void SetInputBufferPartialSettings_StreamControl(
       fuchsia::media::StreamBufferPartialSettings input_partial_settings);
@@ -593,10 +586,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
       CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
       const fuchsia::media::StreamBufferConstraints& constraints);
 
-  __WARN_UNUSED_RESULT bool ValidateStreamBuffer(const fuchsia::media::StreamBuffer& buffer);
-
-  // Temporary until StreamProcessor.AddOutputBuffer is removed.
-  void AddOutputBufferInternal(fuchsia::media::StreamBuffer buffer);
   void AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
 
   // Returns true if the port is done configuring (last buffer was added).
