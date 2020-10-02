@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_cobalt::LoggerFactoryMarker;
 use fidl_fuchsia_logger::LogSinkMarker;
-use fidl_fuchsia_net_interfaces::StateRequestStream;
+use fidl_fuchsia_net_interfaces::{StateRequest, StateRequestStream};
 use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
 use fidl_fuchsia_time_external::{Status, TimeSample};
 use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
@@ -109,13 +109,18 @@ impl NestedTimekeeper {
                         // Timekeeper uses the network state service to wait util the network is
                         // available. Since this isn't a hard dependency, timekeeper continues on
                         // to poll samples anyway even if the network service fails after
-                        // connecting. Therefore, the fake injected by the test accepts connections
-                        // and immediately drops the channel, which provides the minimal
+                        // connecting. Therefore, the fake injected by the test accepts
+                        // connections, holds the stream long enough for the single required
+                        // request to occur, then drops the channel. This provides the minimal
                         // implentation needed to bypass the network check.
                         // This can be removed once timekeeper is not responsible for the network
                         // check.
-                        InjectedServices::Network(_) => {
+                        InjectedServices::Network(mut stream) => {
                             debug!("Network state service connected.");
+                            if let Some(req) = stream.try_next().await.unwrap() {
+                                let StateRequest::GetWatcher { watcher: _watcher, .. } = req;
+                                debug!("Network watcher service connected.");
+                            }
                         }
                     }
                 })
