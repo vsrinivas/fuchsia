@@ -35,7 +35,17 @@ class CompositeDeviceInstance {
   void GetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
     size_t actual = std::min(comp_count, fragments_.size());
     for (size_t i = 0; i < actual; ++i) {
-      comp_list[i] = fragments_[i].get();
+      comp_list[i] = fragments_[i].device.get();
+    }
+    *comp_actual = actual;
+  }
+
+  void GetFragmentsNew(composite_device_fragment_t* comp_list, size_t comp_count,
+                       size_t* comp_actual) {
+    size_t actual = std::min(comp_count, fragments_.size());
+    for (size_t i = 0; i < actual; ++i) {
+      strncpy(comp_list[i].name, fragments_[i].name.c_str(), 32);
+      comp_list[i].device = fragments_[i].device.get();
     }
     *comp_actual = actual;
   }
@@ -45,7 +55,7 @@ class CompositeDeviceInstance {
   void Unbind() {
     for (auto& fragment : fragments_) {
       // Drop the reference to the composite device.
-      fragment->take_composite();
+      fragment.device->take_composite();
     }
     fragments_.reset();
     device_unbind_reply(zxdev_);
@@ -94,12 +104,10 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
                            size_t* comp_actual) {
       static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
     };
-    ops.get_fragment_count = [](void* ctx) {
-      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
-    };
-    ops.get_fragments = [](void* ctx, zx_device_t** comp_list, size_t comp_count,
-                           size_t* comp_actual) {
-      static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
+    ops.get_fragments_new = [](void* ctx, composite_device_fragment_t* comp_list, size_t comp_count,
+                               size_t* comp_actual) {
+      static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentsNew(comp_list, comp_count,
+                                                                  comp_actual);
     };
     return ops;
   }();
@@ -113,7 +121,7 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
   }
 
   for (auto& fragment : new_device->fragments()) {
-    fragment->set_composite(composite);
+    fragment.device->set_composite(composite);
   }
 
   dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);

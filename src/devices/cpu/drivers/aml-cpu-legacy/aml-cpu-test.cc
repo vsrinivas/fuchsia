@@ -72,6 +72,20 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
     }
   }
 
+  void CompositeGetFragmentsNew(composite_device_fragment_t* comp_list, size_t comp_count,
+                                size_t* comp_actual) {
+    size_t comp_cur;
+
+    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
+      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
+      comp_list[comp_cur].device = parent_;
+    }
+
+    if (comp_actual != nullptr) {
+      *comp_actual = comp_cur;
+    }
+  }
+
  private:
   // AmlCpu expects two fragments -- pdev and the thermal device.
   static constexpr size_t kNumFragments = 2;

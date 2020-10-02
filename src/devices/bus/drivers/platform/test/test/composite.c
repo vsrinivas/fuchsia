@@ -670,16 +670,20 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   uint32_t count = composite_get_fragment_count(&composite);
   size_t actual;
-  zx_device_t* fragments[count];
-  composite_get_fragments(&composite, fragments, count, &actual);
+  composite_device_fragment_t fragments[count];
+  composite_get_fragments_new(&composite, fragments, count, &actual);
   if (count != actual) {
     zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %zu)", DRIVER_NAME, count, actual);
     return ZX_ERR_BAD_STATE;
   }
 
   pdev_protocol_t pdev;
+  if (strncmp(fragments[FRAGMENT_PDEV_1].name, "ddk.protocol.platform.device.PDev", 32)) {
+    zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_PDEV_1].name);
+    return ZX_ERR_INTERNAL;
+  }
 
-  status = device_get_protocol(fragments[FRAGMENT_PDEV_1], ZX_PROTOCOL_PDEV, &pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV_1].device, ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PDEV", DRIVER_NAME);
     return status;
@@ -687,13 +691,14 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   size_t size;
   composite_test_metadata metadata;
-  status = device_get_metadata_size(fragments[FRAGMENT_PDEV_1], DEVICE_METADATA_PRIVATE, &size);
+  status =
+      device_get_metadata_size(fragments[FRAGMENT_PDEV_1].device, DEVICE_METADATA_PRIVATE, &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
     zxlogf(ERROR, "%s: device_get_metadata_size failed: %d", DRIVER_NAME, status);
     return ZX_ERR_INTERNAL;
   }
-  status = device_get_metadata(fragments[FRAGMENT_PDEV_1], DEVICE_METADATA_PRIVATE, &metadata,
-                               sizeof(metadata), &size);
+  status = device_get_metadata(fragments[FRAGMENT_PDEV_1].device, DEVICE_METADATA_PRIVATE,
+                               &metadata, sizeof(metadata), &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
     zxlogf(ERROR, "%s: device_get_metadata failed: %d", DRIVER_NAME, status);
     return ZX_ERR_INTERNAL;
@@ -724,32 +729,56 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       return ZX_ERR_BAD_STATE;
     }
 
-    status = device_get_protocol(fragments[FRAGMENT_CLOCK_1], ZX_PROTOCOL_CLOCK, &clock);
+    if (strncmp(fragments[FRAGMENT_CLOCK_1].name, "clock", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_CLOCK_1].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_CLOCK_1].device, ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_POWER_1], ZX_PROTOCOL_POWER, &power);
+    if (strncmp(fragments[FRAGMENT_POWER_1].name, "power", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_POWER_1].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_POWER_1].device, ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_CHILD4_1], ZX_PROTOCOL_CLOCK, &child4);
+    if (strncmp(fragments[FRAGMENT_CHILD4_1].name, "child4", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_CHILD4_1].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_CHILD4_1].device, ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol from child4", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_GPIO_1], ZX_PROTOCOL_GPIO, &gpio);
+    if (strncmp(fragments[FRAGMENT_GPIO_1].name, "gpio", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_GPIO_1].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_GPIO_1].device, ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_I2C_1], ZX_PROTOCOL_I2C, &i2c);
+    if (strncmp(fragments[FRAGMENT_I2C_1].name, "i2c", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_I2C_1].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_I2C_1].device, ZX_PROTOCOL_I2C, &i2c);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_CODEC_1], ZX_PROTOCOL_CODEC, &codec);
+    if (strncmp(fragments[FRAGMENT_CODEC_1].name, "codec", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_CODEC_1].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_CODEC_1].device, ZX_PROTOCOL_CODEC, &codec);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC", DRIVER_NAME);
       return status;
@@ -781,37 +810,65 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       return ZX_ERR_BAD_STATE;
     }
 
-    status = device_get_protocol(fragments[FRAGMENT_CLOCK_2], ZX_PROTOCOL_CLOCK, &clock);
+    if (strncmp(fragments[FRAGMENT_CLOCK_2].name, "clock", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_CLOCK_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_CLOCK_2].device, ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_POWER_2], ZX_PROTOCOL_POWER, &power);
+    if (strncmp(fragments[FRAGMENT_POWER_2].name, "power", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_POWER_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_POWER_2].device, ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_CHILD4_2], ZX_PROTOCOL_CLOCK, &child4);
+    if (strncmp(fragments[FRAGMENT_CHILD4_2].name, "child4", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_CHILD4_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_CHILD4_2].device, ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol from child4", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_SPI_2], ZX_PROTOCOL_SPI, &spi);
+    if (strncmp(fragments[FRAGMENT_SPI_2].name, "spi", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_SPI_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_SPI_2].device, ZX_PROTOCOL_SPI, &spi);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_SPI", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_PWM_2], ZX_PROTOCOL_PWM, &pwm);
+    if (strncmp(fragments[FRAGMENT_PWM_2].name, "pwm", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_PWM_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_PWM_2].device, ZX_PROTOCOL_PWM, &pwm);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_RPMB_2], ZX_PROTOCOL_RPMB, &rpmb);
+    if (strncmp(fragments[FRAGMENT_RPMB_2].name, "rpmb", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_RPMB_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_RPMB_2].device, ZX_PROTOCOL_RPMB, &rpmb);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_RPMB", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_VREG_2], ZX_PROTOCOL_VREG, &vreg);
+    if (strncmp(fragments[FRAGMENT_VREG_2].name, "vreg", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_VREG_2].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_VREG_2].device, ZX_PROTOCOL_VREG, &vreg);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_VREG", DRIVER_NAME);
       return status;
@@ -848,13 +905,24 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       return ZX_ERR_BAD_STATE;
     }
 
-    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL],
+    if (strncmp(fragments[FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL].name, "goldfish-address",
+                32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME,
+             fragments[FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_ADDRESS_SPACE_GOLDFISH_CTRL].device,
                                  ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE, &goldfish_address_space);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_ADDRESS_SPACE", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL],
+    if (strncmp(fragments[FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL].name, "goldfish-pipe", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME,
+             fragments[FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL].name);
+      return ZX_ERR_INTERNAL;
+    }
+    status = device_get_protocol(fragments[FRAGMENT_GOLDFISH_PIPE_GOLDFISH_CTRL].device,
                                  ZX_PROTOCOL_GOLDFISH_PIPE, &goldfish_pipe);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GOLDFISH_PIPE", DRIVER_NAME);

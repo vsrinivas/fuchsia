@@ -71,8 +71,9 @@ zx_status_t CompositeDevice::Create(
       }
       parts[j] = {std::move(match_program)};
     }
+    std::string name(fidl_fragment.name.data(), fidl_fragment.name.size());
 
-    auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), i, std::move(parts));
+    auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), name, i, std::move(parts));
     dev->unbound_.push_back(std::move(fragment));
   }
   *out = std::move(dev);
@@ -139,7 +140,7 @@ zx_status_t CompositeDevice::TryAssemble() {
   }
 
   Coordinator* coordinator = nullptr;
-  uint64_t fragment_local_ids[fuchsia_device_manager_FRAGMENTS_MAX] = {};
+  std::pair<std::string_view, uint64_t> fragments[fuchsia_device_manager_FRAGMENTS_MAX] = {};
 
   // Create all of the proxies for the fragment devices, in the same process
   for (auto& fragment : bound_) {
@@ -156,7 +157,8 @@ zx_status_t CompositeDevice::TryAssemble() {
     // Check if we need to use the proxy.  If not, share a reference to
     // the instance of the fragment device.
     if (bound_dev->host() == driver_host) {
-      fragment_local_ids[fragment.index()] = fragment_dev->local_id();
+      fragments[fragment.index()].first = fragment.name();
+      fragments[fragment.index()].second = fragment_dev->local_id();
       continue;
     }
 
@@ -178,7 +180,8 @@ zx_status_t CompositeDevice::TryAssemble() {
       ZX_ASSERT(driver_host != nullptr);
     }
     // Stash the local ID after the proxy has been created
-    fragment_local_ids[fragment.index()] = fragment_dev->proxy()->local_id();
+    fragments[fragment.index()].first = fragment.name();
+    fragments[fragment.index()].second = fragment_dev->proxy()->local_id();
   }
 
   zx::channel coordinator_rpc_local, coordinator_rpc_remote;
@@ -203,7 +206,7 @@ zx_status_t CompositeDevice::TryAssemble() {
   coordinator->devices().push_back(new_device);
 
   // Create the composite device in the driver_host
-  status = dh_send_create_composite_device(driver_host, new_device.get(), *this, fragment_local_ids,
+  status = dh_send_create_composite_device(driver_host, new_device.get(), *this, fragments,
                                            std::move(coordinator_rpc_remote),
                                            std::move(device_controller_rpc_local));
   if (status != ZX_OK) {
@@ -253,9 +256,10 @@ void CompositeDevice::Remove() {
 
 // CompositeDeviceFragment methods
 
-CompositeDeviceFragment::CompositeDeviceFragment(CompositeDevice* composite, uint32_t index,
+CompositeDeviceFragment::CompositeDeviceFragment(CompositeDevice* composite, std::string name,
+                                                 uint32_t index,
                                                  fbl::Array<const FragmentPartDescriptor> parts)
-    : composite_(composite), index_(index), parts_(std::move(parts)) {}
+    : composite_(composite), name_(name), index_(index), parts_(std::move(parts)) {}
 
 CompositeDeviceFragment::~CompositeDeviceFragment() = default;
 

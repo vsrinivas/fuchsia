@@ -373,6 +373,13 @@ __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
   return internal::ContextForApi()->DeviceAddComposite(dev_ref, name, comp_desc);
 }
 
+__EXPORT zx_status_t device_add_composite_new(zx_device_t* dev, const char* name,
+                                              const composite_device_desc_new_t* comp_desc) {
+  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
+  auto dev_ref = fbl::RefPtr(dev);
+  return internal::ContextForApi()->DeviceAddComposite(dev_ref, name, comp_desc);
+}
+
 __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   auto dev_ref = fbl::RefPtr(dev);

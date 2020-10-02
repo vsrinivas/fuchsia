@@ -231,10 +231,13 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {std::size(vreg_match), vreg_match},
   };
 
-  device_fragment_t composite[] = {
-      {std::size(gpio_fragment), gpio_fragment},     {std::size(clock_fragment), clock_fragment},
-      {std::size(i2c_fragment), i2c_fragment},       {std::size(power_fragment), power_fragment},
-      {std::size(child4_fragment), child4_fragment}, {std::size(codec_fragment), codec_fragment},
+  device_fragment_new_t composite[] = {
+      {"gpio", std::size(gpio_fragment), gpio_fragment},
+      {"clock", std::size(clock_fragment), clock_fragment},
+      {"i2c", std::size(i2c_fragment), i2c_fragment},
+      {"power", std::size(power_fragment), power_fragment},
+      {"child4", std::size(child4_fragment), child4_fragment},
+      {"codec", std::size(codec_fragment), codec_fragment},
   };
 
   struct composite_test_metadata metadata_1 = {
@@ -278,16 +281,19 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev.metadata_list = test_metadata_1;
   pdev.metadata_count = std::size(test_metadata_1);
 
-  status = pbus_composite_device_add(&pbus, &pdev, composite, std::size(composite), UINT32_MAX);
+  status = pbus_composite_device_add_new(&pbus, &pdev, composite, std::size(composite), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
   }
 
-  device_fragment_t composite2[] = {
-      {std::size(clock_fragment), clock_fragment},   {std::size(power_fragment), power_fragment},
-      {std::size(child4_fragment), child4_fragment}, {std::size(spi_fragment), spi_fragment},
-      {std::size(pwm_fragment), pwm_fragment},       {std::size(rpmb_fragment), rpmb_fragment},
-      {std::size(vreg_fragment), vreg_fragment},
+  device_fragment_new_t composite2[] = {
+      {"clock", std::size(clock_fragment), clock_fragment},
+      {"power", std::size(power_fragment), power_fragment},
+      {"child4", std::size(child4_fragment), child4_fragment},
+      {"spi", std::size(spi_fragment), spi_fragment},
+      {"pwm", std::size(pwm_fragment), pwm_fragment},
+      {"rpmb", std::size(rpmb_fragment), rpmb_fragment},
+      {"vreg", std::size(vreg_fragment), vreg_fragment},
   };
 
   pbus_dev_t pdev2 = {};
@@ -298,15 +304,17 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev2.metadata_list = test_metadata_2;
   pdev2.metadata_count = std::size(test_metadata_2);
 
-  status = pbus_composite_device_add(&pbus, &pdev2, composite2, std::size(composite2), UINT32_MAX);
+  status =
+      pbus_composite_device_add_new(&pbus, &pdev2, composite2, std::size(composite2), UINT32_MAX);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
   }
 
-  device_fragment_t goldfish_composite[] = {
-      {std::size(goldfish_address_space_fragment), goldfish_address_space_fragment},
-      {std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
+  device_fragment_new_t goldfish_composite[] = {
+      {"goldfish-address", std::size(goldfish_address_space_fragment),
+       goldfish_address_space_fragment},
+      {"goldfish-pipe", std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
   };
 
   pbus_dev_t pdev_goldfish_composite = {};
@@ -317,7 +325,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev_goldfish_composite.metadata_list = test_metadata_goldfish_control;
   pdev_goldfish_composite.metadata_count = std::size(test_metadata_goldfish_control);
 
-  status = pbus_composite_device_add(&pbus, &pdev_goldfish_composite, goldfish_composite,
+  status = pbus_composite_device_add_new(&pbus, &pdev_goldfish_composite, goldfish_composite,
                                      std::size(goldfish_composite), UINT32_MAX);
 
   if (status != ZX_OK) {

@@ -80,6 +80,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
     zx_bind_inst_t protocol = BI_MATCH_IF(EQ, BIND_PROTOCOL, protocol_ids[i]);
 
     llcpp::fuchsia::device::manager::DeviceFragment fragment;  // = &fragments[i];
+    fragment.name = ::fidl::StringView("unnamed-fragment");
     fragment.parts_count = 2;
     fragment.parts[0].match_program_count = 1;
     fragment.parts[0].match_program[0] = ::llcpp::fuchsia::device::manager::BindInstruction{
@@ -93,7 +94,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
         .arg = protocol.arg,
         .debug = always.debug,
     };
-    fragments.push_back(fragment);
+    fragments.push_back(std::move(fragment));
   }
 
   std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};

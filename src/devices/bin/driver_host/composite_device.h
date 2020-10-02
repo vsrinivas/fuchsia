@@ -12,7 +12,12 @@
 
 #include "zx_device.h"
 
-typedef fbl::Array<fbl::RefPtr<zx_device>> CompositeFragments;
+struct CompositeFragment {
+  std::string name;
+  fbl::RefPtr<zx_device> device;
+};
+
+typedef fbl::Array<CompositeFragment> CompositeFragments;
 
 // Modifies |device| to have the appropriate protocol_id, ctx, and ops tables
 // for a composite device

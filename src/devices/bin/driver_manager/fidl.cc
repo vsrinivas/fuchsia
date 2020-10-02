@@ -160,10 +160,12 @@ zx_status_t dh_send_complete_removal(Device* dev_ptr, fit::function<void()> cb) 
 zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
                                             const Device* composite_dev,
                                             const CompositeDevice& composite,
-                                            const uint64_t* fragment_local_ids,
+                                            const std::pair<std::string_view, uint64_t>* fragments,
                                             zx::channel coordinator_rpc,
                                             zx::channel device_controller_rpc) {
-  size_t fragments_size = composite.fragments_count() * sizeof(uint64_t);
+  size_t fragments_size = composite.fragments_count() *
+                          (FIDL_ALIGN(sizeof(fuchsia_device_manager_Fragment)) +
+                           (FIDL_ALIGN(sizeof(char) * fuchsia_device_manager_FRAGMENT_NAME_MAX)));
   size_t name_size = composite.name().size();
   uint32_t wr_num_bytes = static_cast<uint32_t>(
       sizeof(fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequest) +
@@ -172,10 +174,10 @@ zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
   fidl::Builder builder(wr_bytes, wr_num_bytes);
 
   auto req = builder.New<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequest>();
-  uint64_t* fragments_data =
-      builder.NewArray<uint64_t>(static_cast<uint32_t>(composite.fragments_count()));
-  char* name_data = builder.NewArray<char>(static_cast<uint32_t>(name_size));
-  ZX_ASSERT(req != nullptr && fragments_data != nullptr && name_data != nullptr);
+  fuchsia_device_manager_Fragment* fragments_data =
+      builder.NewArray<fuchsia_device_manager_Fragment>(
+          static_cast<uint32_t>(composite.fragments_count()));
+  ZX_ASSERT(req != nullptr && fragments_data != nullptr);
   // TODO(teisenbe): Allocate and track txids
   zx_txid_t txid = 1;
   fidl_init_txn_header(&req->hdr, txid,
@@ -186,8 +188,17 @@ zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
 
   req->fragments.count = composite.fragments_count();
   req->fragments.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
-  memcpy(fragments_data, fragment_local_ids, fragments_size);
+  for (size_t i = 0; i < composite.fragments_count(); i++) {
+    fragments_data[i].id = fragments[i].second;
+    fragments_data[i].name.size = fragments[i].first.size();
+    char* name_data = builder.NewArray<char>(static_cast<uint32_t>(fragments[i].first.size()));
+    ZX_ASSERT(name_data != nullptr);
+    fragments_data[i].name.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+    fragments[i].first.copy(name_data, fragments[i].first.size());
+  }
 
+  char* name_data = builder.NewArray<char>(static_cast<uint32_t>(name_size));
+  ZX_ASSERT(name_data != nullptr);
   req->name.size = name_size;
   req->name.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
   memcpy(name_data, composite.name().data(), name_size);

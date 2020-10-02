@@ -123,4 +123,6 @@ protocol PBus {
     /// drivers running in the platform bus's devhost. 
     CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceFragment> fragments,
                        uint32 coresident_device_index) -> (zx.status s);
+    CompositeDeviceAddNew(PbusDev dev, vector<ddk.driver.DeviceFragmentNew> fragments,
+                          uint32 coresident_device_index) -> (zx.status s);
 };

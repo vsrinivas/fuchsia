@@ -31,7 +31,7 @@ zx_status_t dh_send_complete_compatibility_tests(const Device* dev, zx_status_t 
 zx_status_t dh_send_create_composite_device(const fbl::RefPtr<DriverHost>& dh,
                                             const Device* composite_dev,
                                             const CompositeDevice& composite,
-                                            const uint64_t* fragment_local_ids,
+                                            const std::pair<std::string_view, uint64_t>* fragments,
                                             zx::channel coordinator_rpc,
                                             zx::channel device_controller_rpc);
 

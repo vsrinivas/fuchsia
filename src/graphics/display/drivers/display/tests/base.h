@@ -186,6 +186,11 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
                                      size_t fragments_count, uint32_t coresident_device_index) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+  zx_status_t PBusCompositeDeviceAddNew(const pbus_dev_t* dev,
+                                        const device_fragment_new_t* fragments_list,
+                                        size_t fragments_count, uint32_t coresident_device_index) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -236,6 +241,20 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
     for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
       comp_list[comp_cur] = parent_;
+    }
+
+    if (comp_actual != nullptr) {
+      *comp_actual = comp_cur;
+    }
+  }
+
+  void CompositeGetFragmentsNew(composite_device_fragment_t* comp_list, size_t comp_count,
+                                size_t* comp_actual) {
+    size_t comp_cur;
+
+    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
+      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
+      comp_list[comp_cur].device = parent_;
     }
 
     if (comp_actual != nullptr) {

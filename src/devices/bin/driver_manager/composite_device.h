@@ -46,7 +46,7 @@ class CompositeDeviceFragment
   using ListTag = internal::CdfListTag;
   using DeviceListTag = internal::CdfDeviceListTag;
 
-  CompositeDeviceFragment(CompositeDevice* composite, uint32_t index,
+  CompositeDeviceFragment(CompositeDevice* composite, std::string name, uint32_t index,
                           fbl::Array<const FragmentPartDescriptor> parts);
 
   CompositeDeviceFragment(CompositeDeviceFragment&&) = delete;
@@ -67,6 +67,7 @@ class CompositeDeviceFragment
   // Unbind this fragment.
   void Unbind();
 
+  std::string_view name() const { return name_; }
   uint32_t index() const { return index_; }
   CompositeDevice* composite() const { return composite_; }
   // If not nullptr, this fragment has been bound to this device
@@ -80,6 +81,9 @@ class CompositeDeviceFragment
  private:
   // The CompositeDevice that this is a part of
   CompositeDevice* const composite_;
+
+  // The name of this fragment within its CompositeDevice
+  const std::string name_;
 
   // The index of this fragment within its CompositeDevice
   const uint32_t index_;

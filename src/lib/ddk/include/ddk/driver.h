@@ -294,6 +294,12 @@ typedef struct device_fragment {
   const device_fragment_part_t* parts;
 } device_fragment_t;
 
+typedef struct device_fragment_new {
+  const char* name;
+  uint32_t parts_count;
+  const device_fragment_part_t* parts;
+} device_fragment_new_t;
+
 //
 typedef struct device_metadata {
   uint32_t type;
@@ -316,6 +322,22 @@ typedef struct composite_device_desc {
   size_t metadata_count;
 } composite_device_desc_t;
 
+typedef struct composite_device_desc_new {
+  const zx_device_prop_t* props;
+  size_t props_count;
+  const device_fragment_new_t* fragments;
+  size_t fragments_count;
+  uint32_t coresident_device_index;
+  const device_metadata_t* metadata_list;
+  size_t metadata_count;
+} composite_device_desc_new_t;
+
+// Neccesary because banjo cannot generate this type correctly.
+typedef struct composite_device_fragment {
+  char name[32];
+  zx_device_t* device;
+} composite_device_fragment_t;
+
 // Create a composite device with the properties |comp_desc|.
 // Once all of the fragment devices are found, the composite
 // device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the
@@ -330,6 +352,9 @@ typedef struct composite_device_desc {
 // Platform Bus Driver's device).
 zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                  const composite_device_desc_t* comp_desc);
+
+zx_status_t device_add_composite_new(zx_device_t* dev, const char* name,
+                                     const composite_device_desc_new_t* comp_desc);
 
 // temporary accessor for root resource handle
 zx_handle_t get_root_resource(void);

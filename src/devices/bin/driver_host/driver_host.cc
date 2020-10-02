@@ -513,24 +513,26 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
 void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-    ::fidl::VectorView<uint64_t> fragments, ::fidl::StringView name, uint64_t local_device_id,
+    ::fidl::VectorView<::llcpp::fuchsia::device::manager::Fragment> fragments,
+    ::fidl::StringView name, uint64_t local_device_id,
     CreateCompositeDeviceCompleter::Sync& completer) {
   // Convert the fragment IDs into zx_device references
-  CompositeFragments fragments_list(new fbl::RefPtr<zx_device>[fragments.count()],
-                                    fragments.count());
+  CompositeFragments fragments_list(new CompositeFragment[fragments.count()], fragments.count());
   {
     // Acquire the API lock so that we don't have to worry about concurrent
     // device removes
     fbl::AutoLock lock(&driver_host_context_->api_lock());
 
     for (size_t i = 0; i < fragments.count(); ++i) {
-      uint64_t local_id = fragments.data()[i];
+      const auto& fragment = fragments.data()[i];
+      uint64_t local_id = fragment.id;
       fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
       if (dev == nullptr || (dev->flags() & DEV_FLAG_DEAD)) {
         completer.Reply(ZX_ERR_NOT_FOUND);
         return;
       }
-      fragments_list[i] = std::move(dev);
+      fragments_list[i].name = std::string(fragment.name.data(), fragment.name.size());
+      fragments_list[i].device = std::move(dev);
     }
   }
 
@@ -1084,10 +1086,87 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
       parts[j] = part;
     }
     auto dc = fuchsia::device::manager::DeviceFragment{
+        .name = ::fidl::StringView("unamed-fragment"),
         .parts_count = comp_desc->fragments[i].parts_count,
         .parts = parts,
     };
-    compvec.push_back(dc);
+    compvec.push_back(std::move(dc));
+  }
+
+  std::vector<fuchsia::device::manager::DeviceMetadata> metadata = {};
+  for (size_t i = 0; i < comp_desc->metadata_count; i++) {
+    auto meta = fuchsia::device::manager::DeviceMetadata{
+        .key = comp_desc->metadata_list[i].type,
+        .data = fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(
+                                     const_cast<void*>(comp_desc->metadata_list[i].data))),
+                                 comp_desc->metadata_list[i].length)};
+    metadata.emplace_back(std::move(meta));
+  }
+
+  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props = {};
+  for (size_t i = 0; i < comp_desc->props_count; i++) {
+    props.push_back(convert_device_prop(comp_desc->props[i]));
+  }
+
+  fuchsia::device::manager::CompositeDeviceDescriptor comp_dev = {
+      .props = ::fidl::unowned_vec(props),
+      .fragments = ::fidl::unowned_vec(compvec),
+      .coresident_device_index = comp_desc->coresident_device_index,
+      .metadata = ::fidl::unowned_vec(metadata)};
+
+  static_assert(sizeof(comp_desc->props[0]) == sizeof(uint64_t));
+  auto response = fuchsia::device::manager::Coordinator::Call::AddCompositeDevice(
+      zx::unowned_channel(rpc.get()), ::fidl::unowned_str(name, strlen(name)), std::move(comp_dev));
+  zx_status_t status = response.status();
+  zx_status_t call_status = ZX_OK;
+  if (status == ZX_OK && response->result.is_err()) {
+    call_status = response->result.err();
+  }
+  return log_rpc_result(dev, "create-composite", status, call_status);
+}
+
+zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev,
+                                                  const char* name,
+                                                  const composite_device_desc_new_t* comp_desc) {
+  if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
+      comp_desc->fragments == nullptr || name == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const zx::channel& rpc = *dev->coordinator_rpc;
+  if (!rpc.is_valid()) {
+    return ZX_ERR_IO_REFUSED;
+  }
+
+  VLOGD(1, *dev, "create-composite");
+  std::vector<fuchsia::device::manager::DeviceFragment> compvec = {};
+  for (size_t i = 0; i < comp_desc->fragments_count; i++) {
+    ::fidl::Array<fuchsia::device::manager::DeviceFragmentPart,
+                  fuchsia::device::manager::DEVICE_FRAGMENT_PARTS_MAX>
+        parts{};
+    for (uint32_t j = 0; j < comp_desc->fragments[i].parts_count; j++) {
+      ::fidl::Array<fuchsia::device::manager::BindInstruction,
+                    fuchsia::device::manager::DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX>
+          bind_instructions{};
+      for (uint32_t k = 0; k < comp_desc->fragments[i].parts[j].instruction_count; k++) {
+        bind_instructions[k] = fuchsia::device::manager::BindInstruction{
+            .op = comp_desc->fragments[i].parts[j].match_program[k].op,
+            .arg = comp_desc->fragments[i].parts[j].match_program[k].arg,
+            .debug = comp_desc->fragments[i].parts[j].match_program[k].debug,
+        };
+      }
+      auto part = fuchsia::device::manager::DeviceFragmentPart{
+          .match_program_count = comp_desc->fragments[i].parts[j].instruction_count,
+          .match_program = bind_instructions,
+      };
+      parts[j] = part;
+    }
+    auto dc = fuchsia::device::manager::DeviceFragment{
+        .name = ::fidl::StringView{fidl::unowned_ptr(comp_desc->fragments[i].name),
+                                   strnlen(comp_desc->fragments[i].name, 32)},
+        .parts_count = comp_desc->fragments[i].parts_count,
+        .parts = parts,
+    };
+    compvec.push_back(std::move(dc));
   }
 
   std::vector<fuchsia::device::manager::DeviceMetadata> metadata = {};

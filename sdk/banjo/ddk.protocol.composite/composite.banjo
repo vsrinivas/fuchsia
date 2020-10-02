@@ -15,4 +15,6 @@ protocol Composite {
     /// in which they were provided to device_add_composite().  The returned
     /// devices must not be used after the composite device is unbound.
     GetFragments() -> (vector<ddk.driver.ZxDevice?> fragment);
+    GetFragmentsNew() -> (vector<ddk.driver.CompositeDeviceFragment> fragment);
+    //GetFragment(string:32 name) -> (ddk.driver.ZxDevice? fragment);
 };

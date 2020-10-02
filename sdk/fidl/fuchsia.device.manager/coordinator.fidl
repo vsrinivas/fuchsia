@@ -85,6 +85,7 @@ struct DeviceFragment {
     // This is an awful hack around the LLCPP bindings not being ready yet.
     // Since we're using the C ones for now, we can only embed these structures as
     // arrays instead of vectors.
+    string:32 name;
     uint32 parts_count;
     array<DeviceFragmentPart>:DEVICE_FRAGMENT_PARTS_MAX parts;
 };
@@ -155,8 +156,15 @@ protocol DeviceController {
     CompleteCompatibilityTests(CompatibilityTestStatus status);
 };
 
-/// Protocol for controlling a devhost process from the devcoordinator
+const uint32 FRAGMENT_NAME_MAX = 32;
+
 [ForDeprecatedCBindings]
+struct Fragment {
+    string:FRAGMENT_NAME_MAX name;
+    LocalDeviceId id;
+};
+
+/// Protocol for controlling a devhost process from the devcoordinator
 protocol DevhostController {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given `protocol_id`.  This device will communicate
@@ -190,7 +198,7 @@ protocol DevhostController {
     /// `local_device_id` will be a unique value within the device's devhost, identifying
     /// the resulting composite device.
     CreateCompositeDevice(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc,
-                          vector<LocalDeviceId>:FRAGMENTS_MAX fragments,
+                          vector<Fragment>:FRAGMENTS_MAX fragments,
                           string:DEVICE_NAME_MAX name, LocalDeviceId local_device_id)
         -> (zx.status status);
 };

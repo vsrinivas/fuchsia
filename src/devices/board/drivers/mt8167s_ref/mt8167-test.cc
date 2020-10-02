@@ -43,6 +43,12 @@ class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
                                      size_t fragments_count, uint32_t t_coresident_device_index) {
     return ZX_OK;
   }
+  zx_status_t PBusCompositeDeviceAddNew(const pbus_dev_t* dev,
+                                        const device_fragment_new_t* fragments_list,
+                                        size_t fragments_count,
+                                        uint32_t t_coresident_device_index) {
+    return ZX_OK;
+  }
 
   void TestInitMmPll();
 
