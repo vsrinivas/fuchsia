@@ -13,15 +13,13 @@ Future<void> main(List<String> args) async {
   // to be correctly initialized inside [ui.window.onMetricsChanged].
   if (ui.window.physicalSize.isEmpty) {
     print('Awaiting window.onMetricsChanged...');
-    await Future(() {
-      final completer = Completer();
-      ui.window.onMetricsChanged = () {
-        if (!ui.window.physicalSize.isEmpty) {
-          completer.complete();
-        }
-      };
-      return completer.future;
-    });
+    final completer = Completer();
+    ui.window.onMetricsChanged = () {
+      if (!ui.window.physicalSize.isEmpty) {
+        completer.complete();
+      }
+    };
+    await completer.future;
     print('Received window.onMetricsChanged: ${ui.window.physicalSize}');
   }
 
