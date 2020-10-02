@@ -314,7 +314,7 @@ impl FormattedRamdisk {
 
     /// Shuts down this ramdisk.
     pub fn stop(self) -> Result<(), Error> {
-        Ok(self.0.client.destroy()?)
+        self.0.stop()
     }
 }
 
