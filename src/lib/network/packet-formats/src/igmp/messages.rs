@@ -687,7 +687,8 @@ mod tests {
 
     #[test]
     fn test_unknown_type() {
-        let buff = &mut igmp_invalid_buffers::UNKNOWN_TYPE;
+        let mut buff = igmp_invalid_buffers::UNKNOWN_TYPE.to_vec();
+        let mut buff = buff.as_mut_slice();
         let packet = buff.parse_with::<_, IgmpPacket<_>>(());
         // we don't use expect_err here because IgmpPacket does not implement
         // std::fmt::Debug
@@ -696,7 +697,8 @@ mod tests {
 
     #[test]
     fn test_full_parses() {
-        for buff in ALL_BUFFERS.iter_mut() {
+        let mut bufs = ALL_BUFFERS.to_vec();
+        for buff in bufs.iter_mut() {
             let orig_req = &buff[..];
             let packet = buff.parse_with::<_, IgmpPacket<_>>(()).unwrap();
             let msg_type = match packet {

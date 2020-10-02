@@ -78,7 +78,7 @@ mod test {
         let test_fut = async move {
             assert_eq!(
                 control_proxy
-                    .transfer_account(TEST_ACCOUNT_ID, &mut TEST_NODE_ID, Lifetime::Persistent)
+                    .transfer_account(TEST_ACCOUNT_ID, &mut TEST_NODE_ID.clone(), Lifetime::Persistent)
                     .await?,
                 Err(ApiError::UnsupportedOperation)
             );

@@ -937,7 +937,7 @@ macro_rules! impl_slice_encoding_by_copy {
                 recursion_depth: usize,
             ) -> Result<()> {
                 (self.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-                ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
+                ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
                 Encoder::check_recursion_depth(recursion_depth + 1)?;
                 if self.len() == 0 {
                     return Ok(());
@@ -1159,7 +1159,7 @@ pub unsafe fn encode_vector<T: Encodable>(
         Some(slice) => {
             // Two u64: (len, present)
             (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
             // write_out_of_line must not be called with a zero-sized out-of-line block.
             if slice.len() == 0 {
                 return Ok(());
@@ -1185,7 +1185,7 @@ pub unsafe fn encode_absent_vector(
     recursion_depth: usize,
 ) -> Result<()> {
     0u64.unsafe_encode(encoder, offset, recursion_depth)?;
-    ALLOC_ABSENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)
+    ALLOC_ABSENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)
 }
 
 /// Like `encode_vector`, but optimized for `&[u8]`.
@@ -1200,7 +1200,7 @@ unsafe fn encode_vector_from_bytes(
         Some(slice) => {
             // Two u64: (len, present)
             (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
             Encoder::check_recursion_depth(recursion_depth + 1)?;
             encoder.append_out_of_line_bytes(slice);
             Ok(())
@@ -1225,7 +1225,7 @@ where
         Some(iter) => {
             // Two u64: (len, present)
             (iter.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
             if iter.len() == 0 {
                 return Ok(());
             }
@@ -1940,7 +1940,7 @@ impl Encodable for Handle {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        ALLOC_PRESENT_U32.unsafe_encode(encoder, offset, recursion_depth)?;
+        ALLOC_PRESENT_U32.clone().unsafe_encode(encoder, offset, recursion_depth)?;
         let handle = take_handle(self);
         encoder.handles.push(handle);
         Ok(())
@@ -1976,7 +1976,7 @@ impl Encodable for Option<Handle> {
     ) -> Result<()> {
         match self {
             Some(handle) => handle.encode(encoder, offset, recursion_depth),
-            None => ALLOC_ABSENT_U32.encode(encoder, offset, recursion_depth),
+            None => ALLOC_ABSENT_U32.clone().encode(encoder, offset, recursion_depth),
         }
     }
 }
@@ -2057,7 +2057,7 @@ macro_rules! handle_based_codable {
             {
                 match self {
                     Some(handle) => $crate::fidl_encode!(handle, encoder, offset, recursion_depth),
-                    None => $crate::fidl_encode!(&mut $crate::encoding::ALLOC_ABSENT_U32, encoder, offset, recursion_depth),
+                    None => $crate::fidl_encode!(&mut $crate::encoding::ALLOC_ABSENT_U32.clone(), encoder, offset, recursion_depth),
                 }
             }
         }
@@ -2214,7 +2214,7 @@ impl<T: Autonull> Encodable for Option<&mut T> {
         } else {
             match self {
                 Some(x) => {
-                    ALLOC_PRESENT_U64.encode(encoder, offset, recursion_depth)?;
+                    ALLOC_PRESENT_U64.clone().encode(encoder, offset, recursion_depth)?;
                     encoder.write_out_of_line(
                         encoder.inline_size_of::<T>(),
                         recursion_depth,
@@ -2223,7 +2223,7 @@ impl<T: Autonull> Encodable for Option<&mut T> {
                         },
                     )
                 }
-                None => ALLOC_ABSENT_U64.encode(encoder, offset, recursion_depth),
+                None => ALLOC_ABSENT_U64.clone().encode(encoder, offset, recursion_depth),
             }
         }
     }
@@ -2575,7 +2575,7 @@ pub unsafe fn encode_in_envelope(
         Some(x) => {
             // Start at offset 8 because we write the first 8 bytes (number of bytes and number
             // number of handles, both u32) at the end.
-            ALLOC_PRESENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
             encoder.write_out_of_line(
@@ -2591,7 +2591,7 @@ pub unsafe fn encode_in_envelope(
         None => {
             0u32.unsafe_encode(encoder, offset, recursion_depth)?; // num_bytes
             0u32.unsafe_encode(encoder, offset + 4, recursion_depth)?; // num_handles
-            ALLOC_ABSENT_U64.unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_ABSENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
         }
     }
     Ok(())
@@ -2668,7 +2668,7 @@ macro_rules! fidl_table {
                 let max_ordinal = self.find_max_ordinal();
                 unsafe {
                     $crate::fidl_unsafe_encode!(&mut (max_ordinal as u64), encoder, offset, recursion_depth)?;
-                    $crate::fidl_unsafe_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 8, recursion_depth)?;
+                    $crate::fidl_unsafe_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64.clone(), encoder, offset + 8, recursion_depth)?;
                 }
                 // write_out_of_line must not be called with a zero-sized out-of-line block.
                 if max_ordinal == 0 {
@@ -3049,7 +3049,7 @@ macro_rules! fidl_xunion {
                             $crate::fidl_unsafe_encode!(&mut (bytes.len() as u32), encoder, offset + 8, recursion_depth)?;
                             $crate::fidl_unsafe_encode!(&mut (handles.len() as u32), encoder, offset + 12, recursion_depth)?;
                             $crate::fidl_unsafe_encode!(
-                                &mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 16, recursion_depth
+                                &mut $crate::encoding::ALLOC_PRESENT_U64.clone(), encoder, offset + 16, recursion_depth
                             )?;
                             $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
                             encoder.append_out_of_line_bytes(bytes);
@@ -3762,10 +3762,10 @@ mod test {
     #[test]
     fn encode_decode_nan() {
         for ctx in CONTEXTS {
-            let nan32 = encode_decode(ctx, &mut f32::NAN);
+            let nan32 = encode_decode(ctx, &mut f32::NAN.clone());
             assert!(nan32.is_nan());
 
-            let nan64 = encode_decode(ctx, &mut f64::NAN);
+            let nan64 = encode_decode(ctx, &mut f64::NAN.clone());
             assert!(nan64.is_nan());
         }
     }

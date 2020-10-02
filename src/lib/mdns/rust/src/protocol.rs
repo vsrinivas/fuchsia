@@ -1170,7 +1170,7 @@ mod tests {
 
     #[test]
     fn test_domain_parse_middle() {
-        let packet = &mut DOMAIN_BYTES[..];
+        let packet = &mut DOMAIN_BYTES.to_vec();
         packet[3] = 0;
         let mut bv = BufferViewWrapper(&packet[..]);
         assert_eq!(Domain::parse(&mut bv, None).unwrap_err(), ParseError::UnexpectedZeroCharacter);
@@ -1178,7 +1178,7 @@ mod tests {
 
     #[test]
     fn test_domain_parse_label_too_long() {
-        let packet = &mut DOMAIN_BYTES[..];
+        let packet = &mut DOMAIN_BYTES.to_vec();
         let bad_len = 65u8;
         packet[0] = bad_len;
         let mut bv = BufferViewWrapper(&packet[..]);

@@ -806,7 +806,7 @@ mod tests {
         bytes: &mut Vec<u8>,
         handles: &mut Vec<zx::Handle>,
     ) {
-        let event = &mut TransactionMessage { header: header, body: &mut SEND_DATA };
+        let event = &mut TransactionMessage { header: header, body: &mut SEND_DATA.clone() };
         Encoder::encode(bytes, handles, event).expect("Encoding failure");
     }
 
@@ -814,7 +814,7 @@ mod tests {
     fn sync_client() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
         let mut client = sync::Client::new(client_end);
-        client.send(&mut SEND_DATA, SEND_ORDINAL).context("sending")?;
+        client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).context("sending")?;
         let mut received = MessageBuf::new();
         server_end.read(&mut received).context("reading")?;
         let one_way_tx_id = 0;
@@ -840,7 +840,7 @@ mod tests {
             send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
         });
         let response_data = client
-            .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL, zx::Time::after(5.seconds()))
+            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL, zx::Time::after(5.seconds()))
             .context("sending query")?;
         assert_eq!(SEND_DATA, response_data);
         Ok(())
@@ -865,7 +865,7 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
 
         let sender = fasync::Timer::new(100.millis().after_now()).map(|()| {
-            client.send(&mut SEND_DATA, SEND_ORDINAL).expect("failed to send msg");
+            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).expect("failed to send msg");
         });
 
         join!(receiver, sender);
@@ -895,7 +895,7 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = client
-            .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL)
+            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
             .map_ok(|x| assert_eq!(x, SEND_DATA))
             .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 
@@ -1332,7 +1332,7 @@ mod tests {
             .close_with_epitaph(zx_status::Status::UNAVAILABLE)
             .expect("failed to write epitaph");
 
-        let result = client.send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL).await;
+        let result = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL).await;
         assert_matches!(
             result,
             Err(crate::Error::ClientChannelClosed {
@@ -1352,7 +1352,7 @@ mod tests {
         let server = AsyncChannel::from_channel(server_end).unwrap();
 
         // Sending works, and checking when a message successfully sends returns itself.
-        let active_fut = client.send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL);
+        let active_fut = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL);
 
         let mut checked_fut = active_fut.check().expect("failed to check future");
 
@@ -1375,7 +1375,7 @@ mod tests {
         // Close the server channel, meaning the next query will fail before it even starts.
         drop(server);
 
-        let query_fut = client.send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL);
+        let query_fut = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL);
 
         // This should be an error, because the server end is closed.
         query_fut.check().expect_err("Didn't make an error on check");
