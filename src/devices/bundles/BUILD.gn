@@ -102,7 +102,6 @@ group("manual_testing") {
     "//src/devices/usb/bin/usb-fwloader",
     "//src/devices/usb/bin/xdc-test",
     "//src/devices/usb/drivers/usb-peripheral-test",
-    "//src/devices/usb/drivers/usb-test/flash-programmer",
   ]
 }
 
