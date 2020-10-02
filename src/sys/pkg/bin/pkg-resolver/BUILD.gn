@@ -93,6 +93,7 @@ rustc_library("lib") {
     "src/experiment.rs",
     "src/font_package_manager.rs",
     "src/inspect_util.rs",
+    "src/local_mirror.rs",
     "src/main.rs",
     "src/metrics_util.rs",
     "src/ota_channel.rs",

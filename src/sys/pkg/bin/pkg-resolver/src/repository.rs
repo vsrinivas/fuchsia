@@ -6,13 +6,13 @@
 #![allow(deprecated)]
 
 use {
+    crate::local_mirror::LocalMirrorWrapper,
     crate::{
         cache::MerkleForError, clock, error, inspect_util,
         metrics_util::tuf_error_as_create_tuf_client_event_code, TCP_KEEPALIVE_TIMEOUT,
     },
     anyhow::{anyhow, format_err},
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{
         BlobId, MirrorConfig, RepositoryConfig, RepositoryKey, RepositoryStorageType,
     },
@@ -86,7 +86,7 @@ impl Repository {
         config: &RepositoryConfig,
         mut cobalt_sender: CobaltSender,
         node: inspect::Node,
-        local_mirror: Option<LocalMirrorProxy>,
+        local_mirror: Option<LocalMirrorWrapper>,
         tuf_metadata_timeout: Duration,
     ) -> Result<Self, anyhow::Error> {
         let mirror_config = config.mirrors().get(0);
@@ -222,7 +222,7 @@ fn get_local_repo(
 fn get_remote_repo(
     config: &RepositoryConfig,
     mirror_config: Option<&MirrorConfig>,
-    local_mirror: Option<LocalMirrorProxy>,
+    local_mirror: Option<LocalMirrorWrapper>,
 ) -> Result<Box<dyn RepositoryProvider<Json> + Send>, anyhow::Error> {
     if config.use_local_mirror() && mirror_config.is_some() {
         return Err(format_err!("Cannot have a local mirror and remote mirrors!"));

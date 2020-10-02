@@ -5,7 +5,7 @@ use {
     anyhow::{anyhow, Context as _, Error},
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
+    fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
@@ -31,6 +31,7 @@ mod error;
 mod experiment;
 mod font_package_manager;
 mod inspect_util;
+mod local_mirror;
 mod metrics_util;
 mod ota_channel;
 mod queue;
@@ -50,6 +51,7 @@ use crate::{
     config::Config,
     experiment::Experiments,
     font_package_manager::{FontPackageManager, FontPackageManagerBuilder},
+    local_mirror::LocalMirrorWrapper,
     ota_channel::ChannelInspectState,
     repository_manager::{RepositoryManager, RepositoryManagerBuilder},
     repository_service::RepositoryService,
@@ -120,14 +122,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
     let pkg_cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
-    let local_mirror = if args.allow_local_mirror {
-        Some(
-            connect_to_service::<LocalMirrorMarker>()
-                .context("error connecting to local mirror")?,
-        )
-    } else {
-        None
-    };
+    let local_mirror = if args.allow_local_mirror { Some(LocalMirrorWrapper::new()) } else { None };
 
     let pkgfs_install = pkgfs::install::Client::open_from_namespace()
         .context("error connecting to pkgfs/install")?;
@@ -309,7 +304,7 @@ fn load_repo_manager(
     experiments: Experiments,
     config: &Config,
     mut cobalt_sender: CobaltSender,
-    local_mirror: Option<LocalMirrorProxy>,
+    local_mirror: Option<LocalMirrorWrapper>,
     tuf_metadata_timeout: Duration,
 ) -> RepositoryManager {
     // report any errors we saw, but don't error out because otherwise we won't be able

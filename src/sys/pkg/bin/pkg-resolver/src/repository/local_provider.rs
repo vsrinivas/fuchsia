@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::local_mirror::LocalMirrorWrapper,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_io::{FileEvent, FileMarker},
-    fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::RepositoryUrl,
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
@@ -19,12 +19,12 @@ use {
 };
 
 pub struct LocalMirrorRepositoryProvider {
-    proxy: LocalMirrorProxy,
+    proxy: LocalMirrorWrapper,
     url: RepoUrl,
 }
 
 impl LocalMirrorRepositoryProvider {
-    pub fn new(proxy: LocalMirrorProxy, url: RepoUrl) -> Self {
+    pub fn new(proxy: LocalMirrorWrapper, url: RepoUrl) -> Self {
         Self { proxy, url }
     }
 }
@@ -147,6 +147,10 @@ mod tests {
                 mirror.handle_request_stream(stream).await.expect("handle_request_stream ok");
             });
 
+            //FIXME: this test is broken because I can't wire in the proxy to the
+            //LocalMirrorWrapper.
+            let _ = proxy;
+            let proxy = LocalMirrorWrapper::new();
             let provider = LocalMirrorRepositoryProvider::new(proxy, url);
 
             TestEnv { _repo: repo, _task: task, provider }

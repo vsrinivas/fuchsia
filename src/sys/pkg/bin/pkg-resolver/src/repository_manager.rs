@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::local_mirror::LocalMirrorWrapper,
     crate::{
         cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus},
         experiment::Experiments,
@@ -12,7 +13,6 @@ use {
     },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
@@ -42,7 +42,7 @@ pub struct RepositoryManager {
     repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     cobalt_sender: CobaltSender,
     inspect: RepositoryManagerInspectState,
-    local_mirror: Option<LocalMirrorProxy>,
+    local_mirror: Option<LocalMirrorWrapper>,
     tuf_metadata_timeout: Duration,
 }
 
@@ -315,7 +315,7 @@ async fn open_cached_or_new_repository(
     url: &RepoUrl,
     cobalt_sender: CobaltSender,
     inspect_node: Arc<inspect::Node>,
-    local_mirror: Option<LocalMirrorProxy>,
+    local_mirror: Option<LocalMirrorWrapper>,
     tuf_metadata_timeout: Duration,
 ) -> Result<Arc<AsyncMutex<Repository>>, OpenRepoError> {
     if let Some(conn) = repositories.read().get(url) {
@@ -363,7 +363,7 @@ pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode>
     experiments: Experiments,
     cobalt_sender: S,
     inspect_node: N,
-    local_mirror: Option<LocalMirrorProxy>,
+    local_mirror: Option<LocalMirrorWrapper>,
     tuf_metadata_timeout: Duration,
 }
 
@@ -403,7 +403,7 @@ impl<S, N> RepositoryManagerBuilder<S, N> {
     }
 
     /// Customize the [RepositoryManager] with a local mirror.
-    pub fn with_local_mirror(mut self, proxy: Option<LocalMirrorProxy>) -> Self {
+    pub fn with_local_mirror(mut self, proxy: Option<LocalMirrorWrapper>) -> Self {
         self.local_mirror = proxy;
         self
     }

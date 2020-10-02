@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{queue, repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
+    crate::{
+        local_mirror::LocalMirrorWrapper, queue, repository::Repository, repository_manager::Stats,
+        TCP_KEEPALIVE_TIMEOUT,
+    },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::{LocalMirrorProxy, PackageCacheProxy},
+    fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt::CobaltSender,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -518,7 +521,7 @@ pub fn make_blob_fetch_queue(
     max_concurrency: usize,
     stats: Arc<Mutex<Stats>>,
     cobalt_sender: CobaltSender,
-    local_mirror_proxy: Option<LocalMirrorProxy>,
+    local_mirror_proxy: Option<LocalMirrorWrapper>,
     blob_fetch_params: BlobFetchParams,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client_from_tcp_options(
@@ -564,7 +567,7 @@ async fn fetch_blob(
     cobalt_sender: CobaltSender,
     merkle: BlobId,
     context: FetchBlobContext,
-    local_mirror_proxy: Option<&LocalMirrorProxy>,
+    local_mirror_proxy: Option<&LocalMirrorWrapper>,
     blob_fetch_params: BlobFetchParams,
 ) -> Result<(), FetchError> {
     let use_remote_mirror = context.mirrors.len() != 0;
@@ -725,7 +728,7 @@ async fn fetch_blob_http(
 
 async fn fetch_blob_local(
     inspect: inspect::TriggerAttempt<inspect::LocalMirror>,
-    local_mirror: &LocalMirrorProxy,
+    local_mirror: &LocalMirrorWrapper,
     merkle: BlobId,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
@@ -746,7 +749,7 @@ async fn fetch_blob_local(
 
 async fn read_local_blob(
     inspect: &inspect::Attempt<inspect::LocalMirror>,
-    proxy: &LocalMirrorProxy,
+    proxy: &LocalMirrorWrapper,
     merkle: BlobId,
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
