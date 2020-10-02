@@ -2040,6 +2040,16 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   EXPECT_GT(histogram[kBgraColor], 0u);
   histogram.erase(kBgraColor);
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+
+  session->Enqueue(scenic::NewReleaseResourceCmd(kShapeId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kShapeNodeId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kMaterialId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kImageId));
+
+  RunLoopUntilIdle();
+  Present(session);
+
+  session->DeregisterBufferCollection(kBufferId);
 }
 
 TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
@@ -2191,6 +2201,16 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   EXPECT_GT(histogram[kBgraColor], 0u);
   histogram.erase(kBgraColor);
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+
+  session->Enqueue(scenic::NewReleaseResourceCmd(kShapeId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kShapeNodeId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kMaterialId));
+  session->Enqueue(scenic::NewReleaseResourceCmd(kImageId));
+
+  RunLoopUntilIdle();
+  Present(session);
+
+  session->DeregisterBufferCollection(kBufferId);
 }
 
 }  // namespace

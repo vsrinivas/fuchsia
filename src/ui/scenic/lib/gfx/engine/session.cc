@@ -196,16 +196,15 @@ void Session::DeregisterBufferCollection(uint32_t buffer_collection_id) {
     return;
   }
 
-  auto buffer_collections_it = buffer_collections_.find(buffer_collection_id);
+  auto buffer_collection = buffer_collections_.extract(buffer_collection_id);
 
-  if (buffer_collections_it == buffer_collections_.end()) {
+  if (buffer_collection.empty()) {
     error_reporter_->ERROR() << "DeregisterBufferCollection failed, buffer_collection_id "
                              << buffer_collection_id << " not found.";
     return;
   }
 
-  buffer_collections_.erase(buffer_collections_it);
-  deregistered_buffer_collections_.push_back(std::move(buffer_collections_it->second));
+  deregistered_buffer_collections_.push_back(std::move(buffer_collection.mapped()));
 }
 
 }  // namespace gfx
