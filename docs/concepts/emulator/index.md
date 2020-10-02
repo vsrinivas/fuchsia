@@ -52,19 +52,6 @@ When using the Fuchsia IDK to set up FEMU, you are limited to the following pre-
 *   `qemu-arm64`
 
 
-### FEMU discoverability {#femu-discoverability}
-
-When looking for an emulated device using the Fuchsia SDK, you have to specify
-the `--netboot` option. For example, searching for devices using `device-finder`,
-you need to use the following command:
-
-```none
-device-finder list -netboot
-```
-
-See [device-finder](/docs/development/sdk/documentation/device_discovery.md) for
-more information about finding Fuchsia devices.
-
 ### FEMU networking  {#femu-networking}
 
 The Fuchsia Emulator should generally be run with the `-N` flag that provides networking through an

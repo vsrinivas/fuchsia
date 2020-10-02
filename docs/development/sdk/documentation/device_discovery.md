@@ -20,8 +20,7 @@ $ ./device-finder list
 
 This will give you the addresses of all Fuchsia devices on the network. If you'd
 like to get their hostnames as well as their addresses, you can include the
-`-full` flag. If you also want to find Fuchsia emulator (FEMU) devices
-use the `-netboot` flag.
+`-full` flag.
 
 ### Finding devices by hostname
 
