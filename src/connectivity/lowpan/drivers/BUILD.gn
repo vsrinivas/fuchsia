@@ -4,7 +4,6 @@
 
 group("drivers") {
   deps = [
-    "lowpan-dummy-driver",
     "lowpan-spinel-driver",
     "spinel_spi_driver",
   ]
@@ -13,6 +12,7 @@ group("drivers") {
 group("tests") {
   testonly = true
   public_deps = [
+    "lowpan-dummy-driver",
     "lowpan-dummy-driver:tests",
     "lowpan-spinel-driver:tests",
     "spinel_spi_driver:tests",
