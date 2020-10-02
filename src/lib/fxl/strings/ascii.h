@@ -16,7 +16,7 @@ inline bool IsAsciiWhitespace(char c) { return c == ' ' || c == '\r' || c == '\n
 
 inline char ToLowerASCII(char c) { return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c; }
 
-inline char ToUpperASCII(char c) { return (c >= 'a' && c <= 'z') ? (c + ('A' - 'a')) : c; }
+inline char ToUpperASCII(char c) { return (c >= 'a' && c <= 'z') ? (c + static_cast<char>('A' - 'a')) : c; }
 
 bool EqualsCaseInsensitiveASCII(std::string_view v1, std::string_view v2);
 
