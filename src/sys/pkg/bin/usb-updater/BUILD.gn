@@ -34,6 +34,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.update.usb:fuchsia.update.usb-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-url",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
