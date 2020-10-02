@@ -18,8 +18,10 @@ mod remote_port_negotiation;
 mod test_command;
 
 pub use self::{
-    dlc_parameter_negotiation::ParameterNegotiationParams, flow_control::FlowControlParams,
-    modem_status::ModemStatusParams, non_supported::NonSupportedCommandParams,
+    dlc_parameter_negotiation::{CreditBasedFlowHandshake, ParameterNegotiationParams},
+    flow_control::FlowControlParams,
+    modem_status::ModemStatusParams,
+    non_supported::NonSupportedCommandParams,
     remote_line_status::RemoteLineStatusParams,
     remote_port_negotiation::RemotePortNegotiationParams, test_command::TestCommandParams,
 };

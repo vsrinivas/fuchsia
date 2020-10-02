@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/49073): Remove this once the Frame object is used by the RFCOMM Session.
-#![allow(unused)]
 use {
     anyhow::{format_err, Error},
     bitfield::bitfield,
@@ -16,7 +14,7 @@ use {
 mod fcs;
 
 /// Multiplexer Commands.
-mod mux_commands;
+pub mod mux_commands;
 
 use crate::pub_decodable_enum;
 use crate::rfcomm::{
@@ -363,19 +361,19 @@ fn is_two_octet_length(length: usize) -> bool {
 #[derive(Debug, PartialEq)]
 pub struct Frame {
     /// The role of the device associated with this frame.
-    role: Role,
+    pub role: Role,
     /// The DLCI associated with this frame.
-    dlci: DLCI,
+    pub dlci: DLCI,
     /// The data associated with this frame.
-    data: FrameData,
+    pub data: FrameData,
     /// The P/F bit for this frame. See RFCOMM 5.2.1 which describes the usages
     /// of the P/F bit in RFCOMM.
-    poll_final: bool,
+    pub poll_final: bool,
     /// Whether this frame is a Command or Response frame.
-    command_response: CommandResponse,
+    pub command_response: CommandResponse,
     /// The credits associated with this frame. Credits are only applicable to UIH frames
     /// when credit-based flow control is enabled. See RFCOMM 6.5.
-    credits: Option<u8>,
+    pub credits: Option<u8>,
 }
 
 impl Frame {
@@ -447,6 +445,39 @@ impl Frame {
         let data = FrameData::decode(&frame_type, &dlci, data)?;
 
         Ok(Self { role, dlci, data, poll_final, command_response, credits })
+    }
+
+    pub fn make_dm_response(role: Role, dlci: DLCI) -> Self {
+        Self {
+            role,
+            dlci,
+            data: FrameData::DisconnectedMode,
+            poll_final: true, // Always set for DM response.
+            command_response: CommandResponse::Response,
+            credits: None,
+        }
+    }
+
+    pub fn make_ua_response(role: Role, dlci: DLCI) -> Self {
+        Self {
+            role,
+            dlci,
+            data: FrameData::UnnumberedAcknowledgement,
+            poll_final: true, // Always set for UA response.
+            command_response: CommandResponse::Response,
+            credits: None,
+        }
+    }
+
+    pub fn make_mux_command_response(role: Role, mux_response: MuxCommand) -> Self {
+        Self {
+            role,
+            dlci: DLCI::MUX_CONTROL_DLCI,
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_response)),
+            poll_final: false, // Always unset for UIH response, GSM 5.4.3.1.
+            command_response: CommandResponse::Response,
+            credits: None,
+        }
     }
 }
 

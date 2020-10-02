@@ -11,6 +11,18 @@ use {
 
 use crate::rfcomm::ServerChannel;
 
+/// Returns a ProtocolDescriptorList for an RFCOMM service with the provided `server_channel`.
+pub fn build_rfcomm_protocol(server_channel: ServerChannel) -> Vec<ProtocolDescriptor> {
+    // The PSM for L2CAP is empty when RFCOMM is used.
+    vec![
+        ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
+        ProtocolDescriptor {
+            protocol: bredr::ProtocolIdentifier::Rfcomm,
+            params: vec![DataElement::Uint8(server_channel.0)],
+        },
+    ]
+}
+
 /// Updates the provided `service` with the assigned `server_channel` if
 /// the service is requesting RFCOMM.
 /// Updates the primary protocol descriptor only. SDP records for profiles
@@ -27,15 +39,7 @@ pub fn update_svc_def_with_server_channel(
         return Err(format_err!("Non-RFCOMM service definition provided"));
     }
 
-    // The PSM for L2CAP is empty when RFCOMM is used.
-    let new_protocol_descriptor = vec![
-        ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
-        ProtocolDescriptor {
-            protocol: bredr::ProtocolIdentifier::Rfcomm,
-            params: vec![DataElement::Uint8(server_channel.0)],
-        },
-    ];
-    service.protocol_descriptor_list = new_protocol_descriptor;
+    service.protocol_descriptor_list = build_rfcomm_protocol(server_channel);
     Ok(())
 }
 

@@ -128,9 +128,9 @@ impl ProfileRegistrar {
     /// Unregisters all the active services advertised by this server.
     /// This should be called when the upstream server drops the single service advertisement that
     /// this server manages.
-    fn unregister_all_services(&mut self) {
+    async fn unregister_all_services(&mut self) {
         self.registered_services = Services::new();
-        self.rfcomm_server.free_all_server_channels();
+        self.rfcomm_server.free_all_server_channels().await;
     }
 
     /// Unregisters the group of services identified by `handle`. Re-registers any remaining
@@ -143,7 +143,7 @@ impl ProfileRegistrar {
 
         // Remove the entry for this client.
         let service_info = self.registered_services.remove(handle);
-        self.rfcomm_server.free_server_channels(service_info.allocated_server_channels());
+        self.rfcomm_server.free_server_channels(service_info.allocated_server_channels()).await;
 
         // Attempt to re-advertise.
         self.refresh_advertisement().await;
@@ -318,13 +318,16 @@ impl ProfileRegistrar {
         // the RFCOMM-requesting services.
         let required_server_channels =
             services.iter().filter(|def| is_rfcomm_service_definition(def)).count();
-        if required_server_channels > self.rfcomm_server.available_server_channels() {
+        if required_server_channels > self.rfcomm_server.available_server_channels().await {
             let _ = responder.send(&mut Err(ErrorCode::Failed));
             return Err(format_err!("RfcommServer not enough free Server Channels"));
         }
         for mut service in services.iter_mut().filter(|def| is_rfcomm_service_definition(def)) {
-            let server_channel =
-                self.rfcomm_server.allocate_server_channel(receiver.clone()).expect("just checked");
+            let server_channel = self
+                .rfcomm_server
+                .allocate_server_channel(receiver.clone())
+                .await
+                .expect("just checked");
             update_svc_def_with_server_channel(&mut service, server_channel)?;
         }
 
@@ -409,7 +412,7 @@ impl ProfileRegistrar {
     ///      directly to the profile client.
     ///   2) An epitaph of the relay task signaling the advertisement has canceled. This is
     ///      usually due to an error in the upstream server. We must clear all of the services.
-    fn handle_connection_request(&mut self, request: ConnectionEvent) -> Result<(), Error> {
+    async fn handle_connection_request(&mut self, request: ConnectionEvent) -> Result<(), Error> {
         match request {
             ConnectionEvent::Request(request) => {
                 let bredr::ConnectionReceiverRequest::Connected {
@@ -420,7 +423,7 @@ impl ProfileRegistrar {
             ConnectionEvent::AdvertisementCanceled => {
                 // The upstream server unexpectedly dropped the advertisement. We must clean up
                 // all of the state.
-                self.unregister_all_services();
+                self.unregister_all_services().await;
                 Ok(())
             }
         }
@@ -479,7 +482,7 @@ impl ProfileRegistrar {
                     }
                 }
                 connection_request = connection_receiver.select_next_some() => {
-                    if let Err(e) = self.handle_connection_request(connection_request) {
+                    if let Err(e) = self.handle_connection_request(connection_request).await {
                         error!("Error processing incoming l2cap connection request: {:?}", e);
                     }
                 }
