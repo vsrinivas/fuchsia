@@ -161,18 +161,23 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
                 notifier.set_source(ftime::UtcSource::External).await;
             }
 
-            // TODO(jsankey): Verify no one is still trying to use this magic entry for automated
-            // log processing and then delete it.
             if self.track == Track::Primary {
-                let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
-                let utc_now = self.clock.read().map_or(0, |time| time.into_nanos());
-                let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
-                info!(
-                    "fxbug.dev/4753:monotonic_before={}:utc={}:monotonic_after={}",
-                    monotonic_before, utc_now, monotonic_after,
-                );
+                self.log_utc_offset();
             }
         }
+    }
+
+    /// Log a line in a specific format that it used by automated tooling to convert log times.
+    fn log_utc_offset(&self) {
+        // TODO(jsankey): Remove this function once the tooling has ceased to use it,
+        //                estimate end October 2020 (b/169868836).
+        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let utc_now = self.clock.read().map_or(0, |time| time.into_nanos());
+        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        info!(
+            "CF-884:monotonic_before={}:utc={}:monotonic_after={}",
+            monotonic_before, utc_now, monotonic_after,
+        );
     }
 }
 
