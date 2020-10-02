@@ -58,7 +58,7 @@ test("as370-power-test") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/as370",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
