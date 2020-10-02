@@ -6,21 +6,21 @@ use {
     crate::constants::get_socket,
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
+    crate::fastboot::{spawn_fastboot_discovery, Fastboot},
     crate::mdns::MdnsTargetFinder,
     crate::target::{RcsConnection, Target, TargetCollection, TargetEvent, ToFidlTarget},
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
-    ffx_fastboot::{erase, flash, reboot},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, FastbootRequest,
+        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
-    std::sync::{Arc, Mutex, Weak},
+    std::sync::{Arc, Weak},
     std::time::Duration,
 };
 
@@ -92,7 +92,7 @@ impl Daemon {
             .await;
         target_collection.set_event_queue(queue.clone()).await;
         Daemon::spawn_onet_discovery(queue.clone());
-        Daemon::spawn_fastboot_discovery(queue.clone());
+        spawn_fastboot_discovery(queue.clone());
 
         let config = TargetFinderConfig {
             interface_discovery_interval: Duration::from_secs(1),
@@ -117,34 +117,6 @@ impl Daemon {
             .map_err(|e| anyhow!("fidl stream err").context(e))
             .try_for_each_concurrent(None, |req| self.handle_request(req))
             .await
-    }
-
-    pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
-        fuchsia_async::Task::spawn(async move {
-            loop {
-                log::debug!("Looking for fastboot devices");
-                let fastboot_devices = ffx_fastboot::find_devices();
-                for dev in fastboot_devices {
-                    // Add to target collection
-                    let nodename = format!("{:?}", dev);
-                    queue
-                        .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(
-                            events::TargetInfo {
-                                nodename,
-                                serial: Some(dev.serial),
-                                ..Default::default()
-                            },
-                        )))
-                        .await
-                        .unwrap_or_else(|err| {
-                            log::warn!("Fastboot discovery failed to enqueue event: {}", err)
-                        });
-                }
-                // Sleep
-                task::sleep(std::time::Duration::from_secs(3)).await;
-            }
-        })
-        .detach();
     }
 
     pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
@@ -304,77 +276,17 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                let usb = match target.usb().await {
-                    Some(u) => Arc::new(Mutex::new(u)),
-                    None => {
-                        log::error!("Could not open usb interface for target: {:?}", target);
-                        responder
-                            .send(&mut Err(FastbootError::Generic))
-                            .context("sending error response")?;
-                        return Ok(());
-                    }
-                };
-
-                let mut stream = fastboot.into_stream()?;
+                let mut fastboot_manager = Fastboot::new(target);
+                let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        log::debug!("fastboot - received req: {:?}", req);
-                        match req {
-                            FastbootRequest::Flash { partition_name, path, responder } => {
-                                let mut usb = usb.lock().unwrap();
-                                match flash(&mut usb, &path, &partition_name) {
-                                    Ok(_) => responder.send(&mut Ok(())).unwrap(),
-                                    Err(e) => {
-                                        log::error!(
-                                            "Error flashing \"{}\" from {}:\n{:?}",
-                                            partition_name,
-                                            path,
-                                            e
-                                        );
-                                        responder
-                                            .send(&mut Err(FastbootError::Generic))
-                                            .context("sending error response")
-                                            .unwrap();
-                                    }
-                                }
-                            }
-                            FastbootRequest::Erase { partition_name, responder } => {
-                                let mut usb = usb.lock().unwrap();
-                                match erase(&mut usb, &partition_name) {
-                                    Ok(_) => responder.send(&mut Ok(())).unwrap(),
-                                    Err(e) => {
-                                        log::error!(
-                                            "Error erasing \"{}\": {:?}",
-                                            partition_name,
-                                            e
-                                        );
-                                        responder
-                                            .send(&mut Err(FastbootError::Generic))
-                                            .context("sending error response")
-                                            .unwrap();
-                                    }
-                                }
-                            }
-                            FastbootRequest::Reboot { responder } => {
-                                let mut usb = usb.lock().unwrap();
-                                match reboot(&mut usb) {
-                                    Ok(_) => responder.send(&mut Ok(())).unwrap(),
-                                    Err(e) => {
-                                        log::error!("Error rebooting: {:?}", e);
-                                        responder
-                                            .send(&mut Err(FastbootError::Generic))
-                                            .context("sending error response")
-                                            .unwrap();
-                                    }
-                                }
-                            }
+                    match fastboot_manager.0.handle_fastboot_requests_from_stream(stream).await {
+                        Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
+                        Err(e) => {
+                            log::error!("There was an error handling fastboot requests: {:?}", e)
                         }
                     }
-
-                    // Reboot?
                 })
                 .detach();
-
                 responder.send(&mut Ok(())).context("error sending response")?;
             }
             DaemonRequest::Quit { responder } => {

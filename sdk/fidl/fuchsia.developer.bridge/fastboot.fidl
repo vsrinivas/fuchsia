@@ -8,9 +8,20 @@ enum FastbootError {
     GENERIC = 1;
 };
 
+/// Callback event listener for when the device reboots to the
+/// bootloader.
+protocol RebootListener {
+    OnReboot();
+};
+
 [Discoverable]
 protocol Fastboot {
-    Flash(string:256 partition_name, string:256 path) -> () error FastbootError;
-    Erase(string:256 partition_name) -> () error FastbootError;
+    Flash(string:64 partition_name, string:256 path) -> () error FastbootError;
+    Erase(string:64 partition_name) -> () error FastbootError;
     Reboot() -> () error FastbootError;
+    RebootBootloader(RebootListener listener) -> () error FastbootError;
+    ContinueBoot() -> () error FastbootError;
+    Stage(string:256 path) -> () error FastbootError;
+    SetActive(string:64 slot) -> () error FastbootError;
+    Oem(string:64 command) -> () error FastbootError;
 };

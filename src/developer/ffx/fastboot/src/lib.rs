@@ -9,7 +9,10 @@ use {
         reply::Reply,
         send, upload,
     },
-    std::fs::read,
+    std::{
+        fs::read,
+        io::{Read, Write},
+    },
     usb_bulk::{Interface, InterfaceInfo, Open},
 };
 
@@ -99,7 +102,20 @@ pub fn open_interface_with_serial(serial: &String) -> Result<Interface> {
     open_interface(|info: &InterfaceInfo| -> bool { extract_serial_number(info) == *serial })
 }
 
-pub fn flash(interface: &mut Interface, file: &String, name: &String) -> Result<()> {
+pub fn stage<T: Read + Write>(interface: &mut T, file: &String) -> Result<()> {
+    let bytes = read(file)?;
+    log::debug!("uploading file size: {}", bytes.len());
+    match upload(&bytes[..], interface).context(format!("uploading {}", file))? {
+        Reply::Okay(s) => {
+            log::debug!("Received response from download command: {}", s);
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to upload {}: {}", file, s),
+        _ => bail!("Unexpected reply from fastboot device for download"),
+    }
+}
+
+pub fn flash<T: Read + Write>(interface: &mut T, file: &String, name: &String) -> Result<()> {
     let bytes = read(file)?;
     log::debug!("uploading file size: {}", bytes.len());
     let upload_reply = upload(&bytes[..], interface).context(format!("uploading {}", file))?;
@@ -119,7 +135,7 @@ pub fn flash(interface: &mut Interface, file: &String, name: &String) -> Result<
     }
 }
 
-pub fn erase(interface: &mut Interface, name: &String) -> Result<()> {
+pub fn erase<T: Read + Write>(interface: &mut T, name: &String) -> Result<()> {
     let reply = send(Command::Erase(name.to_string()), interface).context("sending erase")?;
     match reply {
         Reply::Okay(_) => {
@@ -131,7 +147,7 @@ pub fn erase(interface: &mut Interface, name: &String) -> Result<()> {
     }
 }
 
-pub fn reboot(interface: &mut Interface) -> Result<()> {
+pub fn reboot<T: Read + Write>(interface: &mut T) -> Result<()> {
     let reply = send(Command::Reboot, interface).context("sending reboot")?;
     match reply {
         Reply::Okay(_) => {
@@ -140,6 +156,50 @@ pub fn reboot(interface: &mut Interface) -> Result<()> {
         }
         Reply::Fail(s) => bail!("Failed to reboot: {}", s),
         _ => bail!("Unexpected reply from fastboot device for reboot command: {:?}", reply),
+    }
+}
+
+pub fn reboot_bootloader<T: Read + Write>(interface: &mut T) -> Result<()> {
+    match send(Command::RebootBootLoader, interface).context("sending reboot bootloader")? {
+        Reply::Okay(_) => {
+            log::debug!("Successfully sent reboot bootloader");
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to reboot to bootloader: {}", s),
+        _ => bail!("Unexpected reply from fastboot device for reboot bootloader command"),
+    }
+}
+
+pub fn continue_boot<T: Read + Write>(interface: &mut T) -> Result<()> {
+    match send(Command::Continue, interface).context("sending continue")? {
+        Reply::Okay(_) => {
+            log::debug!("Successfully sent continue");
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to continue: {}", s),
+        _ => bail!("Unexpected reply from fastboot device for continue command"),
+    }
+}
+
+pub fn set_active<T: Read + Write>(interface: &mut T, slot: &String) -> Result<()> {
+    match send(Command::SetActive(slot.to_string()), interface).context("sending set_active")? {
+        Reply::Okay(_) => {
+            log::debug!("Successfully sent set_active");
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to set_active: {}", s),
+        _ => bail!("Unexpected reply from fastboot device for set_active command"),
+    }
+}
+
+pub fn oem<T: Read + Write>(interface: &mut T, cmd: &String, params: Vec<String>) -> Result<()> {
+    match send(Command::Oem(cmd.to_string(), params), interface).context("sending oem")? {
+        Reply::Okay(_) => {
+            log::debug!("Successfully sent oem command \"{}\"", cmd);
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to oem \"{}\": {}", cmd, s),
+        _ => bail!("Unexpected reply from fastboot device for oem command \"{}\"", cmd),
     }
 }
 

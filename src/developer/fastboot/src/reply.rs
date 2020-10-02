@@ -11,7 +11,7 @@ use {
 // Client response with a single packet no greater than 64 bytes. The first four bytes of the
 // response are “OKAY”, “FAIL”, “DATA”, or “INFO”. Additional bytes may contain an (ascii)
 // informative message.
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Reply {
     // INFO -> the remaining 60 bytes are an informative message (providing progress or diagnostic
     // messages).

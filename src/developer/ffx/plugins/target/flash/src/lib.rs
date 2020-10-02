@@ -56,6 +56,22 @@ mod test {
             FastbootRequest::Reboot { responder } => {
                 responder.send(&mut Ok(())).unwrap();
             }
+            FastbootRequest::RebootBootloader { listener, responder } => {
+                listener.into_proxy().unwrap().on_reboot().unwrap();
+                responder.send(&mut Ok(())).unwrap();
+            }
+            FastbootRequest::ContinueBoot { responder } => {
+                responder.send(&mut Ok(())).unwrap();
+            }
+            FastbootRequest::SetActive { slot: _, responder } => {
+                responder.send(&mut Ok(())).unwrap();
+            }
+            FastbootRequest::Stage { path: _, responder } => {
+                responder.send(&mut Ok(())).unwrap();
+            }
+            FastbootRequest::Oem { command: _, responder } => {
+                responder.send(&mut Ok(())).unwrap();
+            }
         })
     }
 
@@ -77,20 +93,36 @@ mod test {
         "manifest": [ 
             {
                 "name": "zedboot", 
+                "bootloader_partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ],
                 "partitions": [
                     ["test1", "path1"],
                     ["test2", "path2"],
                     ["test3", "path3"],
                     ["test4", "path4"],
                     ["test5", "path5"]
+                ],
+                "oem_files": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
                 ]
             },
             {
                 "name": "product", 
+                "bootloader_partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ],
                 "partitions": [
                     ["test10", "path10"],
                     ["test20", "path20"],
                     ["test30", "path30"]
+                ],
+                "oem_files": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
                 ]
             }
         ]
@@ -101,13 +133,15 @@ mod test {
         "manifest": [ 
             {
                 "name": "zedboot", 
+                "bootloader_partitions": [],
                 "partitions": [
                     ["test1", "path1"],
                     ["test2", "path2"],
                     ["test3", "path3"],
                     ["test4", "path4"],
                     ["test5", "path5"]
-                ]
+                ],
+                "oem_files": []
             }
         ]
     }"#;

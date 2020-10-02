@@ -15,6 +15,7 @@ if (is_host) {
       "//src/developer/fastboot:lib",
       "//src/lib/usb_bulk/rust:lib",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-std",
       "//third_party/rust_crates:log",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
@@ -25,5 +26,8 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":lib_test($host_toolchain)" ]
+  deps = [
+    ":lib_test($host_toolchain)",
+    "//src/developer/fastboot:tests($host_toolchain)",
+  ]
 }

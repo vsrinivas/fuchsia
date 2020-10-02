@@ -22,6 +22,8 @@ pub enum ClientVariable {
     // If the value is "yes", the device is running fastbootd. Otherwise, it is running fastboot
     // in the bootloader.
     IsUserSpace,
+    // OEM custom variables
+    Oem(String),
 }
 
 #[derive(PartialEq, Debug)]
@@ -54,6 +56,8 @@ pub enum Command {
     // Reboot back into the bootloader. Useful for upgrade processes that require upgrading
     // the bootloader and then upgrading other partitions using the new bootloader.
     RebootBootLoader,
+    // Set the active slot.
+    SetActive(String),
 
     ////////////// Logical Partition Commands ////////////////////////////////////////////
     //
@@ -73,23 +77,39 @@ pub enum Command {
     ResizeLogicalPartition(String, usize),
     // If the value is "yes", the partition is logical. Otherwise the partition is physical.
     IsLogical(String),
-}
 
-impl From<ClientVariable> for Vec<u8> {
-    fn from(var: ClientVariable) -> Self {
-        match var {
-            ClientVariable::Version => b"version".to_vec(),
-            ClientVariable::VersionBootLoader => b"version-bootloader".to_vec(),
-            ClientVariable::VersionBaseBand => b"version-baseband".to_vec(),
-            ClientVariable::Product => b"product".to_vec(),
-            ClientVariable::SerialNumber => b"serialno".to_vec(),
-            ClientVariable::Secure => b"secure".to_vec(),
-            ClientVariable::IsUserSpace => b"is-userspace".to_vec(),
-        }
-    }
+    ////////////// OEM Commands ////////////////////////////////////////////
+    //
+    // Support for OEM commands not specifically defined in the Fastboot specification.
+    Oem(String, Vec<String>),
 }
 
 const MAX_COMMAND_LENGTH: usize = 64;
+
+impl TryFrom<ClientVariable> for Vec<u8> {
+    type Error = anyhow::Error;
+
+    fn try_from(var: ClientVariable) -> Result<Self, Self::Error> {
+        match var {
+            ClientVariable::Version => Ok(b"version".to_vec()),
+            ClientVariable::VersionBootLoader => Ok(b"version-bootloader".to_vec()),
+            ClientVariable::VersionBaseBand => Ok(b"version-baseband".to_vec()),
+            ClientVariable::Product => Ok(b"product".to_vec()),
+            ClientVariable::SerialNumber => Ok(b"serialno".to_vec()),
+            ClientVariable::Secure => Ok(b"secure".to_vec()),
+            ClientVariable::IsUserSpace => Ok(b"is-userspace".to_vec()),
+            ClientVariable::Oem(s) => {
+                let bytes = s.into_bytes();
+                // Need to make sure it won't break the "getvar:" command
+                if bytes.len() > (MAX_COMMAND_LENGTH - 7) {
+                    Err(anyhow!("Client Variable name is too long"))
+                } else {
+                    Ok(bytes.to_vec())
+                }
+            }
+        }
+    }
+}
 
 fn concat_message(cmd: &[u8], s: String) -> Result<Vec<u8>, anyhow::Error> {
     let bytes = s.into_bytes();
@@ -104,7 +124,7 @@ impl TryFrom<Command> for Vec<u8> {
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
         match command {
-            Command::GetVar(v) => Ok([b"getvar:", &Vec::<u8>::from(v)[..]].concat()),
+            Command::GetVar(v) => Ok([b"getvar:", &Vec::<u8>::try_from(v)?[..]].concat()),
             Command::Download(s) => {
                 Ok([b"download:", &format!("{:08X}", s).into_bytes()[..]].concat())
             }
@@ -126,6 +146,19 @@ impl TryFrom<Command> for Vec<u8> {
                 concat_message(b"resize-logical-partition:", format!("{}:{}", partition_name, size))
             }
             Command::IsLogical(s) => concat_message(b"is-logical:", s),
+            Command::SetActive(s) => concat_message(b"set_active:", s),
+            Command::Oem(s, params) => {
+                if params.len() > 0 {
+                    concat_message(&format!("{}:", s).into_bytes()[..], params.join(" "))
+                } else {
+                    let bytes = s.into_bytes();
+                    if bytes.len() > MAX_COMMAND_LENGTH {
+                        Err(anyhow!("OEM command is too long, must be less than 64 bytes"))
+                    } else {
+                        Ok(bytes.to_vec())
+                    }
+                }
+            }
         }
     }
 }
@@ -362,5 +395,69 @@ mod test {
             String::from_utf8(over_partition_name).unwrap(),
         ));
         assert!(over_vector.is_err());
+    }
+
+    #[test]
+    fn test_set_active() {
+        let byte_vector = Vec::<u8>::try_from(Command::SetActive("a".to_string()));
+        assert!(!byte_vector.is_err());
+        assert_eq!(byte_vector.unwrap(), b"set_active:a".to_vec());
+
+        let max_slot_name = vec![b'X'; MAX_COMMAND_LENGTH - b"set_active:".len()];
+        let max_vector =
+            Vec::<u8>::try_from(Command::SetActive(String::from_utf8(max_slot_name).unwrap()));
+        assert!(!max_vector.is_err());
+
+        let over_slot_name = vec![b'X'; MAX_COMMAND_LENGTH - b"set_active:".len() + 1];
+        let over_vector =
+            Vec::<u8>::try_from(Command::SetActive(String::from_utf8(over_slot_name).unwrap()));
+        assert!(over_vector.is_err());
+    }
+
+    #[test]
+    fn test_oem_variables() {
+        let oem_variable_vector = Vec::<u8>::try_from(ClientVariable::Oem("test".to_string()));
+        assert!(!oem_variable_vector.is_err());
+        assert_eq!(oem_variable_vector.unwrap(), b"test".to_vec());
+
+        let max_variable_name =
+            String::from_utf8(vec![b'X'; MAX_COMMAND_LENGTH - b"getvar:".len()]).unwrap();
+        let max_vector = Vec::<u8>::try_from(ClientVariable::Oem(max_variable_name));
+        assert!(!max_vector.is_err());
+
+        let over_variable_name =
+            String::from_utf8(vec![b'X'; MAX_COMMAND_LENGTH - b"getvar:".len() + 1]).unwrap();
+        let over_vector = Vec::<u8>::try_from(ClientVariable::Oem(over_variable_name));
+        assert!(over_vector.is_err());
+    }
+
+    #[test]
+    fn test_oem_command_with_no_parameters() {
+        let byte_vector = Vec::<u8>::try_from(Command::Oem("test".to_string(), vec![]));
+        assert!(!byte_vector.is_err());
+        assert_eq!(byte_vector.unwrap(), b"test".to_vec());
+
+        let max_command_name = String::from_utf8(vec![b'X'; MAX_COMMAND_LENGTH]).unwrap();
+        let max_command = Vec::<u8>::try_from(Command::Oem(max_command_name, vec![]));
+        assert!(!max_command.is_err());
+
+        let over_command_name = String::from_utf8(vec![b'X'; MAX_COMMAND_LENGTH + 1]).unwrap();
+        let over_command = Vec::<u8>::try_from(Command::Oem(over_command_name, vec![]));
+        assert!(over_command.is_err());
+    }
+
+    #[test]
+    fn test_oem_command_with_parameters() {
+        let byte_vector =
+            Vec::<u8>::try_from(Command::Oem("test".to_string(), vec!["test".to_string()]));
+        assert!(!byte_vector.is_err());
+        assert_eq!(byte_vector.unwrap(), b"test:test".to_vec());
+
+        let multi_vector = Vec::<u8>::try_from(Command::Oem(
+            "test".to_string(),
+            vec!["test".to_string(), "test".to_string()],
+        ));
+        assert!(!multi_vector.is_err());
+        assert_eq!(multi_vector.unwrap(), b"test:test test".to_vec());
     }
 }

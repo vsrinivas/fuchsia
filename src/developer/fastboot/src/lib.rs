@@ -14,7 +14,7 @@ pub mod command;
 pub mod reply;
 
 const MAX_PACKET_SIZE: usize = 64;
-const READ_RETRY_MAX: usize = 10;
+const READ_RETRY_MAX: usize = 100;
 
 fn read_from_interface<T: Read>(interface: &mut T) -> Result<Reply> {
     let mut buf: [u8; MAX_PACKET_SIZE] = [0; MAX_PACKET_SIZE];

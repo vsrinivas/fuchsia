@@ -41,8 +41,11 @@ if (is_host) {
       "//third_party/rust_crates:nix",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:socket2",
+      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:thiserror",
     ]
+
+    test_deps = [ "//src/developer/fastboot:lib" ]
 
     # TODO: remove this dep once Overnet is on async-std also.
     deps += [ "//src/connectivity/overnet/lib/core" ]
@@ -52,6 +55,7 @@ if (is_host) {
       "src/daemon.rs",
       "src/discovery.rs",
       "src/events.rs",
+      "src/fastboot.rs",
       "src/lib.rs",
       "src/mdns.rs",
       "src/net.rs",

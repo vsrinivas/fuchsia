@@ -53,6 +53,7 @@ pub struct RcsConnection {
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum TargetEvent {
     RcsActivated,
+    Rediscovered,
 }
 
 #[derive(Debug)]
@@ -623,6 +624,9 @@ impl TargetCollection {
                     to_update.addrs_extend(t.addrs().await),
                     to_update.update_state(TargetState { rcs: t.rcs().await }),
                 );
+                to_update.events.push(TargetEvent::Rediscovered).await.unwrap_or_else(|err| {
+                    log::warn!("unable to enqueue rediscovered event: {:#}", err)
+                });
                 to_update.clone()
             }
             None => {
