@@ -125,11 +125,11 @@ static const device_fragment_part_t clk4_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk4_match), clk4_match},
 };
-static const device_fragment_t fragments[] = {
-    {countof(clk1_fragment), clk1_fragment},
-    {countof(clk2_fragment), clk2_fragment},
-    {countof(clk3_fragment), clk3_fragment},
-    {countof(clk4_fragment), clk4_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"clock-1", countof(clk1_fragment), clk1_fragment},
+    {"clock-2", countof(clk2_fragment), clk2_fragment},
+    {"clock-3", countof(clk3_fragment), clk3_fragment},
+    {"clock-4", countof(clk4_fragment), clk4_fragment},
 };
 
 }  // namespace
@@ -137,7 +137,8 @@ static const device_fragment_t fragments[] = {
 namespace board_mt8167 {
 
 zx_status_t Mt8167::ThermalInit() {
-  auto status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status =
+      pbus_.CompositeDeviceAddNew(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd thermal failed: %d", __FUNCTION__, status);
   }

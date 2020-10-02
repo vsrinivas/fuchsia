@@ -79,11 +79,11 @@ static const device_fragment_part_t mic_privacy_fragment[] = {
     {countof(root_match), root_match},
     {countof(mic_privacy_match), mic_privacy_match},
 };
-static const device_fragment_t fragments[] = {
-    {countof(volume_up_fragment), volume_up_fragment},
-    {countof(volume_down_fragment), volume_down_fragment},
-    {countof(volume_both_fragment), volume_both_fragment},
-    {countof(mic_privacy_fragment), mic_privacy_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"volume-up", countof(volume_up_fragment), volume_up_fragment},
+    {"volume-down", countof(volume_down_fragment), volume_down_fragment},
+    {"volume-both", countof(volume_both_fragment), volume_both_fragment},
+    {"mic-privacy", countof(mic_privacy_fragment), mic_privacy_fragment},
 };
 
 zx_status_t Astro::ButtonsInit() {
@@ -93,7 +93,7 @@ zx_status_t Astro::ButtonsInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_HID_BUTTONS},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -103,9 +103,9 @@ zx_status_t Astro::ButtonsInit() {
       .metadata_count = countof(available_buttons_metadata),
   };
 
-  zx_status_t status = DdkAddComposite("astro-buttons", &comp_desc);
+  zx_status_t status = DdkAddCompositeNew("astro-buttons", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
     return status;
   }
 

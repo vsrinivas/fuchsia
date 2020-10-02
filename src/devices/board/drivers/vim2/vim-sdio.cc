@@ -129,11 +129,11 @@ static const device_fragment_part_t debug_gpio_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(debug_gpio_match), debug_gpio_match},
 };
-static const device_fragment_t wifi_fragments[] = {
-    {std::size(sdio_fn1_fragment), sdio_fn1_fragment},
-    {std::size(sdio_fn2_fragment), sdio_fn2_fragment},
-    {std::size(oob_gpio_fragment), oob_gpio_fragment},
-    {std::size(debug_gpio_fragment), debug_gpio_fragment},
+static const device_fragment_new_t wifi_fragments[] = {
+    {"sdio-function-1", std::size(sdio_fn1_fragment), sdio_fn1_fragment},
+    {"sdio-function-2", std::size(sdio_fn2_fragment), sdio_fn2_fragment},
+    {"gpio-oob", std::size(oob_gpio_fragment), oob_gpio_fragment},
+    {"gpio-debug", std::size(debug_gpio_fragment), debug_gpio_fragment},
 };
 
 // Composite binding rules for SDIO.
@@ -145,8 +145,8 @@ static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
-static const device_fragment_t sdio_fragments[] = {
-    {std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
+static const device_fragment_new_t sdio_fragments[] = {
+    {"gpio-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
 };
 
 zx_status_t Vim::SdioInit() {
@@ -160,8 +160,8 @@ zx_status_t Vim::SdioInit() {
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
-  status = pbus_.CompositeDeviceAdd(&aml_sdmmc_dev, sdio_fragments, std::size(sdio_fragments),
-                                    UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&aml_sdmmc_dev, sdio_fragments, std::size(sdio_fragments),
+                                       UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdioInit could not add aml_sdmmc_dev: %d", status);
     return status;
@@ -174,7 +174,7 @@ zx_status_t Vim::SdioInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = wifi_fragments,
@@ -184,7 +184,7 @@ zx_status_t Vim::SdioInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("wifi", &comp_desc);
+  status = DdkAddCompositeNew("wifi", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
     return status;

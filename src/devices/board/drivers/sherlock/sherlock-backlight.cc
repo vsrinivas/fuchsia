@@ -36,8 +36,8 @@ constexpr device_fragment_part_t i2c_fragment[] = {
     {countof(i2c_match), i2c_match},
 };
 
-constexpr device_fragment_t fragments[] = {
-    {countof(i2c_fragment), i2c_fragment},
+constexpr device_fragment_new_t fragments[] = {
+    {"i2c", countof(i2c_fragment), i2c_fragment},
 };
 
 constexpr double kMaxBrightnessInNits = 350.0;
@@ -81,9 +81,9 @@ constexpr pbus_dev_t backlight_dev = []() {
 }();
 
 zx_status_t Sherlock::BacklightInit() {
-  auto status = pbus_.CompositeDeviceAdd(&backlight_dev, fragments, countof(fragments), 1);
+  auto status = pbus_.CompositeDeviceAddNew(&backlight_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s CompositeDeviceAddNew failed %d", __FUNCTION__, status);
   }
   return status;
 }

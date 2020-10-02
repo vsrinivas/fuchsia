@@ -96,13 +96,13 @@ zx_status_t Msm8x53::PilInit() {
       {std::size(root_match), root_match},
       {std::size(clk_crypto_match), clk_crypto_match},
   };
-  const device_fragment_t fragments[] = {
-      {std::size(clk_crypto_ahb_fragment), clk_crypto_ahb_fragment},
-      {std::size(clk_crypto_axi_fragment), clk_crypto_axi_fragment},
-      {std::size(clk_crypto_fragment), clk_crypto_fragment},
+  const device_fragment_new_t fragments[] = {
+      {"clock-crypto-ahb", std::size(clk_crypto_ahb_fragment), clk_crypto_ahb_fragment},
+      {"clock-crypto-axi", std::size(clk_crypto_axi_fragment), clk_crypto_axi_fragment},
+      {"clock-crypto", std::size(clk_crypto_fragment), clk_crypto_fragment},
   };
 
-  auto status = pbus_.CompositeDeviceAdd(&dev, fragments, std::size(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAddNew(&dev, fragments, std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not add dev %d", __func__, status);
     return status;

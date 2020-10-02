@@ -142,11 +142,11 @@ static const device_fragment_part_t canvas_fragment[] = {
     {countof(canvas_match), canvas_match},
 };
 
-static const device_fragment_t fragments[] = {
-    {countof(dsi_fragment), dsi_fragment},
-    {countof(lcd_gpio_fragment), lcd_gpio_fragment},
-    {countof(sysmem_fragment), sysmem_fragment},
-    {countof(canvas_fragment), canvas_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"dsi", countof(dsi_fragment), dsi_fragment},
+    {"gpio", countof(lcd_gpio_fragment), lcd_gpio_fragment},
+    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
+    {"canvas", countof(canvas_fragment), canvas_fragment},
 };
 
 zx_status_t Astro::DisplayInit() {
@@ -170,9 +170,9 @@ zx_status_t Astro::DisplayInit() {
 
   // TODO(payamm): Change from 1 to UINT32_MAX to separate DSI and Display into two different
   // devhosts once support for it lands.
-  auto status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
+  auto status = pbus_.CompositeDeviceAddNew(&display_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew display failed: %d", __func__, status);
     return status;
   }
 

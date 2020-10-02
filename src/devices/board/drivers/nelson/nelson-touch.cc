@@ -64,15 +64,15 @@ static const device_fragment_part_t gpio_reset_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_reset_match), gpio_reset_match},
 };
-static const device_fragment_t ft_fragments[] = {
-    {countof(ft_i2c_fragment), ft_i2c_fragment},
-    {countof(gpio_int_fragment), gpio_int_fragment},
-    {countof(gpio_reset_fragment), gpio_reset_fragment},
+static const device_fragment_new_t ft_fragments[] = {
+    {"i2c", countof(ft_i2c_fragment), ft_i2c_fragment},
+    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
+    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
 };
-static const device_fragment_t goodix_fragments[] = {
-    {countof(goodix_i2c_fragment), goodix_i2c_fragment},
-    {countof(gpio_int_fragment), gpio_int_fragment},
-    {countof(gpio_reset_fragment), gpio_reset_fragment},
+static const device_fragment_new_t goodix_fragments[] = {
+    {"i2c", countof(goodix_i2c_fragment), goodix_i2c_fragment},
+    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
+    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
 };
 
 zx_status_t Nelson::TouchInit() {
@@ -96,7 +96,7 @@ zx_status_t Nelson::TouchInit() {
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GTX8X},
     };
 
-    const composite_device_desc_t comp_desc = {
+    const composite_device_desc_new_t comp_desc = {
         .props = props,
         .props_count = countof(props),
         .fragments = goodix_fragments,
@@ -105,7 +105,7 @@ zx_status_t Nelson::TouchInit() {
         .metadata_list = nullptr,
         .metadata_count = 0,
     };
-    zx_status_t status = DdkAddComposite("gtx8x-touch", &comp_desc);
+    zx_status_t status = DdkAddCompositeNew("gtx8x-touch", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(INFO, "nelson_touch_init(gt92xx): composite_device_add failed: %d", status);
       return status;
@@ -117,7 +117,7 @@ zx_status_t Nelson::TouchInit() {
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
     };
 
-    const composite_device_desc_t comp_desc = {
+    const composite_device_desc_new_t comp_desc = {
         .props = props,
         .props_count = countof(props),
         .fragments = ft_fragments,
@@ -127,9 +127,9 @@ zx_status_t Nelson::TouchInit() {
         .metadata_count = std::size(ft3x27_touch_metadata),
     };
 
-    zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);
+    zx_status_t status = DdkAddCompositeNew("ft3x27-touch", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d", __func__, status);
+      zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAddNew failed: %d", __func__, status);
       return status;
     }
   }

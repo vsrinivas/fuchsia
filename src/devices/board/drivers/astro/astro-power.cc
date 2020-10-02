@@ -60,8 +60,8 @@ zx_device_prop_t power_domain_arm_core_props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
-constexpr device_fragment_t power_domain_arm_core_fragments[] = {
-    {countof(power_impl_fragment), power_impl_fragment},
+constexpr device_fragment_new_t power_domain_arm_core_fragments[] = {
+    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
 };
 
 constexpr power_domain_t domains[] = {
@@ -76,7 +76,7 @@ constexpr device_metadata_t power_domain_arm_core_metadata[] = {
     },
 };
 
-constexpr composite_device_desc_t power_domain_arm_core_desc = {
+constexpr composite_device_desc_new_t power_domain_arm_core_desc = {
     .props = power_domain_arm_core_props,
     .props_count = countof(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
@@ -96,8 +96,8 @@ constexpr device_fragment_part_t pwm_ao_d_fragment[] = {
     {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
 
-constexpr device_fragment_t power_impl_fragments[] = {
-    {countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
+constexpr device_fragment_new_t power_impl_fragments[] = {
+    {"pwm-ao-d", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
 };
 
 }  // namespace
@@ -116,14 +116,14 @@ static const pbus_dev_t power_dev = []() {
 zx_status_t Astro::PowerInit() {
   zx_status_t st;
 
-  st = pbus_.CompositeDeviceAdd(&power_dev, power_impl_fragments, countof(power_impl_fragments),
-                                UINT32_MAX);
+  st = pbus_.CompositeDeviceAddNew(&power_dev, power_impl_fragments, countof(power_impl_fragments),
+                                   UINT32_MAX);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;
   }
 
-  st = DdkAddComposite("composite-pd-armcore", &power_domain_arm_core_desc);
+  st = DdkAddCompositeNew("composite-pd-armcore", &power_domain_arm_core_desc);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain ArmCore failed, st = %d", __FUNCTION__,
            st);

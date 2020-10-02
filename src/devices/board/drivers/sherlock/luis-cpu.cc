@@ -69,7 +69,6 @@ constexpr zx_bind_inst_t clock_little_cpu_scaler_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::CLK_SYS_CPU_LITTLE_CLK),
 };
 
-
 const device_fragment_part_t big_power_fragment[] = {
     {countof(root_match), root_match},
     {countof(big_power_match), big_power_match},
@@ -110,17 +109,18 @@ const device_fragment_part_t clock_little_cpu_scaler_fragment[] = {
     {countof(clock_little_cpu_scaler_match), clock_little_cpu_scaler_match},
 };
 
-const device_fragment_t fragments[] = {
+const device_fragment_new_t fragments[] = {
     // Clusters are defined in groups of 4
-    {countof(big_power_fragment), big_power_fragment},  // 0
-    {countof(big_pll_div16_fragment), big_pll_div16_fragment}, // 1
-    {countof(big_cpu_div16_fragment), big_cpu_div16_fragment}, // 2
-    {countof(clock_big_cpu_scaler_fragment), clock_big_cpu_scaler_fragment},
+    {"power-big", countof(big_power_fragment), big_power_fragment},                    // 0
+    {"clock-big-pll-div16", countof(big_pll_div16_fragment), big_pll_div16_fragment},  // 1
+    {"clock-big-cpu-div16", countof(big_cpu_div16_fragment), big_cpu_div16_fragment},  // 2
+    {"clock-big-cpu-scalar", countof(clock_big_cpu_scaler_fragment), clock_big_cpu_scaler_fragment},
 
-    {countof(little_power_fragment), little_power_fragment}, // 4
-    {countof(little_pll_div16_fragment), little_pll_div16_fragment}, // 5
-    {countof(little_cpu_div16_fragment), little_cpu_div16_fragment},
-    {countof(clock_little_cpu_scaler_fragment), clock_little_cpu_scaler_fragment},
+    {"power-little", countof(little_power_fragment), little_power_fragment},                    // 4
+    {"clock-little-pll-div16", countof(little_pll_div16_fragment), little_pll_div16_fragment},  // 5
+    {"clock-little-cpu-div16", countof(little_cpu_div16_fragment), little_cpu_div16_fragment},
+    {"clock-little-cpu-scalar", countof(clock_little_cpu_scaler_fragment),
+     clock_little_cpu_scaler_fragment},
 };
 
 constexpr amlogic_cpu::operating_point_t operating_points[] = {
@@ -193,7 +193,7 @@ constexpr pbus_dev_t cpu_dev = []() {
 namespace sherlock {
 
 zx_status_t Sherlock::LuisCpuInit() {
-  zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
+  zx_status_t result = pbus_.CompositeDeviceAddNew(&cpu_dev, fragments, countof(fragments), 1);
 
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);

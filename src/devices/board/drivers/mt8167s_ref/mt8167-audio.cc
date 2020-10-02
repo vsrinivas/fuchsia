@@ -115,23 +115,23 @@ static const device_fragment_part_t mt8167s_out_mute_gpio_fragment[] = {
     {countof(mt8167s_out_mute_gpio_match), mt8167s_out_mute_gpio_match},
 };
 
-static const device_fragment_t in_fragments[] = {
-    {countof(in_i2c_fragment), in_i2c_fragment},
-    {countof(in_gpio_fragment), in_gpio_fragment},
+static const device_fragment_new_t in_fragments[] = {
+    {"i2c", countof(in_i2c_fragment), in_i2c_fragment},
+    {"gpio", countof(in_gpio_fragment), in_gpio_fragment},
 };
-static const device_fragment_t mt8167s_codec_fragments[] = {
-    {countof(mt8167s_out_i2c_fragment), mt8167s_out_i2c_fragment},
-    {countof(mt8167s_out_reset_gpio_fragment), mt8167s_out_reset_gpio_fragment},
-    {countof(mt8167s_out_mute_gpio_fragment), mt8167s_out_mute_gpio_fragment},
+static const device_fragment_new_t mt8167s_codec_fragments[] = {
+    {"i2c", countof(mt8167s_out_i2c_fragment), mt8167s_out_i2c_fragment},
+    {"gpio-reset", countof(mt8167s_out_reset_gpio_fragment), mt8167s_out_reset_gpio_fragment},
+    {"gpio-mute", countof(mt8167s_out_mute_gpio_fragment), mt8167s_out_mute_gpio_fragment},
 };
-static const device_fragment_t mt8167s_controller_fragments[] = {
-    {countof(mt8167s_out_codec_fragment), mt8167s_out_codec_fragment},
+static const device_fragment_new_t mt8167s_controller_fragments[] = {
+    {"codec", countof(mt8167s_out_codec_fragment), mt8167s_out_codec_fragment},
 };
-static const device_fragment_t cleo_codec_fragments[] = {
-    {countof(cleo_out_i2c_fragment), cleo_out_i2c_fragment},
+static const device_fragment_new_t cleo_codec_fragments[] = {
+    {"i2c", countof(cleo_out_i2c_fragment), cleo_out_i2c_fragment},
 };
-static const device_fragment_t cleo_controller_fragments[] = {
-    {countof(cleo_out_codec_fragment), cleo_out_codec_fragment},
+static const device_fragment_new_t cleo_controller_fragments[] = {
+    {"codec", countof(cleo_out_codec_fragment), cleo_out_codec_fragment},
 };
 
 zx_status_t Mt8167::AudioInit() {
@@ -294,7 +294,7 @@ zx_status_t Mt8167::AudioInit() {
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782}};
 
-    const composite_device_desc_t comp_desc = {
+    const composite_device_desc_new_t comp_desc = {
         .props = props,
         .props_count = std::size(props),
         .fragments = mt8167s_codec_fragments,
@@ -304,16 +304,16 @@ zx_status_t Mt8167::AudioInit() {
         .metadata_count = 0,
     };
 
-    status = DdkAddComposite("audio-tas5782", &comp_desc);
+    status = DdkAddCompositeNew("audio-tas5782", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddComposite failed %d", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: DdkAddCompositeNew failed %d", __FUNCTION__, status);
       return status;
     }
 
-    status = pbus_.CompositeDeviceAdd(&controller_out, mt8167s_controller_fragments,
-                                      countof(mt8167s_controller_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&controller_out, mt8167s_controller_fragments,
+                                         countof(mt8167s_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAddNew failed %d", __FUNCTION__, status);
       return status;
     }
   } else {
@@ -328,7 +328,7 @@ zx_status_t Mt8167::AudioInit() {
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
 
-    const composite_device_desc_t comp_desc = {
+    const composite_device_desc_new_t comp_desc = {
         .props = props,
         .props_count = std::size(props),
         .fragments = cleo_codec_fragments,
@@ -338,22 +338,22 @@ zx_status_t Mt8167::AudioInit() {
         .metadata_count = countof(codec_metadata),
     };
 
-    status = DdkAddComposite("audio-tas58xx", &comp_desc);
+    status = DdkAddCompositeNew("audio-tas58xx", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAddComposite failed %d", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: DdkAddCompositeNew failed %d", __FUNCTION__, status);
       return status;
     }
 
-    status = pbus_.CompositeDeviceAdd(&controller_out, cleo_controller_fragments,
-                                      countof(cleo_controller_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&controller_out, cleo_controller_fragments,
+                                         countof(cleo_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
+      zxlogf(ERROR, "%s: pbus_.CompositeDeviceAddNew failed %d", __FUNCTION__, status);
       return status;
     }
   }
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: pbus_.CompositeDeviceAddNew failed %d", __FUNCTION__, status);
     return status;
   }
   return ZX_OK;

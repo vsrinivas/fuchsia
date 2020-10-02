@@ -9,9 +9,10 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
-#include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
+#include <soc/aml-common/aml-sd-emmc.h>
+#include <soc/aml-common/aml-sdmmc.h>
 
 #include "vim3.h"
 
@@ -83,8 +84,8 @@ static const device_fragment_part_t gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
-static const device_fragment_t fragments[] = {
-    {countof(gpio_fragment), gpio_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
 zx_status_t Vim3::EmmcInit() {
@@ -117,14 +118,12 @@ zx_status_t Vim3::EmmcInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOBOOT(7), A311D_GPIOBOOT_7_EMMC_D7_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOBOOT(8), A311D_GPIOBOOT_8_EMMC_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOBOOT(10), A311D_GPIOBOOT_10_EMMC_CMD_FN);
-  //gpio_impl_.SetAltFunction(A311D_GPIOBOOT(12), 1);
+  // gpio_impl_.SetAltFunction(A311D_GPIOBOOT(12), 1);
   gpio_impl_.SetAltFunction(A311D_GPIOBOOT(13), A311D_GPIOBOOT_13_EMMC_DS_FN);
 
   gpio_impl_.ConfigOut(A311D_GPIOBOOT(14), 1);
 
-
-
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
     return status;

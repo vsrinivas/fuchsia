@@ -30,8 +30,8 @@ zx_status_t Vs680Evk::PowerInit() {
       {std::size(pmic_i2c_match), pmic_i2c_match},
   };
 
-  const device_fragment_t power_impl_fragments[] = {
-      {std::size(pmic_i2c_fragment), pmic_i2c_fragment},
+  const device_fragment_new_t power_impl_fragments[] = {
+      {"i2c-pmic", std::size(pmic_i2c_fragment), pmic_i2c_fragment},
   };
 
   constexpr zx_device_prop_t power_impl_props[] = {
@@ -39,7 +39,7 @@ zx_status_t Vs680Evk::PowerInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_VS680_POWER},
   };
 
-  const composite_device_desc_t power_impl_desc = {
+  const composite_device_desc_new_t power_impl_desc = {
       .props = power_impl_props,
       .props_count = std::size(power_impl_props),
       .fragments = power_impl_fragments,
@@ -60,8 +60,8 @@ zx_status_t Vs680Evk::PowerInit() {
       {std::size(power_impl_driver_match), power_impl_driver_match},
   };
 
-  const device_fragment_t power_domain_vcpu_fragments[] = {
-      {std::size(power_impl_fragment), power_impl_fragment},
+  const device_fragment_new_t power_domain_vcpu_fragments[] = {
+      {"power-impl", std::size(power_impl_fragment), power_impl_fragment},
   };
 
   constexpr power_domain_t power_domain_vcpu[] = {
@@ -76,7 +76,7 @@ zx_status_t Vs680Evk::PowerInit() {
       },
   };
 
-  const composite_device_desc_t power_domain_vcpu_desc = {
+  const composite_device_desc_new_t power_domain_vcpu_desc = {
       .props = power_domain_vcpu_props,
       .props_count = std::size(power_domain_vcpu_props),
       .fragments = power_domain_vcpu_fragments,
@@ -86,13 +86,13 @@ zx_status_t Vs680Evk::PowerInit() {
       .metadata_count = std::size(power_domain_vcpu_metadata),
   };
 
-  zx_status_t status = DdkAddComposite("power", &power_impl_desc);
+  zx_status_t status = DdkAddCompositeNew("power", &power_impl_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add power composite device: %d", __func__, status);
     return status;
   }
 
-  if ((status = DdkAddComposite("composite-pd-vcpu", &power_domain_vcpu_desc)) != ZX_OK) {
+  if ((status = DdkAddCompositeNew("composite-pd-vcpu", &power_domain_vcpu_desc)) != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add VCPU composite device: %d", __func__, status);
     return status;
   }

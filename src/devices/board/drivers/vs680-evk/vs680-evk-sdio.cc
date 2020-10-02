@@ -47,10 +47,10 @@ zx_status_t Vs680Evk::SdioInit() {
       {std::size(sd0_clock_match), sd0_clock_match},
   };
 
-  const device_fragment_t sdio_fragments[] = {
-      {std::size(expander2_fragment), expander2_fragment},
-      {std::size(expander3_fragment), expander3_fragment},
-      {std::size(sd0_clock_fragment), sd0_clock_fragment},
+  const device_fragment_new_t sdio_fragments[] = {
+      {"i2c-expander-2", std::size(expander2_fragment), expander2_fragment},
+      {"i2c-expander-3", std::size(expander3_fragment), expander3_fragment},
+      {"clock-sd-0", std::size(sd0_clock_fragment), sd0_clock_fragment},
   };
 
   constexpr pbus_mmio_t sdio_mmios[] = {
@@ -91,9 +91,9 @@ zx_status_t Vs680Evk::SdioInit() {
   sdio_dev.bti_count = countof(sdio_btis);
 
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, std::size(sdio_fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAddNew(&sdio_dev, sdio_fragments, std::size(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew() error: %d", __func__, status);
   }
 
   return status;

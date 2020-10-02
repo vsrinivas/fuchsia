@@ -44,9 +44,9 @@ static const device_fragment_part_t gpio_fragment[] = {
     {countof(gpio_match), gpio_match},
 };
 
-static const device_fragment_t fragments[] = {
-    {countof(i2c_fragment), i2c_fragment},
-    {countof(gpio_fragment), gpio_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"i2c", countof(i2c_fragment), i2c_fragment},
+    {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
 zx_status_t Astro::LightInit() {
@@ -68,7 +68,7 @@ zx_status_t Astro::LightInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -78,9 +78,9 @@ zx_status_t Astro::LightInit() {
       .metadata_count = countof(metadata),
   };
 
-  zx_status_t status = DdkAddComposite("tcs3400-light", &comp_desc);
+  zx_status_t status = DdkAddCompositeNew("tcs3400-light", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d", __func__, status);
+    zxlogf(ERROR, "%s(tcs-3400): DdkAddCompositeNew failed: %d", __func__, status);
     return status;
   }
 
@@ -124,9 +124,9 @@ zx_status_t Astro::LightInit() {
       {countof(root_match), root_match},
       {countof(amber_led_pwm_match), amber_led_pwm_match},
   };
-  const device_fragment_t light_fragments[] = {
-      {countof(amber_led_gpio_fragment), amber_led_gpio_fragment},
-      {countof(amber_led_pwm_fragment), amber_led_pwm_fragment},
+  const device_fragment_new_t light_fragments[] = {
+      {"gpio", countof(amber_led_gpio_fragment), amber_led_gpio_fragment},
+      {"pwm", countof(amber_led_pwm_fragment), amber_led_pwm_fragment},
   };
 
   static const pbus_dev_t light_dev = []() {
@@ -153,10 +153,10 @@ zx_status_t Astro::LightInit() {
     zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d", __func__, status);
   }
 
-  status =
-      pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&light_dev, light_fragments, countof(light_fragments),
+                                       UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
     return status;
   }
 

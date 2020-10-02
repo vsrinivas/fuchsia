@@ -42,9 +42,9 @@ static const device_fragment_part_t gpio_fragment[] = {
     {countof(gpio_match), gpio_match},
 };
 
-static const device_fragment_t fragments[] = {
-    {countof(i2c_fragment), i2c_fragment},
-    {countof(gpio_fragment), gpio_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"i2c", countof(i2c_fragment), i2c_fragment},
+    {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
 zx_status_t Nelson::LightInit() {
@@ -66,7 +66,7 @@ zx_status_t Nelson::LightInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMS_LIGHT},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -76,9 +76,9 @@ zx_status_t Nelson::LightInit() {
       .metadata_count = countof(metadata),
   };
 
-  zx_status_t status = DdkAddComposite("tcs3400-light", &comp_desc);
+  zx_status_t status = DdkAddCompositeNew("tcs3400-light", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(tcs-3400): DdkAddComposite failed: %d", __func__, status);
+    zxlogf(ERROR, "%s(tcs-3400): DdkAddCompositeNew failed: %d", __func__, status);
     return status;
   }
 

@@ -171,10 +171,10 @@ static const device_fragment_part_t oob_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(oob_gpio_match), oob_gpio_match},
 };
-static const device_fragment_t wifi_composite[] = {
-    {countof(sdio_fn1_fragment), sdio_fn1_fragment},
-    {countof(sdio_fn2_fragment), sdio_fn2_fragment},
-    {countof(oob_gpio_fragment), oob_gpio_fragment},
+static const device_fragment_new_t wifi_composite[] = {
+    {"sdio-function-1", countof(sdio_fn1_fragment), sdio_fn1_fragment},
+    {"sdio-function-2", countof(sdio_fn2_fragment), sdio_fn2_fragment},
+    {"gpio-oob", countof(oob_gpio_fragment), oob_gpio_fragment},
 };
 
 // Composite binding rules for SDIO.
@@ -193,9 +193,9 @@ constexpr device_fragment_part_t pwm_e_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(pwm_e_match), pwm_e_match},
 };
-static const device_fragment_t sdio_fragments[] = {
-    {countof(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
-    {std::size(pwm_e_fragment), pwm_e_fragment},
+static const device_fragment_new_t sdio_fragments[] = {
+    {"gpio-wifi-power-on", countof(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
+    {"pwm", std::size(pwm_e_fragment), pwm_e_fragment},
 };
 
 zx_status_t Astro::SdEmmcConfigurePortB() {
@@ -278,10 +278,10 @@ zx_status_t Astro::SdioInit() {
 
   SdEmmcConfigurePortB();
 
-  status =
-      pbus_.CompositeDeviceAdd(&sd_emmc_dev, sdio_fragments, countof(sdio_fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&sd_emmc_dev, sdio_fragments, countof(sdio_fragments),
+                                       UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd sd_emmc failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew sd_emmc failed: %d", __func__, status);
     return status;
   }
 
@@ -292,7 +292,7 @@ zx_status_t Astro::SdioInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = wifi_composite,
@@ -302,9 +302,9 @@ zx_status_t Astro::SdioInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("wifi", &comp_desc);
+  status = DdkAddCompositeNew("wifi", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddCompositeNew failed: %d", __func__, status);
     return status;
   }
 

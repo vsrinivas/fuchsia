@@ -113,12 +113,12 @@ constexpr device_fragment_part_t clk_dos_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk_dos_match), clk_dos_match},
 };
-constexpr device_fragment_t fragments[] = {
-    {countof(sysmem_fragment), sysmem_fragment},
-    {countof(canvas_fragment), canvas_fragment},
-    {countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
-    {countof(clk_dos_fragment), clk_dos_fragment},
-    {countof(tee_fragment), tee_fragment},
+constexpr device_fragment_new_t fragments[] = {
+    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
+    {"canvas", countof(canvas_fragment), canvas_fragment},
+    {"clock-dos-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
+    {"clock-dos", countof(clk_dos_fragment), clk_dos_fragment},
+    {"tee", countof(tee_fragment), tee_fragment},
 };
 
 static pbus_dev_t video_dev = []() {
@@ -140,9 +140,9 @@ static pbus_dev_t video_dev = []() {
 
 zx_status_t Sherlock::VideoInit() {
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&video_dev, fragments, countof(fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAddNew(&video_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::VideoInit: CompositeDeviceAdd() failed for video: %d", status);
+    zxlogf(ERROR, "Sherlock::VideoInit: CompositeDeviceAddNew() failed for video: %d", status);
     return status;
   }
   return ZX_OK;

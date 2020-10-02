@@ -81,19 +81,19 @@ static constexpr device_fragment_part_t gpio_reset_fragment[] = {
     {std::size(gpio_reset_match), gpio_reset_match},
 };
 
-static constexpr device_fragment_t sherlock_fragments[] = {
-    {std::size(sherlock_i2c_fragment), sherlock_i2c_fragment},
-    {std::size(gpio_int_fragment), gpio_int_fragment},
-    {std::size(gpio_reset_fragment), gpio_reset_fragment},
+static constexpr device_fragment_new_t sherlock_fragments[] = {
+    {"i2c", std::size(sherlock_i2c_fragment), sherlock_i2c_fragment},
+    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
+    {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
 };
 
-static constexpr device_fragment_t luis_fragments[] = {
-    {std::size(sherlock_i2c_fragment), luis_i2c_fragment},
-    {std::size(gpio_int_fragment), gpio_int_fragment},
-    {std::size(gpio_reset_fragment), gpio_reset_fragment},
+static constexpr device_fragment_new_t luis_fragments[] = {
+    {"i2c", std::size(sherlock_i2c_fragment), luis_i2c_fragment},
+    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
+    {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
 };
 
-static const composite_device_desc_t sherlock_comp_desc = {
+static const composite_device_desc_new_t sherlock_comp_desc = {
     .props = sherlock_touch_props,
     .props_count = countof(sherlock_touch_props),
     .fragments = sherlock_fragments,
@@ -103,7 +103,7 @@ static const composite_device_desc_t sherlock_comp_desc = {
     .metadata_count = std::size(ft5726_touch_metadata),
 };
 
-static const composite_device_desc_t luis_comp_desc = {
+static const composite_device_desc_new_t luis_comp_desc = {
     .props = luis_touch_props,
     .props_count = countof(luis_touch_props),
     .fragments = luis_fragments,
@@ -114,9 +114,9 @@ static const composite_device_desc_t luis_comp_desc = {
 zx_status_t Sherlock::TouchInit() {
   zx_status_t status;
   if (pid_ == PDEV_PID_LUIS) {
-    status = DdkAddComposite("ft8201-touch", &luis_comp_desc);
+    status = DdkAddCompositeNew("ft8201-touch", &luis_comp_desc);
   } else {
-    status = DdkAddComposite("ft5726-touch", &sherlock_comp_desc);
+    status = DdkAddCompositeNew("ft5726-touch", &sherlock_comp_desc);
   }
 
   if (status != ZX_OK) {

@@ -99,8 +99,8 @@ static constexpr device_fragment_part_t gpio_spicc0_ss0_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(gpio_spicc0_ss0_match), gpio_spicc0_ss0_match},
 };
-static constexpr device_fragment_t fragments[] = {
-    {std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
+static constexpr device_fragment_new_t fragments[] = {
+    {"gpio", std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
 };
 
 zx_status_t Sherlock::SpiInit() {
@@ -131,7 +131,7 @@ zx_status_t Sherlock::SpiInit() {
   }
 
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&spi_dev, fragments, std::size(fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAddNew(&spi_dev, fragments, std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

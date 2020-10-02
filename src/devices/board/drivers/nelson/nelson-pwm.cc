@@ -92,10 +92,10 @@ static const device_fragment_part_t bt_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(bt_gpio_match), bt_gpio_match},
 };
-static const device_fragment_t composite[] = {
-    {countof(pwm_fragment), pwm_fragment},
-    {countof(wifi_gpio_fragment), wifi_gpio_fragment},
-    {countof(bt_gpio_fragment), bt_gpio_fragment},
+static const device_fragment_new_t composite[] = {
+    {"pwm", countof(pwm_fragment), pwm_fragment},
+    {"gpio-wifi", countof(wifi_gpio_fragment), wifi_gpio_fragment},
+    {"gpio-bt", countof(bt_gpio_fragment), bt_gpio_fragment},
 };
 
 zx_status_t Nelson::PwmInit() {
@@ -112,7 +112,7 @@ zx_status_t Nelson::PwmInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_PWM_INIT},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = composite,
@@ -122,9 +122,9 @@ zx_status_t Nelson::PwmInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("pwm-init", &comp_desc);
+  status = DdkAddCompositeNew("pwm-init", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddComposite failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: DdkAddCompositeNew failed: %d", __func__, status);
     return status;
   }
 

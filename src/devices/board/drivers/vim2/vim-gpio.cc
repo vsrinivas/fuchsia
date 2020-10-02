@@ -157,8 +157,8 @@ zx_status_t Vim::GpioInit() {
       {std::size(root_match), root_match},
       {std::size(gpio_match), gpio_match},
   };
-  const device_fragment_t fragments[] = {
-      {std::size(gpio_fragment), gpio_fragment},
+  const device_fragment_new_t fragments[] = {
+      {"gpio", std::size(gpio_fragment), gpio_fragment},
   };
 
   pbus_dev_t light_dev = {};
@@ -169,7 +169,7 @@ zx_status_t Vim::GpioInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = std::size(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, std::size(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&light_dev, fragments, std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d", status);
     return status;

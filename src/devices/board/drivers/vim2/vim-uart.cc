@@ -73,7 +73,7 @@ static pbus_dev_t bt_uart_dev = [] {
 }();
 
 // Composite binding rules for bluetooth.
-constexpr device_fragment_t bt_uart_fragments[] = {};
+constexpr device_fragment_new_t bt_uart_fragments[] = {};
 
 #if UART_TEST
 static const pbus_mmio_t header_uart_mmios[] = {
@@ -186,8 +186,8 @@ zx_status_t Vim::UartInit() {
   gpio_impl_.Write(BT_EN, 1);
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
-                                    UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
+                                       UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "UartInit: pbus_device_add failed: %d", status);
     return status;

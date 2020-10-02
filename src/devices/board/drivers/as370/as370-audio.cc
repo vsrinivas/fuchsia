@@ -69,18 +69,18 @@ static const device_fragment_part_t ref_out_clk0_fragment[] = {
     {countof(ref_out_clk0_match), ref_out_clk0_match},
 };
 
-static const device_fragment_t codec_fragments[] = {
-    {countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+static const device_fragment_new_t codec_fragments[] = {
+    {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {"gpio", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
 };
-static const device_fragment_t controller_fragments[] = {
-    {countof(dma_fragment), dma_fragment},
-    {countof(ref_out_codec_fragment), ref_out_codec_fragment},
-    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
+static const device_fragment_new_t controller_fragments[] = {
+    {"dma", countof(dma_fragment), dma_fragment},
+    {"codec", countof(ref_out_codec_fragment), ref_out_codec_fragment},
+    {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
-static const device_fragment_t in_fragments[] = {
-    {countof(dma_fragment), dma_fragment},
-    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
+static const device_fragment_new_t in_fragments[] = {
+    {"dma", countof(dma_fragment), dma_fragment},
+    {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 
 zx_status_t As370::AudioInit() {
@@ -182,7 +182,7 @@ zx_status_t As370::AudioInit() {
   constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
                                         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = codec_fragments,
@@ -192,9 +192,9 @@ zx_status_t As370::AudioInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("audio-max98373", &comp_desc);
+  status = DdkAddCompositeNew("audio-max98373", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
+    zxlogf(ERROR, "%s DdkAddCompositeNew failed %d", __FILE__, status);
     return status;
   }
 
@@ -202,9 +202,9 @@ zx_status_t As370::AudioInit() {
   // When autoproxying (fxbug.dev/33274) or its replacement is in place,
   // we can have these drivers in different devhosts.
   constexpr uint32_t controller_coresident_device_index = 1;
-  status =
-      pbus_.CompositeDeviceAdd(&controller_out, controller_fragments, countof(controller_fragments),
-                               controller_coresident_device_index);
+  status = pbus_.CompositeDeviceAddNew(&controller_out, controller_fragments,
+                                       countof(controller_fragments),
+                                       controller_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
     return status;
@@ -215,8 +215,8 @@ zx_status_t As370::AudioInit() {
   // When autoproxying (fxbug.dev/33274) or its replacement is in place,
   // we can have these drivers in different devhosts.
   constexpr uint32_t in_coresident_device_index = 1;
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments),
-                                    in_coresident_device_index);
+  status = pbus_.CompositeDeviceAddNew(&dev_in, in_fragments, countof(in_fragments),
+                                       in_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;

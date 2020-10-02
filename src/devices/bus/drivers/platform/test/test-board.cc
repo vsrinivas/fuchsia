@@ -326,7 +326,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev_goldfish_composite.metadata_count = std::size(test_metadata_goldfish_control);
 
   status = pbus_composite_device_add_new(&pbus, &pdev_goldfish_composite, goldfish_composite,
-                                     std::size(goldfish_composite), UINT32_MAX);
+                                         std::size(goldfish_composite), UINT32_MAX);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);

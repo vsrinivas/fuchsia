@@ -196,41 +196,42 @@ zx_status_t Sherlock::AudioInit() {
   };
 
   // Fragments to be used by the codecs.
-  const device_fragment_t woofer_fragments[] = {
-      {countof(woofer_i2c_fragment), woofer_i2c_fragment},
+  const device_fragment_new_t woofer_fragments[] = {
+      {"i2c-woofer", countof(woofer_i2c_fragment), woofer_i2c_fragment},
   };
-  const device_fragment_t tweeter_left_fragments[] = {
-      {countof(tweeter_left_i2c_fragment), tweeter_left_i2c_fragment},
+  const device_fragment_new_t tweeter_left_fragments[] = {
+      {"i2c-tweeter-left", countof(tweeter_left_i2c_fragment), tweeter_left_i2c_fragment},
   };
-  const device_fragment_t tweeter_right_fragments[] = {
-      {countof(tweeter_right_i2c_fragment), tweeter_right_i2c_fragment},
+  const device_fragment_new_t tweeter_right_fragments[] = {
+      {"i2c-tweeter-right", countof(tweeter_right_i2c_fragment), tweeter_right_i2c_fragment},
   };
-  const device_fragment_t luis_codec_fragments[] = {
-      {countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
+  const device_fragment_new_t luis_codec_fragments[] = {
+      {"i2c-codec", countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
   };
-  const device_fragment_t ernie_woofer_fragments[] = {
-      {countof(ernie_woofer_codec_i2c_fragment), ernie_woofer_codec_i2c_fragment},
+  const device_fragment_new_t ernie_woofer_fragments[] = {
+      {"i2c-woofer", countof(ernie_woofer_codec_i2c_fragment), ernie_woofer_codec_i2c_fragment},
   };
-  const device_fragment_t ernie_tweeter_fragments[] = {
-      {countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
+  const device_fragment_new_t ernie_tweeter_fragments[] = {
+      {"i2c-tweeter", countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
   };
 #ifdef ENABLE_BT
-  static const device_fragment_t tdm_pcm_fragments[] = {};
+  static const device_fragment_new_t tdm_pcm_fragments[] = {};
 #endif
-  const device_fragment_t sherlock_tdm_i2s_fragments[] = {
-      {countof(enable_gpio_fragment), enable_gpio_fragment},
-      {countof(codec_woofer_fragment), codec_woofer_fragment},
-      {countof(codec_tweeter_left_fragment), codec_tweeter_left_fragment},
-      {countof(codec_tweeter_right_fragment), codec_tweeter_right_fragment},
+
+  const device_fragment_new_t sherlock_tdm_i2s_fragments[] = {
+      {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
+      {"codec-woofer", countof(codec_woofer_fragment), codec_woofer_fragment},
+      {"codec-twitter-left", countof(codec_tweeter_left_fragment), codec_tweeter_left_fragment},
+      {"codec-tweeter-right", countof(codec_tweeter_right_fragment), codec_tweeter_right_fragment},
   };
-  const device_fragment_t luis_tdm_i2s_fragments[] = {
-      {countof(enable_gpio_fragment), enable_gpio_fragment},
-      {countof(luis_codec_fragment), luis_codec_fragment},
+  const device_fragment_new_t luis_tdm_i2s_fragments[] = {
+      {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
+      {"codec", countof(luis_codec_fragment), luis_codec_fragment},
   };
-  const device_fragment_t ernie_tdm_i2s_fragments[] = {
-      {countof(enable_gpio_fragment), enable_gpio_fragment},
-      {countof(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
-      {countof(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
+  const device_fragment_new_t ernie_tdm_i2s_fragments[] = {
+      {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
+      {"codec-woofer", countof(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
+      {"codec-tweeter", countof(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
   };
 
   status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
@@ -303,7 +304,7 @@ zx_status_t Sherlock::AudioInit() {
         },
     };
 
-    composite_device_desc_t comp_desc = {};
+    composite_device_desc_new_t comp_desc = {};
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
     comp_desc.coresident_device_index = UINT32_MAX;
@@ -311,7 +312,7 @@ zx_status_t Sherlock::AudioInit() {
     comp_desc.fragments_count = countof(woofer_fragments);
     comp_desc.metadata_list = codec_metadata;
     comp_desc.metadata_count = countof(codec_metadata);
-    status = DdkAddComposite("audio-tas5720-woofer", &comp_desc);
+    status = DdkAddCompositeNew("audio-tas5720-woofer", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite woofer failed %d", __FILE__, status);
       return status;
@@ -321,7 +322,7 @@ zx_status_t Sherlock::AudioInit() {
     props[2].value = 2;
     comp_desc.fragments = tweeter_left_fragments;
     comp_desc.fragments_count = countof(tweeter_left_fragments);
-    status = DdkAddComposite("audio-tas5720-left-tweeter", &comp_desc);
+    status = DdkAddCompositeNew("audio-tas5720-left-tweeter", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite left tweeter failed %d", __FILE__, status);
       return status;
@@ -331,7 +332,7 @@ zx_status_t Sherlock::AudioInit() {
     props[2].value = 3;
     comp_desc.fragments = tweeter_right_fragments;
     comp_desc.fragments_count = countof(tweeter_right_fragments);
-    status = DdkAddComposite("audio-tas5720-right-tweeter", &comp_desc);
+    status = DdkAddCompositeNew("audio-tas5720-right-tweeter", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite right tweeter failed %d", __FILE__, status);
       return status;
@@ -369,7 +370,7 @@ zx_status_t Sherlock::AudioInit() {
           },
       };
 
-      composite_device_desc_t comp_desc = {};
+      composite_device_desc_new_t comp_desc = {};
       comp_desc.props = props;
       comp_desc.props_count = countof(props);
       comp_desc.coresident_device_index = UINT32_MAX;
@@ -377,7 +378,7 @@ zx_status_t Sherlock::AudioInit() {
       comp_desc.fragments_count = countof(ernie_woofer_fragments);
       comp_desc.metadata_list = codec_metadata;
       comp_desc.metadata_count = countof(codec_metadata);
-      status = DdkAddComposite("audio-tas58xx-woofer", &comp_desc);
+      status = DdkAddCompositeNew("audio-tas58xx-woofer", &comp_desc);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAddComposite woofer failed %d", __FILE__, status);
         return status;
@@ -387,7 +388,7 @@ zx_status_t Sherlock::AudioInit() {
       props[2].value = 2;
       comp_desc.fragments = ernie_tweeter_fragments;
       comp_desc.fragments_count = countof(ernie_tweeter_fragments);
-      status = DdkAddComposite("audio-tas58xx-tweeter", &comp_desc);
+      status = DdkAddCompositeNew("audio-tas58xx-tweeter", &comp_desc);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAddComposite left tweeter failed %d", __FILE__, status);
         return status;
@@ -395,13 +396,13 @@ zx_status_t Sherlock::AudioInit() {
     } else {
       zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                   {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
-      composite_device_desc_t comp_desc = {};
+      composite_device_desc_new_t comp_desc = {};
       comp_desc.props = props;
       comp_desc.props_count = countof(props);
       comp_desc.coresident_device_index = UINT32_MAX;
       comp_desc.fragments = luis_codec_fragments;
       comp_desc.fragments_count = countof(luis_codec_fragments);
-      status = DdkAddComposite("audio-tas58xx", &comp_desc);
+      status = DdkAddCompositeNew("audio-tas58xx", &comp_desc);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
         return status;
@@ -484,15 +485,15 @@ zx_status_t Sherlock::AudioInit() {
   tdm_dev.metadata_list = tdm_metadata;
   tdm_dev.metadata_count = countof(tdm_metadata);
   if (is_sherlock) {
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, sherlock_tdm_i2s_fragments,
-                                      countof(sherlock_tdm_i2s_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&tdm_dev, sherlock_tdm_i2s_fragments,
+                                         countof(sherlock_tdm_i2s_fragments), UINT32_MAX);
   } else {
     if (is_ernie) {
-      status = pbus_.CompositeDeviceAdd(&tdm_dev, ernie_tdm_i2s_fragments,
-                                        countof(ernie_tdm_i2s_fragments), UINT32_MAX);
+      status = pbus_.CompositeDeviceAddNew(&tdm_dev, ernie_tdm_i2s_fragments,
+                                           countof(ernie_tdm_i2s_fragments), UINT32_MAX);
     } else {
-      status = pbus_.CompositeDeviceAdd(&tdm_dev, luis_tdm_i2s_fragments,
-                                        countof(luis_tdm_i2s_fragments), UINT32_MAX);
+      status = pbus_.CompositeDeviceAddNew(&tdm_dev, luis_tdm_i2s_fragments,
+                                           countof(luis_tdm_i2s_fragments), UINT32_MAX);
     }
   }
   if (status != ZX_OK) {
@@ -548,8 +549,8 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_count = countof(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
-                                      UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
+                                         UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
@@ -648,8 +649,8 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_count = countof(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
-                                      UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
+                                         UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;

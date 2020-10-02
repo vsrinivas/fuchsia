@@ -187,13 +187,13 @@ static const device_fragment_part_t camera_sensor_fragment[] = {
     {countof(camera_sensor_match), camera_sensor_match},
 };
 
-static const device_fragment_t isp_fragments[] = {
-    {countof(camera_sensor_fragment), camera_sensor_fragment},
+static const device_fragment_new_t isp_fragments[] = {
+    {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
 };
 
 // Compisite binding rules for GDC
-static const device_fragment_t gdc_fragments[] = {
-    {countof(camera_sensor_fragment), camera_sensor_fragment},
+static const device_fragment_new_t gdc_fragments[] = {
+    {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
 };
 
 static const device_fragment_part_t amlogiccanvas_fragment[] = {
@@ -202,9 +202,9 @@ static const device_fragment_part_t amlogiccanvas_fragment[] = {
 };
 
 // Composite binding rules for GE2D
-static const device_fragment_t ge2d_fragments[] = {
-    {countof(camera_sensor_fragment), camera_sensor_fragment},
-    {countof(amlogiccanvas_fragment), amlogiccanvas_fragment},
+static const device_fragment_new_t ge2d_fragments[] = {
+    {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
+    {"canvas", countof(amlogiccanvas_fragment), amlogiccanvas_fragment},
 };
 
 // Composite binding rules for camera modules.
@@ -297,24 +297,24 @@ static const device_fragment_part_t mipicsi_fragment[] = {
     {countof(root_match), root_match},
     {countof(mipicsi_match), mipicsi_match},
 };
-static const device_fragment_t imx227_sensor_fragments[] = {
-    {countof(mipicsi_fragment), mipicsi_fragment},
-    {countof(i2c_fragment), i2c_fragment},
-    {countof(gpio_vana_fragment), gpio_vana_fragment},
-    {countof(gpio_vdig_fragment), gpio_vdig_fragment},
-    {countof(gpio_reset_fragment), gpio_reset_fragment},
-    {countof(clk_sensor_fragment), clk_sensor_fragment},
+static const device_fragment_new_t imx227_sensor_fragments[] = {
+    {"mipcsi", countof(mipicsi_fragment), mipicsi_fragment},
+    {"i2c", countof(i2c_fragment), i2c_fragment},
+    {"gpio-vana", countof(gpio_vana_fragment), gpio_vana_fragment},
+    {"gpio-vdig", countof(gpio_vdig_fragment), gpio_vdig_fragment},
+    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
+    {"clock-sensor", countof(clk_sensor_fragment), clk_sensor_fragment},
 };
-static const device_fragment_t imx355_sensor_fragments[] = {
-    {countof(mipicsi_fragment), mipicsi_fragment},
-    {countof(i2c_fragment), i2c_fragment},
-    {countof(i2c_eeprom_fragment), i2c_eeprom_fragment},
-    {countof(gpio_cam_mute_fragment), gpio_cam_mute_fragment},
-    {countof(gpio_reset_fragment), gpio_reset_fragment},
-    {countof(gpio_cam_vana_fragment), gpio_cam_vana_fragment},
-    {countof(gpio_vdig_fragment), gpio_vdig_fragment},
-    {countof(gpio_cam_vif_fragment), gpio_cam_vif_fragment},
-    {countof(clk_sensor_fragment), clk_sensor_fragment},
+static const device_fragment_new_t imx355_sensor_fragments[] = {
+    {"mipicsi", countof(mipicsi_fragment), mipicsi_fragment},
+    {"i2c", countof(i2c_fragment), i2c_fragment},
+    {"i2c-eeprom", countof(i2c_eeprom_fragment), i2c_eeprom_fragment},
+    {"gpio-cam-mute", countof(gpio_cam_mute_fragment), gpio_cam_mute_fragment},
+    {"gpio-cam-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
+    {"gpio-cam-vana", countof(gpio_cam_vana_fragment), gpio_cam_vana_fragment},
+    {"gpio-vdig", countof(gpio_vdig_fragment), gpio_vdig_fragment},
+    {"gpio-cam-vif", countof(gpio_cam_vif_fragment), gpio_cam_vif_fragment},
+    {"clock-sensor", countof(clk_sensor_fragment), clk_sensor_fragment},
 };
 
 // Composite device binding rules for Camera Controller
@@ -346,11 +346,11 @@ static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-static const device_fragment_t camera_controller_fragments[] = {
-    {countof(isp_fragment), isp_fragment},
-    {countof(gdc_fragment), gdc_fragment},
-    {countof(gdc_fragment), ge2d_fragment},
-    {countof(sysmem_fragment), sysmem_fragment},
+static const device_fragment_new_t camera_controller_fragments[] = {
+    {"isp", countof(isp_fragment), isp_fragment},
+    {"gdc", countof(gdc_fragment), gdc_fragment},
+    {"ge2d", countof(ge2d_fragment), ge2d_fragment},
+    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
 };
 
 constexpr pbus_mmio_t mipi_mmios[] = {
@@ -447,31 +447,31 @@ zx_status_t Sherlock::CameraInit() {
   }
 
   if (pid_ == PDEV_PID_LUIS) {
-    status = pbus_.CompositeDeviceAdd(&sensor_dev_luis, imx355_sensor_fragments,
-                                      countof(imx355_sensor_fragments), 1);
+    status = pbus_.CompositeDeviceAddNew(&sensor_dev_luis, imx355_sensor_fragments,
+                                         countof(imx355_sensor_fragments), 1);
   } else {
-    status = pbus_.CompositeDeviceAdd(&sensor_dev_sherlock, imx227_sensor_fragments,
-                                      countof(imx227_sensor_fragments), 1);
+    status = pbus_.CompositeDeviceAddNew(&sensor_dev_sherlock, imx227_sensor_fragments,
+                                         countof(imx227_sensor_fragments), 1);
   }
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&gdc_dev, gdc_fragments, countof(gdc_fragments), 1);
+  status = pbus_.CompositeDeviceAddNew(&gdc_dev, gdc_fragments, countof(gdc_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&ge2d_dev, ge2d_fragments, countof(ge2d_fragments), 1);
+  status = pbus_.CompositeDeviceAddNew(&ge2d_dev, ge2d_fragments, countof(ge2d_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   // Add a composite device for ARM ISP
-  status = pbus_.CompositeDeviceAdd(&isp_dev, isp_fragments, countof(isp_fragments), 1);
+  status = pbus_.CompositeDeviceAddNew(&isp_dev, isp_fragments, countof(isp_fragments), 1);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d", __func__, status);
@@ -482,7 +482,7 @@ zx_status_t Sherlock::CameraInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_CONTROLLER},
   };
 
-  const composite_device_desc_t camera_comp_desc = {
+  const composite_device_desc_new_t camera_comp_desc = {
       .props = camera_controller_props,
       .props_count = countof(camera_controller_props),
       .fragments = camera_controller_fragments,
@@ -492,7 +492,7 @@ zx_status_t Sherlock::CameraInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddComposite("camera-controller", &camera_comp_desc);
+  status = DdkAddCompositeNew("camera-controller", &camera_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Controller DeviceAdd failed %d", __func__, status);
     return status;

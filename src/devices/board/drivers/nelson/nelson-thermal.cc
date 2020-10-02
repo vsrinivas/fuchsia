@@ -274,10 +274,10 @@ static const device_fragment_part_t clk2_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
-static const device_fragment_t fragments[] = {
-    {countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
-    {countof(clk1_fragment), clk1_fragment},
-    {countof(clk2_fragment), clk2_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"pwm", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
+    {"clock-1", countof(clk1_fragment), clk1_fragment},
+    {"clock-2", countof(clk2_fragment), clk2_fragment},
 };
 
 zx_status_t Nelson::ThermalInit() {
@@ -295,7 +295,7 @@ zx_status_t Nelson::ThermalInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

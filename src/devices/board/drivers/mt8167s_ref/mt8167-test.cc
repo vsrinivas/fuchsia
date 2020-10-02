@@ -12,8 +12,8 @@
 #include "zircon/types.h"
 
 // This stubs ensures the power device setup succeeds
-__EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
-                                          const composite_device_desc_t* comp_desc) {
+__EXPORT zx_status_t device_add_composite_new(zx_device_t* dev, const char* name,
+                                              const composite_device_desc_new_t* comp_desc) {
   return ZX_OK;
 }
 

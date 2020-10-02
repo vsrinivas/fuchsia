@@ -70,15 +70,15 @@ constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-constexpr device_fragment_t fragments[] = {
-    {countof(sysmem_fragment), sysmem_fragment},
+constexpr device_fragment_new_t fragments[] = {
+    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
 };
 
 zx_status_t Astro::TeeInit() {
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&tee_dev, fragments, countof(fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAddNew(&tee_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

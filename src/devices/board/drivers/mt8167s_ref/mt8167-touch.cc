@@ -63,13 +63,13 @@ zx_status_t Mt8167::TouchInit() {
       {std::size(root_match), root_match},
       {std::size(gpio_reset_match), gpio_reset_match},
   };
-  const device_fragment_t ft_fragments[] = {
-      {std::size(ft_i2c_fragment), ft_i2c_fragment},
-      {std::size(gpio_int_fragment), gpio_int_fragment},
-      {std::size(gpio_reset_fragment), gpio_reset_fragment},
+  const device_fragment_new_t ft_fragments[] = {
+      {"i2c", std::size(ft_i2c_fragment), ft_i2c_fragment},
+      {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
+      {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
   };
 
-  static const composite_device_desc_t ft_comp_desc = {
+  static const composite_device_desc_new_t ft_comp_desc = {
       .props = ft_props,
       .props_count = countof(ft_props),
       .fragments = ft_fragments,
@@ -79,7 +79,7 @@ zx_status_t Mt8167::TouchInit() {
       .metadata_count = countof(touch_metadata),
   };
 
-  zx_status_t status = DdkAddComposite("touch", &ft_comp_desc);
+  zx_status_t status = DdkAddCompositeNew("touch", &ft_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add touch device: %d", __FUNCTION__, status);
   }

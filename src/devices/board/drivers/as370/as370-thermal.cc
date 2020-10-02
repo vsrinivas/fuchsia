@@ -92,9 +92,9 @@ zx_status_t As370::ThermalInit() {
       {std::size(cpu_power_match), cpu_power_match},
   };
 
-  static const device_fragment_t fragments[] = {
-      {std::size(cpu_clock_fragment), cpu_clock_fragment},
-      {std::size(cpu_power_fragment), cpu_power_fragment},
+  static const device_fragment_new_t fragments[] = {
+      {"clock", std::size(cpu_clock_fragment), cpu_clock_fragment},
+      {"power", std::size(cpu_power_fragment), cpu_power_fragment},
   };
 
   pbus_dev_t thermal_dev = {};
@@ -107,7 +107,7 @@ zx_status_t As370::ThermalInit() {
   thermal_dev.metadata_count = countof(thermal_metadata);
 
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAddNew(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d", __func__, status);
     return status;

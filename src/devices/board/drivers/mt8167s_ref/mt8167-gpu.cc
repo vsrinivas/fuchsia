@@ -41,10 +41,10 @@ static const device_fragment_part_t clk3_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk3_match), clk3_match},
 };
-static const device_fragment_t fragments[] = {
-    {countof(clk1_fragment), clk1_fragment},
-    {countof(clk2_fragment), clk2_fragment},
-    {countof(clk3_fragment), clk3_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"clock-1", countof(clk1_fragment), clk1_fragment},
+    {"clock-2", countof(clk2_fragment), clk2_fragment},
+    {"clock-3", countof(clk3_fragment), clk3_fragment},
 };
 
 zx_status_t Mt8167::GpuInit() {
@@ -92,7 +92,7 @@ zx_status_t Mt8167::GpuInit() {
   gpu_dev.bti_list = gpu_btis;
   gpu_dev.bti_count = countof(gpu_btis);
 
-  auto status = pbus_.CompositeDeviceAdd(&gpu_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAddNew(&gpu_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __FUNCTION__, status);
     return status;

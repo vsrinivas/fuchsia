@@ -60,12 +60,12 @@ zx_status_t Sherlock::ButtonsInit() {
       {countof(root_match), root_match},
       {countof(cam_mute_match), cam_mute_match},
   };
-  static const device_fragment_t fragments[] = {
-      {countof(volume_up_fragment), volume_up_fragment},
-      {countof(volume_down_fragment), volume_down_fragment},
-      {countof(volume_both_fragment), volume_both_fragment},
-      {countof(mic_privacy_fragment), mic_privacy_fragment},
-      {countof(cam_mute_fragment), cam_mute_fragment},
+  static const device_fragment_new_t fragments[] = {
+      {"volume-up", countof(volume_up_fragment), volume_up_fragment},
+      {"volume-down", countof(volume_down_fragment), volume_down_fragment},
+      {"volume-both", countof(volume_both_fragment), volume_both_fragment},
+      {"mic-privacy", countof(mic_privacy_fragment), mic_privacy_fragment},
+      {"cam-mute", countof(cam_mute_fragment), cam_mute_fragment},
   };
   static constexpr buttons_button_config_t buttons[] = {
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP, 0, 0, 0},
@@ -110,7 +110,7 @@ zx_status_t Sherlock::ButtonsInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_HID_BUTTONS},
   };
 
-  const composite_device_desc_t comp_desc = {
+  const composite_device_desc_new_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -120,9 +120,9 @@ zx_status_t Sherlock::ButtonsInit() {
       .metadata_count = countof(available_buttons_metadata),
   };
 
-  zx_status_t status = DdkAddComposite("sherlock-buttons", &comp_desc);
+  zx_status_t status = DdkAddCompositeNew("sherlock-buttons", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __func__, status);
     return status;
   }
 

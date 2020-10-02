@@ -69,7 +69,7 @@ zx_status_t Mt8167::ButtonsInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_HID_BUTTONS},
   };
 
-  composite_device_desc_t comp_desc = {};
+  composite_device_desc_new_t comp_desc = {};
 
   comp_desc.props = props;
   comp_desc.props_count = countof(props);
@@ -113,19 +113,19 @@ zx_status_t Mt8167::ButtonsInit() {
         {countof(root_match), root_match},
         {countof(col1_match), col1_match},
     };
-    static const device_fragment_t fragments[] = {
-        {countof(row0_fragment), row0_fragment},
-        {countof(row1_fragment), row1_fragment},
-        {countof(col0_fragment), col0_fragment},
-        {countof(col0_fragment), col1_fragment},
+    static const device_fragment_new_t fragments[] = {
+        {"gpio-row-0", countof(row0_fragment), row0_fragment},
+        {"gpio-row-1", countof(row1_fragment), row1_fragment},
+        {"gpio-column-0", countof(col0_fragment), col0_fragment},
+        {"gpio-column-1", countof(col1_fragment), col1_fragment},
     };
 
     comp_desc.fragments = fragments;
     comp_desc.fragments_count = countof(fragments);
 
-    zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
+    zx_status_t status = DdkAddCompositeNew("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
+      zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __func__, status);
       return status;
     }
   } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
@@ -147,16 +147,16 @@ zx_status_t Mt8167::ButtonsInit() {
         {countof(root_match), root_match},
         {countof(mic_privacy_match), mic_privacy_match},
     };
-    static const device_fragment_t fragments[] = {
-        {countof(volume_up_fragment), volume_up_fragment},
-        {countof(mic_privacy_fragment), mic_privacy_fragment},
+    static const device_fragment_new_t fragments[] = {
+        {"volume-up", countof(volume_up_fragment), volume_up_fragment},
+        {"mic-privacy", countof(mic_privacy_fragment), mic_privacy_fragment},
     };
     comp_desc.fragments = fragments;
     comp_desc.fragments_count = countof(fragments);
 
-    zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
+    zx_status_t status = DdkAddCompositeNew("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
+      zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __func__, status);
       return status;
     }
   } else {

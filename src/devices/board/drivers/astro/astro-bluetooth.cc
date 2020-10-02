@@ -84,8 +84,8 @@ constexpr device_fragment_part_t pwm_e_fragment[] = {
     {countof(root_match), root_match},
     {countof(pwm_e_match), pwm_e_match},
 };
-constexpr device_fragment_t bt_uart_fragments[] = {
-    {countof(pwm_e_fragment), pwm_e_fragment},
+constexpr device_fragment_new_t bt_uart_fragments[] = {
+    {"pwm", countof(pwm_e_fragment), pwm_e_fragment},
 };
 
 zx_status_t Astro::BluetoothInit() {
@@ -113,8 +113,8 @@ zx_status_t Astro::BluetoothInit() {
   }
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
-                                    UINT32_MAX);
+  status = pbus_.CompositeDeviceAddNew(&bt_uart_dev, bt_uart_fragments, countof(bt_uart_fragments),
+                                       UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

@@ -254,24 +254,24 @@ zx_status_t Mt8167::Msdc2Init() {
       {std::size(power_en_gpio_match), power_en_gpio_match},
   };
 
-  static const device_fragment_t ref_fragments[] = {
-      {std::size(reset_gpio_fragment), reset_gpio_fragment},
+  static const device_fragment_new_t ref_fragments[] = {
+      {"gpio-reset", std::size(reset_gpio_fragment), reset_gpio_fragment},
   };
-  static const device_fragment_t cleo_fragments[] = {
-      {std::size(reset_gpio_fragment), reset_gpio_fragment},
-      {std::size(power_en_gpio_fragment), power_en_gpio_fragment},
+  static const device_fragment_new_t cleo_fragments[] = {
+      {"gpio-reset", std::size(reset_gpio_fragment), reset_gpio_fragment},
+      {"gpio-power-enable", std::size(power_en_gpio_fragment), power_en_gpio_fragment},
   };
 
   if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-    status =
-        pbus_.CompositeDeviceAdd(&msdc2_dev, cleo_fragments, std::size(cleo_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&msdc2_dev, cleo_fragments, std::size(cleo_fragments),
+                                         UINT32_MAX);
   } else {
-    status =
-        pbus_.CompositeDeviceAdd(&msdc2_dev, ref_fragments, std::size(ref_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAddNew(&msdc2_dev, ref_fragments, std::size(ref_fragments),
+                                         UINT32_MAX);
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC2 failed: %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew MSDC2 failed: %d", __FUNCTION__, status);
   }
 
   return status;

@@ -9,8 +9,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/metadata/gpt.h>
 #include <ddk/metadata/emmc.h>
+#include <ddk/metadata/gpt.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/reg.h>
@@ -125,8 +125,8 @@ static const device_fragment_part_t gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
-static const device_fragment_t fragments[] = {
-    {countof(gpio_fragment), gpio_fragment},
+static const device_fragment_new_t fragments[] = {
+    {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
 }  // namespace
@@ -167,9 +167,10 @@ zx_status_t Sherlock::EmmcInit() {
     emmc_dev.metadata_count = countof(luis_emmc_metadata);
   }
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  zx_status_t status =
+      pbus_.CompositeDeviceAddNew(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __func__, status);
     return status;
   }
 
