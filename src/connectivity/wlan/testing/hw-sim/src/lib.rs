@@ -269,7 +269,7 @@ fn default_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
     WpaIe {
         unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::CCMP_128 }],
         akm_list: vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
-        ..Default::default()
+        multicast_cipher: cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP },
     }
 }
 

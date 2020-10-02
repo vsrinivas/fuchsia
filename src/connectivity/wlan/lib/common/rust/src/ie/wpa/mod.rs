@@ -32,16 +32,6 @@ pub struct WpaIe {
     pub akm_list: Vec<akm::Akm>,
 }
 
-impl Default for WpaIe {
-    fn default() -> Self {
-        WpaIe {
-            multicast_cipher: cipher::Cipher { oui: OUI, suite_type: cipher::TKIP },
-            unicast_cipher_list: vec![],
-            akm_list: vec![],
-        }
-    }
-}
-
 impl WpaIe {
     const FIXED_FIELDS_LENGTH: usize = 10;
     pub fn len(&self) -> usize {
