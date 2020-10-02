@@ -1,16 +1,12 @@
 use super::*;
 use crate::punctuated::Punctuated;
-#[cfg(feature = "extra-traits")]
-use crate::tt::TokenStreamHelper;
 use proc_macro2::TokenStream;
-#[cfg(feature = "extra-traits")]
-use std::hash::{Hash, Hasher};
 
 ast_enum_of_structs! {
     /// A pattern in a local binding, function signature, match expression, or
     /// various other places.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     ///
     /// # Syntax tree enum
     ///
@@ -20,7 +16,7 @@ ast_enum_of_structs! {
     //
     // TODO: change syntax-tree-enum link to an intra rustdoc link, currently
     // blocked on https://github.com/rust-lang/rust/issues/62833
-    pub enum Pat #manual_extra_traits {
+    pub enum Pat {
         /// A box pattern: `box v`.
         Box(PatBox),
 
@@ -86,7 +82,7 @@ ast_enum_of_structs! {
 ast_struct! {
     /// A box pattern: `box v`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatBox {
         pub attrs: Vec<Attribute>,
         pub box_token: Token![box],
@@ -97,7 +93,10 @@ ast_struct! {
 ast_struct! {
     /// A pattern that binds a new variable: `ref mut binding @ SUBPATTERN`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// It may also be a unit struct or struct variant (e.g. `None`), or a
+    /// constant; these cannot be distinguished syntactically.
+    ///
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatIdent {
         pub attrs: Vec<Attribute>,
         pub by_ref: Option<Token![ref]>,
@@ -113,7 +112,7 @@ ast_struct! {
     /// This holds an `Expr` rather than a `Lit` because negative numbers
     /// are represented as an `Expr::Unary`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatLit {
         pub attrs: Vec<Attribute>,
         pub expr: Box<Expr>,
@@ -123,7 +122,7 @@ ast_struct! {
 ast_struct! {
     /// A macro in pattern position.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatMacro {
         pub attrs: Vec<Attribute>,
         pub mac: Macro,
@@ -133,7 +132,7 @@ ast_struct! {
 ast_struct! {
     /// A pattern that matches any one of a set of cases.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatOr {
         pub attrs: Vec<Attribute>,
         pub leading_vert: Option<Token![|]>,
@@ -150,7 +149,7 @@ ast_struct! {
     /// `<A>::B::C` and `<A as Trait>::B::C` can only legally refer to
     /// associated constants.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatPath {
         pub attrs: Vec<Attribute>,
         pub qself: Option<QSelf>,
@@ -161,7 +160,7 @@ ast_struct! {
 ast_struct! {
     /// A range pattern: `1..=2`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatRange {
         pub attrs: Vec<Attribute>,
         pub lo: Box<Expr>,
@@ -173,7 +172,7 @@ ast_struct! {
 ast_struct! {
     /// A reference pattern: `&mut var`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatReference {
         pub attrs: Vec<Attribute>,
         pub and_token: Token![&],
@@ -185,7 +184,7 @@ ast_struct! {
 ast_struct! {
     /// The dots in a tuple or slice pattern: `[0, 1, ..]`
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatRest {
         pub attrs: Vec<Attribute>,
         pub dot2_token: Token![..],
@@ -195,7 +194,7 @@ ast_struct! {
 ast_struct! {
     /// A dynamically sized slice pattern: `[a, b, ref i @ .., y, z]`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatSlice {
         pub attrs: Vec<Attribute>,
         pub bracket_token: token::Bracket,
@@ -206,7 +205,7 @@ ast_struct! {
 ast_struct! {
     /// A struct or struct variant pattern: `Variant { x, y, .. }`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatStruct {
         pub attrs: Vec<Attribute>,
         pub path: Path,
@@ -219,7 +218,7 @@ ast_struct! {
 ast_struct! {
     /// A tuple pattern: `(a, b)`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatTuple {
         pub attrs: Vec<Attribute>,
         pub paren_token: token::Paren,
@@ -230,7 +229,7 @@ ast_struct! {
 ast_struct! {
     /// A tuple struct or tuple variant pattern: `Variant(x, y, .., z)`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatTupleStruct {
         pub attrs: Vec<Attribute>,
         pub path: Path,
@@ -241,7 +240,7 @@ ast_struct! {
 ast_struct! {
     /// A type ascription pattern: `foo: f64`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatType {
         pub attrs: Vec<Attribute>,
         pub pat: Box<Pat>,
@@ -253,7 +252,7 @@ ast_struct! {
 ast_struct! {
     /// A pattern that matches any value: `_`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct PatWild {
         pub attrs: Vec<Attribute>,
         pub underscore_token: Token![_],
@@ -266,7 +265,7 @@ ast_struct! {
     /// Patterns like the fields of Foo `{ x, ref y, ref mut z }` are treated
     /// the same as `x: x, y: ref y, z: ref mut z` but there is no colon token.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct FieldPat {
         pub attrs: Vec<Attribute>,
         pub member: Member,
@@ -275,116 +274,9 @@ ast_struct! {
     }
 }
 
-#[cfg(feature = "extra-traits")]
-impl Eq for Pat {}
-
-#[cfg(feature = "extra-traits")]
-impl PartialEq for Pat {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Pat::Box(this), Pat::Box(other)) => this == other,
-            (Pat::Ident(this), Pat::Ident(other)) => this == other,
-            (Pat::Lit(this), Pat::Lit(other)) => this == other,
-            (Pat::Macro(this), Pat::Macro(other)) => this == other,
-            (Pat::Or(this), Pat::Or(other)) => this == other,
-            (Pat::Path(this), Pat::Path(other)) => this == other,
-            (Pat::Range(this), Pat::Range(other)) => this == other,
-            (Pat::Reference(this), Pat::Reference(other)) => this == other,
-            (Pat::Rest(this), Pat::Rest(other)) => this == other,
-            (Pat::Slice(this), Pat::Slice(other)) => this == other,
-            (Pat::Struct(this), Pat::Struct(other)) => this == other,
-            (Pat::Tuple(this), Pat::Tuple(other)) => this == other,
-            (Pat::TupleStruct(this), Pat::TupleStruct(other)) => this == other,
-            (Pat::Type(this), Pat::Type(other)) => this == other,
-            (Pat::Verbatim(this), Pat::Verbatim(other)) => {
-                TokenStreamHelper(this) == TokenStreamHelper(other)
-            }
-            (Pat::Wild(this), Pat::Wild(other)) => this == other,
-            _ => false,
-        }
-    }
-}
-
-#[cfg(feature = "extra-traits")]
-impl Hash for Pat {
-    fn hash<H>(&self, hash: &mut H)
-    where
-        H: Hasher,
-    {
-        match self {
-            Pat::Box(pat) => {
-                hash.write_u8(0);
-                pat.hash(hash);
-            }
-            Pat::Ident(pat) => {
-                hash.write_u8(1);
-                pat.hash(hash);
-            }
-            Pat::Lit(pat) => {
-                hash.write_u8(2);
-                pat.hash(hash);
-            }
-            Pat::Macro(pat) => {
-                hash.write_u8(3);
-                pat.hash(hash);
-            }
-            Pat::Or(pat) => {
-                hash.write_u8(4);
-                pat.hash(hash);
-            }
-            Pat::Path(pat) => {
-                hash.write_u8(5);
-                pat.hash(hash);
-            }
-            Pat::Range(pat) => {
-                hash.write_u8(6);
-                pat.hash(hash);
-            }
-            Pat::Reference(pat) => {
-                hash.write_u8(7);
-                pat.hash(hash);
-            }
-            Pat::Rest(pat) => {
-                hash.write_u8(8);
-                pat.hash(hash);
-            }
-            Pat::Slice(pat) => {
-                hash.write_u8(9);
-                pat.hash(hash);
-            }
-            Pat::Struct(pat) => {
-                hash.write_u8(10);
-                pat.hash(hash);
-            }
-            Pat::Tuple(pat) => {
-                hash.write_u8(11);
-                pat.hash(hash);
-            }
-            Pat::TupleStruct(pat) => {
-                hash.write_u8(12);
-                pat.hash(hash);
-            }
-            Pat::Type(pat) => {
-                hash.write_u8(13);
-                pat.hash(hash);
-            }
-            Pat::Verbatim(pat) => {
-                hash.write_u8(14);
-                TokenStreamHelper(pat).hash(hash);
-            }
-            Pat::Wild(pat) => {
-                hash.write_u8(15);
-                pat.hash(hash);
-            }
-            Pat::__Nonexhaustive => unreachable!(),
-        }
-    }
-}
-
 #[cfg(feature = "parsing")]
-mod parsing {
+pub mod parsing {
     use super::*;
-
     use crate::ext::IdentExt;
     use crate::parse::{Parse, ParseBuffer, ParseStream, Result};
     use crate::path;
@@ -412,7 +304,6 @@ mod parsing {
                 || lookahead.peek(Token![<])
                 || input.peek(Token![Self])
                 || input.peek(Token![super])
-                || input.peek(Token![extern])
                 || input.peek(Token![crate])
             {
                 pat_path_or_macro_or_struct_or_range(input)
@@ -548,7 +439,7 @@ mod parsing {
         while !content.is_empty() && !content.peek(Token![..]) {
             let value = content.call(field_pat)?;
             fields.push_value(value);
-            if !content.peek(Token![,]) {
+            if content.is_empty() {
                 break;
             }
             let punct: Token![,] = content.parse()?;
@@ -593,7 +484,7 @@ mod parsing {
                 attrs,
                 member,
                 colon_token: input.parse()?,
-                pat: input.parse()?,
+                pat: Box::new(multi_pat(input)?),
             });
         }
 
@@ -672,7 +563,7 @@ mod parsing {
 
         let mut elems = Punctuated::new();
         while !content.is_empty() {
-            let value: Pat = content.parse()?;
+            let value = multi_pat(&content)?;
             elems.push_value(value);
             if content.is_empty() {
                 break;
@@ -743,7 +634,6 @@ mod parsing {
             || lookahead.peek(Token![self])
             || lookahead.peek(Token![Self])
             || lookahead.peek(Token![super])
-            || lookahead.peek(Token![extern])
             || lookahead.peek(Token![crate])
         {
             Expr::Path(input.parse()?)
@@ -768,7 +658,7 @@ mod parsing {
 
         let mut elems = Punctuated::new();
         while !content.is_empty() {
-            let value: Pat = content.parse()?;
+            let value = multi_pat(&content)?;
             elems.push_value(value);
             if content.is_empty() {
                 break;
@@ -783,16 +673,45 @@ mod parsing {
             elems,
         })
     }
+
+    pub fn multi_pat(input: ParseStream) -> Result<Pat> {
+        multi_pat_impl(input, None)
+    }
+
+    pub fn multi_pat_with_leading_vert(input: ParseStream) -> Result<Pat> {
+        let leading_vert: Option<Token![|]> = input.parse()?;
+        multi_pat_impl(input, leading_vert)
+    }
+
+    fn multi_pat_impl(input: ParseStream, leading_vert: Option<Token![|]>) -> Result<Pat> {
+        let mut pat: Pat = input.parse()?;
+        if leading_vert.is_some()
+            || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
+        {
+            let mut cases = Punctuated::new();
+            cases.push_value(pat);
+            while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
+                let punct = input.parse()?;
+                cases.push_punct(punct);
+                let pat: Pat = input.parse()?;
+                cases.push_value(pat);
+            }
+            pat = Pat::Or(PatOr {
+                attrs: Vec::new(),
+                leading_vert,
+                cases,
+            });
+        }
+        Ok(pat)
+    }
 }
 
 #[cfg(feature = "printing")]
 mod printing {
     use super::*;
-
+    use crate::attr::FilterAttrs;
     use proc_macro2::TokenStream;
     use quote::{ToTokens, TokenStreamExt};
-
-    use crate::attr::FilterAttrs;
 
     impl ToTokens for PatWild {
         fn to_tokens(&self, tokens: &mut TokenStream) {

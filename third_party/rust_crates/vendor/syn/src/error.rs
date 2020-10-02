@@ -1,17 +1,15 @@
-use std::fmt::{self, Debug, Display};
-use std::iter::FromIterator;
-use std::slice;
-use std::vec;
-
+#[cfg(feature = "parsing")]
+use crate::buffer::Cursor;
+use crate::thread::ThreadBound;
 use proc_macro2::{
     Delimiter, Group, Ident, LexError, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
 };
 #[cfg(feature = "printing")]
 use quote::ToTokens;
-
-#[cfg(feature = "parsing")]
-use crate::buffer::Cursor;
-use crate::thread::ThreadBound;
+use std::fmt::{self, Debug, Display};
+use std::iter::FromIterator;
+use std::slice;
+use std::vec;
 
 /// The result of a Syn parser.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -31,8 +29,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// conversion to `compile_error!` automatically.
 ///
 /// ```
-/// extern crate proc_macro;
-///
+/// # extern crate proc_macro;
+/// #
 /// use proc_macro::TokenStream;
 /// use syn::{parse_macro_input, AttributeArgs, ItemFn};
 ///
@@ -81,7 +79,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// #     }
 /// # }
 /// ```
-#[derive(Clone)]
 pub struct Error {
     messages: Vec<ErrorMessage>,
 }
@@ -288,6 +285,14 @@ impl Display for Error {
     }
 }
 
+impl Clone for Error {
+    fn clone(&self) -> Self {
+        Error {
+            messages: self.messages.clone(),
+        }
+    }
+}
+
 impl Clone for ErrorMessage {
     fn clone(&self) -> Self {
         let start = self
@@ -363,5 +368,13 @@ impl<'a> Iterator for Iter<'a> {
         Some(Error {
             messages: vec![self.messages.next()?.clone()],
         })
+    }
+}
+
+impl Extend<Error> for Error {
+    fn extend<T: IntoIterator<Item = Error>>(&mut self, iter: T) {
+        for err in iter {
+            self.combine(err);
+        }
     }
 }

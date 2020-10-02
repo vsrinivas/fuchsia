@@ -3,7 +3,7 @@ use super::*;
 ast_struct! {
     /// A braced block containing Rust statements.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct Block {
         pub brace_token: token::Brace,
         /// Statements in a block
@@ -14,7 +14,7 @@ ast_struct! {
 ast_enum! {
     /// A statement, usually ending in a semicolon.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub enum Stmt {
         /// A local (let) binding.
         Local(Local),
@@ -33,7 +33,7 @@ ast_enum! {
 ast_struct! {
     /// A local `let` binding: `let x: u64 = s.parse()?`.
     ///
-    /// *This type is available if Syn is built with the `"full"` feature.*
+    /// *This type is available only if Syn is built with the `"full"` feature.*
     pub struct Local {
         pub attrs: Vec<Attribute>,
         pub let_token: Token![let],
@@ -46,17 +46,15 @@ ast_struct! {
 #[cfg(feature = "parsing")]
 pub mod parsing {
     use super::*;
-
     use crate::parse::discouraged::Speculative;
     use crate::parse::{Parse, ParseStream, Result};
-    use crate::punctuated::Punctuated;
     use proc_macro2::TokenStream;
 
     impl Block {
         /// Parse the body of a block as zero or more statements, possibly
         /// including one trailing expression.
         ///
-        /// *This function is available if Syn is built with the `"parsing"`
+        /// *This function is available only if Syn is built with the `"parsing"`
         /// feature.*
         ///
         /// # Example
@@ -164,7 +162,7 @@ pub mod parsing {
             stmt_local(input, attrs).map(Stmt::Local)
         } else if input.peek(Token![pub])
             || input.peek(Token![crate]) && !input.peek2(Token![::])
-            || input.peek(Token![extern]) && !input.peek2(Token![::])
+            || input.peek(Token![extern])
             || input.peek(Token![use])
             || input.peek(Token![static]) && (input.peek2(Token![mut]) || input.peek2(Ident))
             || input.peek(Token![const])
@@ -220,28 +218,7 @@ pub mod parsing {
             attrs,
             let_token: input.parse()?,
             pat: {
-                let leading_vert: Option<Token![|]> = input.parse()?;
-                let mut pat: Pat = input.parse()?;
-                if leading_vert.is_some()
-                    || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
-                {
-                    let mut cases = Punctuated::new();
-                    cases.push_value(pat);
-                    while input.peek(Token![|])
-                        && !input.peek(Token![||])
-                        && !input.peek(Token![|=])
-                    {
-                        let punct = input.parse()?;
-                        cases.push_punct(punct);
-                        let pat: Pat = input.parse()?;
-                        cases.push_value(pat);
-                    }
-                    pat = Pat::Or(PatOr {
-                        attrs: Vec::new(),
-                        leading_vert,
-                        cases,
-                    });
-                }
+                let mut pat: Pat = pat::parsing::multi_pat_with_leading_vert(input)?;
                 if input.peek(Token![:]) {
                     let colon_token: Token![:] = input.parse()?;
                     let ty: Type = input.parse()?;
@@ -274,8 +251,12 @@ pub mod parsing {
     ) -> Result<Stmt> {
         let mut e = expr::parsing::expr_early(input)?;
 
-        attrs.extend(e.replace_attrs(Vec::new()));
-        e.replace_attrs(attrs);
+        let mut attr_target = &mut e;
+        while let Expr::Binary(e) = attr_target {
+            attr_target = &mut e.left;
+        }
+        attrs.extend(attr_target.replace_attrs(Vec::new()));
+        attr_target.replace_attrs(attrs);
 
         if input.peek(Token![;]) {
             return Ok(Stmt::Semi(e, input.parse()?));
@@ -292,7 +273,6 @@ pub mod parsing {
 #[cfg(feature = "printing")]
 mod printing {
     use super::*;
-
     use proc_macro2::TokenStream;
     use quote::{ToTokens, TokenStreamExt};
 

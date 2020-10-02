@@ -553,7 +553,7 @@ group("semver") {
 }
 
 group("serde") {
-  deps = [ ":serde-v1_0_104" ]
+  deps = [ ":serde-v1_0_116" ]
 }
 
 group("serde_cbor") {
@@ -561,7 +561,7 @@ group("serde_cbor") {
 }
 
 group("serde_derive") {
-  deps = [ ":serde_derive-v1_0_104($host_toolchain)" ]
+  deps = [ ":serde_derive-v1_0_116($host_toolchain)" ]
 }
 
 group("serde_json") {
@@ -624,7 +624,7 @@ group("structopt") {
 
 if (!(current_os == "fuchsia")) {
   group("syn") {
-    deps = [ ":syn-v1_0_21" ]
+    deps = [ ":syn-v1_0_41" ]
   }
 }
 
@@ -1020,7 +1020,7 @@ rust_proc_macro("argh_derive-v0_1_1") {
   deps += [ ":heck-v0_3_1" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -1109,7 +1109,7 @@ rust_proc_macro("async-attributes-v1_1_1") {
 
   deps = []
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -1219,7 +1219,7 @@ rust_proc_macro("async-trait-v0_1_40") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -1396,7 +1396,7 @@ rust_library("bincode-v1_1_1") {
 
   deps = []
   deps += [ ":byteorder-v1_3_1" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -1556,7 +1556,7 @@ rust_library("bstr-v0_2_12") {
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":memchr-v2_3_3" ]
   deps += [ ":regex-automata-v0_1_9" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -1725,8 +1725,8 @@ rust_library("cargo_metadata-v0_9_1") {
 
   deps = []
   deps += [ ":semver-v0_9_0" ]
-  deps += [ ":serde-v1_0_104" ]
-  deps += [ ":serde_derive-v1_0_104($host_toolchain)" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
   deps += [ ":serde_json-v1_0_38" ]
 
   rustenv = []
@@ -2009,8 +2009,8 @@ rust_library("criterion-v0_2_11") {
   deps += [ ":rand_xoshiro-v0_1_0" ]
   deps += [ ":rayon-v1_3_0" ]
   deps += [ ":rayon-core-v1_7_0" ]
-  deps += [ ":serde-v1_0_104" ]
-  deps += [ ":serde_derive-v1_0_104($host_toolchain)" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
   deps += [ ":serde_json-v1_0_38" ]
   deps += [ ":walkdir-v2_3_1" ]
 
@@ -2254,7 +2254,7 @@ rust_library("csv-v1_1_3") {
   deps += [ ":csv-core-v0_1_10" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":ryu-v1_0_3" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -2350,7 +2350,7 @@ executable("cxxbridge-cmd-cxxbridge-v0_3_5") {
   deps += [ ":codespan-reporting-v0_9_5" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -2377,7 +2377,7 @@ rust_library("cxxbridge-cmd-v0_3_5") {
   deps += [ ":codespan-reporting-v0_9_5" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -2401,7 +2401,7 @@ rust_proc_macro("cxxbridge-macro-v0_3_5") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -2472,7 +2472,7 @@ rust_proc_macro("derivative-v2_1_1") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -2495,7 +2495,7 @@ rust_proc_macro("derive_arbitrary-v0_4_0") {
 
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
   deps += [ ":synstructure-v0_12_1" ]
 
   rustenv = []
@@ -2630,7 +2630,7 @@ rust_proc_macro("enum-as-inner-v0_3_0") {
   deps += [ ":heck-v0_3_1" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -2702,7 +2702,7 @@ rust_library("eui48-v0_4_6") {
 
   deps = []
   deps += [ ":rustc-serialize-v0_3_24" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -3050,7 +3050,7 @@ rust_proc_macro("futures-macro-v0_3_5") {
   deps += [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -3377,7 +3377,7 @@ rust_library("handlebars-v2_0_0-beta_2") {
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
   deps += [ ":quick-error-v1_2_2" ]
   deps += [ ":regex-v1_3_5" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_38" ]
   deps += [ ":walkdir-v2_3_1" ]
 
@@ -3407,7 +3407,7 @@ rust_library("hashbrown-v0_2_2") {
   ]
 
   deps = []
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -3891,7 +3891,7 @@ rust_library("jsonway-v2_0_0") {
   ]
 
   deps = []
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_38" ]
 
   rustenv = []
@@ -5177,7 +5177,7 @@ rust_library("pest_generator-v2_1_3") {
   deps += [ ":pest_meta-v2_1_0" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -5321,7 +5321,7 @@ rust_proc_macro("pin-project-internal-v0_4_17") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -6713,8 +6713,8 @@ rust_library("rouille-v3_0_0") {
   deps += [ ":multipart-v0_15_4" ]
   deps += [ ":num_cpus-v1_12_0" ]
   deps += [ ":rand-v0_5_6" ]
-  deps += [ ":serde-v1_0_104" ]
-  deps += [ ":serde_derive-v1_0_104($host_toolchain)" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
   deps += [ ":serde_json-v1_0_38" ]
   deps += [ ":sha1-v0_6_0" ]
   deps += [ ":term-v0_5_1" ]
@@ -7384,7 +7384,7 @@ rust_library("semver-v0_9_0") {
 
   deps = []
   deps += [ ":semver-parser-v0_7_0" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -7419,25 +7419,25 @@ rust_library("semver-parser-v0_7_0") {
   ]
 }
 
-rust_library("serde-v1_0_104") {
+rust_library("serde-v1_0_116") {
   crate_name = "serde"
   crate_root = "//third_party/rust_crates/vendor/serde/src/lib.rs"
-  output_name = "serde-47ebe2dd896460d9"
+  output_name = "serde-51abe0aa53b0d3ac"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
 
   deps = []
-  deps += [ ":serde_derive-v1_0_104($host_toolchain)" ]
+  deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=47ebe2dd896460d9",
-    "-Cextra-filename=-47ebe2dd896460d9",
+    "-Cmetadata=51abe0aa53b0d3ac",
+    "-Cextra-filename=-51abe0aa53b0d3ac",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"serde_derive\"",
@@ -7469,7 +7469,7 @@ rust_library("serde_cbor-v0_11_1") {
 
   deps = []
   deps += [ ":half-v1_6_0" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -7483,10 +7483,10 @@ rust_library("serde_cbor-v0_11_1") {
   ]
 }
 
-rust_proc_macro("serde_derive-v1_0_104") {
+rust_proc_macro("serde_derive-v1_0_116") {
   crate_name = "serde_derive"
   crate_root = "//third_party/rust_crates/vendor/serde_derive/src/lib.rs"
-  output_name = "serde_derive-8edebf314413ac4f"
+  output_name = "serde_derive-5a8d3d0247af7cfd"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7495,16 +7495,17 @@ rust_proc_macro("serde_derive-v1_0_104") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=8edebf314413ac4f",
-    "-Cextra-filename=-8edebf314413ac4f",
+    "-Cmetadata=5a8d3d0247af7cfd",
+    "-Cextra-filename=-5a8d3d0247af7cfd",
     "--cfg=feature=\"default\"",
+    "--cfg=underscore_consts",
   ]
 }
 
@@ -7520,7 +7521,7 @@ rust_library("serde_json-v1_0_38") {
   deps = []
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":ryu-v0_2_7" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -7545,7 +7546,7 @@ rust_library("serde_json5-v0_1_0") {
   deps = []
   deps += [ ":pest-v2_1_0" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -8126,10 +8127,10 @@ rust_library("syn-v0_15_26") {
   ]
 }
 
-rust_library("syn-v1_0_21") {
+rust_library("syn-v1_0_41") {
   crate_name = "syn"
   crate_root = "//third_party/rust_crates/vendor/syn/src/lib.rs"
-  output_name = "syn-90306e03d970b083"
+  output_name = "syn-de51d36a285db121"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -8145,8 +8146,8 @@ rust_library("syn-v1_0_21") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=90306e03d970b083",
-    "-Cextra-filename=-90306e03d970b083",
+    "-Cmetadata=de51d36a285db121",
+    "-Cextra-filename=-de51d36a285db121",
     "--cfg=feature=\"clone-impls\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"derive\"",
@@ -8173,7 +8174,7 @@ rust_library("synstructure-v0_12_1") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
   deps += [ ":unicode-xid-v0_2_0" ]
 
   rustenv = []
@@ -8398,7 +8399,7 @@ rust_proc_macro("test-case-v1_0_0") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -8466,7 +8467,7 @@ rust_proc_macro("thiserror-impl-v1_0_9") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -8701,7 +8702,7 @@ rust_library("toml-v0_5_6") {
   ]
 
   deps = []
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -8777,7 +8778,7 @@ rust_proc_macro("tracing-attributes-v0_1_9") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
 
   rustenv = []
 
@@ -9536,7 +9537,7 @@ rust_library("uuid-v0_7_2") {
 
   deps = []
   deps += [ ":rand-v0_6_5" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -9568,7 +9569,7 @@ rust_library("valico-v2_4_2") {
   deps += [ ":phf-v0_7_24" ]
   deps += [ ":publicsuffix-v1_5_2" ]
   deps += [ ":regex-v1_3_5" ]
-  deps += [ ":serde-v1_0_104" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_38" ]
   deps += [ ":url-v1_7_2" ]
   deps += [ ":uuid-v0_7_2" ]
@@ -9806,7 +9807,7 @@ rust_library("wasm-bindgen-backend-v0_2_60") {
   deps += [ ":log-v0_4_8" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
   deps += [ ":wasm-bindgen-shared-v0_2_60" ]
 
   rustenv = []
@@ -9879,7 +9880,7 @@ rust_library("wasm-bindgen-macro-support-v0_2_60") {
   deps = []
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_21" ]
+  deps += [ ":syn-v1_0_41" ]
   deps += [ ":wasm-bindgen-backend-v0_2_60" ]
   deps += [ ":wasm-bindgen-shared-v0_2_60" ]
 

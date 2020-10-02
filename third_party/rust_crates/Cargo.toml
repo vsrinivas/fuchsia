@@ -102,9 +102,9 @@ rustc-demangle = "0.1.16"
 rustc-hash = "1.0.1"
 scopeguard = "0.3.3"
 semver = "0.9.0"
-serde = { version = "1.0.104", features = ["derive"] }
+serde = { version = "1.0.116", features = ["derive"] }
 serde_cbor = "0.11.1"
-serde_derive = "1.0.104"
+serde_derive = "1.0.116"
 serde_json = "1"
 serde_json5 = "0.1.0"
 slab = "0.4"
@@ -366,8 +366,11 @@ rustflags = ["--cfg=integer128", "--cfg=must_use_return"]
 rustflags = []
 env_vars = ["OUT_DIR=../../../compat/proc-macro-nested"]
 
-[gn.package.serde."1.0.104"]
+[gn.package.serde."1.0.116"]
 rustflags = ["--cfg=ops_bound", "--cfg=core_reverse", "--cfg=de_boxed_c_str", "--cfg=de_boxed_path", "--cfg=de_rc_dst", "--cfg=core_duration", "--cfg=integer128", "--cfg=range_inclusive", "--cfg=num_nonzero", "--cfg=core_try_from", "--cfg=num_nonzero_signed", "--cfg=std_atomic64", "--cfg=std_atomic"]
+
+[gn.package.serde_derive."1.0.116"]
+rustflags = ["--cfg=underscore_consts"]
 
 [gn.package.unicase."1.4.2"]
 rustflags = ["--cfg=__unicase__default_hasher", "--cfg=__unicase__iter_cmp"]
@@ -455,7 +458,7 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 [gn.package.pulldown-cmark."0.6.0"]
 [gn.package.rayon-core."1.7.0"]
 [gn.package.servo-freetype-sys."4.0.5"]
-[gn.package.syn."1.0.21"]
+[gn.package.syn."1.0.41"]
 [gn.package.test-case."1.0.0"]
 [gn.package.wasm-bindgen."0.2.60"]
 

@@ -1,8 +1,7 @@
+use proc_macro2::{Ident, Span};
 use std::cmp::Ordering;
 use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
-
-use proc_macro2::{Ident, Span};
 
 #[cfg(feature = "parsing")]
 use crate::lookahead;
@@ -18,10 +17,8 @@ use crate::lookahead;
 /// - All following characters must be Unicode code points with the XID_Continue
 ///   property.
 ///
-/// *This type is available if Syn is built with the `"derive"` or `"full"`
+/// *This type is available only if Syn is built with the `"derive"` or `"full"`
 /// feature.*
-#[cfg_attr(feature = "extra-traits", derive(Debug))]
-#[derive(Clone)]
 pub struct Lifetime {
     pub apostrophe: Span,
     pub ident: Ident,
@@ -72,6 +69,15 @@ impl Display for Lifetime {
     }
 }
 
+impl Clone for Lifetime {
+    fn clone(&self) -> Self {
+        Lifetime {
+            apostrophe: self.apostrophe,
+            ident: self.ident.clone(),
+        }
+    }
+}
+
 impl PartialEq for Lifetime {
     fn eq(&self, other: &Lifetime) -> bool {
         self.ident.eq(&other.ident)
@@ -108,7 +114,6 @@ pub fn Lifetime(marker: lookahead::TokenMarker) -> Lifetime {
 #[cfg(feature = "parsing")]
 pub mod parsing {
     use super::*;
-
     use crate::parse::{Parse, ParseStream, Result};
 
     impl Parse for Lifetime {
@@ -125,7 +130,6 @@ pub mod parsing {
 #[cfg(feature = "printing")]
 mod printing {
     use super::*;
-
     use proc_macro2::{Punct, Spacing, TokenStream};
     use quote::{ToTokens, TokenStreamExt};
 

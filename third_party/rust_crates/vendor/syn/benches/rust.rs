@@ -35,8 +35,7 @@ mod syn_parse {
 }
 
 #[cfg(not(syn_only))]
-mod libsyntax_parse {
-    extern crate rustc_ast;
+mod librustc_parse {
     extern crate rustc_data_structures;
     extern crate rustc_errors;
     extern crate rustc_parse;
@@ -59,7 +58,7 @@ mod libsyntax_parse {
             }
         }
 
-        rustc_ast::with_globals(Edition::Edition2018, || {
+        rustc_span::with_session_globals(Edition::Edition2018, || {
             let cm = Lrc::new(SourceMap::new(FilePathMapping::empty()));
             let emitter = Box::new(SilentEmitter);
             let handler = Handler::with_emitter(false, None, emitter);
@@ -145,7 +144,7 @@ fn main() {
         tokenstream_parse,
         syn_parse,
         #[cfg(not(syn_only))]
-        libsyntax_parse,
+        librustc_parse,
     ) {
         eprint!("{:20}", format!("{}:", name));
         let elapsed = exec(f);

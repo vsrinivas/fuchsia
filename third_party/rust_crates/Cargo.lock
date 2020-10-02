@@ -74,7 +74,7 @@ dependencies = [
  "heck",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -111,7 +111,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "efd3d156917d94862e779f356c5acae312b08fd3121e792c857d7928c8088423"
 dependencies = [
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -153,7 +153,7 @@ checksum = "687c230d85c0a52504709705fc8a53e4a692b83a2184f03dae73e38e1e93a783"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -632,7 +632,7 @@ dependencies = [
  "codespan-reporting",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -643,7 +643,7 @@ checksum = "78c14b3ae0d7570ece1495f1fe2773d7bc97811755f800ccce1e0391ec8ad360"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -671,7 +671,7 @@ checksum = "cb582b60359da160a9477ee80f15c8d784c477e69c217ef2cdd4169c24ea380f"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -681,7 +681,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caedd6a71b6d00bdc458ec8ffbfd12689c1ee7ffa69ad9933310aaf2f08f18d8"
 dependencies = [
  "proc-macro2 1.0.19",
- "syn 1.0.21",
+ "syn 1.0.41",
  "synstructure",
 ]
 
@@ -736,7 +736,7 @@ dependencies = [
  "heck",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -969,7 +969,7 @@ dependencies = [
  "splines",
  "static_assertions",
  "structopt",
- "syn 1.0.21",
+ "syn 1.0.41",
  "synstructure",
  "tar",
  "tempfile",
@@ -1068,7 +1068,7 @@ dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -1897,7 +1897,7 @@ dependencies = [
  "pest_meta",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -1977,7 +1977,7 @@ checksum = "e58db2081ba5b4c93bd6be09c40fd36cb9193a8336c384f3b40012e531aa7e40"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -2789,9 +2789,9 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.104"
+version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "414115f25f818d7dfccec8ee535d76949ae78584fc4f79a6f45a904bf8ab4449"
+checksum = "96fe57af81d28386a513cbc6858332abc6117cfdb5999647c6444b8f43a370a5"
 dependencies = [
  "serde_derive",
 ]
@@ -2808,13 +2808,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.104"
+version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "128f9e303a5a29922045a830221b8f78ec74a5f544944f3d5984f8ec3895ef64"
+checksum = "f630a6370fd8e457873b4bd2ffdae75408bc291ba72be773772a4c2a065d9ae8"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -3051,9 +3051,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.21"
+version = "1.0.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4696caa4048ac7ce2bcd2e484b3cef88c1004e41b8e945a277e2c25dc0b72060"
+checksum = "6690e3e9f692504b941dc6c3b188fd28df054f7fb8469ab40680df52fdcc842b"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
@@ -3068,7 +3068,7 @@ checksum = "3f085a5855930c0441ca1288cf044ea4aecf4f43a91668abdb870b4ba546a203"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
  "unicode-xid 0.2.0",
 ]
 
@@ -3154,7 +3154,7 @@ checksum = "199464148b42bcf3da8b2a56f6ee87ca68f47402496d1268849291ec9fb463c8"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
  "version_check 0.9.1",
 ]
 
@@ -3184,7 +3184,7 @@ checksum = "eb2e25d25307eb8436894f727aba8f65d07adf02e5b35a13cebed48bd282bfef"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -3313,7 +3313,7 @@ checksum = "f0693bf8d6f2bf22c690fc61a9d21ac69efdbb894a17ed596b9af0f01e64b84b"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
 ]
 
 [[package]]
@@ -3707,7 +3707,7 @@ dependencies = [
  "log 0.4.8",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
  "wasm-bindgen-shared",
 ]
 
@@ -3733,7 +3733,7 @@ checksum = "d68a5b36eef1be7868f668632863292e37739656a80fc4b9acec7b0bd35a4931"
 dependencies = [
  "proc-macro2 1.0.19",
  "quote 1.0.7",
- "syn 1.0.21",
+ "syn 1.0.41",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
