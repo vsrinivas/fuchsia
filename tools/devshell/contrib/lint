@@ -169,7 +169,7 @@ declare RUN_CLANG_TIDY="${PREBUILT_CLANG_DIR}/share/clang/run-clang-tidy.py"
 
 # Suppress the "name-repeats-*" checks for now. These produce a high number of
 # linter warnings, many of which are questionable. The algorithm will be refined.
-declare FIDL_LINT_TARGET="$( fx get-build-artifacts --expect-one --no-build --name fidl-lint tools )"
+declare FIDL_LINT_TARGET="$( fx-command-run get-build-artifacts --expect-one --no-build --name fidl-lint tools )"
 declare FIDL_LINT="${FUCHSIA_BUILD_DIR}/${FIDL_LINT_TARGET}"
 
 declare CLANG_TIDY_CMD=(
