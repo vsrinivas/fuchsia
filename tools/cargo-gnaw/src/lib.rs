@@ -321,9 +321,9 @@ pub fn generate_from_manifest<W: io::Write>(
             match build_output {
                 Ok(rules) => {
                     anyhow::bail!(
-                        "Add this to your Cargo.toml located at {}\n \
-                        [[gn.crate.{}.\"{}\"]] \n \
-                        rustflags = [{}]\n",
+                        "Add this to your Cargo.toml located at {}:\n\
+                        [gn.package.{}.\"{}\"]\n\
+                        rustflags = [{}]",
                         manifest_path.display(),
                         target.name(),
                         target.version(),
