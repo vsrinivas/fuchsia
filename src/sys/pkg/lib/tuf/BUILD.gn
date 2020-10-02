@@ -55,6 +55,9 @@ rustc_library("tuf") {
     "//third_party/rust_crates:url",
   ]
 
+  #FIXME(55290): temporarily disable enforcing sources to enable a soft
+  #migration for rust-tuf.
+  enforce_source_listing = false
   sources = common_sources
 }
 
@@ -92,6 +95,9 @@ rustc_test("tuf_lib_test") {
     "//third_party/rust_crates:url",
   ]
 
+  #FIXME(55290): temporarily disable enforcing sources to enable a soft
+  #migration for rust-tuf.
+  enforce_source_listing = false
   sources = common_sources
 
   inputs = [
