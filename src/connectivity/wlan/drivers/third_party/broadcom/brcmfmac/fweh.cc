@@ -303,17 +303,20 @@ static void brcmf_fweh_event_worker(WorkItem* work) {
   struct brcmf_pub* drvr = containerof(fweh, struct brcmf_pub, fweh);
 
   while ((event = brcmf_fweh_dequeue_event(drvr, fweh))) {
-    if (event->item_type == BRCMF_FWEH_EVENT_INDICATION) {
-      // This is an event.
-      brcmf_fweh_handle_event(drvr, event);
-    } else if (event->item_type == BRCMF_FWEH_EAPOL_FRAME) {
-      // This is an eapol frame
-      brcmf_if* ifp = brcmf_get_ifp(drvr, event->ifidx);
-      if (ifp) {
-        brcmf_cfg80211_handle_eapol_frame(ifp, event->data, event->datalen);
-      }
-      // Free the event item memory allocated in brcmf_fweh_queue_eapol_frame().
-      free(event);
+    switch (event->item_type) {
+      case BRCMF_FWEH_EVENT_INDICATION:
+        // This is an event.
+        brcmf_fweh_handle_event(drvr, event);
+        break;
+      case BRCMF_FWEH_EAPOL_FRAME:
+        // This is an eapol frame
+        brcmf_if* ifp = brcmf_get_ifp(drvr, event->ifidx);
+        if (ifp) {
+          brcmf_cfg80211_handle_eapol_frame(ifp, event->data, event->datalen);
+        }
+        // Free the event item memory allocated in brcmf_fweh_queue_eapol_frame().
+        free(event);
+        break;
     }
   }
 }
