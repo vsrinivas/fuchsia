@@ -79,8 +79,12 @@ impl FatDevice {
                 }
             };
 
-            fx_log_info!("Found block device {:?} with guid {:?}", entry.name, guid);
             if guid.value == MICROSOFT_BASIC_DATA_GUID {
+                fx_log_info!(
+                    "Attempting to mount block device {:?} with guid {:?}",
+                    entry.name,
+                    guid
+                );
                 return Ok(Some(entry.name.clone()));
             }
         }
