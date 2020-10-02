@@ -9,8 +9,8 @@ use {
     fdio::service_connect,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_hardware_rtc as frtc,
-    fuchsia_async::TimeoutExt,
-    fuchsia_zircon as zx,
+    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_zircon::{self as zx, DurationNum},
     futures::TryFutureExt,
     lazy_static::lazy_static,
     log::error,
@@ -23,10 +23,13 @@ use {parking_lot::Mutex, std::sync::Arc};
 lazy_static! {
     /// The absolute path at which RTC devices are exposed.
     static ref RTC_PATH: PathBuf = PathBuf::from("/dev/class/rtc/");
-
-    /// Time to wait before declaring a FIDL call to be failed.
-    static ref FIDL_TIMEOUT: zx::Duration = zx::Duration::from_millis(100);
 }
+
+/// Time to wait before declaring a FIDL call to be failed.
+const FIDL_TIMEOUT: zx::Duration = zx::Duration::from_millis(100);
+
+// The minimum error at which to begin an async wait for top of second while setting RTC.
+const WAIT_THRESHOLD: zx::Duration = zx::Duration::from_millis(1);
 
 const NANOS_PER_SECOND: i64 = 1_000_000_000;
 
@@ -117,18 +120,30 @@ impl Rtc for RtcImpl {
         self.proxy
             .get()
             .map_err(|err| anyhow!("FIDL error: {}", err))
-            .on_timeout(zx::Time::after(*FIDL_TIMEOUT), || Err(anyhow!("FIDL timeout on get")))
+            .on_timeout(zx::Time::after(FIDL_TIMEOUT), || Err(anyhow!("FIDL timeout on get")))
             .await
             .map(fidl_time_to_zx_time)
     }
 
     async fn set(&self, value: zx::Time) -> Result<(), Error> {
-        let mut fidl_time = zx_time_to_fidl_time(value);
+        let fractional_second = zx::Duration::from_nanos(value.into_nanos() % NANOS_PER_SECOND);
+        // The RTC API only accepts integer seconds but we really need higher accuracy, particularly
+        // for the kernel clock set by the RTC driver...
+        let mut fidl_time = if fractional_second < WAIT_THRESHOLD {
+            // ...if we are being asked to set a time at or near the bottom of the second, truncate
+            // the time and set the RTC immediately...
+            zx_time_to_fidl_time(value)
+        } else {
+            // ...otherwise, wait until the top of the current second than set the RTC using the
+            // following second.
+            fasync::Timer::new(fasync::Time::after(1.second() - fractional_second)).await;
+            zx_time_to_fidl_time(value + 1.second())
+        };
         let status = self
             .proxy
             .set(&mut fidl_time)
             .map_err(|err| anyhow!("FIDL error: {}", err))
-            .on_timeout(zx::Time::after(*FIDL_TIMEOUT), || Err(anyhow!("FIDL timeout on set")))
+            .on_timeout(zx::Time::after(FIDL_TIMEOUT), || Err(anyhow!("FIDL timeout on set")))
             .await?;
         zx::Status::ok(status).map_err(|stat| anyhow!("Bad status on set: {:?}", stat))
     }
@@ -180,14 +195,18 @@ impl Rtc for FakeRtc {
 
 #[cfg(test)]
 mod test {
-    use {super::*, fuchsia_async as fasync, lazy_static::lazy_static};
-
-    // NOTE: Coverage of the interaction between RtcImpl and an RTC device will be provided by
-    // timekeeper integration tests. Here we cover the logic used to convert time formats and the
-    // fake used in the rest of the component.
+    use {
+        super::*,
+        fidl::endpoints::create_proxy_and_stream,
+        fuchsia_async as fasync,
+        futures::StreamExt,
+        lazy_static::lazy_static,
+        test_util::{assert_gt, assert_lt},
+    };
 
     const TEST_FIDL_TIME: frtc::Time =
         frtc::Time { year: 2020, month: 8, day: 14, hours: 0, minutes: 0, seconds: 0 };
+    const TEST_OFFSET: zx::Duration = zx::Duration::from_millis(100);
 
     lazy_static! {
         static ref TEST_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_363_200_000_000_000);
@@ -198,9 +217,71 @@ mod test {
     fn time_conversion() {
         let to_fidl = zx_time_to_fidl_time(*TEST_ZX_TIME);
         assert_eq!(to_fidl, TEST_FIDL_TIME);
+        // Times should be truncated to the previous second
+        let to_fidl_2 = zx_time_to_fidl_time(*TEST_ZX_TIME + 999.millis());
+        assert_eq!(to_fidl_2, TEST_FIDL_TIME);
 
         let to_zx = fidl_time_to_zx_time(TEST_FIDL_TIME);
         assert_eq!(to_zx, *TEST_ZX_TIME);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rtc_impl_get() {
+        let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
+
+        let rtc_impl = RtcImpl { proxy };
+        let _responder = fasync::Task::spawn(async move {
+            if let Some(Ok(frtc::DeviceRequest::Get { responder })) = stream.next().await {
+                let mut fidl_time = TEST_FIDL_TIME;
+                responder.send(&mut fidl_time).expect("Failed response");
+            }
+        });
+        assert_eq!(rtc_impl.get().await.unwrap(), *TEST_ZX_TIME);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rtc_impl_set_whole_second() {
+        let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
+
+        let rtc_impl = RtcImpl { proxy };
+        let _responder = fasync::Task::spawn(async move {
+            if let Some(Ok(frtc::DeviceRequest::Set { rtc, responder })) = stream.next().await {
+                let status = match rtc {
+                    TEST_FIDL_TIME => zx::Status::OK,
+                    _ => zx::Status::INVALID_ARGS,
+                };
+                responder.send(status.into_raw()).expect("Failed response");
+            }
+        });
+        let before = zx::Time::get(zx::ClockId::Monotonic);
+        assert!(rtc_impl.set(*TEST_ZX_TIME).await.is_ok());
+        let span = zx::Time::get(zx::ClockId::Monotonic) - before;
+        // Setting an integer second should not require any delay and therefore should complete
+        // very fast - well under a millisecond typically.
+        assert_lt!(span, 10.millis());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rtc_impl_set_partial_second() {
+        let (proxy, mut stream) = create_proxy_and_stream::<frtc::DeviceMarker>().unwrap();
+
+        let rtc_impl = RtcImpl { proxy };
+        let _responder = fasync::Task::spawn(async move {
+            if let Some(Ok(frtc::DeviceRequest::Set { rtc, responder })) = stream.next().await {
+                let status = match rtc {
+                    TEST_FIDL_TIME => zx::Status::OK,
+                    _ => zx::Status::INVALID_ARGS,
+                };
+                responder.send(status.into_raw()).expect("Failed response");
+            }
+        });
+        let before = zx::Time::get(zx::ClockId::Monotonic);
+        assert!(rtc_impl.set(*TEST_ZX_TIME - TEST_OFFSET).await.is_ok());
+        let span = zx::Time::get(zx::ClockId::Monotonic) - before;
+        // Setting a fractional second should cause a delay until the top of second before calling
+        // the FIDL interface. We only verify half the expected time has passed to allow for some
+        // slack in the timer calculation.
+        assert_gt!(span, TEST_OFFSET / 2);
     }
 
     #[fasync::run_until_stalled(test)]
