@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
+    fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
@@ -63,17 +63,23 @@ impl FatServer {
     async fn handle_admin(&self, mut stream: AdminRequestStream) -> Result<(), Error> {
         match self.ensure_mounted().await {
             Ok(()) => {}
-            Err(e) => {
-                stream.control_handle().shutdown_with_epitaph(e);
-                return Ok(());
-            }
+            Err(_) => {}
         };
 
         while let Some(req) = stream.try_next().await? {
             let device = self.device.lock().await;
             if device.as_ref().map_or(true, |d| !d.is_present()) {
-                // Device has gone away.
-                stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
+                // Device has gone away, or was never present.
+                match req {
+                    AdminRequest::GetRoot { dir, .. } => {
+                        let dstream =
+                            dir.into_stream().map_err(|_| anyhow::anyhow!("getting dir stream"))?;
+                        dstream.control_handle().shutdown_with_epitaph(Status::UNAVAILABLE);
+                    }
+                    AdminRequest::Shutdown { .. } => {
+                        stream.control_handle().shutdown_with_epitaph(Status::IO_NOT_PRESENT);
+                    }
+                }
                 break;
             }
             let device = device.as_ref().unwrap();
