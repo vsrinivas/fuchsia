@@ -1,23 +1,25 @@
 # Run Fuchsia Emulator (FEMU)
 
-You can run Fuchsia under emulation using the Fuchsia Emulator (FEMU).
+This document describes how to run Fuchsia under
+emulation using the Fuchsia Emulator (FEMU), covering
+differnent developer environments and setups.
 
-FEMU is downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`, and
-is fetched into `//prebuilt/third_party/aemu`. You can run FEMU using `fx emu`
-(see section ["Run Fuchsia under FEMU"](#run_fuchsia_under_femu)).
+For more information on FEMU, see the
+[Fuchsia emulator overview](/docs/concepts/emulator/index.md).
 
 ## Prerequisites
 
-In order to run FEMU, you must do the following:
+Before you run FEMU, you must:
 
- * [Installed Fuchsia source and created environment variables](/docs/get-started/get_fuchsia_source.md)
- * [Configured and built Fuchsia](/docs/get-started/build_fuchsia.md)
- * [Set up and configured FEMU](/docs/get-started/set_up_femu.md)
+ * [Install Fuchsia source and create environment variables](/docs/get-started/get_fuchsia_source.md)
+ * [Configur and build Fuchsia](/docs/get-started/build_fuchsia.md)
+ * [Set up and configure FEMU](/docs/get-started/set_up_femu.md)
 
 ## Run Fuchsia under FEMU
 
-Ensure that you have set up and built the Fuchsia product (this example uses
-`workstation` product). Currently only `qemu-x64` boards are supported.
+First, set up and build Fuchsia, using `fx set`, and specying a `qemu`
+board and supported product (this example uses
+`workstation` product). 
 
 ```posix-terminal
 cd $FUCHSIA_DIR
@@ -27,7 +29,10 @@ fx set workstation.qemu-x64 --release [--with=...]
 fx build
 ```
 
-Then run Fuchsia Emulator with ssh access:
+Note: More information on supported boards and products is in the
+[Fuchsia emulator overview](/docs/concepts/emulator/index.md).
+
+Next, run FEMU with `ssh` access (with the `-N` flag):
 
 ```posix-terminal
 cd $FUCHSIA_DIR
@@ -37,7 +42,7 @@ fx emu -N
 
 To exit FEMU, run `dm poweroff` in the FEMU terminal.
 
-### Run FEMU without GUI
+### Run FEMU without GUI support
 
 If you don't need graphics or working under the remote workflow,
 you can run FEMU in headless mode by adding `--headless` argument to the
@@ -125,3 +130,9 @@ fx emu-remote --stream --display :0 {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} -
 Any arguments after “--” will be passed to the fx emu invocation on the remote
 machine.
 
+## Next steps
+
+Once you are running Fuchsia on FEMU, you can: 
+
+*   [Test components](/docs/development/run/run-components-in-a-test.md)
+*   [Run end-to-end tests](/docs/development/testing/run_an_end_to_end_test.md)

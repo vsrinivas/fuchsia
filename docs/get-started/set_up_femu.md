@@ -1,8 +1,8 @@
 # Set up the emulator
 
-You can set up and run Fuchsia in an emulator,
-also called FEMU.
-
+This document describes how to set up the
+Fuchsia emulator (FEMU). For more information on FEMU, see the
+[Fuchsia emulator overview](/docs/concepts/emulator/index.md).
 
 ## Prerequisites
 
@@ -85,5 +85,5 @@ forwarding and IPv4 support on the emulator TAP interface.
 
 ## Next steps
 
-For next steps on using FEMU, see the [Running the Fuchsia Emulator](/docs/development/run/femu.md)
-guide.
+For next steps on using FEMU, see
+[Running the Fuchsia Emulator](/docs/development/run/femu.md).

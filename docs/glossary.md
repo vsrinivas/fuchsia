@@ -437,6 +437,14 @@ The Fuchsia API Surface is the combination of the
 [Fuchsia System Interface](#fuchsia-system-interface) and the client libraries
 included in the [Fuchsia IDK](#fuchsia-idk).
 
+### **Fuchsia emulator (FEMU)** {#fuchsia-emulator}
+
+The [Fuchsia emulator (FEMU)](/docs/concepts/emulator/index.md) is the default emulator for Fuchsia.
+It allows you to test Fuchsia components and
+applications without needing a Fuchsia device. FEMU is based on the
+[Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator),
+which is a fork of [QEMU](https://www.qemu.org/).
+
 ### **Fuchsia Package** {#fuchsia-package}
 
 A Fuchsia Package is a unit of software distribution. It is a collection of
