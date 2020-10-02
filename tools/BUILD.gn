@@ -7,10 +7,6 @@ group("tools") {
 
   public_deps = [
     ":infratools",
-
-    # TODO(olivernewman): Move blobstats code into //tools once recipes no
-    # longer have its location hardcoded.
-    "//scripts/blobstats($host_toolchain)",
     "//tools/bindc:host",
     "//tools/blackout:all",
     "//tools/bootserver_old:host($host_toolchain)",
@@ -34,44 +30,64 @@ group("tools") {
   ]
 }
 
+# Tools that are used by the infrastructure for testing, data collection, etc.
 group("infratools") {
   testonly = true
 
-  # Building with the following toolchains ensures that, for the associated
-  # tools, there will be at most one tool for every (name, cpu, os) tuple.
-  toolchains = []
+  # Tools that are only needed in the context of the current host.
+  current_host_tools = [
+    # TODO(olivernewman): Move blobstats code into //tools once recipes no
+    # longer have its location hardcoded.
+    "//scripts/blobstats",
+    "//tools/artifactory",
+    "//tools/integration:tools",
+    "//tools/size_checker/cmd:host",
+  ]
+
+  # Tools that are only needed on Linux x64, regardless of the current host.
+  linux_x64_only_tools = [ "//tools/testing/tefmocheck" ]
+
+  # Tools needed on all possible hosts.
+  all_host_tools = [
+    "//tools/artifactory",
+    "//tools/bootserver",
+    "//tools/botanist",
+    "//tools/build:tools",
+    "//tools/debug:tools",
+    "//tools/testing:tools",
+    "//tools/testing/affectedtests",
+    "//zircon/tools/fvm",
+    "//zircon/tools/minfs",
+  ]
+
   public_deps = []
+
+  foreach(tool, current_host_tools) {
+    public_deps += [ "$tool($host_toolchain)" ]
+  }
+
+  foreach(tool, linux_x64_only_tools) {
+    if (host_os == "linux") {
+      public_deps += [ "$tool($host_x64_toolchain)" ]
+    } else {
+      public_deps += [ "$tool($linux_x64_toolchain)" ]
+    }
+  }
+
+  all_host_toolchains = []
   if (host_os == "linux") {
-    toolchains += [
+    all_host_toolchains += [
       host_arm64_toolchain,
       host_x64_toolchain,
     ]
-    public_deps += [
-      # Run by fuchsia/fuchsia recipe which only runs on linux_x64.
-      "//tools/testing/tefmocheck:tefmocheck($host_x64_toolchain)",
-    ]
   } else if (host_os == "mac") {
-    toolchains += [ host_toolchain ]
-    public_deps += [
-      # Run by fuchsia/fuchsia recipe which only runs on linux_x64.
-      "//tools/testing/tefmocheck:tefmocheck($linux_x64_toolchain)",
-    ]
+    all_host_toolchains += [ host_toolchain ]
   }
 
-  foreach(toolchain, toolchains) {
-    public_deps += [
-      "//tools/artifactory($toolchain)",
-      "//tools/bootserver($toolchain)",
-      "//tools/botanist($toolchain)",
-      "//tools/build:tools($toolchain)",
-      "//tools/debug:tools($toolchain)",
-      "//tools/integration:tools($toolchain)",
-      "//tools/size_checker/cmd:host",
-      "//tools/testing:tools($toolchain)",
-      "//tools/testing/affectedtests($toolchain)",
-      "//zircon/tools/fvm($toolchain)",
-      "//zircon/tools/minfs($toolchain)",
-    ]
+  foreach(tool, all_host_tools) {
+    foreach(toolchain, all_host_toolchains) {
+      public_deps += [ "$tool($toolchain)" ]
+    }
   }
 }
 
