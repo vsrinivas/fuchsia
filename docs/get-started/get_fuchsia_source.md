@@ -85,7 +85,8 @@ in your terminal.
 Note: If you don't wish to update your environment variables, see
 [Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path).
 
-The following steps use a `bash` terminal as an example:
+The following steps use a `bash` terminal as an example. If you are using `zsh` replace
+`~/.bashrc` with `~/.zshrc` in the following example.
 
 1.  Use a text editor to open your `~/.bashrc` file:
 
