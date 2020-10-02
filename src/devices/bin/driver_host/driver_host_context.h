@@ -116,8 +116,6 @@ class DriverHostContext {
                               const void* data, size_t length) TA_REQ(api_lock_);
 
   zx_status_t DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
-                                 const composite_device_desc_t* comp_desc) TA_REQ(api_lock_);
-  zx_status_t DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
                                  const composite_device_desc_new_t* comp_desc) TA_REQ(api_lock_);
 
   // Sets up event on async loop which gets triggered once

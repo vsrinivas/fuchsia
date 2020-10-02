@@ -289,11 +289,6 @@ typedef struct device_fragment_part {
 // property from the range [BIND_TOPO_START, BIND_TOPO_END] must be matched to
 // an element of |parts|.  This sequences of matches between |parts| and devices
 // must be unique.
-typedef struct device_fragment {
-  uint32_t parts_count;
-  const device_fragment_part_t* parts;
-} device_fragment_t;
-
 typedef struct device_fragment_new {
   const char* name;
   uint32_t parts_count;
@@ -312,16 +307,6 @@ typedef struct device_metadata {
 // as the device that matches |fragments[coresident_device_index]|, unless
 // |coresident_device_index| is UINT32_MAX, in which case it reside in a new devhost.
 // |metadata_list| contains the metadata to be added to the composite device, if any.
-typedef struct composite_device_desc {
-  const zx_device_prop_t* props;
-  size_t props_count;
-  const device_fragment_t* fragments;
-  size_t fragments_count;
-  uint32_t coresident_device_index;
-  const device_metadata_t* metadata_list;
-  size_t metadata_count;
-} composite_device_desc_t;
-
 typedef struct composite_device_desc_new {
   const zx_device_prop_t* props;
   size_t props_count;
@@ -350,9 +335,6 @@ typedef struct composite_device_fragment {
 //
 // |dev| must be the zx_device_t corresponding to the "sys" device (i.e., the
 // Platform Bus Driver's device).
-zx_status_t device_add_composite(zx_device_t* dev, const char* name,
-                                 const composite_device_desc_t* comp_desc);
-
 zx_status_t device_add_composite_new(zx_device_t* dev, const char* name,
                                      const composite_device_desc_new_t* comp_desc);
 

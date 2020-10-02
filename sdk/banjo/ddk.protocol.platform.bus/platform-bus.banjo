@@ -121,8 +121,6 @@ protocol PBus {
     /// |coresident_device_index|, or a new devhost if |coresident_device_index| is UINT32_MAX.
     /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
     /// drivers running in the platform bus's devhost. 
-    CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceFragment> fragments,
-                       uint32 coresident_device_index) -> (zx.status s);
     CompositeDeviceAddNew(PbusDev dev, vector<ddk.driver.DeviceFragmentNew> fragments,
                           uint32 coresident_device_index) -> (zx.status s);
 };

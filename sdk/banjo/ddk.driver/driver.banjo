@@ -23,10 +23,6 @@ struct DeviceAddArgs {
 };
 
 [repr = "C"]
-struct DeviceFragment {
-};
-
-[repr = "C"]
 struct DeviceFragmentNew {
 };
 
