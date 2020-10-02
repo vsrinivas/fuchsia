@@ -69,7 +69,7 @@ zx_status_t Mt8167::I2cInit() {
       {countof(root_match), root_match},
       {countof(scl2_match), scl2_match},
   };
-  static const device_fragment_new_t fragments[] = {
+  static const device_fragment_t fragments[] = {
       {"gpio-sda-0", countof(sda0_fragment), sda0_fragment},
       {"gpio-scl-0", countof(scl0_fragment), scl0_fragment},
       {"gpio-sda-1", countof(sda1_fragment), sda1_fragment},
@@ -216,9 +216,9 @@ zx_status_t Mt8167::I2cInit() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto status = pbus_.CompositeDeviceAddNew(&i2c_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&i2c_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

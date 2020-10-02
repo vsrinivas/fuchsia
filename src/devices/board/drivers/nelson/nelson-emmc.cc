@@ -114,7 +114,7 @@ static const device_fragment_part_t gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
-static const device_fragment_new_t fragments[] = {
+static const device_fragment_t fragments[] = {
     {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
@@ -135,9 +135,9 @@ zx_status_t Nelson::EmmcInit() {
   gpio_impl_.SetAltFunction(S905D3_EMMC_CMD, S905D3_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(S905D3_EMMC_DS, S905D3_EMMC_DS_FN);
 
-  auto status = pbus_.CompositeDeviceAddNew(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;
   }
 

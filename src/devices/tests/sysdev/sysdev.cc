@@ -118,7 +118,7 @@ zx_status_t Sysdev::MakeComposite() {
       {countof(root_match), root_match},
       {countof(fragment2_match), fragment2_match},
   };
-  const device_fragment_new_t fragments[] = {
+  const device_fragment_t fragments[] = {
       {"fragment-1", countof(fragment1), fragment1},
       {"fragment-2", countof(fragment2), fragment2},
   };
@@ -129,7 +129,7 @@ zx_status_t Sysdev::MakeComposite() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_COMPOSITE},
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -139,7 +139,7 @@ zx_status_t Sysdev::MakeComposite() {
       .metadata_count = 0,
   };
 
-  return device_add_composite_new(zxdev(), "composite", &comp_desc);
+  return device_add_composite(zxdev(), "composite", &comp_desc);
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

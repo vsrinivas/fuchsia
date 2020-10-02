@@ -97,7 +97,7 @@ static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-static const device_fragment_new_t fragments[] = {
+static const device_fragment_t fragments[] = {
     {"gpio", countof(hpd_gpio_fragment), hpd_gpio_fragment},
     {"canvas", countof(canvas_fragment), canvas_fragment},
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
@@ -122,8 +122,8 @@ zx_status_t Vim::DisplayInit() {
     gpio_set_alt_function(&bus->gpio, S912_SPDIF_H4, S912_SPDIF_H4_OUT_FN);
 #endif
 
-  if ((status = pbus_.CompositeDeviceAddNew(&display_dev, fragments, countof(fragments),
-                                            UINT32_MAX)) != ZX_OK) {
+  if ((status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments),
+                                         UINT32_MAX)) != ZX_OK) {
     zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d", status);
     return status;
   }

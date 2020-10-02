@@ -21,7 +21,7 @@ static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-static const device_fragment_new_t fragments[] = {
+static const device_fragment_t fragments[] = {
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
 };
 zx_status_t QemuArm64::DisplayInit() {
@@ -30,8 +30,7 @@ zx_status_t QemuArm64::DisplayInit() {
   display_dev.vid = PDEV_VID_GENERIC;
   display_dev.pid = PDEV_PID_GENERIC;
   display_dev.did = PDEV_DID_FAKE_DISPLAY;
-  auto status =
-      pbus_.CompositeDeviceAddNew(&display_dev, fragments, countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

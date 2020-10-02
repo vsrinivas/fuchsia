@@ -40,7 +40,7 @@ zx_status_t Mt8167::BacklightInit() {
       {std::size(root_match), root_match},
       {std::size(gpio_match), gpio_match},
   };
-  const device_fragment_new_t fragments[] = {
+  const device_fragment_t fragments[] = {
       {"i2c", std::size(i2c_fragment), i2c_fragment},
       {"gpio", std::size(gpio_fragment), gpio_fragment},
   };
@@ -51,7 +51,7 @@ zx_status_t Mt8167::BacklightInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_SG_MICRO_SGM37603A},
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = std::size(props),
       .fragments = fragments,
@@ -61,7 +61,7 @@ zx_status_t Mt8167::BacklightInit() {
       .metadata_count = 0,
   };
 
-  auto status = DdkAddCompositeNew("sgm37603a", &comp_desc);
+  auto status = DdkAddComposite("sgm37603a", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add SGM37603A device: %d", __FUNCTION__, status);
   }

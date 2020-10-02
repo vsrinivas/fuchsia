@@ -34,7 +34,7 @@ zx_device_prop_t power_domain_kBuckSoC_props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
-constexpr device_fragment_new_t power_domain_kBuckSoC_fragments[] = {
+constexpr device_fragment_t power_domain_kBuckSoC_fragments[] = {
     {"power", countof(power_impl_fragment), power_impl_fragment},
 };
 
@@ -50,7 +50,7 @@ static const device_metadata_t power_domain_kBuckSoC_metadata[] = {
     },
 };
 
-const composite_device_desc_new_t power_domain_kBuckSoC_desc = {
+const composite_device_desc_t power_domain_kBuckSoC_desc = {
     .props = power_domain_kBuckSoC_props,
     .props_count = countof(power_domain_kBuckSoC_props),
     .fragments = power_domain_kBuckSoC_fragments,
@@ -71,7 +71,7 @@ static const device_fragment_part_t i2c_fragment[] = {
     {countof(i2c_match), i2c_match},
 };
 
-static const device_fragment_new_t fragments[] = {
+static const device_fragment_t fragments[] = {
     {"i2c", countof(i2c_fragment), i2c_fragment},
 };
 
@@ -80,7 +80,7 @@ constexpr zx_device_prop_t props[] = {
     {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AS370_POWER},
 };
 
-const composite_device_desc_new_t comp_desc = {
+const composite_device_desc_t comp_desc = {
     .props = props,
     .props_count = countof(props),
     .fragments = fragments,
@@ -95,15 +95,15 @@ const composite_device_desc_new_t comp_desc = {
 zx_status_t As370::PowerInit() {
   zx_status_t status;
 
-  status = DdkAddCompositeNew("power", &comp_desc);
+  status = DdkAddComposite("power", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew for powerimpl failed %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed %d", __FUNCTION__, status);
     return status;
   }
 
-  status = DdkAddCompositeNew("composite-pd-kBuckSoC", &power_domain_kBuckSoC_desc);
+  status = DdkAddComposite("composite-pd-kBuckSoC", &power_domain_kBuckSoC_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew for power domain kBuckSoC failed %d", __FUNCTION__,
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain kBuckSoC failed %d", __FUNCTION__,
            status);
     return status;
   }

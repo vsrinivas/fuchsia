@@ -149,7 +149,7 @@ static const device_fragment_part_t gpio_int_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_int_match), gpio_int_match},
 };
-static const device_fragment_new_t eth_fragments[] = {
+static const device_fragment_t eth_fragments[] = {
     {"i2c", countof(i2c_fragment), i2c_fragment},
     {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
     {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
@@ -165,7 +165,7 @@ static const device_fragment_part_t eth_board_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(eth_board_match), eth_board_match},
 };
-static const device_fragment_new_t dwmac_fragments[] = {
+static const device_fragment_t dwmac_fragments[] = {
     {"eth-board", std::size(eth_board_fragment), eth_board_fragment},
 };
 
@@ -188,17 +188,17 @@ zx_status_t Vim::EthInit() {
   gpio_impl_.SetAltFunction(S912_ETH_TXD3, S912_ETH_TXD3_FN);
 
   // Add a composite device for ethernet board in a new devhost.
-  auto status = pbus_.CompositeDeviceAddNew(&eth_board_dev, eth_fragments, std::size(eth_fragments),
-                                            UINT32_MAX);
+  auto status =
+      pbus_.CompositeDeviceAdd(&eth_board_dev, eth_fragments, std::size(eth_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 
   // Add a composite device for dwmac driver in the ethernet board driver's devhost.
-  status = pbus_.CompositeDeviceAddNew(&dwmac_dev, dwmac_fragments, std::size(dwmac_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_fragments, std::size(dwmac_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

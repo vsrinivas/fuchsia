@@ -29,7 +29,7 @@ zx_device_prop_t props[] = {
 };
 
 // kVDLdoVGp2
-static const device_fragment_new_t power_domain_kVDLdoVGp2_fragments[] = {
+static const device_fragment_t power_domain_kVDLdoVGp2_fragments[] = {
     {"power", countof(power_impl_fragment), power_impl_fragment},
 };
 static const power_domain_t power_domain_kVDLdoVGp2[] = {
@@ -40,7 +40,7 @@ static const device_metadata_t power_metadata_kVDLdoVGp2[] = {{
     .data = &power_domain_kVDLdoVGp2,
     .length = sizeof(power_domain_kVDLdoVGp2),
 }};
-const composite_device_desc_new_t power_domain_kVDLdoVGp2_desc = {
+const composite_device_desc_t power_domain_kVDLdoVGp2_desc = {
     .props = props,
     .props_count = countof(props),
     .fragments = power_domain_kVDLdoVGp2_fragments,
@@ -87,9 +87,9 @@ zx_status_t Mt8167::PowerInit() {
     return status;
   }
 
-  status = DdkAddCompositeNew("composite-pd-kVDLdoVGp2", &power_domain_kVDLdoVGp2_desc);
+  status = DdkAddComposite("composite-pd-kVDLdoVGp2", &power_domain_kVDLdoVGp2_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DdkAddCompositeNew for power domain kVDLdoVGp2 failed: %d", __FUNCTION__,
+    zxlogf(ERROR, "%s: DdkAddComposite for power domain kVDLdoVGp2 failed: %d", __FUNCTION__,
            status);
     return status;
   }

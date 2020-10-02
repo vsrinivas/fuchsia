@@ -39,7 +39,7 @@ static constexpr device_fragment_part_t spi_fragment[] = {
     {countof(spi_match), spi_match},
 };
 
-static constexpr device_fragment_new_t fragments[] = {
+static constexpr device_fragment_t fragments[] = {
     {"gpio", countof(gpio_fragment), gpio_fragment},
     {"spi", countof(spi_fragment), spi_fragment},
 };
@@ -50,8 +50,8 @@ static constexpr zx_device_prop_t props[] = {
     {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_RADAR_SENSOR},
 };
 
-static composite_device_desc_new_t composite_dev = []() {
-  composite_device_desc_new_t desc = {};
+static composite_device_desc_t composite_dev = []() {
+  composite_device_desc_t desc = {};
   desc.props = props;
   desc.props_count = countof(props);
   desc.fragments = fragments;
@@ -60,6 +60,6 @@ static composite_device_desc_new_t composite_dev = []() {
   return desc;
 }();
 
-zx_status_t Nelson::SelinaInit() { return DdkAddCompositeNew("selina", &composite_dev); }
+zx_status_t Nelson::SelinaInit() { return DdkAddComposite("selina", &composite_dev); }
 
 }  // namespace nelson

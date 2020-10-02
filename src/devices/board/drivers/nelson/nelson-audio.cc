@@ -81,25 +81,25 @@ static const device_fragment_part_t ref_out_clk0_fragment[] = {
     {countof(ref_out_clk0_match), ref_out_clk0_match},
 };
 
-static const device_fragment_new_t ref_codec_fragments[] = {
+static const device_fragment_t ref_codec_fragments[] = {
     {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
     {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
     {"gpio-fault", countof(ref_out_fault_gpio_fragment), ref_out_fault_gpio_fragment},
 };
-static const device_fragment_new_t p2_codec_fragments[] = {
+static const device_fragment_t p2_codec_fragments[] = {
     {"i2c", countof(ref_out_i2c_fragment), p2_out_i2c_fragment},
     {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
     {"gpio-fault", countof(ref_out_fault_gpio_fragment), ref_out_fault_gpio_fragment},
 };
-static const device_fragment_new_t ref_controller_fragments[] = {
+static const device_fragment_t ref_controller_fragments[] = {
     {"codec", countof(ref_out_codec_fragment), ref_out_codec_fragment},
     {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
-static const device_fragment_new_t p2_controller_fragments[] = {
+static const device_fragment_t p2_controller_fragments[] = {
     {"codec", countof(p2_out_codec_fragment), p2_out_codec_fragment},
     {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
-static const device_fragment_new_t in_fragments[] = {
+static const device_fragment_t in_fragments[] = {
     {"clock", countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 
@@ -183,19 +183,19 @@ zx_status_t Nelson::AudioInit() {
 
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
-    composite_device_desc_new_t codec_desc = {};
+    composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
     codec_desc.coresident_device_index = UINT32_MAX;
     codec_desc.fragments = ref_codec_fragments;
     codec_desc.fragments_count = countof(ref_codec_fragments);
-    status = DdkAddCompositeNew("audio-max98373", &codec_desc);
+    status = DdkAddComposite("audio-max98373", &codec_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s DdkAddCompositeNew failed %d", __FILE__, status);
+      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAddNew(&controller_out, ref_controller_fragments,
-                                         countof(ref_controller_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&controller_out, ref_controller_fragments,
+                                      countof(ref_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
@@ -229,19 +229,19 @@ zx_status_t Nelson::AudioInit() {
 
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
-    composite_device_desc_new_t codec_desc = {};
+    composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
     codec_desc.coresident_device_index = UINT32_MAX;
     codec_desc.fragments = p2_codec_fragments;
     codec_desc.fragments_count = countof(p2_codec_fragments);
-    status = DdkAddCompositeNew("audio-tas58xx", &codec_desc);
+    status = DdkAddComposite("audio-tas58xx", &codec_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s DdkAddCompositeNew failed %d", __FILE__, status);
+      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAddNew(&controller_out, p2_controller_fragments,
-                                         countof(p2_controller_fragments), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&controller_out, p2_controller_fragments,
+                                      countof(p2_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
@@ -249,7 +249,7 @@ zx_status_t Nelson::AudioInit() {
   }
 
   // Input device.
-  status = pbus_.CompositeDeviceAddNew(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;

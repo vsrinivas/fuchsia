@@ -63,8 +63,8 @@ zx_device_prop_t power_domain_arm_core_props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
-constexpr device_fragment_new_t power_domain_arm_core_fragments[] = {
-    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
+constexpr device_fragment_t power_domain_arm_core_fragments[] = {
+    {"power", countof(power_impl_fragment), power_impl_fragment},
 };
 
 constexpr power_domain_t big_domain[] = {
@@ -79,7 +79,7 @@ constexpr device_metadata_t power_domain_big_core[] = {
     },
 };
 
-constexpr composite_device_desc_new_t power_domain_big_core_desc = {
+constexpr composite_device_desc_t power_domain_big_core_desc = {
     .props = power_domain_arm_core_props,
     .props_count = countof(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
@@ -101,7 +101,7 @@ constexpr device_metadata_t power_domain_little_core[] = {
     },
 };
 
-constexpr composite_device_desc_new_t power_domain_little_core_desc = {
+constexpr composite_device_desc_t power_domain_little_core_desc = {
     .props = power_domain_arm_core_props,
     .props_count = countof(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
@@ -132,7 +132,7 @@ constexpr device_fragment_part_t vreg_pp1000_cpu_a_fragment[] = {
     {countof(vreg_pp1000_cpu_a_match), vreg_pp1000_cpu_a_match},
 };
 
-constexpr device_fragment_new_t power_impl_fragments[] = {
+constexpr device_fragment_t power_impl_fragments[] = {
     {"pwm-ao-d", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
     {"vreg-pp1000-cpu-a", countof(vreg_pp1000_cpu_a_fragment), vreg_pp1000_cpu_a_fragment},
 };
@@ -162,7 +162,7 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
       {countof(i2c_match), i2c_match},
   };
 
-  const device_fragment_new_t fragments[] = {
+  const device_fragment_t fragments[] = {
       {"i2c", countof(i2c_fragment), i2c_fragment},
   };
 
@@ -184,7 +184,7 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
       },
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -194,7 +194,7 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
       .metadata_count = countof(metadata),
   };
 
-  return DdkAddCompositeNew(name, &comp_desc);
+  return DdkAddComposite(name, &comp_desc);
 }
 
 zx_status_t Sherlock::LuisPowerInit() {
@@ -222,21 +222,21 @@ zx_status_t Sherlock::LuisPowerInit() {
     return st;
   }
 
-  st = pbus_.CompositeDeviceAddNew(&power_dev, power_impl_fragments, countof(power_impl_fragments),
-                                   UINT32_MAX);
+  st = pbus_.CompositeDeviceAdd(&power_dev, power_impl_fragments, countof(power_impl_fragments),
+                                UINT32_MAX);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;
   }
 
-  st = DdkAddCompositeNew("composite-pd-big-core", &power_domain_big_core_desc);
+  st = DdkAddComposite("composite-pd-big-core", &power_domain_big_core_desc);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain Big Arm Core failed, st = %d",
            __FUNCTION__, st);
     return st;
   }
 
-  st = DdkAddCompositeNew("composite-pd-little-core", &power_domain_little_core_desc);
+  st = DdkAddComposite("composite-pd-little-core", &power_domain_little_core_desc);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain Little Arm Core failed, st = %d",
            __FUNCTION__, st);

@@ -39,7 +39,7 @@ static const device_fragment_part_t ref_out_touch_gpio_fragment[] = {
     {countof(ref_out_touch_gpio_match), ref_out_touch_gpio_match},
 };
 
-static const device_fragment_new_t controller_fragments[] = {
+static const device_fragment_t controller_fragments[] = {
     {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
     {"gpio-touch", countof(ref_out_touch_gpio_fragment), ref_out_touch_gpio_fragment},
 };
@@ -73,7 +73,7 @@ zx_status_t As370::TouchInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AS370_TOUCH},
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = controller_fragments,
@@ -83,9 +83,9 @@ zx_status_t As370::TouchInit() {
       .metadata_count = countof(as370_touch_metadata),
   };
 
-  zx_status_t status = DdkAddCompositeNew("as370-touch", &comp_desc);
+  zx_status_t status = DdkAddComposite("as370-touch", &comp_desc);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s CompositeDeviceAddNew failed %d", __FILE__, status);
+    zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FILE__, status);
     return status;
   }
 

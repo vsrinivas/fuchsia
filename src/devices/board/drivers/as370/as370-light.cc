@@ -67,7 +67,7 @@ zx_status_t As370::LightInit() {
       {countof(i2c_match), i2c_match},
   };
 
-  static const device_fragment_new_t fragments[] = {
+  static const device_fragment_t fragments[] = {
       {"i2c", countof(i2c_fragment), i2c_fragment},
   };
 
@@ -79,9 +79,9 @@ zx_status_t As370::LightInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = countof(light_metadata);
 
-  status = pbus_.CompositeDeviceAddNew(&light_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
 

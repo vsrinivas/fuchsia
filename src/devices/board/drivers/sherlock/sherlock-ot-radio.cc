@@ -63,7 +63,7 @@ static constexpr device_fragment_part_t gpio_bootloader_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(gpio_bootloader_match), gpio_bootloader_match},
 };
-static constexpr device_fragment_new_t ot_fragments[] = {
+static constexpr device_fragment_t ot_fragments[] = {
     {"ot-radio", std::size(ot_dev_fragment), ot_dev_fragment},
     {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
     {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
@@ -80,7 +80,7 @@ zx_status_t Sherlock::OtRadioInit() {
   dev.metadata_count = std::size(nrf52840_radio_metadata);
 
   zx_status_t status =
-      pbus_.CompositeDeviceAddNew(&dev, ot_fragments, std::size(ot_fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&dev, ot_fragments, std::size(ot_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s(nrf52840): DeviceAdd failed: %d", __func__, status);
   } else {

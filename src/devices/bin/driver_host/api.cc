@@ -366,8 +366,8 @@ __EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path,
   return internal::ContextForApi()->PublishMetadata(dev_ref, path, type, data, length);
 }
 
-__EXPORT zx_status_t device_add_composite_new(zx_device_t* dev, const char* name,
-                                              const composite_device_desc_new_t* comp_desc) {
+__EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
+                                          const composite_device_desc_t* comp_desc) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   auto dev_ref = fbl::RefPtr(dev);
   return internal::ContextForApi()->DeviceAddComposite(dev_ref, name, comp_desc);

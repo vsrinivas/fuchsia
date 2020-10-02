@@ -191,7 +191,7 @@ static const device_fragment_part_t fan1_gpio_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(fan1_gpio_match), fan1_gpio_match},
 };
-static const device_fragment_new_t fragments[] = {
+static const device_fragment_t fragments[] = {
     {"scpi", std::size(scpi_fragment), scpi_fragment},
     {"gpio-fan-0", std::size(fan0_gpio_fragment), fan0_gpio_fragment},
     {"gpio-fan-1", std::size(fan1_gpio_fragment), fan1_gpio_fragment},
@@ -224,7 +224,7 @@ zx_status_t Vim::ThermalInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_VIM2_THERMAL},
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
@@ -234,7 +234,7 @@ zx_status_t Vim::ThermalInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddCompositeNew("vim-thermal", &comp_desc);
+  status = DdkAddComposite("vim-thermal", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
     return status;

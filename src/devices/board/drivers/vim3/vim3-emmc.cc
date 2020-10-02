@@ -84,7 +84,7 @@ static const device_fragment_part_t gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
-static const device_fragment_new_t fragments[] = {
+static const device_fragment_t fragments[] = {
     {"gpio", countof(gpio_fragment), gpio_fragment},
 };
 
@@ -123,7 +123,7 @@ zx_status_t Vim3::EmmcInit() {
 
   gpio_impl_.ConfigOut(A311D_GPIOBOOT(14), 1);
 
-  status = pbus_.CompositeDeviceAddNew(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
     return status;

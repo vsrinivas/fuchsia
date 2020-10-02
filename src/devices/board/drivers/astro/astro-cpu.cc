@@ -72,7 +72,7 @@ constexpr device_fragment_part_t clock_cpu_scaler_dfp[] = {
     {countof(clock_cpu_scaler_match), clock_cpu_scaler_match},
 };
 
-constexpr device_fragment_new_t fragments[] = {
+constexpr device_fragment_t fragments[] = {
     {"power", countof(power_dfp), power_dfp},
     {"clock-pll-div16", countof(clock_pll_div16_dfp), clock_pll_div16_dfp},
     {"clock-cpu-div16", countof(clock_cpu_div16_dfp), clock_cpu_div16_dfp},
@@ -143,7 +143,7 @@ zx_status_t Astro::CpuInit() {
     return result;
   }
 
-  result = pbus_.CompositeDeviceAddNew(&cpu_dev, fragments, countof(fragments), 1);
+  result = pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
   }

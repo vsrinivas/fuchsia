@@ -64,9 +64,8 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
   zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info);
-  zx_status_t PBusCompositeDeviceAddNew(const pbus_dev_t* dev,
-                                        const device_fragment_new_t* fragments_list,
-                                        size_t fragments_count, uint32_t coresident_device_index);
+  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev, const device_fragment_t* fragments_list,
+                                     size_t fragments_count, uint32_t coresident_device_index);
 
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
 

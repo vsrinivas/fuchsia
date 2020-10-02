@@ -190,7 +190,7 @@ constexpr device_fragment_part_t power_fragment[] = {
     {countof(root_match), root_match},
     {countof(power_match), power_match},
 };
-constexpr device_fragment_new_t fragments[] = {
+constexpr device_fragment_t fragments[] = {
     {"gpio-lcd", countof(lcd_gpio_fragment), lcd_gpio_fragment},
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"dsi", countof(dsi_impl_fragment), dsi_impl_fragment},
@@ -286,9 +286,9 @@ zx_status_t Mt8167::DisplayInit() {
   display_panel_metadata[0].data_buffer = &display_panel_info;
 
   // Load display driver in same devhost as DSI driver.
-  status = pbus_.CompositeDeviceAddNew(&display_dev, fragments, std::size(fragments), 3);
+  status = pbus_.CompositeDeviceAdd(&display_dev, fragments, std::size(fragments), 3);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;
   }
 

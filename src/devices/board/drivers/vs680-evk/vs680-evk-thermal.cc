@@ -53,7 +53,7 @@ zx_status_t Vs680Evk::ThermalInit() {
       {std::size(cpu_power_match), cpu_power_match},
   };
 
-  const device_fragment_new_t thermal_fragments[] = {
+  const device_fragment_t thermal_fragments[] = {
       {"clock", std::size(cpu_clock_fragment), cpu_clock_fragment},
       {"power", std::size(cpu_power_fragment), cpu_power_fragment},
   };
@@ -67,10 +67,10 @@ zx_status_t Vs680Evk::ThermalInit() {
   thermal_dev.irq_list = thermal_irqs;
   thermal_dev.irq_count = std::size(thermal_irqs);
 
-  zx_status_t status = pbus_.CompositeDeviceAddNew(&thermal_dev, thermal_fragments,
-                                                   std::size(thermal_fragments), UINT32_MAX);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&thermal_dev, thermal_fragments,
+                                                std::size(thermal_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
 

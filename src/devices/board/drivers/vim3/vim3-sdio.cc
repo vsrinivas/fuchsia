@@ -63,7 +63,7 @@ static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
-static const device_fragment_new_t sdio_fragments[] = {
+static const device_fragment_t sdio_fragments[] = {
     {"gpio-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
 };
 
@@ -91,8 +91,8 @@ zx_status_t Vim3::SdioInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOX(4), A311D_GPIOX_4_SDIO_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOX(5), A311D_GPIOX_5_SDIO_CMD_FN);
 
-  if ((status = pbus_.CompositeDeviceAddNew(&sdio_dev, sdio_fragments, countof(sdio_fragments),
-                                            UINT32_MAX)) != ZX_OK) {
+  if ((status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, countof(sdio_fragments),
+                                         UINT32_MAX)) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sdio_dev: %d", status);
     return status;
   }

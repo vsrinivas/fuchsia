@@ -248,10 +248,10 @@ zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t
   return ZX_OK;
 }
 
-zx_status_t PlatformBus::PBusCompositeDeviceAddNew(const pbus_dev_t* pdev,
-                                                   const device_fragment_new_t* fragments_list,
-                                                   size_t fragments_count,
-                                                   uint32_t coresident_device_index) {
+zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
+                                                const device_fragment_t* fragments_list,
+                                                size_t fragments_count,
+                                                uint32_t coresident_device_index) {
   if (!pdev || !pdev->name) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -282,7 +282,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAddNew(const pbus_dev_t* pdev,
     zxlogf(ERROR, "Too many fragments requested.");
     return ZX_ERR_INVALID_ARGS;
   }
-  device_fragment_new_t fragments[kMaxFragments];
+  device_fragment_t fragments[kMaxFragments];
   memcpy(&fragments[1], fragments_list, fragments_count * sizeof(fragments[1]));
 
   constexpr zx_bind_inst_t root_match[] = {
@@ -309,7 +309,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAddNew(const pbus_dev_t* pdev,
       {BIND_PLATFORM_DEV_DID, 0, pdev->did},
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = std::size(props),
       .fragments = fragments,
@@ -319,7 +319,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAddNew(const pbus_dev_t* pdev,
       .metadata_count = 0,
   };
 
-  return DdkAddCompositeNew(pdev->name, &comp_desc);
+  return DdkAddComposite(pdev->name, &comp_desc);
 }
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {

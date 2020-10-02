@@ -260,7 +260,7 @@ const device_fragment_part_t clk4_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk4_match), clk4_match},
 };
-const device_fragment_new_t fragments[] = {
+const device_fragment_t fragments[] = {
     // First fragment must be big cluster PWM, second must be little cluster PWM.
     {"pwm-a", countof(pwm_a_fragment), pwm_a_fragment},
     {"pwm-ao-d", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
@@ -293,7 +293,7 @@ zx_status_t Sherlock::SherlockThermalInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAddNew(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

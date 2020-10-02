@@ -46,7 +46,7 @@ constexpr device_fragment_part_t thermal_fragment[] = {
     {countof(thermal_match), thermal_match},
 };
 
-constexpr device_fragment_new_t fragments[] = {
+constexpr device_fragment_t fragments[] = {
     {"thermal", countof(thermal_fragment), thermal_fragment},
 };
 
@@ -55,7 +55,7 @@ constexpr device_fragment_new_t fragments[] = {
 namespace sherlock {
 
 zx_status_t Sherlock::SherlockCpuInit() {
-  zx_status_t result = pbus_.CompositeDeviceAddNew(&cpu_dev, fragments, countof(fragments), 1);
+  zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
 
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);

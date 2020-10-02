@@ -30,7 +30,7 @@ zx_device_prop_t props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
-constexpr device_fragment_new_t power_domain_1_fragments[] = {
+constexpr device_fragment_t power_domain_1_fragments[] = {
     {"power-impl", countof(power_impl_fragment), power_impl_fragment},
 };
 static const power_domain_t power_domain_1[] = {
@@ -42,7 +42,7 @@ static const device_metadata_t power_metadata_1[] = {{
     .data = &power_domain_1,
     .length = sizeof(power_domain_1),
 }};
-const composite_device_desc_new_t power_domain_1_desc = {
+const composite_device_desc_t power_domain_1_desc = {
     .props = props,
     .props_count = countof(props),
     .fragments = power_domain_1_fragments,
@@ -62,7 +62,7 @@ constexpr device_fragment_part_t parent_domain_fragment[] = {
     {countof(parent_domain_match), parent_domain_match},
 };
 
-constexpr device_fragment_new_t power_domain_3_fragments[] = {
+constexpr device_fragment_t power_domain_3_fragments[] = {
     {"power-impl", countof(power_impl_fragment), power_impl_fragment},
     {"power-domain", countof(parent_domain_fragment), parent_domain_fragment},
 };
@@ -75,7 +75,7 @@ static const device_metadata_t power_metadata_3[] = {{
     .data = &power_domain_3,
     .length = sizeof(power_domain_3),
 }};
-const composite_device_desc_new_t power_domain_3_desc = {
+const composite_device_desc_t power_domain_3_desc = {
     .props = props,
     .props_count = countof(props),
     .fragments = power_domain_3_fragments,
@@ -101,13 +101,13 @@ zx_status_t TestBoard::PowerInit() {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
-  status = DdkAddCompositeNew("composite-pd-1", &power_domain_1_desc);
+  status = DdkAddComposite("composite-pd-1", &power_domain_1_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAddComposite for power domain 1 failed: %d ", __FUNCTION__, status);
     return status;
   }
 
-  status = DdkAddCompositeNew("composite-pd-3", &power_domain_3_desc);
+  status = DdkAddComposite("composite-pd-3", &power_domain_3_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAddComposite for power domain 3 failed: %d", __FUNCTION__, status);
     return status;

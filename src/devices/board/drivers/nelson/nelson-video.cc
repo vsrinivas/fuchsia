@@ -117,7 +117,7 @@ constexpr device_fragment_part_t tee_fragment[] = {
     {countof(root_match), root_match},
     {countof(tee_match), tee_match},
 };
-constexpr device_fragment_new_t fragments[] = {
+constexpr device_fragment_t fragments[] = {
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"canvas", countof(canvas_fragment), canvas_fragment},
     {"clock-doc-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
@@ -144,9 +144,9 @@ constexpr pbus_dev_t video_dev = []() {
 
 zx_status_t Nelson::VideoInit() {
   zx_status_t status;
-  if ((status = pbus_.CompositeDeviceAddNew(&video_dev, fragments, countof(fragments),
-                                            UINT32_MAX)) != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew() failed: %d", __func__, status);
+  if ((status = pbus_.CompositeDeviceAdd(&video_dev, fragments, countof(fragments), UINT32_MAX)) !=
+      ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd() failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

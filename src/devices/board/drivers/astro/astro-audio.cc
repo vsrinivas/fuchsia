@@ -82,13 +82,13 @@ static const device_fragment_part_t codec_fragment[] = {
 };
 
 #ifdef ENABLE_BT
-static const device_fragment_new_t tdm_pcm_fragments[] = {};
+static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
-static const device_fragment_new_t tdm_i2s_fragments[] = {
+static const device_fragment_t tdm_i2s_fragments[] = {
     {"gpio", countof(enable_gpio_fragment), enable_gpio_fragment},
     {"codec", countof(codec_fragment), codec_fragment},
 };
-static const device_fragment_new_t codec_fragments[] = {
+static const device_fragment_t codec_fragments[] = {
     {"i2c", countof(i2c_fragment), i2c_fragment},
     {"gpio", countof(fault_gpio_fragment), fault_gpio_fragment},
 };
@@ -216,10 +216,10 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.bti_count = countof(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAddNew(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
-                                         UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
+                                      UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: PCM CompositeDeviceAddNew failed: %d", __FILE__, status);
+      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
     }
   }
@@ -229,15 +229,15 @@ zx_status_t Astro::AudioInit() {
     zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, kCodecVid},
                                 {BIND_PLATFORM_DEV_DID, 0, kCodecDid}};
 
-    composite_device_desc_new_t comp_desc = {};
+    composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
     comp_desc.coresident_device_index = UINT32_MAX;
     comp_desc.fragments = codec_fragments;
     comp_desc.fragments_count = countof(codec_fragments);
-    status = DdkAddCompositeNew("audio-codec-tas27xx", &comp_desc);
+    status = DdkAddComposite("audio-codec-tas27xx", &comp_desc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s DdkAddCompositeNew failed %d", __FILE__, status);
+      zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
     }
 
@@ -288,10 +288,10 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.bti_count = countof(tdm_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAddNew(&tdm_dev, tdm_i2s_fragments, countof(tdm_i2s_fragments),
-                                         UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_i2s_fragments, countof(tdm_i2s_fragments),
+                                      UINT32_MAX);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: I2S CompositeDeviceAddNew failed: %d", __FILE__, status);
+      zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
     }
   }

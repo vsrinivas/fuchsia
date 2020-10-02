@@ -1052,7 +1052,7 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
 
 zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev,
                                                   const char* name,
-                                                  const composite_device_desc_new_t* comp_desc) {
+                                                  const composite_device_desc_t* comp_desc) {
   if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
       comp_desc->fragments == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;

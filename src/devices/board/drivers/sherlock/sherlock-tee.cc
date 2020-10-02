@@ -74,16 +74,16 @@ constexpr device_fragment_part_t rpmb_fragment[] = {
     {countof(root_match), root_match},
     {countof(rpmb_match), rpmb_match},
 };
-constexpr device_fragment_new_t fragments[] = {
+constexpr device_fragment_t fragments[] = {
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"rpmb", countof(rpmb_fragment), rpmb_fragment},
 };
 
 zx_status_t Sherlock::TeeInit() {
   zx_status_t status =
-      pbus_.CompositeDeviceAddNew(&tee_dev, fragments, countof(fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&tee_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

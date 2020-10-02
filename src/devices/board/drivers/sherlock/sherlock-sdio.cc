@@ -180,7 +180,7 @@ constexpr device_fragment_part_t oob_gpio_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(oob_gpio_match), oob_gpio_match},
 };
-constexpr device_fragment_new_t wifi_composite[] = {
+constexpr device_fragment_t wifi_composite[] = {
     {"sdio-function-1", std::size(sdio_fn1_fragment), sdio_fn1_fragment},
     {"sdio-function-2", std::size(sdio_fn2_fragment), sdio_fn2_fragment},
     {"gpio-oob", std::size(oob_gpio_fragment), oob_gpio_fragment},
@@ -202,7 +202,7 @@ constexpr device_fragment_part_t pwm_e_fragment[] = {
     {std::size(root_match), root_match},
     {std::size(pwm_e_match), pwm_e_match},
 };
-constexpr device_fragment_new_t sdio_fragments[] = {
+constexpr device_fragment_t sdio_fragments[] = {
     {"gpoi-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
     {"pwm", std::size(pwm_e_fragment), pwm_e_fragment},
 };
@@ -253,9 +253,9 @@ zx_status_t Sherlock::SdioInit() {
   }
 
   status =
-      pbus_.CompositeDeviceAddNew(&sdio_dev, sdio_fragments, std::size(sdio_fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, std::size(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew() error: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
     return status;
   }
 
@@ -266,7 +266,7 @@ zx_status_t Sherlock::SdioInit() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI},
   };
 
-  const composite_device_desc_new_t comp_desc = {
+  const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
       .fragments = wifi_composite,
@@ -276,7 +276,7 @@ zx_status_t Sherlock::SdioInit() {
       .metadata_count = 0,
   };
 
-  status = DdkAddCompositeNew("wifi", &comp_desc);
+  status = DdkAddComposite("wifi", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
     return status;

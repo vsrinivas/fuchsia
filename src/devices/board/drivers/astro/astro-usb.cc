@@ -208,7 +208,7 @@ static const device_fragment_part_t xhci_phy_fragment[] = {
     {countof(root_match), root_match},
     {countof(xhci_phy_match), xhci_phy_match},
 };
-static const device_fragment_new_t xhci_fragments[] = {
+static const device_fragment_t xhci_fragments[] = {
     {"xhci-phy", countof(xhci_phy_fragment), xhci_phy_fragment},
 };
 static const zx_bind_inst_t dwc2_phy_match[] = {
@@ -221,7 +221,7 @@ static const device_fragment_part_t dwc2_phy_fragment[] = {
     {countof(root_match), root_match},
     {countof(dwc2_phy_match), dwc2_phy_match},
 };
-static const device_fragment_new_t dwc2_fragments[] = {
+static const device_fragment_t dwc2_fragments[] = {
     {"dwc2-phy", countof(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
@@ -233,9 +233,9 @@ zx_status_t Astro::UsbInit() {
   }
 
   // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
-  status = pbus_.CompositeDeviceAddNew(&xhci_dev, xhci_fragments, countof(xhci_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&xhci_dev, xhci_fragments, countof(xhci_fragments), 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew(xhci) failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
   }
 
@@ -260,10 +260,10 @@ zx_status_t Astro::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = config;
 
-  status = pbus_.CompositeDeviceAddNew(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAddNew(dwc2) failed %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
     return status;
   }
 

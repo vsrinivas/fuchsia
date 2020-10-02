@@ -69,7 +69,7 @@ constexpr device_fragment_part_t clk_dos_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk_dos_match), clk_dos_match},
 };
-constexpr device_fragment_new_t fragments[] = {
+constexpr device_fragment_t fragments[] = {
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"clock-dos", countof(clk_dos_fragment), clk_dos_fragment},
 };
@@ -91,9 +91,9 @@ static pbus_dev_t hevc_enc_dev = []() {
 
 zx_status_t Sherlock::HevcEncInit() {
   zx_status_t status =
-      pbus_.CompositeDeviceAddNew(&hevc_enc_dev, fragments, countof(fragments), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&hevc_enc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::HevcEncInit: CompositeDeviceAddNew() failed: %d", status);
+    zxlogf(ERROR, "Sherlock::HevcEncInit: CompositeDeviceAdd() failed: %d", status);
     return status;
   }
   return ZX_OK;
