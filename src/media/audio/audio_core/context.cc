@@ -7,6 +7,7 @@
 #include "src/media/audio/audio_core/activity_dispatcher.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/audio_impl.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
 #include "src/media/audio/audio_core/effects_controller_impl.h"
 #include "src/media/audio/audio_core/link_matrix.h"
@@ -47,7 +48,8 @@ class ContextImpl : public Context {
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
         usage_gain_reporter_(this),
         effects_controller_(*this),
-        audio_tuner_(*this) {
+        audio_tuner_(*this),
+        audio_(this) {
     FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
     zx_status_t res = device_manager_.Init();
@@ -68,6 +70,7 @@ class ContextImpl : public Context {
 
   // |fuchsia::audio::Context|
   void PublishOutgoingServices() override {
+    component_context_->outgoing()->AddPublicService(audio_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(device_manager_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(usage_reporter_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(activity_dispatcher_.GetFidlRequestHandler());
@@ -118,6 +121,9 @@ class ContextImpl : public Context {
 
   EffectsControllerImpl effects_controller_;
   AudioTunerImpl audio_tuner_;
+
+  // FIDL service that forwards requests to AudioCore.
+  AudioImpl audio_;
 };
 
 }  // namespace

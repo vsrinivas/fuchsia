@@ -26,6 +26,9 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   ~AudioCoreImpl() override;
 
  private:
+  // Forwards requests to the AudioCore service.
+  friend class AudioImpl;
+
   // |fuchsia::media::AudioCore|
   void CreateAudioRenderer(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final;

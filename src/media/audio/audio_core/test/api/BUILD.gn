@@ -93,6 +93,11 @@ audio_core_api_test_component("audio-renderer-pipeline-test") {
   ]
 }
 
+audio_core_api_test_component("audio-test") {
+  source = "audio_test.cc"
+  executable_deps = [ "//sdk/fidl/fuchsia.media" ]
+}
+
 audio_core_api_test_component("audio-tuner-test") {
   source = "audio_tuner_test.cc"
   executable_deps = [ "//sdk/fidl/fuchsia.media.tuning" ]
@@ -134,6 +139,7 @@ fuchsia_test_package("audio-core-api-tests") {
     ":audio-capturer-test",
     ":audio-device-enumerator-test",
     ":audio-renderer-test",
+    ":audio-test",
     ":audio-tuner-test",
     ":gain-control-test",
     ":ultrasound-test",

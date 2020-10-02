@@ -140,7 +140,6 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
 
   // The '_nodevfs' cmx files are needed to allow us to map in our isolated devmgr under /dev for
   // each component, otherwise these components would still be provided the shared/global devmgr.
-  std::string audio_url = "fuchsia-pkg://fuchsia.com/audio#meta/audio.cmx";
   std::string audio_core_url = options_.audio_core_base_url;
   if (options_.audio_core_config_data_path != "") {
     // When a custom config is specified, don't bother loading the default config data.
@@ -162,12 +161,6 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   };
   std::vector<ComponentLaunchInfo> to_launch{
       {
-          .type = kAudioComponent,
-          .url = audio_url,
-          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_url, devmgr_services_),
-          .service_names = {fuchsia::media::Audio::Name_},
-      },
-      {
           .type = kAudioCoreComponent,
           .url = audio_core_url,
           .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(audio_core_url, devmgr_services_,
@@ -176,6 +169,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
           .service_names =
               {
                   fuchsia::media::ActivityReporter::Name_,
+                  fuchsia::media::Audio::Name_,
                   fuchsia::media::AudioCore::Name_,
                   fuchsia::media::AudioDeviceEnumerator::Name_,
                   fuchsia::media::tuning::AudioTuner::Name_,

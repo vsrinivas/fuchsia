@@ -55,7 +55,6 @@ class HermeticAudioEnvironment {
 
   // Components started by this environment.
   enum ComponentType {
-    kAudioComponent,
     kAudioCoreComponent,
     kVirtualAudioComponent,
   };
