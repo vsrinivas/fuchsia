@@ -17,7 +17,8 @@ const uint32_t kErrorOccurredIndicesToUse[] = {0, 1, 2, 9};
 const uint32_t kErrorOccurredInvalidIndex = 18;
 
 // Common metric constants.
-const std::string kApplicationComponentNames[] = {"audio_core", "logger", "scheduler", "scenic", "unknown"};
+const std::string kApplicationComponentNames[] = {"audio_core", "logger", "scheduler", "scenic",
+                                                  "unknown"};
 
 // file_system_cache_misses metric constants.
 const uint32_t kFileSystemCacheMissesIndices[] = {0, 1};
@@ -27,8 +28,8 @@ const int64_t kFileSystemCacheMissesCountMax = 2;
 
 // update_duration metric constants.
 const int32_t kUpdateDurationIndices[] = {0, 1, 2};
-const std::string kUpdateDurationComponentNames[] = {
-    "DownloadPayload", "VerifyUpdate", "", "unknown"};
+const std::string kUpdateDurationComponentNames[] = {"DownloadPayload", "VerifyUpdate", "",
+                                                     "unknown"};
 const int64_t kUpdateDurationValues[] = {-1, 0, 1, 2, 10, 37, 158, 702};
 
 // game_frame_rate metric constants.
@@ -61,6 +62,11 @@ const int kConnectionAttemptsNumWindowSizes = 2;
 const int32_t kStreamingTimeIndices[] = {0, 1, 2};
 const std::string kStreamingTimeComponentNames[] = {"ModuleA", "ModuleB", "ModuleC"};
 const int kStreamingTimeNumWindowSizes = 2;
+
+// update_duration_new metric constants.
+const int32_t kUpdateDurationNewErrorNameIndices[] = {0, 1, 2};
+const int32_t kUpdateDurationNewStageIndices[] = {0, 1, 2};
+const int64_t kUpdateDurationNewValues[] = {-1, 0, 1, 10, 702};
 
 // The report IDs of the locally aggregated reports in the testapp project.
 const std::vector<uint32_t> kAggregatedReportIds = {

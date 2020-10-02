@@ -128,22 +128,15 @@ bool CobaltTestAppLogger::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
   return true;
 }
 
-bool CobaltTestAppLogger::LogStringPair(uint32_t metric_id, const std::string& part0,
-                                        const std::string& val0, const std::string& part1,
-                                        const std::string& val1) {
+bool CobaltTestAppLogger::LogInteger(uint32_t metric_id, std::vector<uint32_t> indices,
+                                     int64_t value) {
   Status status = Status::INTERNAL_ERROR;
-  std::vector<fuchsia::cobalt::CustomEventValue> parts(2);
-  parts.at(0).dimension_name = part0;
-  parts.at(0).value.set_string_value(val0);
-  parts.at(1).dimension_name = part1;
-  parts.at(1).value.set_string_value(val1);
-  logger_->LogCustomEvent(metric_id, std::move(parts), &status);
-  FX_VLOGS(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => " << StatusToString(status);
+  metric_event_logger_->LogInteger(metric_id, value, indices, &status);
+  FX_VLOGS(1) << "LogInteger(" << value << ") => " << StatusToString(status);
   if (status != Status::OK) {
-    FX_LOGS(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogInteger() => " << StatusToString(status);
     return false;
   }
-
   return true;
 }
 

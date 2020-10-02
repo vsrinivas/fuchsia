@@ -441,5 +441,57 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
   return SendAndCheckSuccess("TestLogElapsedTimeWithAggregation", logger);
 }
 
+// update_duration_new using INTEGER metric.
+//
+// For each of the two event_codes, log one observation with an integer value.
+bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
+                                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                                      const size_t backfill_days) {
+  FX_LOGS(INFO) << "========================";
+  FX_LOGS(INFO) << "TestLogInteger";
+  // Expect to generate |kNumAggregatedObservations| for each day in the
+  // backfill period, plus the current day. Expect to generate no observations
+  // when GenerateObservations is called for the second time on the same day.
+  std::map<uint32_t, uint64_t> expected_num_obs;
+  std::map<uint32_t, uint64_t> expect_no_obs;
+  for (const auto& pair : kNumAggregatedObservations) {
+    expected_num_obs[pair.first] = (1 + backfill_days) * pair.second;
+    expect_no_obs[pair.first] = 0;
+  }
+
+  auto day_index = CurrentDayIndex(clock);
+  for (uint32_t errorNameIndex : kUpdateDurationNewErrorNameIndices) {
+    for (uint32_t stageIndex : kUpdateDurationNewStageIndices) {
+      for (int64_t value : kUpdateDurationNewValues) {
+        if (!logger->LogInteger(cobalt_registry::kUpdateDurationNewMetricId, {errorNameIndex, stageIndex}, value)) {
+          FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kUpdateDurationNewMetricId << ", {"
+                        << errorNameIndex << ", " << stageIndex << "}, " << value << ")";
+          FX_LOGS(INFO) << "TestLogInteger : FAIL";
+          return false;
+        }
+        expected_num_obs[cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId] +=
+            kStreamingTimeNumWindowSizes;
+      }
+    }
+  }
+
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogInteger : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, expect_no_obs)) {
+    FX_LOGS(INFO) << "TestLogInteger : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogInteger", logger);
+}
+
 }  // namespace testapp
 }  // namespace cobalt

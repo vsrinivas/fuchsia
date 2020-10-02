@@ -10,8 +10,7 @@
 #include <map>
 #include <string>
 
-namespace cobalt {
-namespace testapp {
+namespace cobalt::testapp {
 
 class CobaltTestAppLogger {
  public:
@@ -48,10 +47,8 @@ class CobaltTestAppLogger {
   // Synchronously invokes LogCobaltEvent() using the given parameters.
   bool LogCobaltEvent(fuchsia::cobalt::CobaltEvent event);
 
-  // Synchronously invokes LogCustomEvent() for an event with
-  // two string parts using the given parameters.
-  bool LogStringPair(uint32_t metric_id, const std::string& part0, const std::string& val0,
-                     const std::string& part1, const std::string& val1);
+  // Synchronously invokes LogInteger() using the given parameters.
+  bool LogInteger(uint32_t metric_id, std::vector<uint32_t> indices, int64_t value);
 
   // Synchronously invokes LogCustomEvent() for an event of type
   // cobalt.CobaltMetricsTestProto, using the given parameter values.
@@ -74,9 +71,9 @@ class CobaltTestAppLogger {
 
   fuchsia::cobalt::LoggerSyncPtr logger_;
   fuchsia::cobalt::LoggerSimpleSyncPtr logger_simple_;
+  fuchsia::cobalt::MetricEventLoggerSyncPtr metric_event_logger_;
 };
 
-}  // namespace testapp
-}  // namespace cobalt
+}  // namespace cobalt::testapp
 
 #endif  // SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_LOGGER_H_

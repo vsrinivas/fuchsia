@@ -100,6 +100,9 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
       backfill_days);
+  CONNECT_AND_TRY_TEST_TWICE(
+      TestLogInteger(&logger_, clock_.get(), &cobalt_controller_, backfill_days),
+      backfill_days);
 
   return true;
 }
@@ -174,6 +177,18 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
                                                   &status);
   FX_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
+
+  fuchsia::cobalt::MetricEventLoggerFactorySyncPtr metric_event_logger_factory;
+  services.Connect(metric_event_logger_factory.NewRequest());
+
+  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  fuchsia::cobalt::ProjectSpec project;
+  project.set_customer_id(1);
+  project.set_project_id(project_id);
+  metric_event_logger_factory->CreateMetricEventLogger(
+      std::move(project), logger_.metric_event_logger_.NewRequest(), &status);
+  FX_CHECK(status == fuchsia::cobalt::Status::OK)
+      << "CreateMetricEventLogger() => " << StatusToString(status);
 
   services.Connect(system_data_updater_.NewRequest());
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
