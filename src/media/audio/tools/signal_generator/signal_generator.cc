@@ -288,8 +288,8 @@ void MediaApp::DisplayConfigurationSettings() {
     case ClockType::Default:
       printf("the default clock");
       break;
-    case ClockType::Optimal:
-      printf("the AudioCore-provided 'optimal' clock");
+    case ClockType::Flexible:
+      printf("the AudioCore-provided 'flexible' clock");
       break;
     case ClockType::Monotonic:
       printf("a clone of the MONOTONIC clock");
@@ -417,8 +417,8 @@ void MediaApp::InitializeAudibleRenderer() {
   if (clock_type_ != ClockType::Default) {
     zx::clock reference_clock_to_set;
 
-    if (clock_type_ == ClockType::Optimal) {
-      // To select the Optimal clock maintained by audio_core, we effectively SetRefClock(NULL).
+    if (clock_type_ == ClockType::Flexible) {
+      // To select the Flexible clock maintained by audio_core, we effectively SetRefClock(NULL).
       reference_clock_to_set = zx::clock(ZX_HANDLE_INVALID);
     } else {
       // For Monotonic and Custom, we create and rights-reduce a clock to send to SetRefClock().

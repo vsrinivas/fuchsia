@@ -28,7 +28,7 @@ WavWriter class to record a waveform audio file.
     --async                Capture using sequential-buffer ('asynchronous') mode
 
       By default, use the default reference clock
-    --optimal-clock        Use the 'optimal' reference clock provided by the Audio service
+    --flexible-clock       Use the 'flexible' reference clock provided by the Audio service
     --monotonic-clock      Set the local system monotonic clock as reference for this stream
     --custom-clock         Use a custom clock as this stream's reference clock
     --rate-adjust[=<PPM>]  Run faster/slower than local system clock, in parts-per-million

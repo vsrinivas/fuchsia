@@ -25,7 +25,7 @@ constexpr char kInt16FormatOption[] = "int16";
 constexpr char kGainOption[] = "gain";
 constexpr char kMuteOption[] = "mute";
 constexpr char kAsyncModeOption[] = "async";
-constexpr char kOptimalClockOption[] = "optimal-clock";
+constexpr char kFlexibleClockOption[] = "flexible-clock";
 constexpr char kMonotonicClockOption[] = "monotonic-clock";
 constexpr char kCustomClockOption[] = "custom-clock";
 constexpr char kClockRateAdjustOption[] = "rate-adjust";
@@ -40,7 +40,7 @@ constexpr char kShowUsageOption2[] = "?";
 constexpr std::array<const char*, 12> kUltrasoundInvalidOptions = {
     kLoopbackOption,       kChannelsOption,       kFrameRateOption,   k24In32FormatOption,
     kPacked24FormatOption, kInt16FormatOption,    kGainOption,        kMuteOption,
-    kOptimalClockOption,   kMonotonicClockOption, kCustomClockOption, kClockRateAdjustOption,
+    kFlexibleClockOption,  kMonotonicClockOption, kCustomClockOption, kClockRateAdjustOption,
 };
 
 constexpr uint32_t kPayloadBufferId = 0;
@@ -110,8 +110,8 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   } else if (cmd_line_.HasOption(kCustomClockOption) ||
              cmd_line_.HasOption(kClockRateAdjustOption)) {
     clock_type_ = ClockType::Custom;
-  } else if (cmd_line_.HasOption(kOptimalClockOption)) {
-    clock_type_ = ClockType::Optimal;
+  } else if (cmd_line_.HasOption(kFlexibleClockOption)) {
+    clock_type_ = ClockType::Flexible;
   } else {
     clock_type_ = ClockType::Default;
   }
@@ -201,8 +201,8 @@ void WavRecorder::Usage() {
   printf("  --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n", kAsyncModeOption);
 
   printf("\n    Use the default reference clock unless specified otherwise\n");
-  printf("  --%s\tUse the 'optimal' reference clock provided by the Audio service\n",
-         kOptimalClockOption);
+  printf("  --%s\tUse the 'flexible' reference clock provided by the Audio service\n",
+         kFlexibleClockOption);
   printf("  --%s\tSet the local system monotonic clock as reference for this stream\n",
          kMonotonicClockOption);
   printf("  --%s\tUse a custom clock as this stream's reference clock\n", kCustomClockOption);
@@ -297,8 +297,8 @@ void WavRecorder::EstablishReferenceClock() {
     // With any of these 3 options, we will first set a reference clock before we retrieve it
     zx::clock reference_clock_to_set;
 
-    // To use the optimal clock, pass a clock with HANDLE_INVALID
-    if (clock_type_ == ClockType::Optimal) {
+    // To use the flexible clock, pass a clock with HANDLE_INVALID
+    if (clock_type_ == ClockType::Flexible) {
       reference_clock_to_set = zx::clock(ZX_HANDLE_INVALID);
     } else {
       zx_status_t status;
@@ -440,11 +440,9 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
   }
 
   uint32_t bytes_per_sample =
-      (sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT)
-          ? sizeof(float)
-          : (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32)
-                ? sizeof(int32_t)
-                : sizeof(int16_t);
+      (sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT)             ? sizeof(float)
+      : (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) ? sizeof(int32_t)
+                                                                               : sizeof(int16_t);
   bytes_per_frame_ = channel_count_ * bytes_per_sample;
   uint32_t bits_per_sample = bytes_per_sample * 8;
   if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
@@ -528,19 +526,17 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
         async_get_default_dispatcher(), [this] { OnQuit(); }, file_duration_);
   }
 
-  printf(
-      "\nRecording %s, %u Hz, %u-channel linear PCM\n",
-      sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT
-          ? "32-bit float"
-          : sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
-                ? (pack_24bit_samples_ ? "packed 24-bit signed int" : "24-bit-in-32-bit signed int")
-                : "16-bit signed int",
-      frames_per_second_, channel_count_);
+  printf("\nRecording %s, %u Hz, %u-channel linear PCM\n",
+         sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT ? "32-bit float"
+         : sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+             ? (pack_24bit_samples_ ? "packed 24-bit signed int" : "24-bit-in-32-bit signed int")
+             : "16-bit signed int",
+         frames_per_second_, channel_count_);
 
   printf("from %s into '%s'\n", loopback_ ? "loopback" : "default input", filename_);
 
-  if (clock_type_ == ClockType::Optimal) {
-    printf("using AudioCore's optimal clock as the reference\n");
+  if (clock_type_ == ClockType::Flexible) {
+    printf("using AudioCore's flexible clock as the reference\n");
   } else if (clock_type_ == ClockType::Monotonic) {
     printf("using a clone of CLOCK_MONOTONIC as reference clock");
     if (adjusting_clock_rate_) {

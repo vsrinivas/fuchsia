@@ -34,7 +34,7 @@ constexpr char kAmplitudeNotSpecifiedScale[] = "0.25";
 constexpr char kSaveToFileSwitch[] = "wav";
 constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
 
-constexpr char kOptimalClockSwitch[] = "optimal-clock";
+constexpr char kFlexibleClockSwitch[] = "flexible-clock";
 constexpr char kMonotonicClockSwitch[] = "monotonic-clock";
 constexpr char kCustomClockSwitch[] = "custom-clock";
 constexpr char kClockRateSwitch[] = "rate-adjust";
@@ -87,7 +87,7 @@ constexpr char kHelp2Switch[] = "?";
 constexpr std::array<const char*, 16> kUltrasoundInvalidOptions = {
     kNumChannelsSwitch,          kInt16FormatSwitch,
     kInt24FormatSwitch,          kFrameRateSwitch,
-    kOptimalClockSwitch,         kMonotonicClockSwitch,
+    kFlexibleClockSwitch,        kMonotonicClockSwitch,
     kCustomClockSwitch,          kClockRateSwitch,
     kStreamGainSwitch,           kStreamMuteSwitch,
     kStreamRampSwitch,           kStreamRampDurationSwitch,
@@ -153,8 +153,8 @@ void usage(const char* prog_name) {
   printf("    Changes to these system-wide volume/gain settings persist after the utility runs.\n");
 
   printf("\n    Use the default reference clock unless specified otherwise\n");
-  printf("  --%s\t Request and use the 'optimal' reference clock provided by the Audio service\n",
-         kOptimalClockSwitch);
+  printf("  --%s\t Request and use the 'flexible' reference clock provided by the Audio service\n",
+         kFlexibleClockSwitch);
   printf("  --%s\t Clone CLOCK_MONOTONIC and use it as this stream's reference clock\n",
          kMonotonicClockSwitch);
   printf("  --%s\t Create and use a custom clock as this stream's reference clock\n",
@@ -343,8 +343,8 @@ int main(int argc, const char** argv) {
   } else if (command_line.HasOption(kCustomClockSwitch) ||
              command_line.HasOption(kClockRateSwitch)) {
     media_app.set_clock_type(ClockType::Custom);
-  } else if (command_line.HasOption(kOptimalClockSwitch)) {
-    media_app.set_clock_type(ClockType::Optimal);
+  } else if (command_line.HasOption(kFlexibleClockSwitch)) {
+    media_app.set_clock_type(ClockType::Flexible);
   } else {
     media_app.set_clock_type(ClockType::Default);
   }

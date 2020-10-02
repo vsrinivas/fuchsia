@@ -16,7 +16,7 @@ AudioCore, AudioRenderer, VolumeControl and GainControl FIDL protocols.
       [--usage=<RENDER_USAGE>]
       [--usage-vol[=<USAGE_VOLUME>]]
       [--usage-gain[=<USAGE_GAIN_DB>]]
-      [--optimal-clock | --monotonic-clock | --custom-clock | --rate-adjust[=<PPM>]]
+      [--flexible-clock | --monotonic-clock | --custom-clock | --rate-adjust[=<PPM>]]
       [--ref]
       [--media[=<PTS>]]
       [--pts]
@@ -66,7 +66,7 @@ These optional parameters are interpreted as follows:
       Changes to these system-wide volume/gain settings persist after the utility runs
 
       Use the default reference clock unless specified otherwise
-    --optimal-clock          Request and use the 'optimal' reference clock provided by the Audio service
+    --flexible-clock         Request and use the 'flexible' reference clock provided by the Audio service
     --monotonic-clock        Clone CLOCK_MONOTONIC and use it as this stream's reference clock
     --custom-clock           Create and use a custom clock as this stream's reference clock
     --rate-adjust[=<PPM>]    Run faster/slower than local system clock, in parts-per-million

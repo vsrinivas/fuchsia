@@ -17,7 +17,7 @@
 #include "src/media/audio/lib/wav/wav_writer.h"
 
 namespace {
-typedef enum { Default, Optimal, Monotonic, Custom } ClockType;
+typedef enum { Default, Flexible, Monotonic, Custom } ClockType;
 }  // namespace
 
 namespace media::tools {
