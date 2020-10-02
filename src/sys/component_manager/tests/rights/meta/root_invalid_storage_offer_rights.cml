@@ -12,7 +12,7 @@
     ],
     capabilities: [
         {
-            storage: "mystorage",
+            storage: "data",
             from: "#expose_dir_rights",
             backing_dir: "read_only",
         },
@@ -20,7 +20,7 @@
     offer: [
         {
             storage: "data",
-            from: "#mystorage",
+            from: "self",
             to: [ "#use_storage" ],
         },
     ],

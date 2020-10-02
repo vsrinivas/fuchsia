@@ -152,6 +152,7 @@ fn main() {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_path: Some("/data".to_string()),
+                subdir: None,
             }),
             CapabilityDecl::Runner(RunnerDecl {
                 name: Some("dart_runner".to_string()),

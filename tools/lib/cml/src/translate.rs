@@ -7,6 +7,7 @@ use {
     crate::{AnyRef, Capability, RightsClause},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     std::collections::HashSet,
+    std::convert::Into,
 };
 
 pub fn translate_capabilities(
@@ -56,6 +57,7 @@ pub fn translate_capabilities(
                 name: Some(n.clone().into()),
                 source_path: Some(source_path),
                 source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
+                subdir: capability.subdir.clone().map(Into::into),
             }));
         } else if let Some(n) = &capability.runner {
             out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {

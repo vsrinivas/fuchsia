@@ -158,7 +158,7 @@ mod tests {
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
         std::{
-            convert::TryFrom,
+            convert::{TryFrom, TryInto},
             sync::{Arc, Weak},
         },
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
@@ -183,13 +183,14 @@ mod tests {
                     source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                 }),
-                UseDecl::Storage(UseStorageDecl::Data(
-                    CapabilityPath::try_from("/in/data/persistent").unwrap(),
-                )),
-                UseDecl::Storage(UseStorageDecl::Cache(
-                    CapabilityPath::try_from("/in/data/cache").unwrap(),
-                )),
-                UseDecl::Storage(UseStorageDecl::Meta),
+                UseDecl::Storage(UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/in/data/persistent".try_into().unwrap(),
+                }),
+                UseDecl::Storage(UseStorageDecl {
+                    source_name: "cache".into(),
+                    target_path: "/in/data/cache".try_into().unwrap(),
+                }),
                 UseDecl::Runner(UseRunnerDecl { source_name: CapabilityName::from("elf") }),
             ],
             ..default_component_decl()

@@ -13,8 +13,7 @@ flexible union Ref {
     2: SelfRef self;
     3: ChildRef child;
     4: CollectionRef collection;
-    5: StorageRef storage;
-    6: FrameworkRef framework;
+    5: FrameworkRef framework;
 };
 
 /// A reference to a component’s parent instance.
@@ -39,11 +38,6 @@ struct ChildRef {
 
 /// A reference to one of the component's collections.
 struct CollectionRef {
-    fuchsia.component.name name;
-};
-
-/// A reference to one of the component's storage sections.
-struct StorageRef {
     fuchsia.component.name name;
 };
 

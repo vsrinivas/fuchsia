@@ -117,8 +117,8 @@ table OfferDirectoryDecl {
 /// such as meta storage offered by the component's containing realm or cache
 /// storage offered by the component itself.
 table OfferStorageDecl {
-    /// The type of storage being offered.
-    1: StorageType type;
+    /// The name of the storage capability being offered
+    1: fuchsia.component.name source_name;
 
     /// The source of the storage capability. Must be `parent` or `storage`.
     2: Ref source;
@@ -126,6 +126,9 @@ table OfferStorageDecl {
     /// Reference to the target of the capability. Must be `child` or
     /// `collection`.
     3: Ref target;
+
+    /// The name the storage capability is being offered as
+    4: fuchsia.component.name target_name;
 };
 
 /// Declares a runner offered by a component to one of its children, which may

@@ -17,19 +17,6 @@ flexible union CapabilityDecl {
     6: ResolverDecl resolver;
 };
 
-/// The type of storage offered or used by a component.
-enum StorageType {
-    /// Persistent data storage.
-    DATA = 1;
-
-    /// Cache storage that may be deleted at any time by the system.
-    CACHE = 2;
-
-    /// Meta storage that will be used by component manager to persist metadata
-    /// and other information about the component
-    META = 3;
-};
-
 /// Declares a service capability backed by this component.
 ///
 /// To learn more about services, see:
@@ -83,6 +70,9 @@ table StorageDecl {
     /// is a path in the component's outgoing directory. Otherwise, it is the
     /// path by which the capability was presented to the component.
     3: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+
+    /// The subdirectory of the source directory that will back the storage
+    4: string:fuchsia.component.MAX_PATH_LENGTH subdir;
 };
 
 /// Declares a runner capability backed by a service.

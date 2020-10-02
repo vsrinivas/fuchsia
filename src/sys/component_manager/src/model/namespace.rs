@@ -8,7 +8,7 @@ use {
         constants::PKG_PATH,
         model::{error::ModelError, realm::WeakRealm, rights::Rights, routing},
     },
-    cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
+    cm_rust::{self, ComponentDecl, UseDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
@@ -162,21 +162,8 @@ impl IncomingNamespace {
         use_: &UseDecl,
         realm: WeakRealm,
     ) -> Result<(), ModelError> {
-        let target_path = match use_ {
-            UseDecl::Directory(d) => d.target_path.to_string(),
-            UseDecl::Storage(s) => match s {
-                UseStorageDecl::Data(p) => p.to_string(),
-                UseStorageDecl::Cache(p) => p.to_string(),
-                UseStorageDecl::Meta => {
-                    // Meta storage capabilities are handled in model::model, as these are capabilities
-                    // used by the framework itself and not given to components directly.
-                    return Ok(());
-                }
-            },
-            _ => {
-                panic!("not a directory or storage capability");
-            }
-        };
+        let target_path =
+            use_.path().expect("use decl without path used in add_directory_helper").to_string();
         let flags = match use_ {
             UseDecl::Directory(dir) => Rights::from(dir.rights).into_legacy(),
             UseDecl::Storage(_) => fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,

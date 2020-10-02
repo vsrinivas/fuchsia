@@ -89,11 +89,12 @@ table UseDirectoryDecl {
 /// Declares storage used by a component, which was offered to the component's
 /// environment.
 table UseStorageDecl {
-    /// Type of storage used by the component.
-    1: StorageType type;
+    /// Name identifying the storage, by which it was presented to this
+    /// component.
+    1: fuchsia.component.name source_name;
 
     /// The path where the capability should be installed in the component's
-    /// namespace. Must not be set if `type` is `META`.
+    /// namespace.
     ///
     /// Must be an absolute path starting with /.
     2: string:fuchsia.component.MAX_PATH_LENGTH target_path;

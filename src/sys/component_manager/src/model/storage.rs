@@ -19,7 +19,6 @@ use {
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys,
     std::{path::PathBuf, sync::Arc},
     thiserror::Error,
 };
@@ -90,14 +89,36 @@ impl StorageError {
     }
 }
 
+/// Information returned by the route_storage_capability function on the source of a storage
+/// capability.
+pub struct StorageCapabilitySource {
+    /// The component that's providing the backing directory capability for this storage
+    /// capability. If None, then the backing directory comes from component_manager's namespace.
+    pub storage_provider: Option<Arc<Realm>>,
+
+    /// The path to the backing directory in the providing component's outgoing directory (or
+    /// component_manager's namespace).
+    pub backing_directory_path: CapabilityPath,
+
+    /// The subdirectory inside of the backing directory capability to use, if any
+    pub backing_directory_subdir: Option<PathBuf>,
+
+    /// The subdirectory inside of the backing directory's sub-directory to use, if any. The
+    /// difference between this and backing_directory_subdir is that backing_directory_subdir is
+    /// appended to backing_directory_path first, and component_manager will create this subdir if
+    /// it doesn't exist but won't create backing_directory_subdir.
+    pub storage_subdir: Option<PathBuf>,
+
+    /// The relative moniker between the component that declares the storage capability and the
+    /// component that uses the storage capability.
+    pub relative_moniker: RelativeMoniker,
+}
+
 /// Open the isolated storage sub-directory for the given component, creating it if necessary.
 /// `dir_source_realm` and `dir_source_path` are the realm hosting the directory and its capability
 /// path.
 pub async fn open_isolated_storage(
-    dir_source_realm: Option<Arc<Realm>>,
-    dir_source_path: &CapabilityPath,
-    storage_type: fsys::StorageType,
-    relative_moniker: &RelativeMoniker,
+    storage_source_info: StorageCapabilitySource,
     open_mode: u32,
     bind_reason: &BindReason,
 ) -> Result<DirectoryProxy, ModelError> {
@@ -105,37 +126,53 @@ pub async fn open_isolated_storage(
     // correct, it would be more consistent to get the rights from `CapabilityState` and pass them
     // here.
     const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-    let (dir_proxy, local_server_end) =
+    let (mut dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     let mut local_server_end = local_server_end.into_channel();
-    if let Some(dir_source_realm) = dir_source_realm.as_ref() {
+    let full_backing_directory_path = match storage_source_info.backing_directory_subdir.as_ref() {
+        Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
+        None => storage_source_info.backing_directory_path.to_path_buf(),
+    };
+    if let Some(dir_source_realm) = storage_source_info.storage_provider.as_ref() {
         dir_source_realm
             .bind(bind_reason)
             .await?
-            .open_outgoing(FLAGS, open_mode, dir_source_path.to_path_buf(), &mut local_server_end)
+            .open_outgoing(FLAGS, open_mode, full_backing_directory_path, &mut local_server_end)
             .await?;
     } else {
-        // If dir_source_moniker is None, the directory comes from component_manager's namespace
+        // If storage_source_info.storage_provider is None, the directory comes from component_manager's namespace
         let local_server_end = channel::take_channel(&mut local_server_end);
-        io_util::connect_in_namespace(&dir_source_path.to_string(), local_server_end, FLAGS)
-            .map_err(|e| {
-                ModelError::from(StorageError::open(
-                    None,
-                    dir_source_path.clone(),
-                    relative_moniker.clone(),
-                    e,
-                ))
-            })?;
+        let path = full_backing_directory_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(full_backing_directory_path.clone()))?;
+        io_util::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
+            ModelError::from(StorageError::open(
+                None,
+                storage_source_info.backing_directory_path.clone(),
+                storage_source_info.relative_moniker.clone(),
+                e,
+            ))
+        })?;
+    }
+    if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
+        dir_proxy = io_util::create_sub_directories(&dir_proxy, subdir.as_path()).map_err(|e| {
+            ModelError::from(StorageError::open(
+                storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
+                storage_source_info.backing_directory_path.clone(),
+                storage_source_info.relative_moniker.clone(),
+                e,
+            ))
+        })?;
     }
     let storage_proxy = io_util::create_sub_directories(
         &dir_proxy,
-        &generate_storage_path(Some(storage_type), &relative_moniker),
+        &generate_storage_path(&storage_source_info.relative_moniker),
     )
     .map_err(|e| {
         ModelError::from(StorageError::open(
-            dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
-            dir_source_path.clone(),
-            relative_moniker.clone(),
+            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
+            storage_source_info.backing_directory_path.clone(),
+            storage_source_info.relative_moniker.clone(),
             e,
         ))
     })?;
@@ -145,14 +182,16 @@ pub async fn open_isolated_storage(
 /// Delete the isolated storage sub-directory for the given component.  `dir_source_realm` and
 /// `dir_source_path` are the realm hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
-    dir_source_realm: Option<Arc<Realm>>,
-    dir_source_path: &CapabilityPath,
-    relative_moniker: &RelativeMoniker,
+    storage_source_info: StorageCapabilitySource,
 ) -> Result<(), ModelError> {
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     let mut local_server_end = local_server_end.into_channel();
-    if let Some(dir_source_realm) = dir_source_realm.as_ref() {
+    let full_backing_directory_path = match storage_source_info.backing_directory_subdir.as_ref() {
+        Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
+        None => storage_source_info.backing_directory_path.to_path_buf(),
+    };
+    if let Some(dir_source_realm) = storage_source_info.storage_provider.as_ref() {
         // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
         // capability to plumb through the correct BindReason.
         dir_source_realm
@@ -161,34 +200,51 @@ pub async fn delete_isolated_storage(
             .open_outgoing(
                 FLAGS,
                 MODE_TYPE_DIRECTORY,
-                dir_source_path.to_path_buf(),
+                full_backing_directory_path,
                 &mut local_server_end,
             )
             .await?;
     } else {
         let local_server_end = channel::take_channel(&mut local_server_end);
-        io_util::connect_in_namespace(&dir_source_path.to_string(), local_server_end, FLAGS)
-            .map_err(|e| {
-                StorageError::open(None, dir_source_path.clone(), relative_moniker.clone(), e)
-            })?;
+        let path = full_backing_directory_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(full_backing_directory_path.clone()))?;
+        io_util::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
+            StorageError::open(
+                None,
+                storage_source_info.backing_directory_path.clone(),
+                storage_source_info.relative_moniker.clone(),
+                e,
+            )
+        })?;
     }
-    let storage_path = generate_storage_path(None, &relative_moniker);
-    if storage_path.parent().is_none() {
-        return Err(StorageError::invalid_storage_path(relative_moniker.clone()).into());
+    let storage_path = generate_storage_path(&storage_source_info.relative_moniker);
+    // We want to strip off the "data" portion of the path, and then one more level to get to the
+    // directory holding the target component's storage.
+    if storage_path.parent().and_then(|p| p.parent()).is_none() {
+        return Err(StorageError::invalid_storage_path(
+            storage_source_info.relative_moniker.clone(),
+        )
+        .into());
     }
-    let dir_path = storage_path.parent().unwrap();
-    let name = storage_path.file_name().ok_or_else(|| {
-        ModelError::from(StorageError::invalid_storage_path(relative_moniker.clone()))
+    let mut dir_path = storage_path.parent().unwrap().parent().unwrap().to_path_buf();
+    let name = storage_path.parent().unwrap().file_name().ok_or_else(|| {
+        ModelError::from(StorageError::invalid_storage_path(
+            storage_source_info.relative_moniker.clone(),
+        ))
     })?;
     let name = name.to_str().ok_or_else(|| ModelError::name_is_not_utf8(name.to_os_string()))?;
+    if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
+        dir_path = subdir.join(dir_path);
+    }
     let dir = if dir_path.parent().is_none() {
         root_dir
     } else {
-        io_util::open_directory(&root_dir, dir_path, FLAGS).map_err(|e| {
+        io_util::open_directory(&root_dir, &dir_path, FLAGS).map_err(|e| {
             StorageError::open(
-                dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
-                dir_source_path.clone(),
-                relative_moniker.clone(),
+                storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
+                storage_source_info.backing_directory_path.clone(),
+                storage_source_info.relative_moniker.clone(),
                 e,
             )
         })?
@@ -201,9 +257,9 @@ pub async fn delete_isolated_storage(
     // prior run.
     files_async::remove_dir_recursive(&dir, name).await.map_err(|e| {
         StorageError::remove(
-            dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
-            dir_source_path.clone(),
-            relative_moniker.clone(),
+            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
+            storage_source_info.backing_directory_path.clone(),
+            storage_source_info.relative_moniker.clone(),
             e,
         )
     })?;
@@ -212,36 +268,31 @@ pub async fn delete_isolated_storage(
 
 /// Generates the path into a directory the provided component will be afforded for storage
 ///
-/// The path of the sub-directory for a component that uses a storage capability is based on:
-///
-/// - Each component instance's child moniker as given in the `children` section of its parent's
-///   manifest, for each component instance in the path from the [`storage`
-///   declaration][storage-syntax] to the [`use` declaration][use-syntax].
-/// - The storage type.
+/// The path of the sub-directory for a component that uses a storage capability is based on each
+/// component instance's child moniker as given in the `children` section of its parent's manifest,
+/// for each component instance in the path from the `storage` declaration to the
+/// `use` declaration.
 ///
 /// These names are used as path elements, separated by elements of the name "children". The
-/// storage type is then appended to this path.
+/// string "data" is then appended to this path for compatibility reasons.
 ///
 /// For example, if the following component instance tree exists, with `a` declaring storage
-/// capabilities, and then cache storage being offered down the chain to `d`:
+/// capabilities, and then storage being offered down the chain to `d`:
 ///
 /// ```
-///  a  <- declares storage, offers cache storage to b
+///  a  <- declares storage "cache", offers "cache" to b
 ///  |
-///  b  <- offers cache storage to c
+///  b  <- offers "cache" to c
 ///  |
-///  c  <- offers cache storage to d
+///  c  <- offers "cache" to d
 ///  |
-///  d  <- uses cache storage as `/my_cache`
+///  d  <- uses "cache" storage as `/my_cache`
 /// ```
 ///
 /// When `d` attempts to access `/my_cache` the framework creates the sub-directory
-/// `b:0/children/c:0/children/d:0/cache` in the directory used by `a` to declare storage
+/// `b:0/children/c:0/children/d:0/data` in the directory used by `a` to declare storage
 /// capabilities.  Then, the framework gives 'd' access to this new directory.
-fn generate_storage_path(
-    type_: Option<fsys::StorageType>,
-    relative_moniker: &RelativeMoniker,
-) -> PathBuf {
+fn generate_storage_path(relative_moniker: &RelativeMoniker) -> PathBuf {
     assert!(
         !relative_moniker.down_path().is_empty(),
         "storage capability appears to have been exposed or used by its source"
@@ -253,12 +304,14 @@ fn generate_storage_path(
         dir_path.push("children".to_string());
         dir_path.push(p.as_str().to_string());
     }
-    match type_ {
-        Some(fsys::StorageType::Data) => dir_path.push("data".to_string()),
-        Some(fsys::StorageType::Cache) => dir_path.push("cache".to_string()),
-        Some(fsys::StorageType::Meta) => dir_path.push("meta".to_string()),
-        None => {}
-    }
+
+    // Storage capabilities used to have a hardcoded set of types, which would be appended
+    // here. To maintain compatibility with the old paths (and thus not lose data when this was
+    // migrated) we append "data" here. This works because this is the only type of storage
+    // that was actually used in the wild.
+    //
+    // This is only temporary, until the storage instance id migration changes this layout.
+    dir_path.push("data".to_string());
     dir_path.into_iter().collect()
 }
 
@@ -274,7 +327,6 @@ mod tests {
         },
         cm_rust::*,
         fidl_fuchsia_io2 as fio2,
-        fidl_fuchsia_sys2::StorageType,
         std::convert::{TryFrom, TryInto},
     };
 
@@ -307,10 +359,13 @@ mod tests {
 
         // Open.
         let dir = open_isolated_storage(
-            Some(Arc::clone(&b_realm)),
-            &dir_source_path,
-            fsys::StorageType::Data,
-            &relative_moniker,
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: relative_moniker.clone(),
+            },
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -322,10 +377,13 @@ mod tests {
 
         // Open again.
         let dir = open_isolated_storage(
-            Some(Arc::clone(&b_realm)),
-            &dir_source_path,
-            fsys::StorageType::Data,
-            &relative_moniker,
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: relative_moniker.clone(),
+            },
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -337,25 +395,13 @@ mod tests {
         let relative_moniker =
             RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into(), "e:0".into()]);
         let dir = open_isolated_storage(
-            Some(Arc::clone(&b_realm)),
-            &dir_source_path,
-            fsys::StorageType::Data,
-            &relative_moniker,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            &BindReason::Eager,
-        )
-        .await
-        .expect("failed to open isolated storage");
-        assert_eq!(test_helpers::list_directory(&dir).await, Vec::<String>::new());
-        test_helpers::write_file(&dir, "file", "hippos").await;
-        assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
-
-        // Open a different storage type.
-        let dir = open_isolated_storage(
-            Some(Arc::clone(&b_realm)),
-            &dir_source_path,
-            fsys::StorageType::Cache,
-            &relative_moniker,
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: relative_moniker.clone(),
+            },
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -365,6 +411,8 @@ mod tests {
         test_helpers::write_file(&dir, "file", "hippos").await;
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
     }
+
+    // TODO: test with different subdirs
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_isolated_storage_failure_test() {
@@ -380,10 +428,13 @@ mod tests {
         // Try to open the storage. We expect an error.
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let err = open_isolated_storage(
-            Some(Arc::clone(&test.model.root_realm)),
-            &CapabilityPath::try_from("/data").unwrap(),
-            fsys::StorageType::Data,
-            &relative_moniker,
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&test.model.root_realm)),
+                backing_directory_path: CapabilityPath::try_from("/data").unwrap().clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: relative_moniker.clone(),
+            },
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -425,31 +476,33 @@ mod tests {
         let parent_moniker = RelativeMoniker::new(vec![], vec!["c:0".into()]);
         let child_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
 
-        // Open and write to all storage types in child.
-        for storage_type in
-            vec![fsys::StorageType::Data, fsys::StorageType::Cache, fsys::StorageType::Meta]
-        {
-            let dir = open_isolated_storage(
-                Some(Arc::clone(&b_realm)),
-                &dir_source_path,
-                storage_type,
-                &child_moniker,
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                &BindReason::Eager,
-            )
-            .await
-            .expect("failed to open isolated storage");
-            assert_eq!(test_helpers::list_directory(&dir).await, Vec::<String>::new());
-            test_helpers::write_file(&dir, "file", "hippos").await;
-            assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
-        }
+        // Open and write to the storage for child.
+        let dir = open_isolated_storage(
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: child_moniker.clone(),
+            },
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            &BindReason::Eager,
+        )
+        .await
+        .expect("failed to open isolated storage");
+        assert_eq!(test_helpers::list_directory(&dir).await, Vec::<String>::new());
+        test_helpers::write_file(&dir, "file", "hippos").await;
+        assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
 
         // Open parent's storage.
         let dir = open_isolated_storage(
-            Some(Arc::clone(&b_realm)),
-            &dir_source_path,
-            fsys::StorageType::Data,
-            &parent_moniker,
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: parent_moniker.clone(),
+            },
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -460,16 +513,25 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
 
         // Delete the child's storage.
-        delete_isolated_storage(Some(Arc::clone(&b_realm)), &dir_source_path, &child_moniker)
-            .await
-            .expect("failed to delete child's isolated storage");
+        delete_isolated_storage(StorageCapabilitySource {
+            storage_provider: Some(Arc::clone(&b_realm)),
+            backing_directory_path: dir_source_path.clone(),
+            backing_directory_subdir: None,
+            storage_subdir: None,
+            relative_moniker: child_moniker.clone(),
+        })
+        .await
+        .expect("failed to delete child's isolated storage");
 
         // Open parent's storage again. Should work.
         let dir = open_isolated_storage(
-            Some(Arc::clone(&b_realm)),
-            &dir_source_path,
-            fsys::StorageType::Data,
-            &parent_moniker,
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+                relative_moniker: parent_moniker.clone(),
+            },
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -479,15 +541,20 @@ mod tests {
 
         // Open list of children from parent. Should not contain child directory.
         assert_eq!(
-            test.list_directory_in_storage(parent_moniker.clone(), "children").await,
+            test.list_directory_in_storage(None, parent_moniker.clone(), "children").await,
             Vec::<String>::new(),
         );
 
         // Error -- tried to delete nonexistent storage.
-        let err =
-            delete_isolated_storage(Some(Arc::clone(&b_realm)), &dir_source_path, &child_moniker)
-                .await
-                .expect_err("delete isolated storage not meant to succeed");
+        let err = delete_isolated_storage(StorageCapabilitySource {
+            storage_provider: Some(Arc::clone(&b_realm)),
+            backing_directory_path: dir_source_path,
+            backing_directory_subdir: None,
+            storage_subdir: None,
+            relative_moniker: child_moniker,
+        })
+        .await
+        .expect_err("delete isolated storage not meant to succeed");
         match err {
             ModelError::StorageError { err: StorageError::Remove { .. } } => {}
             _ => {
@@ -498,9 +565,8 @@ mod tests {
 
     #[test]
     fn generate_storage_path_test() {
-        for (type_, relative_moniker, expected_output) in vec![
+        for (relative_moniker, expected_output) in vec![
             (
-                Some(StorageType::Data),
                 RelativeMoniker::from_absolute(
                     &AbsoluteMoniker::from(vec![]),
                     &AbsoluteMoniker::from(vec!["a:1"]),
@@ -508,31 +574,6 @@ mod tests {
                 "a:1/data",
             ),
             (
-                Some(StorageType::Cache),
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
-                ),
-                "a:1/cache",
-            ),
-            (
-                Some(StorageType::Meta),
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
-                ),
-                "a:1/meta",
-            ),
-            (
-                None,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1"]),
-                ),
-                "a:1",
-            ),
-            (
-                Some(StorageType::Data),
                 RelativeMoniker::from_absolute(
                     &AbsoluteMoniker::from(vec![]),
                     &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
@@ -540,66 +581,14 @@ mod tests {
                 "a:1/children/b:2/data",
             ),
             (
-                Some(StorageType::Cache),
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
-                ),
-                "a:1/children/b:2/cache",
-            ),
-            (
-                Some(StorageType::Meta),
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
-                ),
-                "a:1/children/b:2/meta",
-            ),
-            (
-                None,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
-                ),
-                "a:1/children/b:2",
-            ),
-            (
-                Some(StorageType::Data),
                 RelativeMoniker::from_absolute(
                     &AbsoluteMoniker::from(vec![]),
                     &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
                 ),
                 "a:1/children/b:2/children/c:3/data",
             ),
-            (
-                Some(StorageType::Cache),
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
-                ),
-                "a:1/children/b:2/children/c:3/cache",
-            ),
-            (
-                Some(StorageType::Meta),
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
-                ),
-                "a:1/children/b:2/children/c:3/meta",
-            ),
-            (
-                None,
-                RelativeMoniker::from_absolute(
-                    &AbsoluteMoniker::from(vec![]),
-                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
-                ),
-                "a:1/children/b:2/children/c:3",
-            ),
         ] {
-            assert_eq!(
-                generate_storage_path(type_, &relative_moniker),
-                PathBuf::from(expected_output)
-            )
+            assert_eq!(generate_storage_path(&relative_moniker), PathBuf::from(expected_output))
         }
     }
 }

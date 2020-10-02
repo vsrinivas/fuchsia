@@ -11,7 +11,10 @@
     ],
     use: [
         { runner: "elf" },
-        { storage: "data" },
+        {
+            storage: "data",
+            path: "/data",
+        },
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",

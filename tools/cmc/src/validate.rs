@@ -332,15 +332,13 @@ impl<'a> ValidationContext<'a> {
             if capability.from.is_none() {
                 return Err(Error::validate("\"from\" should be present with \"storage\""));
             }
-            if capability.path.is_none() && capability.backing_dir.is_none() {
+            if capability.path.is_some() {
                 return Err(Error::validate(
-                    "One of \"path\" or \"backing_dir\" must be present with \"storage\"",
+                    "\"path\" can not be present with \"storage\", use \"backing_dir\"",
                 ));
             }
-            if capability.path.is_some() && capability.backing_dir.is_some() {
-                return Err(Error::validate(
-                    "\"path\" and \"backing_dir\" may not both be present with \"storage\"",
-                ));
+            if capability.backing_dir.is_none() {
+                return Err(Error::validate("\"backing_dir\" should be present with \"storage\""));
             }
         }
         if capability.runner.is_some() && capability.from.is_none() {
@@ -403,17 +401,11 @@ impl<'a> ValidationContext<'a> {
         if use_.event.is_none() && use_.filter.is_some() {
             return Err(Error::validate("\"filter\" can only be used with \"event\""));
         }
-
-        let storage = use_.storage.as_ref().map(|s| s.as_str());
-        if storage.is_some() && use_.r#as.is_some() {
-            if storage.unwrap() == "meta" {
-                return Err(Error::validate(
-                    "\"as\" field cannot be used with storage type \"meta\"",
-                ));
-            }
-        }
-        if storage.is_some() && use_.from.is_some() {
+        if use_.storage.is_some() && use_.from.is_some() {
             return Err(Error::validate("\"from\" field cannot be used with \"storage\""));
+        }
+        if use_.storage.is_some() && use_.r#as.is_some() {
+            return Err(Error::validate("\"as\" field cannot be used with \"storage\""));
         }
 
         if let Some(event_stream) = use_.event_stream.as_ref() {
@@ -694,6 +686,22 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that storage offered from self are defined in `capabilities`.
+        if let Some(storage) = &offer.storage {
+            if offer.from.iter().any(|r| r.is_named()) {
+                return Err(Error::validate(format!(
+                    "Storage \"{}\" is offered from a child, but storage capabilities cannot be exposed", storage)));
+            }
+            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                if !self.all_storage_and_sources.contains_key(storage) {
+                    return Err(Error::validate(format!(
+                       "Storage \"{}\" is offered from self, so it must be declared as a \"storage\" in \"capabilities\"",
+                       storage
+                   )));
+                }
+            }
+        }
+
         // Ensure that runners offered from self are defined in `runners`.
         if let Some(runner_name) = &offer.runner {
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
@@ -752,13 +760,6 @@ impl<'a> ValidationContext<'a> {
                 )));
             }
 
-            // Storage cannot be aliased when offered. Return an error if it is used.
-            if offer.storage.is_some() && offer.r#as.is_some() {
-                return Err(Error::validate(
-                    "\"as\" field cannot be used for storage offer targets",
-                ));
-            }
-
             // Ensure that a target is not offered more than once.
             let ids_for_entity = used_ids.entry(to_target).or_insert(HashMap::new());
             for target_cap_id in &target_cap_ids {
@@ -771,13 +772,25 @@ impl<'a> ValidationContext<'a> {
                 }
             }
 
+            // Ensure that storage offered from self is defined in `capabilities`.
+            if let Some(storage) = &offer.storage {
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if !self.all_storage_and_sources.contains_key(storage) {
+                        return Err(Error::validate(format!(
+                           "Storage \"{}\" is offered from self, so it must be declared as a \"storage\" in \"capabilities\"",
+                           storage
+                       )));
+                    }
+                }
+            }
+
             // Ensure we are not offering a capability back to its source.
-            if offer.storage.is_some() {
+            if let Some(storage) = offer.storage.as_ref() {
                 // Storage can only have a single `from` clause and this has been
                 // verified.
-                if let OneOrMany::One(cml::OfferFromRef::Named(name)) = &offer.from {
+                if let OneOrMany::One(cml::OfferFromRef::Self_) = &offer.from {
                     if let Some(cml::CapabilityFromRef::Named(source)) =
-                        self.all_storage_and_sources.get(&name)
+                        self.all_storage_and_sources.get(storage)
                     {
                         if to_target == source {
                             return Err(Error::validate(format!(
@@ -854,18 +867,9 @@ impl<'a> ValidationContext<'a> {
             ensure_no_duplicate_values(&cap.from_())?;
         }
 
-        // If offered cap is a storage type, then "from" should be interpreted
-        // as a storage name. Otherwise, it should be interpreted as a child
-        // or collection.
         let reference_description = format!("\"{}\" source", verb);
-        if cap.storage_type().is_some() {
-            for from_clause in from {
-                self.validate_storage_ref(&reference_description, from_clause)?;
-            }
-        } else {
-            for from_clause in from {
-                self.validate_component_ref(&reference_description, from_clause)?;
-            }
+        for from_clause in from {
+            self.validate_component_ref(&reference_description, from_clause)?;
         }
         Ok(())
     }
@@ -895,28 +899,6 @@ impl<'a> ValidationContext<'a> {
             // We don't attempt to validate other reference types.
             _ => Ok(()),
         }
-    }
-
-    /// Validates that the given storage reference exists.
-    ///
-    /// - `reference_description` is a human-readable description of
-    ///   the reference used in error message, such as `"storage" source`.
-    /// - `storage_ref` is a reference to a storage source.
-    fn validate_storage_ref(
-        &self,
-        reference_description: &str,
-        storage_ref: cml::AnyRef,
-    ) -> Result<(), Error> {
-        if let cml::AnyRef::Named(name) = storage_ref {
-            if !self.all_storage_and_sources.contains_key(name) {
-                return Err(Error::validate(format!(
-                    "{} \"{}\" does not appear in \"storage\"",
-                    reference_description, storage_ref,
-                )));
-            }
-        }
-
-        Ok(())
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
@@ -1262,9 +1244,11 @@ mod tests {
                     "rights": ["rx*"],
                     "subdir": "fonts/all",
                   },
-                  { "storage": "data", "as": "/example" },
-                  { "storage": "cache", "as": "/tmp" },
+                  { "storage": "data", "path": "/example" },
+                  { "storage": "cache", "path": "/tmp" },
                   { "storage": "meta" },
+                  { "storage": "ephemral" },
+                  { "storage": "hippos", "path": "/i-love-hippos" },
                   { "runner": "elf" },
                   { "event": [ "started", "stopped"], "from": "parent" },
                   { "event": [ "launched"], "from": "framework" },
@@ -1302,12 +1286,6 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
         ),
-        test_cml_use_as_with_meta_storage(
-            json!({
-                "use": [ { "storage": "meta", "as": "/meta" } ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with storage type \"meta\""
-        ),
         test_cml_use_as_with_service(
             json!({
                 "use": [ { "service": "foo", "as": "xxx" } ]
@@ -1332,7 +1310,13 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"runner\""
         ),
-        test_cml_use_from_with_meta_storage(
+        test_cml_use_as_with_storage(
+            json!({
+                "use": [ { "storage": "cache", "as": "mystorage" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"storage\""
+        ),
+        test_cml_use_from_with_storage(
             json!({
                 "use": [ { "storage": "cache", "from": "parent" } ]
             }),
@@ -1953,7 +1937,7 @@ mod tests {
                     },
                     {
                         "storage": "data",
-                        "from": "#minfs",
+                        "from": "self",
                         "to": [ "#modular", "#logger" ]
                     },
                     {
@@ -2000,9 +1984,9 @@ mod tests {
                         "rights": [ "rw*" ],
                     },
                     {
-                        "storage": "minfs",
+                        "storage": "data",
                         "from": "parent",
-                        "path": "/minfs",
+                        "backing_dir": "/minfs",
                     },
                 ],
             }),
@@ -2038,11 +2022,6 @@ mod tests {
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "to": [ "#abcdefghijklmnopqrstuvwxyz0123456789_-to" ],
                     },
-                    {
-                        "storage": "data",
-                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-storage",
-                        "to": [ "#abcdefghijklmnopqrstuvwxyz0123456789_-to" ],
-                    }
                 ],
                 "children": [
                     {
@@ -2058,7 +2037,7 @@ mod tests {
                     {
                         "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "path": "/example"
+                        "backing_dir": "/example"
                     }
                 ]
             }),
@@ -2088,12 +2067,12 @@ mod tests {
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"children\""
         ),
-        test_cml_storage_offer_missing_from(
+        test_cml_storage_offer_from_child(
             json!({
                     "offer": [
                         {
                             "storage": "cache",
-                            "from": "#missing",
+                            "from": "#storage_provider",
                             "to": [ "#echo_server" ],
                         },
                     ],
@@ -2102,9 +2081,13 @@ mod tests {
                             "name": "echo_server",
                             "url": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
                         },
+                        {
+                            "name": "storage_provider",
+                            "url": "fuchsia-pkg://fuchsia.com/storage_provider#meta/storage_provider.cm",
+                        },
                     ],
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"storage\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage \"cache\" is offered from a child, but storage capabilities cannot be exposed"
         ),
         test_cml_offer_bad_from(
             json!({
@@ -2135,21 +2118,6 @@ mod tests {
                     ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"protocol\" capabilities cannot have multiple \"from\" clauses"
-        ),
-        test_cml_storage_offer_bad_to(
-            json!({
-                    "offer": [ {
-                        "storage": "cache",
-                        "from": "parent",
-                        "to": [ "#logger" ],
-                        "as": "/invalid",
-                    } ],
-                    "children": [ {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm"
-                    } ]
-                }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used for storage offer targets"
         ),
         test_cml_offer_empty_targets(
             json!({
@@ -2236,8 +2204,8 @@ mod tests {
         test_cml_storage_offer_target_equals_from(
             json!({
                 "offer": [ {
-                    "storage": "data",
-                    "from": "#minfs",
+                    "storage": "minfs",
+                    "from": "self",
                     "to": [ "#logger" ],
                 } ],
                 "children": [ {
@@ -2247,7 +2215,7 @@ mod tests {
                 "capabilities": [ {
                     "storage": "minfs",
                     "from": "#logger",
-                    "path": "/minfs",
+                    "backing_dir": "/minfs",
                 } ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage offer target \"#logger\" is same as source"
@@ -2320,7 +2288,7 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"offer\" target capability for \"#echo_server\""
         ),
-        test_cml_offer_duplicate_storage_types(
+        test_cml_offer_duplicate_storage_names(
             json!({
                 "offer": [
                     {
@@ -2330,14 +2298,14 @@ mod tests {
                     },
                     {
                         "storage": "cache",
-                        "from": "#minfs",
+                        "from": "self",
                         "to": [ "#echo_server" ]
                     }
                 ],
                 "capabilities": [ {
-                    "storage": "minfs",
+                    "storage": "cache",
                     "from": "self",
-                    "path": "/minfs"
+                    "backing_dir": "/minfs"
                 } ],
                 "children": [ {
                     "name": "echo_server",
@@ -2563,6 +2531,24 @@ mod tests {
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is offered from self, so it must be declared as a \"resolver\" in \"capabilities\""
+        ),
+        test_cml_offer_storage_from_self_missing(
+            json!({
+                    "offer": [
+                        {
+                            "storage": "cache",
+                            "from": "self",
+                            "to": [ "#echo_server" ],
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "echo_server",
+                            "url": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
+                        },
+                    ],
+                }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage \"cache\" is offered from self, so it must be declared as a \"storage\" in \"capabilities\""
         ),
         test_cml_offer_dependency_on_wrong_type(
             json!({
@@ -3033,17 +3019,17 @@ mod tests {
                     {
                         "storage": "a",
                         "from": "#minfs",
-                        "path": "/minfs",
+                        "backing_dir": "/minfs",
                     },
                     {
                         "storage": "b",
                         "from": "parent",
-                        "path": "/data",
+                        "backing_dir": "/data",
                     },
                     {
                         "storage": "c",
                         "from": "self",
-                        "backing_dir": "storage",
+                        "backing_dir": "/storage",
                     },
                 ],
                 "children": [
@@ -3061,7 +3047,7 @@ mod tests {
                     {
                         "storage": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
-                        "path": "/example",
+                        "backing_dir": "/example",
                     },
                 ],
                 "children": [
@@ -3078,7 +3064,7 @@ mod tests {
                     "capabilities": [ {
                         "storage": "minfs",
                         "from": "#missing",
-                        "path": "/minfs"
+                        "backing_dir": "/minfs"
                     } ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
@@ -3090,19 +3076,18 @@ mod tests {
                         "from": "self",
                     } ]
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "One of \"path\" or \"backing_dir\" must be present with \"storage\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"backing_dir\" should be present with \"storage\""
 
         ),
-        test_cml_storage_both_path_and_backing_dir(
+        test_cml_storage_path(
             json!({
                     "capabilities": [ {
                         "storage": "minfs",
                         "from": "self",
                         "path": "/minfs",
-                        "backing_dir": "minfs",
                     } ]
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" and \"backing_dir\" may not both be present with \"storage\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" can not be present with \"storage\", use \"backing_dir\""
         ),
         test_cml_runner(
             json!({

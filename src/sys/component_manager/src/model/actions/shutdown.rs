@@ -408,10 +408,10 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                 }
             }
             OfferDecl::Storage(s) => {
-                match s.source() {
-                    OfferStorageSource::Storage(source_name) => {
-                        match find_storage_provider(&decl.capabilities, &source_name) {
-                            Some(storage_source) => match s.target() {
+                match &s.source {
+                    OfferStorageSource::Self_ => {
+                        match find_storage_provider(&decl.capabilities, s.source_name.str()) {
+                            Some(storage_source) => match &s.target {
                                 OfferTarget::Child(target) => vec![(
                                     DependencyNode::Child(storage_source.clone()),
                                     DependencyNode::Child(target.clone()),

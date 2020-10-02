@@ -665,27 +665,6 @@ impl Default for DependencyType {
     }
 }
 
-/// The type of storage capability. See [`StorageType`].
-///
-/// [`StorageType`]: ../../fidl_fuchsia_sys2/enum.StorageType.html
-#[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
-pub enum StorageType {
-    Data,
-    Cache,
-    Meta,
-}
-
-impl StorageType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Data => "data",
-            Self::Cache => "cache",
-            Self::Meta => "meta",
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {

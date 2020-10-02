@@ -320,18 +320,13 @@ pub async fn route_and_open_storage_capability<'a>(
     server_chan: &mut zx::Channel,
     bind_reason: &BindReason,
 ) -> Result<(), ModelError> {
-    let (dir_source_realm, dir_source_path, relative_moniker, _) =
-        route_storage_capability(use_decl, target_realm).await?;
-    let storage_dir_proxy = storage::open_isolated_storage(
-        dir_source_realm.clone(),
-        &dir_source_path,
-        use_decl.type_(),
-        &relative_moniker,
-        open_mode,
-        bind_reason,
-    )
-    .await
-    .map_err(|e| ModelError::from(e))?;
+    let storage_source_info = route_storage_capability(use_decl, target_realm).await?;
+    let dir_source_realm = storage_source_info.storage_provider.clone();
+    let relative_moniker = storage_source_info.relative_moniker.clone();
+    let storage_dir_proxy =
+        storage::open_isolated_storage(storage_source_info, open_mode, bind_reason)
+            .await
+            .map_err(|e| ModelError::from(e))?;
 
     // clone the final connection to connect the channel we're routing to its destination
     let server_chan = channel::take_channel(server_chan);
@@ -353,24 +348,18 @@ pub(super) async fn route_and_delete_storage<'a>(
     use_decl: &'a UseStorageDecl,
     target_realm: &'a Arc<Realm>,
 ) -> Result<(), ModelError> {
-    let (dir_source_realm, dir_source_path, relative_moniker, _) =
-        route_storage_capability(use_decl, target_realm).await?;
-    storage::delete_isolated_storage(dir_source_realm, &dir_source_path, &relative_moniker)
-        .await
-        .map_err(|e| ModelError::from(e))?;
+    let storage_source_info = route_storage_capability(use_decl, target_realm).await?;
+    storage::delete_isolated_storage(storage_source_info).await.map_err(|e| ModelError::from(e))?;
     Ok(())
 }
 
-/// Assuming `use_decl` is a UseStorage declaration, returns information about the source of the
-/// storage capability, including:
-/// - AbsoluteMoniker of the component hosting the backing directory capability
-/// - Path to the backing directory capability
-/// - Relative moniker between the backing directory component and the consumer, which identifies
-///   the isolated storage directory.
+/// Follows the capability routing for the given use declaration from the target realm to the
+/// storage capability declaration, and then on to the backing directory provider, and returns a
+/// `StorageCapabilitySource` containing information discovered durng the routing.
 async fn route_storage_capability<'a>(
     use_decl: &'a UseStorageDecl,
     target_realm: &'a Arc<Realm>,
-) -> Result<(Option<Arc<Realm>>, CapabilityPath, RelativeMoniker, CapabilityState), ModelError> {
+) -> Result<storage::StorageCapabilitySource, ModelError> {
     // Walk the offer chain to find the storage decl
     let parent_realm = match target_realm.try_get_parent()? {
         ExtendedRealm::Component(p) => p,
@@ -405,7 +394,8 @@ async fn route_storage_capability<'a>(
         RelativeMoniker::from_absolute(&source_realm.abs_moniker, &target_realm.abs_moniker);
 
     // Find the path and source of the directory consumed by the storage capability.
-    let (dir_source_path, dir_source_realm, cap_state) = match storage_decl.source {
+    let storage_subdir = storage_decl.subdir.clone();
+    let (dir_source_path, mut dir_subdir, dir_source_realm) = match storage_decl.source {
         StorageDirectorySource::Self_ => {
             let source_path =
                 if let CapabilityNameOrPath::Path(source_path) = storage_decl.source_path {
@@ -420,9 +410,11 @@ async fn route_storage_capability<'a>(
                         None,
                         None,
                     )?;
-                    capability.source_path().expect("directory has no source path?").clone()
+                    let source_path =
+                        capability.source_path().expect("directory has no source path?").clone();
+                    source_path
                 };
-            (source_path, Some(source_realm), pos.cap_state)
+            (source_path, None, Some(source_realm))
         }
         StorageDirectorySource::Parent => {
             let capability = ComponentCapability::Storage(storage_decl);
@@ -431,7 +423,9 @@ async fn route_storage_capability<'a>(
                 CapabilitySource::Component { capability, realm } => {
                     let source_path =
                         capability.source_path().expect("directory has no source path?").clone();
-                    (source_path, Some(realm.upgrade()?), cap_state)
+                    let dir_subdir = cap_state.get_subdir().map(Clone::clone);
+
+                    (source_path, dir_subdir, Some(realm.upgrade()?))
                 }
                 CapabilitySource::Framework { .. } => {
                     return Err(RoutingError::storage_directory_source_is_not_component(
@@ -456,7 +450,8 @@ async fn route_storage_capability<'a>(
                             unreachable!("Invalid capability source for storage: {:?}", capability);
                         }
                     };
-                    (source_path, None, cap_state)
+                    let dir_subdir = cap_state.get_subdir().map(Clone::clone);
+                    (source_path, dir_subdir, None)
                 }
                 CapabilitySource::Namespace { capability } => {
                     unreachable!("Invalid capability source for storage: {:?}", capability);
@@ -486,7 +481,8 @@ async fn route_storage_capability<'a>(
                 CapabilitySource::Component { capability, realm } => {
                     let source_path =
                         capability.source_path().expect("directory has no source path?").clone();
-                    (source_path, Some(realm.upgrade()?), pos.cap_state)
+                    let dir_subdir = pos.cap_state.get_subdir().map(Clone::clone);
+                    (source_path, dir_subdir, Some(realm.upgrade()?))
                 }
                 CapabilitySource::Framework { .. } | CapabilitySource::Builtin { .. } => {
                     return Err(RoutingError::storage_directory_source_is_not_component(
@@ -501,7 +497,16 @@ async fn route_storage_capability<'a>(
             }
         }
     };
-    Ok((dir_source_realm, dir_source_path, relative_moniker, cap_state))
+    if dir_subdir == Some(PathBuf::from("")) {
+        dir_subdir = None;
+    }
+    Ok(storage::StorageCapabilitySource {
+        storage_provider: dir_source_realm,
+        backing_directory_path: dir_source_path,
+        backing_directory_subdir: dir_subdir,
+        storage_subdir,
+        relative_moniker,
+    })
 }
 
 /// Check if a used capability is from the framework, and if so return a framework
@@ -622,12 +627,14 @@ impl CapabilityState {
                 subdir: PathBuf::new(),
             },
             // Directories backing storage must provide read and write rights.
-            ComponentCapability::Use(UseDecl::Storage { .. }) | ComponentCapability::Storage(_) => {
-                CapabilityState::Directory {
-                    rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
-                    subdir: PathBuf::new(),
-                }
-            }
+            ComponentCapability::Use(UseDecl::Storage { .. }) => CapabilityState::Directory {
+                rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
+                subdir: PathBuf::new(),
+            },
+            ComponentCapability::Storage(_) => CapabilityState::Directory {
+                rights_state: WalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
+                subdir: PathBuf::new(),
+            },
             _ => CapabilityState::Other,
         }
     }
@@ -683,6 +690,19 @@ impl CapabilityState {
         let subdir_decl = subdir_decl.unwrap_or(PathBuf::new());
         let old_subdir = subdir.clone();
         *subdir = subdir_decl.attach(old_subdir);
+    }
+
+    /// Returns the subdir for the given capability, or None if the subdir is empty. Panics if this
+    /// is not a Directory.
+    fn get_subdir(&self) -> Option<&PathBuf> {
+        match &self {
+            CapabilityState::Directory { subdir, .. } if subdir != &PathBuf::new() => Some(subdir),
+            CapabilityState::Directory { .. } => None,
+            _ => panic!(
+                "get_subdir called on a ComponentCapability that is not a Directory: {:?}",
+                self
+            ),
+        }
     }
 }
 
@@ -1050,7 +1070,7 @@ async fn walk_offer_chain<'a>(
             OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
             OfferDecl::Protocol(s) => OfferSource::Protocol(&s.source),
             OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
-            OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
+            OfferDecl::Storage(s) => OfferSource::Storage(&s.source),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
             OfferDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
             OfferDecl::Event(e) => OfferSource::Event(&e.source),
@@ -1230,12 +1250,20 @@ async fn walk_offer_chain<'a>(
                 );
                 return Ok(None);
             }
-            OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
+            OfferSource::Storage(OfferStorageSource::Self_) => {
+                let storage_name = match &offer {
+                    OfferDecl::Storage(s) => &s.source_name,
+                    _ => panic!(
+                        "OfferSource::Storage on a non-storage OfferDecl should be impossible"
+                    ),
+                };
                 let storage = decl
-                    .find_storage_source(&storage_name)
+                    .find_storage_source(storage_name.str())
                     .expect("storage offer references nonexistent section");
+                let capability = ComponentCapability::Storage(storage.clone());
+                pos.cap_state = CapabilityState::new(&capability);
                 return Ok(Some(CapabilitySource::Component {
-                    capability: ComponentCapability::Storage(storage.clone()),
+                    capability,
                     realm: cur_realm.as_weak(),
                 }));
             }
@@ -1487,8 +1515,9 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
     }
 }
 
-/// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a failure to route a capability. Formats `err` as a `String`, but elides the type if the
-/// error is a `RoutingError`, the common case.
+/// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a
+/// failure to route a capability. Formats `err` as a `String`, but elides the type if the error is
+/// a `RoutingError`, the common case.
 pub(super) fn report_routing_failure(
     target_moniker: &AbsoluteMoniker,
     cap: &ComponentCapability,

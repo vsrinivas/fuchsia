@@ -20,8 +20,7 @@ use {
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, NameOrPath, ParseError, Path, RelativePath, StartupMode,
-    StorageType, Url,
+    DependencyType, Durability, Name, NameOrPath, ParseError, Path, RelativePath, StartupMode, Url,
 };
 
 lazy_static! {
@@ -52,7 +51,6 @@ pub enum CapabilityId {
     Storage(Name),
     Runner(Name),
     Resolver(Name),
-    StorageType(StorageType),
     Event(Name),
     EventStream(Path),
 }
@@ -70,7 +68,6 @@ impl CapabilityId {
             CapabilityId::Storage(_) => "storage",
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
-            CapabilityId::StorageType(_) => "storage type",
             CapabilityId::Event(_) => "event",
             CapabilityId::EventStream(_) => "event_stream",
         }
@@ -260,12 +257,6 @@ impl CapabilityId {
             )?)]);
         }
 
-        // Offers rules prohibit using the "as" clause for storage; this is validated outside the
-        // scope of this function.
-        if let Some(p) = clause.storage_type().as_ref() {
-            return Ok(vec![CapabilityId::StorageType(p.clone())]);
-        }
-
         // Unknown capability type.
         let supported_keywords = clause
             .supported()
@@ -295,7 +286,6 @@ impl fmt::Display for CapabilityId {
             | CapabilityId::UsedDirectory(p) => p.as_str(),
             CapabilityId::EventStream(p) => p.as_str(),
             CapabilityId::Protocol(p) | CapabilityId::Directory(p) => p.as_str(),
-            CapabilityId::StorageType(s) => s.as_str(),
         };
         write!(f, "{}", s)
     }
@@ -481,6 +471,15 @@ pub enum OfferFromRef {
     Framework,
     /// A reference to this component.
     Self_,
+}
+
+impl OfferFromRef {
+    pub fn is_named(&self) -> bool {
+        match self {
+            OfferFromRef::Named(_) => true,
+            _ => false,
+        }
+    }
 }
 
 /// A reference in an `offer to`.
@@ -687,13 +686,7 @@ impl Document {
 
     pub fn all_storage_names(&self) -> Vec<&Name> {
         if let Some(capabilities) = self.capabilities.as_ref() {
-            capabilities
-                .iter()
-                .filter_map(|c| match c.storage.as_ref() {
-                    Some(s) => Some(s),
-                    None => None,
-                })
-                .collect()
+            capabilities.iter().filter_map(|c| c.storage.as_ref()).collect()
         } else {
             vec![]
         }
@@ -813,7 +806,8 @@ pub struct Capability {
     pub from: Option<CapabilityFromRef>,
     pub path: Option<Path>,
     pub rights: Option<Rights>,
-    pub backing_dir: Option<Name>,
+    pub backing_dir: Option<NameOrPath>,
+    pub subdir: Option<RelativePath>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -822,7 +816,7 @@ pub struct Use {
     pub service: Option<Name>,
     pub protocol: Option<OneOrMany<NameOrPath>>,
     pub directory: Option<NameOrPath>,
-    pub storage: Option<StorageType>,
+    pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
     pub path: Option<Path>,
@@ -855,7 +849,7 @@ pub struct Offer {
     pub service: Option<Name>,
     pub protocol: Option<OneOrMany<NameOrPath>>,
     pub directory: Option<NameOrPath>,
-    pub storage: Option<StorageType>,
+    pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub event: Option<OneOrMany<Name>>,
@@ -907,7 +901,6 @@ pub trait CapabilityClause {
     fn protocol(&self) -> Option<OneOrMany<NameOrPath>>;
     fn directory(&self) -> Option<NameOrPath>;
     fn storage(&self) -> &Option<Name>;
-    fn storage_type(&self) -> &Option<StorageType>;
     fn runner(&self) -> &Option<Name>;
     fn resolver(&self) -> &Option<Name>;
     fn event(&self) -> &Option<OneOrMany<Name>>;
@@ -956,9 +949,6 @@ impl CapabilityClause for Capability {
     }
     fn storage(&self) -> &Option<Name> {
         &self.storage
-    }
-    fn storage_type(&self) -> &Option<StorageType> {
-        &None
     }
     fn runner(&self) -> &Option<Name> {
         &self.runner
@@ -1032,9 +1022,6 @@ impl CapabilityClause for Use {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
-        &None
-    }
-    fn storage_type(&self) -> &Option<StorageType> {
         &self.storage
     }
     fn runner(&self) -> &Option<Name> {
@@ -1121,9 +1108,6 @@ impl CapabilityClause for Expose {
     fn storage(&self) -> &Option<Name> {
         &None
     }
-    fn storage_type(&self) -> &Option<StorageType> {
-        &None
-    }
     fn runner(&self) -> &Option<Name> {
         &self.runner
     }
@@ -1200,9 +1184,6 @@ impl CapabilityClause for Offer {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
-        &None
-    }
-    fn storage_type(&self) -> &Option<StorageType> {
         &self.storage
     }
     fn runner(&self) -> &Option<Name> {
@@ -1661,10 +1642,10 @@ mod tests {
         // storage
         assert_eq!(
             CapabilityId::from_clause(
-                &Offer { storage: Some(StorageType::Cache), ..empty_offer() },
+                &Offer { storage: Some("cache".parse().unwrap()), ..empty_offer() },
                 RoutingClauseType::Offer
             )?,
-            vec![CapabilityId::StorageType(StorageType::Cache)],
+            vec![CapabilityId::Storage("cache".parse().unwrap())],
         );
 
         // "as" aliasing.

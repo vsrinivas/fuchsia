@@ -21,9 +21,7 @@ use {
         },
     },
     clonable_error::ClonableError,
-    cm_rust::{
-        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl, UseStorageDecl,
-    },
+    cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
@@ -343,50 +341,6 @@ impl Realm {
         }
     }
 
-    /// Resolves and populates this component's meta directory handle if it has not been done so
-    /// already, and returns a reference to the handle. If this component does not use meta storage
-    /// Ok(None) will be returned.
-    pub async fn resolve_meta_dir(
-        self: &Arc<Self>,
-        bind_reason: &BindReason,
-    ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
-        {
-            // If our meta directory has already been resolved, just return the answer.
-            let state = self.lock_state().await;
-            let state = state.as_ref().expect("resolve_meta_dir: not resolved");
-            if state.meta_dir.is_some() {
-                return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
-            }
-
-            // If we don't even have a meta directory, return None.
-            if !state.decl().uses.iter().any(|u| u == &UseDecl::Storage(UseStorageDecl::Meta)) {
-                return Ok(None);
-            }
-
-            // Don't hold the state lock while performing routing for the meta storage capability,
-            // as the routing logic may want to acquire the lock for this component's state.
-        }
-
-        let (meta_client_chan, mut server_chan) =
-            zx::Channel::create().expect("failed to create channel");
-        routing::route_and_open_storage_capability(
-            &UseStorageDecl::Meta,
-            fio::MODE_TYPE_DIRECTORY,
-            self,
-            &mut server_chan,
-            bind_reason,
-        )
-        .await?;
-        let meta_dir = Arc::new(DirectoryProxy::from_channel(
-            fasync::Channel::from_channel(meta_client_chan).unwrap(),
-        ));
-
-        let mut state = self.lock_state().await;
-        let state = state.as_mut().expect("resolve_meta_dir: not resolved");
-        state.meta_dir = Some(meta_dir.clone());
-        Ok(Some(meta_dir))
-    }
-
     /// Resolves a runner for this component.
     //
     // We use an explicit `BoxFuture` here instead of a standard async
@@ -576,7 +530,6 @@ impl Realm {
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
                 routing::route_and_delete_storage(&use_storage, &self).await?;
-                break;
             }
         }
         Ok(())
@@ -728,10 +681,6 @@ pub struct RealmState {
     child_realms: HashMap<ChildMoniker, Arc<Realm>>,
     /// Realms of child instances that have not been deleted, indexed by child moniker.
     live_child_realms: HashMap<PartialMoniker, (InstanceId, Arc<Realm>)>,
-    /// The component's meta directory. Evaluated on demand by the `resolve_meta_dir`
-    /// getter.
-    // TODO: Store this under a separate Mutex?
-    meta_dir: Option<Arc<DirectoryProxy>>,
     /// The next unique identifier for a dynamic component instance created in the realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: InstanceId,
@@ -743,7 +692,6 @@ impl RealmState {
             child_realms: HashMap::new(),
             live_child_realms: HashMap::new(),
             decl: decl.clone(),
-            meta_dir: None,
             next_dynamic_instance_id: 1,
         };
         state.add_static_child_realms(realm, &decl).await?;

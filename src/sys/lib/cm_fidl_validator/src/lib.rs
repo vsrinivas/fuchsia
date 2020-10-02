@@ -483,22 +483,20 @@ impl<'a> ValidationContext<'a> {
                     );
                 }
             }
-            fsys::UseDecl::Storage(u) => match u.type_ {
-                None => self.errors.push(Error::missing_field("UseStorageDecl", "type")),
-                Some(fsys::StorageType::Meta) => {
-                    if u.target_path.is_some() {
-                        self.errors.push(Error::invalid_field("UseStorageDecl", "target_path"));
-                    }
-                }
-                _ => {
-                    check_path(
-                        u.target_path.as_ref(),
-                        "UseStorageDecl",
-                        "target_path",
-                        &mut self.errors,
-                    );
-                }
-            },
+            fsys::UseDecl::Storage(u) => {
+                check_name(
+                    u.source_name.as_ref(),
+                    "UseStorageDecl",
+                    "source_name",
+                    &mut self.errors,
+                );
+                check_path(
+                    u.target_path.as_ref(),
+                    "UseStorageDecl",
+                    "target_path",
+                    &mut self.errors,
+                );
+            }
             fsys::UseDecl::Runner(r) => {
                 check_name(
                     r.source_name.as_ref(),
@@ -991,10 +989,10 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_storage_source(&mut self, source: &fsys::StorageRef, decl_type: &str) {
-        if check_name(Some(&source.name), decl_type, "source.storage.name", &mut self.errors) {
-            if !self.all_storage_and_sources.contains_key(&source.name as &str) {
-                self.errors.push(Error::invalid_storage(decl_type, "source", &source.name as &str));
+    fn validate_storage_source(&mut self, source_name: &String, decl_type: &str) {
+        if check_name(Some(source_name), decl_type, "source.storage.name", &mut self.errors) {
+            if !self.all_storage_and_sources.contains_key(source_name.as_str()) {
+                self.errors.push(Error::invalid_storage(decl_type, "source", source_name));
             }
         }
     }
@@ -1325,7 +1323,7 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::Storage(o) => {
                 self.validate_storage_offer_fields(
                     "OfferStorageDecl",
-                    o.type_.as_ref(),
+                    o.source_name.as_ref(),
                     o.source.as_ref(),
                     o.target.as_ref(),
                 );
@@ -1482,29 +1480,26 @@ impl<'a> ValidationContext<'a> {
     fn validate_storage_offer_fields(
         &mut self,
         decl: &str,
-        type_: Option<&fsys::StorageType>,
+        source_name: Option<&'a String>,
         source: Option<&'a fsys::Ref>,
         target: Option<&'a fsys::Ref>,
     ) {
-        if type_.is_none() {
-            self.errors.push(Error::missing_field(decl, "type"));
+        if source_name.is_none() {
+            self.errors.push(Error::missing_field(decl, "source_name"));
         }
-        let storage_source_name = match source {
-            Some(fsys::Ref::Parent(_)) => None,
-            Some(fsys::Ref::Storage(s)) => {
-                self.validate_storage_source(s, decl);
-                Some(&s.name as &str)
+        match source {
+            Some(fsys::Ref::Parent(_)) => (),
+            Some(fsys::Ref::Self_(_)) => {
+                self.validate_storage_source(source_name.unwrap(), decl);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "source"));
-                None
             }
             None => {
                 self.errors.push(Error::missing_field(decl, "source"));
-                None
             }
-        };
-        self.validate_storage_target(decl, storage_source_name, target);
+        }
+        self.validate_storage_target(decl, source_name.map(|n| n.as_str()), target);
     }
 
     fn validate_event_offer_fields(&mut self, event: &'a fsys::OfferEventDecl) {
@@ -2468,11 +2463,11 @@ mod tests {
                         subdir: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
-                        type_: None,
+                        source_name: None,
                         target_path: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
-                        type_: Some(StorageType::Cache),
+                        source_name: Some("cache".to_string()),
                         target_path: None,
                     }),
                     UseDecl::Runner(UseRunnerDecl {
@@ -2502,7 +2497,8 @@ mod tests {
                 Error::missing_field("UseDirectoryDecl", "source_path"),
                 Error::missing_field("UseDirectoryDecl", "target_path"),
                 Error::missing_field("UseDirectoryDecl", "rights"),
-                Error::missing_field("UseStorageDecl", "type"),
+                Error::missing_field("UseStorageDecl", "source_name"),
+                Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseRunnerDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "source"),
@@ -2560,12 +2556,12 @@ mod tests {
                         subdir: Some("/foo".to_string()),
                     }),
                     UseDecl::Storage(UseStorageDecl {
-                        type_: Some(StorageType::Cache),
+                        source_name: Some("/cache".to_string()),
                         target_path: Some("/".to_string()),
                     }),
                     UseDecl::Storage(UseStorageDecl {
-                        type_: Some(StorageType::Meta),
-                        target_path: Some("/meta".to_string()),
+                        source_name: Some("temp".to_string()),
+                        target_path: Some("tmp".to_string()),
                     }),
                     UseDecl::Event(UseEventDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -2585,6 +2581,7 @@ mod tests {
                 Error::invalid_field("UseDirectoryDecl", "source_path"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
                 Error::invalid_field("UseDirectoryDecl", "subdir"),
+                Error::invalid_field("UseStorageDecl", "source_name"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseEventDecl", "source"),
@@ -2655,7 +2652,7 @@ mod tests {
                         subdir: None,
                     }),
                     UseDecl::Storage(UseStorageDecl {
-                        type_: Some(StorageType::Cache),
+                        source_name: Some("cache".to_string()),
                         target_path: Some(format!("/{}", "e".repeat(1024))),
                     }),
                     UseDecl::Runner(UseRunnerDecl {
@@ -2967,21 +2964,21 @@ mod tests {
                         subdir: None,
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_path: Some("/g".to_string()),
                         target_path: Some("/h".to_string()),
-                        target: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        target: Some(Ref::Framework(FrameworkRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
-                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("c".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("d".to_string()),
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
-                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("e".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("f".to_string()),
@@ -3365,9 +3362,10 @@ mod tests {
                         dependency_type: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: None,
+                        source_name: None,
                         source: None,
                         target: None,
+                        target_name: None,
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: None,
@@ -3400,7 +3398,7 @@ mod tests {
                 Error::missing_field("OfferDirectoryDecl", "target"),
                 Error::missing_field("OfferDirectoryDecl", "target_path"),
                 Error::missing_field("OfferDirectoryDecl", "dependency_type"),
-                Error::missing_field("OfferStorageDecl", "type"),
+                Error::missing_field("OfferStorageDecl", "source_name"),
                 Error::missing_field("OfferStorageDecl", "source"),
                 Error::missing_field("OfferStorageDecl", "target"),
                 Error::missing_field("OfferRunnerDecl", "source"),
@@ -3498,7 +3496,7 @@ mod tests {
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
+                        source_name: Some("data".to_string()),
                         source: Some(Ref::Parent(ParentRef {})),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -3506,13 +3504,15 @@ mod tests {
                                 collection: None,
                             }
                         )),
+                        target_name: Some("data".to_string()),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
+                        source_name: Some("data".to_string()),
                         source: Some(Ref::Parent(ParentRef {})),
                         target: Some(Ref::Collection(
                             CollectionRef { name: "b".repeat(101) }
                         )),
+                        target_name: Some("data".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3690,7 +3690,7 @@ mod tests {
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
+                        source_name: Some("data".to_string()),
                         source: Some(Ref::Parent(ParentRef{ })),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -3698,6 +3698,7 @@ mod tests {
                                 collection: Some("modular".to_string()),
                             }
                         )),
+                        target_name: Some("data".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3962,26 +3963,26 @@ mod tests {
             input = ComponentDecl {
                 offers: Some(vec![
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
-                        source: Some(Ref::Storage(StorageRef {
-                            name: "minfs".to_string(),
-                        })),
+                        source_name: Some("data".to_string()),
+                        source: Some(Ref::Self_(SelfRef { })),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "logger".to_string(),
                                 collection: None,
                             }
                         )),
+                        target_name: Some("data".to_string()),
                     })
                 ]),
                 capabilities: Some(vec![
                     CapabilityDecl::Storage(StorageDecl {
-                        name: Some("minfs".to_string()),
+                        name: Some("data".to_string()),
                         source_path: Some("/minfs".to_string()),
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
+                        subdir: None,
                     }),
                 ]),
                 children: Some(vec![
@@ -4054,6 +4055,7 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
+                        subdir: None,
                     }),
                 ]);
                 decl.children = Some(vec![
@@ -4293,7 +4295,7 @@ mod tests {
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
+                        source_name: Some("data".to_string()),
                         source: Some(Ref::Parent(ParentRef{})),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -4301,13 +4303,15 @@ mod tests {
                                 collection: None,
                             }
                         )),
+                        target_name: Some("data".to_string()),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
-                        type_: Some(StorageType::Data),
+                        source_name: Some("data".to_string()),
                         source: Some(Ref::Parent(ParentRef{})),
                         target: Some(Ref::Collection(
                             CollectionRef { name: "modular".to_string(), }
                         )),
+                        target_name: Some("data".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4396,7 +4400,6 @@ mod tests {
                         Ref::Self_(SelfRef {}),
                         Ref::Child(ChildRef {name: "netstack".to_string(), collection: None }),
                         Ref::Collection(CollectionRef {name: "modular".to_string() }),
-                        Ref::Storage(StorageRef {name: "a".to_string()}),
                     ]
                     .into_iter()
                     .enumerate()
@@ -4431,7 +4434,6 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("OfferEventDecl", "source"),
                 Error::invalid_field("OfferEventDecl", "source"),
                 Error::invalid_field("OfferEventDecl", "source"),
                 Error::invalid_field("OfferEventDecl", "source"),
@@ -4987,6 +4989,7 @@ mod tests {
                         name: None,
                         source: None,
                         source_path: None,
+                        subdir: None,
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: None,
@@ -5041,6 +5044,7 @@ mod tests {
                             name: "/bad".to_string()
                         })),
                         source_path: Some("&bad".to_string()),
+                        subdir: None,
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("^bad".to_string()),
@@ -5083,6 +5087,7 @@ mod tests {
                             name: "invalid".to_string(),
                         })),
                         source_path: Some("/foo".to_string()),
+                        subdir: None,
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("bar".to_string()),
@@ -5127,6 +5132,7 @@ mod tests {
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
+                        subdir: None,
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("a".repeat(101)),
@@ -5194,11 +5200,13 @@ mod tests {
                         name: Some("storage".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/storage".to_string()),
+                        subdir: None,
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("storage".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/storage".to_string()),
+                        subdir: None,
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("runner".to_string()),

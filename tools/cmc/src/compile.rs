@@ -141,15 +141,6 @@ fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::Dictionar
     }
 }
 
-// Translates a cm::StorageType to a fsys::StorageType.
-fn translate_storage_type_to_fidl(storage_type: &cm::StorageType) -> fsys::StorageType {
-    match storage_type {
-        cm::StorageType::Data => fsys::StorageType::Data,
-        cm::StorageType::Cache => fsys::StorageType::Cache,
-        cm::StorageType::Meta => fsys::StorageType::Meta,
-    }
-}
-
 // Translates a optional cm::DependencyType to a fsys::DependencyType, defaulting to Strong if the input is None.
 fn translate_dependency_type_to_fidl(
     dependency_type: Option<cm::DependencyType>,
@@ -249,21 +240,14 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 rights: Some(rights),
                 subdir: subdir.map(|s| s.into()),
             }));
-        } else if let Some(s) = use_.storage_type() {
-            let target_path =
-                match all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use) {
-                    Some(OneOrMany::One(target_id)) => {
-                        let target_path = target_id.extract_path()?;
-                        Ok(Some(target_path))
-                    }
-                    Some(OneOrMany::Many(_)) => Err(Error::internal(format!(
-                        "expecting one capability, but multiple provided"
-                    ))),
-                    None => Ok(None),
-                }?;
+        } else if let Some(s) = use_.storage() {
+            let target_path = cml::NameOrPath::Path(
+                one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                    .extract_path()?,
+            );
             out_uses.push(fsys::UseDecl::Storage(fsys::UseStorageDecl {
-                type_: Some(translate_storage_type_to_fidl(s)),
-                target_path: target_path.map(|path| path.into()),
+                source_name: Some(s.to_string()),
+                target_path: Some(target_path.into()),
             }));
         } else if let Some(n) = use_.runner() {
             out_uses.push(fsys::UseDecl::Runner(fsys::UseRunnerDecl {
@@ -447,14 +431,15 @@ fn translate_offer(
                     )),
                 }));
             }
-        } else if let Some(s) = offer.storage_type() {
+        } else if let Some(s) = offer.storage() {
             let source = extract_single_offer_storage_source(offer)?;
-            let targets = extract_storage_targets(offer, all_children, all_collections)?;
-            for target in targets {
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            for (target, target_id) in targets {
                 out_offers.push(fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
-                    type_: Some(translate_storage_type_to_fidl(s)),
+                    source_name: Some(s.to_string()),
                     source: Some(clone_fsys_ref(&source)?),
                     target: Some(clone_fsys_ref(&target)?),
+                    target_name: Some(target_id.into()),
                 }));
             }
         } else if let Some(n) = offer.runner() {
@@ -620,7 +605,6 @@ fn clone_fsys_ref(fsys_ref: &fsys::Ref) -> Result<fsys::Ref, Error> {
         fsys::Ref::Self_(self_ref) => Ok(fsys::Ref::Self_(self_ref.clone())),
         fsys::Ref::Child(child_ref) => Ok(fsys::Ref::Child(child_ref.clone())),
         fsys::Ref::Collection(collection_ref) => Ok(fsys::Ref::Collection(collection_ref.clone())),
-        fsys::Ref::Storage(storage_ref) => Ok(fsys::Ref::Storage(storage_ref.clone())),
         fsys::Ref::Framework(framework_ref) => Ok(fsys::Ref::Framework(framework_ref.clone())),
         _ => Err(Error::internal("Unknown fsys::Ref found.")),
     }
@@ -763,9 +747,7 @@ fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<fsys::Ref,
     };
     match reference {
         cml::OfferFromRef::Parent => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
-        cml::OfferFromRef::Named(name) => {
-            Ok(fsys::Ref::Storage(fsys::StorageRef { name: name.clone().into() }))
-        }
+        cml::OfferFromRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
         other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {:?}", other))),
     }
 }
@@ -787,19 +769,6 @@ fn translate_child_or_collection_ref(
         }
         _ => Err(Error::internal(format!("invalid child reference: \"{}\"", reference))),
     }
-}
-
-fn extract_storage_targets(
-    in_obj: &cml::Offer,
-    all_children: &HashSet<&cml::Name>,
-    all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<fsys::Ref>, Error> {
-    in_obj
-        .to
-        .0
-        .iter()
-        .map(|to| translate_child_or_collection_ref(to.into(), all_children, all_collections))
-        .collect()
 }
 
 // Return a list of (child, target capability id) expressed in the `offer`.
@@ -896,7 +865,12 @@ where
                 path => OneOrMany::One(path.clone()),
             })
         } else if let Some(n) = in_obj.storage() {
-            Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
+            if clause_type == cml::RoutingClauseType::Use {
+                let path = to_obj.path().expect("no path on use storage");
+                Some(OneOrMany::One(cml::NameOrPath::Path(path.clone())))
+            } else {
+                Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
+            }
         } else if let Some(n) = in_obj.runner() {
             Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
         } else if let Some(n) = in_obj.resolver() {
@@ -905,12 +879,6 @@ where
             Some(OneOrMany::One(cml::NameOrPath::Name(event.clone())))
         } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
             Some(OneOrMany::Many(events.iter().map(|e| cml::NameOrPath::Name(e.clone())).collect()))
-        } else if let Some(type_) = in_obj.storage_type() {
-            match type_ {
-                cml::StorageType::Data => Some(OneOrMany::One("/data".parse().unwrap())),
-                cml::StorageType::Cache => Some(OneOrMany::One("/cache".parse().unwrap())),
-                _ => None,
-            }
         } else {
             None
         }
@@ -1097,8 +1065,8 @@ mod tests {
                         "rights": ["read_bytes"],
                         "subdir": "fonts",
                     },
-                    { "storage": "meta" },
-                    { "storage": "cache", "as": "/tmp" },
+                    { "storage": "hippos", "path": "/hippos" },
+                    { "storage": "cache", "path": "/tmp" },
                     { "runner": "elf" },
                     { "runner": "web" },
                     { "event": "destroyed", "from": "parent" },
@@ -1193,13 +1161,13 @@ mod tests {
                     ),
                     fsys::UseDecl::Storage (
                         fsys::UseStorageDecl {
-                            type_: Some(fsys::StorageType::Meta),
-                            target_path: None,
+                            source_name: Some("hippos".to_string()),
+                            target_path: Some("/hippos".to_string()),
                         }
                     ),
                     fsys::UseDecl::Storage (
                         fsys::UseStorageDecl {
-                            type_: Some(fsys::StorageType::Cache),
+                            source_name: Some("cache".to_string()),
                             target_path: Some("/tmp".to_string()),
                         }
                     ),
@@ -1649,7 +1617,7 @@ mod tests {
                     },
                     {
                         "storage": "data",
-                        "from": "#logger-storage",
+                        "from": "self",
                         "to": [
                             "#netstack",
                             "#modular"
@@ -1715,8 +1683,8 @@ mod tests {
                 "capabilities": [
                     { "service": "my.service.Service" },
                     {
-                        "storage": "logger-storage",
-                        "path": "/minfs",
+                        "storage": "data",
+                        "backing_dir": "/minfs",
                         "from": "#logger",
                     },
                 ],
@@ -1959,25 +1927,23 @@ mod tests {
                     ),
                     fsys::OfferDecl::Storage (
                         fsys::OfferStorageDecl {
-                            type_: Some(fsys::StorageType::Data),
-                            source: Some(fsys::Ref::Storage(fsys::StorageRef {
-                                name: "logger-storage".to_string(),
-                            })),
+                            source_name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             target: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "netstack".to_string(),
                                 collection: None,
                             })),
+                            target_name: Some("data".to_string()),
                         }
                     ),
                     fsys::OfferDecl::Storage (
                         fsys::OfferStorageDecl {
-                            type_: Some(fsys::StorageType::Data),
-                            source: Some(fsys::Ref::Storage(fsys::StorageRef {
-                                name: "logger-storage".to_string(),
-                            })),
+                            source_name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
+                            target_name: Some("data".to_string()),
                         }
                     ),
                     fsys::OfferDecl::Runner (
@@ -2075,12 +2041,13 @@ mod tests {
                     ),
                     fsys::CapabilityDecl::Storage (
                         fsys::StorageDecl {
-                            name: Some("logger-storage".to_string()),
+                            name: Some("data".to_string()),
                             source: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "logger".to_string(),
                                 collection: None,
                             })),
                             source_path: Some("/minfs".to_string()),
+                            subdir: None,
                         }
                     )
                 ]),
@@ -2247,7 +2214,7 @@ mod tests {
                     },
                     {
                         "storage": "mystorage2",
-                        "path": "/storage2",
+                        "backing_dir": "/storage2",
                         "from": "#minfs",
                     },
                     {
@@ -2320,6 +2287,7 @@ mod tests {
                                 collection: None,
                             })),
                             source_path: Some("storage".to_string()),
+                            subdir: None,
                         }
                     ),
                     fsys::CapabilityDecl::Storage (
@@ -2330,6 +2298,7 @@ mod tests {
                                 collection: None,
                             })),
                             source_path: Some("/storage2".to_string()),
+                            subdir: None,
                         }
                     ),
                     fsys::CapabilityDecl::Runner (

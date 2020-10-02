@@ -34,9 +34,9 @@
     ],
     capabilities: [
         {
-            storage: "isolated_storage",
+            storage: "data",
             from: "parent",
-            path: "/minfs",
+            backing_dir: "/minfs",
         },
     ],
     offer: [
@@ -165,7 +165,7 @@
         },
         {
             storage: "data",
-            from: "#isolated_storage",
+            from: "self",
             to: [ "#archivist" ],
         },
         {

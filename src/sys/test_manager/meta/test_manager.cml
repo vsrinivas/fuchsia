@@ -33,9 +33,9 @@
     ],
     capabilities: [
         {
-            storage: "runner_storage",
+            storage: "data",
             from: "#runner_memfs",
-            path: "/memfs",
+            backing_dir: "/memfs",
         },
     ],
     use: [
@@ -94,7 +94,7 @@
         },
         {
             storage: "data",
-            from: "#runner_storage",
+            from: "self",
             to: [
                 "#gtest_runner",
                 "#rust_test_runner",

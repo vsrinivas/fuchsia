@@ -527,6 +527,11 @@ fsys::UseDirectoryDecl,
     rights: fio2::Operations,
     subdir: Option<PathBuf>,
 });
+fidl_into_struct!(UseStorageDecl, UseStorageDecl, fsys::UseStorageDecl, fsys::UseStorageDecl,
+{
+    source_name: CapabilityName,
+    target_path: CapabilityPath,
+});
 fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
 fsys::UseRunnerDecl,
 {
@@ -601,6 +606,14 @@ fsys::OfferDirectoryDecl,
     subdir: Option<PathBuf>,
     dependency_type: DependencyType,
 });
+fidl_into_struct!(OfferStorageDecl, OfferStorageDecl, fsys::OfferStorageDecl,
+fsys::OfferStorageDecl,
+{
+    source_name: CapabilityName,
+    source: OfferStorageSource,
+    target: OfferTarget,
+    target_name: CapabilityName,
+});
 fidl_into_struct!(OfferResolverDecl, OfferResolverDecl, fsys::OfferResolverDecl,
 fsys::OfferResolverDecl,
 {
@@ -657,6 +670,7 @@ fsys::StorageDecl,
     name: String,
     source: StorageDirectorySource,
     source_path: CapabilityNameOrPath,
+    subdir: Option<PathBuf>,
 });
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
 {
@@ -780,29 +794,24 @@ impl fmt::Display for CapabilityPath {
 
 impl UseDecl {
     pub fn path(&self) -> Option<&CapabilityPath> {
-        let path = match self {
-            UseDecl::Service(d) => &d.target_path,
-            UseDecl::Protocol(d) => &d.target_path,
-            UseDecl::Directory(d) => &d.target_path,
-            UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
-            UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
-            UseDecl::EventStream(e) => &e.target_path,
-            UseDecl::Storage(UseStorageDecl::Meta) | UseDecl::Runner(_) | UseDecl::Event(_) => {
-                // Meta storage and runners don't show up in the namespace; no capability path.
-                return None;
-            }
-        };
-        Some(path)
+        match self {
+            UseDecl::Service(d) => Some(&d.target_path),
+            UseDecl::Protocol(d) => Some(&d.target_path),
+            UseDecl::Directory(d) => Some(&d.target_path),
+            UseDecl::Storage(d) => Some(&d.target_path),
+            UseDecl::EventStream(e) => Some(&e.target_path),
+            UseDecl::Runner(_) | UseDecl::Event(_) => None,
+        }
     }
 
     pub fn name(&self) -> Option<&CapabilityName> {
         match self {
             UseDecl::Event(event_decl) => Some(&event_decl.source_name),
             UseDecl::Runner(runner_decl) => Some(&runner_decl.source_name),
+            UseDecl::Storage(storage_decl) => Some(&storage_decl.source_name),
             UseDecl::Service(_)
             | UseDecl::Protocol(_)
             | UseDecl::Directory(_)
-            | UseDecl::Storage(_)
             | UseDecl::EventStream(_) => None,
         }
     }
@@ -1037,153 +1046,6 @@ fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
                 .map(|(key, value)| fdata::DictionaryEntry { key, value: value.native_into_fidl() })
                 .collect(),
         ),
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UseStorageDecl {
-    Data(CapabilityPath),
-    Cache(CapabilityPath),
-    Meta,
-}
-
-impl FidlIntoNative<UseStorageDecl> for fsys::UseStorageDecl {
-    fn fidl_into_native(self) -> UseStorageDecl {
-        match self.type_.unwrap() {
-            fsys::StorageType::Data => {
-                UseStorageDecl::Data(self.target_path.unwrap().as_str().try_into().unwrap())
-            }
-            fsys::StorageType::Cache => {
-                UseStorageDecl::Cache(self.target_path.unwrap().as_str().try_into().unwrap())
-            }
-            fsys::StorageType::Meta => UseStorageDecl::Meta,
-        }
-    }
-}
-
-impl NativeIntoFidl<fsys::UseStorageDecl> for UseStorageDecl {
-    fn native_into_fidl(self) -> fsys::UseStorageDecl {
-        match self {
-            UseStorageDecl::Data(p) => fsys::UseStorageDecl {
-                type_: Some(fsys::StorageType::Data),
-                target_path: p.native_into_fidl(),
-            },
-            UseStorageDecl::Cache(p) => fsys::UseStorageDecl {
-                type_: Some(fsys::StorageType::Cache),
-                target_path: p.native_into_fidl(),
-            },
-            UseStorageDecl::Meta => {
-                fsys::UseStorageDecl { type_: Some(fsys::StorageType::Meta), target_path: None }
-            }
-        }
-    }
-}
-
-impl UseStorageDecl {
-    pub fn type_(&self) -> fsys::StorageType {
-        match self {
-            UseStorageDecl::Data(_) => fsys::StorageType::Data,
-            UseStorageDecl::Cache(_) => fsys::StorageType::Cache,
-            UseStorageDecl::Meta => fsys::StorageType::Meta,
-        }
-    }
-
-    pub fn type_name(&self) -> &CapabilityName {
-        match self {
-            Self::Data(_) => &DATA_TYPENAME,
-            Self::Cache(_) => &CACHE_TYPENAME,
-            Self::Meta => &META_TYPENAME,
-        }
-    }
-
-    pub fn path<'a>(&'a self) -> Option<&'a CapabilityPath> {
-        match self {
-            UseStorageDecl::Data(p) => Some(p),
-            UseStorageDecl::Cache(p) => Some(p),
-            UseStorageDecl::Meta => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OfferStorageDecl {
-    Data(OfferStorage),
-    Cache(OfferStorage),
-    Meta(OfferStorage),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OfferStorage {
-    pub source: OfferStorageSource,
-    pub target: OfferTarget,
-}
-
-impl FidlIntoNative<OfferStorageDecl> for fsys::OfferStorageDecl {
-    fn fidl_into_native(self) -> OfferStorageDecl {
-        match self.type_.unwrap() {
-            fsys::StorageType::Data => OfferStorageDecl::Data(OfferStorage {
-                source: self.source.fidl_into_native(),
-                target: self.target.fidl_into_native(),
-            }),
-            fsys::StorageType::Cache => OfferStorageDecl::Cache(OfferStorage {
-                source: self.source.fidl_into_native(),
-                target: self.target.fidl_into_native(),
-            }),
-            fsys::StorageType::Meta => OfferStorageDecl::Meta(OfferStorage {
-                source: self.source.fidl_into_native(),
-                target: self.target.fidl_into_native(),
-            }),
-        }
-    }
-}
-
-impl NativeIntoFidl<fsys::OfferStorageDecl> for OfferStorageDecl {
-    fn native_into_fidl(self) -> fsys::OfferStorageDecl {
-        let type_ = self.type_();
-        let (source, target) = match self {
-            OfferStorageDecl::Data(OfferStorage { source, target }) => (source, target),
-            OfferStorageDecl::Cache(OfferStorage { source, target }) => (source, target),
-            OfferStorageDecl::Meta(OfferStorage { source, target }) => (source, target),
-        };
-        fsys::OfferStorageDecl {
-            type_: Some(type_),
-            source: source.native_into_fidl(),
-            target: target.native_into_fidl(),
-        }
-    }
-}
-
-impl OfferStorageDecl {
-    pub fn type_(&self) -> fsys::StorageType {
-        match self {
-            OfferStorageDecl::Data(..) => fsys::StorageType::Data,
-            OfferStorageDecl::Cache(..) => fsys::StorageType::Cache,
-            OfferStorageDecl::Meta(..) => fsys::StorageType::Meta,
-        }
-    }
-
-    pub fn type_name(&self) -> &CapabilityName {
-        match self {
-            Self::Data(_) => &DATA_TYPENAME,
-            Self::Cache(_) => &CACHE_TYPENAME,
-            Self::Meta(_) => &META_TYPENAME,
-        }
-    }
-
-    pub fn source(&self) -> &OfferStorageSource {
-        match self {
-            OfferStorageDecl::Data(OfferStorage { source, .. }) => source,
-            OfferStorageDecl::Cache(OfferStorage { source, .. }) => source,
-            OfferStorageDecl::Meta(OfferStorage { source, .. }) => source,
-        }
-    }
-
-    pub fn target(&self) -> &OfferTarget {
-        match self {
-            OfferStorageDecl::Data(OfferStorage { target, .. }) => target,
-            OfferStorageDecl::Cache(OfferStorage { target, .. }) => target,
-            OfferStorageDecl::Meta(OfferStorage { target, .. }) => target,
-        }
     }
 }
 
@@ -1523,14 +1385,14 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferDirectorySource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferStorageSource {
     Parent,
-    Storage(String),
+    Self_,
 }
 
 impl FidlIntoNative<OfferStorageSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferStorageSource {
         match self.unwrap() {
             fsys::Ref::Parent(_) => OfferStorageSource::Parent,
-            fsys::Ref::Storage(c) => OfferStorageSource::Storage(c.name),
+            fsys::Ref::Self_(_) => OfferStorageSource::Self_,
             _ => panic!("invalid OfferStorageSource variant"),
         }
     }
@@ -1540,7 +1402,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
             OfferStorageSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
-            OfferStorageSource::Storage(name) => fsys::Ref::Storage(fsys::StorageRef { name }),
+            OfferStorageSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
         })
     }
 }
@@ -1870,12 +1732,12 @@ mod tests {
                        subdir: Some("foo/bar".to_string()),
                    }),
                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
-                       type_: Some(fsys::StorageType::Cache),
+                       source_name: Some("cache".to_string()),
                        target_path: Some("/cache".to_string()),
                    }),
                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
-                       type_: Some(fsys::StorageType::Meta),
-                       target_path: None,
+                       source_name: Some("temp".to_string()),
+                       target_path: Some("/temp".to_string()),
                    }),
                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                        source_name: Some("myrunner".to_string()),
@@ -1977,13 +1839,12 @@ mod tests {
                        dependency_type: Some(fsys::DependencyType::Strong),
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
-                       type_: Some(fsys::StorageType::Cache),
-                       source: Some(fsys::Ref::Storage(fsys::StorageRef {
-                           name: "memfs".to_string(),
-                       })),
+                       source_name: Some("cache".to_string()),
+                       source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                        target: Some(fsys::Ref::Collection(
                            fsys::CollectionRef { name: "modular".to_string() }
                        )),
+                       target_name: Some("cache".to_string()),
                    }),
                    fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -2064,14 +1925,16 @@ mod tests {
                        rights: Some(fio2::Operations::Connect),
                    }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
-                       name: Some("memfs".to_string()),
+                       name: Some("cache".to_string()),
                        source_path: Some("data".to_string()),
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                       subdir: Some("cache".to_string()),
                    }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
-                       name: Some("memfs2".to_string()),
+                       name: Some("memfs".to_string()),
                        source_path: Some("/data".to_string()),
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                       subdir: None,
                    }),
                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                        name: Some("elf".to_string()),
@@ -2178,8 +2041,14 @@ mod tests {
                             rights: fio2::Operations::Connect,
                             subdir: Some("foo/bar".into()),
                         }),
-                        UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
-                        UseDecl::Storage(UseStorageDecl::Meta),
+                        UseDecl::Storage(UseStorageDecl {
+                            source_name: "cache".into(),
+                            target_path: "/cache".try_into().unwrap(),
+                        }),
+                        UseDecl::Storage(UseStorageDecl {
+                            source_name: "temp".into(),
+                            target_path: "/temp".try_into().unwrap(),
+                        }),
                         UseDecl::Runner(UseRunnerDecl {
                             source_name: "myrunner".into(),
                         }),
@@ -2249,12 +2118,12 @@ mod tests {
                             subdir: None,
                             dependency_type: DependencyType::Strong,
                         }),
-                        OfferDecl::Storage(OfferStorageDecl::Cache(
-                            OfferStorage {
-                                source: OfferStorageSource::Storage("memfs".to_string()),
-                                target: OfferTarget::Collection("modular".to_string()),
-                            }
-                        )),
+                        OfferDecl::Storage(OfferStorageDecl {
+                            source_name: "cache".try_into().unwrap(),
+                            source: OfferStorageSource::Self_,
+                            target: OfferTarget::Collection("modular".to_string()),
+                            target_name: "cache".try_into().unwrap(),
+                        }),
                         OfferDecl::Runner(OfferRunnerDecl {
                             source: OfferRunnerSource::Parent,
                             source_name: "elf".try_into().unwrap(),
@@ -2304,14 +2173,16 @@ mod tests {
                             rights: fio2::Operations::Connect,
                         }),
                         CapabilityDecl::Storage(StorageDecl {
-                            name: "memfs".to_string(),
+                            name: "cache".to_string(),
                             source_path: "data".try_into().unwrap(),
                             source: StorageDirectorySource::Parent,
+                            subdir: Some("cache".try_into().unwrap()),
                         }),
                         CapabilityDecl::Storage(StorageDecl {
-                            name: "memfs2".to_string(),
+                            name: "memfs".to_string(),
                             source_path: "/data".try_into().unwrap(),
                             source: StorageDirectorySource::Parent,
+                            subdir: None,
                         }),
                         CapabilityDecl::Runner(RunnerDecl {
                             name: "elf".into(),
@@ -2488,14 +2359,12 @@ mod tests {
         fidl_into_and_from_offer_storage_source => {
             input = vec![
                 Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                Some(fsys::Ref::Storage(fsys::StorageRef {
-                    name: "foo".to_string(),
-                })),
+                Some(fsys::Ref::Self_(fsys::SelfRef {})),
             ],
             input_type = Option<fsys::Ref>,
             result = vec![
                 OfferStorageSource::Parent,
-                OfferStorageSource::Storage("foo".to_string()),
+                OfferStorageSource::Self_,
             ],
             result_type = OfferStorageSource,
         },
@@ -2505,6 +2374,7 @@ mod tests {
                     name: Some("minfs".to_string()),
                     source_path: Some("/minfs".to_string()),
                     source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                    subdir: None,
                 },
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
@@ -2513,6 +2383,7 @@ mod tests {
                         name: "foo".to_string(),
                         collection: None,
                     })),
+                    subdir: None,
                 },
             ],
             input_type = fsys::StorageDecl,
@@ -2521,11 +2392,13 @@ mod tests {
                     name: "minfs".to_string(),
                     source_path: CapabilityNameOrPath::try_from("/minfs").unwrap(),
                     source: StorageDirectorySource::Parent,
+                    subdir: None,
                 },
                 StorageDecl {
                     name: "minfs".to_string(),
                     source_path: CapabilityNameOrPath::try_from("minfs").unwrap(),
                     source: StorageDirectorySource::Child("foo".to_string()),
+                    subdir: None,
                 },
             ],
             result_type = StorageDecl,

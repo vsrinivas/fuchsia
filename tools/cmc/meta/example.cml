@@ -34,7 +34,7 @@
         {
             storage: "minfs",
             from: "parent",
-            path: "/data",
+            backing_dir: "/data",
         },
         {
             runner: "dart_runner",

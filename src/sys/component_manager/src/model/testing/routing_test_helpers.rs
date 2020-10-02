@@ -39,6 +39,7 @@ use {
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
         default::Default,
+        fs,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -75,13 +76,14 @@ pub enum CheckUse {
     },
     Storage {
         path: CapabilityPath,
-        type_: fsys::StorageType,
         // The relative moniker from the storage declaration to the use declaration. If None, this
         // storage use is expected to fail.
         storage_relation: Option<RelativeMoniker>,
         // The backing directory for this storage is in component manager's namsepace, not the
         // test's isolated test directory.
         from_cm_namespace: bool,
+
+        storage_subdir: Option<String>,
     },
     Event {
         names: Vec<CapabilityName>,
@@ -185,7 +187,7 @@ pub struct RoutingTest {
     pub builtin_environment: BuiltinEnvironment,
     _echo_service: Arc<EchoService>,
     pub mock_runner: Arc<MockRunner>,
-    _test_dir: TempDir,
+    test_dir: TempDir,
     pub test_dir_proxy: DirectoryProxy,
     root_component_name: String,
 }
@@ -268,7 +270,7 @@ impl RoutingTest {
             builtin_environment,
             _echo_service: echo_service,
             mock_runner,
-            _test_dir: test_dir,
+            test_dir,
             test_dir_proxy,
             root_component_name: builder.root_component,
         }
@@ -332,6 +334,11 @@ impl RoutingTest {
         nf.await.expect("failed to destroy child");
     }
 
+    /// Creates a sub directory in the outgoing dir's /data directory
+    pub fn add_subdir_to_data_directory(&self, subdir: &str) {
+        fs::create_dir_all(self.test_dir.path().join(subdir)).unwrap()
+    }
+
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
@@ -349,23 +356,7 @@ impl RoutingTest {
                 capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
                     .await
             }
-            CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation, .. } => {
-                let expected_res = match storage_relation {
-                    Some(_) => ExpectedResult::Ok,
-                    None => ExpectedResult::Err,
-                };
-                capability_util::write_file_to_meta_storage(&self.model, moniker, expected_res)
-                    .await;
-                if let Some(relative_moniker) = storage_relation {
-                    capability_util::check_file_in_storage(
-                        fsys::StorageType::Meta,
-                        relative_moniker,
-                        &self.test_dir_proxy,
-                    )
-                    .await;
-                }
-            }
-            CheckUse::Storage { path, type_, storage_relation, from_cm_namespace } => {
+            CheckUse::Storage { path, storage_relation, from_cm_namespace, storage_subdir } => {
                 let expected_res = match storage_relation {
                     Some(_) => ExpectedResult::Ok,
                     None => ExpectedResult::Err,
@@ -380,12 +371,16 @@ impl RoutingTest {
                             io_util::OPEN_RIGHT_READABLE,
                         )
                         .expect("failed to open /tmp");
-                        capability_util::check_file_in_storage(type_, relative_moniker, &tmp_proxy)
-                            .await;
+                        capability_util::check_file_in_storage(
+                            storage_subdir,
+                            relative_moniker,
+                            &tmp_proxy,
+                        )
+                        .await;
                     } else {
                         // Check for the file in the test's isolated test directory
                         capability_util::check_file_in_storage(
-                            type_,
+                            storage_subdir,
                             relative_moniker,
                             &self.test_dir_proxy,
                         )
@@ -446,10 +441,13 @@ impl RoutingTest {
     /// Lists the contents of a storage directory.
     pub async fn list_directory_in_storage(
         &self,
+        subdir: Option<&str>,
         relation: RelativeMoniker,
         relative_path: &str,
     ) -> Vec<String> {
-        let mut dir_path = capability_util::generate_storage_path(None, &relation);
+        let dir_path =
+            capability_util::generate_storage_path(subdir.map(|s| s.to_string()), &relation);
+        let mut dir_path = dir_path.parent().unwrap().to_path_buf();
         if !relative_path.is_empty() {
             dir_path.push(relative_path);
         }
@@ -464,6 +462,17 @@ impl RoutingTest {
         } else {
             list_directory(&self.test_dir_proxy).await
         }
+    }
+
+    /// Lists the contents of a directory.
+    pub async fn list_directory(&self, path: &str) -> Vec<String> {
+        let dir_proxy = io_util::open_directory(
+            &self.test_dir_proxy,
+            Path::new(path),
+            io_util::OPEN_RIGHT_READABLE,
+        )
+        .expect("failed to open directory");
+        list_directory(&dir_proxy).await
     }
 
     /// check_namespace will ensure that the paths in `namespaces` for `component_name` match the use
@@ -486,9 +495,7 @@ impl RoutingTest {
                 UseDecl::Directory(d) => Some(d.target_path.to_string()),
                 UseDecl::Service(s) => Some(s.target_path.to_string()),
                 UseDecl::Protocol(s) => Some(s.target_path.dirname),
-                UseDecl::Storage(UseStorageDecl::Data(p)) => Some(p.to_string()),
-                UseDecl::Storage(UseStorageDecl::Cache(p)) => Some(p.to_string()),
-                UseDecl::Storage(UseStorageDecl::Meta) => None,
+                UseDecl::Storage(s) => Some(s.target_path.to_string()),
                 UseDecl::Runner(_) | UseDecl::Event(_) | UseDecl::EventStream(_) => None,
             })
             .collect();
@@ -743,39 +750,22 @@ pub mod capability_util {
         add_dir_to_namespace(namespace, dir_path.as_str(), dir_proxy).await;
     }
 
-    pub async fn write_file_to_meta_storage(
-        model: &Arc<Model>,
-        moniker: AbsoluteMoniker,
-        expected_res: ExpectedResult,
-    ) {
-        let realm = model.look_up_realm(&moniker).await.expect("failed to look up realm");
-        let meta_dir_res = realm.resolve_meta_dir(&BindReason::Eager).await;
-        match expected_res {
-            ExpectedResult::Ok => {
-                let meta_dir = meta_dir_res.expect("failed to resolve meta dir");
-                let meta_dir = meta_dir.as_ref().expect("no meta dir for component");
-                write_hippo_file_to_directory(&meta_dir, ExpectedResult::Ok).await
-            }
-            ExpectedResult::Err | ExpectedResult::ErrWithNoEpitaph => match meta_dir_res {
-                Ok(_) => {
-                    panic!("Unexpected success");
-                }
-                Err(ModelError::RoutingError { .. }) => {}
-                Err(e) => panic!("Unexpected error: {:?}", e),
-            },
-        }
-    }
-
     async fn write_hippo_file_to_directory(
         dir_proxy: &DirectoryProxy,
         expected_res: ExpectedResult,
     ) {
         let (file_proxy, server_end) = create_proxy::<FileMarker>().unwrap();
         let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
-        dir_proxy
-            .open(flags, MODE_TYPE_FILE, "hippos", ServerEnd::new(server_end.into_channel()))
-            .expect("failed to open file on storage");
-        let res = file_proxy.write(b"hippos can be stored here").await;
+        let res = async {
+            dir_proxy.open(
+                flags,
+                MODE_TYPE_FILE,
+                "hippos",
+                ServerEnd::new(server_end.into_channel()),
+            )?;
+            file_proxy.write(b"hippos can be stored here").await
+        }
+        .await;
         match expected_res {
             ExpectedResult::Ok => {
                 let (s, _) = res.expect("failed to write file");
@@ -823,11 +813,11 @@ pub mod capability_util {
     }
 
     pub async fn check_file_in_storage(
-        type_: fsys::StorageType,
+        storage_subdir: Option<String>,
         relation: RelativeMoniker,
         test_dir_proxy: &DirectoryProxy,
     ) {
-        let mut dir_path = generate_storage_path(Some(type_), &relation);
+        let mut dir_path = generate_storage_path(storage_subdir, &relation);
         dir_path.push("hippos");
         let file_proxy =
             io_util::open_file(&test_dir_proxy, &dir_path, io_util::OPEN_RIGHT_READABLE)
@@ -1157,12 +1147,15 @@ pub mod capability_util {
 
     // This function should reproduce the logic of `crate::storage::generate_storage_path`
     pub fn generate_storage_path(
-        type_: Option<fsys::StorageType>,
+        subdir: Option<String>,
         relative_moniker: &RelativeMoniker,
     ) -> PathBuf {
         assert!(relative_moniker.up_path().is_empty());
         let mut down_path = relative_moniker.down_path().iter();
         let mut dir_path = vec![];
+        if let Some(subdir) = subdir {
+            dir_path.push(subdir);
+        }
         if let Some(p) = down_path.next() {
             dir_path.push(p.as_str().to_string());
         }
@@ -1170,12 +1163,14 @@ pub mod capability_util {
             dir_path.push("children".to_string());
             dir_path.push(p.as_str().to_string());
         }
-        match type_ {
-            Some(fsys::StorageType::Data) => dir_path.push("data".to_string()),
-            Some(fsys::StorageType::Cache) => dir_path.push("cache".to_string()),
-            Some(fsys::StorageType::Meta) => dir_path.push("meta".to_string()),
-            None => {}
-        }
+
+        // Storage capabilities used to have a hardcoded set of types, which would be appended
+        // here. To maintain compatibility with the old paths (and thus not lose data when this was
+        // migrated) we append "data" here. This works because this is the only type of storage
+        // that was actually used in the wild.
+        //
+        // This is only temporary, until the storage instance id migration changes this layout.
+        dir_path.push("data".to_string());
         dir_path.into_iter().collect()
     }
 

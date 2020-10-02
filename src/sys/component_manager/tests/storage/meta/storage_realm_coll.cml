@@ -17,7 +17,7 @@
     ],
     capabilities: [
         {
-            storage: "mystorage",
+            storage: "data",
             from: "#memfs",
             backing_dir: "memfs",
         },
@@ -40,7 +40,7 @@
     offer: [
         {
             storage: "data",
-            from: "#mystorage",
+            from: "self",
             to: [ "#coll" ],
         },
         {

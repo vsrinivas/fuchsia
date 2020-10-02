@@ -10,7 +10,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::*,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     std::{collections::HashSet, fmt, path::PathBuf},
     thiserror::Error,
 };
@@ -458,7 +458,7 @@ impl ComponentCapability {
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Runner(UseRunnerDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Event(UseEventDecl { source_name, .. }) => Some(source_name),
-                UseDecl::Storage(d) => Some(d.type_name()),
+                UseDecl::Storage(UseStorageDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
@@ -471,7 +471,7 @@ impl ComponentCapability {
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Runner(OfferRunnerDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Event(OfferEventDecl { source_name, .. }) => Some(source_name),
-                OfferDecl::Storage(d) => Some(d.type_name()),
+                OfferDecl::Storage(OfferStorageDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
             _ => None,
@@ -625,18 +625,18 @@ impl ComponentCapability {
                     OfferDecl::Storage(offer),
                 ) => Self::is_offer_storage_match(
                     child_moniker,
-                    child_use.type_(),
-                    offer.target(),
-                    offer.type_(),
+                    &child_use.source_name,
+                    &offer.target,
+                    &offer.source_name,
                 ),
                 (
                     ComponentCapability::Offer(OfferDecl::Storage(child_offer)),
                     OfferDecl::Storage(offer),
                 ) => Self::is_offer_storage_match(
                     child_moniker,
-                    child_offer.type_(),
-                    offer.target(),
-                    offer.type_(),
+                    &child_offer.source_name,
+                    &offer.target,
+                    &offer.source_name,
                 ),
                 // Runners offered from parent.
                 (
@@ -802,12 +802,12 @@ impl ComponentCapability {
 
     fn is_offer_storage_match(
         child_moniker: &ChildMoniker,
-        child_type: fsys::StorageType,
+        child_name: &CapabilityName,
         parent_target: &OfferTarget,
-        parent_type: fsys::StorageType,
+        parent_name: &CapabilityName,
     ) -> bool {
-        // The types must match...
-        parent_type == child_type &&
+        // The names must match...
+        parent_name == child_name &&
         // ...and the child/collection names must match.
         target_matches_moniker(parent_target, child_moniker)
     }
@@ -908,6 +908,7 @@ mod tests {
                 dirname: "".to_string(),
                 basename: "".to_string(),
             }),
+            subdir: None,
         });
         capability.find_expose_service_sources(&default_component_decl());
     }
@@ -1078,6 +1079,7 @@ mod tests {
                 dirname: "".to_string(),
                 basename: "".to_string(),
             }),
+            subdir: None,
         });
         let moniker = ChildMoniker::new("".to_string(), None, 0);
         capability.find_offer_service_sources(&default_component_decl(), &moniker);
