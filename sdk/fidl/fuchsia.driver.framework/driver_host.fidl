@@ -18,7 +18,14 @@ resource table DriverStartArgs {
     /// in the bind program.
     2: vector<DriverSymbol>:MAX_SYMBOL_COUNT symbols;
 
-    /// Information about the driver to start.
+    /// Information about the driver to start. Currently, we support the
+    /// following entries:
+    ///   1. "binary": a string containing the package-relative path to the
+    ///      driver binary.
+    ///   2. "colocate" (optional): a string containing "true" or "false"
+    ///      specifying whether the driver should be colocated in the same
+    ///      driver host as the driver that added |node|. If not specified, the
+    ///      driver will be launched in a new driver host.
     3: fuchsia.data.Dictionary program;
 
     /// The incoming namespace provided to the driver.
