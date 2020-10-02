@@ -304,6 +304,7 @@ memcpy
 memmem
 memmove
 memset
+stpcpy
 strcasecmp
 strcat
 strchr
