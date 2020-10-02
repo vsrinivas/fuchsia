@@ -76,7 +76,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  tun::DevicePtr OpenTunDevice() {
+  tun::DevicePtr OpenTunDevice(tun::DeviceConfig config = DefaultDeviceConfig()) {
     tun::ControlPtr tunctl = ConnectTunCtl().Bind();
     tunctl.set_error_handler([](zx_status_t err) {
       FAIL() << "Lost connection to tunctl " << zx_status_get_string(err);
@@ -86,7 +86,6 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     tun_device.set_error_handler([](zx_status_t err) {
       FAIL() << "Lost connection to tun device " << zx_status_get_string(err);
     });
-    auto config = DefaultDeviceConfig();
     tun::DevicePtr device;
     tunctl->CreateDevice(std::move(config), device.NewRequest());
     return device;
@@ -447,6 +446,61 @@ TEST_F(NetDeviceTest, ErrorCallback) {
   tun_device.Unbind().TakeChannel().reset();
   ASSERT_TRUE(RunLoopUntilOrFailure([&error]() { return error != ZX_OK; }));
   ASSERT_STATUS(error, ZX_ERR_PEER_CLOSED);
+}
+
+TEST_F(NetDeviceTest, PadTxFrames) {
+  constexpr uint8_t kPayload[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A};
+  constexpr size_t kMinBufferLength = sizeof(kPayload) - 2;
+  constexpr size_t kSmallPayloadLength = kMinBufferLength - 2;
+  auto device_config = DefaultDeviceConfig();
+  device_config.mutable_base()->set_min_tx_buffer_length(kMinBufferLength);
+  auto tun_device = OpenTunDevice(std::move(device_config));
+  std::unique_ptr<NetworkDeviceClient> client;
+  tun_device->ConnectProtocols(CreateClientRequest(&client));
+
+  auto startup = RunPromise(StartSessionPromise(client.get())
+                                .and_then([&client]() { ASSERT_OK(client->SetPaused(false)); })
+                                .and_then(TapOnlinePromise(&tun_device)));
+  ASSERT_NO_FATAL_FAILURE();
+  ASSERT_TRUE(startup.is_ok()) << "Session startup failed: " << startup.error();
+  ASSERT_TRUE(client->HasSession());
+
+  // Send three frames: one too small, one exactly minimum length, and one larger than minimum
+  // length.
+  for (auto& frame : {
+           fbl::Span(kPayload, sizeof(kSmallPayloadLength)),
+           fbl::Span(kPayload, sizeof(kMinBufferLength)),
+           fbl::Span(kPayload),
+       }) {
+    auto tx = client->AllocTx();
+    // Pollute buffer data first to check zero-padding.
+    for (auto& b : tx.data().part(0).data()) {
+      b = 0xAA;
+    }
+    ASSERT_TRUE(tx.is_valid());
+    tx.data().SetFrameType(netdev::FrameType::ETHERNET);
+    EXPECT_EQ(tx.data().Write(frame.data(), frame.size()), frame.size());
+    EXPECT_EQ(tx.Send(), ZX_OK);
+
+    std::vector<uint8_t> expect(frame.begin(), frame.end());
+    while (expect.size() < kMinBufferLength) {
+      expect.push_back(0);
+    }
+
+    // Retrieve the frame and assert it's what we expect.
+    bool done = false;
+    tun_device->ReadFrame([&done, &expect](tun::Device_ReadFrame_Result result) {
+      done = true;
+      if (result.is_response()) {
+        auto& frame = result.response().frame;
+        ASSERT_EQ(frame.frame_type(), netdev::FrameType::ETHERNET);
+        ASSERT_EQ(frame.data(), expect);
+      } else {
+        ADD_FAILURE() << "Read frame failed " << zx_status_get_string(result.err());
+      }
+    });
+    ASSERT_TRUE(RunLoopUntilOrFailure([&done]() { return done; }));
+  }
 }
 
 }  // namespace

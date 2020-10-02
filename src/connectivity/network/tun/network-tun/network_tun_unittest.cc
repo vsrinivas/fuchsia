@@ -136,16 +136,16 @@ class SimpleClient {
   buffer_descriptor_t* ResetDescriptor(uint16_t index) {
     auto* desc = descriptor(index);
     *desc = {
-        static_cast<uint8_t>(fuchsia::hardware::network::FrameType::ETHERNET),  // frame_type
-        0,                                                                      // chain_length
-        0,                                                                      // nxt
-        static_cast<uint32_t>(fuchsia::hardware::network::InfoType::NO_INFO),   // info_type
-        static_cast<uint64_t>(index) * kBufferSize,                             // offset
-        0,                                                                      // head_length
-        0,                                                                      // tail_length
-        kBufferSize,                                                            // data_length
-        0,                                                                      // inbound_flags
-        0,                                                                      // return_flags
+        .frame_type = static_cast<uint8_t>(fuchsia::hardware::network::FrameType::ETHERNET),
+        .chain_length = 0,
+        .nxt = 0,
+        .info_type = static_cast<uint32_t>(fuchsia::hardware::network::InfoType::NO_INFO),
+        .offset = static_cast<uint64_t>(index) * kBufferSize,
+        .head_length = 0,
+        .tail_length = 0,
+        .data_length = kBufferSize,
+        .inbound_flags = 0,
+        .return_flags = 0,
     };
     return desc;
   }
@@ -831,6 +831,7 @@ TEST_F(TunTest, PairEcho) {
       std::copy(rx_data.begin(), rx_data.end(), tx_data.begin());
       tx_desc->frame_type = rx_desc->frame_type;
       tx_desc->data_length = rx_desc->data_length;
+      rx_desc->data_length = SimpleClient::kBufferSize;
     }
     echoed += count;
     ASSERT_OK(right.SendTx(tx_buffer, false, count));

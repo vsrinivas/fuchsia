@@ -54,6 +54,8 @@ table BaseConfig {
     3: vector<fuchsia.hardware.network.FrameTypeSupport>:fuchsia.hardware.network.MAX_FRAME_TYPES tx_types;
     /// Report frame metadata on receiving frames. Defaults to `false`.
     4: bool report_metadata;
+    /// Minimum requested TX buffer length, in bytes. Defaults to zero.
+    5: uint32 min_tx_buffer_length;
 };
 
 /// Configuration used to create a [`fuchsia.net.tun/Device`].

@@ -78,13 +78,18 @@ struct Info {
     uint32 buffer_alignment;
     /// Maximum supported length of buffers in the data VMO, in bytes.
     uint32 max_buffer_length;
-    /// The minimum RX buffer length for correct operation, in bytes.
+    /// The minimum RX buffer length required for device.
     uint32 min_rx_buffer_length;
-    /// The number of bytes the device requests be free as `head` space in a Tx buffer. Devices
-    /// may choose to reject Tx buffers that do not satisfy this constraint.
+    /// The minimum TX buffer length required for the device.
+    ///
+    /// This value accounts only for TX payload length, `min_tx_buffer_head` and
+    /// `min_tx_buffer_tail` are not part of this value.
+    ///
+    /// Clients must zero pad outgoing frames to meet the required minimum length.
+    uint32 min_tx_buffer_length;
+    /// The number of bytes the device requests be free as `head` space in a Tx buffer.
     uint16 min_tx_buffer_head;
-    /// The amount of bytes the device requests be free as `tail` space in a Tx buffer. Devices
-    /// may choose to reject Tx buffers that to not satisfy this constraint.
+    /// The amount of bytes the device requests be free as `tail` space in a Tx buffer.
     uint16 min_tx_buffer_tail;
     /// Supported Rx frame types on this device.
     ///

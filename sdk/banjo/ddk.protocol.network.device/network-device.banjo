@@ -274,6 +274,9 @@ struct DeviceInfo {
   uint32 buffer_alignment;
   /// The minimum RX buffer length for correct operation, in bytes.
   uint32 min_rx_buffer_length;
+  /// The minimum TX buffer length for correct operation, in bytes. This length accounts only for
+  /// the buffer's body, and should not account for `tx_head_length` or `tx_tail_length`.
+  uint32 min_tx_buffer_length;
   /// Number of bytes requested as header bytes on Tx buffers. If set to zero, Tx buffers will never
   /// contain header space. Otherwise, Tx buffers will start at the beginning of the header space,
   /// and the header region will be informed.

@@ -19,6 +19,9 @@ bool TryConsolidateBaseConfig(fuchsia::net::tun::BaseConfig* config) {
   if (!config->has_report_metadata()) {
     config->set_report_metadata(false);
   }
+  if (!config->has_min_tx_buffer_length()) {
+    config->set_min_tx_buffer_length(0);
+  }
 
   // Check field validity.
   return !(config->tx_types().empty() || config->rx_types().empty() || config->mtu() == 0 ||

@@ -35,7 +35,6 @@ import "C"
 const descriptorLength uint64 = C.sizeof_buffer_descriptor_t
 const tag = "netdevice"
 const emptyLinkAddress tcpip.LinkAddress = ""
-const minEthernetBufferSize = 60
 
 type bufferDescriptor = C.buffer_descriptor_t
 
@@ -132,12 +131,6 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 		var frameType network.FrameType
 		if len(pkt.LinkHeader().View()) != 0 {
 			frameType = network.FrameTypeEthernet
-			// TODO(fxbug.dev/44605): Remove this padding when network device is
-			// capable of doing it by itself. For now, pad to the minimum
-			// frame size for a valid ethernet frame.
-			for ; n < minEthernetBufferSize; n++ {
-				data[n] = 0
-			}
 		} else {
 			switch protocol {
 			case header.IPv4ProtocolNumber:
@@ -147,6 +140,10 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 			default:
 				_ = syslog.ErrorTf(tag, "can't identify outgoing packet type")
 			}
+		}
+		// Pad tx frame to device requirements.
+		for ; n < int(c.info.MinTxBufferLength); n++ {
+			data[n] = 0
 		}
 
 		descriptor.info_type = C.uint(network.InfoTypeNoInfo)

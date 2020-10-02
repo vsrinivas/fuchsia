@@ -49,6 +49,7 @@ class NetworkDeviceClient {
   // Creates a default session configuration with the given device information.
   static SessionConfig DefaultSessionConfig(const netdev::Info& dev_info);
   // Creates a client that will bind to `handle` using `dispatcher`.
+  //
   // If `dispatcher` is `nullptr`, the default dispatcher for the current thread will be used.
   // All the `NetworkDeviceClient` callbacks are called on the dispatcher.
   explicit NetworkDeviceClient(fidl::InterfaceHandle<netdev::Device> handle,
@@ -61,6 +62,7 @@ class NetworkDeviceClient {
   using ErrorCallback = fit::function<void(zx_status_t err)>;
   using StatusCallback = fit::function<void(netdev::Status)>;
   // Opens a new session with `name` and invokes `callback` when done.
+  //
   // `config_factory` is called to create a `SessionConfig` from a `fuchsia.hardware.network/Info`,
   // which is used to define the buffer allocation and layout for the new session.
   // If the client already has a session running, `OpenSession` fails with `ZX_ERR_ALREADY_EXISTS`.
@@ -75,14 +77,17 @@ class NetworkDeviceClient {
   void SetErrorCallback(ErrorCallback callback) { err_callback_ = std::move(callback); }
 
   // Pauses or unpauses this client's session.
+  //
   // Returns `ZX_ERR_BAD_STATE` if there's no open session.
   [[nodiscard]] zx_status_t SetPaused(bool paused);
   // Kills the current session.
+  //
   // The error callback is called once the session is destroyed with the session epitaph.
   // Returns `ZX_ERR_BAD_STATE` if there's no open session.
   [[nodiscard]] zx_status_t KillSession();
 
   // Attempts to send `buffer`.
+  //
   // If this buffer was received on the rx path, `Send` will attempt to allocate a buffer from the
   // transmit pool to replace this buffer before sending it.
   // `buffer` is transitioned to an invalid state on success.
@@ -91,6 +96,7 @@ class NetworkDeviceClient {
   bool HasSession() { return session_.is_bound(); }
 
   // Creates an asynchronous handler for status changes.
+  //
   // `callback` will be called for every status change on the device for as long as the returned
   // `StatusWatchHandle` is in scope.
   // `buffer` is the number of changes buffered by the network device, according to the
@@ -100,31 +106,43 @@ class NetworkDeviceClient {
   const netdev::Info& device_info() const { return device_info_; }
 
   // Allocates a transmit buffer.
+  //
   // Takes a buffer from the pool of available transmit buffers. If there are no buffers available,
   // the returned `Buffer` instance will be invalid (`Buffer::is_valid` returns false).
   Buffer AllocTx();
 
   // A contiguous buffer region.
+  //
   // `Buffer`s are composed of N disjoint `BufferRegion`s, accessible through `BufferData`.
   class BufferRegion {
    public:
     // Caps this buffer to `len` bytes.
+    //
     // If the buffer's length is smaller than `len`, `CapLength` does nothing.
     void CapLength(uint32_t len);
     uint32_t len() const;
     fbl::Span<uint8_t> data();
     fbl::Span<const uint8_t> data() const;
     // Writes `len` bytes from `src` into this region starting at `offset`.
+    //
     // Returns the number of bytes that were written.
     size_t Write(const void* src, size_t len, size_t offset = 0);
     // Reads `len` bytes from this region into `dst` starting at `offset`.
+    //
     // Returns the number of bytes that were read.
     size_t Read(void* dst, size_t len, size_t offset = 0);
     // Writes the `src` region starting at `src_offset` into this region starting at `offset`.
+    //
     // Returns the number of bytes written.
     size_t Write(size_t offset, const BufferRegion& src, size_t src_offset);
-    // Move assignment deleted to abide by `Buffer` destruction semantics. See `Buffer` for more
-    // details.
+    // Zero pads this region to `size`, returning the new size of the buffer.
+    //
+    // The returned value may be smaller than `size` if the amount of space available is not large
+    // enough or larger if the buffer is already larger than `size.`
+    size_t PadTo(size_t size);
+    // Move assignment deleted to abide by `Buffer` destruction semantics.
+    //
+    // See `Buffer` for more details.
     BufferRegion& operator=(BufferRegion&&) = delete;
     BufferRegion(BufferRegion&& other) = default;
 
@@ -148,6 +166,7 @@ class NetworkDeviceClient {
     uint32_t parts() { return parts_count_; }
 
     // Retrieves a `BufferRegion` part from this `BufferData`.
+    //
     // Crashes if `idx >= parts()`.
     BufferRegion& part(size_t idx);
     const BufferRegion& part(size_t idx) const;
@@ -168,9 +187,15 @@ class NetworkDeviceClient {
     size_t Read(void* dst, size_t len);
     // Writes the contents of `data` into this buffer, returning the number of bytes written.
     size_t Write(const BufferData& data);
+    // Zero pads buffer to total size `size`.
+    //
+    // Returns `ZX_ERR_BUFFER_TOO_SMALL` if buffer doesn't have enough available space to be padded
+    // to size. No-op and returns `ZX_OK` if `len()` is at least `size`.
+    zx_status_t PadTo(size_t size);
 
-    // Move assignment deleted to abide by `Buffer` destruction semantics. See `Buffer` for more
-    // details.
+    // Move assignment deleted to abide by `Buffer` destruction semantics.
+    //
+    // See `Buffer` for more details.
     BufferData& operator=(BufferData&&) = delete;
 
    protected:

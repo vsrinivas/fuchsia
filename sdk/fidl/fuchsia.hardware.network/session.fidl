@@ -7,10 +7,20 @@ library fuchsia.hardware.network;
 using zx;
 
 /// Represents a session with a Network device.
+///
 /// A session has a data plane and a control plane. The `Session` protocol represents the control
 /// plane of the session and the FIFOs and VMOs exchanged during the
 /// [`fuchsia.hardware.network/Device.OpenSession`] call are the data plane. Lifetime of the session
 /// is controlled by a `Session` protocol handle. Sessions are always created in a paused state.
+///
+/// The session will be closed with an error epitaph if an invalid buffer descriptor is sent over
+/// either the Tx or Rx FIFOs. Invalid descriptors include:
+///    - Descriptor index larger than [`fuchsia.hardware.network/SessionInfo.descriptor_count`].
+///    - Descriptor chains larger than [`fuchsia.hardware.network/MAX_DESCRIPTOR_CHAIN`].
+///    - Rx buffers smaller than [`fuchsia.hardware.network/Info.min_rx_buffer_length`].
+///    - Tx buffers smaller than [`fuchsia.hardware.network/Info.min_tx_buffer_length`].
+///    - Tx buffers not respecting [`fuchsia.hardware.network/Info.min_tx_buffer_head`] or
+///    [`fuchsia.hardware.network/Info.min_tx_buffer_tail`].
 protocol Session {
     /// Pauses or unpauses reception of frames on this session.
     SetPaused(bool paused);

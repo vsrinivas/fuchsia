@@ -16,7 +16,7 @@ constexpr uint16_t kFifoDepth = 128;
 
 zx_status_t DeviceAdapter::Create(async_dispatcher_t* dispatcher, DeviceAdapterParent* parent,
                                   bool online, std::unique_ptr<DeviceAdapter>* out) {
-  std::unique_ptr<DeviceAdapter> adapter(new DeviceAdapter(dispatcher, parent, online));
+  std::unique_ptr<DeviceAdapter> adapter(new DeviceAdapter(parent, online));
   network_device_impl_protocol_t proto = {&adapter->network_device_impl_protocol_ops_,
                                           adapter.get()};
 
@@ -310,11 +310,9 @@ void DeviceAdapter::CommitTx() {
   }
 }
 
-DeviceAdapter::DeviceAdapter(async_dispatcher_t* dispatcher, DeviceAdapterParent* parent,
-                             bool online)
+DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
     : ddk::NetworkDeviceImplProtocol<DeviceAdapter>(),
       parent_(parent),
-      has_sessions_(false),
       online_(online),
       device_info_(device_info_t{
           .tx_depth = kFifoDepth,
@@ -327,6 +325,7 @@ DeviceAdapter::DeviceAdapter(async_dispatcher_t* dispatcher, DeviceAdapterParent
           .max_buffer_length = fuchsia::net::tun::MAX_MTU,
           .buffer_alignment = 1,
           .min_rx_buffer_length = parent->config().mtu(),
+          .min_tx_buffer_length = parent->config().min_tx_buffer_length(),
       }) {
   // Initialize rx_types_ and tx_types_ lists from parent config.
   for (size_t i = 0; i < parent_->config().rx_types().size(); i++) {

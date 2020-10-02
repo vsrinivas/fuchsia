@@ -123,6 +123,8 @@ void PrintVec(const std::string& name, const std::vector<uint8_t>& vec) {
 TEST_F(NetworkDeviceTest, CanCreate) { ASSERT_OK(CreateDevice()); }
 
 TEST_F(NetworkDeviceTest, GetInfo) {
+  impl_.info().min_rx_buffer_length = 2048;
+  impl_.info().min_tx_buffer_length = 60;
   ASSERT_OK(CreateDevice());
   auto connection = OpenConnection();
   auto rsp = netdev::Device::Call::GetInfo(zx::unowned(connection));
@@ -131,6 +133,7 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.tx_depth, impl_.info().tx_depth * 2);
   EXPECT_EQ(info.rx_depth, impl_.info().rx_depth * 2);
   EXPECT_EQ(info.min_rx_buffer_length, impl_.info().min_rx_buffer_length);
+  EXPECT_EQ(info.min_tx_buffer_length, impl_.info().min_tx_buffer_length);
   EXPECT_EQ(info.max_buffer_length, impl_.info().max_buffer_length);
   EXPECT_EQ(info.min_tx_buffer_tail, impl_.info().tx_tail_length);
   EXPECT_EQ(info.min_tx_buffer_head, impl_.info().tx_head_length);
@@ -927,6 +930,42 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   const auto& session = dev->sessions_unsafe().front();
 
   ASSERT_STR_EQ("hello", session.name());
+}
+
+TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
+  constexpr uint32_t kMinRxLength = 60;
+  impl_.info().min_rx_buffer_length = kMinRxLength;
+  ASSERT_OK(CreateDevice());
+  auto connection = OpenConnection();
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+  auto* desc = session.ResetDescriptor(0);
+  desc->data_length = kMinRxLength - 1;
+  ASSERT_OK(session.SendRx(0));
+  // Session should be killed because of contract breach:
+  ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
+  // We should NOT have received that frame:
+  ASSERT_TRUE(impl_.rx_buffers().is_empty());
+}
+
+TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
+  constexpr uint32_t kMinTxLength = 60;
+  impl_.info().min_tx_buffer_length = kMinTxLength;
+  ASSERT_OK(CreateDevice());
+  auto connection = OpenConnection();
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+  auto* desc = session.ResetDescriptor(0);
+  desc->data_length = kMinTxLength - 1;
+  ASSERT_OK(session.SendTx(0));
+  // Session should be killed because of contract breach:
+  ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
+  // We should NOT have received that frame:
+  ASSERT_TRUE(impl_.tx_buffers().is_empty());
 }
 
 }  // namespace testing

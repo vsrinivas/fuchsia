@@ -55,6 +55,7 @@ func (*dispatcherChan) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.Net
 }
 
 const TunMtu uint32 = 2048
+const TunMinTxLength int = 60
 
 func getTunMac() net.MacAddress {
 	return net.MacAddress{Octets: [6]uint8{0x02, 0x03, 0x04, 0x05, 0x06, 0x07}}
@@ -168,6 +169,7 @@ func createTunWithOnline(t *testing.T, ctx context.Context, online bool) *tun.De
 		Features:       network.FrameFeaturesRaw,
 		SupportedFlags: 0,
 	}})
+	base.SetMinTxBufferLength(uint32(TunMinTxLength))
 
 	config.SetBase(base)
 	return createTunWithConfig(t, ctx, config)
@@ -340,15 +342,15 @@ func TestWritePacket(t *testing.T) {
 	data := readFrameResult.Response.Frame.Data
 
 	expect := func() []byte {
-		b := make([]byte, 0, minEthernetBufferSize)
+		b := make([]byte, 0, TunMinTxLength)
 		b = append(b, otherMac.Octets[:]...)
 		b = append(b, tunMac.Octets[:]...)
 		ethType := [2]byte{0, 0}
 		binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
 		b = append(b, ethType[:]...)
 		b = append(b, []byte(pktBody)...)
-		if len(b) < minEthernetBufferSize {
-			b = b[:minEthernetBufferSize]
+		if len(b) < TunMinTxLength {
+			b = b[:TunMinTxLength]
 		}
 		return b
 	}()

@@ -194,6 +194,7 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
       .buffer_alignment = device_info_.buffer_alignment,
       .max_buffer_length = device_info_.max_buffer_length,
       .min_rx_buffer_length = device_info_.min_rx_buffer_length,
+      .min_tx_buffer_length = device_info_.min_tx_buffer_length,
       .min_tx_buffer_head = device_info_.tx_head_length,
       .min_tx_buffer_tail = device_info_.tx_tail_length,
   };

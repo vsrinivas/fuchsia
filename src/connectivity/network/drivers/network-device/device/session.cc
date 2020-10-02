@@ -352,6 +352,7 @@ zx_status_t Session::FetchTx() {
 
   bool notify_listeners = false;
 
+  uint32_t total_length = 0;
   while (read > 0) {
     auto* desc = descriptor(*desc_idx);
     if (!desc) {
@@ -418,25 +419,33 @@ zx_status_t Session::FetchTx() {
       if (expect_chain == 0 && buffer->tail_length) {
         cur->length += buffer->tail_length;
       }
+      total_length += desc->data_length;
       buffer->data.parts_count++;
 
       add_head_space = false;
       if (expect_chain == 0) {
         break;
-      } else {
-        didx = desc->nxt;
-        desc = descriptor(didx);
-        if (desc == nullptr) {
-          LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
-          return ZX_ERR_IO_INVALID;
-        } else if (desc->chain_length != expect_chain - 1) {
-          LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
-                     desc->chain_length, didx);
-          return ZX_ERR_IO_INVALID;
-        }
-        expect_chain--;
       }
+      didx = desc->nxt;
+      desc = descriptor(didx);
+      if (desc == nullptr) {
+        LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
+        return ZX_ERR_IO_INVALID;
+      }
+      if (desc->chain_length != expect_chain - 1) {
+        LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
+                   desc->chain_length, didx);
+        return ZX_ERR_IO_INVALID;
+      }
+      expect_chain--;
     }
+
+    if (total_length < parent_->info().min_tx_buffer_length) {
+      LOGF_ERROR("network-device(%s): tx buffer length %d less than required minimum of %d", name(),
+                 total_length, parent_->info().min_tx_buffer_length);
+      return ZX_ERR_IO_INVALID;
+    }
+
     // notifty parent so we can copy this to any listening sessions
     notify_listeners |= parent_->ListenSessionData(*this, *desc_idx);
     transaction.Push(*desc_idx);
@@ -611,26 +620,33 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
 
   auto expect_chain = desc->chain_length;
   uint16_t didx = descriptor_index;
+  uint32_t total_length = 0;
   for (;;) {
     buffer_parts->offset = desc->offset + desc->head_length;
     buffer_parts->length = desc->data_length;
     buff->data.parts_count++;
+    total_length += desc->data_length;
     buffer_parts++;
     if (expect_chain == 0) {
       break;
-    } else {
-      didx = desc->nxt;
-      desc = descriptor(didx);
-      if (desc == nullptr) {
-        LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
-        return ZX_ERR_INVALID_ARGS;
-      } else if (desc->chain_length != expect_chain - 1) {
-        LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
-                   desc->chain_length, didx);
-        return ZX_ERR_INVALID_ARGS;
-      }
-      expect_chain--;
     }
+    didx = desc->nxt;
+    desc = descriptor(didx);
+    if (desc == nullptr) {
+      LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (desc->chain_length != expect_chain - 1) {
+      LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
+                 desc->chain_length, didx);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    expect_chain--;
+  }
+  if (total_length < parent_->info().min_rx_buffer_length) {
+    LOGF_ERROR("netwok-device(%s): rx buffer length %d less than required minimum of %d", name(),
+               total_length, parent_->info().min_rx_buffer_length);
+    return ZX_ERR_INVALID_ARGS;
   }
 
   return ZX_OK;

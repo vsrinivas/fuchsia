@@ -110,9 +110,8 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   void CopyTo(DeviceAdapter* other, bool return_failed_buffers);
 
  private:
-  DeviceAdapter(async_dispatcher_t* dispatcher, DeviceAdapterParent* parent, bool online);
+  DeviceAdapter(DeviceAdapterParent* parent, bool online);
 
-  ddk::NetworkDeviceImplProtocolClient MakeProtocolClient();
   // Enqueues a single fulfilled rx frame.
   void EnqueueRx(fuchsia::hardware::network::FrameType frame_type, uint32_t buffer_id,
                  uint32_t total_len, const fuchsia::net::tun::FrameMetadata* meta)

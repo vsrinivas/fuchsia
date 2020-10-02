@@ -563,6 +563,10 @@ zx_status_t NetworkDeviceClient::Buffer::Send() {
   if (!is_valid()) {
     return ZX_ERR_UNAVAILABLE;
   }
+  zx_status_t status = data_.PadTo(parent_->device_info_.min_tx_buffer_length);
+  if (status != ZX_OK) {
+    return status;
+  }
   return parent_->Send(this);
 }
 
@@ -665,6 +669,17 @@ size_t NetworkDeviceClient::BufferData::Write(const BufferData& data) {
   return count;
 }
 
+zx_status_t NetworkDeviceClient::BufferData::PadTo(size_t size) {
+  size_t total_size = 0;
+  for (uint32_t i = 0; i < parts_count_ && total_size < size; i++) {
+    total_size += parts_[i].PadTo(size - total_size);
+  }
+  if (total_size < size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  return ZX_OK;
+}
+
 size_t NetworkDeviceClient::BufferData::Read(void* dst, size_t len) {
   auto* ptr = static_cast<uint8_t*>(dst);
   size_t actual = 0;
@@ -719,6 +734,18 @@ size_t NetworkDeviceClient::BufferRegion::Write(size_t offset, const BufferRegio
   size_t wr = std::min(desc_->data_length - offset, src.desc_->data_length - src_offset);
   std::copy_n(src.data().begin() + src_offset, wr, data().begin() + offset);
   return wr;
+}
+
+size_t NetworkDeviceClient::BufferRegion::PadTo(size_t size) {
+  if (size > desc_->data_length) {
+    size -= desc_->data_length;
+    fbl::Span<uint8_t> pad(static_cast<uint8_t*>(base_) + desc_->head_length + desc_->data_length,
+                           std::min(size, static_cast<size_t>(desc_->tail_length)));
+    memset(pad.data(), 0x00, pad.size());
+    desc_->data_length += pad.size();
+    desc_->tail_length -= pad.size();
+  }
+  return desc_->data_length;
 }
 
 void NetworkDeviceClient::StatusWatchHandle::Watch() {

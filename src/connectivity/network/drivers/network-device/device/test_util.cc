@@ -63,7 +63,6 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
           .tx_types_count = 1,
           .max_buffer_length = ZX_PAGE_SIZE / 2,
           .buffer_alignment = ZX_PAGE_SIZE,
-          .min_rx_buffer_length = 1500,
       }) {
   rx_types_[0] = static_cast<uint8_t>(netdev::FrameType::ETHERNET);
   tx_types_[0].type = static_cast<uint8_t>(netdev::FrameType::ETHERNET);

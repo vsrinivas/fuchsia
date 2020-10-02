@@ -244,6 +244,7 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
             },
         ]),
         report_metadata: None,
+        min_tx_buffer_length: None,
     }
 }
 
