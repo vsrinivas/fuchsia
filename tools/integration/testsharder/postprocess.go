@@ -327,8 +327,9 @@ func WithTargetDuration(
 			// If targetDuration is set but all durations are zero, we'll
 			// determine that we need zero new shards. In this case, we'll be
 			// careful and assume that we need the maximum allowed shards to be
-			// able to fit all tests.
-			numNewShards = maxShardsPerEnvironment
+			// able to fit all tests or one shard per test if the number of tests
+			// is less than the maximum allowed shards.
+			numNewShards = min(len(shard.Tests), maxShardsPerEnvironment)
 		}
 		numNewShards = min(numNewShards, maxShardsPerEnvironment)
 
