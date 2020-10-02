@@ -6,6 +6,7 @@ use {
     anyhow::anyhow,
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
+    log::info,
     scrutiny::{
         collectors, controllers,
         engine::hook::PluginHooks,
@@ -15,7 +16,7 @@ use {
         model::model::*,
         plugin,
     },
-    scrutiny_utils::{bootfs::*, env, usage::*, zbi::*},
+    scrutiny_utils::{bootfs::*, env, fvm::*, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::fs::{self, File},
@@ -71,6 +72,26 @@ impl DataController for ZbiExtractController {
                     }
                     let mut bootfs_file = File::create(bootfs_file_path)?;
                     bootfs_file.write_all(&data)?;
+                }
+            } else if section.section_type == ZbiType::StorageRamdisk {
+                info!("Attempting to load FvmPartitions");
+                let mut fvm_reader = FvmReader::new(section.buffer.clone());
+                if let Ok(fvm_partitions) = fvm_reader.parse() {
+                    info!("Found {} Partitions in StorageRamdisk", fvm_partitions.len());
+                    let mut fvm_dir = output_path.clone();
+                    fvm_dir.push("fvm");
+                    fs::create_dir_all(fvm_dir.clone())?;
+                    let mut partition_count = 0;
+                    for partition in fvm_partitions.iter() {
+                        let file_name = format!("{}_{}", partition_count, partition.partition_type);
+                        let mut fvm_partition_path = fvm_dir.clone();
+                        fvm_partition_path.push(file_name);
+                        let mut fvm_file = File::create(fvm_partition_path)?;
+                        fvm_file.write_all(&partition.buffer)?;
+                        partition_count += 1;
+                    }
+                } else {
+                    info!("No FvmPartitions found in StorageRamdisk");
                 }
             }
         }
@@ -209,11 +230,98 @@ impl DataController for PackageExtractController {
     }
 }
 
+#[derive(Deserialize, Serialize)]
+struct FvmExtractRequest {
+    // The input path for the FVM to extract.
+    input: String,
+    // The output directory for the extracted FVM.
+    output: String,
+}
+
+#[derive(Default)]
+pub struct FvmExtractController {}
+
+impl DataController for FvmExtractController {
+    fn query(&self, _model: Arc<DataModel>, query: Value) -> Result<Value> {
+        let request: FvmExtractRequest = serde_json::from_value(query)?;
+        let mut fvm_file = File::open(request.input)?;
+        let output_path = PathBuf::from(request.output);
+        let mut fvm_buffer = Vec::new();
+        fvm_file.read_to_end(&mut fvm_buffer)?;
+        let mut reader = FvmReader::new(fvm_buffer);
+        let fvm_partitions = reader.parse()?;
+
+        fs::create_dir_all(&output_path)?;
+        let mut minfs_count = 0;
+        let mut blobfs_count = 0;
+        for partition in fvm_partitions {
+            let partition_name = match partition.partition_type {
+                FvmPartitionType::MinFs => {
+                    if minfs_count == 0 {
+                        format!("{}.blk", partition.partition_type)
+                    } else {
+                        format!("{}.{}.blk", partition.partition_type, minfs_count)
+                    }
+                }
+                FvmPartitionType::BlobFs => {
+                    if blobfs_count == 0 {
+                        format!("{}.blk", partition.partition_type)
+                    } else {
+                        format!("{}.{}.blk", partition.partition_type, blobfs_count)
+                    }
+                }
+            };
+            let mut path = output_path.clone();
+            path.push(partition_name);
+            let mut file = File::create(path)?;
+            file.write_all(&partition.buffer)?;
+            match partition.partition_type {
+                FvmPartitionType::MinFs => minfs_count += 1,
+                FvmPartitionType::BlobFs => blobfs_count += 1,
+            };
+        }
+
+        Ok(json!({"status": "ok"}))
+    }
+
+    fn description(&self) -> String {
+        "Extracts FVM (.blk) values from an input file to a directory.".to_string()
+    }
+
+    fn usage(&self) -> String {
+        UsageBuilder::new()
+            .name("tool.fvm.extract - Extracts a fvm (.blk) to a directory.")
+            .summary("tool.fvm.extract --input foo.blk --output /tmp/foo")
+            .description(
+                "Extracts a FVM (.blk) into a series of volumes. \
+            This tool will simply extract the volumes as large files and will \
+            not attempt to interpret the internal file system within the volume.",
+            )
+            .arg("--input", "Path to the input fvm to extract.")
+            .arg("--output", "Path to the output directory")
+            .build()
+    }
+
+    fn hints(&self) -> Vec<(String, HintDataType)> {
+        vec![
+            ("--input".to_string(), HintDataType::NoType),
+            ("--output".to_string(), HintDataType::NoType),
+        ]
+    }
+
+    /// FvmExtract is only available to the local shell as it directly
+    /// modifies files on disk.
+    fn connection_mode(&self) -> ConnectionMode {
+        ConnectionMode::Local
+    }
+}
+
 plugin!(
     ToolkitPlugin,
     PluginHooks::new(
         collectors! {},
         controllers! {
+            "/tool/fvm/extract" => FvmExtractController::default(),
             "/tool/package/extract" => PackageExtractController::default(),
             "/tool/zbi/extract" => ZbiExtractController::default(),
         }
@@ -258,6 +366,25 @@ mod tests {
         };
         let query = serde_json::to_value(request).unwrap();
         let response = package_controller.query(model, query);
+        assert_eq!(response.is_ok(), false);
+    }
+
+    #[test]
+    fn test_fvm_extractor_empty_fvm() {
+        let store_dir = tempdir().unwrap();
+        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
+        let model = Arc::new(DataModel::connect(uri).unwrap());
+        let fvm_controller = FvmExtractController::default();
+        let input_dir = tempdir().unwrap();
+        let input_path = input_dir.path().join("empty-fvm");
+        let output_dir = tempdir().unwrap();
+        let output_path = output_dir.path();
+        let request = FvmExtractRequest {
+            input: input_path.to_str().unwrap().to_string(),
+            output: output_path.to_str().unwrap().to_string(),
+        };
+        let query = serde_json::to_value(request).unwrap();
+        let response = fvm_controller.query(model, query);
         assert_eq!(response.is_ok(), false);
     }
 }

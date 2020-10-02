@@ -4,6 +4,7 @@
 
 pub mod bootfs;
 pub mod env;
+pub mod fvm;
 pub mod usage;
 pub mod zbi;
 pub mod zstd;

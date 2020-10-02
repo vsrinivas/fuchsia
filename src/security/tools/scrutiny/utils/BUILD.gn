@@ -16,6 +16,7 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:byteorder",
+      "//third_party/rust_crates:hex",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde",
@@ -27,6 +28,7 @@ if (!is_fuchsia) {
     sources = [
       "src/bootfs.rs",
       "src/env.rs",
+      "src/fvm.rs",
       "src/lib.rs",
       "src/usage.rs",
       "src/zbi.rs",
