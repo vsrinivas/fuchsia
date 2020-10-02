@@ -1,0 +1,17 @@
+{
+    children: [
+        {
+            name: "echo_server",
+
+            // This will be resolved by appmgr loader
+            url: "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/echo_server.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+}

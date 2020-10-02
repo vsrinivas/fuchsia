@@ -250,6 +250,7 @@ impl RoutingTest {
             .set_args(args)
             .set_runtime_config(config)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
+            .unwrap()
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());
         for (name, runner) in builder.builtin_runners {
             env_builder = env_builder.add_runner(name, runner);

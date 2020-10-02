@@ -55,6 +55,30 @@ pub struct RuntimeConfig {
 
     /// The list of capabilities offered from component manager's namespace.
     pub namespace_capabilities: Vec<cm_rust::CapabilityDecl>,
+
+    /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
+    pub builtin_pkg_resolver: BuiltinPkgResolver,
+}
+#[derive(Debug, PartialEq, Eq, Clone)]
+/// Which builtin resolver to use, if any. Default value is `None`.
+pub enum BuiltinPkgResolver {
+    /// No builtin package resolver is used. This is likely the right choice for an environment
+    /// which lacks a pkgfs.
+    None,
+
+    /// Serve the base package set using a resolver backed by pkgfs. This is the most common option
+    /// and the one that products which include pkgfs probably want.
+    PkgfsBase,
+
+    /// Try to use the `fuchsia.sys.Loader` protocol from the namespace, typically this is provided
+    /// by `appmgr`. Test scenarios commonly use this option.
+    AppmgrBridge,
+}
+
+impl Default for BuiltinPkgResolver {
+    fn default() -> Self {
+        BuiltinPkgResolver::None
+    }
 }
 
 /// Runtime security policy.
@@ -95,6 +119,7 @@ impl Default for RuntimeConfig {
             maintain_utc_clock: false,
             num_threads: 1,
             namespace_capabilities: vec![],
+            builtin_pkg_resolver: Default::default(),
         }
     }
 }
@@ -146,6 +171,27 @@ fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
     }
 }
 
+impl From<&component_internal::BuiltinPkgResolver> for BuiltinPkgResolver {
+    fn from(input: &component_internal::BuiltinPkgResolver) -> Self {
+        match input {
+            component_internal::BuiltinPkgResolver::None => BuiltinPkgResolver::None,
+            component_internal::BuiltinPkgResolver::PkgfsBase => BuiltinPkgResolver::PkgfsBase,
+            component_internal::BuiltinPkgResolver::AppmgrBridge => {
+                BuiltinPkgResolver::AppmgrBridge
+            }
+        }
+    }
+}
+
+impl From<Option<&component_internal::BuiltinPkgResolver>> for BuiltinPkgResolver {
+    fn from(input: Option<&component_internal::BuiltinPkgResolver>) -> Self {
+        match input {
+            None => BuiltinPkgResolver::default(),
+            Some(i) => i.into(),
+        }
+    }
+}
+
 impl TryFrom<component_internal::Config> for RuntimeConfig {
     type Error = Error;
 
@@ -179,6 +225,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 .unwrap_or(default.use_builtin_process_launcher),
             maintain_utc_clock: config.maintain_utc_clock.unwrap_or(default.maintain_utc_clock),
             num_threads,
+            builtin_pkg_resolver: config.builtin_pkg_resolver.as_ref().into(),
         })
     }
 }
@@ -274,6 +321,7 @@ mod tests {
             list_children_batch_size: None,
             maintain_utc_clock: None,
             use_builtin_process_launcher: None,
+            builtin_pkg_resolver: None,
             security_policy: Some(component_internal::SecurityPolicy {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
                     main_process_critical: None,
@@ -296,11 +344,13 @@ mod tests {
             use_builtin_process_launcher: None,
             num_threads: None,
             namespace_capabilities: None,
+            builtin_pkg_resolver: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
             list_children_batch_size: Some(5),
             maintain_utc_clock: Some(false),
+            builtin_pkg_resolver: None,
             use_builtin_process_launcher: Some(true),
             security_policy: Some(component_internal::SecurityPolicy {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
@@ -314,6 +364,7 @@ mod tests {
             debug:false, list_children_batch_size: 5,
             maintain_utc_clock: false, use_builtin_process_launcher:true,
             num_threads: 10,
+            builtin_pkg_resolver: BuiltinPkgResolver::None,
             ..Default::default() }),
         all_fields_some => (
             component_internal::Config {
@@ -321,6 +372,7 @@ mod tests {
                 list_children_batch_size: Some(42),
                 maintain_utc_clock: Some(true),
                 use_builtin_process_launcher: Some(false),
+                builtin_pkg_resolver: Some(component_internal::BuiltinPkgResolver::None),
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/something/important".to_string()]),
@@ -368,6 +420,7 @@ mod tests {
                         rights: fio2::Operations::Connect,
                     }),
                 ],
+                builtin_pkg_resolver: BuiltinPkgResolver::None,
             }
         ),
     }
@@ -421,6 +474,7 @@ mod tests {
             maintain_utc_clock: None,
             use_builtin_process_launcher: None,
             num_threads: None,
+            builtin_pkg_resolver: None,
         };
         install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 

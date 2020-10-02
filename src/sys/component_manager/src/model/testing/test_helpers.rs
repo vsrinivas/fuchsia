@@ -675,6 +675,7 @@ pub async fn new_test_model(
         BuiltinEnvironmentBuilder::new()
             .set_args(args)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
+            .unwrap()
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
             .set_runtime_config(runtime_config)
             .build()

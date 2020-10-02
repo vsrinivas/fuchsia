@@ -1,4 +1,5 @@
 {
   debug: true,
   maintain_utc_clock: true,
+  builtin_pkg_resolver: "appmgr_bridge",
 }

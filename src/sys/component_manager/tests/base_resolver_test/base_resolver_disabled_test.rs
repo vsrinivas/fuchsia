@@ -1,15 +1,19 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    fuchsia_component::client::*,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
 };
 
 #[fasync::run_singlethreaded(test)]
-async fn base_resolver_test() {
+/// This uses the root_component.rs implementation to make the test package's
+/// contents appear at /pkgfs. This allows component manager's built-in base
+/// package resolver to see the contents of the package. HOWEVER, the component
+/// manager configuration here sets the built-in resolver to 'None', meaning we
+/// expect the attempt to start `echo_server` to not resolve.
+async fn base_resolver_disabled_test() {
     // Obtain access to this component's pkg directory
     let pkg_proxy = io_util::open_directory_in_namespace(
         "/pkg",
@@ -18,12 +22,10 @@ async fn base_resolver_test() {
     .unwrap();
     let pkg_channel = pkg_proxy.into_channel().unwrap().into_zx_channel();
 
-    // A custom OpaqueTest is required because
-    // 1. the /pkg dir of this component has to be passed in to component manager as /boot
-    // 2. the component manager needs a manifest without fuchsia.sys.Loader
+    // Create an OpaqueTest which has the builtin resolver disabled.
     let test = OpaqueTestBuilder::new("fuchsia-boot:///#meta/root.cm")
-        .component_manager_url("fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx")
-        .config("/pkg/data/component_manager_config")
+        .component_manager_url("fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_disabled_resolver.cmx")
+        .config("/pkg/data/component_manager_config_resolver_disabled")
         .add_dir_handle("/boot", pkg_channel.into())
         .build().await.unwrap();
 
@@ -39,19 +41,10 @@ async fn base_resolver_test() {
     let event = EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     event.resume().await.unwrap();
 
-    // Expect the echo_server component to be bound to
-    let event = EventMatcher::ok()
+    // // Expect start failure for echo_server because we shouldn't resolve the component
+    let event = EventMatcher::err()
         .moniker("./echo_server:0")
         .expect_match::<Started>(&mut event_stream)
         .await;
     event.resume().await.unwrap();
-
-    // Connect to the echo service
-    let path_to_service_dir =
-        test.get_component_manager_path().join("out/hub/children/echo_server/exec/out/svc");
-    let path_to_service_dir = path_to_service_dir.to_str().expect("unexpected chars");
-    let echo_proxy = connect_to_service_at::<fidl_echo::EchoMarker>(path_to_service_dir).unwrap();
-
-    // Test the echo service
-    assert_eq!(Some("hippos!".to_string()), echo_proxy.echo_string(Some("hippos!")).await.unwrap());
 }

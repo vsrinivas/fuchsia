@@ -45,4 +45,5 @@
             rights: [ "r*" ],
         },
     ],
+    builtin_pkg_resolver: "appmgr_bridge",
 }

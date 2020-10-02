@@ -91,7 +91,7 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
         .create_and_start_utc_clock()
         .await?
         .add_elf_runner()?
-        .add_available_resolvers_from_namespace()?;
+        .include_namespace_resolvers();
 
     let builtin_environment = builtin_environment_builder.build().await?;
     builtin_environment.bind_service_fs_to_out().await?;

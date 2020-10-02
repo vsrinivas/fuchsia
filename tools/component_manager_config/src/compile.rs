@@ -28,6 +28,21 @@ struct Config {
     use_builtin_process_launcher: Option<bool>,
     maintain_utc_clock: Option<bool>,
     num_threads: Option<u32>,
+    builtin_pkg_resolver: Option<BuiltinPkgResolver>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+enum BuiltinPkgResolver {
+    None,
+    AppmgrBridge,
+    PkgfsBase,
+}
+
+impl std::default::Default for BuiltinPkgResolver {
+    fn default() -> Self {
+        BuiltinPkgResolver::None
+    }
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -62,6 +77,18 @@ impl TryFrom<Config> for component_internal::Config {
             maintain_utc_clock: config.maintain_utc_clock,
             list_children_batch_size: config.list_children_batch_size,
             security_policy: Some(translate_security_policy(config.security_policy)),
+            builtin_pkg_resolver: match config.builtin_pkg_resolver {
+                Some(BuiltinPkgResolver::None) => {
+                    Some(component_internal::BuiltinPkgResolver::None)
+                }
+                Some(BuiltinPkgResolver::AppmgrBridge) => {
+                    Some(component_internal::BuiltinPkgResolver::AppmgrBridge)
+                }
+                Some(BuiltinPkgResolver::PkgfsBase) => {
+                    Some(component_internal::BuiltinPkgResolver::PkgfsBase)
+                }
+                None => None,
+            },
             namespace_capabilities: config
                 .namespace_capabilities
                 .as_ref()
@@ -134,6 +161,7 @@ impl Config {
         extend_if_unset!(self, another, security_policy);
         extend_if_unset!(self, another, namespace_capabilities);
         extend_if_unset!(self, another, num_threads);
+        extend_if_unset!(self, another, builtin_pkg_resolver);
         Ok(self)
     }
 
@@ -231,6 +259,7 @@ mod tests {
             list_children_batch_size: 123,
             maintain_utc_clock: false,
             use_builtin_process_launcher: true,
+            builtin_pkg_resolver: "pkgfs_base",
             security_policy: {
                 job_policy: {
                     main_process_critical: [ "/", "/bar" ],
@@ -257,6 +286,7 @@ mod tests {
                 maintain_utc_clock: Some(false),
                 use_builtin_process_launcher: Some(true),
                 list_children_batch_size: Some(123),
+                builtin_pkg_resolver: Some(component_internal::BuiltinPkgResolver::PkgfsBase),
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/".to_string(), "/bar".to_string()]),

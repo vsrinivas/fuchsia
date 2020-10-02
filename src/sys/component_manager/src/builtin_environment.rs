@@ -18,7 +18,7 @@ use {
             vmex::VmexService,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
-        config::RuntimeConfig,
+        config::{BuiltinPkgResolver, RuntimeConfig},
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
         fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
@@ -37,7 +37,7 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
-            resolver::{Resolver, ResolverRegistry},
+            resolver::{Resolver, ResolverError, ResolverRegistry},
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
         startup::Arguments,
@@ -56,7 +56,7 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
-    log::info,
+    log::{info, warn},
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -73,10 +73,8 @@ pub struct BuiltinEnvironmentBuilder {
     runtime_config: Option<RuntimeConfig>,
     runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
     resolvers: ResolverRegistry,
-    // This is used to initialize fuchsia_base_pkg_resolver's Model reference. Resolvers must
-    // be created to construct the Model.
-    model_for_resolver: Option<oneshot::Sender<Weak<Model>>>,
     utc_clock: Option<Arc<Clock>>,
+    add_environment_resolvers: bool,
 }
 
 impl BuiltinEnvironmentBuilder {
@@ -163,57 +161,33 @@ impl BuiltinEnvironmentBuilder {
         mut self,
         scheme: String,
         resolver: Box<dyn Resolver + Send + Sync + 'static>,
-    ) -> Self {
-        self.resolvers.register(scheme, resolver);
-        self
+    ) -> Result<Self, ResolverError> {
+        self.resolvers.register(scheme, resolver)?;
+        Ok(self)
     }
 
-    /// Adds standard resolvers whose dependencies are available in the process's namespace. This
-    /// includes:
+    /// Adds standard resolvers whose dependencies are available in the process's namespace and for
+    /// whose scheme no resolver is registered through `add_resolver` by the time `build()` is
+    /// is called. This includes:
     ///   - A fuchsia-boot resolver if /boot is available.
     ///   - One of two different fuchsia-pkg resolver implementations, either:
     ///       - If /svc/fuchsia.sys.Loader is present, then an implementation that proxies to that
     ///         protocol (which is the v1 resolver equivalent). This is used for tests or other
     ///         scenarios where component_manager runs as a v1 component.
     ///       - Otherwise, an implementation that resolves packages from a /pkgfs directory
-    ///         capability if one is exposed from the root component. (See fuchsia_base_pkg_resolver
-    ///         for more details.)
+    ///         capability if one is exposed from the root component.
+    ///         (See fuchsia_base_pkg_resolver for more details.)
     ///
-    /// TODO(fxbug.dev/46491): fuchsia_base_pkg_resolver should be replaced with a resolver provided by
-    /// the topology.
-    pub fn add_available_resolvers_from_namespace(mut self) -> Result<Self, Error> {
-        // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
-        let boot_resolver = fuchsia_boot_resolver::FuchsiaBootResolver::new()
-            .context("Failed to create boot resolver")?;
-        match boot_resolver {
-            None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
-            Some(r) => {
-                self.resolvers.register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(r));
-            }
-        };
-
-        if let Some(loader) = Self::connect_sys_loader()? {
-            self.resolvers.register(
-                fuchsia_pkg_resolver::SCHEME.to_string(),
-                Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
-            );
-        } else {
-            // There's a circular dependency here. The model needs the resolver register to be
-            // created, but fuchsia_base_pkg_resolver needs a reference to model so it can bind to
-            // the pkgfs directory. We use a futures::oneshot::channel to send the Model to the
-            // resolver once it has been created.
-            let (sender, receiver) = oneshot::channel();
-            self.resolvers.register(
-                fuchsia_base_pkg_resolver::SCHEME.to_string(),
-                Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(receiver)),
-            );
-            self.model_for_resolver = Some(sender);
-        }
-        Ok(self)
+    /// TODO(fxbug.dev/46491): fuchsia_base_pkg_resolver should be replaced with a resolver provided
+    /// by the topology.
+    pub fn include_namespace_resolvers(mut self) -> Self {
+        self.add_environment_resolvers = true;
+        self
     }
 
-    pub async fn build(self) -> Result<BuiltinEnvironment, Error> {
+    pub async fn build(mut self) -> Result<BuiltinEnvironment, Error> {
         let args = self.args.unwrap_or_default();
+
         let runtime_config = self
             .runtime_config
             .ok_or(format_err!("Runtime config is required for BuiltinEnvironment."))?;
@@ -232,6 +206,12 @@ impl BuiltinEnvironmentBuilder {
             })
             .collect();
 
+        let sender = if self.add_environment_resolvers {
+            Self::insert_namespace_resolvers(&mut self.resolvers, &runtime_config)?
+        } else {
+            None
+        };
+
         let params = ModelParams {
             root_component_url: args.root_component_url.clone(),
             root_environment: Environment::new_root(
@@ -244,7 +224,7 @@ impl BuiltinEnvironmentBuilder {
 
         // If we previously created a resolver that requires the Model (in
         // add_available_resolvers_from_namespace), send the just-created model to it.
-        if let Some(sender) = self.model_for_resolver {
+        if let Some(sender) = sender {
             // This only fails if the receiver has been dropped already which shouldn't happen.
             sender
                 .send(Arc::downgrade(&model))
@@ -276,6 +256,76 @@ impl BuiltinEnvironmentBuilder {
         let loader = client::connect_to_service::<LoaderMarker>()
             .context("error connecting to system loader")?;
         return Ok(Some(loader));
+    }
+
+    /// Adds the namespace resolvers according to the policy in the RuntimeConfig.
+    fn insert_namespace_resolvers(
+        resolvers: &mut ResolverRegistry,
+        runtime_config: &RuntimeConfig,
+    ) -> Result<Option<oneshot::Sender<Weak<Model>>>, Error> {
+        // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
+        let boot_resolver = fuchsia_boot_resolver::FuchsiaBootResolver::new()
+            .context("Failed to create boot resolver")?;
+        match boot_resolver {
+            None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
+            Some(r) => {
+                resolvers.register(
+                    fuchsia_boot_resolver::SCHEME.to_string(),
+                    Box::new(r)).unwrap_or_else(|_| {
+                        info!(
+                            "failed to register `{}` resolver from environment, a custom resolver is registered.",
+                            fuchsia_boot_resolver::SCHEME.to_string()
+                        );
+                    });
+            }
+        };
+
+        if let Some(loader) = Self::connect_sys_loader()? {
+            match &runtime_config.builtin_pkg_resolver {
+                BuiltinPkgResolver::None | BuiltinPkgResolver::PkgfsBase => {
+                    warn!("Appmgr bridge package resolver is available, but not enabled, verify configuration correctness");
+                }
+                BuiltinPkgResolver::AppmgrBridge => {
+                    resolvers
+                        .register(
+                            fuchsia_pkg_resolver::SCHEME.to_string(),
+                            Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
+                        )
+                        .unwrap_or_else(|_| {
+                            info!(
+                                "A resolver for {} is already registered, it will be used instead",
+                                fuchsia_pkg_resolver::SCHEME.to_string()
+                            );
+                        });
+                    return Ok(None);
+                }
+            }
+        }
+
+        match &runtime_config.builtin_pkg_resolver {
+            BuiltinPkgResolver::PkgfsBase => {
+                // There's a circular dependency here. The model needs the resolver register to be
+                // created, but fuchsia_base_pkg_resolver needs a reference to model so it can bind to
+                // the pkgfs directory. We use a futures::oneshot::channel to send the Model to the
+                // resolver once it has been created.
+                let (sender, receiver) = oneshot::channel();
+                resolvers
+                    .register(
+                        fuchsia_base_pkg_resolver::SCHEME.to_string(),
+                        Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(receiver)),
+                    )
+                    .unwrap_or_else(|_| {
+                        info!(
+                            "A resolver for {} is already registered, it will be used instead",
+                            fuchsia_base_pkg_resolver::SCHEME.to_string()
+                        );
+                    });
+                return Ok(Some(sender));
+            }
+            _ => {}
+        }
+
+        Ok(None)
     }
 }
 

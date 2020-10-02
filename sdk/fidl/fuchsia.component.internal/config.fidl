@@ -48,6 +48,24 @@ table Config {
     /// The number of threads to use for running component_manager's executor.
     /// Value defaults to 1.
     7: uint32 num_threads;
+
+    /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
+    8: BuiltinPkgResolver builtin_pkg_resolver;
+};
+
+/// The builtin resolver to use, if any.
+enum BuiltinPkgResolver : uint8 {
+    /// No builtin package resolver is used. This is likely the right choice for an environment
+    /// which lacks a pkgfs.
+    NONE = 1;
+
+    /// Serve the base package set using a resolver backed by pkgfs. This is the most common option
+    /// and the one that products which include pkgfs probably want.
+    PKGFS_BASE = 2;
+
+    /// Try to use the `fuchsia.sys.Loader` protocol from the namespace, typically this is provided
+    /// by `appmgr`. Test scenarios commonly use this option.
+    APPMGR_BRIDGE = 3;
 };
 
 /// Runtime security policy.

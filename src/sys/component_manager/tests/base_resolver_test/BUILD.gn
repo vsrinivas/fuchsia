@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
@@ -22,6 +23,42 @@ rustc_test("base_resolver_test_bin") {
   ]
 
   sources = [ "base_resolver_test.rs" ]
+}
+
+rustc_test("base_resolver_disabled_test_bin") {
+  name = "base_resolver_disabled_test"
+  edition = "2018"
+  source_root = "base_resolver_disabled_test.rs"
+
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "base_resolver_disabled_test.rs" ]
+}
+
+rustc_test("base_resolver_appmgr_loader_test_bin") {
+  name = "base_resolver_appmgr_loader_test"
+  edition = "2018"
+  source_root = "base_resolver_appmgr_loader_test.rs"
+
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "base_resolver_appmgr_loader_test.rs" ]
 }
 
 rustc_binary("root_component_bin") {
@@ -45,19 +82,43 @@ rustc_binary("root_component_bin") {
   sources = [ "root_component.rs" ]
 }
 
+component_config("component_manager_base_resolver_test_config") {
+  sources = [ "cm_config.json" ]
+}
+
+component_config("component_manager_base_resolver_disabled_test_config") {
+  sources = [ "cm_config_disabled_resolver.json" ]
+}
+
+component_config("component_manager_base_appmgr_loader_test_config") {
+  sources = [ "cm_config_appmgr_loader.json" ]
+}
+
 test_package("base_resolver_test") {
   deps = [
+    ":base_resolver_appmgr_loader_test_bin",
+    ":base_resolver_disabled_test_bin",
     ":base_resolver_test_bin",
+    ":component_manager_base_appmgr_loader_test_config",
+    ":component_manager_base_resolver_disabled_test_config",
+    ":component_manager_base_resolver_test_config",
     ":root_component_bin",
     "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
     "//src/sys/component_manager:bin",
-    "//src/sys/component_manager:component_manager_test_config",
   ]
 
   resources = [
     {
-      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
+      path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_resolver_test_config"
       dest = "component_manager_config"
+    },
+    {
+      path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_resolver_disabled_test_config"
+      dest = "component_manager_config_resolver_disabled"
+    },
+    {
+      path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_appmgr_loader_test_config"
+      dest = "component_manager_config_appmgr_loader"
     },
   ]
 
@@ -80,6 +141,14 @@ test_package("base_resolver_test") {
       dest = "component_manager_without_loader.cmx"
     },
     {
+      path = rebase_path("meta/component_manager_disabled_resolver.cmx")
+      dest = "component_manager_disabled_resolver.cmx"
+    },
+    {
+      path = rebase_path("meta/component_manager_appmgr_loader.cmx")
+      dest = "component_manager_appmgr_loader.cmx"
+    },
+    {
       path = rebase_path("meta/root.cml")
       dest = "root.cm"
     },
@@ -88,15 +157,20 @@ test_package("base_resolver_test") {
       dest = "echo_server.cm"
     },
     {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
+      path = rebase_path("meta/simple_root.cml")
+      dest = "simple_root.cm"
     },
   ]
 
   tests = [
     {
       name = "base_resolver_test"
+    },
+    {
+      name = "base_resolver_disabled_test"
+    },
+    {
+      name = "base_resolver_appmgr_loader_test"
     },
   ]
 }

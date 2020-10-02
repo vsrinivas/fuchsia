@@ -6,5 +6,6 @@
                 "/policy_allowed",
             ],
         }
-    }
+    },
+    builtin_pkg_resolver: "appmgr_bridge",
 }

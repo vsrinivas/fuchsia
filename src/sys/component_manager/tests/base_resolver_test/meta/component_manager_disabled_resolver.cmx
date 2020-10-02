@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/component_manager",
+        "args": [
+            "--config",
+            "/pkg/data/component_manager_config_resolver_disabled"
+        ]
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

@@ -301,7 +301,7 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver));
+            registry.register("test".to_string(), Box::new(resolver)).unwrap();
             registry
         };
 
@@ -363,7 +363,7 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver));
+            registry.register("test".to_string(), Box::new(resolver)).unwrap();
             registry
         };
 
@@ -429,7 +429,7 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver));
+            registry.register("test".to_string(), Box::new(resolver)).unwrap();
             registry
         };
 
@@ -493,7 +493,7 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let resolvers = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver));
+            registry.register("test".to_string(), Box::new(resolver)).unwrap();
             registry
         };
 
@@ -544,7 +544,7 @@ mod tests {
         resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
         let registry = {
             let mut registry = ResolverRegistry::new();
-            registry.register("test".to_string(), Box::new(resolver));
+            registry.register("test".to_string(), Box::new(resolver)).unwrap();
             registry
         };
         let model = Arc::new(Model::new(ModelParams {

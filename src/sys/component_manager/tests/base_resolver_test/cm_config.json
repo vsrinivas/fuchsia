@@ -1,6 +1,6 @@
 {
-  "debug": false,
+  "debug": true,
   "maintain_utc_clock": false,
   "use_builtin_process_launcher": false,
-  "builtin_pkg_resolver": "appmgr_bridge",
+  "builtin_pkg_resolver": "pkgfs_base",
 }

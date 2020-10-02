@@ -68,7 +68,7 @@ async fn run_root(args: startup::Arguments) -> Result<(), Error> {
         .populate_config_from_args()
         .await?
         .add_elf_runner()?
-        .add_available_resolvers_from_namespace()?
+        .include_namespace_resolvers()
         .build()
         .await?;
     let hub_proxy = builtin_environment.bind_service_fs_for_hub().await?;
