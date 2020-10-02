@@ -17,6 +17,8 @@ void main() {
   sl4f.Sl4f sl4fDriver;
   sl4f.Inspect inspect;
 
+  tearDownAll(printErrorHelp);
+
   group('archivist pipeline metrics', () {
     setUp(() async {
       sl4fDriver = sl4f.Sl4f.fromEnvironment();
@@ -34,7 +36,7 @@ void main() {
           multiValue(isNotNull, length: greaterThan(0)));
     });
 
-    test('appmgr exposes metrics for "feedback" pipeline', () async {
+    test('archivist exposes metrics for "feedback" pipeline', () async {
       expect(await getInspectValues(inspect, feedbackNode),
           multiValue(isNotNull, length: greaterThan(0)));
     });

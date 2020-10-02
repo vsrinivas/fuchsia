@@ -22,6 +22,8 @@ void main() {
     sl4fDriver.close();
   });
 
+  tearDownAll(printErrorHelp);
+
   test('inspect metrics tests inspection nodes written by metrics', () async {
     // The test will read each of the node for disk usages
     // fx set ... --release --with=//src/tests/end_to_end/inspect_metrics:test --with garnet/bin/sl4f:bin

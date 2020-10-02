@@ -28,6 +28,8 @@ void main() {
       sl4fDriver.close();
     });
 
+    tearDownAll(printErrorHelp);
+
     test('appmgr exposes cpu metrics for itself', () async {
       expect(
           await getInspectValues(inspect, '$appmgrPath/*/@samples/*:cpu_time'),

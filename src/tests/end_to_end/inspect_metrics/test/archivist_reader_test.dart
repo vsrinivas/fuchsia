@@ -29,6 +29,8 @@ void main() {
     sl4fDriver.close();
   });
 
+  tearDownAll(printErrorHelp);
+
   test('archivist can read both v1 and v2 component data', () async {
     expect(await getInspectValues(inspect, '$fshostPath/data/cache:size'),
         singleValue(greaterThan(0)));

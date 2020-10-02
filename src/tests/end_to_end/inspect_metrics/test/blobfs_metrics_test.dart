@@ -35,6 +35,8 @@ void main() {
     sl4fDriver.close();
   });
 
+  tearDownAll(printErrorHelp);
+
   test('BlobFS exposes lookup statistics', () async {
     expect(
         await getInspectValues(

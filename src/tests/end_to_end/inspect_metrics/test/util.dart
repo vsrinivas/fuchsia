@@ -66,3 +66,9 @@ dynamic multiValue(dynamic matcher, {dynamic length}) {
   return allOf(
       isNotNull, hasLength(length ?? greaterThan(1)), everyElement(matcher));
 }
+
+void printErrorHelp() {
+  print('If this test fails, see '
+      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/inspect_metrics/README.md'
+      ' for details!');
+}
