@@ -102,6 +102,11 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
     }
   }
 
+  bool CompositeGetFragment(const char* name, zx_device_t** out) {
+    *out = parent_;
+    return true;
+  }
+
  private:
   static constexpr size_t kNumFragments = 2;
 

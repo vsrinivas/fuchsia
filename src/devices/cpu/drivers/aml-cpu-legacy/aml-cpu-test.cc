@@ -86,6 +86,11 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
     }
   }
 
+  bool CompositeGetFragment(const char* name, zx_device_t** out) {
+    *out = parent_;
+    return true;
+  }
+
  private:
   // AmlCpu expects two fragments -- pdev and the thermal device.
   static constexpr size_t kNumFragments = 2;

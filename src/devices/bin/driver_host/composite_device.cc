@@ -50,6 +50,16 @@ class CompositeDeviceInstance {
     *comp_actual = actual;
   }
 
+  bool GetFragment(const char* name, zx_device_t** out) {
+    for (auto& fragment : fragments_) {
+      if (strncmp(name, fragment.name.c_str(), 32) == 0) {
+        *out = fragment.device.get();
+        return true;
+      }
+    }
+    return false;
+  }
+
   void Release() { delete this; }
 
   void Unbind() {
@@ -108,6 +118,9 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
                                size_t* comp_actual) {
       static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentsNew(comp_list, comp_count,
                                                                   comp_actual);
+    };
+    ops.get_fragment = [](void* ctx, const char* name, zx_device_t** out) -> bool {
+      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragment(name, out);
     };
     return ops;
   }();
