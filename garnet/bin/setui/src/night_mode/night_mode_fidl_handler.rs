@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::fidl_process;
-use crate::fidl_processor::RequestContext;
+use crate::fidl_processor::settings::RequestContext;
 use futures::FutureExt;
 
 use futures::future::LocalBoxFuture;

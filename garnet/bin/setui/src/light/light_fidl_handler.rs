@@ -14,7 +14,7 @@ use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
 use crate::fidl_process_full;
-use crate::fidl_processor::RequestContext;
+use crate::fidl_processor::settings::RequestContext;
 use crate::light::light_controller::ARG_NAME;
 use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};

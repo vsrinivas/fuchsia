@@ -21,7 +21,7 @@ macro_rules! fidl_process_full {
             paste::paste!{use fidl_fuchsia_settings::{[<$interface Marker>], [<$interface RequestStream>]};}
             use super::*;
             use fuchsia_async as fasync;
-            use crate::fidl_processor::{FidlProcessor};
+            use crate::fidl_processor::processor::SettingsFidlProcessor;
             use crate::internal::switchboard;
             use crate::message::base::MessengerType;
 
@@ -34,7 +34,7 @@ macro_rules! fidl_process_full {
                         return
                     };
 
-                    let mut processor = FidlProcessor::<paste::paste!{[<$interface Marker>]}>::new(stream, messenger).await;
+                    let mut processor = SettingsFidlProcessor::<paste::paste!{[<$interface Marker>]}>::new(stream, messenger).await;
                         $(processor
                             .register::<$fidl_settings, $fidl_responder, $change_func_key>(
                                 $setting_type,

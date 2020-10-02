@@ -5,7 +5,7 @@
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 
-use crate::fidl_processor::RequestContext;
+use crate::fidl_processor::settings::RequestContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
 };

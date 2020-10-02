@@ -10,7 +10,7 @@ use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
-use crate::fidl_processor::RequestContext;
+use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;

@@ -34,5 +34,8 @@ pub mod response {
     pub enum Error {
         #[error("Unexpected error")]
         Unexpected,
+
+        #[error("Communication error")]
+        CommunicationError,
     }
 }

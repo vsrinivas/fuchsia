@@ -4,7 +4,7 @@
 use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
-    crate::fidl_processor::RequestContext,
+    crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
         AudioSettingSource, AudioStream, AudioStreamType, SettingRequest, SettingResponse,
