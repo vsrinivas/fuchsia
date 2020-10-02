@@ -298,7 +298,7 @@ impl Associating {
                     &elements[..],
                 );
                 let (ap_ht_op, ap_vht_op) = extract_ht_vht_op(elements);
-                let controlled_port_open = !sta.sta.is_rsn;
+                let controlled_port_open = !sta.sta.eapol_required;
                 if controlled_port_open {
                     if let Err(e) = sta.ctx.device.set_eth_link_up() {
                         error!("Cannot set ethernet to UP. Status: {}", e);
@@ -633,7 +633,7 @@ impl Associated {
         sta.send_data_frame(
             hdr.sa,
             hdr.da,
-            sta.sta.is_rsn,
+            sta.sta.eapol_required,
             self.0.qos.is_enabled(),
             hdr.ether_type.to_native(),
             &body,
@@ -677,18 +677,18 @@ impl Associated {
 
     fn on_sme_eapol(&self, sta: &mut BoundClient<'_>, req: fidl_mlme::EapolRequest) {
         // Drop EAPoL frame if it is not a protected network.
-        if !sta.sta.is_rsn {
+        if !sta.sta.eapol_required {
             error!("Unexpected MLME-EAPOL.request message: BSS not protected");
             return;
         }
         // There may be more EAPoL frames (such as key rotation) coming after EAPoL established.
         // They need to be protected.
-        let protected = sta.sta.is_rsn && self.0.controlled_port_open;
+        let protected = sta.sta.eapol_required && self.0.controlled_port_open;
         sta.send_eapol_frame(req.src_addr, req.dst_addr, protected, &req.data);
     }
 
     fn on_sme_set_keys(&self, sta: &BoundClient<'_>, req: fidl_mlme::SetKeysRequest) {
-        if !sta.sta.is_rsn {
+        if !sta.sta.eapol_required {
             error!("Unexpected MLME-SetKeys.request message: BSS not protected");
             return;
         }
@@ -704,7 +704,7 @@ impl Associated {
         sta: &BoundClient<'_>,
         req: fidl_mlme::SetControlledPortRequest,
     ) {
-        if !sta.sta.is_rsn {
+        if !sta.sta.eapol_required {
             error!("Unexpected MLME-SetControlledPort.request message: BSS not protected.");
             return;
         }

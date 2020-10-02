@@ -339,7 +339,7 @@ pub struct Client {
     pub bssid: Bssid,
     pub iface_mac: MacAddr,
     beacon_period: u16,
-    pub is_rsn: bool,
+    pub eapol_required: bool,
 }
 
 impl Client {
@@ -348,7 +348,7 @@ impl Client {
         bssid: Bssid,
         iface_mac: MacAddr,
         beacon_period: u16,
-        is_rsn: bool,
+        eapol_required: bool,
     ) -> Self {
         Self {
             state: Some(States::new_initial()),
@@ -356,7 +356,7 @@ impl Client {
             bssid,
             iface_mac,
             beacon_period,
-            is_rsn,
+            eapol_required,
         }
     }
 
@@ -1205,7 +1205,7 @@ mod tests {
 
         #[allow(deprecated)] // MlmeRequestMessage is deprecated
         fn close_controlled_port(&mut self) {
-            self.sta.is_rsn = true;
+            self.sta.eapol_required = true;
             self.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort {
                 req: fidl_mlme::SetControlledPortRequest {
                     peer_sta_address: BSSID.0,
@@ -1237,7 +1237,7 @@ mod tests {
     }
 
     #[test]
-    fn rsn_ie_implies_sta_is_rsn() {
+    fn rsn_ie_implies_sta_eapol_required() {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
@@ -1256,11 +1256,11 @@ mod tests {
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
-        assert!(client.sta.is_rsn);
+        assert!(client.sta.eapol_required);
     }
 
     #[test]
-    fn wpa_ie_implies_sta_is_rsn() {
+    fn wpa_ie_implies_sta_eapol_required() {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
@@ -1280,11 +1280,11 @@ mod tests {
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
-        assert!(client.sta.is_rsn);
+        assert!(client.sta.eapol_required);
     }
 
     #[test]
-    fn no_wpa_or_rsn_ie_implies_sta_is_not_rsn() {
+    fn no_wpa_or_rsn_ie_implies_sta_eapol_not_required() {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
@@ -1302,7 +1302,7 @@ mod tests {
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
-        assert!(!client.sta.is_rsn);
+        assert!(!client.sta.eapol_required);
     }
 
     #[test]
