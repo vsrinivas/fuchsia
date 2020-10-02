@@ -4,9 +4,6 @@
 
 // Tests that the archivist read data from both v1 and v2 components.
 
-// This is an E2E test that often needs extra time to complete.
-@Timeout(Duration(minutes: 10))
-
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
@@ -31,36 +28,38 @@ void main() {
 
   tearDownAll(printErrorHelp);
 
-  test('archivist can read both v1 and v2 component data', () async {
-    expect(await getInspectValues(inspect, '$fshostPath/data/cache:size'),
-        singleValue(greaterThan(0)));
-    expect(await getInspectValues(inspect, '$fshostPath/stats:used_bytes'),
-        singleValue(greaterThan(0)));
-    // Note: when memory monitor becomes a v2 component, pick a v1 component
-    // that starts early on.
-    expect(
-        await getInspectValues(inspect, '$memoryMonitorPath:current_digest'),
-        allOf(
-            isNotNull,
-            contains(allOf([
-              contains('Archivist'),
-              contains('Audio'),
-              contains('Kernel'),
-              contains('Free'),
-              contains('Minfs'),
-              contains('Pkgfs'),
-              contains('Graphics'),
-              contains('Flutter')
-            ]))));
-  });
+  withLongTimeout(() {
+    test('archivist can read both v1 and v2 component data', () async {
+      expect(await getInspectValues(inspect, '$fshostPath/data/cache:size'),
+          singleValue(greaterThan(0)));
+      expect(await getInspectValues(inspect, '$fshostPath/stats:used_bytes'),
+          singleValue(greaterThan(0)));
+      // Note: when memory monitor becomes a v2 component, pick a v1 component
+      // that starts early on.
+      expect(
+          await getInspectValues(inspect, '$memoryMonitorPath:current_digest'),
+          allOf(
+              isNotNull,
+              contains(allOf([
+                contains('Archivist'),
+                contains('Audio'),
+                contains('Kernel'),
+                contains('Free'),
+                contains('Minfs'),
+                contains('Pkgfs'),
+                contains('Graphics'),
+                contains('Flutter')
+              ]))));
+    });
 
-  test('read from the feedback accessor', () async {
-    expect(
-        await getInspectValues(
-          inspect,
-          'core/archivist:root/fuchsia.inspect.Health:status',
-          pipeline: sl4f.InspectPipeline.feedback,
-        ),
-        equals(['OK']));
+    test('read from the feedback accessor', () async {
+      expect(
+          await getInspectValues(
+            inspect,
+            'core/archivist:root/fuchsia.inspect.Health:status',
+            pipeline: sl4f.InspectPipeline.feedback,
+          ),
+          equals(['OK']));
+    });
   });
 }

@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This is an E2E test that often needs extra time to complete.
-@Timeout(Duration(minutes: 10))
-
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
@@ -31,14 +28,16 @@ void main() {
       sl4fDriver.close();
     });
 
-    test('archivist exposes metrics for "all" pipeline', () async {
-      expect(await getInspectValues(inspect, allNode),
-          multiValue(isNotNull, length: greaterThan(0)));
-    });
+    withLongTimeout(() {
+      test('archivist exposes metrics for "all" pipeline', () async {
+        expect(await getInspectValues(inspect, allNode),
+            multiValue(isNotNull, length: greaterThan(0)));
+      });
 
-    test('archivist exposes metrics for "feedback" pipeline', () async {
-      expect(await getInspectValues(inspect, feedbackNode),
-          multiValue(isNotNull, length: greaterThan(0)));
+      test('archivist exposes metrics for "feedback" pipeline', () async {
+        expect(await getInspectValues(inspect, feedbackNode),
+            multiValue(isNotNull, length: greaterThan(0)));
+      });
     });
-  }, timeout: Timeout(Duration(seconds: 60)));
+  });
 }

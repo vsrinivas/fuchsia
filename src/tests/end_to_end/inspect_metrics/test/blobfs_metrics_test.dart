@@ -4,9 +4,6 @@
 
 // Tests that blobfs exposes valid metrics via inspect
 
-// This is an E2E test that often needs extra time to complete.
-@Timeout(Duration(minutes: 10))
-
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
@@ -37,58 +34,60 @@ void main() {
 
   tearDownAll(printErrorHelp);
 
-  test('BlobFS exposes lookup statistics', () async {
-    expect(
-        await getInspectValues(
-            inspect, '$fshostPath/lookup_stats:blobs_opened'),
-        singleValue(greaterThan(0)));
-    expect(
-        await getInspectValues(
-            inspect, '$fshostPath/lookup_stats:blobs_opened_total_size'),
-        singleValue(greaterThan(0)));
-  });
+  withLongTimeout(() {
+    test('BlobFS exposes lookup statistics', () async {
+      expect(
+          await getInspectValues(
+              inspect, '$fshostPath/lookup_stats:blobs_opened'),
+          singleValue(greaterThan(0)));
+      expect(
+          await getInspectValues(
+              inspect, '$fshostPath/lookup_stats:blobs_opened_total_size'),
+          singleValue(greaterThan(0)));
+    });
 
-  test('BlobFS exposes allocation statistics', () async {
-    expect(
-        await getInspectValues(
-            inspect, '$fshostPath/allocation_stats:blobs_created'),
-        singleValue(greaterThanOrEqualTo(0)));
-    expect(
-        await getInspectValues(inspect,
-            '$fshostPath/allocation_stats:total_allocation_time_ticks'),
-        singleValue(greaterThanOrEqualTo(0)));
-  });
+    test('BlobFS exposes allocation statistics', () async {
+      expect(
+          await getInspectValues(
+              inspect, '$fshostPath/allocation_stats:blobs_created'),
+          singleValue(greaterThanOrEqualTo(0)));
+      expect(
+          await getInspectValues(inspect,
+              '$fshostPath/allocation_stats:total_allocation_time_ticks'),
+          singleValue(greaterThanOrEqualTo(0)));
+    });
 
-  test('BlobFS exposes writeback statistics', () async {
-    expect(
-        await getInspectValues(
-            inspect, '$fshostPath/writeback_stats:data_bytes_written'),
-        singleValue(greaterThanOrEqualTo(0)));
-    expect(
-        await getInspectValues(
-            inspect, '$fshostPath/writeback_stats:merkle_bytes_written'),
-        singleValue(greaterThanOrEqualTo(0)));
-    expect(
-        await getInspectValues(inspect,
-            '$fshostPath/writeback_stats:total_merkle_generation_time_ticks'),
-        singleValue(greaterThanOrEqualTo(0)));
-    expect(
-        await getInspectValues(inspect,
-            '$fshostPath/writeback_stats:total_write_enqueue_time_ticks'),
-        singleValue(greaterThanOrEqualTo(0)));
-  });
+    test('BlobFS exposes writeback statistics', () async {
+      expect(
+          await getInspectValues(
+              inspect, '$fshostPath/writeback_stats:data_bytes_written'),
+          singleValue(greaterThanOrEqualTo(0)));
+      expect(
+          await getInspectValues(
+              inspect, '$fshostPath/writeback_stats:merkle_bytes_written'),
+          singleValue(greaterThanOrEqualTo(0)));
+      expect(
+          await getInspectValues(inspect,
+              '$fshostPath/writeback_stats:total_merkle_generation_time_ticks'),
+          singleValue(greaterThanOrEqualTo(0)));
+      expect(
+          await getInspectValues(inspect,
+              '$fshostPath/writeback_stats:total_write_enqueue_time_ticks'),
+          singleValue(greaterThanOrEqualTo(0)));
+    });
 
-  test('BlobFS exposes read statistics', () async {
-    final pagedBytesRead =
-        await sumOfProperties(inspect, '$pagedPath:read_bytes');
-    final unpagedBytesRead =
-        await sumOfProperties(inspect, '$unpagedPath:read_bytes');
-    expect(pagedBytesRead + unpagedBytesRead, greaterThan(0));
+    test('BlobFS exposes read statistics', () async {
+      final pagedBytesRead =
+          await sumOfProperties(inspect, '$pagedPath:read_bytes');
+      final unpagedBytesRead =
+          await sumOfProperties(inspect, '$unpagedPath:read_bytes');
+      expect(pagedBytesRead + unpagedBytesRead, greaterThan(0));
 
-    final pagedReadTicks =
-        await sumOfProperties(inspect, '$pagedPath:read_ticks');
-    final unpagedReadTicks =
-        await sumOfProperties(inspect, '$unpagedPath:read_ticks');
-    expect(pagedReadTicks + unpagedReadTicks, greaterThan(0));
+      final pagedReadTicks =
+          await sumOfProperties(inspect, '$pagedPath:read_ticks');
+      final unpagedReadTicks =
+          await sumOfProperties(inspect, '$unpagedPath:read_ticks');
+      expect(pagedReadTicks + unpagedReadTicks, greaterThan(0));
+    });
   });
 }

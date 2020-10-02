@@ -5,6 +5,10 @@
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 
+void withLongTimeout(void Function() tests) {
+  group('(long timeout)', tests, timeout: Timeout(Duration(minutes: 10)));
+}
+
 // Return all matched inspect properties as a list.
 Future<List<dynamic>> getInspectValues(
   sl4f.Inspect inspect,
