@@ -310,6 +310,13 @@ From //boards/x64.gni:50
 
 From //build/board.gni:25
 
+### board_system_image_deps
+A list of binary labels to include in the system_image package.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:28
+
 ### board_tools
 List of paths to board-specific tools to include in the build output.
 
@@ -462,7 +469,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:82
+From //products/core.gni:81
 
 **Overridden from the default:** `[]`
 
@@ -470,7 +477,7 @@ From //BUILD.gn:40
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:82
+From //products/core.gni:81
 
 **Overridden from the default:** `[]`
 
@@ -1327,17 +1334,17 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:14
+From //products/core.gni:13
 
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:23
 
-**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:14
+From //products/core.gni:13
 
 **Overridden from the default:** `[]`
 
@@ -1743,7 +1750,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:16
+From //products/core.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -1751,7 +1758,7 @@ From //build/images/args.gni:66
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:16
+From //products/core.gni:15
 
 **Overridden from the default:** `[]`
 
@@ -1940,7 +1947,14 @@ TODO(fxbug.dev/58645) Remove when no longer needed.
 
 **Current value (from the default):** `true`
 
-From //build/product.gni:12
+From //build/product.gni:15
+
+### product_system_image_deps
+A list of binary labels to include in the system_image package.
+
+**Current value (from the default):** `[]`
+
+From //build/product.gni:10
 
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
@@ -2525,7 +2539,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
-From //products/core.gni:84
+From //products/core.gni:83
 
 **Overridden from the default:** `[]`
 
@@ -2533,7 +2547,7 @@ From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
-From //products/core.gni:84
+From //products/core.gni:83
 
 **Overridden from the default:** `[]`
 
