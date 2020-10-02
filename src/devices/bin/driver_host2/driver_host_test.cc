@@ -28,13 +28,15 @@ namespace ftest = llcpp::fuchsia::driverhost::test;
 using Completer = fdf::DriverHost::Interface::StartCompleter::Sync;
 
 class TestFile : public fio::testing::File_TestBase {
+ public:
+  TestFile(std::string_view path) : path_(std::move(path)) {}
+
  private:
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override {
     EXPECT_EQ(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC, flags);
     zx::channel client_end, server_end;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
-    EXPECT_EQ(ZX_OK, fdio_open("/pkg/driver/test_driver.so",
-                               fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                server_end.release()));
 
     llcpp::fuchsia::io::File::SyncClient file(std::move(client_end));
@@ -49,6 +51,8 @@ class TestFile : public fio::testing::File_TestBase {
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: File::%s\n", name.data());
   }
+
+  std::string_view path_;
 };
 
 class TestDirectory : public fio::testing::Directory_TestBase {
@@ -96,6 +100,12 @@ struct StartDriverResult {
 };
 
 class DriverHostTest : public gtest::TestLoopFixture {
+ public:
+  void TearDown() override {
+    loop_.Shutdown();
+    TestLoopFixture::TearDown();
+  }
+
  protected:
   async::Loop& loop() { return loop_; }
   fdf::DriverHost::Interface* driver_host() { return &driver_host_; }
@@ -125,7 +135,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
             .set_directory(std::make_unique<zx::channel>(std::move(svc_client_end)))
             .build(),
     };
-    TestFile file;
+    TestFile file("/pkg/driver/test_driver.so");
     fidl::Binding<fio::File> file_binding(&file);
     TestDirectory pkg_directory;
     fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
@@ -176,7 +186,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
 
  private:
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  DriverHost driver_host_{loop_.dispatcher()};
+  DriverHost driver_host_{&loop_};
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };
@@ -328,5 +338,57 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
             .build(),
         std::move(driver_server_end), completer);
   }
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
+}
+
+// Start a driver with an invalid binary.
+TEST_F(DriverHostTest, Start_InvalidBinary) {
+  zx_status_t epitaph = ZX_OK;
+  TestTransaction transaction(&epitaph);
+
+  zx::channel pkg_client_end, pkg_server_end;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &pkg_client_end, &pkg_server_end));
+  frunner::ComponentNamespaceEntry ns_entries[] = {
+      frunner::ComponentNamespaceEntry::Builder(
+          std::make_unique<frunner::ComponentNamespaceEntry::Frame>())
+          .set_path(std::make_unique<fidl::StringView>("/pkg"))
+          .set_directory(std::make_unique<zx::channel>(std::move(pkg_client_end)))
+          .build(),
+  };
+  TestFile file("/pkg/driver/test_not_driver.so");
+  fidl::Binding<fio::File> file_binding(&file);
+  TestDirectory pkg_directory;
+  fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
+  pkg_binding.Bind(std::move(pkg_server_end), loop().dispatcher());
+  pkg_directory.SetOpenHandler(
+      [this, &file_binding](uint32_t flags, std::string path, auto object) {
+        EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
+        EXPECT_EQ("driver/library.so", path);
+        file_binding.Bind(object.TakeChannel(), loop().dispatcher());
+      });
+  fdata::DictionaryEntry program_entries[] = {
+      {
+          .key = "binary",
+          .value = fdata::DictionaryValue::WithStr(
+              std::make_unique<fidl::StringView>("driver/library.so")),
+      },
+  };
+  zx::channel driver_client_end, driver_server_end;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  {
+    Completer completer(&transaction);
+    driver_host()->Start(
+        fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+            .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
+                fidl::unowned_vec(ns_entries)))
+            .set_program(std::make_unique<fdata::Dictionary>(
+                fdata::Dictionary::Builder(std::make_unique<fdata::Dictionary::Frame>())
+                    .set_entries(std::make_unique<fidl::VectorView<fdata::DictionaryEntry>>(
+                        fidl::unowned_vec(program_entries)))
+                    .build()))
+            .build(),
+        std::move(driver_server_end), completer);
+  }
+  loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }

@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  DriverHost driver_host(loop.dispatcher());
+  DriverHost driver_host(&loop);
   auto init = driver_host.PublishDriverHost(outgoing.svc_dir());
   if (init.is_error()) {
     return init.error_value();

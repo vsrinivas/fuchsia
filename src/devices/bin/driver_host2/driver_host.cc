@@ -18,24 +18,25 @@ namespace fdf = llcpp::fuchsia::driver::framework;
 namespace fio = llcpp::fuchsia::io;
 namespace frunner = llcpp::fuchsia::component::runner;
 
-namespace {
-
-DriverRecordV1* find_record(void* library) {
+zx::status<std::unique_ptr<Driver>> Driver::Load(zx::vmo vmo) {
+  void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
-    return nullptr;
+    LOGF(ERROR, "Failed to start driver, could not load library: %s", dlerror());
+    return zx::error(ZX_ERR_INTERNAL);
   }
   auto record = static_cast<DriverRecordV1*>(dlsym(library, "__fuchsia_driver_record__"));
+  if (record == nullptr) {
+    LOGF(ERROR, "Failed to start driver, driver record not found");
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
   if (record->version != 1) {
     LOGF(ERROR, "Failed to start driver, unknown driver record version: %lu", record->version);
-    return nullptr;
+    return zx::error(ZX_ERR_WRONG_TYPE);
   }
-  return record;
+  return zx::ok(std::make_unique<Driver>(library, record));
 }
 
-}  // namespace
-
-Driver::Driver(zx::vmo vmo)
-    : library_(dlopen_vmo(vmo.get(), RTLD_NOW)), record_(find_record(library_)), opaque_(nullptr) {}
+Driver::Driver(void* library, DriverRecordV1* record) : library_(library), record_(record) {}
 
 Driver::~Driver() {
   zx_status_t status = record_->stop(opaque_);
@@ -49,8 +50,6 @@ Driver::~Driver() {
   }
 }
 
-bool Driver::ok() const { return record_ != nullptr; }
-
 void Driver::set_binding(
     fidl::ServerBindingRef<llcpp::fuchsia::driver::framework::Driver> binding) {
   binding_ = std::make_optional(std::move(binding));
@@ -61,11 +60,11 @@ zx::status<> Driver::Start(fidl_msg_t* msg, async_dispatcher_t* dispatcher) {
   return zx::make_status(status);
 }
 
-DriverHost::DriverHost(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+DriverHost::DriverHost(async::Loop* loop) : loop_(loop) {}
 
 zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
-    auto result = fidl::BindServer(dispatcher_, std::move(request), this);
+    auto result = fidl::BindServer(loop_->dispatcher(), std::move(request), this);
     if (result.is_error()) {
       LOGF(ERROR, "Failed to bind channel to '%s': %s", fdf::DriverHost::Name,
            zx_status_get_string(result.error()));
@@ -108,11 +107,11 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     return;
   }
   status =
-      fdio_open_at(pkg.value()->get(), binary.value().data(),
+      fdio_open_at(pkg->get(), binary->data(),
                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, server_end.release());
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s",
-         binary.value().data(), zx_status_get_string(status));
+    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary->data(),
+         zx_status_get_string(status));
     completer.Close(status);
     return;
   }
@@ -122,15 +121,15 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   const char* error;
   auto encode = start_args::Encode(storage.get(), std::move(start_args), &error);
   if (encode.is_error()) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s",
-         binary.value().data(), error);
+    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
+         error);
     completer.Close(encode.error_value());
     return;
   }
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
-  fidl::Client<fio::File> file(std::move(client_end), dispatcher_);
+  fidl::Client<fio::File> file(std::move(client_end), loop_->dispatcher());
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    binary = std::move(binary.value()), storage = std::move(storage),
@@ -149,21 +148,20 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
       completer.Close(status);
       return;
     }
-    auto driver = std::make_unique<Driver>(std::move(buffer->vmo));
-    if (!driver->ok()) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not load library", binary.data());
-      completer.Close(ZX_ERR_INTERNAL);
+    auto driver = Driver::Load(std::move(buffer->vmo));
+    if (driver.is_error()) {
+      completer.Close(driver.error_value());
       return;
     }
-    auto driver_ptr = driver.get();
-    auto bind = fidl::BindServer<Driver>(
-        dispatcher_, std::move(request), driver_ptr, [this](Driver* driver, auto, auto) {
-          drivers_.erase(*driver);
-          // If this is the last driver, shutdown the driver host.
-          if (drivers_.is_empty()) {
-            async_loop_quit(async_loop_from_dispatcher(dispatcher_));
-          }
-        });
+    auto driver_ptr = driver.value().get();
+    auto bind = fidl::BindServer<Driver>(loop_->dispatcher(), std::move(request), driver_ptr,
+                                         [this](Driver* driver, auto, auto) {
+                                           drivers_.erase(*driver);
+                                           // If this is the last driver, shutdown the driver host.
+                                           if (drivers_.is_empty()) {
+                                             loop_->Quit();
+                                           }
+                                         });
     if (bind.is_error()) {
       LOGF(ERROR,
            "Failed to start driver '/pkg/%s', could not bind channel to "
@@ -173,9 +171,9 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
       return;
     }
     driver->set_binding(bind.take_value());
-    drivers_.push_back(std::move(driver));
+    drivers_.push_back(std::move(driver.value()));
 
-    auto start = driver_ptr->Start(&msg, dispatcher_);
+    auto start = driver_ptr->Start(&msg, loop_->dispatcher());
     if (start.is_error()) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
       completer.Close(start.error_value());

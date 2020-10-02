@@ -31,7 +31,7 @@ source_set("lib") {
     "//src/devices/lib/driver2:llcpp",
     "//src/devices/lib/log",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fs",
   ]
 }
@@ -51,6 +51,13 @@ driver_module("test_driver") {
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/svc",
   ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+driver_module("test_not_driver") {
+  testonly = true
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -78,6 +85,7 @@ fuchsia_unittest_package("driver-host2-test") {
 
   deps = [
     ":test_driver",
+    ":test_not_driver",
     ":unittests",
   ]
 }
@@ -90,7 +98,6 @@ executable("bin") {
   deps = [
     ":lib",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/syslog",
