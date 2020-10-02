@@ -40,7 +40,7 @@ macro_rules! gen_controller {
         impl controller::Create for $name {
             async fn create(_: ClientProxy) -> Result<Self, ControllerError> {
                 if $succeed {
-                    Ok(Self {})
+                    Ok($name {})
                 } else {
                     Err(ControllerError::InitFailure("failure".into()))
                 }

@@ -31,6 +31,8 @@ use {
     thiserror::Error,
 };
 
+// TODO(fxbug.dev/61174): Document these.
+#[allow(missing_docs)]
 extern "C" {
     pub fn zx_take_startup_handle(hnd_info: u32) -> zx_handle_t;
     pub fn zx_thread_self() -> zx_handle_t;

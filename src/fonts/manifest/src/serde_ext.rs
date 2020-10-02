@@ -62,7 +62,7 @@ use {
 /// - `local_type_str`: The same as `local_type`, but wrapped in quotes.
 macro_rules! derive_opt {
     ($module:ident, $remote_type:ty, $local_type:ty, $local_type_str:expr) => {
-        #[allow(non_snake_case, dead_code, missing_docs)]
+        #[allow(non_snake_case, dead_code, missing_docs, explicit_outlives_requirements)]
         pub mod $module {
             use {
                 super::*,

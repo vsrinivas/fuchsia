@@ -92,6 +92,7 @@ impl HostDataDeserializer {
 //   }
 macro_rules! option_encoding {
     ($encoding:ident, $remote_type:ty, $local_type:expr) => {
+        #[allow(explicit_outlives_requirements)]
         mod $encoding {
             use {
                 super::*,
