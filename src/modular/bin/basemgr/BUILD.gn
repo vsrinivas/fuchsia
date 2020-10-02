@@ -122,7 +122,7 @@ source_set("lib") {
   configs += [ "//build/config:Wno-reorder-init-list" ]
 
   if (auto_login_to_guest) {
-    public_configs += [ ":auto_login_to_guest" ]
+    configs += [ ":auto_login_to_guest" ]
   }
 }
 
