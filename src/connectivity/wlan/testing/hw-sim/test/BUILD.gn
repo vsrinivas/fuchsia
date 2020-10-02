@@ -149,15 +149,6 @@ fuchsia_component("verify-wlan-inspect") {
   ]
 }
 
-fuchsia_component("run-without-regulatory-manager") {
-  testonly = true
-  manifest = "meta/run_without_regulatory_manager.cmx"
-  deps = [
-    "run_without_regulatory_manager",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
-}
-
 fuchsia_test_package("wlan-hw-sim-test") {
   test_components = [
     ":configure-legacy-privacy-off",
@@ -171,7 +162,6 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":multi-ifaces",
     ":multiple-clients-ap",
     ":open-ap-connect",
-    ":run-without-regulatory-manager",
     ":set-country",
     ":sim-client-vs-sim-ap",
     ":simulate-scan",

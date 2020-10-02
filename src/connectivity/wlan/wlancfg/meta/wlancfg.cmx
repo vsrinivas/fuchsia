@@ -9,7 +9,6 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.location.sensor.WlanBaseStationWatcher",
             "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
