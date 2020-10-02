@@ -4,6 +4,9 @@
 
 // Tests that the archivist read data from both v1 and v2 components.
 
+// This is an E2E test that often needs extra time to complete.
+@Timeout(Duration(minutes: 10))
+
 import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
