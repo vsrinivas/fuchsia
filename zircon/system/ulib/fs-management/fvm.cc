@@ -31,6 +31,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
+#include <fvm/format.h>
 #include <fvm/fvm.h>
 
 namespace {
@@ -132,36 +133,31 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fvm::FormatInfo format_info =
-      fvm::FormatInfo::FromPreallocatedSize(initial_volume_size, max_volume_size, slice_size);
-
-  std::unique_ptr<uint8_t[]> mvmo(new uint8_t[format_info.metadata_allocated_size() * 2]);
-  // Clear entire primary copy of metadata
-  memset(mvmo.get(), 0, format_info.metadata_allocated_size());
-
-  // Superblock
-  fvm::Header* sb = reinterpret_cast<fvm::Header*>(mvmo.get());
-  sb->magic = fvm::kMagic;
-  sb->version = fvm::kVersion;
-  sb->pslice_count = format_info.slice_count();
-  sb->slice_size = slice_size;
-  sb->fvm_partition_size = initial_volume_size;
-  sb->vpartition_table_size = fvm::PartitionTableLength(fvm::kMaxVPartitions);
-  sb->allocation_table_size = fvm::AllocTableLengthForDiskSize(max_volume_size, slice_size);
-  sb->generation = 0;
-
-  if (sb->pslice_count == 0) {
+  fvm::Header header = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, initial_volume_size, max_volume_size, slice_size);
+  if (header.pslice_count == 0) {
     return ZX_ERR_NO_SPACE;
   }
 
-  fvm::UpdateHash(mvmo.get(), format_info.metadata_size());
+  // This buffer needs to hold both copies of the metadata.
+  // TODO(fxbug.dev/60709): Eliminate layout assumptions.
+  size_t metadata_allocated_bytes = header.GetMetadataAllocatedBytes();
+  size_t dual_metadata_bytes = metadata_allocated_bytes * 2;
+  std::unique_ptr<uint8_t[]> mvmo(new uint8_t[dual_metadata_bytes]);
+  // Clear entire primary copy of metadata
+  memset(mvmo.get(), 0, metadata_allocated_bytes);
+
+  // Save the header to our primary metadata.
+  memcpy(mvmo.get(), &header, sizeof(fvm::Header));
+  size_t metadata_used_bytes = header.GetMetadataUsedBytes();
+  fvm::UpdateHash(mvmo.get(), metadata_used_bytes);
 
   // Copy the new primary metadata to the backup copy.
-  void* backup = mvmo.get() + format_info.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
-  memcpy(backup, mvmo.get(), format_info.metadata_size());
+  void* backup = mvmo.get() + header.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
+  memcpy(backup, mvmo.get(), metadata_allocated_bytes);
 
   // Validate our new state.
-  if (!fvm::ValidateHeader(mvmo.get(), backup, format_info.metadata_size())) {
+  if (!fvm::ValidateHeader(mvmo.get(), backup, metadata_used_bytes)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -169,14 +165,14 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
     return ZX_ERR_BAD_STATE;
   }
   // Write to primary copy.
-  if (write(fd, mvmo.get(), format_info.metadata_allocated_size()) !=
-      static_cast<ssize_t>(format_info.metadata_allocated_size())) {
+  if (write(fd, mvmo.get(), metadata_allocated_bytes) !=
+      static_cast<ssize_t>(metadata_allocated_bytes)) {
     return ZX_ERR_BAD_STATE;
   }
   // Write to secondary copy, to overwrite any previous FVM metadata copy that
   // could be here.
-  if (write(fd, mvmo.get(), format_info.metadata_allocated_size()) !=
-      static_cast<ssize_t>(format_info.metadata_allocated_size())) {
+  if (write(fd, mvmo.get(), metadata_allocated_bytes) !=
+      static_cast<ssize_t>(metadata_allocated_bytes)) {
     return ZX_ERR_BAD_STATE;
   }
 

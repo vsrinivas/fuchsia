@@ -12,7 +12,6 @@
 #include <utility>
 
 #include <fvm/format.h>
-#include <fvm/fvm.h>
 #include <fvm/sparse-reader.h>
 
 #include "fvm-host/container.h"
@@ -269,18 +268,18 @@ zx_status_t FvmContainer::Verify() const {
   return ZX_OK;
 }
 
-zx_status_t FvmContainer::Extend(size_t disk_size) {
+zx_status_t FvmContainer::Extend(size_t new_disk_size) {
   if (disk_offset_) {
     fprintf(stderr, "Cannot extend FVM within another container\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  if (disk_size <= disk_size_) {
+  if (new_disk_size <= disk_size_) {
     if (extend_length_type_ == ExtendLengthType::LOWER_BOUND) {
       return ResizeImageFileToDiskSize();
     }
     fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %" PRIu64 "\n",
-            disk_size, disk_size_);
+            new_disk_size, disk_size_);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -306,7 +305,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     }
   });
 
-  if (ftruncate(fd.get(), disk_size) != 0) {
+  if (ftruncate(fd.get(), new_disk_size) != 0) {
     fprintf(stderr, "Failed to truncate fvm container");
     return ZX_ERR_IO;
   }
@@ -321,8 +320,10 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
   // Then, we update the on-disk metadata to reflect the new size of the disk.
   // To avoid collision between relocated slices, this is done on a temporary file.
   uint64_t pslice_count = info_.SuperBlock()->pslice_count;
-  fvm::FormatInfo source_format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
-  fvm::FormatInfo target_format_info = fvm::FormatInfo::FromDiskSize(disk_size, slice_size_);
+  fvm::Header source_header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size_, slice_size_);
+  fvm::Header target_header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, new_disk_size, slice_size_);
   std::vector<uint8_t> data(slice_size_);
   for (uint32_t index = 1; index <= pslice_count; index++) {
     zx_status_t status;
@@ -336,37 +337,31 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
       continue;
     }
 
-    ssize_t r = pread(fd_.get(), data.data(), slice_size_, source_format_info.GetSliceStart(index));
-    ZX_ASSERT(source_format_info.GetSliceStart(index) ==
-              source_format_info.header().GetSliceDataOffset(index));
+    ssize_t r = pread(fd_.get(), data.data(), slice_size_, source_header.GetSliceDataOffset(index));
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to read data from FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
     }
 
-    r = pwrite(fd.get(), data.data(), slice_size_, target_format_info.GetSliceStart(index));
-    ZX_ASSERT(target_format_info.GetSliceStart(index) ==
-              target_format_info.header().GetSliceDataOffset(index));
+    r = pwrite(fd.get(), data.data(), slice_size_, target_header.GetSliceDataOffset(index));
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to write data to FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
     }
   }
 
-  size_t metadata_size = fvm::MetadataSizeForDiskSize(disk_size, slice_size_);
-  ZX_ASSERT(metadata_size == target_format_info.header().GetMetadataUsedBytes());
-  zx_status_t status = info_.Grow(metadata_size);
-  if (status != ZX_OK) {
+  size_t metadata_size = target_header.GetMetadataUsedBytes();
+  if (zx_status_t status = info_.Grow(metadata_size); status != ZX_OK) {
     return status;
   }
 
   fvm::host::FdWrapper wrapper = fvm::host::FdWrapper(fd.get());
-  if ((status = info_.Write(&wrapper, 0, disk_size)) != ZX_OK) {
+  if (zx_status_t status = info_.Write(&wrapper, 0, new_disk_size); status != ZX_OK) {
     return status;
   }
 
   fd_.reset(fd.release());
-  disk_size_ = disk_size;
+  disk_size_ = new_disk_size;
 
   if (rename(path.c_str(), path_.c_str()) < 0) {
     fprintf(stderr, "Failed to copy over temp file\n");
@@ -658,7 +653,8 @@ zx_status_t FvmContainer::WriteData(uint32_t pslice, uint32_t block_offset, size
 size_t FvmContainer::GetBlockStart(uint32_t pslice, uint32_t block_offset,
                                    size_t block_size) const {
   return disk_offset_ +
-         fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_).GetSliceStart(pslice) +
+         fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size_, slice_size_)
+             .GetSliceDataOffset(pslice) +
          block_offset * block_size;
 }
 

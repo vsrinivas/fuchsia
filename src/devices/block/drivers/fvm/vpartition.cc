@@ -148,7 +148,7 @@ void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
     uint64_t mapped_pslice;
     return SliceGetLocked(vslice, &mapped_pslice) && mapped_pslice == pslice;
   }()));
-  AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
+  AddBlocksLocked((mgr_->slice_size() / info_.block_size));
 
   // Merge with the next contiguous extent (if any)
   auto next_extent = slice_map_.upper_bound(vslice);
@@ -174,7 +174,7 @@ void VPartition::SliceFreeLocked(uint64_t vslice) {
     slice_map_.erase(*extent);
   }
 
-  AddBlocksLocked(-(mgr_->SliceSize() / info_.block_size));
+  AddBlocksLocked(-(mgr_->slice_size() / info_.block_size));
 }
 
 void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
@@ -183,7 +183,7 @@ void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
   auto extent = --slice_map_.upper_bound(vslice);
   size_t length = extent->size();
   slice_map_.erase(*extent);
-  AddBlocksLocked(-((length * mgr_->SliceSize()) / info_.block_size));
+  AddBlocksLocked(-((length * mgr_->slice_size()) / info_.block_size));
 }
 
 template <typename T>
@@ -305,8 +305,8 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     return;
   }
 
-  const FormatInfo& format_info = mgr_->format_info();
-  const uint64_t slice_size = mgr_->SliceSize();
+  fvm::Header header = mgr_->GetHeader();
+  const uint64_t slice_size = mgr_->slice_size();
   const uint64_t blocks_per_slice = slice_size / BlockSize();
   // Start, end both inclusive
   uint64_t vslice_start = offset_dev / blocks_per_slice;
@@ -320,7 +320,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
       completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, txn);
       return;
     }
-    offset_dev = format_info.GetSliceStart(pslice) / BlockSize() + (offset_dev % blocks_per_slice);
+    offset_dev = header.GetSliceDataOffset(pslice) / BlockSize() + (offset_dev % blocks_per_slice);
     SetOperationDeviceOffset(offset_dev, txn);
     mgr_->Queue(txn, completion_cb, cookie);
     return;
@@ -348,7 +348,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
   if (contiguous) {
     uint64_t pslice;
     SliceGetLocked(vslice_start, &pslice);
-    offset_dev = format_info.GetSliceStart(pslice) / BlockSize() + (offset_dev % blocks_per_slice);
+    offset_dev = header.GetSliceDataOffset(pslice) / BlockSize() + (offset_dev % blocks_per_slice);
     SetOperationDeviceOffset(offset_dev, txn);
     mgr_->Queue(txn, completion_cb, cookie);
     return;
@@ -382,7 +382,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     txns.push_back(reinterpret_cast<block_op_t*>(new uint8_t[mgr_->BlockOpSize()]));
 
     memcpy(txns[i], txn, sizeof(*txn));
-    uint64_t sub_txn_offset_dev = format_info.GetSliceStart(pslice) / BlockSize();
+    uint64_t sub_txn_offset_dev = header.GetSliceDataOffset(pslice) / BlockSize();
     if (vslice == vslice_start) {
       sub_txn_offset_dev += (offset_dev % blocks_per_slice);
     }
@@ -498,9 +498,9 @@ zx_status_t VPartition::BlockVolumeDestroy() {
 }
 
 zx_off_t VPartition::DdkGetSize() {
-  const zx_off_t sz = mgr_->VSliceMax() * mgr_->SliceSize();
+  const zx_off_t sz = mgr_->VSliceMax() * mgr_->slice_size();
   // Check for overflow; enforced when loading driver
-  ZX_ASSERT(sz / mgr_->VSliceMax() == mgr_->SliceSize());
+  ZX_ASSERT(sz / mgr_->VSliceMax() == mgr_->slice_size());
   return sz;
 }
 

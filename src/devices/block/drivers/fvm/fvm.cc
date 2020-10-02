@@ -59,6 +59,13 @@ VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& in
 
 VPartitionManager::~VPartitionManager() = default;
 
+void VPartitionManager::SetMetadataForTest(fzl::OwnedVmoMapper metadata_vmo) {
+  fbl::AutoLock lock(&lock_);
+
+  metadata_ = std::move(metadata_vmo);
+  slice_size_ = GetFvmLocked()->slice_size;
+}
+
 // static
 zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
   block_info_t block_info;
@@ -82,6 +89,11 @@ zx_status_t VPartitionManager::Bind(void* /*unused*/, zx_device_t* dev) {
   // added. It will be deleted when the device is released.
   __UNUSED auto ptr = vpm.release();
   return ZX_OK;
+}
+
+fvm::Header VPartitionManager::GetHeader() const {
+  fbl::AutoLock lock(&const_cast<VPartitionManager*>(this)->lock_);
+  return *GetFvmLocked();
 }
 
 void VPartitionManager::DdkInit(ddk::InitTxn txn) {
@@ -183,6 +195,17 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
   return static_cast<zx_status_t>(cookie.status.load());
 }
 
+// TODO(brettw/jfsulliv) consider moving to FVM Header/Metadata.
+size_t VPartitionManager::GetMaxAddressableSlicesLocked() const {
+  const fvm::Header* header = GetFvmLocked();
+
+  // See how many slices fit in in the non-metadata portion of the current device.
+  size_t requested_slices = (DiskSize() - header->GetDataStartOffset()) / slice_size_;
+
+  // That value may be limited by the maximum number of entries in the allocation table.
+  return std::min(requested_slices, header->GetAllocationTableAllocatedEntryCount());
+}
+
 zx_status_t VPartitionManager::Load() {
   fbl::AutoLock lock(&lock_);
 
@@ -221,7 +244,7 @@ zx_status_t VPartitionManager::Load() {
     return status;
   }
 
-  format_info_ = FormatInfo(sb);
+  slice_size_ = sb.slice_size;
 
   // Validate the superblock, confirm the slice size
   if ((sb.slice_size * VSliceMax()) / VSliceMax() != sb.slice_size) {
@@ -229,8 +252,8 @@ zx_status_t VPartitionManager::Load() {
            VSliceMax());
     return ZX_ERR_BAD_STATE;
   }
-  if (info_.block_size == 0 || SliceSize() % info_.block_size) {
-    zxlogf(ERROR, "Bad block (%u) or slice size (%zu)", info_.block_size, SliceSize());
+  if (info_.block_size == 0 || sb.slice_size % info_.block_size) {
+    zxlogf(ERROR, "Bad block (%u) or slice size (%zu)", info_.block_size, sb.slice_size);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -318,21 +341,10 @@ zx_status_t VPartitionManager::Load() {
     metadata_ = std::move(mapper_backup);
   }
 
-  // Whether the metadata should grow or not.
-  bool metadata_should_grow =
-      GetFvmLocked()->fvm_partition_size < DiskSize() &&
-      AllocTableLengthForDiskSize(GetFvmLocked()->fvm_partition_size, GetFvmLocked()->slice_size) <
-          GetFvmLocked()->allocation_table_size;
-
-  // Recalculate format info for the valid metadata header.
-  format_info_ = FormatInfo(*GetFvmLocked());
-  if (metadata_should_grow) {
-    size_t new_slice_count = format_info_.GetMaxAddressableSlices(DiskSize());
-    size_t target_partition_size =
-        format_info_.GetSliceStart(1) + new_slice_count * format_info_.slice_size();
-    GetFvmLocked()->fvm_partition_size = target_partition_size;
-    GetFvmLocked()->pslice_count = new_slice_count;
-    format_info_ = FormatInfo(*GetFvmLocked());
+  // See if we need to grow the data.
+  size_t slices_for_disk = GetMaxAddressableSlicesLocked();
+  if (slices_for_disk > GetFvmLocked()->GetAllocationTableUsedEntryCount()) {
+    GetFvmLocked()->SetSliceCount(slices_for_disk);
 
     // Persist the growth.
     if ((status = WriteFvmLocked()) != ZX_OK) {
@@ -415,21 +427,22 @@ zx_status_t VPartitionManager::Load() {
     device_count++;
   }
 
-  zxlogf(INFO, "Loaded %lu partitions, slice size=%zu", device_count, format_info_.slice_size());
+  zxlogf(INFO, "Loaded %lu partitions, slice size=%zu", device_count, slice_size_);
 
   return ZX_OK;
 }
 
 zx_status_t VPartitionManager::WriteFvmLocked() {
-  zx_status_t status;
+  fvm::Header* header = GetFvmLocked();
+  header->generation++;
 
-  GetFvmLocked()->generation++;
-  UpdateHash(GetFvmLocked(), format_info_.metadata_size());
+  size_t metadata_used_bytes = header->GetMetadataUsedBytes();
+  UpdateHash(header, metadata_used_bytes);
 
   // If we were reading from the primary, write to the backup.
-  status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(), format_info_.metadata_size(),
-                      BLOCK_OP_WRITE);
-  if (status != ZX_OK) {
+  if (zx_status_t status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(),
+                                      metadata_used_bytes, BLOCK_OP_WRITE);
+      status != ZX_OK) {
     zxlogf(ERROR, "Failed to write metadata");
     return status;
   }
@@ -453,7 +466,8 @@ zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
 
 zx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) const {
   hint = std::max(hint, 1lu);
-  for (size_t i = hint; i <= format_info_.slice_count(); i++) {
+  size_t slice_count = GetFvmLocked()->GetAllocationTableUsedEntryCount();
+  for (size_t i = hint; i <= slice_count; i++) {
     if (GetSliceEntryLocked(i)->IsFree()) {
       *out = i;
       return ZX_OK;
@@ -626,11 +640,11 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
 }
 
 void VPartitionManager::Query(volume_info_t* info) {
-  info->slice_size = SliceSize();
+  info->slice_size = slice_size_;
   info->vslice_count = VSliceMax();
   {
     fbl::AutoLock lock(&lock_);
-    info->pslice_total_count = format_info_.slice_count();
+    info->pslice_total_count = GetFvmLocked()->pslice_count;
     info->pslice_allocated_count = pslice_allocated_count_;
   }
 }
@@ -655,8 +669,9 @@ void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, uint64_t pslice, u
 }
 
 SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
+  const Header* header = GetFvmLocked();
   ZX_DEBUG_ASSERT(index >= 1);
-  Header* header = GetFvmLocked();
+  ZX_DEBUG_ASSERT(index <= header->GetAllocationTableUsedEntryCount());
 
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(header);
   uintptr_t offset = static_cast<uintptr_t>(header->GetSliceEntryOffset(index));
@@ -668,8 +683,9 @@ SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
 }
 
 VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
-  ZX_DEBUG_ASSERT(index >= 1);
   Header* header = GetFvmLocked();
+  ZX_DEBUG_ASSERT(index >= 1);
+  ZX_DEBUG_ASSERT(index <= header->GetPartitionTableEntryCount());
 
   uintptr_t metadata_start = reinterpret_cast<uintptr_t>(header);
   uintptr_t offset = static_cast<uintptr_t>(header->GetPartitionEntryOffset(index));
@@ -746,12 +762,15 @@ zx_status_t VPartitionManager::FIDLQuery(fidl_txn_t* txn) {
   return fuchsia_hardware_block_volume_VolumeManagerQuery_reply(txn, ZX_OK, &info);
 }
 
-zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) const {
+zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) {
   fuchsia_hardware_block_volume_VolumeManagerInfo info;
-  info.slice_size = format_info().slice_size();
-  info.current_slice_count =
-      format_info().GetMaxAddressableSlices(info_.block_size * info_.block_count);
-  info.maximum_slice_count = format_info().GetMaxAllocatableSlices();
+
+  {
+    fbl::AutoLock lock(&lock_);
+    info.slice_size = slice_size_;
+    info.current_slice_count = GetMaxAddressableSlicesLocked();
+    info.maximum_slice_count = GetFvmLocked()->GetAllocationTableAllocatedEntryCount();
+  }
   return fuchsia_hardware_block_volume_VolumeManagerGetInfo_reply(txn, ZX_OK, &info);
 }
 

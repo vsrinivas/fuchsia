@@ -148,6 +148,11 @@ struct Header {
   static Header FromGrowableSliceCount(size_t usable_partitions, size_t initial_usable_slices,
                                        size_t max_usable_slices, size_t slice_size);
 
+  // Sets the number of slices.
+  //   0 <= usable_slices <= GetAllocationTableAllocatedEntryCount();
+  // This will update the pslice_count as well as the fvm_partition_size accordingly.
+  void SetSliceCount(size_t usable_slices);
+
   // Getters ---------------------------------------------------------------------------------------
 
   // The partition table always starts at a block offset, and is always a multiple of blocks
@@ -397,6 +402,14 @@ constexpr size_t PartitionTableLength(size_t total_partition_entries) {
   return fbl::round_up(sizeof(VPartitionEntry) * total_partition_entries, kBlockSize);
 }
 
+// Returns the size in bytes of the partition table given the number of usable partitions.
+// See PartitionTableLength() which counts the total entries.
+constexpr size_t PartitionTableByteSizeForUsablePartitions(size_t usable_partitions) {
+  // TODO(fxb/59980): Partition table is 1-indexed, which means that the 0th entry is unused, hence
+  // the +1. Remove this once the table uses the 0th entry.
+  return PartitionTableLength(usable_partitions + 1);
+}
+
 constexpr size_t AllocTableOffset() {
   // TODO(fxb/40192): Allow a variable partition table size.
   return PartitionTableOffset() + PartitionTableLength(kMaxVPartitions);
@@ -413,8 +426,21 @@ constexpr size_t AllocTableLengthForDiskSize(size_t disk_size, size_t slice_size
   return AllocTableLengthForUsableSliceCount(disk_size / slice_size);
 }
 
+// Returns how large one copy of the metadata is for the given table settings.
+constexpr size_t MetadataSizeForUsableEntries(size_t usable_partitions, size_t usable_slices) {
+  return kBlockSize +                                                    // Superblock
+         PartitionTableByteSizeForUsablePartitions(usable_partitions) +  // Partition table.
+         AllocTableLengthForUsableSliceCount(usable_slices);
+}
+
+constexpr size_t DataStartForUsableEntries(size_t usable_partitions, size_t usable_slices) {
+  // The data starts after the two copies of the metadata.
+  return MetadataSizeForUsableEntries(usable_partitions, usable_slices) * 2;
+}
+
+// TODO(fxb/40192): Remove in preference of MetadataSizeForUsableEntries() which takes a partition
+// table size.
 constexpr size_t MetadataSizeForDiskSize(size_t total_size, size_t slice_size) {
-  // TODO(fxb/40192): Allow a variable partition table size.
   return AllocTableOffset() + AllocTableLengthForDiskSize(total_size, slice_size);
 }
 
@@ -451,6 +477,11 @@ static constexpr uint64_t kMaxAllocationTableByteSize =
     fbl::round_up(sizeof(SliceEntry) * kMaxVSlices, fvm::kBlockSize);
 static constexpr uint64_t kMaxMetadataByteSize =
     kBlockSize + kMaxPartitionTableByteSize + kMaxAllocationTableByteSize;
+
+inline void Header::SetSliceCount(size_t usable_slices) {
+  pslice_count = usable_slices;
+  fvm_partition_size = GetDataStartOffset() + usable_slices * slice_size;
+}
 
 inline size_t Header::GetPartitionTableOffset() const {
   // The partition table starts at the first block after the header.

@@ -34,12 +34,12 @@ namespace internal {
 
 fvm::Header MakeHeader(const FvmOptions& options, uint64_t slice_count) {
   if (options.max_volume_size.has_value()) {
-    return fvm::FormatInfo::FromDiskSize(options.max_volume_size.value(), options.slice_size)
-        .header();
+    return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, options.max_volume_size.value(),
+                                     options.slice_size);
   }
   if (options.target_volume_size.has_value()) {
-    return fvm::FormatInfo::FromDiskSize(options.target_volume_size.value(), options.slice_size)
-        .header();
+    return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, options.target_volume_size.value(),
+                                     options.slice_size);
   }
   return fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slice_count, options.slice_size);
 }

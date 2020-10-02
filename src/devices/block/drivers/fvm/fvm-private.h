@@ -77,22 +77,24 @@ class VPartitionManager : public ManagerDeviceType {
   void Query(volume_info_t* info) TA_EXCL(lock_);
 
   size_t DiskSize() const { return info_.block_count * info_.block_size; }
-  size_t SliceSize() const { return format_info_.slice_size(); }
-  // format_info_ is calculated on Load and never updated again.
-  const FormatInfo& format_info() const { return format_info_; }
+  size_t slice_size() const { return slice_size_; }
   uint64_t VSliceMax() const { return fvm::kMaxVSlices; }
   const block_info_t& Info() const { return info_; }
+
+  // Returns a copy of the current header.
+  fvm::Header GetHeader() const;
 
   void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  void SetFormatInfoForTest(const fvm::FormatInfo& format_info) { format_info_ = format_info; }
-
   VPartitionManager(zx_device_t* parent, const block_info_t& info, size_t block_op_size,
                     const block_impl_protocol_t* bp);
   ~VPartitionManager();
+
+  // For tests to inject a configuration. This should include both copies of the metadata.
+  void SetMetadataForTest(fzl::OwnedVmoMapper metadata_vmo);
 
  private:
   static const fuchsia_hardware_block_volume_VolumeManager_ops* Ops() {
@@ -113,7 +115,7 @@ class VPartitionManager : public ManagerDeviceType {
                                     const char* name_data, size_t name_size, uint32_t flags,
                                     fidl_txn_t* txn);
   zx_status_t FIDLQuery(fidl_txn_t* txn);
-  zx_status_t FIDLGetInfo(fidl_txn_t* txn) const;
+  zx_status_t FIDLGetInfo(fidl_txn_t* txn);
   zx_status_t FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
                            const fuchsia_hardware_block_partition_GUID* new_guid, fidl_txn_t* txn);
 
@@ -163,16 +165,21 @@ class VPartitionManager : public ManagerDeviceType {
   VPartitionEntry* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
 
   size_t PrimaryOffsetLocked() const TA_REQ(lock_) {
-    return format_info_.GetSuperblockOffset(
+    return GetFvmLocked()->GetSuperblockOffset(
         (first_metadata_is_primary_) ? SuperblockType::kPrimary : SuperblockType::kSecondary);
   }
 
   size_t BackupOffsetLocked() const TA_REQ(lock_) {
-    return format_info_.GetSuperblockOffset(
-        (first_metadata_is_primary_) ? SuperblockType::kSecondary : SuperblockType::kPrimary);
+    return GetFvmLocked()->GetSuperblockOffset(
+        first_metadata_is_primary_ ? SuperblockType::kSecondary : SuperblockType::kPrimary);
   }
 
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
+
+  // Computes the number of slices that can be accessed using the current block device size. This
+  // may be more than the slices actually allocated by FVM, and may be less that the maximum slice
+  // count representable by the current FVM header (should the block device grow).
+  size_t GetMaxAddressableSlicesLocked() const TA_REQ(lock_);
 
   thrd_t initialization_thread_;
   std::atomic_bool initialization_thread_started_ = false;
@@ -184,9 +191,8 @@ class VPartitionManager : public ManagerDeviceType {
   // Number of currently allocated slices.
   size_t pslice_allocated_count_ TA_GUARDED(lock_);
 
-  // Format information of the fvm. This is only set when the driver is loaded, and not
-  // modified.
-  fvm::FormatInfo format_info_;
+  // Set when the driver is loaded and never changed.
+  size_t slice_size_ = 0;
 
   // Block Protocol
   const size_t block_op_size_;

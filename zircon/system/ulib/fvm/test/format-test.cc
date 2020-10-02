@@ -29,7 +29,7 @@ TEST(FvmFormat, DefaultInitializedGetterValues) {
   EXPECT_EQ(0u, header.GetMetadataAllocatedBytes());
 }
 
-TEST(FvmFormat, Constructors) {
+TEST(FvmFormat, SliceConstructors) {
   constexpr size_t kInitialSliceCount = 2;
   constexpr size_t kMaxSliceCount = 4096;
   constexpr size_t kSmallSliceSize = kBlockSize;
@@ -42,16 +42,36 @@ TEST(FvmFormat, Constructors) {
   EXPECT_EQ(kSmallSliceSize, header.slice_size);
   EXPECT_EQ(header.GetSliceDataOffset(1) + kSmallSliceSize * kInitialSliceCount,
             header.fvm_partition_size);
+}
 
-  constexpr size_t kInitialDiskSize = 1024;
+TEST(FvmFormat, SizeConstructors) {
+  // A growable partition that starts off with no slices.
+  constexpr size_t kInitialDiskSize = 1;  // Too small for anything.
   constexpr size_t kMaxDiskSize = static_cast<size_t>(1024) * 1024 * 1024 * 1024;  // 1TB
   constexpr size_t kBigSliceSize = 1024 * 1024;
-  header = Header::FromGrowableDiskSize(kMaxUsablePartitions, kInitialDiskSize, kMaxDiskSize,
-                                        kBigSliceSize);
-  EXPECT_EQ(1, header.GetAllocationTableUsedEntryCount());  // 1 slice is enough for 1024 bytes.
+  Header header = Header::FromGrowableDiskSize(kMaxUsablePartitions, kInitialDiskSize, kMaxDiskSize,
+                                               kBigSliceSize);
+  // No allocated slices since it's too small.
+  EXPECT_EQ(0, header.GetAllocationTableUsedEntryCount());
   EXPECT_LT(kMaxDiskSize / kBigSliceSize, header.GetAllocationTableAllocatedEntryCount());
   EXPECT_EQ(kBigSliceSize, header.slice_size);
-  EXPECT_EQ(header.GetSliceDataOffset(1) + kBigSliceSize, header.fvm_partition_size);
+
+  size_t metadata_size = header.GetSliceDataOffset(1);
+
+  // Test an input disk size that's one too small for two slices. The slice count should always
+  // be rounded down so there are only full slices, so we should be left with one current slicw.
+  size_t round_down_disk_size = metadata_size + kBigSliceSize * 2 - 1;
+  header = Header::FromGrowableDiskSize(kMaxUsablePartitions, round_down_disk_size, kMaxDiskSize,
+                                        kBigSliceSize);
+  EXPECT_EQ(1, header.GetAllocationTableUsedEntryCount());
+  EXPECT_EQ(metadata_size + kBigSliceSize, header.fvm_partition_size);
+
+  // A large non-growable disk. This one has block size == slice size so all of the disk should
+  // be addressable with no rounding.
+  constexpr size_t kSmallSliceSize = kBlockSize;
+  header = Header::FromDiskSize(kMaxUsablePartitions, kMaxDiskSize, kSmallSliceSize);
+  EXPECT_LT(kMaxDiskSize / kSmallSliceSize, header.GetAllocationTableAllocatedEntryCount());
+  EXPECT_EQ(kMaxDiskSize, header.fvm_partition_size);
 }
 
 TEST(FvmFormat, Getters) {

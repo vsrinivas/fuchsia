@@ -16,25 +16,9 @@ using fvm::Header;
 using fvm::VPartition;
 using fvm::VPartitionManager;
 
-constexpr size_t kFvmSlizeSize = 8 * fvm::kBlockSize;
+constexpr size_t kFvmSliceSize = 8 * fvm::kBlockSize;
 constexpr size_t kDiskSize = 64 * fvm::kBlockSize;
-constexpr size_t kAllocTableSize = fvm::AllocTableLengthForDiskSize(kDiskSize, kFvmSlizeSize);
-constexpr size_t kPartitionTableSize = fvm::PartitionTableLength(fvm::kMaxVPartitions);
 constexpr uint32_t kBlocksPerSlice = 128;
-
-// Initializes the header of an FVM volume.
-Header MakeSuperBlock(size_t part_size, size_t part_table_size, size_t alloc_table_size) {
-  Header superblock;
-  superblock.fvm_partition_size = part_size;
-  superblock.vpartition_table_size = part_table_size;
-  superblock.allocation_table_size = alloc_table_size;
-  superblock.slice_size = kFvmSlizeSize;
-  superblock.version = fvm::kMagic;
-  superblock.magic = fvm::kVersion;
-  superblock.generation = 1;
-  fvm::UpdateHash(&superblock, sizeof(Header));
-  return superblock;
-}
 
 class FakeBlockDevice : public ddk::BlockImplProtocol<FakeBlockDevice> {
  public:
@@ -87,13 +71,23 @@ class BlockDeviceTest : public zxtest::Test {
     device_ =
         std::make_unique<VPartitionManager>(nullptr, info, block_op_size, block_device_.proto());
 
-    Header superblock = MakeSuperBlock(kDiskSize, kPartitionTableSize, kAllocTableSize);
-    FormatInfo format_info(superblock);
-    device_->SetFormatInfoForTest(format_info);
+    // Supply the basic configuration to the FVM driver so it can make sense of slice requests.
+    fvm::Header superblock =
+        fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kDiskSize, kFvmSliceSize);
+    size_t metadata_vmo_size = superblock.GetDataStartOffset();
+    fzl::OwnedVmoMapper metadata_mapper;
+    ASSERT_OK(metadata_mapper.CreateAndMap(metadata_vmo_size, "fvm-metadata"));
+    uint8_t* metadata_buffer = static_cast<uint8_t*>(metadata_mapper.start());
+
+    // Copy the header to both copies of the metadata.
+    memcpy(metadata_buffer, &superblock, sizeof(fvm::Header));
+    memcpy(&metadata_buffer[superblock.GetSuperblockOffset(fvm::SuperblockType::kSecondary)],
+           &superblock, sizeof(Header));
+    device_->SetMetadataForTest(std::move(metadata_mapper));
 
     partition_ = std::make_unique<VPartition>(device_.get(), 1, block_op_size);
 
-    ASSERT_EQ(kBlocksPerSlice, kFvmSlizeSize / info.block_size);
+    ASSERT_EQ(kBlocksPerSlice, kFvmSliceSize / info.block_size);
   }
 
  protected:

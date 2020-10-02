@@ -171,7 +171,7 @@ FvmDescriptor MakeDescriptor() {
   FvmOptions options;
   options.compression.schema = CompressionSchema::kLz4;
   options.max_volume_size = 20 * (1 << 20);
-  options.slice_size = 64;
+  options.slice_size = fvm::kBlockSize;
 
   auto partition_1_result = Partition::Create(kSerializedVolumeImage1, nullptr);
   EXPECT_TRUE(partition_1_result.is_ok()) << partition_1_result.error();

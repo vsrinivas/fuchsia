@@ -16,7 +16,6 @@
 #include <fs-management/fvm.h>
 #include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
-#include <fvm/fvm.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
@@ -185,18 +184,18 @@ TEST(FvmSparseImageReaderTest, ImageWithMaxSizeAllocatesEnoughMetadata) {
   ASSERT_TRUE(sparse_image_or.is_ok()) << sparse_image_or.error();
   auto sparse_image = sparse_image_or.take_value();
 
-  auto expected_format_info = fvm::FormatInfo::FromDiskSize(300 << 20, image.slice_size);
+  auto expected_header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, 300 << 20, image.slice_size);
 
   fvm::Header header = {};
   auto header_stream = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header));
-  read_result = sparse_image.reader()->Read(sparse_image.reader()->GetMaximumOffset() -
-                                                2 * expected_format_info.metadata_allocated_size(),
-                                            header_stream);
+  read_result = sparse_image.reader()->Read(
+      sparse_image.reader()->GetMaximumOffset() - expected_header.GetDataStartOffset(),
+      header_stream);
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();
   ASSERT_EQ(header.magic, fvm::kMagic);
 
-  EXPECT_EQ(expected_format_info.header().GetMetadataAllocatedBytes(),
-            header.GetMetadataAllocatedBytes());
+  EXPECT_EQ(expected_header.GetMetadataAllocatedBytes(), header.GetMetadataAllocatedBytes());
 }
 
 // This doesn't test that the resulting image is valid, but it least tests that FtlImageWrite can

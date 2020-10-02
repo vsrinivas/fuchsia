@@ -10,8 +10,8 @@
 #include <string>
 
 #include <digest/digest.h>
+#include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
-#include <fvm/fvm.h>
 
 #include "fvm/format.h"
 #include "src/storage/volume_image/address_descriptor.h"
@@ -224,8 +224,8 @@ fit::result<Partition, std::string> OpenSparseImage(Reader& base_reader,
   fvm::Header header;
   if (fvm_sparse_header.maximum_disk_size) {
     // The sparse image includes a maximum disk size, use that.
-    header =
-        fvm::FormatInfo::FromDiskSize(fvm_sparse_header.maximum_disk_size, slice_size).header();
+    header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions,
+                                       fvm_sparse_header.maximum_disk_size, slice_size);
     if (total_slices > header.GetAllocationTableUsedEntryCount()) {
       return fit::error("Fvm Sparse Image Reader, found " + std::to_string(total_slices) +
                         ", but disk size allows " +

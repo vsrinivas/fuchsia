@@ -15,11 +15,11 @@ namespace fvm {
 namespace {
 
 // Shared constants for all resize tests.
-constexpr uint64_t kBlockSize = 512;
+constexpr uint64_t kTestBlockSize = 512;
 constexpr uint64_t kSliceSize = 1 << 20;
 
 constexpr uint64_t kDataSizeInBlocks = 10;
-constexpr uint64_t kDataSize = kBlockSize * kDataSizeInBlocks;
+constexpr uint64_t kDataSize = kTestBlockSize * kDataSizeInBlocks;
 
 constexpr char kPartitionName[] = "partition-name";
 constexpr uint8_t kPartitionUniqueGuid[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -102,109 +102,84 @@ class FvmResizeTest : public zxtest::Test {
   devmgr_integration_test::IsolatedDevmgr devmgr_;
 };
 
-TEST_F(FvmResizeTest, NonPreallocatedMetadataIsUnaffected) {
-  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kBlockSize;
-  constexpr uint64_t kMaxBlockCount = (4 << 10) * kSliceSize / kBlockSize;
-
-  std::unique_ptr<RamdiskRef> ramdisk =
-      RamdiskRef::Create(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount);
-  ASSERT_TRUE(ramdisk);
-  std::unique_ptr<FvmAdapter> fvm = FvmAdapter::Create(
-      devmgr_.devfs_root(), kBlockSize, kInitialBlockCount, kSliceSize, ramdisk.get());
-  ASSERT_TRUE(fvm);
-
-  GrowParams params;
-  params.target_size = kMaxBlockCount * kBlockSize;
-  // Data stays the same size, so there are no new slices.
-  params.validate_new_slices = false;
-  params.format = FormatInfo::FromDiskSize(kInitialBlockCount * kBlockSize, kSliceSize);
-  params.seed = zxtest::Runner::GetInstance()->options().seed;
-
-  ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
-}
-
 TEST_F(FvmResizeTest, PreallocatedMetadataGrowsCorrectly) {
-  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kBlockSize;
-  constexpr uint64_t kMaxBlockCount = (4 << 10) * kSliceSize / kBlockSize;
+  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kTestBlockSize;
+  constexpr uint64_t kMaxBlockCount = (4 << 10) * kSliceSize / kTestBlockSize;
 
   std::unique_ptr<RamdiskRef> ramdisk =
-      RamdiskRef::Create(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount);
+      RamdiskRef::Create(devmgr_.devfs_root(), kTestBlockSize, kInitialBlockCount);
   ASSERT_TRUE(ramdisk);
   std::unique_ptr<FvmAdapter> fvm =
-      FvmAdapter::CreateGrowable(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount,
+      FvmAdapter::CreateGrowable(devmgr_.devfs_root(), kTestBlockSize, kInitialBlockCount,
                                  kMaxBlockCount, kSliceSize, ramdisk.get());
   ASSERT_TRUE(fvm);
 
   GrowParams params;
-  params.target_size = kMaxBlockCount * kBlockSize;
+  params.target_size = kMaxBlockCount * kTestBlockSize;
   // Data stays the same size, so there are no new slices.
   params.validate_new_slices = true;
-  params.format = FormatInfo::FromDiskSize(kMaxBlockCount * kBlockSize, kSliceSize);
+  params.format = FormatInfo::FromDiskSize(kMaxBlockCount * kTestBlockSize, kSliceSize);
   params.seed = zxtest::Runner::GetInstance()->options().seed;
 
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
 }
 
-// TODO(fxb/60920) re-enable this test when FVM getters are used consistently. The problem is that
-// The FormatInfo constructors are used in some places, while fvm::AllocTableLengthForDiskSize
-// are used in other places, giving different required allocation table sizes. The "old" FormatInfo
-// code may result in one unusable slice at the end, and can be smaller in some cases because the
-// metadata size is subtracted from the size reserved for slices (which can lead to smaller slice
-// counts for some boundary cases of whith this test is one).
-//
-// The particular case that causes this test to fail is in fvm_init_preallocated() where it
-// initializes:
-//   sb->allocation_table_size
-// which used to be the "old" fvm::AllocTableLength() and is now the "new"
-// AllocTableLengthForDiskSize().
-TEST_F(FvmResizeTest, DISABLED_PreallocatedMetadataGrowsAsMuchAsPossible) {
-  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kBlockSize;
-  constexpr uint64_t kMaxBlockCount = (4 << 10) * kSliceSize / kBlockSize;
+TEST_F(FvmResizeTest, PreallocatedMetadataGrowsAsMuchAsPossible) {
+  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kTestBlockSize;
+  constexpr uint64_t kMaxBlockCount = (4 << 10) * kSliceSize / kTestBlockSize;
 
   std::unique_ptr<RamdiskRef> ramdisk =
-      RamdiskRef::Create(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount);
+      RamdiskRef::Create(devmgr_.devfs_root(), kTestBlockSize, kInitialBlockCount);
   ASSERT_TRUE(ramdisk);
   std::unique_ptr<FvmAdapter> fvm =
-      FvmAdapter::CreateGrowable(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount,
+      FvmAdapter::CreateGrowable(devmgr_.devfs_root(), kTestBlockSize, kInitialBlockCount,
                                  kMaxBlockCount, kSliceSize, ramdisk.get());
   ASSERT_TRUE(fvm);
 
+  // Compute the expected header information. This is the header computed for the original slice
+  // size, expanded by as many slices as possible.
+  Header expected =
+      Header::FromDiskSize(kMaxUsablePartitions, kMaxBlockCount * kTestBlockSize, kSliceSize);
+  expected.SetSliceCount(expected.GetAllocationTableAllocatedEntryCount());
+
   GrowParams params;
-  params.target_size = 2 * kMaxBlockCount * kBlockSize;
+  // This defines a target size much larger than our header could handle so the resize will max
+  // out the slices in the headeer.
+  params.target_size = 2 * expected.fvm_partition_size;
   // Data stays the same size, so there are no new slices.
   params.validate_new_slices = false;
-  params.format = FormatInfo::FromDiskSize(kMaxBlockCount * kBlockSize, kSliceSize);
+  params.format = FormatInfo(expected);
   params.seed = zxtest::Runner::GetInstance()->options().seed;
 
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
 }
 
 TEST_F(FvmResizeTest, PreallocatedMetadataRemainsValidInPartialGrowths) {
-  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kBlockSize;
-  constexpr uint64_t kMidBlockCount = (4 << 10) * kSliceSize / kBlockSize;
-  constexpr uint64_t kMaxBlockCount = (8 << 10) * kSliceSize / kBlockSize;
+  constexpr uint64_t kInitialBlockCount = (50 * kSliceSize) / kTestBlockSize;
+  constexpr uint64_t kMidBlockCount = (4 << 10) * kSliceSize / kTestBlockSize;
+  constexpr uint64_t kMaxBlockCount = (8 << 10) * kSliceSize / kTestBlockSize;
 
   std::unique_ptr<RamdiskRef> ramdisk =
-      RamdiskRef::Create(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount);
+      RamdiskRef::Create(devmgr_.devfs_root(), kTestBlockSize, kInitialBlockCount);
   ASSERT_TRUE(ramdisk);
   std::unique_ptr<FvmAdapter> fvm =
-      FvmAdapter::CreateGrowable(devmgr_.devfs_root(), kBlockSize, kInitialBlockCount,
+      FvmAdapter::CreateGrowable(devmgr_.devfs_root(), kTestBlockSize, kInitialBlockCount,
                                  kMaxBlockCount, kSliceSize, ramdisk.get());
   ASSERT_TRUE(fvm);
 
   GrowParams params;
-  params.target_size = kMidBlockCount * kBlockSize;
+  params.target_size = kMidBlockCount * kTestBlockSize;
   // Data stays the same size, so there are no new slices.
   params.validate_new_slices = true;
-  params.format = FormatInfo::FromPreallocatedSize(kMidBlockCount * kBlockSize,
-                                                   kMaxBlockCount * kBlockSize, kSliceSize);
+  params.format = FormatInfo::FromPreallocatedSize(kMidBlockCount * kTestBlockSize,
+                                                   kMaxBlockCount * kTestBlockSize, kSliceSize);
   params.seed = zxtest::Runner::GetInstance()->options().seed;
 
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
 
-  params.format = FormatInfo::FromPreallocatedSize(kMaxBlockCount * kBlockSize,
-                                                   kMaxBlockCount * kBlockSize, kSliceSize);
-  params.target_size = kMaxBlockCount * kBlockSize;
+  params.format = FormatInfo::FromPreallocatedSize(kMaxBlockCount * kTestBlockSize,
+                                                   kMaxBlockCount * kTestBlockSize, kSliceSize);
+  params.target_size = kMaxBlockCount * kTestBlockSize;
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
 }
 

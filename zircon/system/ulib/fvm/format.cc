@@ -56,9 +56,27 @@ Header Header::FromDiskSize(size_t usable_partitions, size_t disk_size, size_t s
 
 Header Header::FromGrowableDiskSize(size_t usable_partitions, size_t initial_disk_size,
                                     size_t max_disk_size, size_t slice_size) {
-  return FromGrowableSliceCount(usable_partitions,
-                                (initial_disk_size + (slice_size - 1)) / slice_size,
-                                (max_disk_size + (slice_size - 1)) / slice_size, slice_size);
+  // The relationship between the minimum number of slices required and the disk size is nonlinear
+  // because the metadata takes away from the usable disk space covered by the slices and the
+  // allocation table size is always block-aligned.
+  //
+  // Here we ignore this and just compute the metadata size based on the number of slices required
+  // to cover the entire device, even though we don't need a slice to cover the copies of the
+  // metadata.
+  //
+  // This function always rounds down because we can't have partial slices. If the non-metadata
+  // space isn't a multiple of the slice size, there will be some unusable space at the end.
+  size_t max_usable_slices = max_disk_size / slice_size;
+
+  // Compute the initial slice count. Unlike when calculating the max usable slices, we can't ignore
+  // the metadata size since the caller expects the metadata and the used slices to fit in the
+  // requested disk size.
+  size_t slice_data_start = DataStartForUsableEntries(usable_partitions, max_usable_slices);
+  size_t initial_slices = 0;
+  if (initial_disk_size > slice_data_start)
+    initial_slices = (initial_disk_size - slice_data_start) / slice_size;
+
+  return FromGrowableSliceCount(usable_partitions, initial_slices, max_usable_slices, slice_size);
 }
 
 Header Header::FromSliceCount(size_t usable_partitions, size_t usable_slices, size_t slice_size) {
@@ -75,17 +93,16 @@ Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_u
   Header result{
       .magic = kMagic,
       .version = kVersion,
-      .pslice_count = initial_usable_slices,
+      .pslice_count = 0,  // Will be set properly below.
       .slice_size = slice_size,
       .fvm_partition_size = kBlockSize,  // Will be set properly below.
-      .vpartition_table_size =
-          fbl::round_up((usable_partitions + 1) * sizeof(VPartitionEntry), kBlockSize),
+      .vpartition_table_size = PartitionTableByteSizeForUsablePartitions(usable_partitions),
       .allocation_table_size = AllocTableLengthForUsableSliceCount(max_usable_slices),
       .generation = 0,
   };
 
-  // Fix up the partition size now that we know the metadata size. Slices count from 1.
-  result.fvm_partition_size = result.GetDataStartOffset() + result.pslice_count * slice_size;
+  // Set the pslice_count and fvm_partition_size now that we know the metadata size.
+  result.SetSliceCount(initial_usable_slices);
 
   return result;
 }
