@@ -402,22 +402,16 @@ template("package") {
 
       url = "fuchsia-pkg://fuchsia.com"
       dest = "test/$dest"
-      if (pkg.__deprecated_system_image) {
-        url_pkg_name = "system"
-        path = "/system/$dest"
-      } else {
-        url_pkg_name = pkg.package_name
-        path = ""
-      }
+      url_pkg_name = pkg.package_name
+      path = ""
       url += "/${url_pkg_name}"
 
       dest_name = get_path_info(dest, "name")
       not_needed([ "dest_name" ])
 
       # Check that all tests are components with cmx/cm files at the expected path.
-      if (!pkg.__deprecated_system_image && !is_disabled &&
-          (!defined(require_bare_tests_allowlist) ||
-           !require_bare_tests_allowlist)) {
+      if (!is_disabled && (!defined(require_bare_tests_allowlist) ||
+                           !require_bare_tests_allowlist)) {
         require_bare_tests_allowlist = true
         url_resource_path = ""
         foreach(meta, pkg.meta) {
