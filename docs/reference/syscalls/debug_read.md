@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Read data from the debug serial port.
+Read a message from the debug serial port.
 
 ## SYNOPSIS
 
@@ -60,7 +60,6 @@ on the kernel command line.
 
  - [`kernel_cmdline.md`](/docs/reference/kernel/kernel_cmdline.md)
 
- - [`zx_debug_write()`]
  - [`zx_debug_write()`]
  - [`zx_debuglog_read()`]
  - [`zx_debuglog_write()`]

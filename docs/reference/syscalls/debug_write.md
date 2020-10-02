@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Write data to the debug serial port.
+Write a message to the debug serial port.
 
 ## SYNOPSIS
 

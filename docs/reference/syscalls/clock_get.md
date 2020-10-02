@@ -194,3 +194,8 @@ void test() {
 }
 
 ```
+
+<!-- References updated by update-docs-from-fidl, do not edit. -->
+
+[`zx_clock_get_monotonic()`]: clock_get_monotonic.md
+[`zx_object_get_info()`]: object_get_info.md
