@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        appendable::BufferTooSmall,
         ie::{
             rsn::{
                 akm::{Akm, PSK},
@@ -11,7 +12,7 @@ use {
                 rsne::Rsne,
             },
             wpa::WpaIe,
-            *,
+            write_wpa1_ie, *,
         },
         organization::Oui,
     },
@@ -158,6 +159,11 @@ pub fn fake_wpa_ie() -> WpaIe {
     wpa.unicast_cipher_list.push(Cipher { oui: Oui::MSFT, suite_type: TKIP });
     wpa.akm_list.push(Akm { oui: Oui::MSFT, suite_type: PSK });
     wpa
+}
+
+pub fn get_vendor_ie_bytes_for_wpa_ie(wpa_ie: &WpaIe) -> Result<Vec<u8>, BufferTooSmall> {
+    let mut buf = vec![];
+    write_wpa1_ie(&mut buf, &wpa_ie).map(|_| buf)
 }
 
 pub fn get_rsn_ie_bytes(rsne: &Rsne) -> Vec<u8> {

@@ -33,6 +33,7 @@ use {
     std::convert::TryInto,
     wlan_common::{
         appendable::Appendable,
+        bss::BssDescriptionExt,
         buffer_writer::BufferWriter,
         data_writer,
         ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
@@ -219,7 +220,11 @@ impl ClientMlme {
                     Bssid(bss.bssid),
                     self.ctx.device.wlan_info().ifc_info.mac_addr,
                     bss.beacon_period,
-                    bss.rsne.is_some(),
+                    bss.rsne.is_some()
+                    // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
+                    // purposes only. In particular, connect-to-wpa1-network relies
+                    // on this half of the OR statement.
+                        || bss.find_wpa_ie().is_some(),
                 ));
                 self.ctx.device.access_sme_sender(|sender| {
                     sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
@@ -1060,7 +1065,14 @@ mod tests {
         },
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
-            assert_variant, ie, stats::SignalStrengthAverage, test_utils::fake_frames::*, TimeUnit,
+            assert_variant,
+            ie::{
+                self, fake_wpa_ie, get_rsn_ie_bytes, get_vendor_ie_bytes_for_wpa_ie,
+                rsn::fake_wpa2_a_rsne,
+            },
+            stats::SignalStrengthAverage,
+            test_utils::fake_frames::*,
+            TimeUnit,
         },
         wlan_statemachine::*,
     };
@@ -1222,6 +1234,75 @@ mod tests {
         })
         .expect("valid JoinRequest should be handled successfully");
         me.get_bound_client().expect("client sta should have been created by now.");
+    }
+
+    #[test]
+    fn rsn_ie_implies_sta_is_rsn() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
+        let rsne_bytes = get_rsn_ie_bytes(&fake_wpa2_a_rsne());
+        me.on_sme_join(fidl_mlme::JoinRequest {
+            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
+                vec![],
+                Some(rsne_bytes),
+                None,
+            ),
+            join_failure_timeout: 42,
+            nav_sync_delay: 42,
+            op_rates: vec![1, 2, 3],
+            phy: fidl_common::Phy::Erp,
+            cbw: fidl_common::Cbw::Cbw20,
+        })
+        .expect("valid JoinRequest should be handled successfully");
+        let client = me.get_bound_client().expect("client sta should have been created by now.");
+        assert!(client.sta.is_rsn);
+    }
+
+    #[test]
+    fn wpa_ie_implies_sta_is_rsn() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
+        let vendor_ies_bytes = get_vendor_ie_bytes_for_wpa_ie(&fake_wpa_ie())
+            .expect("could not write WPA IE to Vendor IE buffer");
+        me.on_sme_join(fidl_mlme::JoinRequest {
+            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
+                vec![],
+                None,
+                Some(vendor_ies_bytes),
+            ),
+            join_failure_timeout: 42,
+            nav_sync_delay: 42,
+            op_rates: vec![1, 2, 3],
+            phy: fidl_common::Phy::Erp,
+            cbw: fidl_common::Cbw::Cbw20,
+        })
+        .expect("valid JoinRequest should be handled successfully");
+        let client = me.get_bound_client().expect("client sta should have been created by now.");
+        assert!(client.sta.is_rsn);
+    }
+
+    #[test]
+    fn no_wpa_or_rsn_ie_implies_sta_is_not_rsn() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
+        me.on_sme_join(fidl_mlme::JoinRequest {
+            selected_bss: wlan_common::test_utils::fake_stas::fake_bss_description(
+                vec![],
+                None,
+                None,
+            ),
+            join_failure_timeout: 42,
+            nav_sync_delay: 42,
+            op_rates: vec![1, 2, 3],
+            phy: fidl_common::Phy::Erp,
+            cbw: fidl_common::Cbw::Cbw20,
+        })
+        .expect("valid JoinRequest should be handled successfully");
+        let client = me.get_bound_client().expect("client sta should have been created by now.");
+        assert!(!client.sta.is_rsn);
     }
 
     #[test]
