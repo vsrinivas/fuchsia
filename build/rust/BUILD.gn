@@ -18,13 +18,7 @@ group("disable_strict_sources_check_allowlist") {
   # This is an allowlist of packages that do not enforce that the source files
   # are listed in `source`. This is only intended to be used as a temporary
   # allowlist during soft migrations.
-  visibility = [
-    #FIXME(55290) Temporarily allow rust-tuf to ignore the sources check to
-    #help with a soft migration.
-    "//src/sys/pkg/lib/tuf:tuf",
-    "//src/sys/pkg/lib/tuf:tuf_lib_test",
-    "//src/sys/pkg/lib/tuf:tuf_lib_test_executable",
-  ]
+  visibility = []
 }
 
 cargo_toml_gen_desc_out = "$target_out_dir/cargo_toml_gen_desc.json"
