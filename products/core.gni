@@ -7,8 +7,7 @@ import("//products/bringup.gni")
 bootfs_only = false
 
 kernel_cmdline_args -= [
-  # TODO(fxbug.dev/59308): Re-enable once logging is handled in early boot.
-  # "devmgr.log-to-debuglog=true",
+  "devmgr.log-to-debuglog=true",
   "kernel.oom.behavior=jobkill",
 ]
 kernel_cmdline_args += [ "kernel.oom.behavior=reboot" ]
