@@ -523,7 +523,7 @@ impl FrameBuffer {
         frame_count: usize,
         config: &Config,
     ) -> Result<fidl_fuchsia_sysmem::BufferCollectionProxy, Error> {
-        let local_token = self.local_token.take().expect("token");
+        let local_token = self.local_token.take().expect("token in allocate_buffer_collection");
         let (display_token, display_token_request) =
             create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
 

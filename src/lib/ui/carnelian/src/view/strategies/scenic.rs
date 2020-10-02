@@ -18,22 +18,16 @@ use crate::{
 };
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
-use fidl_fuchsia_sysmem::ImageFormat2;
 use fidl_fuchsia_ui_gfx::{self as gfx};
 use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
-use fuchsia_scenic::{EntityNode, ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{EntityNode, Image2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_trace::{self, duration, instant};
 use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
 use futures::{channel::mpsc::UnboundedSender, TryStreamExt};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    iter,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 struct Plumber {
     pub size: UintSize,
@@ -42,17 +36,18 @@ struct Plumber {
     pub first_image_id: u64,
     pub frame_set: FrameSet,
     pub image_indexes: BTreeMap<ImageId, u32>,
+    pub images: BTreeMap<ImageId, Image2>,
     pub context: render::Context,
 }
 
 impl Plumber {
     async fn new(
+        session: &SessionPtr,
         size: UintSize,
         pixel_format: fidl_fuchsia_sysmem::PixelFormatType,
         buffer_count: usize,
         collection_id: u32,
         first_image_id: u64,
-        image_pipe_client: &mut ImagePipe2Proxy,
         render_options: RenderOptions,
     ) -> Result<Plumber, Error> {
         let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
@@ -63,10 +58,12 @@ impl Plumber {
             usage,
             buffer_count,
         )?;
-        let image_pipe_token = buffer_allocator.duplicate_token().await?;
-        image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
+
+        let buffer_collection_token = buffer_allocator.duplicate_token().await?;
+        session.lock().register_buffer_collection(collection_id, buffer_collection_token)?;
+
         let context_token = buffer_allocator.duplicate_token().await?;
-        let mut context = render::Context {
+        let context = render::Context {
             inner: if render_options.use_spinel {
                 ContextInner::Spinel(generic::Spinel::new_context(context_token, size))
             } else {
@@ -74,46 +71,19 @@ impl Plumber {
             },
         };
         let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;
-        let buffers_pixel_format = if render_options.use_spinel {
-            match context.pixel_format() {
-                fuchsia_framebuffer::PixelFormat::Abgr8888 => {
-                    fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
-                }
-                fuchsia_framebuffer::PixelFormat::Argb8888 => {
-                    fidl_fuchsia_sysmem::PixelFormatType::Bgra32
-                }
-                fuchsia_framebuffer::PixelFormat::RgbX888 => {
-                    fidl_fuchsia_sysmem::PixelFormatType::Bgra32
-                }
-                fuchsia_framebuffer::PixelFormat::BgrX888 => {
-                    fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
-                }
-                _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
-            }
-        } else {
-            pixel_format
-        };
 
         let mut image_ids = BTreeSet::new();
         let mut image_indexes = BTreeMap::new();
-        let mut index = 0;
-        for _buffer in &buffers.buffers[0..buffers.buffer_count as usize] {
-            let image_id = index + first_image_id;
-            image_ids.insert(image_id);
+        let mut images = BTreeMap::new();
+        for index in 0..buffers.buffer_count as usize {
+            let image_id = index + first_image_id as usize;
+            image_ids.insert(image_id as u64);
             let uindex = index as u32;
-            // Realized the image before passing it to image pipe.
-            let _render_image = context.get_image(uindex);
-            image_pipe_client
-                .add_image(
-                    image_id as u32,
-                    collection_id,
-                    uindex,
-                    &mut make_image_format(size.width, size.height, buffers_pixel_format),
-                )
-                .expect("add_image");
-            image_indexes.insert(image_id, uindex);
-            index += 1;
+            image_indexes.insert(image_id as u64, uindex);
+            let image = Image2::new(session, size.width, size.height, collection_id, uindex);
+            images.insert(image_id as u64, image);
         }
+
         let frame_set = FrameSet::new(image_ids);
         Ok(Plumber {
             size,
@@ -122,26 +92,21 @@ impl Plumber {
             first_image_id,
             frame_set,
             image_indexes,
+            images,
             context,
         })
     }
 
-    pub fn enter_retirement(&mut self, image_pipe_client: &mut ImagePipe2Proxy) {
-        for image_id in self.first_image_id..self.first_image_id + self.buffer_count as u64 {
-            image_pipe_client.remove_image(image_id as u32).unwrap_or_else(|err| {
-                eprintln!("image_pipe_client.remove_image {} failed with {}", image_id, err)
-            });
-        }
-        image_pipe_client.remove_buffer_collection(self.collection_id).unwrap_or_else(|err| {
-            eprintln!(
-                "image_pipe_client.remove_buffer_collection {} failed with {}",
-                self.collection_id, err
-            )
-        });
+    pub fn enter_retirement(&mut self, session: &SessionPtr) {
+        session
+            .lock()
+            .deregister_buffer_collection(self.collection_id)
+            .expect("deregister_buffer_collection");
     }
 }
 
 const RENDER_BUFFER_COUNT: usize = 3;
+const DEFAULT_PRESENT_INTERVAL: i64 = (1_000_000_000.0 / 60.0) as i64;
 
 pub(crate) struct ScenicViewStrategy {
     #[allow(unused)]
@@ -154,6 +119,7 @@ pub(crate) struct ScenicViewStrategy {
     view_key: ViewKey,
     pending_present_count: usize,
     next_presentation_times: Vec<i64>,
+    present_interval: i64,
     last_presentation_time: i64,
     remaining_presents_in_flight_allowed: i64,
     render_timer_scheduled: bool,
@@ -162,8 +128,6 @@ pub(crate) struct ScenicViewStrategy {
     content_node: ShapeNode,
     content_material: Material,
     next_buffer_collection: u32,
-    image_pipe: ImagePipe2,
-    image_pipe_client: ImagePipe2Proxy,
     plumber: Option<Plumber>,
     retiring_plumbers: Vec<Plumber>,
     next_image_id: u64,
@@ -180,12 +144,49 @@ impl ScenicViewStrategy {
         view_ref: ViewRef,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewStrategyPtr, Error> {
-        let (image_pipe_client, server_end) = create_endpoints::<ImagePipe2Marker>()?;
-        let image_pipe = ImagePipe2::new(session.clone(), server_end);
+        let (view, root_node, content_material, content_node) =
+            Self::create_scenic_resources(session, view_token, control_ref, view_ref);
+        Self::request_hard_keys(session);
+        Self::listen_for_session_events(session, &app_sender, key);
+
+        // This initial present is needed in order for session events to start flowing.
+        Self::do_present(session, &app_sender, key, 0);
+
+        let strat = ScenicViewStrategy {
+            view,
+            session: session.clone(),
+            view_key: key,
+            app_sender: app_sender.clone(),
+            pending_present_count: 1,
+            next_presentation_times: Vec::new(),
+            present_interval: DEFAULT_PRESENT_INTERVAL,
+            last_presentation_time: 0,
+            remaining_presents_in_flight_allowed: 3,
+            render_timer_scheduled: false,
+            missed_frame: false,
+            root_node,
+            render_options,
+            content_node,
+            content_material,
+            plumber: None,
+            retiring_plumbers: Vec::new(),
+            next_buffer_collection: 1,
+            next_image_id: 1,
+            input_handler: ScenicInputHandler::new(),
+        };
+
+        Ok(Box::new(strat))
+    }
+
+    fn create_scenic_resources(
+        session: &SessionPtr,
+        view_token: ViewToken,
+        control_ref: ViewRefControl,
+        view_ref: ViewRef,
+    ) -> (View, EntityNode, Material, ShapeNode) {
         let content_material = Material::new(session.clone());
         let content_node = ShapeNode::new(session.clone());
         content_node.set_material(&content_material);
-        let image_pipe_client = image_pipe_client.into_proxy()?;
         session.lock().flush();
         let view = View::new3(
             session.clone(),
@@ -204,7 +205,22 @@ impl ScenicViewStrategy {
                 delivery_request: true,
             }),
         ));
+        (view, root_node, content_material, content_node)
+    }
 
+    fn request_hard_keys(session: &SessionPtr) {
+        session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(
+            fidl_fuchsia_ui_input::Command::SetHardKeyboardDelivery(SetHardKeyboardDeliveryCmd {
+                delivery_request: true,
+            }),
+        ));
+    }
+
+    fn listen_for_session_events(
+        session: &SessionPtr,
+        app_sender: &UnboundedSender<MessageInternal>,
+        key: ViewKey,
+    ) {
         let event_sender = app_sender.clone();
         let mut event_stream = session.lock().take_event_stream();
         fasync::Task::local(async move {
@@ -225,9 +241,16 @@ impl ScenicViewStrategy {
             }
         })
         .detach();
+    }
 
+    fn do_present(
+        session: &SessionPtr,
+        app_sender: &UnboundedSender<MessageInternal>,
+        key: ViewKey,
+        presentation_time: i64,
+    ) {
         let present_sender = app_sender.clone();
-        let info_fut = session.lock().present2(0, 0);
+        let info_fut = session.lock().present2(presentation_time, 0);
         fasync::Task::local(async move {
             match info_fut.await {
                 // TODO: figure out how to recover from this error
@@ -240,32 +263,6 @@ impl ScenicViewStrategy {
             }
         })
         .detach();
-
-        let strat = ScenicViewStrategy {
-            view,
-            session: session.clone(),
-            view_key: key,
-            app_sender: app_sender.clone(),
-            pending_present_count: 1,
-            next_presentation_times: Vec::new(),
-            last_presentation_time: 0,
-            remaining_presents_in_flight_allowed: 3,
-            render_timer_scheduled: false,
-            missed_frame: false,
-            root_node,
-            render_options,
-            image_pipe_client,
-            image_pipe,
-            content_node,
-            content_material,
-            plumber: None,
-            retiring_plumbers: Vec::new(),
-            next_buffer_collection: 1,
-            next_image_id: 1,
-            input_handler: ScenicInputHandler::new(),
-        };
-
-        Ok(Box::new(strat))
     }
 
     fn make_view_assistant_context(
@@ -295,12 +292,12 @@ impl ScenicViewStrategy {
         self.next_image_id = self.next_image_id.wrapping_add(RENDER_BUFFER_COUNT as u64);
         self.plumber = Some(
             Plumber::new(
+                &self.session,
                 size.to_u32(),
                 fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
                 RENDER_BUFFER_COUNT,
                 buffer_collection_id,
                 next_image_id,
-                &mut self.image_pipe_client,
                 self.render_options,
             )
             .await
@@ -312,7 +309,9 @@ impl ScenicViewStrategy {
     fn next_presentation_time(&self) -> i64 {
         // TODO: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=60306
         let now = fasync::Time::now().into_nanos();
-        let next = self.next_presentation_times.iter().find(|time| **time >= now).unwrap_or(&now);
+        let legal_next = now + self.present_interval;
+        let next =
+            self.next_presentation_times.iter().find(|time| **time >= now).unwrap_or(&legal_next);
         *next
     }
 
@@ -329,33 +328,65 @@ impl ScenicViewStrategy {
             self.render_timer_scheduled = true;
         }
     }
-}
 
-fn make_image_format(
-    width: u32,
-    height: u32,
-    pixel_format: fidl_fuchsia_sysmem::PixelFormatType,
-) -> ImageFormat2 {
-    ImageFormat2 {
-        bytes_per_row: width * 4,
-        coded_height: height,
-        coded_width: width,
-        color_space: fidl_fuchsia_sysmem::ColorSpace {
-            type_: fidl_fuchsia_sysmem::ColorSpaceType::Srgb,
-        },
-        display_height: height,
-        display_width: width,
-        has_pixel_aspect_ratio: false,
-        layers: 1,
-        pixel_aspect_ratio_height: 1,
-        pixel_aspect_ratio_width: 1,
-        pixel_format: fidl_fuchsia_sysmem::PixelFormat {
-            type_: pixel_format,
-            has_format_modifier: true,
-            format_modifier: fidl_fuchsia_sysmem::FormatModifier {
-                value: fidl_fuchsia_sysmem::FORMAT_MODIFIER_LINEAR,
-            },
-        },
+    fn adjust_scenic_resources(&mut self, view_details: &ViewDetails) {
+        let center_x = view_details.physical_size.width * 0.5;
+        let center_y = view_details.physical_size.height * 0.5;
+        self.content_node.set_translation(center_x, center_y, -0.1);
+        let rectangle = Rectangle::new(
+            self.session.clone(),
+            view_details.physical_size.width as f32,
+            view_details.physical_size.height as f32,
+        );
+        self.content_node.set_shape(&rectangle);
+    }
+
+    fn render_to_image_from_plumber(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+    ) -> bool {
+        let plumber = self.plumber.as_mut().expect("plumber");
+        if let Some(available) = plumber.frame_set.get_available_image() {
+            duration!("gfx", "ScenicViewStrategy::render.render_to_image");
+            self.missed_frame = false;
+            let available_index = plumber.image_indexes.get(&available).expect("index for image");
+            let image2 = plumber.images.get(&available).expect("image2");
+            self.content_material.set_texture_resource(Some(&image2));
+            let render_context = ScenicViewStrategy::make_view_assistant_context(
+                view_details,
+                available,
+                *available_index,
+                self.app_sender.clone(),
+            );
+            let buffer_ready_event = Event::create().expect("Event.create");
+            view_assistant
+                .render(&mut plumber.context, buffer_ready_event, &render_context)
+                .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+            plumber.frame_set.mark_prepared(available);
+            let key = view_details.key;
+            let collection_id = plumber.collection_id;
+            let done_event = Event::create().expect("Event.create");
+            let local_done_event =
+                done_event.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("duplicate_handle");
+            self.session.lock().add_release_fence(done_event);
+            let app_sender = self.app_sender.clone();
+            fasync::Task::local(async move {
+                let signals = OnSignals::new(&local_done_event, Signals::EVENT_SIGNALED);
+                signals.await.expect("to wait");
+                app_sender
+                    .unbounded_send(MessageInternal::ImageFreed(key, available, collection_id))
+                    .expect("unbounded_send");
+            })
+            .detach();
+
+            // Image is guaranteed to be presented at this point.
+            plumber.frame_set.mark_presented(available);
+            true
+        } else {
+            self.missed_frame = true;
+            false
+        }
     }
 }
 
@@ -380,6 +411,8 @@ impl ViewStrategy for ScenicViewStrategy {
         self.render_timer_scheduled = false;
         let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
+            self.adjust_scenic_resources(view_details);
+
             if self.plumber.is_none() {
                 duration!("gfx", "ScenicViewStrategy::render.create_plumber");
                 self.create_plumber(size).await.expect("create_plumber");
@@ -392,68 +425,7 @@ impl ViewStrategy for ScenicViewStrategy {
                     self.create_plumber(size).await.expect("create_plumber");
                 }
             }
-            let plumber = self.plumber.as_mut().expect("plumber");
-            let center_x = view_details.physical_size.width * 0.5;
-            let center_y = view_details.physical_size.height * 0.5;
-            self.content_node.set_translation(center_x, center_y, -0.1);
-            let rectangle = Rectangle::new(
-                self.session.clone(),
-                view_details.physical_size.width as f32,
-                view_details.physical_size.height as f32,
-            );
-            if let Some(available) = plumber.frame_set.get_available_image() {
-                self.missed_frame = false;
-                duration!("gfx", "ScenicViewStrategy::render.render_to_image");
-                let available_index =
-                    plumber.image_indexes.get(&available).expect("index for image");
-                self.content_node.set_shape(&rectangle);
-                let render_context = ScenicViewStrategy::make_view_assistant_context(
-                    view_details,
-                    available,
-                    *available_index,
-                    self.app_sender.clone(),
-                );
-                let buffer_ready_event = Event::create().expect("Event.create");
-                let buffer_ready_event_for_image_pipe = buffer_ready_event
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .expect("duplicate_handle");
-                view_assistant
-                    .render(&mut plumber.context, buffer_ready_event, &render_context)
-                    .unwrap_or_else(|e| panic!("Update error: {:?}", e));
-                plumber.frame_set.mark_prepared(available);
-                let image_freed_event = Event::create().expect("Event.create");
-                let local_event = image_freed_event
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .expect("duplicate_handle");
-                let app_sender = self.app_sender.clone();
-                let key = view_details.key;
-                let collection_id = plumber.collection_id;
-                fasync::Task::local(async move {
-                    let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
-                    signals.await.expect("to wait");
-                    app_sender
-                        .unbounded_send(MessageInternal::ImageFreed(key, available, collection_id))
-                        .expect("unbounded_send");
-                })
-                .detach();
-                self.content_material.set_texture_resource(Some(&self.image_pipe));
-                let image_present_event = self.image_pipe_client.present_image(
-                    available as u32,
-                    0,
-                    &mut iter::once(buffer_ready_event_for_image_pipe),
-                    &mut iter::once(image_freed_event),
-                );
-                fasync::Task::local(async move {
-                    image_present_event.await.expect("to present_image");
-                })
-                .detach();
-                // Image is guaranteed to be presented at this point.
-                plumber.frame_set.mark_presented(available);
-                true
-            } else {
-                self.missed_frame = true;
-                false
-            }
+            self.render_to_image_from_plumber(view_details, view_assistant)
         } else {
             true
         }
@@ -477,21 +449,8 @@ impl ViewStrategy for ScenicViewStrategy {
             );
         } else {
             let presentation_time = self.next_presentation_time();
-            let present_event = self.session.lock().present2(presentation_time, 0);
-            let present_sender = self.app_sender.clone();
-            let view_key = self.view_key;
-            fasync::Task::local(async move {
-                match present_event.await {
-                    // TODO: figure out how to recover from this error
-                    Err(err) => eprintln!("Present Error: {}", err),
-                    Ok(info) => {
-                        present_sender
-                            .unbounded_send(MessageInternal::ScenicPresentSubmitted(view_key, info))
-                            .expect("unbounded_send");
-                    }
-                }
-            })
-            .detach();
+            Self::do_present(&self.session, &self.app_sender, self.view_key, presentation_time);
+
             // Advance presentation time.
             self.pending_present_count += 1;
             self.last_presentation_time = presentation_time;
@@ -510,6 +469,21 @@ impl ViewStrategy for ScenicViewStrategy {
             .skip(1) // Skip the first one, as it is the time we are presenting to.
             .filter_map(|info| info.presentation_time)
             .collect();
+
+        let present_intervals = info.future_presentations.len().saturating_sub(1);
+        if present_intervals > 0 {
+            let times: Vec<_> = info
+                .future_presentations
+                .iter()
+                .filter_map(|info| info.presentation_time)
+                .collect();
+            let average_interval: i64 =
+                times.as_slice().windows(2).map(|slice| slice[1] - slice[0]).sum::<i64>()
+                    / present_intervals as i64;
+            self.present_interval = average_interval;
+        } else {
+            self.present_interval = DEFAULT_PRESENT_INTERVAL;
+        }
         self.remaining_presents_in_flight_allowed = info.remaining_presents_in_flight_allowed;
     }
 
@@ -586,7 +560,7 @@ impl ViewStrategy for ScenicViewStrategy {
             if retired_plumber.collection_id == collection_id {
                 retired_plumber.frame_set.mark_done_presenting(image_id);
                 if retired_plumber.frame_set.no_images_in_use() {
-                    retired_plumber.enter_retirement(&mut self.image_pipe_client);
+                    retired_plumber.enter_retirement(&self.session);
                 }
             }
         }

@@ -8,17 +8,19 @@ mod view_token_pair;
 pub use self::view_ref_pair::*;
 pub use self::view_token_pair::*;
 
+use fidl::endpoints::ClientEnd;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_images::{
     ImageInfo, ImagePipe2Marker, MemoryType, PixelFormat, PresentationInfo, Tiling,
 };
 use fidl_fuchsia_scenic_scheduling::FuturePresentationTimes;
+use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
-    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImagePipe2Args, LayerArgs, LayerStackArgs,
-    MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs, ResourceArgs,
-    RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewArgs3, ViewHolderArgs,
-    ViewProperties,
+    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImageArgs2, ImagePipe2Args, LayerArgs,
+    LayerStackArgs, MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs,
+    ResourceArgs, RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewArgs3,
+    ViewHolderArgs, ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, Present2Args, SessionEventStream, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewRef, ViewRefControl, ViewToken};
@@ -125,6 +127,18 @@ impl Session {
     pub fn add_release_fence(&mut self, fence: Event) {
         self.release_fences.push(fence)
     }
+
+    pub fn register_buffer_collection(
+        &self,
+        buffer_id: u32,
+        token: ClientEnd<BufferCollectionTokenMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.session.register_buffer_collection(buffer_id, token)
+    }
+
+    pub fn deregister_buffer_collection(&self, buffer_id: u32) -> Result<(), fidl::Error> {
+        self.session.deregister_buffer_collection(buffer_id)
+    }
 }
 
 pub struct Resource {
@@ -197,6 +211,35 @@ impl Image {
 
     pub fn id(&self) -> u32 {
         self.resource.id
+    }
+}
+
+pub struct Image2 {
+    resource: Resource,
+}
+
+impl Image2 {
+    pub fn new(
+        session: &SessionPtr,
+        width: u32,
+        height: u32,
+        buffer_collection_id: u32,
+        buffer_collection_index: u32,
+    ) -> Image2 {
+        let args = ImageArgs2 { width, height, buffer_collection_id, buffer_collection_index };
+        Image2 { resource: Resource::new(session.clone(), ResourceArgs::Image2(args)) }
+    }
+
+    pub fn id(&self) -> u32 {
+        self.resource.id
+    }
+}
+
+impl Deref for Image2 {
+    type Target = Resource;
+
+    fn deref(&self) -> &Resource {
+        &self.resource
     }
 }
 

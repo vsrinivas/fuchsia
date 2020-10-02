@@ -184,7 +184,7 @@ impl BufferCollectionAllocator {
         &mut self,
         set_constraints: bool,
     ) -> Result<fidl_fuchsia_sysmem::BufferCollectionInfo2, Error> {
-        let token = self.token.take().expect("token");
+        let token = self.token.take().expect("token in allocate_buffers");
         let (collection_client, collection_request) =
             create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionMarker>()?;
         self.sysmem.bind_shared_collection(
@@ -229,8 +229,11 @@ impl BufferCollectionAllocator {
         let (requested_token, requested_token_request) =
             create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
 
-        self.token.as_ref().expect("token").duplicate(std::u32::MAX, requested_token_request)?;
-        self.token.as_ref().expect("token").sync().await?;
+        self.token
+            .as_ref()
+            .expect("token in duplicate_token[duplicate]")
+            .duplicate(std::u32::MAX, requested_token_request)?;
+        self.token.as_ref().expect("tokenin duplicate_token[sync]").sync().await?;
         Ok(requested_token)
     }
 }

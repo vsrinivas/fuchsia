@@ -15,6 +15,7 @@ rustc_library("fuchsia-scenic") {
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.scenic.scheduling:fuchsia.scenic.scheduling-rustc",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
