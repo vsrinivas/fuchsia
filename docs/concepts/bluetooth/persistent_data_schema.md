@@ -180,6 +180,7 @@ Key            | Value Type            | Description
 ---------------|-----------------------|-----------------------------------------------------------
 rolePreference | String                | `"leader"` or `"follower"`
 linkKey        | [Long Term Key](#ltk) | The link encryption key
+services       | Array of String       | Cached discovered service UUIDs
 
 #### Bonding data schema
 
@@ -220,6 +221,21 @@ Example:
             "ediv": 0,
             "rand": 0,
         },
+    },
+    "bredr": {
+        "rolePreference": "follower",
+        "linkKey": {
+            "security": {
+                "authenticated": true,
+                "secureConnections": true,
+                "encryptionKeySize": 16
+            },
+            "value": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        },
+        "services": [
+           "0000110a-0000-1000-8000-00805f9b34fb",
+           "0000110b-0000-1000-8000-00805f9b34fb"
+        ]
     }
 }
 ```
