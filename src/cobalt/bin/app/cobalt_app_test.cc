@@ -429,6 +429,7 @@ TEST_F(CobaltAppTest, ShutDown) {
   EXPECT_EQ(fake_service_->is_shut_down(), true);
   EXPECT_FALSE(metric_logger.is_bound());
   EXPECT_FALSE(logger.is_bound());
+  EXPECT_FALSE(process_lifecycle.is_bound());
 }
 
 TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {

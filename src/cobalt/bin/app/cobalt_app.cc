@@ -182,7 +182,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
   // Create process.lifecycle protocol implementation and start serving it.
   process_lifecycle_impl_ = std::make_unique<ProcessLifecycle>(
-      cobalt_service_.get(), logger_factory_impl_.get(), metric_event_logger_factory_impl_.get());
+      cobalt_service_.get(), logger_factory_impl_.get(), metric_event_logger_factory_impl_.get(),
+      &process_lifecycle_bindings_);
   context_->outgoing()->AddPublicService(
       process_lifecycle_bindings_.GetHandler(process_lifecycle_impl_.get()),
       "fuchsia.process.lifecycle.Lifecycle");
