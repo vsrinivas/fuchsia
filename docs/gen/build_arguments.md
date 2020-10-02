@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1099
+From //build/config/BUILDCONFIG.gn:1166
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -591,7 +591,7 @@ we explicitly reduce the number of jobs.
 
 **Current value (from the default):** `32`
 
-From //build/rust/BUILD.gn:15
+From //build/rust/toolchain/BUILD.gn:15
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -611,13 +611,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/74b38694fa86075b07e2e670ca543c389a634a02/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0b240a5347e73a8f5fa9a1f8a3d37b59d650900f/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/74b38694fa86075b07e2e670ca543c389a634a02/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0b240a5347e73a8f5fa9a1f8a3d37b59d650900f/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -650,7 +650,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/b7ea431960d4c294005b36b415cb792fabbd4a98/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/eb68c77694f673ae945b5c65d499159b859f7a17/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -658,14 +658,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/b7ea431960d4c294005b36b415cb792fabbd4a98/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/eb68c77694f673ae945b5c65d499159b859f7a17/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/b7ea431960d4c294005b36b415cb792fabbd4a98/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/eb68c77694f673ae945b5c65d499159b859f7a17/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -851,7 +851,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:862
+From //build/config/BUILDCONFIG.gn:929
 
 ### fastboot_product
 
@@ -899,7 +899,7 @@ From //build/images/args.gni:49
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/b7ea431960d4c294005b36b415cb792fabbd4a98/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/eb68c77694f673ae945b5c65d499159b859f7a17/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -914,14 +914,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/b7ea431960d4c294005b36b415cb792fabbd4a98/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/eb68c77694f673ae945b5c65d499159b859f7a17/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/b7ea431960d4c294005b36b415cb792fabbd4a98/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/eb68c77694f673ae945b5c65d499159b859f7a17/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1515,7 +1515,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:772
+From //build/config/BUILDCONFIG.gn:839
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2206,7 +2206,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1089
+From //build/config/BUILDCONFIG.gn:1156
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2215,7 +2215,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1094
+From //build/config/BUILDCONFIG.gn:1161
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2253,7 +2253,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:908
+From //build/config/BUILDCONFIG.gn:975
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2513,7 +2513,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:882
+From //build/config/BUILDCONFIG.gn:949
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
