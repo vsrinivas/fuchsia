@@ -23,6 +23,8 @@ use {
     std::{borrow::Cow, collections::BTreeSet, ffi::CString},
 };
 
+const RAMDISK_BLOCK_SIZE: u64 = 512;
+
 #[cfg(test)]
 mod test;
 
@@ -47,7 +49,7 @@ where
 
 /// A helper to construct [`BlobfsRamdisk`] instances.
 pub struct BlobfsRamdiskBuilder {
-    ramdisk: Option<Ramdisk>,
+    ramdisk: Option<FormattedRamdisk>,
     blobs: Vec<BlobInfo>,
 }
 
@@ -56,9 +58,8 @@ impl BlobfsRamdiskBuilder {
         Self { ramdisk: None, blobs: vec![] }
     }
 
-    /// Configures this blobfs to use the given backing ramdisk.  The provided ramdisk should be
-    /// formatted as blobfs.
-    pub fn ramdisk(mut self, ramdisk: Ramdisk) -> Self {
+    /// Configures this blobfs to use the already formatted given backing ramdisk.
+    pub fn ramdisk(mut self, ramdisk: FormattedRamdisk) -> Self {
         self.ramdisk = Some(ramdisk);
         self
     }
@@ -72,13 +73,10 @@ impl BlobfsRamdiskBuilder {
     /// Starts a blobfs server with the current configuration options.
     pub fn start(self) -> Result<BlobfsRamdisk, Error> {
         // Use the provided ramdisk or format a fresh one with blobfs.
-        let ramdisk = match self.ramdisk {
-            Some(ramdisk) => ramdisk,
-            None => {
-                let ramdisk = Ramdisk::start().context("creating backing ramdisk for blobfs")?;
-                mkblobfs(&ramdisk)?;
-                ramdisk
-            }
+        let ramdisk = if let Some(ramdisk) = self.ramdisk {
+            ramdisk
+        } else {
+            Ramdisk::start().context("creating backing ramdisk for blobfs")?.format()?
         };
 
         // Spawn blobfs on top of the ramdisk.
@@ -125,7 +123,7 @@ impl BlobfsRamdiskBuilder {
 
 /// A ramdisk-backed blobfs instance
 pub struct BlobfsRamdisk {
-    backing_ramdisk: Ramdisk,
+    backing_ramdisk: FormattedRamdisk,
     process: Scoped<fuchsia_zircon::Process>,
     proxy: DirectoryAdminProxy,
 }
@@ -166,7 +164,7 @@ impl BlobfsRamdisk {
     }
 
     /// Signals blobfs to unmount and waits for it to exit cleanly, returning the backing Ramdisk.
-    pub async fn unmount(self) -> Result<Ramdisk, Error> {
+    pub async fn unmount(self) -> Result<FormattedRamdisk, Error> {
         zx::Status::ok(self.proxy.unmount().await.context("sending blobfs unmount")?)
             .context("unmounting blobfs")?;
 
@@ -224,19 +222,55 @@ impl BlobfsRamdisk {
     }
 }
 
+/// A helper to construct [`Ramdisk`] instances.
+pub struct RamdiskBuilder {
+    block_count: u64,
+}
+
+impl RamdiskBuilder {
+    fn new() -> Self {
+        Self { block_count: 1 << 20 }
+    }
+
+    /// Set the block count of the [`Ramdisk`].
+    pub fn block_count(mut self, block_count: u64) -> Self {
+        self.block_count = block_count;
+        self
+    }
+
+    /// Starts a new ramdisk.
+    pub fn start(self) -> Result<Ramdisk, Error> {
+        let client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, self.block_count)
+            .isolated_dev_root()
+            .build()?;
+        let proxy = NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
+        Ok(Ramdisk { proxy, client })
+    }
+
+    /// Create a [`BlobfsRamdiskBuilder`] that uses this as its backing ramdisk.
+    pub fn into_blobfs_builder(self) -> Result<BlobfsRamdiskBuilder, Error> {
+        Ok(BlobfsRamdiskBuilder::new().ramdisk(self.start()?.format()?))
+    }
+}
+
 /// A virtual memory-backed block device.
 pub struct Ramdisk {
     proxy: NodeProxy,
     client: RamdiskClient,
 }
 
+// FormattedRamdisk Derefs to Ramdisk, which is only safe if all of the &self Ramdisk methods
+// preserve the blobfs formatting.
 impl Ramdisk {
-    /// Starts a new ramdisk with 1024 * 1024 blocks and a block size of 512 bytes, or a drive with
-    /// 512MiB capacity.
+    /// Create a RamdiskBuilder that defaults to 1024 * 1024 blocks of size 512 bytes.
+    pub fn builder() -> RamdiskBuilder {
+        RamdiskBuilder::new()
+    }
+
+    /// Starts a new ramdisk with 1024 * 1024 blocks and a block size of 512 bytes, resulting in a
+    /// drive with 512MiB capacity.
     pub fn start() -> Result<Self, Error> {
-        let client = RamdiskClient::builder(512, 1 << 20).isolated_dev_root().build()?;
-        let proxy = NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
-        Ok(Ramdisk { proxy, client })
+        Self::builder().start()
     }
 
     fn clone_channel(&self) -> Result<zx::Channel, Error> {
@@ -249,15 +283,38 @@ impl Ramdisk {
         Ok(self.clone_channel().context("cloning ramdisk channel")?.into())
     }
 
+    fn format(self) -> Result<FormattedRamdisk, Error> {
+        mkblobfs_block(self.clone_handle()?)?;
+        Ok(FormattedRamdisk(self))
+    }
+
     /// Shuts down this ramdisk.
     pub fn stop(self) -> Result<(), Error> {
         Ok(self.client.destroy()?)
     }
+}
 
-    /// Corrupt the blob given by merkle, assuming this ramdisk is formatted as blobfs.
+/// A [`Ramdisk`] formatted for use by blobfs.
+pub struct FormattedRamdisk(Ramdisk);
+
+// This is safe as long as all of the &self methods of Ramdisk maintain the blobfs formatting.
+impl std::ops::Deref for FormattedRamdisk {
+    type Target = Ramdisk;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FormattedRamdisk {
+    /// Corrupt the blob given by merkle.
     pub async fn corrupt_blob(&self, merkle: &Hash) {
-        let ramdisk = Clone::clone(&self.proxy);
+        let ramdisk = Clone::clone(&self.0.proxy);
         blobfs_corrupt_blob(ramdisk, merkle).await.unwrap();
+    }
+
+    /// Shuts down this ramdisk.
+    pub fn stop(self) -> Result<(), Error> {
+        Ok(self.0.client.destroy()?)
     }
 }
 
@@ -349,10 +406,6 @@ fn wait_for_process(proc: fuchsia_zircon::Process) -> Result<(), Error> {
         return Err(format_err!("tool returned nonzero exit code {}", ret));
     }
     Ok(())
-}
-
-fn mkblobfs(ramdisk: &Ramdisk) -> Result<(), Error> {
-    mkblobfs_block(ramdisk.clone_handle()?)
 }
 
 #[cfg(test)]
@@ -471,5 +524,21 @@ mod tests {
             .unwrap()
             .map(|entry| entry.unwrap().file_name().to_owned().into_string().unwrap())
             .collect()
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ramdisk_builder_sets_block_count() {
+        for block_count in &[1, 2, 3, 16] {
+            let ramdisk = Ramdisk::builder().block_count(*block_count).start().unwrap();
+
+            let (status, attr) = ramdisk.proxy.get_attr().await.unwrap();
+            zx::Status::ok(status).unwrap();
+            assert_eq!(attr.content_size, RAMDISK_BLOCK_SIZE * block_count);
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn ramdisk_into_blobfs_formats_ramdisk() {
+        let _: BlobfsRamdisk = Ramdisk::builder().into_blobfs_builder().unwrap().start().unwrap();
     }
 }
