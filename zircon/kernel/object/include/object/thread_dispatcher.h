@@ -18,7 +18,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/thread.h>
@@ -287,9 +286,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Holds the type of the exceptionate currently processing the exception,
   // which may be our |exceptionate_| or one of our parents'.
   uint32_t exceptionate_type_ TA_GUARDED(get_lock()) = ZX_EXCEPTION_CHANNEL_TYPE_NONE;
-
-  // cleanup dpc structure
-  Dpc cleanup_dpc_;
 
   // Tracks the number of times Suspend() has been called. Resume() will resume this thread
   // only when this reference count reaches 0.
