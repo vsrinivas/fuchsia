@@ -13,6 +13,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "zircon/system/ulib/fbl/include/fbl/auto_lock.h"
 
@@ -243,13 +244,9 @@ TEST_F(Mac80211Test, MvmSlotBindUnbind) {
   ASSERT_EQ(index, 1);
 }
 
-class McastFilterTest : public Mac80211Test {
+class McastFilterTest : public Mac80211Test, public MockTrans {
  public:
-  McastFilterTest() {
-    // Set up pointer back to this test so that the following wrapper can call its mock funciton.
-    struct trans_sim_priv* priv = IWL_TRANS_GET_TRANS_SIM(mvm_->trans);
-    priv->test = this;
-  }
+  McastFilterTest() { BIND_TEST(mvm_->trans); }
   ~McastFilterTest() { mock_send_cmd_.VerifyAndClear(); }
 
   // The values we expect.  We only test few arbitrary bytes in 'addr_list' .
@@ -264,34 +261,23 @@ class McastFilterTest : public Mac80211Test {
                               uint8_t    // mcast_cmd->addr_list[2 * ETH_ALEN + 2]
                               >
       mock_send_cmd_;
-  static zx_status_t send_cmd_wrapper(struct iwl_trans* trans, struct iwl_host_cmd* hcmd) {
-    struct trans_sim_priv* priv = IWL_TRANS_GET_TRANS_SIM(trans);
-    McastFilterTest* test = reinterpret_cast<McastFilterTest*>(priv->test);
-    ZX_ASSERT(test);
 
+  static zx_status_t send_cmd_wrapper(struct iwl_trans* trans, struct iwl_host_cmd* hcmd) {
     auto mcast_cmd = reinterpret_cast<const struct iwl_mcast_filter_cmd*>(hcmd->data[0]);
+
+    auto test = GET_TEST(McastFilterTest, trans);
     return test->mock_send_cmd_.Call(hcmd->id, mcast_cmd->port_id, mcast_cmd->count,
                                      mcast_cmd->bssid[0], mcast_cmd->addr_list[0 * ETH_ALEN + 0],
                                      mcast_cmd->addr_list[1 * ETH_ALEN + 5],
                                      mcast_cmd->addr_list[2 * ETH_ALEN + 2]);
   }
-
-  void bind_mock_function() {
-    org_send_cmd_ = sim_trans_.iwl_trans()->ops->send_cmd;
-    sim_trans_.iwl_trans()->ops->send_cmd = send_cmd_wrapper;
-  }
-
-  void unbind_mock_function() { sim_trans_.iwl_trans()->ops->send_cmd = org_send_cmd_; }
-
- private:
-  zx_status_t (*org_send_cmd_)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);  // for backup
 };
 
 TEST_F(McastFilterTest, McastFilterNormal) {
   ClientInterfaceHelper();
 
   // mock function after the testing environment had been set.
-  bind_mock_function();
+  bindSendCmd(send_cmd_wrapper);
 
   // Test if we can configure the mcast filter.
   mock_send_cmd_.ExpectCall(ZX_OK, WIDE_ID(LONG_GROUP, MCAST_FILTER_CMD),  // hcmd->id
@@ -306,18 +292,18 @@ TEST_F(McastFilterTest, McastFilterNormal) {
 
   ASSERT_NE(mvm_->mcast_filter_cmd, nullptr);
 
-  unbind_mock_function();
+  unbindSendCmd();
 }
 
 TEST_F(McastFilterTest, McastFilterNoActiveInterface) {
   // mock function after the testing environment had been set.
-  bind_mock_function();
+  bindSendCmd(send_cmd_wrapper);
 
   // We shall expect nothing will happen because ClientInterfaceHelper() is not called and
   // no interface is created.
   iwl_mvm_configure_filter(mvm_);
 
-  unbind_mock_function();
+  unbindSendCmd();
 }
 
 TEST_F(McastFilterTest, McastFilterAp) {
@@ -325,12 +311,12 @@ TEST_F(McastFilterTest, McastFilterAp) {
   mvmvif_.mac_role = WLAN_INFO_MAC_ROLE_AP;  // overwrite to AP.
 
   // mock function after the testing environment had been set.
-  bind_mock_function();
+  bindSendCmd(send_cmd_wrapper);
 
   // We shall expect nothing will happen because the interface is for AP.
   iwl_mvm_configure_filter(mvm_);
 
-  unbind_mock_function();
+  unbindSendCmd();
 }
 
 }  // namespace

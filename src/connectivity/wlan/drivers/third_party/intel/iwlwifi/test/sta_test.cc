@@ -14,19 +14,17 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
 namespace wlan::testing {
 namespace {
 
-class StaTest : public SingleApTest {
+class StaTest : public SingleApTest, public MockTrans {
  public:
   StaTest() {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-
-    // Set up pointer back to this test so that the following wrapper can call its mock funciton.
-    struct trans_sim_priv* priv = IWL_TRANS_GET_TRANS_SIM(mvm_->trans);
-    priv->test = this;
+    BIND_TEST(mvm_->trans);
   }
   ~StaTest() {}
 
@@ -45,32 +43,22 @@ class StaTest : public SingleApTest {
       mock_send_cmd_;
 
   static zx_status_t send_cmd_wrapper(struct iwl_trans* trans, struct iwl_host_cmd* host_cmd) {
-    struct trans_sim_priv* priv = IWL_TRANS_GET_TRANS_SIM(trans);
-    StaTest* test = reinterpret_cast<StaTest*>(priv->test);
-    ZX_ASSERT(test);
-
     auto sta_cmd = reinterpret_cast<const struct iwl_mvm_add_sta_cmd*>(host_cmd->data[0]);
+
+    auto test = GET_TEST(StaTest, trans);
     return test->mock_send_cmd_.Call(host_cmd->id, host_cmd->len[0], sta_cmd->add_modify,
                                      sta_cmd->mac_id_n_color, sta_cmd->sta_id, sta_cmd->modify_mask,
                                      sta_cmd->station_flags, sta_cmd->station_flags_msk,
                                      sta_cmd->assoc_id);
   }
 
-  void bind_mock_function() {
-    org_send_cmd_ = sim_trans_.iwl_trans()->ops->send_cmd;
-    sim_trans_.iwl_trans()->ops->send_cmd = send_cmd_wrapper;
-  }
-
-  void unbind_mock_function() { sim_trans_.iwl_trans()->ops->send_cmd = org_send_cmd_; }
-
  protected:
   struct iwl_mvm* mvm_;  // pointing to the mvm instance associated with this transportation.
-  zx_status_t (*org_send_cmd_)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);  // for backup
 };
 
 TEST_F(StaTest, DisableTx) {
   // mock function after the testing environment had been set.
-  bind_mock_function();
+  bindSendCmd(send_cmd_wrapper);
 
   struct iwl_mvm_sta mvmsta = {};
 
@@ -87,12 +75,12 @@ TEST_F(StaTest, DisableTx) {
 
   iwl_mvm_sta_modify_disable_tx(mvm_, &mvmsta, true);
 
-  unbind_mock_function();
+  unbindSendCmd();
 }
 
 TEST_F(StaTest, EnableTx) {
   // mock function after the testing environment had been set.
-  bind_mock_function();
+  bindSendCmd(send_cmd_wrapper);
 
   struct iwl_mvm_sta mvmsta = {};
 
@@ -109,7 +97,7 @@ TEST_F(StaTest, EnableTx) {
 
   iwl_mvm_sta_modify_disable_tx(mvm_, &mvmsta, false);
 
-  unbind_mock_function();
+  unbindSendCmd();
 }
 
 }  // namespace
