@@ -23,4 +23,7 @@ declare_args() {
 
   # A list of binary labels to include in the recovery ZBI.
   board_recovery_bootfs_labels = []
+
+  # A list of binary labels to include in the system_image package.
+  board_system_image_deps = []
 }

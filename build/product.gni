@@ -6,6 +6,9 @@ declare_args() {
   # A list of binary labels to include in ZBIs built for this product.
   product_bootfs_labels = []
 
+  # A list of binary labels to include in the system_image package.
+  product_system_image_deps = []
+
   # Include update package in blob.blk. Some products may not need the update
   # package included as part of the blobfs.
   # TODO(fxbug.dev/58645) Remove when no longer needed.
