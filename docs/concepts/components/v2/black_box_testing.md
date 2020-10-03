@@ -185,7 +185,7 @@ event.resume().await?;
 ### Scoping of events
 
 The `EventSource` can be requested by any component instance within the
-component topology served by the component manager if its available to the component.
+component topology served by the component manager if it is available to the component.
 Events are capailities themselves so they have to be requested as well. Refer
 to [event capabilities][event-capabilities] for more details on this.
 
