@@ -4,4 +4,5 @@
 /third_party/lz4
 /third_party/zstd
 /third_party/rapidjson
+/third_party/scudo/gwp_asan
 /third_party/scudo/src
