@@ -22,21 +22,29 @@ int main(int argc, char** argv) {
 
   syslog::SetTags({"audio_core_mixer_test"});
 
+  // --profile  Profile the performance of Mixer creation, Mix() and ProduceOutput() across numerous
+  // configurations, and don't do further testing.
+  //
+  bool do_performance_profiling = command_line.HasOption("profile");
+  if (do_performance_profiling) {
+    media::audio::test::AudioPerformance::Profile();
+    return 0;
+  }
+
   // --full     Measure across the full frequency spectrum; display full results in tabular format.
   // --no-recap Do not display summary fidelity results.
   // --dump     Display full-spectrum results in importable format.
   //            (This flag is used when updating AudioResult kPrev arrays.)
-  // --profile  Profile the performance of Mix() across numerous configurations.
   //
   bool show_full_frequency_set = command_line.HasOption("full");
   bool display_summary_results = !command_line.HasOption("no-recap");
   bool dump_threshold_values = command_line.HasOption("dump");
-  bool do_performance_profiling = command_line.HasOption("profile");
 
   media::audio::test::FrequencySet::UseFullFrequencySet =
       (show_full_frequency_set || dump_threshold_values);
 
   testing::InitGoogleTest(&argc, argv);
+
   int result = RUN_ALL_TESTS();
 
   if (display_summary_results) {
@@ -44,9 +52,6 @@ int main(int argc, char** argv) {
   }
   if (dump_threshold_values) {
     media::audio::test::AudioResult::DumpThresholdValues();
-  }
-  if (do_performance_profiling) {
-    media::audio::test::AudioPerformance::Profile();
   }
 
   return result;

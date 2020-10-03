@@ -13,10 +13,6 @@
 
 namespace media::audio::mixer {
 
-// Whether to enable verbose debugging of filter creation. Setting to true
-// decreases performance slightly. See fxr/383524.
-static const bool kEnableVerboseDebugging = false;
-
 // Display the filter table values.
 void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   FX_LOGS(INFO) << "Filter: src rate " << source_rate_ << ", dest rate " << dest_rate_
@@ -161,68 +157,47 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
 
-  auto width = inputs.side_width;
-  auto frac_one = 1u << inputs.num_frac_bits;
+  const auto width = inputs.side_width;
+  const auto frac_one = 1u << inputs.num_frac_bits;
 
   // By capping this at 1.0, we set our low-pass filter to the lower of [src_rate, dest_rate].
-  auto conversion_rate = M_PI * fmin(inputs.rate_conversion_ratio, 1.0);
+  const double conversion_rate = M_PI * fmin(inputs.rate_conversion_ratio, 1.0);
 
-  // First calculate our sinc filter, based on rate-conversion ratio and filter width.
-  //
-  // TODO(mpuryear): Make the low-pass a BAND-pass, for DC offset removal (perhaps up to 20 hz?)
+  // Construct a sinc-based LPF, from our rate-conversion ratio and filter width.
+  const double theta_factor = conversion_rate / frac_one;
+
+  // Concurrently, calculate a VonHann window function. These form the windowed-sinc filter.
+  const double normalize_width_factor = M_PI / width;
+
+  table[0] = 1.0f;
   for (auto idx = 1u; idx < width; ++idx) {
-    auto double_idx = static_cast<double>(idx);
-    auto idx_over_frac_one = double_idx / frac_one;
-    auto theta = idx_over_frac_one * conversion_rate;
-    auto sin_theta = sin(theta);
-    auto sinc_theta = sin_theta / theta;
+    const double theta = theta_factor * idx;
+    const double sinc_theta = sin(theta) / theta;
 
-    if constexpr (kEnableVerboseDebugging) {
-      FX_LOGS(TRACE) << "Sinc[" << std::hex << idx << "] -- Factors 1:" << idx_over_frac_one
-                     << ", 2:" << theta << ", 3:" << sin_theta << ", 4:" << sinc_theta;
-    }
-
-    // Then window the filter. Here we choose a VonHann window, but Kaiser or others can work too.
-    //
-    // TODO(mpuryear): Pre-populate a static VonHann|Blackman|Kaiser; don't recalc for every
-    // mixer.
-    auto fraction_width = double_idx / width;
-    auto pi_fraction_width = fraction_width * M_PI;
-    auto cos_pi_frac_width = cos(pi_fraction_width);
-    auto raised_cosine = cos_pi_frac_width * 0.5 + 0.5;
-
-    if constexpr (kEnableVerboseDebugging) {
-      FX_LOGS(TRACE) << "VonHann window[" << std::hex << idx
-                     << "] -- Fraction of width:" << fraction_width
-                     << ", PI * fraction_width:" << pi_fraction_width
-                     << ", COS(PI * fraction_width):" << cos_pi_frac_width
-                     << ", Raised-cosine (result):" << raised_cosine;
-    }
+    // TODO(mpuryear): Pre-populate a static VonHann|Blackman|Kaiser window; don't recalc each one.
+    const double raised_cosine = cos(normalize_width_factor * idx) * 0.5 + 0.5;
 
     table[idx] = sinc_theta * raised_cosine;
   }
 
-  table[0] = 1.0f;
-
   // Normalize our filter so that it doesn't change amplitude for DC (0 hz).
   // While doing this, zero out any denormal float values as an optimization.
-  auto amplitude_at_dc = 0.0;
+  double amplitude_at_dc = 0.0;
+
   for (auto idx = frac_one; idx < width; idx += frac_one) {
     amplitude_at_dc += table[idx];
   }
   amplitude_at_dc = (2 * amplitude_at_dc) + table[0];
-  auto normalize_factor = 1.0 / amplitude_at_dc;
+
+  const double normalize_factor = 1.0 / amplitude_at_dc;
+  const double pre_normalized_epsilon = std::numeric_limits<float>::epsilon() * amplitude_at_dc;
 
   std::transform(table.begin(), table.end(), table.begin(),
-                 [normalize_factor](float sample) -> float {
-                   if (normalize_factor != 1.0) {
-                     sample *= normalize_factor;
-                   }
-                   if (sample < std::numeric_limits<float>::epsilon() &&
-                       sample > -std::numeric_limits<float>::epsilon()) {
+                 [normalize_factor, pre_normalized_epsilon](float sample) -> float {
+                   if (sample < pre_normalized_epsilon && sample > -pre_normalized_epsilon) {
                      return 0.0f;
                    }
-                   return sample;
+                   return sample * normalize_factor;
                  });
 
   return out;

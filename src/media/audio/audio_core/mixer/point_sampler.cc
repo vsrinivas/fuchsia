@@ -228,13 +228,17 @@ bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                             : Mix<ScalerType::EQ_UNITY, false, false>(
                                   dest, dest_frames, dest_offset, src, frac_src_frames,
                                   frac_src_offset, info));
-  } else if (info->gain.IsSilent()) {
+  }
+
+  if (info->gain.IsSilent()) {
     return (hasModulo
                 ? Mix<ScalerType::MUTED, true, true>(dest, dest_frames, dest_offset, src,
                                                      frac_src_frames, frac_src_offset, info)
                 : Mix<ScalerType::MUTED, true, false>(dest, dest_frames, dest_offset, src,
                                                       frac_src_frames, frac_src_offset, info));
-  } else if (info->gain.IsRamping()) {
+  }
+
+  if (info->gain.IsRamping()) {
     return accumulate
                ? (hasModulo
                       ? Mix<ScalerType::RAMPING, true, true>(dest, dest_frames, dest_offset, src,
@@ -248,21 +252,21 @@ bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
                             : Mix<ScalerType::RAMPING, false, false>(dest, dest_frames, dest_offset,
                                                                      src, frac_src_frames,
                                                                      frac_src_offset, info));
-  } else {
-    return accumulate
-               ? (hasModulo ? Mix<ScalerType::NE_UNITY, true, true>(dest, dest_frames, dest_offset,
-                                                                    src, frac_src_frames,
-                                                                    frac_src_offset, info)
-                            : Mix<ScalerType::NE_UNITY, true, false>(dest, dest_frames, dest_offset,
-                                                                     src, frac_src_frames,
-                                                                     frac_src_offset, info))
-               : (hasModulo ? Mix<ScalerType::NE_UNITY, false, true>(dest, dest_frames, dest_offset,
-                                                                     src, frac_src_frames,
-                                                                     frac_src_offset, info)
-                            : Mix<ScalerType::NE_UNITY, false, false>(
-                                  dest, dest_frames, dest_offset, src, frac_src_frames,
-                                  frac_src_offset, info));
   }
+
+  return accumulate
+             ? (hasModulo
+                    ? Mix<ScalerType::NE_UNITY, true, true>(dest, dest_frames, dest_offset, src,
+                                                            frac_src_frames, frac_src_offset, info)
+                    : Mix<ScalerType::NE_UNITY, true, false>(dest, dest_frames, dest_offset, src,
+                                                             frac_src_frames, frac_src_offset,
+                                                             info))
+             : (hasModulo
+                    ? Mix<ScalerType::NE_UNITY, false, true>(dest, dest_frames, dest_offset, src,
+                                                             frac_src_frames, frac_src_offset, info)
+                    : Mix<ScalerType::NE_UNITY, false, false>(dest, dest_frames, dest_offset, src,
+                                                              frac_src_frames, frac_src_offset,
+                                                              info));
 }
 
 // If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
@@ -427,6 +431,7 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
 
   auto info = &bookkeeping();
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
+
   if (info->gain.IsUnity()) {
     return accumulate ? (hasModulo ? Mix<ScalerType::EQ_UNITY, true, true>(
                                          dest, dest_frames, dest_offset, src, frac_src_frames,
@@ -440,14 +445,18 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
                                    : Mix<ScalerType::EQ_UNITY, false, false>(
                                          dest, dest_frames, dest_offset, src, frac_src_frames,
                                          frac_src_offset, info, chan_count_));
-  } else if (info->gain.IsSilent()) {
+  }
+
+  if (info->gain.IsSilent()) {
     return (hasModulo ? Mix<ScalerType::MUTED, true, true>(dest, dest_frames, dest_offset, src,
                                                            frac_src_frames, frac_src_offset, info,
                                                            chan_count_)
                       : Mix<ScalerType::MUTED, true, false>(dest, dest_frames, dest_offset, src,
                                                             frac_src_frames, frac_src_offset, info,
                                                             chan_count_));
-  } else if (info->gain.IsRamping()) {
+  }
+
+  if (info->gain.IsRamping()) {
     return accumulate ? (hasModulo ? Mix<ScalerType::RAMPING, true, true>(
                                          dest, dest_frames, dest_offset, src, frac_src_frames,
                                          frac_src_offset, info, chan_count_)
@@ -460,20 +469,20 @@ bool NxNPointSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
                                    : Mix<ScalerType::RAMPING, false, false>(
                                          dest, dest_frames, dest_offset, src, frac_src_frames,
                                          frac_src_offset, info, chan_count_));
-  } else {
-    return accumulate ? (hasModulo ? Mix<ScalerType::NE_UNITY, true, true>(
-                                         dest, dest_frames, dest_offset, src, frac_src_frames,
-                                         frac_src_offset, info, chan_count_)
-                                   : Mix<ScalerType::NE_UNITY, true, false>(
-                                         dest, dest_frames, dest_offset, src, frac_src_frames,
-                                         frac_src_offset, info, chan_count_))
-                      : (hasModulo ? Mix<ScalerType::NE_UNITY, false, true>(
-                                         dest, dest_frames, dest_offset, src, frac_src_frames,
-                                         frac_src_offset, info, chan_count_)
-                                   : Mix<ScalerType::NE_UNITY, false, false>(
-                                         dest, dest_frames, dest_offset, src, frac_src_frames,
-                                         frac_src_offset, info, chan_count_));
   }
+
+  return accumulate ? (hasModulo ? Mix<ScalerType::NE_UNITY, true, true>(
+                                       dest, dest_frames, dest_offset, src, frac_src_frames,
+                                       frac_src_offset, info, chan_count_)
+                                 : Mix<ScalerType::NE_UNITY, true, false>(
+                                       dest, dest_frames, dest_offset, src, frac_src_frames,
+                                       frac_src_offset, info, chan_count_))
+                    : (hasModulo ? Mix<ScalerType::NE_UNITY, false, true>(
+                                       dest, dest_frames, dest_offset, src, frac_src_frames,
+                                       frac_src_offset, info, chan_count_)
+                                 : Mix<ScalerType::NE_UNITY, false, false>(
+                                       dest, dest_frames, dest_offset, src, frac_src_frames,
+                                       frac_src_offset, info, chan_count_));
 }
 
 // Templates used to expand the combinations of possible PointSampler configurations.

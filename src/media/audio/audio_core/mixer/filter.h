@@ -191,7 +191,7 @@ class SincFilter : public Filter {
 
   static inline uint32_t GetFilterWidth(uint32_t source_frame_rate, uint32_t dest_frame_rate) {
     return ((source_frame_rate > dest_frame_rate)
-                ? std::ceil((static_cast<double>(kSincFilterSideLength) * source_frame_rate) /
+                ? std::ceil((static_cast<float>(kSincFilterSideLength) * source_frame_rate) /
                             dest_frame_rate)
                 : kSincFilterSideLength) -
            1u;

@@ -20,41 +20,37 @@ class AudioPerformance {
   // After first run ("cold"), timings measured are tightly clustered (+/-1-2%);
   // we can get a high-confidence profile assessment with fewer runs.
   //
-  // We set these values to keep Mixer profile times, and OutputProducer profile times, each at or
-  // below 180 seconds, for a Release core build running on standard VIM2 and NUC.
-  static constexpr uint32_t kNumMixerCreationRuns = 10;
-  static constexpr uint32_t kNumMixerProfilerRuns = 10;
-  static constexpr uint32_t kNumOutputProfilerRuns = 1500;
+  // We set these values to keep Mixer/OutputProducer profile times reasonable: totalling no more
+  // than 5 minutes, for a Release core build running on standard platforms.
+  static constexpr uint32_t kNumMixerCreationRuns = 30;
+  static constexpr uint32_t kNumMixerProfilerRuns = 15;
+  static constexpr uint32_t kNumOutputProfilerRuns = 200;
 
   // class is static only - prevent attempts to instantiate it
   AudioPerformance() = delete;
 
-  // The subsequent methods are used when profiling the performance of the core
-  // Mix() function. They display the nanoseconds required to mix a buffer of
-  // 64k samples, in various configurations. Results are displayed in an
-  // easily-imported format. Use the --profile flag to trigger this.
+  // Subsequent methods profile the performance of mixer creation, the core Mix() function, and the
+  // final ProduceOutput() function. Each displays nanoseconds required, in various configurations.
+  // Results are displayed in an easily-imported format. Use the --profile flag to trigger this.
   static void Profile();
 
  private:
-  static void ProfileMixers();
-
+  static void ProfileMixerCreation();
   static void DisplayMixerCreationLegend();
   static void DisplayMixerCreationColumnHeader();
-  static void ProfileMixerCreation();
   static void ProfileMixerCreationType(Mixer::Resampler sampler_type);
   static void ProfileMixerCreationTypeChan(Mixer::Resampler sampler_type, uint32_t num_input_chans,
                                            uint32_t num_output_chans);
-  static void ProfileMixerCreationTypeChanFormat(Mixer::Resampler sampler_type,
-                                                 uint32_t num_input_chans,
-                                                 uint32_t num_output_chans,
-                                                 fuchsia::media::AudioSampleFormat sample_format);
-  static void ProfileMixerCreationTypeChanFormatRate(
+  static void ProfileMixerCreationTypeChanRate(Mixer::Resampler sampler_type,
+                                               uint32_t num_input_chans, uint32_t num_output_chans,
+                                               uint32_t source_rate, uint32_t dest_rate);
+  static void ProfileMixerCreationTypeChanRateFormat(
       Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
-      fuchsia::media::AudioSampleFormat sample_format, uint32_t source_rate, uint32_t dest_rate);
+      uint32_t source_rate, uint32_t dest_rate, fuchsia::media::AudioSampleFormat sample_format);
 
-  static void DisplayMixerColumnHeader();
+  static void ProfileMixing();
   static void DisplayMixerConfigLegend();
-
+  static void DisplayMixerColumnHeader();
   static void ProfileSampler(Mixer::Resampler sampler_type);
   static void ProfileSamplerIn(uint32_t in_chans, Mixer::Resampler sampler_type);
   static void ProfileSamplerChans(uint32_t in_chans, uint32_t out_chans,
@@ -68,15 +64,13 @@ class AudioPerformance {
                                               Mixer::Resampler sampler_type, uint32_t source_rate,
                                               GainType gain_type, bool accumulate);
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  static void ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
-                           Mixer::Resampler sampler_type, uint32_t source_rate, GainType gain_type,
-                           bool accumulate);
+  static void ProfileMix(uint32_t num_input_chans, uint32_t num_output_chans,
+                         Mixer::Resampler sampler_type, uint32_t source_rate, GainType gain_type,
+                         bool accumulate);
 
   static void ProfileOutputProducers();
-
-  static void DisplayOutputColumnHeader();
   static void DisplayOutputConfigLegend();
-
+  static void DisplayOutputColumnHeader();
   static void ProfileOutputChans(uint32_t num_chans);
   static void ProfileOutputRange(uint32_t num_chans, OutputDataRange data_range);
   template <fuchsia::media::AudioSampleFormat SampleFormat>

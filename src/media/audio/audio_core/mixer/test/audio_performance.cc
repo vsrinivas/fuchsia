@@ -27,40 +27,25 @@ using ASF = fuchsia::media::AudioSampleFormat;
 void AudioPerformance::Profile() {
   printf("\n\n Performance Profiling\n\n");
 
-  AudioPerformance::ProfileMixers();
+  AudioPerformance::ProfileMixerCreation();
+  AudioPerformance::ProfileMixing();
   AudioPerformance::ProfileOutputProducers();
 }
 
-void AudioPerformance::ProfileMixers() {
+void AudioPerformance::ProfileMixerCreation() {
   auto start_time = zx::clock::get_monotonic();
 
-  ProfileMixerCreation();
-
-  DisplayMixerConfigLegend();
-  DisplayMixerColumnHeader();
-
-  ProfileSampler(Resampler::SampleAndHold);
-  ProfileSampler(Resampler::LinearInterpolation);
-  ProfileSampler(Resampler::WindowedSinc);
-
-  DisplayMixerColumnHeader();
-  DisplayMixerConfigLegend();
-
-  printf("   Total time to profile Mixers: %lu ms\n   --------\n\n",
-         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
-}
-
-void AudioPerformance::DisplayMixerCreationColumnHeader() {
-  printf("\nCreation config \t\t     Mean\t    First\t     Best\t    Worst\tMean Cached\n");
-}
-
-void AudioPerformance::ProfileMixerCreation() {
   DisplayMixerCreationLegend();
   DisplayMixerCreationColumnHeader();
 
   ProfileMixerCreationType(Resampler::SampleAndHold);
   ProfileMixerCreationType(Resampler::LinearInterpolation);
   ProfileMixerCreationType(Resampler::WindowedSinc);
+
+  DisplayMixerCreationColumnHeader();
+
+  printf("   Total time to profile Mixer creation: %lu ms\n   --------\n\n",
+         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 void AudioPerformance::DisplayMixerCreationLegend() {
@@ -68,11 +53,15 @@ void AudioPerformance::DisplayMixerCreationLegend() {
   printf(
       "\n   For mixer configuration R-fff.IO sssss:ddddd, where:\n"
       "\t     R: Resampler type - [P]oint, [L]inear, [W]indowed Sinc\n"
-      "\t   fff: Format - un8, i16, i24, f32,\n"
-      "\t     I: Input channels (one-digit number),\n"
-      "\t     O: Output channels (one-digit number),\n"
+      "\t   fff: Format - un8, i16, i24, f32\n"
+      "\t     I: Input channels (one-digit number)\n"
+      "\t     O: Output channels (one-digit number)\n"
       "\t sssss: Source sample rate\n"
-      "\t nnnnn: Destination sample rate\n\n");
+      "\t ddddd: Destination sample rate\n\n");
+}
+
+void AudioPerformance::DisplayMixerCreationColumnHeader() {
+  printf("\nCreation config         \t     Mean\t    First\t     Best\t    Worst\tMean Cached\n");
 }
 
 void AudioPerformance::ProfileMixerCreationType(Resampler sampler_type) {
@@ -87,57 +76,48 @@ void AudioPerformance::ProfileMixerCreationType(Resampler sampler_type) {
 void AudioPerformance::ProfileMixerCreationTypeChan(Mixer::Resampler sampler_type,
                                                     uint32_t num_input_chans,
                                                     uint32_t num_output_chans) {
+  ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 48000, 48000);
   if (num_input_chans == 4 && num_output_chans == 4) {
-    ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                       ASF::UNSIGNED_8);
-    ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                       ASF::SIGNED_16);
-    ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                       ASF::SIGNED_24_IN_32);
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 8000, 8000);
+
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 8000, 192000);
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 16000, 96000);
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 16000, 48000);
+
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 48000, 16000);
   }
-  ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans, ASF::FLOAT);
+  if (num_input_chans == 1 && num_output_chans == 1) {
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 192000,
+                                     192000);
+
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 48000, 96000);
+
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 96000, 48000);
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 96000, 16000);
+    ProfileMixerCreationTypeChanRate(sampler_type, num_input_chans, num_output_chans, 192000, 8000);
+  }
 }
 
 // skip some of the permutations, to optimize test running time
-void AudioPerformance::ProfileMixerCreationTypeChanFormat(Mixer::Resampler sampler_type,
-                                                          uint32_t num_input_chans,
-                                                          uint32_t num_output_chans,
-                                                          ASF sample_format) {
-  if (num_input_chans == 4 && num_output_chans == 4 && sample_format == ASF::FLOAT) {
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 8000, 8000);
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 8000, 192000);
-
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 16000, 48000);
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 16000, 96000);
-
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 48000, 16000);
+void AudioPerformance::ProfileMixerCreationTypeChanRate(Mixer::Resampler sampler_type,
+                                                        uint32_t num_input_chans,
+                                                        uint32_t num_output_chans,
+                                                        uint32_t source_rate, uint32_t dest_rate) {
+  if (num_input_chans == 1 && num_output_chans == 1 && source_rate == 48000 && dest_rate == 48000) {
+    ProfileMixerCreationTypeChanRateFormat(sampler_type, num_input_chans, num_output_chans,
+                                           source_rate, dest_rate, ASF::UNSIGNED_8);
+    ProfileMixerCreationTypeChanRateFormat(sampler_type, num_input_chans, num_output_chans,
+                                           source_rate, dest_rate, ASF::SIGNED_16);
+    ProfileMixerCreationTypeChanRateFormat(sampler_type, num_input_chans, num_output_chans,
+                                           source_rate, dest_rate, ASF::SIGNED_24_IN_32);
   }
-  ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                         sample_format, 48000, 48000);
-  if (num_input_chans == 1 && num_output_chans == 1 && sample_format == ASF::FLOAT) {
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 48000, 96000);
-
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 96000, 16000);
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 96000, 48000);
-
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 192000, 192000);
-    ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
-                                           sample_format, 192000, 8000);
-  }
+  ProfileMixerCreationTypeChanRateFormat(sampler_type, num_input_chans, num_output_chans,
+                                         source_rate, dest_rate, ASF::FLOAT);
 }
 
-void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
+void AudioPerformance::ProfileMixerCreationTypeChanRateFormat(
     Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
-    ASF sample_format, uint32_t source_rate, uint32_t dest_rate) {
+    uint32_t source_rate, uint32_t dest_rate, ASF sample_format) {
   zx::duration first, worst, best, total_elapsed{0}, total_elapsed_cached{0};
 
   for (uint32_t i = 0; i < kNumMixerCreationRuns; ++i) {
@@ -208,8 +188,20 @@ void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
          to_frac_usecs(mean_cached));
 }
 
-void AudioPerformance::DisplayMixerColumnHeader() {
-  printf("Configuration\t\t     Mean\t    First\t     Best\t    Worst\n");
+void AudioPerformance::ProfileMixing() {
+  auto start_time = zx::clock::get_monotonic();
+
+  DisplayMixerConfigLegend();
+  DisplayMixerColumnHeader();
+
+  ProfileSampler(Resampler::SampleAndHold);
+  ProfileSampler(Resampler::LinearInterpolation);
+  ProfileSampler(Resampler::WindowedSinc);
+
+  DisplayMixerColumnHeader();
+
+  printf("   Total time to profile Mixing: %lu ms\n   --------\n\n",
+         (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
 }
 
 void AudioPerformance::DisplayMixerConfigLegend() {
@@ -217,12 +209,16 @@ void AudioPerformance::DisplayMixerConfigLegend() {
   printf(
       "\n   For mixer configuration R-fff.IOGAnnnnn, where:\n"
       "\t     R: Resampler type - [P]oint, [L]inear, [W]indowed Sinc\n"
-      "\t   fff: Format - un8, i16, i24, f32,\n"
-      "\t     I: Input channels (one-digit number),\n"
-      "\t     O: Output channels (one-digit number),\n"
-      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amping,\n"
-      "\t     A: Accumulate - [-] no or [+] yes,\n"
+      "\t   fff: Format - un8, i16, i24, f32\n"
+      "\t     I: Input channels (one-digit number)\n"
+      "\t     O: Output channels (one-digit number)\n"
+      "\t     G: Gain factor - [M]ute, [U]nity, [S]caled, [R]amping\n"
+      "\t     A: Accumulate - [-] no or [+] yes\n"
       "\t nnnnn: Sample rate (five-digit number)\n\n");
+}
+
+void AudioPerformance::DisplayMixerColumnHeader() {
+  printf("Configuration   \t     Mean\t    First\t     Best\t    Worst\n");
 }
 
 // Profile the samplers in various input and output channel configurations
@@ -286,20 +282,20 @@ void AudioPerformance::ProfileSamplerChansRateScaleMix(uint32_t num_input_chans,
                                                        uint32_t num_output_chans,
                                                        Resampler sampler_type, uint32_t source_rate,
                                                        GainType gain_type, bool accumulate) {
-  ProfileMixer<ASF::UNSIGNED_8>(num_input_chans, num_output_chans, sampler_type, source_rate,
-                                gain_type, accumulate);
-  ProfileMixer<ASF::SIGNED_16>(num_input_chans, num_output_chans, sampler_type, source_rate,
-                               gain_type, accumulate);
-  ProfileMixer<ASF::SIGNED_24_IN_32>(num_input_chans, num_output_chans, sampler_type, source_rate,
-                                     gain_type, accumulate);
-  ProfileMixer<ASF::FLOAT>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
-                           accumulate);
+  ProfileMix<ASF::UNSIGNED_8>(num_input_chans, num_output_chans, sampler_type, source_rate,
+                              gain_type, accumulate);
+  ProfileMix<ASF::SIGNED_16>(num_input_chans, num_output_chans, sampler_type, source_rate,
+                             gain_type, accumulate);
+  ProfileMix<ASF::SIGNED_24_IN_32>(num_input_chans, num_output_chans, sampler_type, source_rate,
+                                   gain_type, accumulate);
+  ProfileMix<ASF::FLOAT>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
+                         accumulate);
 }
 
 template <ASF SampleFormat>
-void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
-                                    Resampler sampler_type, uint32_t source_rate,
-                                    GainType gain_type, bool accumulate) {
+void AudioPerformance::ProfileMix(uint32_t num_input_chans, uint32_t num_output_chans,
+                                  Resampler sampler_type, uint32_t source_rate, GainType gain_type,
+                                  bool accumulate) {
   double amplitude;
   std::string format;
   if constexpr (SampleFormat == ASF::UNSIGNED_8) {
@@ -441,19 +437,6 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
          to_frac_usecs(best), to_frac_usecs(worst));
 }
 
-void AudioPerformance::DisplayOutputColumnHeader() {
-  printf("Config\t    Mean\t   First\t    Best\t   Worst\n");
-}
-
-void AudioPerformance::DisplayOutputConfigLegend() {
-  printf("\n   Elapsed time in microsec to ProduceOutput() %u frames\n", kFreqTestBufSize);
-  printf(
-      "\n   For output configuration FFF-Rn, where:\n"
-      "\t   FFF: Format of output data - Un8, I16, I24, F32,\n"
-      "\t     R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal,\n"
-      "\t     n: Number of output channels (one-digit number)\n\n");
-}
-
 void AudioPerformance::ProfileOutputProducers() {
   auto start_time = zx::clock::get_monotonic();
 
@@ -466,10 +449,22 @@ void AudioPerformance::ProfileOutputProducers() {
   ProfileOutputChans(8);
 
   DisplayOutputColumnHeader();
-  DisplayOutputConfigLegend();
 
   printf("   Total time to profile OutputProducers: %lu ms\n   --------\n\n",
          (zx::clock::get_monotonic() - start_time).get() / ZX_MSEC(1));
+}
+
+void AudioPerformance::DisplayOutputConfigLegend() {
+  printf("\n   Elapsed time in microsec to ProduceOutput() %u frames\n", kFreqTestBufSize);
+  printf(
+      "\n   For output configuration FFF-Rn, where:\n"
+      "\t   FFF: Format of output data - Un8, I16, I24, F32\n"
+      "\t     R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal\n"
+      "\t     n: Number of output channels (one-digit number)\n\n");
+}
+
+void AudioPerformance::DisplayOutputColumnHeader() {
+  printf("Config\t    Mean\t   First\t    Best\t   Worst\n");
 }
 
 void AudioPerformance::ProfileOutputChans(uint32_t num_chans) {
