@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/component_manager"
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.routing.echo.Echo",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

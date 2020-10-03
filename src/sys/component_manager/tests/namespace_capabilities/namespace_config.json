@@ -1,0 +1,21 @@
+{
+    maintain_utc_clock: false,
+    use_builtin_process_launcher: false,
+    namespace_capabilities: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.process.Launcher",
+                // Injected for test
+                "fidl.examples.routing.echo.Echo"
+            ],
+        },
+        {
+            directory: "test-pkg",
+            path: "/pkg",
+            rights: [ "r*" ],
+        },
+    ],
+    "builtin_pkg_resolver": "appmgr_bridge",
+}

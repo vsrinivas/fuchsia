@@ -15,6 +15,7 @@ group("tests") {
     "elf_runner:tests",
     "events:events_integration_test",
     "hub:hub_integration_test",
+    "namespace_capabilities:tests",
     "panic-test:component_manager_panic_test",
     "rights:tests",
     "routing:tests",

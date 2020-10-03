@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fidl.examples.routing.echo.Echo": "fuchsia-pkg://fuchsia.com/namespace-capabilities-integration-test#meta/echo-server-v1.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/namespace_capabilities_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

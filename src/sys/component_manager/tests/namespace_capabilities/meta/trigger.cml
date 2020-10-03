@@ -1,0 +1,31 @@
+// Integration test component that runs a Trigger service. When triggered, the
+// component echoes a string using the Echo service and prints it.
+{
+    program: {
+        binary: "bin/namespace_capabilities_trigger",
+        args: [ "Triggered" ],
+    },
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "fidl.examples.routing.echo.Echo",
+                "fuchsia.logger.LogSink",
+            ],
+        },
+        {
+            directory: "test-pkg",
+            rights: [ "r*" ],
+            path: "/test-pkg",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "self",
+        },
+    ],
+}
