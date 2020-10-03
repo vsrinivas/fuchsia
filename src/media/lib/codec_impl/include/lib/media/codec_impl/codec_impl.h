@@ -313,16 +313,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
     fuchsia::sysmem::CoherencyDomain coherency_domain();
 
-    // If is_partial_settings(), the PortSettings are initially partial, with
-    // sysmem used to complete the settings.  Along the way the PortSettings
-    // transiently also have the zx::vmo handles.  In contrast, if
-    // !is_partial_settings(), the settings are complete from the start (aside
-    // from vmo handles which are never owned by PortSettings in this case).
-    bool is_partial_settings();
-
     const fuchsia::media::StreamBufferPartialSettings& partial_settings();
-
-    const fuchsia::media::StreamBufferSettings& settings();
 
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> TakeToken();
 
