@@ -343,12 +343,12 @@ void CodecImpl::SetInputBufferPartialSettings_StreamControl(
           "lacks sysmem_");
       return;
     }
-    SetInputBufferSettingsCommon(lock, nullptr, &input_partial_settings);
+    SetInputBufferSettingsCommon(lock, &input_partial_settings);
   }  // ~lock
 }
 
 void CodecImpl::SetInputBufferSettingsCommon(
-    std::unique_lock<std::mutex>& lock, fuchsia::media::StreamBufferSettings* input_settings,
+    std::unique_lock<std::mutex>& lock,
     fuchsia::media::StreamBufferPartialSettings* input_partial_settings) {
   if (IsStoppingLocked()) {
     return;
@@ -357,12 +357,11 @@ void CodecImpl::SetInputBufferSettingsCommon(
     FailLocked("client sent SetInputBuffer*Settings() with stream active");
     return;
   }
-  SetBufferSettingsCommon(lock, kInputPort, input_settings, input_partial_settings,
-                          *input_constraints_);
+  SetBufferSettingsCommon(lock, kInputPort, input_partial_settings, *input_constraints_);
 }
 
 void CodecImpl::SetOutputBufferSettingsCommon(
-    std::unique_lock<std::mutex>& lock, fuchsia::media::StreamBufferSettings* output_settings,
+    std::unique_lock<std::mutex>& lock,
     fuchsia::media::StreamBufferPartialSettings* output_partial_settings) {
   if (!output_constraints_) {
     // invalid client behavior
@@ -397,7 +396,7 @@ void CodecImpl::SetOutputBufferSettingsCommon(
     return;
   }
 
-  SetBufferSettingsCommon(lock, kOutputPort, output_settings, output_partial_settings,
+  SetBufferSettingsCommon(lock, kOutputPort, output_partial_settings,
                           output_constraints_->buffer_constraints());
 }
 
@@ -424,7 +423,7 @@ void CodecImpl::SetOutputBufferPartialSettings(
           "that lacks a sysmem_");
       return;
     }
-    SetOutputBufferSettingsCommon(lock, nullptr, &output_partial_settings);
+    SetOutputBufferSettingsCommon(lock, &output_partial_settings);
   }  // ~lock
 }
 
@@ -1434,61 +1433,31 @@ bool CodecImpl::IsStreamActiveLocked() {
 
 void CodecImpl::SetBufferSettingsCommon(
     std::unique_lock<std::mutex>& lock, CodecPort port,
-    fuchsia::media::StreamBufferSettings* settings,
     fuchsia::media::StreamBufferPartialSettings* partial_settings,
     const fuchsia::media::StreamBufferConstraints& stream_constraints) {
   ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
                   port == kOutputPort && thrd_current() == fidl_thread());
   ZX_DEBUG_ASSERT(!IsStoppingLocked());
 
-  // Invariant
-  //
-  // Either we've never seen settings, or the logical buffer_lifetime_ordinal_
-  // is either the last accepted from the client or one more than that as a way
-  // of cleanly permitting the server to unilaterally de-configure output
-  // buffers.
-  if (settings) {
-    if (!settings->has_buffer_lifetime_ordinal()) {
-      FailLocked("settings missing buffer lifetime ordinal");
-      return;
-    }
-    if (!settings->has_buffer_constraints_version_ordinal()) {
-      FailLocked("settings missing buffer constraints version ordinal");
-      return;
-    }
-    if (!settings->has_packet_count_for_server()) {
-      FailLocked("settings missing packet_count_for_server");
-      return;
-    }
-    if (!settings->has_packet_count_for_client()) {
-      FailLocked("settings missing packet_count_for_client");
-      return;
-    }
-    if (!settings->has_per_packet_buffer_bytes()) {
-      FailLocked("settings missing per_packet_buffer_bytes");
-      return;
-    }
-  } else {
-    if (!partial_settings->has_buffer_lifetime_ordinal()) {
-      FailLocked("partial_settings do not have buffer lifetime ordinal");
-      return;
-    }
-    if (!partial_settings->has_buffer_constraints_version_ordinal()) {
-      FailLocked("partial_settings do not have buffer constraints version ordinal");
-      return;
-    }
-    if (!partial_settings->has_packet_count_for_server()) {
-      FailLocked("partial_settings missing packet_count_for_server");
-      return;
-    }
-    if (!partial_settings->has_packet_count_for_client()) {
-      FailLocked("partial_settings missing packet_count_for_client");
-      return;
-    }
-    if (!partial_settings->has_sysmem_token() || !partial_settings->sysmem_token().is_valid()) {
-      FailLocked("partial_settings missing valid sysmem_token");
-      return;
-    }
+  if (!partial_settings->has_buffer_lifetime_ordinal()) {
+    FailLocked("partial_settings do not have buffer lifetime ordinal");
+    return;
+  }
+  if (!partial_settings->has_buffer_constraints_version_ordinal()) {
+    FailLocked("partial_settings do not have buffer constraints version ordinal");
+    return;
+  }
+  if (!partial_settings->has_packet_count_for_server()) {
+    FailLocked("partial_settings missing packet_count_for_server");
+    return;
+  }
+  if (!partial_settings->has_packet_count_for_client()) {
+    FailLocked("partial_settings missing packet_count_for_client");
+    return;
+  }
+  if (!partial_settings->has_sysmem_token() || !partial_settings->sysmem_token().is_valid()) {
+    FailLocked("partial_settings missing valid sysmem_token");
+    return;
   }
 
   ZX_DEBUG_ASSERT(
@@ -1496,19 +1465,13 @@ void CodecImpl::SetBufferSettingsCommon(
       (buffer_lifetime_ordinal_[port] >= port_settings_[port]->buffer_lifetime_ordinal() &&
        buffer_lifetime_ordinal_[port] <= port_settings_[port]->buffer_lifetime_ordinal() + 1));
 
-  // The caller may be providing StreamBufferSettings or
-  // StreamBufferPartialSettings, but not both.
-  ZX_DEBUG_ASSERT(!!settings ^ !!partial_settings);
-
   // Extract buffer_lifetime_ordinal and buffer_constraints_version_ordinal from
-  // whichever of StreamBufferSettings or StreamBufferPartialSettings the caller
+  // StreamBufferPartialSettings
   // is providing.
-  uint64_t buffer_lifetime_ordinal =
-      settings ? settings->buffer_lifetime_ordinal() : partial_settings->buffer_lifetime_ordinal();
+  uint64_t buffer_lifetime_ordinal = partial_settings->buffer_lifetime_ordinal();
 
   uint64_t buffer_constraints_version_ordinal =
-      settings ? settings->buffer_constraints_version_ordinal()
-               : partial_settings->buffer_constraints_version_ordinal();
+      partial_settings->buffer_constraints_version_ordinal();
 
   if (buffer_lifetime_ordinal <= protocol_buffer_lifetime_ordinal_[port]) {
     FailLocked(
@@ -1548,23 +1511,13 @@ void CodecImpl::SetBufferSettingsCommon(
   ZX_DEBUG_ASSERT(!port_settings_[port] ||
                   buffer_lifetime_ordinal > buffer_lifetime_ordinal_[port]);
 
-  if (settings) {
-    if (!ValidateBufferSettingsVsConstraintsLocked(port, *settings, stream_constraints)) {
-      // This assert is safe only because this thread still holds lock_.  This
-      // is asserting that ValidateBufferSettingsVsConstraintsLocked() already
-      // called FailLocked().
-      ZX_DEBUG_ASSERT(IsStoppingLocked());
-      return;
-    }
-  } else {
-    if (!ValidatePartialBufferSettingsVsConstraintsLocked(port, *partial_settings,
-                                                          stream_constraints)) {
-      // This assert is safe only because this thread still holds lock_.  This
-      // is asserting that ValidateBufferSettingsVsConstraintsLocked() already
-      // called FailLocked().
-      ZX_DEBUG_ASSERT(IsStoppingLocked());
-      return;
-    }
+  if (!ValidatePartialBufferSettingsVsConstraintsLocked(port, *partial_settings,
+                                                        stream_constraints)) {
+    // This assert is safe only because this thread still holds lock_.  This
+    // is asserting that ValidateBufferSettingsVsConstraintsLocked() already
+    // called FailLocked().
+    ZX_DEBUG_ASSERT(IsStoppingLocked());
+    return;
   }
 
   // Little if any reason to do this outside the lock.
@@ -1573,11 +1526,7 @@ void CodecImpl::SetBufferSettingsCommon(
   // This also starts the new buffer_lifetime_ordinal.
   {  // scope port_settings, to enforce not using it after we've moved it out
     std::unique_ptr<PortSettings> port_settings;
-    if (settings) {
-      port_settings = std::make_unique<PortSettings>(this, port, std::move(*settings));
-    } else {
-      port_settings = std::make_unique<PortSettings>(this, port, std::move(*partial_settings));
-    }
+    port_settings = std::make_unique<PortSettings>(this, port, std::move(*partial_settings));
     port_settings_[port] = std::move(port_settings);
   }  // ~port_settings, which has been moved out, so we can't use it anyway
   buffer_lifetime_ordinal_[port] = port_settings_[port]->buffer_lifetime_ordinal();
@@ -1860,62 +1809,6 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock, C
   all_buffers_[port].clear();
   ZX_DEBUG_ASSERT(all_packets_[port].empty());
   ZX_DEBUG_ASSERT(all_buffers_[port].empty());
-}
-
-bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
-    CodecPort port, const fuchsia::media::StreamBufferSettings& settings,
-    const fuchsia::media::StreamBufferConstraints& constraints) {
-  if (!settings.has_packet_count_for_server()) {
-    FailLocked("settings do not have packet count for server");
-    return false;
-  }
-
-  if (settings.packet_count_for_server() < constraints.packet_count_for_server_min()) {
-    FailLocked("packet_count_for_server < packet_count_for_server_min");
-    return false;
-  }
-
-  if (settings.packet_count_for_server() > constraints.packet_count_for_server_max()) {
-    FailLocked("packet_count_for_server > packet_count_for_server_max");
-    return false;
-  }
-  if (!settings.has_packet_count_for_client()) {
-    FailLocked("settings do not have packet count for client");
-    return false;
-  }
-  if (settings.packet_count_for_client() < constraints.packet_count_for_client_min()) {
-    FailLocked(
-        "packet_count_for_client < packet_count_for_client_min - port: %d %d < "
-        "%d",
-        port, settings.packet_count_for_client(), constraints.packet_count_for_client_min());
-    return false;
-  }
-  if (settings.packet_count_for_client() > constraints.packet_count_for_client_max()) {
-    FailLocked("packet_count_for_client > packet_count_for_client_max");
-    return false;
-  }
-
-  if (!settings.has_per_packet_buffer_bytes()) {
-    FailLocked("settings do not have per packet buffer bytes");
-    return false;
-  }
-
-  if (settings.per_packet_buffer_bytes() < constraints.per_packet_buffer_bytes_min()) {
-    FailLocked("per_packet_buffer_bytes < per_packet_buffer_bytes_min");
-    return false;
-  }
-  if (settings.per_packet_buffer_bytes() > constraints.per_packet_buffer_bytes_max()) {
-    FailLocked("per_packet_buffer_bytes > per_packet_buffer_bytes_max");
-    return false;
-  }
-
-  if ((settings.has_single_buffer_mode() && settings.single_buffer_mode()) &&
-      (!constraints.has_single_buffer_mode_allowed() ||
-       !constraints.single_buffer_mode_allowed())) {
-    FailLocked("single_buffer_mode && !single_buffer_mode_allowed");
-    return false;
-  }
-  return true;
 }
 
 bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
@@ -3614,14 +3507,6 @@ void CodecImpl::Stream::ClearMidStreamOutputConstraintsChangeActive() {
 
 bool CodecImpl::Stream::is_mid_stream_output_constraints_change_active() {
   return is_mid_stream_output_constraints_change_active_;
-}
-
-CodecImpl::PortSettings::PortSettings(CodecImpl* parent, CodecPort port,
-                                      fuchsia::media::StreamBufferSettings settings)
-    : parent_(parent),
-      port_(port),
-      settings_(std::make_unique<fuchsia::media::StreamBufferSettings>(std::move(settings))) {
-  // nothing else to do here
 }
 
 CodecImpl::PortSettings::PortSettings(CodecImpl* parent, CodecPort port,

@@ -291,15 +291,11 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // PortSettings
   //
-  // The PortSettings wraps/homogenizes the port settings regardless of whether
-  // the settings are specified by the client using StreamBufferSettings or
-  // StreamBufferPartialSettings.  In addition, in the case of
-  // StreamBufferPartialSettings, this class tracks the settings that arrive
-  // later from sysmem (whether we've received them yet, and if so, what the
-  // values are).
+  // The PortSettings wraps the port settings specified in StreamBufferPartialSettings.
+  // TODO(afoxley) remove this class and just directly use StreamBufferPartialSettings now that it
+  // no longer also wraps StreamBufferSettings
   class PortSettings {
    public:
-    PortSettings(CodecImpl* parent, CodecPort port, fuchsia::media::StreamBufferSettings settings);
     PortSettings(CodecImpl* parent, CodecPort port,
                  fuchsia::media::StreamBufferPartialSettings partial_settings);
     ~PortSettings();
@@ -355,10 +351,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
     CodecPort port_ = kInvalidPort;
 
-    // Only one or the other of settings_ or partial_settings_ is set.
-    std::unique_ptr<fuchsia::media::StreamBufferSettings> settings_;
-
-    // Only needed/set for the partial_settings_ case.
     std::unique_ptr<const fuchsia::media::StreamBufferConstraints> constraints_;
     std::unique_ptr<fuchsia::media::StreamBufferPartialSettings> partial_settings_;
 
@@ -550,24 +542,17 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT bool IsStreamActiveLocked();
 
   void SetInputBufferSettingsCommon(
-      std::unique_lock<std::mutex>& lock, fuchsia::media::StreamBufferSettings* input_settings,
+      std::unique_lock<std::mutex>& lock,
       fuchsia::media::StreamBufferPartialSettings* input_partial_settings);
 
   void SetOutputBufferSettingsCommon(
-      std::unique_lock<std::mutex>& lock, fuchsia::media::StreamBufferSettings* output_settings,
+      std::unique_lock<std::mutex>& lock,
       fuchsia::media::StreamBufferPartialSettings* output_partial_settings);
 
   void SetBufferSettingsCommon(std::unique_lock<std::mutex>& lock, CodecPort port,
-                               fuchsia::media::StreamBufferSettings* settings,
                                fuchsia::media::StreamBufferPartialSettings* partial_settings,
                                const fuchsia::media::StreamBufferConstraints& constraints);
   void EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock, CodecPort port);
-  // Returns true if validation passed.  Returns false if validation failed and
-  // FailLocked() has already been called with a specific error string (in which
-  // case the caller will likely want to just return).
-  __WARN_UNUSED_RESULT bool ValidateBufferSettingsVsConstraintsLocked(
-      CodecPort port, const fuchsia::media::StreamBufferSettings& settings,
-      const fuchsia::media::StreamBufferConstraints& constraints);
 
   // This is just validating that the _partial_ settings set by the client are
   // valid with respect to the constraints indicated to the client, without any
@@ -644,13 +629,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   std::unique_ptr<const fuchsia::media::StreamBufferConstraints> input_constraints_;
 
   // This holds the most recent settings received from the client and accepted,
-  // received via SetInputBufferSettings()/SetInputBufferPartialSettings() or
-  // SetOutputBufferSettings()/SetOutputBufferPartialSettings(). The settings
-  // are retained as-received from the client.  In the case of the client
-  // sending StreamBufferPartialSettings, we discover some of the settings via
-  // sysmem (instead of from the client) and store those in port_settings_, to
-  // homogenize how we handle the settigns between StreamBufferSettings and
-  // StreamBufferPartialSettings.
+  // received via SetInputBufferPartialSettings() or
+  // SetOutputBufferPartialSettings(). The settings
+  // are retained as-received from the client. We discover some of the settings via
+  // sysmem and store those in port_settings_.
   std::unique_ptr<PortSettings> port_settings_[kPortCount];
 
   // The most recent fully-configured input or output buffers had this
