@@ -8,6 +8,7 @@
             "class/sysmem"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.net.http.Loader",
             "fuchsia.sys.Environment",
