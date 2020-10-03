@@ -61,9 +61,23 @@ TEST(ModuleSymbols, BadFileType) {
   ASSERT_FALSE(setup.Init("", false).ok());
 }
 
+TEST(ModuleSymbols, GetMappedLength) {
+  TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
+
+  // The checked-in test .so's last PROGBITS segment record is:
+  //
+  //   [15] .got.plt          PROGBITS         0000000000003008  00003008
+  //       0000000000000030  0000000000000000  WA       0     0     8
+  //
+  // So 0x3008 offset + 0x38 = 0x3038 ending offset. This will likely change if the checked-in
+  // test .so is updated. Just verify the results with "readelf -S"
+  EXPECT_EQ(0x3038u, setup.symbols()->GetMappedLength());
+}
+
 TEST(ModuleSymbols, Basic) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init("/build_dir").ok());
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
 
   // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
@@ -100,9 +114,28 @@ TEST(ModuleSymbols, Basic) {
   EXPECT_TRUE(DwarfLangIsCFamily(unit->language()));
 }
 
+// Tests that querying an address far from the last address in the module won't return anything.
+TEST(ModuleSymbols, OffEnd) {
+  TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
+
+  constexpr uint64_t kLoadAddress = 0x100000;
+  SymbolContext symbol_context(kLoadAddress);
+
+  // Check an address far past the end of the test module.
+  std::vector<Location> addrs = setup.symbols()->ResolveInputLocation(
+      symbol_context,
+      InputLocation(kLoadAddress + 0x1000000000));
+  ASSERT_EQ(1u, addrs.size());
+
+  // It should not have a matching symbol (the last ELF symbol in the module shouldn't match it
+  // just because it's the previous thing).
+  EXPECT_FALSE(addrs[0].has_symbols());
+}
+
 TEST(ModuleSymbols, LineDetailsForAddress) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init("/build_dir").ok());
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
 
   // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
@@ -160,7 +193,7 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
 
 TEST(ModuleSymbols, ResolveLineInputLocation) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init("/build_dir").ok());
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
 
   // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
@@ -236,7 +269,7 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
 
 TEST(ModuleSymbols, ResolveGlobalVariable) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init().ok());
+  ASSERT_TRUE(setup.Init().ok());
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
@@ -292,7 +325,7 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
 TEST(ModuleSymbols, ResolvePLTEntry) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(),
                          TestSymbolModule::GetStrippedCheckedInTestFileName());
-  EXPECT_TRUE(setup.Init().ok());
+  ASSERT_TRUE(setup.Init().ok());
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
@@ -329,7 +362,7 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
 TEST(ModuleSymbols, ResolveMainFunction) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(),
                          TestSymbolModule::GetStrippedCheckedInTestFileName());
-  EXPECT_TRUE(setup.Init().ok());
+  ASSERT_TRUE(setup.Init().ok());
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
@@ -372,7 +405,7 @@ TEST(ModuleSymbols, ResolveMainFunction) {
 TEST(ModuleSymbols, SkipPrologue) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(),
                          TestSymbolModule::GetStrippedCheckedInTestFileName());
-  EXPECT_TRUE(setup.Init().ok());
+  ASSERT_TRUE(setup.Init().ok());
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
@@ -439,7 +472,7 @@ TEST(ModuleSymbols, SkipPrologue) {
 TEST(ModuleSymbols, ElfSymbols) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(),
                          TestSymbolModule::GetStrippedCheckedInTestFileName());
-  EXPECT_TRUE(setup.Init().ok());
+  ASSERT_TRUE(setup.Init().ok());
 
   // Give it a non-relative context to make sure that things are relative-ized going in and out.
   SymbolContext symbol_context(0x1000000);

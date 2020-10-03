@@ -93,10 +93,9 @@ TEST(ProcessSymbols, SetModules_Probe) {
 }
 
 TEST(ProcessSymbols, SetModules) {
-  // This uses two different build IDs mapping to the same file. SystemSymbols
-  // only deals with build IDs rather than file uniqueness, so this will create
-  // two separate entries (what we need, even though we only have one symbol
-  // test file).
+  // This uses two different build IDs mapping to the same file. SystemSymbols only deals with build
+  // IDs rather than file uniqueness, so this will create two separate entries (what we need, even
+  // though we only have one symbol test file).
   std::string fake_build_id_1 = "12345";
   std::string fake_build_id_2 = "67890";
   std::string test_file_name = TestSymbolModule::GetTestFileName();
@@ -157,6 +156,38 @@ TEST(ProcessSymbols, SetModules) {
   // Should have one unload and no load.
   EXPECT_TRUE(notifications.HaveOneUnloadFor(base2));
   EXPECT_EQ(0u, notifications.loaded().size());
+}
+
+TEST(ProcessSymbols, ModuleLength) {
+  std::string fake_build_id = "12345";
+  std::string test_file_name = TestSymbolModule::GetTestFileName();
+  SystemSymbols system(nullptr);
+  system.build_id_index().AddBuildIDMappingForTest(fake_build_id, test_file_name);
+
+  TargetSymbols target(&system);
+
+  NotificationsImpl notifications;
+  ProcessSymbols process(&notifications, &target);
+
+  // Add a new module.
+  constexpr uint64_t kBase = 0x100000000;
+  std::vector<debug_ipc::Module> ipc;
+  debug_ipc::Module ipc_module;
+  ipc_module.base = kBase;
+  ipc_module.build_id = fake_build_id;
+  ipc_module.name = "module1.so";
+  ipc.push_back(ipc_module);
+  process.SetModules(ipc);
+
+  // Valid address for the module should return it.
+  EXPECT_TRUE(process.GetModuleForAddress(kBase + 1));
+
+  // Before the module's address shouldn't match anything.
+  EXPECT_FALSE(process.GetModuleForAddress(kBase - 1));
+
+  // After the module's end shouldn't match anything (this assumes the test module is less than
+  // 0x10000000 long).
+  EXPECT_FALSE(process.GetModuleForAddress(kBase + 0x10000000));
 }
 
 }  // namespace zxdb

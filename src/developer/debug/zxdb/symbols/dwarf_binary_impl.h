@@ -26,7 +26,7 @@ class Binary;
 
 namespace zxdb {
 
-class DwarfBinaryImpl : public DwarfBinary {
+class DwarfBinaryImpl final : public DwarfBinary {
  public:
   // Callers must call Load() to complete initialization (which can fail).
   DwarfBinaryImpl(const std::string& name, const std::string& binary_name,
@@ -51,6 +51,7 @@ class DwarfBinaryImpl : public DwarfBinary {
   bool HasBinary() const override;
   llvm::object::ObjectFile* GetLLVMObjectFile() override;
   llvm::DWARFContext* GetLLVMContext() override;
+  uint64_t GetMappedLength() const override;
   const std::map<std::string, llvm::ELF::Elf64_Sym>& GetELFSymbols() const override;
   const std::map<std::string, uint64_t> GetPLTSymbols() const override;
   size_t GetUnitCount() const override;
@@ -79,6 +80,8 @@ class DwarfBinaryImpl : public DwarfBinary {
 
   // Holds the mapping between LLVM units and our cached unit wrappers that reference them.
   mutable std::map<const llvm::DWARFUnit*, fxl::RefPtr<DwarfUnit>> unit_map_;
+
+  uint64_t mapped_length_ = 0;
 
   fxl::WeakPtrFactory<DwarfBinaryImpl> weak_factory_;
 };

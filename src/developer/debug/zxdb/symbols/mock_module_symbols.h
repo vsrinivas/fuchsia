@@ -50,11 +50,13 @@ class MockModuleSymbols : public ModuleSymbols {
   Index& index() { return index_; }
 
   void set_modification_time(std::size_t mtime) { modification_time_ = mtime; }
+  void set_mapped_length(uint64_t len) { mapped_length_ = len; }
 
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
   std::time_t GetModificationTime() const override { return modification_time_; }
   std::string GetBuildDir() const override { return ""; }
+  uint64_t GetMappedLength() const override { return mapped_length_; }
   std::vector<Location> ResolveInputLocation(const SymbolContext& symbol_context,
                                              const InputLocation& input_location,
                                              const ResolveOptions& options) const override;
@@ -81,6 +83,7 @@ class MockModuleSymbols : public ModuleSymbols {
 
   std::string local_file_name_;
   std::size_t modification_time_ = 0;
+  uint64_t mapped_length_ = 0;
 
   // Maps manually-added symbols to their locations.
   std::map<Identifier, std::vector<Location>> named_symbols_;

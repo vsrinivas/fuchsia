@@ -40,6 +40,14 @@ namespace zxdb {
 
 namespace {
 
+// When looking for symbol matches, don't consider any symbol further than this from the looked-up
+// location to be a match. We don't want this number to be too large as users can be confused by
+// seeing a name for a symbol that's unrelated to the address at hand.
+//
+// However, when dealing with unsymbolized code, the nearest previous Elf symbol name can be a
+// valuable hint about the location of an address.
+constexpr uint64_t kMaxElfOffsetForMatch = 4096;
+
 // Implementation of SymbolDataProvider that returns no memory or registers. This is used when
 // evaluating global variables' location expressions which normally just declare an address. See
 // LocationForVariable().
@@ -176,6 +184,10 @@ std::time_t ModuleSymbolsImpl::GetModificationTime() const {
 }
 
 std::string ModuleSymbolsImpl::GetBuildDir() const { return build_dir_; }
+
+uint64_t ModuleSymbolsImpl::GetMappedLength() const {
+  return binary_->GetMappedLength();
+}
 
 std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContext& symbol_context,
                                                               const InputLocation& input_location,
@@ -553,8 +565,6 @@ std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(
   if (elf_addresses_.empty())
     return std::nullopt;
 
-  // TODO(bug 42243) make sure the address is inside the library. Otherwise this will match
-  // random addresses for the largest ELF symbol.
   uint64_t relative_addr = symbol_context.AbsoluteToRelative(absolute_address);
   auto found = debug_ipc::LargestLessOrEqual(
       elf_addresses_.begin(), elf_addresses_.end(), relative_addr,
@@ -565,6 +575,8 @@ std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(
 
   // There could theoretically be multiple matches for this address, but we return only the first.
   const ElfSymbolRecord* record = *found;
+  if (relative_addr - record->relative_address > kMaxElfOffsetForMatch)
+    return std::nullopt;  // Too far away.
   return Location(
       absolute_address, FileLine(), 0, symbol_context,
       fxl::MakeRefCounted<ElfSymbol>(const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), *record));

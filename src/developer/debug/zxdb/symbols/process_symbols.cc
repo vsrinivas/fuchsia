@@ -286,14 +286,20 @@ const ProcessSymbols::ModuleInfo* ProcessSymbols::InfoForAddress(uint64_t addres
   if (modules_.empty())
     return nullptr;
 
-  // TODO(bug 42243) we should be able to tell the size of the module and fail when it's outside
-  // the extent of one.
   auto found = debug_ipc::LargestLessOrEqual(
       modules_.begin(), modules_.end(), address,
       [](const ModuleMap::value_type& v, uint64_t a) { return v.first < a; },
       [](const ModuleMap::value_type& v, uint64_t a) { return v.first == a; });
   if (found == modules_.end())
     return nullptr;  // Address below first module.
+
+  if (found->second.symbols->module_symbols()) {
+    if (uint64_t mapped_length = found->second.symbols->module_symbols()->GetMappedLength()) {
+      if (found->first + mapped_length < address)
+        return nullptr;  // Address is beyond the end of the module.
+    }
+  }
+
   return &found->second;
 }
 

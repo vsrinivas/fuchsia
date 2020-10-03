@@ -63,6 +63,11 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // Returns the build directory associated with this module, useful for source file lookup.
   virtual std::string GetBuildDir() const = 0;
 
+  // Returns the extent of the mapped segments in memory.
+  //
+  // This may return 0 on error or in testing which indicates the mapped length is unknown.
+  virtual uint64_t GetMappedLength() const = 0;
+
   // Converts the given InputLocation into one or more locations. Called by LoadedModuleSymbols. See
   // there for more info.
   virtual std::vector<Location> ResolveInputLocation(

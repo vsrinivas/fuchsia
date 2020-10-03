@@ -40,7 +40,7 @@ class Variable;
 //
 // This provides a high-level interface on top of the DwarfBinary file (low-level stuff), the Index,
 // and the SymbolFactory.
-class ModuleSymbolsImpl : public ModuleSymbols {
+class ModuleSymbolsImpl final : public ModuleSymbols {
  public:
   DwarfBinary* binary() { return binary_.get(); }
   DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
@@ -51,6 +51,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   ModuleSymbolStatus GetStatus() const override;
   std::time_t GetModificationTime() const override;
   std::string GetBuildDir() const override;
+  uint64_t GetMappedLength() const override;
   std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const override;

@@ -220,7 +220,7 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols*
 }
 
 void BreakpointImpl::WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
-  // TODO(bug 42243) need to get the address range of this module and then remove all breakpoints in
+  // TODO(bug 61248) need to get the address range of this module and then remove all breakpoints in
   // that range.
 }
 

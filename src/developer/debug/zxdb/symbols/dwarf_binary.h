@@ -47,6 +47,9 @@ class DwarfBinary {
   virtual llvm::object::ObjectFile* GetLLVMObjectFile() = 0;
   virtual llvm::DWARFContext* GetLLVMContext() = 0;
 
+  // Returns the extent of the mapped segments in memory.
+  virtual uint64_t GetMappedLength() const = 0;
+
   // Returns symbols from the ELF File.
   virtual const std::map<std::string, llvm::ELF::Elf64_Sym>& GetELFSymbols() const = 0;
   virtual const std::map<std::string, uint64_t> GetPLTSymbols() const = 0;

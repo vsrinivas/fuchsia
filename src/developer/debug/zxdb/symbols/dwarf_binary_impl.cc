@@ -18,6 +18,22 @@
 
 namespace zxdb {
 
+namespace {
+
+uint64_t ComputeMappedLength(elflib::ElfLib& elf) {
+  uint64_t max = 0;
+  for (const elflib::Elf64_Phdr& header : elf.GetSegmentHeaders()) {
+    // Only check segments that are loaded. Some segments contain things like DWARF symbols that
+    // won't be loaded. Here we only want the size in-memory to resolve addresses in the program's
+    // address space.
+    if (header.p_type == elflib::PT_LOAD)
+      max = std::max(max, header.p_vaddr + header.p_memsz);
+  }
+  return max;
+}
+
+}  // namespace
+
 DwarfBinaryImpl::DwarfBinaryImpl(const std::string& name, const std::string& binary_name,
                                  const std::string& build_id)
     : name_(name), binary_name_(binary_name), build_id_(build_id), weak_factory_(this) {}
@@ -49,11 +65,15 @@ Err DwarfBinaryImpl::Load() {
       plt_symbols_ = debug->GetPLTOffsets();
       if (const auto opt_syms = debug->GetAllSymbols())
         elf_symbols_ = std::move(*opt_syms);
+
+      mapped_length_ = ComputeMappedLength(*debug);
     } else if (auto elf = elflib::ElfLib::Create(binary_name_)) {
       // Found in binary file.
       plt_symbols_ = elf->GetPLTOffsets();
       if (const auto opt_syms = elf->GetAllSymbols())
         elf_symbols_ = std::move(*opt_syms);
+
+      mapped_length_ = ComputeMappedLength(*elf);
     }
   }
 
@@ -82,6 +102,8 @@ Err DwarfBinaryImpl::Load() {
 llvm::object::ObjectFile* DwarfBinaryImpl::GetLLVMObjectFile() { return object_file(); }
 
 llvm::DWARFContext* DwarfBinaryImpl::GetLLVMContext() { return context(); }
+
+uint64_t DwarfBinaryImpl::GetMappedLength() const { return mapped_length_; }
 
 const std::map<std::string, llvm::ELF::Elf64_Sym>& DwarfBinaryImpl::GetELFSymbols() const {
   return elf_symbols_;
