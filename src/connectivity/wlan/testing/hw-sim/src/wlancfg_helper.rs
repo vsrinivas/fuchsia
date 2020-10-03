@@ -221,6 +221,22 @@ pub async fn assert_connecting(
     .await;
 }
 
+pub async fn assert_connected(
+    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    network_identifier: fidl_policy::NetworkIdentifier,
+) {
+    // The next update in the queue should be "Connecting".
+    assert_next_client_listener_update(
+        listener_stream,
+        vec![fidl_policy::NetworkState {
+            id: Some(network_identifier),
+            state: Some(fidl_policy::ConnectionState::Connected),
+            status: None,
+        }],
+    )
+    .await;
+}
+
 pub async fn assert_failed(
     listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     network_identifier: fidl_policy::NetworkIdentifier,

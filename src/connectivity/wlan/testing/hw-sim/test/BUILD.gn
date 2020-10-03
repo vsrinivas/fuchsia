@@ -32,6 +32,15 @@ fuchsia_component("connect-to-open-network") {
   ]
 }
 
+fuchsia_component("connect-to-wpa1-network") {
+  testonly = true
+  manifest = "meta/connect_to_wpa1_network.cmx"
+  deps = [
+    "connect_to_wpa1_network",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_component("connect-to-wpa2-network") {
   testonly = true
   manifest = "meta/connect_to_wpa2_network.cmx"
@@ -154,6 +163,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":configure-legacy-privacy-off",
     ":configure-legacy-privacy-on",
     ":connect-to-open-network",
+    ":connect-to-wpa1-network",
     ":connect-to-wpa2-network",
     ":connect-with-bad-password",
     ":connect-with-failed-association",

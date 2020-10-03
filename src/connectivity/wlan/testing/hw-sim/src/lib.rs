@@ -99,7 +99,7 @@ pub fn send_beacon(
     rssi_dbm: i8,
 ) -> Result<(), anyhow::Error> {
     let rsne = default_wpa2_psk_rsne();
-    let wpa1_ie = default_wpa1_vendor_ie();
+    let wpa1_ie = default_deprecated_wpa1_vendor_ie();
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
         headers: {
@@ -151,7 +151,7 @@ pub fn send_probe_resp(
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
     let rsne = default_wpa2_psk_rsne();
-    let wpa1_ie = default_wpa1_vendor_ie();
+    let wpa1_ie = default_deprecated_wpa1_vendor_ie();
 
     let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
         headers: {
@@ -265,7 +265,7 @@ fn default_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
     rsne
 }
 
-fn default_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
+fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
     WpaIe {
         unicast_cipher_list: vec![cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::CCMP_128 }],
         akm_list: vec![akm::Akm { oui: Oui::MSFT, suite_type: akm::PSK }],
@@ -314,11 +314,11 @@ pub fn create_deprecated_wpa1_psk_authenticator(
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
-    let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::CCMP_128))
+    let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::TKIP))
         .expect("creating gtk provider");
     let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
-    let s_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_wpa1_vendor_ie());
-    let a_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_wpa1_vendor_ie());
+    let s_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
+    let a_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
     wlan_rsn::Authenticator::new_wpa2psk_ccmp128(
         nonce_rdr,
         std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
