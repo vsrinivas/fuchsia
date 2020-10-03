@@ -47,7 +47,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
 
     packet_queue_ = std::make_shared<PacketQueue>(
         kDefaultFormat, source_timeline_function,
-        AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
+        AudioClock::CreateAsClientNonadjustable(clock::AdjustableCloneOfMonotonic()));
     ASSERT_TRUE(packet_queue_);
 
     auto tap_timeline_function =

@@ -148,9 +148,9 @@ class BaseCapturer : public AudioObject,
 
   fidl::Binding<fuchsia::media::AudioCapturer>& binding() { return binding_; }
 
-  void SetOptimalReferenceClock();
+  void SetAdjustableReferenceClock();
 
-  // If custom, audio_core treats this as not-rate-adjustable. If optimal, it will be tuned.
+  // AudioCore treats client-provided clocks as not-rate-adjustable.
   void SetClock(AudioClock audio_clock) { audio_clock_ = std::move(audio_clock); }
 
   Reporter::Capturer& reporter() { return *reporter_; }

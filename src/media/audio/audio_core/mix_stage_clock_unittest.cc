@@ -46,7 +46,7 @@ const Format kDefaultFormat =
 //
 // There are three synchronization scenarios to be validated:
 //  1) Client and device clocks are non-adjustable -- apply micro-SRC (MicroSrcClockTest)
-//  2) Client clock is adjustable -- tune this "flexible" client clock (not yet implemented)
+//  2) Client clock is adjustable -- tune this adjustable client clock (not yet implemented)
 //  3) Device clock is adjustable -- trim the hardware clock (not yet implemented).
 //
 
@@ -63,7 +63,7 @@ const Format kDefaultFormat =
 // +1000 adjusted) should cause worst-case desync position error of less than 16000 sub-frames
 // (< 2 frame) -- about 40 microsec at 48kHz.
 //
-// Note: these are subject to change as we tune the PID coefficients for optimal performance.
+// Note: these are subject to change as we tune the PID coefficients for best performance.
 //
 
 // These multipliers (scaled by rate_adjust_ppm) determine worst-case primary/secondary error
@@ -149,10 +149,10 @@ class MicroSrcClockTest : public MixStageClockTest {
   }
 
   void SetUpClocks(ClockMode clock_mode, zx::clock raw_clock) {
-    client_clock_ = AudioClock::CreateAsCustom(std::move(raw_clock));
+    client_clock_ = AudioClock::CreateAsClientNonadjustable(std::move(raw_clock));
 
-    device_clock_ =
-        AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+    device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                            AudioClock::kMonotonicDomain);
   }
 
   Fixed PrimaryErrorLimit(int32_t rate_adjust_ppm) override {

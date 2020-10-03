@@ -94,7 +94,7 @@ class BaseRenderer : public AudioObject,
 
   fidl::Binding<fuchsia::media::AudioRenderer>& binding() { return audio_renderer_binding_; }
 
-  zx_status_t SetOptimalReferenceClock();
+  zx_status_t SetAdjustableReferenceClock();
   zx_status_t SetCustomReferenceClock(zx::clock ref_clock);
   Reporter::Renderer& reporter() { return *reporter_; }
 

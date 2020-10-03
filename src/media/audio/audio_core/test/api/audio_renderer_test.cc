@@ -740,16 +740,16 @@ TEST_F(AudioRendererClockTest, SetRefClock_Default) {
   clock::testing::VerifyCannotBeRateAdjusted(ref_clock);
 }
 
-// Set a null clock; representing selecting the AudioCore-generated optimal clock.
-TEST_F(AudioRendererClockTest, SetRefClock_Optimal) {
+// Set a null clock; this represents selecting the AudioCore-generated clock.
+TEST_F(AudioRendererClockTest, SetRefClock_Flexible) {
   audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
-  zx::clock optimal_clock = GetAndValidateReferenceClock();
+  zx::clock provided_clock = GetAndValidateReferenceClock();
 
-  clock::testing::VerifyReadOnlyRights(optimal_clock);
-  clock::testing::VerifyIsSystemMonotonic(optimal_clock);
+  clock::testing::VerifyReadOnlyRights(provided_clock);
+  clock::testing::VerifyIsSystemMonotonic(provided_clock);
 
-  clock::testing::VerifyAdvances(optimal_clock);
-  clock::testing::VerifyCannotBeRateAdjusted(optimal_clock);
+  clock::testing::VerifyAdvances(provided_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(provided_clock);
 }
 
 // Set a recognizable custom reference clock -- should be what we receive from GetReferenceClock.
@@ -831,7 +831,7 @@ TEST_F(AudioRendererClockTest, SetRefClock_NoReadShouldDisconnect) {
 }
 
 // Regardless of the type of clock, calling SetReferenceClock a second time should fail.
-TEST_F(AudioRendererClockTest, SetRefClock_CustomThenOptimalShouldDisconnect) {
+TEST_F(AudioRendererClockTest, SetRefClock_CustomThenFlexibleShouldDisconnect) {
   audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
 
   audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
@@ -847,7 +847,7 @@ TEST_F(AudioRendererClockTest, SetRefClock_SecondCustomShouldDisconnect) {
 }
 
 // Regardless of the type of clock, calling SetReferenceClock a second time should fail.
-TEST_F(AudioRendererClockTest, SetRefClock_SecondOptimalShouldDisconnect) {
+TEST_F(AudioRendererClockTest, SetRefClock_SecondFlexibleShouldDisconnect) {
   audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
 
   audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
@@ -855,7 +855,7 @@ TEST_F(AudioRendererClockTest, SetRefClock_SecondOptimalShouldDisconnect) {
 }
 
 // Regardless of the type of clock, calling SetReferenceClock a second time should fail.
-TEST_F(AudioRendererClockTest, SetRefClock_OptimalThenCustomShouldDisconnect) {
+TEST_F(AudioRendererClockTest, SetRefClock_FlexibleThenCustomShouldDisconnect) {
   audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
 
   audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());

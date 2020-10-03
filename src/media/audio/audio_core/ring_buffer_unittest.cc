@@ -33,8 +33,8 @@ class InputRingBufferTest : public ::testing::Test {
         TimelineFunction(0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(),
                          zx::sec(1).to_nsecs()));
 
-    audio_clock_ =
-        AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+    audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                           AudioClock::kMonotonicDomain);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,
@@ -67,8 +67,8 @@ class OutputRingBufferTest : public ::testing::Test {
         TimelineFunction(0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(),
                          zx::sec(1).to_nsecs()));
 
-    audio_clock_ =
-        AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+    audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                           AudioClock::kMonotonicDomain);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,

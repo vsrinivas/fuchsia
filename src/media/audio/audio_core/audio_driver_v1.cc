@@ -1157,8 +1157,8 @@ zx_status_t AudioDriverV1::OnDriverInfoFetched(uint32_t info) {
 void AudioDriverV1::SetUpClocks() {
   // If we are in the monotonic domain, or if we have problem setting up the mechanism to recover a
   // clock, then we'll just fall back to using this non-adjustable clone of CLOCK_MONOTONIC.
-  audio_clock_ = AudioClock::CreateAsDeviceStatic(audio::clock::CloneOfMonotonic(),
-                                                  AudioClock::kMonotonicDomain);
+  audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(audio::clock::CloneOfMonotonic(),
+                                                         AudioClock::kMonotonicDomain);
 
   if (clock_domain_ == AudioClock::kMonotonicDomain) {
     return;
@@ -1175,17 +1175,21 @@ void AudioDriverV1::SetUpClocks() {
     return;
   }
 
-  recovered_clock_ = AudioClock::CreateAsDeviceStatic(std::move(adjustable_clock), clock_domain_);
+  recovered_clock_ =
+      AudioClock::CreateAsDeviceNonadjustable(std::move(adjustable_clock), clock_domain_);
   if (!recovered_clock_.is_valid()) {
-    FX_LOGS(ERROR) << "CreateAsDeviceStatic (recovered) failed, will not recover a device clock!";
+    FX_LOGS(ERROR)
+        << "CreateAsDeviceNonadjustable (recovered) failed, will not recover a device clock!";
     return;
   }
 
   // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
-  // be DeviceAdjustable instead of DeviceStatic, to articulate that it has hardware controls.
-  auto clone = AudioClock::CreateAsDeviceStatic(read_only_clock_result.take_value(), clock_domain_);
+  // be DeviceAdjustable, not DeviceNonadjustable, to articulate that it has hardware controls.
+  auto clone =
+      AudioClock::CreateAsDeviceNonadjustable(read_only_clock_result.take_value(), clock_domain_);
   if (!clone.is_valid()) {
-    FX_LOGS(ERROR) << "CreateAsDeviceStatic (read_only) failed, will not recover a device clock!";
+    FX_LOGS(ERROR)
+        << "CreateAsDeviceNonadjustable (read_only) failed, will not recover a device clock!";
     recovered_clock_ = AudioClock();
     return;
   }

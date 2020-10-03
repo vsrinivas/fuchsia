@@ -59,8 +59,8 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   usage_ = usage;
 }
 
-// If received clock is null, use optimal clock. Otherwise, use this new clock. Fail and disconnect,
-// if the client-submitted clock has insufficient rights (and strip off other rights such as WRITE).
+// If received clock is null, use our adjustable clock. Else, use this new clock. Fail/disconnect,
+// if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
 void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   TRACE_DURATION("audio", "AudioRenderer::SetReferenceClock");
   AUDIO_LOG_OBJ(DEBUG, this);
@@ -76,10 +76,9 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
 
   zx_status_t status;
   if (ref_clock.is_valid()) {
-    // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
     status = SetCustomReferenceClock(std::move(ref_clock));
   } else {
-    status = SetOptimalReferenceClock();
+    status = SetAdjustableReferenceClock();
   }
   if (status != ZX_OK) {
     return;

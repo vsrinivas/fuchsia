@@ -83,8 +83,8 @@ void AudioCapturer::OnLinkAdded() {
 }
 
 constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-// If received clock is null, use optimal clock. Otherwise, use this new clock. Fail and disconnect,
-// if the client-submitted clock has insufficient rights (and strip off other rights such as WRITE).
+// If received clock is null, use our adjustable clock. Else, use this new clock. Fail/disconnect,
+// if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
 void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
   TRACE_DURATION("audio", "AudioCapturer::SetReferenceClock");
   AUDIO_LOG_OBJ(DEBUG, this);
@@ -106,11 +106,10 @@ void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
       FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
       return;
     }
-    SetClock(AudioClock::CreateAsCustom(std::move(ref_clock)));
+    SetClock(AudioClock::CreateAsClientNonadjustable(std::move(ref_clock)));
   } else {
-    // Optimal clock is writable: to achieve "no-SRC", we fine-tune it to match the device clock.
-    // TODO(mpuryear): Client may rate-adjust the clock at any time; we should only use SincSampler
-    SetOptimalReferenceClock();
+    // To achieve "no-SRC", we will rate-adjust this clock to match the device clock.
+    SetAdjustableReferenceClock();
   }
 
   reference_clock_is_set_ = true;

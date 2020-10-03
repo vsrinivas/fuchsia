@@ -24,7 +24,7 @@ static const TimelineFunction kDriverRefPtsToFractionalFrames =
 class TestOutputPipeline : public OutputPipeline {
  public:
   TestOutputPipeline(const Format& format) : OutputPipeline(format) {
-    audio_clock_ = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+    audio_clock_ = AudioClock::CreateAsClientNonadjustable(clock::AdjustableCloneOfMonotonic());
   }
 
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }

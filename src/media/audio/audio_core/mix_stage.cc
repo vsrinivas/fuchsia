@@ -64,7 +64,8 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
   if (resampler_hint == Mixer::Resampler::Default) {
     auto mode = AudioClock::SynchronizationMode(stream->reference_clock(), reference_clock());
     // If we might need micro-SRC for synchronization, use the higher quality resampler.
-    if (mode == AudioClock::SyncMode::MicroSrc || mode == AudioClock::SyncMode::TuneHardware) {
+    if (mode == AudioClock::SyncMode::MicroSrc ||
+        mode == AudioClock::SyncMode::AdjustHardwareClock) {
       resampler_hint = Mixer::Resampler::WindowedSinc;
     }
   }
@@ -83,19 +84,10 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
   stream->SetPresentationDelay(GetPresentationDelay() + LeadTimeForMixer(stream->format(), *mixer));
 
   FX_LOGS(DEBUG) << "AddInput "
-                 << (stream->reference_clock().is_flexible()
-                         ? "flexible"
-                         : (stream->reference_clock().is_tuneable()
-                                ? "tuneable"
-                                : (stream->reference_clock().is_device_clock() ? "static device"
-                                                                               : "static client")))
-                 << " (self "
-                 << (reference_clock().is_flexible()
-                         ? "flexible"
-                         : (reference_clock().is_tuneable()
-                                ? "tuneable"
-                                : (reference_clock().is_device_clock() ? "static device)"
-                                                                       : "static client)")));
+                 << (stream->reference_clock().is_adjustable() ? "adjustable " : "static ")
+                 << (stream->reference_clock().is_device_clock() ? "device" : "client") << " (self "
+                 << (reference_clock().is_adjustable() ? "adjustable " : "static ")
+                 << (reference_clock().is_device_clock() ? "device)" : "client)");
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     streams_.emplace_back(StreamHolder{std::move(stream), mixer});
@@ -116,20 +108,10 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   }
 
   FX_LOGS(DEBUG) << "RemoveInput "
-                 << (it->stream->reference_clock().is_flexible()
-                         ? "flexible"
-                         : (it->stream->reference_clock().is_tuneable()
-                                ? "tuneable"
-                                : (it->stream->reference_clock().is_device_clock()
-                                       ? "static device"
-                                       : "static client")))
-                 << " (self "
-                 << (reference_clock().is_flexible()
-                         ? "flexible"
-                         : (reference_clock().is_tuneable()
-                                ? "tuneable"
-                                : (reference_clock().is_device_clock() ? "static device)"
-                                                                       : "static client)")));
+                 << (it->stream->reference_clock().is_adjustable() ? "adjustable " : "static ")
+                 << (it->stream->reference_clock().is_device_clock() ? "device" : "client")
+                 << " (self " << (reference_clock().is_adjustable() ? "adjustable " : "static ")
+                 << (reference_clock().is_device_clock() ? "device)" : "client)");
 
   streams_.erase(it);
 }
@@ -492,7 +474,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 }
 
 // We compose the effects of clock reconciliation into our sample-rate-conversion step size, but
-// only for streams that use neither the 'optimal' clock, nor the clock we designate as driving our
+// only for streams that use neither our adjustable clock, nor the clock designated as driving our
 // hardware-rate-adjustments. We apply this micro-SRC via an intermediate "slew away the error"
 // rate-correction factor driven by a PID control. Why use a PID? Sources do not merely chase the
 // other clock's rate -- they chase its position. Note that even if we don't adjust our rate, we
@@ -632,7 +614,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     //   If mix is continuous since then, report the latest error to the AudioClock
     //   AudioClock feeds errors to its internal PID, producing a running correction factor....
     //   ... If clock is hardware-controlling, apply correction factor to the hardware.
-    //   ... If clock is optimal, apply correction factor directly to the client clock.
+    //   ... If clock is adjustable, apply correction factor directly to the client clock.
     //   ... Otherwise, expose this error correction factor directly to MixStage
     AudioClock& device_clock =
         stream.reference_clock().is_device_clock() ? stream.reference_clock() : reference_clock();
@@ -654,9 +636,9 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       // No error is too small to worry about; handle them all.
       FX_LOGS(TRACE) << "frac_source_error: tuning reference clock at dest " << curr_dest_frame
                      << " for " << info.frac_source_error.raw_value();
-      if (client_clock.is_flexible()) {
-        // Adjust the 'flexible' client clock to match the device clock
-      } else if (device_clock.is_tuneable() && client_clock.controls_tuneable_clock()) {
+      if (client_clock.is_adjustable()) {
+        // Adjust the adjustable client clock to match the device clock
+      } else if (device_clock.is_adjustable() && client_clock.controls_device_clock()) {
         // Adjust device_clock's hardware clock rate based on the frac_source_error
       } else {
         // Synchronize two non-adjustable clocks using micro-SRC

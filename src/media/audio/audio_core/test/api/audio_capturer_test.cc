@@ -311,16 +311,16 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_Default) {
   clock::testing::VerifyCannotBeRateAdjusted(ref_clock);
 }
 
-// Set a null clock; representing selecting the AudioCore-generated optimal clock.
-TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_Optimal) {
+// Set a null clock; this represents selecting the AudioCore-generated clock.
+TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_Flexible) {
   audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
-  zx::clock optimal_clock = GetAndValidateReferenceClock();
+  zx::clock provided_clock = GetAndValidateReferenceClock();
 
-  clock::testing::VerifyReadOnlyRights(optimal_clock);
-  clock::testing::VerifyIsSystemMonotonic(optimal_clock);
+  clock::testing::VerifyReadOnlyRights(provided_clock);
+  clock::testing::VerifyIsSystemMonotonic(provided_clock);
 
-  clock::testing::VerifyAdvances(optimal_clock);
-  clock::testing::VerifyCannotBeRateAdjusted(optimal_clock);
+  clock::testing::VerifyAdvances(provided_clock);
+  clock::testing::VerifyCannotBeRateAdjusted(provided_clock);
 }
 
 TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_Custom) {
@@ -400,7 +400,7 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_NoReadShouldDisconnect) {
 }
 
 // Regardless of the type of clock, calling SetReferenceClock a second time should fail.
-TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_CustomThenOptimalShouldDisconnect) {
+TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_CustomThenFlexibleShouldDisconnect) {
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
 
   audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
@@ -416,7 +416,7 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_SecondCustomShouldDisconnect) {
 }
 
 // Regardless of the type of clock, calling SetReferenceClock a second time should fail.
-TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_SecondOptimalShouldDisconnect) {
+TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_SecondFlexibleShouldDisconnect) {
   audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
 
   audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
@@ -424,7 +424,7 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_SecondOptimalShouldDisconnect) 
 }
 
 // Regardless of the type of clock, calling SetReferenceClock a second time should fail.
-TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_OptimalThenCustomShouldDisconnect) {
+TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_FlexibleThenCustomShouldDisconnect) {
   audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());

@@ -36,9 +36,9 @@ BaseRenderer::BaseRenderer(
   FX_DCHECK(context);
   AUDIO_LOG_OBJ(DEBUG, this);
 
-  // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of the
-  // device where the renderer is initially routed.
-  SetOptimalReferenceClock();
+  // Our default clock starts as an adjustable clone of MONOTONIC, but ultimately it will track the
+  // clock of the device where the renderer is routed.
+  SetAdjustableReferenceClock();
 
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "BaseRenderer::audio_renderer_binding_.error_handler", "zx_status",
@@ -67,8 +67,8 @@ void BaseRenderer::Shutdown() {
 
 // Because a PacketQueue might need to outlive its Renderer, and because (in the future) there could
 // be multiple destinations for a single renderer, we duplicate the raw clock here and send a new
-// AudioClock object to each PacketQueue. If the client is using the optimal clock, then one
-// PacketQueue will receive an AudioClock marked adjustable; otherwise PacketQueues receive
+// AudioClock object to each PacketQueue. If the client uses our clock (which is adjustable), then
+// one PacketQueue will receive an AudioClock marked adjustable. All other PacketQueues receive
 // AudioClocks that are non-adjustable.
 fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::InitializeDestLink(
     const AudioObject& dest) {
@@ -76,7 +76,8 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
 
   AudioClock clock_for_packet_queue;
   if (client_allows_clock_adjustment_ && !adjustable_clock_is_allocated_) {
-    // Retain WRITE, mark AudioClock adjustable, and note that an optimal clock has been provided.
+    // Retain WRITE, mark AudioClock adjustable, and note that an adjustable clock has been
+    // provided.
     zx::clock adjustable_duplicate;
     auto status = raw_clock().duplicate(ZX_RIGHT_SAME_RIGHTS, &adjustable_duplicate);
     if (status != ZX_OK) {
@@ -84,7 +85,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     }
     FX_DCHECK(adjustable_duplicate.is_valid());
 
-    clock_for_packet_queue = AudioClock::CreateAsOptimal(std::move(adjustable_duplicate));
+    clock_for_packet_queue = AudioClock::CreateAsClientAdjustable(std::move(adjustable_duplicate));
     adjustable_clock_is_allocated_ = true;
   } else {
     // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
@@ -96,7 +97,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     zx::clock readable_clock = result.take_value();
     FX_DCHECK(readable_clock.is_valid());
 
-    clock_for_packet_queue = AudioClock::CreateAsCustom(std::move(readable_clock));
+    clock_for_packet_queue = AudioClock::CreateAsClientNonadjustable(std::move(readable_clock));
   }
 
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
@@ -132,7 +133,7 @@ void BaseRenderer::CleanupDestLink(const AudioObject& dest) {
   queue->Flush(PendingFlushToken::Create(context_.threading_model().FidlDomain().dispatcher(),
                                          [self = shared_from_this()] {}));
   // If this was our one adjustable clock, mark that a new dest link can use it.
-  if (queue->reference_clock().is_flexible()) {
+  if (queue->reference_clock().is_adjustable()) {
     FX_DCHECK(client_allows_clock_adjustment_);
     adjustable_clock_is_allocated_ = false;
   }
@@ -708,9 +709,10 @@ void BaseRenderer::ReportNewMinLeadTime() {
   }
 }
 
-// Use the optimal clock as the default. This starts as a clone of MONOTONIC.
-zx_status_t BaseRenderer::SetOptimalReferenceClock() {
-  TRACE_DURATION("audio", "BaseRenderer::SetOptimalReferenceClock");
+// Use our adjustable clock as the default. This starts as an adjustable clone of MONOTONIC, but
+// will track the clock of the device where the renderer is routed.
+zx_status_t BaseRenderer::SetAdjustableReferenceClock() {
+  TRACE_DURATION("audio", "BaseRenderer::SetAdjustableReferenceClock");
 
   raw_clock_ = audio::clock::AdjustableCloneOfMonotonic();
   if (!raw_clock_.is_valid()) {

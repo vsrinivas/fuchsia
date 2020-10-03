@@ -34,8 +34,8 @@ class ThrottleOutput : public AudioOutput {
       : AudioOutput("throttle", threading_model, registry, link_matrix) {
     // Establish an audio clock (clone of monotonic) and override the default reference_clock()
     // implementation that calls into the AudioDriver, because we don't have an associated driver.
-    audio_clock_ = AudioClock::CreateAsDeviceStatic(audio::clock::CloneOfMonotonic(),
-                                                    AudioClock::kMonotonicDomain);
+    audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(audio::clock::CloneOfMonotonic(),
+                                                           AudioClock::kMonotonicDomain);
 
     const auto ref_now = reference_clock().Read();
     const auto fps = PipelineConfig::kDefaultMixGroupRate;

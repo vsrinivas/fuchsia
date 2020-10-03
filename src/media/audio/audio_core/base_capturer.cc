@@ -61,9 +61,9 @@ BaseCapturer::BaseCapturer(
       reporter_(Reporter::Singleton().CreateCapturer()) {
   FX_DCHECK(mix_domain_);
 
-  // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of
-  // the device where the capturer is initially routed.
-  SetOptimalReferenceClock();
+  // Our default clock starts as an adjustable clone of MONOTONIC, but ultimately will track the
+  // clock of the device where the capturer is initially routed.
+  SetAdjustableReferenceClock();
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
@@ -810,13 +810,12 @@ void BaseCapturer::UpdateFormat(Format format) {
                                           reference_clock());
 }
 
-// For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
-// When we switch optimal clock to device clock, the default must still be a clone of MONOTONIC.
-// In long-term, use the optimal clock by default.
-void BaseCapturer::SetOptimalReferenceClock() {
-  TRACE_DURATION("audio", "BaseCapturer::SetOptimalReferenceClock");
+// Our default clock starts as an adjustable clone of MONOTONIC, but ultimately it will track the
+// clock of the device where the capturer is routed.
+void BaseCapturer::SetAdjustableReferenceClock() {
+  TRACE_DURATION("audio", "BaseCapturer::SetAdjustableReferenceClock");
 
-  SetClock(AudioClock::CreateAsOptimal(audio::clock::AdjustableCloneOfMonotonic()));
+  SetClock(AudioClock::CreateAsClientAdjustable(audio::clock::AdjustableCloneOfMonotonic()));
 
   FX_DCHECK(reference_clock().is_valid()) << "Default reference clock is not valid";
 }

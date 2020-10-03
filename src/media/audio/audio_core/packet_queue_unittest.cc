@@ -33,7 +33,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
                        })
             .take_value(),
         std::move(one_frame_per_ms),
-        AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
+        AudioClock::CreateAsClientNonadjustable(clock::AdjustableCloneOfMonotonic()));
   }
 
   fbl::RefPtr<Packet> CreatePacket(uint32_t payload_buffer_id, int64_t start = 0,
@@ -321,7 +321,8 @@ TEST_F(PacketQueueTest, ReportUnderflowWithZeroedTimelineFunction) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      std::move(zero_function), AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
+      std::move(zero_function),
+      AudioClock::CreateAsClientNonadjustable(clock::AdjustableCloneOfMonotonic()));
 
   bool called = false;
   packet_queue->SetUnderflowReporter([&called](zx::time start_time, zx::time end_time) {
