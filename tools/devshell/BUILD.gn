@@ -38,6 +38,7 @@ test_scripts = [
   "tests/subcommands/fx_ssh_test",
   "tests/subcommands/fx_symbolize_test",
   "tests/subcommands/fx_vendor_test",
+  "tests/subcommands/fx_vdl_test",
 
   # tests that currently can't be included in automation.
   # use 'fx self-test' to run them manually:
@@ -152,6 +153,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/tests/subcommands/data/fx_test_test/tests_multiple_in_package.json",
         "//tools/devshell/tests/subcommands/data/fx_test_test/tests_package_server_integration.json",
         "//tools/devshell/vendor",
+        "//tools/devshell/vdl",
       ]
     },
     {

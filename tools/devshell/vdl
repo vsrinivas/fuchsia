@@ -1,0 +1,216 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+## usage: fx vdl [-a <action>] [-d <device_launcher>] [-c <text>] [-e <directory>] [-H|--headless] [--software-gpu] [-N] [-u <path>]
+##   -a <text> action, allowed values: start, kill. Default is start
+##   -d <path> device_launcher/vdl binary location. Defaults to looking in prebuilt/vdl/device_launcher
+##   -c <text> append item to kernel command line, currently not supported.
+##   -ds <size> extends the fvm image size to <size> bytes. Default is 2G
+##   -N run with emulated nic via tun/tap
+##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
+##   -H|--headless run in headless mode
+##   -p <text> extra packages to serve to FEMU.
+##   -u <path> execute emu if-up script, default: linux: no script, macos: tap ifup script.
+##   --host-gpu run with host GPU acceleration, this doesn't work on remote-desktop && headless=false.
+##   --software-gpu run without host GPU acceleration, default.
+
+set -e
+
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "${DEVSHELL_DIR}"/lib/image_build_vars.sh || exit $?
+
+# Scans ports from and return the first identified unused port.
+function find_unused_tcp_port {
+  local server_port="${1}"
+  local max_port=59759
+  while ss -latn | grep -q :${server_port} && server_port < ${max_port}; do
+    server_port=$((${server_port} + 1))
+  done
+  echo "${server_port}"
+}
+
+# Defaults
+ACTION="start"
+EXTR_KERNEL_FLAGS=""
+IMAGE_SIZE="2G"
+AEMU_DIR="${PREBUILT_AEMU_DIR}"
+VDL="${PREBUILT_VDL_DIR}/device_launcher"
+PACKAGES_TO_SERVE=""
+GPU="swiftshader_indirect"
+HEADLESS=false
+TUNTAP=false
+UPSCRIPT=""
+while [[ $# -ge 1 ]]; do
+  case "${1}" in
+  -h|--help)
+    fx-command-help
+    exit 0
+    ;;
+  -a)
+    shift
+    ACTION="${1}"
+    ;;
+  -c)
+    shift
+    EXTR_KERNEL_FLAGS+="${1} "
+    ;;
+  -d)
+    shift
+    VDL="${1}"
+    ;;
+  -ds)
+    shift
+    IMAGE_SIZE="${1}"
+    ;;
+  -e)
+    shift
+    AEMU_DIR="${1}"
+    ;;
+  -p)
+    shift
+    PACKAGES_TO_SERVE="${1}"
+    ;;
+  -u)
+    shift
+    UPSCRIPT="${1}"
+    ;;
+  -H|--headless)
+    HEADLESS=true
+    ;;
+  -N)
+    TUNTAP=true
+    ;;
+  --host-gpu)
+    GPU="host"
+    ;;
+  --software-gpu)
+    GPU="swiftshader_indirect"
+    ;;
+  *)
+    break
+  esac
+  shift
+done
+
+# Stores VDL outputs such as pid for package server, and created tmp files.
+VDL_PROTO="/tmp/vdl_proto"
+
+if [[ "${ACTION}" == "kill" ]]; then
+  "${VDL}" --action=kill \
+    --launched_virtual_device_proto="${VDL_PROTO}" \
+    --ga=true
+
+  exit_code=$?
+  if [[ ${exit_code} == 0 ]]; then
+    rm "${VDL_PROTO}"
+  fi
+  exit ${exit_code}
+fi
+
+if [[ -f "${VDL_PROTO}" ]]; then
+  rm "${VDL_PROTO}"
+fi
+touch "${VDL_PROTO}"
+chmod 644 "${VDL_PROTO}"
+
+# Host side binaries
+AEMU="${AEMU_DIR}/emulator"
+FAR="${HOST_OUT_DIR}/far"
+FVM="${HOST_OUT_DIR}/fvm"
+PM="${HOST_OUT_DIR}/pm"
+
+img_dir="$(mktemp -d)"
+if [[ ! -d "${img_dir}" ]]; then
+  fx-error "Failed to create temporary directory"
+  exit 1
+fi
+echo "Created tmp dir ${img_dir}"
+trap 'rm -Rf "${img_dir}"' EXIT
+
+# System images
+# Currently VDL makes some files naming pattern assumptions
+# that requires us to provide a list of files matching the naming
+# regex. We want to have VDL automatically check these environment
+# variables and look for the relevant image files.
+
+# TODO(yuanzhi) Remove the `ln` command once VDL can look for these
+# files automatically.
+
+# SSH
+PRIVATE_KEY="$(get-ssh-privkey)"
+AUTHORIZED_KEYS="${PRIVATE_KEY}.pub"
+SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
+SYSTEM_FILES="${PRIVATE_KEY},${AUTHORIZED_KEYS},${SSH_CONFIG},"
+
+# ziron-a.zbi
+ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}"
+VDL_ZBI_IMAGE="${img_dir}/qemu_zircona-ed25519"
+fx-zbi -o "${VDL_ZBI_IMAGE}" "${ZBI_IMAGE}" \
+  --entry "data/ssh/authorized_keys=${AUTHORIZED_KEYS}"
+SYSTEM_FILES+="${VDL_ZBI_IMAGE},"
+
+# Kernel
+KERNEL_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
+VDL_KERNEL_IMAGE="${img_dir}/qemu_kernel"
+ln -s "${KERNEL_IMAGE}" "${VDL_KERNEL_IMAGE}"
+SYSTEM_FILES+="${VDL_KERNEL_IMAGE},"
+
+# FVM storage
+FVM_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}"
+VDL_FVM_IMAGE="${img_dir}/qemu_fvm"
+ln -s "${FVM_IMAGE}" "${VDL_FVM_IMAGE}"
+SYSTEM_FILES+="${VDL_FVM_IMAGE},"
+
+# Build Args
+BUILD_ARGS="${FUCHSIA_BUILD_DIR}/args.gn"
+VDL_BUILD_ARGS="${img_dir}/qemu_buildargs"
+ln -s "${BUILD_ARGS}" "${VDL_BUILD_ARGS}"
+SYSTEM_FILES+="${VDL_BUILD_ARGS},"
+
+# Fuchsia packages
+AMBER_FILES="${FUCHSIA_BUILD_DIR}/amber-files"
+SYSTEM_FILES+="${AMBER_FILES}"
+
+# Device Spec
+# TODO(yuanzhi) Integrate with FVD
+DEVICE_PROTO="${img_dir}/virtual_device.textproto"
+echo "device_spec {
+  horizontal_resolution: 1280
+  vertical_resolution: 800
+  vm_heap: 192
+  ram: 4096
+  cache: 32
+  screen_density: 240
+}
+" >> "${DEVICE_PROTO}"
+# This is only relevant when using SLIRP where we manually map ssh port;
+# if using Tun/Tap (-N) then we don't need to forward ssh port, and this flag
+# will be ignored by VDL.
+SSH_PORT=$(find_unused_tcp_port 32761)
+readonly PORT_MAP="hostfwd=tcp::${SSH_PORT}-:22"
+
+# Start FEMU using VDL
+set -x
+if [[ "${ACTION}" == "start" ]]; then
+  "${VDL}" --action=start \
+      --emulator_binary_path="${AEMU}" \
+      --pm_tool="${PM}" \
+      --far_tool="${FAR}" \
+      --fvm_tool="${FVM}" \
+      --resize_fvm="${IMAGE_SIZE}" \
+      --gpu="${GPU}" \
+      --headless_mode="${HEADLESS}" \
+      --tuntap="${TUNTAP}" \
+      --upscript="${UPSCRIPT}" \
+      --enable_grpc_server=false \
+      --enable_grpc_tls=false \
+      --system_images="${SYSTEM_FILES}" \
+      --proto_file_path="${DEVICE_PROTO}" \
+      --host_port_map="${PORT_MAP}" \
+      --output_launched_device_proto="${VDL_PROTO}" \
+      --ga=true \
+      --emu_log="/tmp/emulator_log.log"
+fi
+
