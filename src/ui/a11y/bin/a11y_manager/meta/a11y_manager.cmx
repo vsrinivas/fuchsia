@@ -12,6 +12,7 @@
             "fuchsia.ui.annotation.Registry",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.accessibility.PointerEventRegistry",
+            "fuchsia.ui.policy.DisplayBacklight",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.views.accessibility.FocuserRegistry"
         ]

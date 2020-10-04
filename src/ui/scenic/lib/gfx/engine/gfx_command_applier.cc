@@ -402,7 +402,7 @@ bool GfxCommandApplier::ApplySetDisplayMinimumRgbCmd(
   if (status != ZX_OK || cmd_result.is_err()) {
     FX_LOGS(WARNING)
         << "GfxCommandApplier:ApplySetDisplayMinimumRgbCmd failed, controller returned status: "
-        << status;
+        << status << " with error: " << cmd_result.err();
     return false;
   }
 
