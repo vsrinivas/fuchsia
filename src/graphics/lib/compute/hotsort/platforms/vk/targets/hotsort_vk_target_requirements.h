@@ -83,7 +83,7 @@ union hotsort_vk_target_features
 #undef HOTSORT_VK_TARGET_FEATURE
 #define HOTSORT_VK_TARGET_FEATURE(feature_) +1
 
-  uint32_t bitmap[(31 HOTSORT_VK_TARGET_FEATURE()) / 32];
+  uint32_t bitmap[(31 HOTSORT_VK_TARGET_FEATURES()) / 32];
 };
 
 //

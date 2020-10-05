@@ -402,9 +402,9 @@ main(int argc, char const * argv[])
   //
   // select the target by vendor and device id
   //
-  uint32_t const vendor_id     = (argc <= 1) ? UINT32_MAX : strtoul(argv[1], NULL, 16);
-  uint32_t const device_id     = (argc <= 2) ? UINT32_MAX : strtoul(argv[2], NULL, 16);
-  uint32_t const key_val_words = (argc <= 3) ? 1 : strtoul(argv[3], NULL, 0);
+  uint32_t const vendor_id     = (argc <= 1) ? UINT32_MAX : (uint32_t)strtoul(argv[1], NULL, 16);
+  uint32_t const device_id     = (argc <= 2) ? UINT32_MAX : (uint32_t)strtoul(argv[2], NULL, 16);
+  uint32_t const key_val_words = (argc <= 3) ? 1 : (uint32_t)strtoul(argv[3], NULL, 0);
 
   if ((key_val_words != 1) && (key_val_words != 2))
     {
@@ -498,14 +498,15 @@ main(int argc, char const * argv[])
   //
   uint32_t const slab_size = hs_target->config.slab.height << hs_target->config.slab.width_log2;
 
-  uint32_t const count_lo   = (argc <= 4) ? slab_size : strtoul(argv[4], NULL, 0);
-  uint32_t const count_hi   = (argc <= 5) ? count_lo : strtoul(argv[5], NULL, 0);
-  uint32_t const count_step = (argc <= 6) ? count_lo : strtoul(argv[6], NULL, 0);
-  uint32_t const loops      = (argc <= 7) ? HS_BENCH_LOOPS : strtoul(argv[7], NULL, 0);
-  uint32_t const warmup     = (argc <= 8) ? HS_BENCH_WARMUP : strtoul(argv[8], NULL, 0);
+  uint32_t const count_lo   = (argc <= 4) ? slab_size : (uint32_t)strtoul(argv[4], NULL, 0);
+  uint32_t const count_hi   = (argc <= 5) ? count_lo : (uint32_t)strtoul(argv[5], NULL, 0);
+  uint32_t const count_step = (argc <= 6) ? count_lo : (uint32_t)strtoul(argv[6], NULL, 0);
+  uint32_t const loops      = (argc <= 7) ? HS_BENCH_LOOPS : (uint32_t)strtoul(argv[7], NULL, 0);
+  uint32_t const warmup     = (argc <= 8) ? HS_BENCH_WARMUP : (uint32_t)strtoul(argv[8], NULL, 0);
   bool const     linearize  = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
   bool const     verify     = (argc <= 10) ? true : strtoul(argv[10], NULL, 0) != 0;
-  uint32_t const rand_bits  = (argc <= 11) ? key_val_words * 32 : strtoul(argv[11], NULL, 0);
+  uint32_t const rand_bits =
+    (argc <= 11) ? key_val_words * 32 : (uint32_t)strtoul(argv[11], NULL, 0);
 
   //
   //
@@ -563,7 +564,7 @@ main(int argc, char const * argv[])
   //
   struct hotsort_vk_target_requirements hs_tr = { 0 };
 
-  assert(hotsort_vk_target_get_requirements(hs_target, &hs_tr) == false);
+  hotsort_vk_target_get_requirements(hs_target, &hs_tr); // returns false
 
   //
   // populate accumulated device requirements
@@ -577,7 +578,15 @@ main(int argc, char const * argv[])
   hs_tr.ext_names = ext_names;
   hs_tr.pdf       = &pdf;
 
-  assert(hotsort_vk_target_get_requirements(hs_target, &hs_tr) == true);
+  if (hotsort_vk_target_get_requirements(hs_target, &hs_tr) != true)
+    {
+      fprintf(stderr,
+              "\"%s\", line %u: "
+              "hotsort_vk_target_get_requirements(hs_target, &hs_tr) != true",
+              __FILE__,
+              __LINE__);
+      exit(EXIT_FAILURE);
+    }
 
   //
   // create VkDevice
@@ -1223,6 +1232,10 @@ main(int argc, char const * argv[])
       //
       // REPORT
       //
+      double const elapsed_ns_min_f64 = (double)elapsed_ns_min;
+      double const elapsed_ns_max_f64 = (double)elapsed_ns_max;
+      double const elapsed_ns_sum_f64 = (double)elapsed_ns_sum;
+
       fprintf(
         stderr,
         "%s, %u.%u.%u.%u, %s, %s, %s, %8u, %8u, %8u, CPU, %s, %9.2f, %6.2f, GPU, %9u, %7.3f, %7.3f, %7.3f, %7.2f, %7.2f\n",
@@ -1243,11 +1256,11 @@ main(int argc, char const * argv[])
         verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
         // GPU
         loops,
-        (vk_timestamp_period * elapsed_ns_sum) / 1e6 / loops,             // avg msecs
-        (vk_timestamp_period * elapsed_ns_min) / 1e6,                     // min msecs
-        (vk_timestamp_period * elapsed_ns_max) / 1e6,                     // max msecs
-        1000.0 * count * loops / (vk_timestamp_period * elapsed_ns_sum),  // mkeys / sec - avg
-        1000.0 * count / (vk_timestamp_period * elapsed_ns_min));         // mkeys / sec - max
+        (vk_timestamp_period * elapsed_ns_sum_f64) / 1e6 / loops,             // avg msecs
+        (vk_timestamp_period * elapsed_ns_min_f64) / 1e6,                     // min msecs
+        (vk_timestamp_period * elapsed_ns_max_f64) / 1e6,                     // max msecs
+        1000.0 * count * loops / (vk_timestamp_period * elapsed_ns_sum_f64),  // mkeys / sec - avg
+        1000.0 * count / (vk_timestamp_period * elapsed_ns_min_f64));         // mkeys / sec - max
     }
 
   //
