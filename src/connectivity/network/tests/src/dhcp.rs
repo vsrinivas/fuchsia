@@ -259,7 +259,16 @@ async fn test_dhcp<E: netemul::Endpoint>(
         let want_addr =
             addr.ok_or(anyhow::format_err!("expected address must be set for client endpoints"))?;
 
-        interface.start_dhcp().await.context("Failed to start DHCP")?;
+        let bind = || {
+            use netemul::EnvironmentUdpSocket as _;
+
+            let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = want_addr;
+            let fidl_fuchsia_net_ext::IpAddress(ip_address) = addr.into();
+            std::net::UdpSocket::bind_in_env(
+                client_env_ref,
+                std::net::SocketAddr::new(ip_address, 0),
+            )
+        };
 
         let client_interface_state = client_env_ref
             .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -272,7 +281,12 @@ async fn test_dhcp<E: netemul::Endpoint>(
         let mut properties =
             fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
         for _ in 0..cycles {
-            let () = interface.set_link_up(true).await.context("Failed to bring link up")?;
+            // Enable the interface and assert that binding fails before the address is acquired.
+            let () = interface.stop_dhcp().await.context("failed to stop DHCP")?;
+            let () = interface.set_link_up(true).await.context("failed to bring link up")?;
+            matches::assert_matches!(bind().await, Err(_));
+
+            let () = interface.start_dhcp().await.context("failed to start DHCP")?;
 
             let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
                 fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
@@ -298,8 +312,11 @@ async fn test_dhcp<E: netemul::Endpoint>(
             .context("failed to observe DHCP acquisition on client ep {}")?;
             assert_eq!(addr, want_addr);
 
+            // Address acquired; bind is expected to succeed.
+            matches::assert_matches!(bind().await, Ok(_));
+
             // Set interface online signal to down and wait for address to be removed.
-            let () = interface.set_link_up(false).await.context("Failed to bring link up")?;
+            let () = interface.set_link_up(false).await.context("failed to bring link down")?;
 
             let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
                 fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),

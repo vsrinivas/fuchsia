@@ -665,8 +665,7 @@ impl<'a> TestInterface<'a> {
         Ok(self.get_info().await?.properties.addresses)
     }
 
-    /// Starts DHCP on this interface.
-    pub async fn start_dhcp(&self) -> Result<()> {
+    async fn get_dhcp_client(&self) -> Result<net_dhcp::ClientProxy> {
         let (dhcp_client, server_end) =
             fidl::endpoints::create_proxy::<net_dhcp::ClientMarker>()
                 .context("failed to create endpoints for fuchsia.net.dhcp.Client")?;
@@ -683,13 +682,31 @@ impl<'a> TestInterface<'a> {
             .context("failed to call netstack.get_dhcp_client")?
             .map_err(zx::Status::from_raw)
             .context("failed to get dhcp client")?;
+        Ok(dhcp_client)
+    }
 
+    /// Starts DHCP on this interface.
+    pub async fn start_dhcp(&self) -> Result<()> {
+        let dhcp_client = self.get_dhcp_client().await?;
         let () = dhcp_client
             .start()
             .await
             .context("failed to call dhcp_client.start")?
             .map_err(zx::Status::from_raw)
             .context("failed to start dhcp client")?;
+
+        Ok(())
+    }
+
+    /// Stops DHCP on this interface.
+    pub async fn stop_dhcp(&self) -> Result<()> {
+        let dhcp_client = self.get_dhcp_client().await?;
+        let () = dhcp_client
+            .stop()
+            .await
+            .context("failed to call dhcp_client.stop")?
+            .map_err(zx::Status::from_raw)
+            .context("failed to stop dhcp client")?;
 
         Ok(())
     }
