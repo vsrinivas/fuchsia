@@ -5,6 +5,7 @@
 package checklicenses
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -204,12 +205,18 @@ func (licenses *Licenses) MatchAuthors(matched []byte, data []byte, path string,
 	// Sort the authors alphabetically and join them as one string.
 	sort.Strings(output)
 	authors := strings.Join(output, ", ")
-
+	// Replace < and > so that it doesn't cause special character highlights.
+	authors = strings.ReplaceAll(authors, "<", "&lt")
+	authors = strings.ReplaceAll(authors, ">", "&gt")
 	if len(lic.matches) == 0 {
 		lic.matches = make(map[string]*Match)
 	}
 	_, f := lic.matches[authors]
 	if !f {
+		// Replace < and > so that it doesn't cause special character highlights.
+		matched = bytes.ReplaceAll(matched, []byte("<"), []byte("&lt"))
+		matched = bytes.ReplaceAll(matched, []byte(">"), []byte("&gt"))
+
 		lic.matches[authors] = &Match{value: matched}
 	}
 	lic.matches[authors].files = append(lic.matches[authors].files, path)

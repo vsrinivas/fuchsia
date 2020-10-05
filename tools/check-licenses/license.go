@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -42,12 +43,19 @@ func (license *License) append(path string) {
 	if len(finalAuthors) >= captureGroup && finalAuthors[captureGroup] != "" {
 		authorName = finalAuthors[captureGroup]
 	}
+	// Replace < and > so that it doesn't cause special character highlights.
+	authorName = strings.ReplaceAll(authorName, "<", "&lt")
+	authorName = strings.ReplaceAll(authorName, ">", "&gt")
 	if len(license.matches) == 0 {
 		license.matches = make(map[string]*Match)
 	}
 	_, f := license.matches[authorName]
 	if !f {
-		license.matches[authorName] = &Match{value: []byte(license.pattern.String())}
+		pattern := license.pattern.String()
+		// Replace < and > so that it doesn't cause special character highlights.
+		pattern = strings.ReplaceAll(pattern, "<", "&lt")
+		pattern = strings.ReplaceAll(pattern, ">", "&gt")
+		license.matches[authorName] = &Match{value: []byte(pattern)}
 	}
 	license.matches[authorName].files = append(license.matches[authorName].files, path)
 }
