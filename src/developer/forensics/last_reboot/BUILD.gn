@@ -31,6 +31,7 @@ source_set("main") {
   deps = [
     ":main_service",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/component",
   ]
 

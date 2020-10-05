@@ -10,6 +10,7 @@
 
 #include "src/developer/forensics/last_reboot/main_service.h"
 #include "src/developer/forensics/utils/component/component.h"
+#include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
@@ -17,31 +18,8 @@ namespace forensics {
 namespace last_reboot {
 namespace {
 
-constexpr char kTmpGracefulRebootReason[] = "/tmp/graceful_reboot_reason.txt";
-constexpr char kCacheGracefulRebootReason[] = "/cache/graceful_reboot_reason.txt";
+constexpr char kGracefulRebootReasonFile[] = "graceful_reboot_reason.txt";
 constexpr char kNotAFdr[] = "/data/not_a_fdr.txt";
-
-void MoveGracefulRebootReason() {
-  if (!files::IsFile(kCacheGracefulRebootReason)) {
-    return;
-  }
-
-  std::string content;
-  if (!files::ReadFileToString(kCacheGracefulRebootReason, &content)) {
-    FX_LOGS(ERROR) << "Failed to read graceful reboot reason from " << kCacheGracefulRebootReason;
-    return;
-  }
-
-  if (!files::WriteFile(kTmpGracefulRebootReason, content.c_str(), content.size())) {
-    FX_LOGS(ERROR) << "Failed to write graceful reboot reason to " << kTmpGracefulRebootReason;
-    return;
-  }
-
-  if (!files::DeletePath(kCacheGracefulRebootReason, /*recursive=*/true)) {
-    FX_LOGS(ERROR) << "Failed to delete " << kCacheGracefulRebootReason;
-    return;
-  }
-}
 
 void SetNotAFdr() {
   if (files::IsFile(kNotAFdr)) {
@@ -58,18 +36,17 @@ void SetNotAFdr() {
 int main() {
   syslog::SetTags({"forensics", "reboot"});
 
-  forensics::component::Component component;
-  if (component.IsFirstInstance()) {
-    MoveGracefulRebootReason();
-  }
+  component::Component component;
+  PreviousBootFile reboot_reason_file =
+      PreviousBootFile::FromCache(component.IsFirstInstance(), kGracefulRebootReasonFile);
 
   MainService main_service(MainService::Config{
       .dispatcher = component.Dispatcher(),
       .services = component.Services(),
       .root_node = component.InspectRoot(),
-      .reboot_log =
-          RebootLog::ParseRebootLog("/boot/log/last-panic.txt", kTmpGracefulRebootReason, kNotAFdr),
-      .graceful_reboot_reason_write_path = kCacheGracefulRebootReason,
+      .reboot_log = RebootLog::ParseRebootLog("/boot/log/last-panic.txt",
+                                              reboot_reason_file.PreviousBootPath(), kNotAFdr),
+      .graceful_reboot_reason_write_path = reboot_reason_file.CurrentBootPath(),
   });
 
   // The "no-FDR" marker needs to be written after parsing the reboot log as its absence may

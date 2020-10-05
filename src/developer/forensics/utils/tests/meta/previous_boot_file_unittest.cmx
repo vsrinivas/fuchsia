@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/previous_boot_file_unittest_exe"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage",
+            "isolated-persistent-storage",
+            "isolated-temp"
+        ]
+    }
+}

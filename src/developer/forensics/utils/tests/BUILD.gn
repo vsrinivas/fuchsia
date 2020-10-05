@@ -185,6 +185,19 @@ executable("oneshot_ptr_unittest_exe") {
   ]
 }
 
+executable("previous_boot_file_unittest_exe") {
+  testonly = true
+
+  sources = [ "previous_boot_file_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils:previous_boot_file",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("promise_unittest_exe") {
   testonly = true
 
@@ -333,6 +346,14 @@ fuchsia_component("oneshot_ptr_unittest") {
   deps = [ ":oneshot_ptr_unittest_exe" ]
 }
 
+fuchsia_component("previous_boot_file_unittest") {
+  testonly = true
+
+  manifest = "meta/previous_boot_file_unittest.cmx"
+
+  deps = [ ":previous_boot_file_unittest_exe" ]
+}
+
 fuchsia_component("promise_unittest") {
   testonly = true
 
@@ -373,6 +394,7 @@ fuchsia_test_package("feedback-utils-tests") {
     ":inspect_protocol_stats_unittest",
     ":log_format_unittest",
     ":oneshot_ptr_unittest",
+    ":previous_boot_file_unittest",
     ":promise_unittest",
     ":time_unittest",
     ":utc_time_provider_unittest",

@@ -78,6 +78,15 @@ source_set("logs") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+source_set("previous_boot_file") {
+  sources = [
+    "previous_boot_file.cc",
+    "previous_boot_file.h",
+  ]
+
+  deps = [ "//src/lib/files" ]
+}
+
 source_set("sized_data") {
   sources = [ "sized_data.h" ]
 }
