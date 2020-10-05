@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/bin/device/test/fake_device_listener_registry.h"
+#include "src/camera/bin/device/testing/fake_device_listener_registry.h"
 
 FakeDeviceListenerRegistry::FakeDeviceListenerRegistry(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}

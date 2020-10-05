@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/device_test"
+        "binary": "test/camera_device_unittests"
     },
     "sandbox": {
         "services": [

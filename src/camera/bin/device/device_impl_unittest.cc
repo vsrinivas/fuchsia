@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/bin/device/device_impl.h"
+
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 
 #include <limits>
 
-#include "src/camera/bin/device/device_impl.h"
 #include "src/camera/bin/device/stream_impl.h"
-#include "src/camera/bin/device/test/fake_device_listener_registry.h"
-#include "src/camera/bin/device/util.h"
+#include "src/camera/bin/device/testing/fake_device_listener_registry.h"
 #include "src/camera/lib/fake_controller/fake_controller.h"
 #include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 #include "src/lib/fsl/handles/object_info.h"
@@ -38,9 +37,9 @@ static void nop_stream_requested(
   callback(0);
 }
 
-class DeviceTest : public gtest::RealLoopFixture {
+class DeviceImplTest : public gtest::RealLoopFixture {
  protected:
-  DeviceTest()
+  DeviceImplTest()
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         fake_listener_registry_(async_get_default_dispatcher()) {
     fake_properties_.set_image_format({});
@@ -121,12 +120,12 @@ class DeviceTest : public gtest::RealLoopFixture {
   FakeDeviceListenerRegistry fake_listener_registry_;
 };
 
-TEST_F(DeviceTest, CreateStreamNullConnection) {
+TEST_F(DeviceImplTest, CreateStreamNullConnection) {
   StreamImpl stream(fake_properties_, fake_legacy_config_, nullptr, check_stream_valid,
                     nop_stream_requested, nop);
 }
 
-TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
+TEST_F(DeviceImplTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera3::Stream> stream;
   StreamImpl stream_impl(
       fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
@@ -142,19 +141,7 @@ TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DeviceTest, ConvertConfig) {
-  auto configs = FakeController::GetDefaultConfigs();
-  ASSERT_FALSE(configs.empty());
-  auto& a = configs[0];
-  ASSERT_FALSE(a.stream_configs.empty());
-  ASSERT_FALSE(a.stream_configs[0].image_formats.empty());
-  auto result = Convert(a);
-  ASSERT_TRUE(result.is_ok());
-  auto b = result.take_value();
-  EXPECT_EQ(a.stream_configs.size(), b.streams().size());
-}
-
-TEST_F(DeviceTest, GetFrames) {
+TEST_F(DeviceImplTest, GetFrames) {
   fuchsia::camera3::StreamPtr stream;
   stream.set_error_handler(MakeErrorHandler("Stream"));
   constexpr uint32_t kBufferId1 = 42;
@@ -275,7 +262,7 @@ TEST_F(DeviceTest, GetFrames) {
   stream_impl = nullptr;
 }
 
-TEST_F(DeviceTest, GetFramesInvalidCall) {
+TEST_F(DeviceImplTest, GetFramesInvalidCall) {
   bool stream_errored = false;
   fuchsia::camera3::StreamPtr stream;
   stream.set_error_handler([&](zx_status_t status) {
@@ -302,7 +289,7 @@ TEST_F(DeviceTest, GetFramesInvalidCall) {
   }
 }
 
-TEST_F(DeviceTest, Configurations) {
+TEST_F(DeviceImplTest, Configurations) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -329,7 +316,7 @@ TEST_F(DeviceTest, Configurations) {
   RunLoopUntilFailureOr(all_callbacks_received);
 }
 
-TEST_F(DeviceTest, Identifier) {
+TEST_F(DeviceImplTest, Identifier) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -343,7 +330,7 @@ TEST_F(DeviceTest, Identifier) {
   RunLoopUntilFailureOr(callback_received);
 }
 
-TEST_F(DeviceTest, RequestStreamFromController) {
+TEST_F(DeviceImplTest, RequestStreamFromController) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -404,7 +391,7 @@ TEST_F(DeviceTest, RequestStreamFromController) {
 }
 
 // TODO(fxbug.dev/58063): Restore camera default exclusivity policy.
-TEST_F(DeviceTest, DISABLED_DeviceClientDisconnect) {
+TEST_F(DeviceImplTest, DISABLED_DeviceClientDisconnect) {
   // Create the first client.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
@@ -434,7 +421,7 @@ TEST_F(DeviceTest, DISABLED_DeviceClientDisconnect) {
   RunLoopUntilFailureOr(callback_received);
 }
 
-TEST_F(DeviceTest, StreamClientDisconnect) {
+TEST_F(DeviceImplTest, StreamClientDisconnect) {
   // Create the first client.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
@@ -472,7 +459,7 @@ TEST_F(DeviceTest, StreamClientDisconnect) {
   }
 }
 
-TEST_F(DeviceTest, SetResolution) {
+TEST_F(DeviceImplTest, SetResolution) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -519,7 +506,7 @@ TEST_F(DeviceTest, SetResolution) {
   RunLoopUntilFailureOr(callback_received);
 }
 
-TEST_F(DeviceTest, SetResolutionInvalid) {
+TEST_F(DeviceImplTest, SetResolutionInvalid) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -535,7 +522,7 @@ TEST_F(DeviceTest, SetResolutionInvalid) {
   RunLoopUntilFailureOr(error_received);
 }
 
-TEST_F(DeviceTest, SetConfigurationDisconnectsStreams) {
+TEST_F(DeviceImplTest, SetConfigurationDisconnectsStreams) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -551,7 +538,7 @@ TEST_F(DeviceTest, SetConfigurationDisconnectsStreams) {
   RunLoopUntilFailureOr(error_received);
 }
 
-TEST_F(DeviceTest, Rebind) {
+TEST_F(DeviceImplTest, Rebind) {
   // First device connection.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
@@ -584,7 +571,7 @@ TEST_F(DeviceTest, Rebind) {
   Sync(stream2);
 }
 
-TEST_F(DeviceTest, OrphanStream) {
+TEST_F(DeviceImplTest, OrphanStream) {
   // Connect to the device.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
@@ -639,7 +626,7 @@ TEST_F(DeviceTest, OrphanStream) {
   Sync(stream2);
 }
 
-TEST_F(DeviceTest, SetCropRegion) {
+TEST_F(DeviceImplTest, SetCropRegion) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -675,7 +662,7 @@ TEST_F(DeviceTest, SetCropRegion) {
   RunLoopUntilFailureOr(error_received);
 }
 
-TEST_F(DeviceTest, SoftwareMuteState) {
+TEST_F(DeviceImplTest, SoftwareMuteState) {
   // Connect to the device.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
@@ -806,7 +793,7 @@ TEST_F(DeviceTest, SoftwareMuteState) {
   collection->Close();
 }
 
-TEST_F(DeviceTest, HardwareMuteState) {
+TEST_F(DeviceImplTest, HardwareMuteState) {
   // Connect to the device.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
@@ -846,7 +833,7 @@ TEST_F(DeviceTest, HardwareMuteState) {
   RunLoopUntilFailureOr(watch_returned);
 }
 
-TEST_F(DeviceTest, GetProperties) {
+TEST_F(DeviceImplTest, GetProperties) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -882,7 +869,7 @@ TEST_F(DeviceTest, GetProperties) {
   RunLoopUntilFailureOr(properties_returned);
 }
 
-TEST_F(DeviceTest, BindFailureOk) {
+TEST_F(DeviceImplTest, BindFailureOk) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("BindFailureOk");
   volatile bool started = false;
@@ -909,7 +896,7 @@ TEST_F(DeviceTest, BindFailureOk) {
   loop.Shutdown();
 }
 
-TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
+TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   constexpr uint32_t kCycleCount = 10;
   uint32_t cycle = 0;
 
@@ -973,7 +960,7 @@ TEST_F(DeviceTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   }
 }
 
-TEST_F(DeviceTest, FrameWaiterTest) {
+TEST_F(DeviceImplTest, FrameWaiterTest) {
   {  // Test that destructor of a non-triggered waiter does not panic.
     zx::eventpair client;
     zx::eventpair server;
@@ -998,7 +985,7 @@ TEST_F(DeviceTest, FrameWaiterTest) {
   }
 }
 
-TEST_F(DeviceTest, BadToken) {
+TEST_F(DeviceImplTest, BadToken) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -1019,7 +1006,7 @@ TEST_F(DeviceTest, BadToken) {
   RunLoopUntilFailureOr(stream_disconnected);
 }
 
-TEST_F(DeviceTest, StuckToken) {
+TEST_F(DeviceImplTest, StuckToken) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
@@ -1040,7 +1027,7 @@ TEST_F(DeviceTest, StuckToken) {
   RunLoopUntilFailureOr(stream_disconnected);
 }
 
-TEST_F(DeviceTest, GoodTokenWithSync) {
+TEST_F(DeviceImplTest, GoodTokenWithSync) {
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_BIN_DEVICE_TEST_FAKE_DEVICE_LISTENER_REGISTRY_H_
-#define SRC_CAMERA_BIN_DEVICE_TEST_FAKE_DEVICE_LISTENER_REGISTRY_H_
+#ifndef SRC_CAMERA_BIN_DEVICE_TESTING_FAKE_DEVICE_LISTENER_REGISTRY_H_
+#define SRC_CAMERA_BIN_DEVICE_TESTING_FAKE_DEVICE_LISTENER_REGISTRY_H_
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -27,4 +27,4 @@ class FakeDeviceListenerRegistry : public fuchsia::ui::policy::DeviceListenerReg
   uint32_t listener_id_next_ = 1;
 };
 
-#endif  // SRC_CAMERA_BIN_DEVICE_TEST_FAKE_DEVICE_LISTENER_REGISTRY_H_
+#endif  // SRC_CAMERA_BIN_DEVICE_TESTING_FAKE_DEVICE_LISTENER_REGISTRY_H_

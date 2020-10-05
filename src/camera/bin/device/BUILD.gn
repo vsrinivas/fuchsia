@@ -10,6 +10,10 @@ declare_args() {
   camera_policy_allow_replacement_connections = true
 }
 
+group("device") {
+  public_deps = [ ":camera_device" ]
+}
+
 source_set("lib") {
   sources = [
     "device_impl.cc",
@@ -84,6 +88,23 @@ package("camera_device") {
   ]
 }
 
-group("device") {
-  public_deps = [ ":camera_device" ]
+executable("unittests") {
+  testonly = true
+  output_name = "camera_device_unittests"
+  sources = [
+    "device_impl_unittest.cc",
+    "util_unittest.cc",
+  ]
+  deps = [
+    ":lib",
+    "testing",
+    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/sys/cpp",
+    "//src/camera/lib/fake_controller",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+  ]
 }
