@@ -263,10 +263,6 @@ struct net_device {
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
     wlanif_mlme_stats_t mlme_stats;
-    // To workaround a bug in firmware, store the last read value from signalling data.
-    // Firmware does not update signalling data beyond the first packet in an ampdu.
-    // TODO(karthikrish) This can be removed once the issue is resolved in firmware
-    int8_t last_signal_rssi;
   } stats;
   zx::channel sme_channel;
   uint32_t features;

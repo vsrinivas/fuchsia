@@ -1763,7 +1763,6 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   }
   cfg->signal_report_timer->Stop();
   ndev->stats = {};
-  ifp->ndev->stats.last_signal_rssi = 0;
 
   BRCMF_DBG(TRACE, "Exit");
 }
@@ -4274,9 +4273,9 @@ void brcmf_if_stats_query_req(net_device* ndev) {
           mlme_stats->stats.client_mlme_stats.tx_frame.drop.name = "Bad";
         }
         // Pass on the data rssi histogram (populated in fwsignal.cc)
-        mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_list =
-            ndev->stats.rssi_buckets.data();
-        mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_count = RSSI_HISTOGRAM_LEN;
+        // mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_list =
+        //     ndev->stats.rssi_buckets.data();
+        mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_count = 0;
 
         // Skip wlanif detailed histogram collection if feature is not enabled.
         if (!brcmf_feat_is_enabled(ifp->drvr, BRCMF_FEAT_DHIST)) {

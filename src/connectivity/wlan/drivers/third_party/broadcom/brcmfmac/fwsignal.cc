@@ -929,23 +929,7 @@ static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq
   return;
 }
 
-static void brcmf_fws_rssi_indicate(struct brcmf_if* ifp, int8_t rssi) {
-  BRCMF_DBG(CTL, "rssi %d", rssi);
-  // Note that using an unsigned int8 to set the value of index ensures that -128
-  // is handled as well.
-  if (ifp->ndev && (rssi <= 0)) {
-    // To workaround a bug in firmware, use the last value if the current reading
-    // is zero.
-    // TODO(karthikrish) Remove this workaround once the issue is fixed in firmware
-    if (rssi == 0) {
-      rssi = ifp->ndev->stats.last_signal_rssi;
-    } else {
-      ifp->ndev->stats.last_signal_rssi = rssi;
-    }
-    uint8_t idx = -rssi;
-    ifp->ndev->stats.rssi_buckets[idx]++;
-  }
-}
+static void brcmf_fws_rssi_indicate(struct brcmf_if* ifp, int8_t rssi) {}
 
 static int brcmf_fws_macdesc_indicate(struct brcmf_fws_info* fws, uint8_t type, uint8_t* data) {
   struct brcmf_fws_mac_descriptor* entry;
@@ -2195,18 +2179,6 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
   fws->drvr = drvr;
   fws->fcmode = static_cast<brcmf_fws_fcmode>(drvr->settings->fcmode);
 
-  /* Setting the iovar may fail if feature is unsupported
-   * so leave the rc as is so driver initialization can
-   * continue. Set mode back to none indicating not enabled.
-   */
-  fws->fw_signals = true;
-  ifp = brcmf_get_ifp(drvr, 0);
-  if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
-    BRCMF_ERR("failed to set bdcv2 tlv signaling");
-    fws->fcmode = BRCMF_FWS_FCMODE_NONE;
-    fws->fw_signals = false;
-  }
-
   if ((drvr->bus_if->always_use_fws_queue == false) && (fws->fcmode == BRCMF_FWS_FCMODE_NONE)) {
     fws->avoid_queueing = true;
     BRCMF_DBG(INFO, "FWS queueing will be avoided");
@@ -2239,6 +2211,18 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
     BRCMF_ERR("register bcmc credit handler failed");
     brcmf_fweh_unregister(drvr, BRCMF_E_FIFO_CREDIT_MAP);
     goto fail;
+  }
+
+  /* Setting the iovar may fail if feature is unsupported
+   * so leave the rc as is so driver initialization can
+   * continue. Set mode back to none indicating not enabled.
+   */
+  fws->fw_signals = true;
+  ifp = brcmf_get_ifp(drvr, 0);
+  if (brcmf_fil_iovar_int_set(ifp, "tlv", tlv, nullptr) != ZX_OK) {
+    BRCMF_ERR("failed to set bdcv2 tlv signaling");
+    fws->fcmode = BRCMF_FWS_FCMODE_NONE;
+    fws->fw_signals = false;
   }
 
   if (brcmf_fil_iovar_int_set(ifp, "ampdu_hostreorder", 1, nullptr) != ZX_OK) {

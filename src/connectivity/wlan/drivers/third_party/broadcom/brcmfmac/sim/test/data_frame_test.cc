@@ -307,13 +307,7 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
 void DataFrameTest::OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {
   status_query_rsp_count_++;
   ASSERT_NE(resp->stats.mlme_stats_list, nullptr);
-  uint64_t num_rssi_ind = 0;
-  for (int idx = 0; idx < RSSI_HISTOGRAM_LEN; idx++) {
-    num_rssi_ind +=
-        resp->stats.mlme_stats_list->stats.client_mlme_stats.assoc_data_rssi.hist_list[idx];
-  }
-  ASSERT_NE(num_rssi_ind, 0U);
-  ASSERT_EQ(resp->stats.mlme_stats_list->stats.client_mlme_stats.assoc_data_rssi.hist_list[0], 0U);
+  ASSERT_EQ(resp->stats.mlme_stats_list->stats.client_mlme_stats.assoc_data_rssi.hist_count, 0U);
 }
 
 void DataFrameTest::SendStatsQuery() {
@@ -504,8 +498,7 @@ TEST_F(DataFrameTest, TxEapolFrame) {
   EXPECT_EQ(env_data_frame_capture_.front().payload_, kSampleEapol);
 }
 
-// Test driver can receive data frames and report rssi histogram in stats
-// query response
+// Test driver can receive data frames
 TEST_F(DataFrameTest, RxDataFrame) {
   // Create our device instance
   Init();
