@@ -41,7 +41,8 @@ bool ZirconPlatformPciDevice::ReadPciConfig16(uint64_t addr, uint16_t* value) {
   if (!value)
     return DRETF(false, "bad value");
 
-  zx_status_t status = pci_config_read16(&pci(), addr, value);
+  DASSERT(addr <= std::numeric_limits<uint16_t>::max());
+  zx_status_t status = pci_config_read16(&pci(), static_cast<uint16_t>(addr), value);
   if (status != ZX_OK)
     return DRETF(false, "failed to read config: %d\n", status);
 

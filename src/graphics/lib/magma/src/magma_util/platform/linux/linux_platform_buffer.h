@@ -35,7 +35,7 @@ class LinuxPlatformBuffer : public PlatformBuffer {
   uint64_t id() const override { return id_; }
 
   bool duplicate_handle(uint32_t* handle_out) const override;
-  bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
+  bool CommitPages(uint64_t start_page_index, uint64_t page_count) const override;
   bool MapCpu(void** addr_out, uintptr_t alignment) override;
   bool UnmapCpu() override;
   bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) override;

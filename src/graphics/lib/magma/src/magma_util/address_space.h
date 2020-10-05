@@ -185,7 +185,7 @@ std::unique_ptr<GpuMapping> AddressSpace<GpuMapping>::MapBufferGpu(
        gpu_addr);
 
   uint64_t page_offset = offset / magma::page_size();
-  uint32_t page_count = mapped_size / magma::page_size();
+  uint64_t page_count = mapped_size / magma::page_size();
 
   std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping;
 

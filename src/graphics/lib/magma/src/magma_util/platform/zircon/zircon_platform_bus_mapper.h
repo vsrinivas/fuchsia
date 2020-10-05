@@ -20,8 +20,8 @@ class ZirconPlatformBusMapper : public PlatformBusMapper {
   ZirconPlatformBusMapper(std::shared_ptr<ZirconPlatformHandle> bus_transaction_initiator)
       : bus_transaction_initiator_(std::move(bus_transaction_initiator)) {}
 
-  std::unique_ptr<BusMapping> MapPageRangeBus(PlatformBuffer* buffer, uint32_t start_page_index,
-                                              uint32_t page_count) override;
+  std::unique_ptr<BusMapping> MapPageRangeBus(PlatformBuffer* buffer, uint64_t start_page_index,
+                                              uint64_t page_count) override;
   std::unique_ptr<PlatformBuffer> CreateContiguousBuffer(size_t size, uint32_t alignment_log2,
                                                          const char* name) override;
 

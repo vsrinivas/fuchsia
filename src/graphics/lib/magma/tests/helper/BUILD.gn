@@ -65,7 +65,4 @@ source_set("inflight_list") {
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:status",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

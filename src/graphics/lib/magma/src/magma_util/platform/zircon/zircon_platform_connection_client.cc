@@ -530,8 +530,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   }
 
   // Returns the number of commands that will fit within |max_bytes|.
-  static int FitCommands(const size_t max_bytes, const int num_buffers,
-                         const magma_inline_command_buffer* buffers, const int starting_index,
+  static int FitCommands(const size_t max_bytes, const uint64_t num_buffers,
+                         const magma_inline_command_buffer* buffers, const uint64_t starting_index,
                          uint64_t* command_bytes, uint32_t* num_semaphores) {
     int buffer_count = 0;
     uint64_t bytes_used = 0;
@@ -741,8 +741,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                          size_t* buffer_size_out) override {
     uint32_t buffer_actual_size;
-    zx_status_t status = notification_channel_.read(0, buffer, nullptr, buffer_size, 0,
-                                                    &buffer_actual_size, nullptr);
+
+    zx_status_t status = notification_channel_.read(
+        0, buffer, nullptr, magma::to_uint32(buffer_size), 0, &buffer_actual_size, nullptr);
     *buffer_size_out = buffer_actual_size;
     if (status == ZX_ERR_SHOULD_WAIT) {
       *buffer_size_out = 0;

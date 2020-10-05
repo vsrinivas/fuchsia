@@ -37,9 +37,6 @@ executable("magma_abi_conformance_tests") {
       "//zircon/system/ulib/async-loop:async-loop-cpp",
     ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("virtmagma_abi_conformance_tests") {
@@ -59,7 +56,4 @@ executable("virtmagma_abi_conformance_tests") {
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

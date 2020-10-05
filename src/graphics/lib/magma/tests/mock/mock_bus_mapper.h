@@ -34,7 +34,7 @@ class MockBusMapper : public magma::PlatformBusMapper {
   MockBusMapper(uint64_t start_addr = 0x0000100000000000) : start_addr_(start_addr) {}
 
   std::unique_ptr<magma::PlatformBusMapper::BusMapping> MapPageRangeBus(
-      magma::PlatformBuffer* buffer, uint32_t start_page_index, uint32_t page_count) override {
+      magma::PlatformBuffer* buffer, uint64_t start_page_index, uint64_t page_count) override {
     // Prevent mapping unreasonably large numbers of pages.
     if (page_count > (1ul << 33) / PAGE_SIZE)
       return nullptr;
@@ -64,7 +64,7 @@ class MockConsistentBusMapper : public magma::PlatformBusMapper {
   MockConsistentBusMapper() {}
 
   std::unique_ptr<magma::PlatformBusMapper::BusMapping> MapPageRangeBus(
-      magma::PlatformBuffer* buffer, uint32_t start_page_index, uint32_t page_count) override {
+      magma::PlatformBuffer* buffer, uint64_t start_page_index, uint64_t page_count) override {
     // Prevent mapping unreasonably large numbers of pages.
     if (page_count > (1ul << 33) / PAGE_SIZE)
       return nullptr;

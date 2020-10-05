@@ -16,8 +16,8 @@
 magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
     std::unique_ptr<magma_system_command_buffer> cmd_buf,
     std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) {
-  // used to validate that handles are not duplicated
-  std::unordered_set<uint32_t> id_set;
+  // used to validate that buffers are not duplicated
+  std::unordered_set<uint64_t> id_set;
 
   // used to keep resources in scope until msd_context_execute_command_buffer returns
   std::vector<std::shared_ptr<MagmaSystemBuffer>> system_resources;

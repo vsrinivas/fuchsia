@@ -102,7 +102,8 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
     }
 
     std::optional<llcpp::fuchsia::sysmem::ImageFormat_2> image_format =
-        image_format::ConstraintsToFormat(settings_.image_format_constraints, width, height);
+        image_format::ConstraintsToFormat(settings_.image_format_constraints,
+                                          magma::to_uint32(width), magma::to_uint32(height));
     if (!image_format) {
       return DRETF(false, "Image format not valid");
     }
@@ -112,7 +113,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
       if (!plane_valid) {
         planes_out[plane].byte_offset = 0;
       } else {
-        planes_out[plane].byte_offset = offset;
+        planes_out[plane].byte_offset = magma::to_uint32(offset);
       }
       uint32_t row_bytes;
       if (image_format::GetPlaneRowBytes(*image_format, plane, &row_bytes)) {
@@ -368,7 +369,8 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     }
 
     *handle_out = response->buffer_collection_info.buffers[index].vmo.release();
-    *offset_out = response->buffer_collection_info.buffers[index].vmo_usable_start;
+    *offset_out =
+        magma::to_uint32(response->buffer_collection_info.buffers[index].vmo_usable_start);
     return MAGMA_STATUS_OK;
   }
 
@@ -403,7 +405,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     constraints.usage = usage;
     constraints.min_buffer_count_for_camping = 1;
     constraints.has_buffer_memory_constraints = true;
-    constraints.buffer_memory_constraints.min_size_bytes = size;
+    constraints.buffer_memory_constraints.min_size_bytes = magma::to_uint32(size);
     // It's always ok to support inaccessible domain, though this does imply that CPU access will
     // potentially not be possible.
     constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
@@ -545,8 +547,9 @@ magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
   const char* error = nullptr;
   static_assert(llcpp::fuchsia::sysmem::SingleBufferSettings::MaxNumHandles == 0,
                 "Can't decode a buffer with handles");
-  zx_status_t status = fidl_decode(llcpp::fuchsia::sysmem::SingleBufferSettings::Type,
-                                   copy_message.data(), copy_message.size(), nullptr, 0, &error);
+  zx_status_t status =
+      fidl_decode(llcpp::fuchsia::sysmem::SingleBufferSettings::Type, copy_message.data(),
+                  magma::to_uint32(copy_message.size()), nullptr, 0, &error);
 
   if (status != ZX_OK)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid SingleBufferSettings: %d %s", status,

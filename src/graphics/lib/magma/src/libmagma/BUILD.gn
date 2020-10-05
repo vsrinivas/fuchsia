@@ -36,9 +36,6 @@ static_library("libmagma_static") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/async-default",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # This library is complete, so it's usable outside BUILD.gn

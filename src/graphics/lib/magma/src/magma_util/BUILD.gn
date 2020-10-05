@@ -36,9 +36,6 @@ source_set("address_space") {
     "platform:buffer",
     "platform:bus_mapper",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("macros") {
@@ -54,9 +51,6 @@ source_set("macros") {
     "dlog.h",
     "macros.h",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("status") {
@@ -67,9 +61,6 @@ source_set("status") {
   sources = [ "status.h" ]
 
   public_deps = [ "$magma_build_root/include:magma_abi_common" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("mapped_batch") {
@@ -90,9 +81,6 @@ source_set("mapped_batch") {
     "platform:semaphore",
     "platform:trace",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("thread") {
@@ -122,9 +110,6 @@ source_set("allocator") {
     ":macros",
     "//zircon/public/lib/fit",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("semaphore_port") {
@@ -140,9 +125,6 @@ source_set("semaphore_port") {
     "platform:port",
     "platform:semaphore",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("registers") {
@@ -163,9 +145,6 @@ source_set("registers") {
     ":macros",
     "platform:device",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("ringbuffer") {
@@ -182,7 +161,4 @@ source_set("ringbuffer") {
     ":address_space",
     ":macros",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

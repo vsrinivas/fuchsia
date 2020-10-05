@@ -70,7 +70,7 @@ class PlatformBuffer {
 
   // Ensures the specified pages are backed by real memory.
   // note: the implementation of this function is required to be threadsafe.
-  virtual bool CommitPages(uint32_t start_page_index, uint32_t page_count) const = 0;
+  virtual bool CommitPages(uint64_t start_page_index, uint64_t page_count) const = 0;
 
   // If |alignment| isn't 0, it must be a power of 2 and page-aligned. It's
   // invalid to map the same buffer twice with different alignments.

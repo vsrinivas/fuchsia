@@ -69,13 +69,13 @@ bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uin
   if (offset + length > size())
     return DRETF(false, "offset %lx + length %lx > size %lx", offset, length, size());
 
-  uint32_t map_flags = 0;
+  zx_vm_option_t map_flags = 0;
   if (flags & kMapRead)
     map_flags |= ZX_VM_PERM_READ;
   if (flags & kMapWrite)
     map_flags |= ZX_VM_PERM_WRITE;
   uintptr_t ptr;
-  zx_status_t status = parent_vmar_->get()->map(0, vmo_, offset, length, flags, &ptr);
+  zx_status_t status = parent_vmar_->get()->map(0, vmo_, offset, length, map_flags, &ptr);
   if (status != ZX_OK) {
     return DRETF(false, "Failed to map: %d", status);
   }
@@ -218,7 +218,8 @@ bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uin
     DLOG("upper_limit=0x%lx upper_limit_max=0x%lx upper_limit_offset=0x%lx", upper_limit,
          upper_limit_max, upper_limit_offset);
 
-    const zx_vm_option_t alignment_flag = alignment_log2 << ZX_VM_ALIGN_BASE;
+    const zx_vm_option_t alignment_flag =
+        static_cast<zx_vm_option_t>(alignment_log2 << ZX_VM_ALIGN_BASE);
     const zx_vm_option_t flags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC |
                                  ZX_VM_OFFSET_IS_UPPER_LIMIT | alignment_flag;
     zx_status_t status = parent_vmar_->get()->allocate(upper_limit_offset, length + padding_size_,
@@ -273,9 +274,10 @@ bool ZirconPlatformBuffer::UnmapCpu() {
   return DRETF(false, "attempting to unmap buffer that isnt mapped");
 }
 
-bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_count) const {
-  TRACE_DURATION("magma", "CommitPages", "start_page_index", TA_UINT32(start_page_index),
-                 "page_count", TA_UINT32(page_count));
+bool ZirconPlatformBuffer::CommitPages(uint64_t start_page_index, uint64_t page_count) const {
+  TRACE_DURATION("magma", "CommitPages", "start_page_index",
+                 TA_UINT32(static_cast<uint32_t>(start_page_index)), "page_count",
+                 TA_UINT32(static_cast<uint32_t>(page_count)));
   if (!page_count)
     return true;
 
@@ -288,8 +290,8 @@ bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_
 
   if (status == ZX_ERR_NO_MEMORY)
     return DRETF(false,
-                 "Kernel returned ZX_ERR_NO_MEMORY when attempting to commit %u vmo "
-                 "pages (%u bytes).\nThis means the system has run out of physical memory and "
+                 "Kernel returned ZX_ERR_NO_MEMORY when attempting to commit %lu vmo "
+                 "pages (%lu bytes).\nThis means the system has run out of physical memory and "
                  "things will now start going very badly.\nPlease stop using so much "
                  "physical memory or download more RAM at www.downloadmoreram.com :)",
                  page_count, PAGE_SIZE * page_count);

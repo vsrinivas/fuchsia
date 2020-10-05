@@ -78,10 +78,8 @@ bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
   DASSERT(magma::is_page_aligned(size));
 
   const auto page_shift = magma::page_shift();
-  if (align_pow2 < page_shift)
-    align_pow2 = page_shift;
 
-  uint64_t align = 1UL << align_pow2;
+  uint64_t align = 1UL << ((align_pow2 < page_shift) ? page_shift : align_pow2);
   uint64_t addr;
   bool continue_search;
 

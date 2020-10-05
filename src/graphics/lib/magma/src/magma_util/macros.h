@@ -12,6 +12,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <limits>
+
 // Files #including macros.h may assume that it #includes inttypes.h.
 // So, for convenience, they don't need to follow "#include-what-you-use" for that header.
 #include <inttypes.h>
@@ -104,13 +106,18 @@ __attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, con
   void operator=(const TypeName&) = delete
 #endif
 
-static inline uint64_t page_size() {
+static inline uint32_t to_uint32(uint64_t val) {
+  DASSERT(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
+
+static inline uint32_t page_size() {
 #ifdef PAGE_SIZE
   return PAGE_SIZE;
 #else
   long page_size = sysconf(_SC_PAGESIZE);
   DASSERT(page_size > 0);
-  return page_size;
+  return to_uint32(page_size);
 #endif
 }
 
@@ -151,7 +158,7 @@ static inline bool is_pow2(uint64_t val) {
 
 // Note, alignment must be a power of 2
 template <class T>
-static inline T round_up(T val, uint32_t alignment) {
+static inline T round_up(T val, uint64_t alignment) {
   DASSERT(is_pow2(alignment));
   return ((val - 1) | (alignment - 1)) + 1;
 }

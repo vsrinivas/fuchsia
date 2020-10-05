@@ -89,9 +89,6 @@ source_set("magma_util_tests") {
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("magma_platform_tests") {
@@ -130,9 +127,6 @@ source_set("magma_platform_tests") {
   if (is_fuchsia) {
     deps += [ "$magma_build_root/src/magma_util/platform/zircon:connection" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Requires hardware
@@ -179,9 +173,6 @@ source_set("magma_platform_hardware_tests") {
   if (is_fuchsia) {
     deps += [ "//zircon/public/lib/zx" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Requires hardware
@@ -206,7 +197,4 @@ source_set("msd_abi_conformance_tests") {
     "//src/graphics/drivers/msd-intel-gen/include",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

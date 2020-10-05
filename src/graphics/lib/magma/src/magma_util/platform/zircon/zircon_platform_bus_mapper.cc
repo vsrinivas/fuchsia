@@ -21,12 +21,12 @@ ZirconPlatformBusMapper::BusMapping::~BusMapping() {
 }
 
 std::unique_ptr<PlatformBusMapper::BusMapping> ZirconPlatformBusMapper::MapPageRangeBus(
-    magma::PlatformBuffer* buffer, uint32_t start_page_index, uint32_t page_count) {
+    magma::PlatformBuffer* buffer, uint64_t start_page_index, uint64_t page_count) {
   TRACE_DURATION("magma", "MapPageRangeBus");
   static_assert(sizeof(zx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(zx_paddr_t)");
 
   if ((page_count == 0) || (start_page_index + page_count) * PAGE_SIZE > buffer->size())
-    return DRETP(nullptr, "Invalid range: %d, %d", start_page_index, page_count);
+    return DRETP(nullptr, "Invalid range: %lu, %lu", start_page_index, page_count);
 
   std::vector<uint64_t> page_addr(page_count);
   zx::pmt pmt;
@@ -49,7 +49,7 @@ std::unique_ptr<PlatformBusMapper::BusMapping> ZirconPlatformBusMapper::MapPageR
     zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats, sizeof(task_stats), nullptr,
                                   nullptr);
     MAGMA_LOG(WARNING,
-              "Failed to pin 0x%x pages (0x%lx bytes) with status %d. Out of Memory?\n"
+              "Failed to pin 0x%lx pages (0x%lx bytes) with status %d. Out of Memory?\n"
               "mem_mapped_bytes: 0x%lx mem_private_bytes: 0x%lx mem_shared_bytes: 0x%lx\n"
               "total_bytes: 0x%lx free_bytes 0x%lx: wired_bytes: 0x%lx vmo_bytes: 0x%lx\n"
               "mmu_overhead_bytes: 0x%lx other_bytes: 0x%lx\n",

@@ -72,7 +72,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   bool HasChildren() const override;
 
   // PlatformBuffer implementation
-  bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
+  bool CommitPages(uint64_t start_page_index, uint64_t page_count) const override;
   bool MapCpu(void** addr_out, uintptr_t alignment) override;
   bool MapCpuConstrained(void** va_out, uint64_t length, uint64_t upper_limit,
                          uint64_t alignment) override;
@@ -92,7 +92,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   bool Write(const void* buffer, uint64_t offset, uint64_t length) override;
   bool SetName(const char* name) override;
 
-  uint32_t num_pages() { return size_ / PAGE_SIZE; }
+  uint64_t num_pages() { return size_ / PAGE_SIZE; }
 
  private:
   zx_status_t vmar_unmap() {
