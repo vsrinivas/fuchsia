@@ -34,6 +34,7 @@
 #define SPN_DEVICE_INTEL_SIMD32_LOG2                              5
 
 #define SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE                        128 // bytes
+#define SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS                       292
 
 //
 // TILE CONFIGURATION

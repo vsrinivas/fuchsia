@@ -236,10 +236,8 @@ fxt_spinel_vk_render::SetUp()
 
   uint32_t const layer_count = param.test->layer_count();
 
-  spn(styling_create(context,
-                     &styling,
-                     layer_count,
-                     layer_count * 16));  // 16 cmds per layer is conservative
+  // 16 cmds per layer is conservative plus 7 for a group at depth one
+  spn(styling_create(context, &styling, layer_count, layer_count * 16 + 7));
   //
   // set up rendering extensions
   //

@@ -14,6 +14,10 @@
 #include "targets/vendors/amd/gcn3/hotsort/hs_target.h"
 #include "targets/vendors/amd/gcn3/spn_target.h"
 #endif
+#ifdef SPN_VK_TARGET_ARM_BIFROST4
+#include "targets/vendors/arm/bifrost4/hotsort/hs_target.h"
+#include "targets/vendors/arm/bifrost4/spn_target.h"
+#endif
 #ifdef SPN_VK_TARGET_ARM_BIFROST8
 #include "targets/vendors/arm/bifrost8/hotsort/hs_target.h"
 #include "targets/vendors/arm/bifrost8/spn_target.h"
@@ -84,18 +88,31 @@ spn_vk_find_target(uint32_t const                          vendor_id,
           //
           // ARM
           //
-#ifdef SPN_VK_TARGET_ARM_BIFROST8
-          if (device_id == 0x72120000)
+          switch (device_id)
             {
-              //
-              // BIFROST8
-              //
-              *spinel_target  = spn_arm_bifrost8;
-              *hotsort_target = hs_arm_bifrost8_u64;
-              return true;
-            }
+#ifdef SPN_VK_TARGET_ARM_BIFROST4
+              case 0x70930000:
+                //
+                // ARM BIFROST4
+                //
+                *spinel_target  = spn_arm_bifrost4;
+                *hotsort_target = hs_arm_bifrost4_u64;
+                return true;
 #endif
+#ifdef SPN_VK_TARGET_ARM_BIFROST8
+              case 0x72120000:
+                //
+                // ARM BIFROST8
+                //
+                *spinel_target  = spn_arm_bifrost8;
+                *hotsort_target = hs_arm_bifrost8_u64;
+                return true;
+#endif
+              default:
+                break;
+            }
         }
+
         default: {
           break;
         }
@@ -103,7 +120,7 @@ spn_vk_find_target(uint32_t const                          vendor_id,
 
   snprintf(error_buffer,
            error_buffer_size,
-           "No spinel configuration data for (vendor=%X, device=%X)",
+           "Spinel target not found: [ vendor: %X, device: %X ]",
            vendor_id,
            device_id);
 

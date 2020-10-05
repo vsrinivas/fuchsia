@@ -11,7 +11,7 @@
 //
 
 // clang-format off
-#define SPN_RASTERIZE_PATH_PRIM_TYPE         SPN_BLOCK_ID_TAG_PATH_LINE
+#define SPN_RASTERIZE_PATH_PRIM_TYPE         SPN_RAST_TYPE_LINE
 #define SPN_RASTERIZE_PATH_PRIM_XY_EXPAND()  SPN_EXPAND_2()
 #define SPN_RASTERIZE_PATH_PRIM_W_EXPAND()   SPN_EXPAND_0()
 #define SPN_RASTERIZE_PATH_PRIM_END()        }
@@ -27,11 +27,8 @@
   vec2 b1 = a1 * t_a + t_b[0];                                                                     \
                                                                                                    \
   /* projective */                                                                                 \
-  if (SPN_CMD_RASTERIZE_IS_TRANSFORM_TYPE_PROJECTIVE(cmd))                                         \
-    {                                                                                              \
-      b0 = b0 / (dot(a0, t_b[1]) + 1.0f);                                                          \
-      b1 = b1 / (dot(a1, t_b[1]) + 1.0f);                                                          \
-    }
+  b0 = b0 / (dot(a0, t_b[1]) + 1.0f);                                                              \
+  b1 = b1 / (dot(a1, t_b[1]) + 1.0f);
 
 //
 // Round the line's control points to subpixel coordinates

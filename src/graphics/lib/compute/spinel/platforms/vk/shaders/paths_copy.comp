@@ -256,37 +256,6 @@ spn_copy_head(const uint bp_block_idx,
       // store updated tagged block id to device-side block
       bp_blocks[bp_block_idx + ii] = tbid;
     }
-
-    //
-    // DEBUG -- dump the head block
-    //
-#if 0
-  {
-    subgroupBarrier();
-
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0],
-                             SPN_BLOCK_POOL_BLOCK_DWORDS + SPN_PATHS_COPY_SUBGROUP_SIZE);
-
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-    bp_debug[debug_base] = 0xCAFEBABE;
-
-    debug_base += SPN_PATHS_COPY_SUBGROUP_SIZE;
-
-    for (int ii = 0; ii < SPN_BLOCK_POOL_BLOCK_DWORDS; ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
-      {
-        uint tbid = pc_ring[pc_block_idx + ii];
-
-        if (ii + gl_SubgroupInvocationID >= SPN_PATH_HEAD_DWORDS)
-          tbid = SPN_TAGGED_BLOCK_ID_GET_ID(tbid);
-
-        bp_debug[debug_base + ii] = tbid;
-      }
-  }
-#endif
 }
 
 //

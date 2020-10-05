@@ -10,6 +10,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
 #extension GL_KHR_shader_subgroup_arithmetic : require
 
 //
@@ -26,17 +27,9 @@
 #define SPN_FILLS_DISPATCH_SUBGROUP_SIZE (1 << SPN_DEVICE_FILLS_DISPATCH_SUBGROUP_SIZE_LOG2)
 
 //
-// If the subgroup size is less than SPN_BLOCK_ID_TAG_PATH_COUNT then
-// we use a different strategy.
-//
-
-#define SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT                                         \
-  (SPN_FILLS_DISPATCH_SUBGROUP_SIZE < SPN_BLOCK_ID_TAG_PATH_COUNT)
-
-//
 // FILLS DISPATCH
 //
-// This fixes up the (5) path primitive counts so they can be used by
+// This fixes up the 8 path primitive counts so they can be used by
 // vkCmdDispatchIndirect().
 //
 // It also computes the exclusive prefix sum of the counts so each
@@ -61,50 +54,53 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_DISPATCH();
 void
 main()
 {
-#if SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT
+#if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE == 4)
   //
   // SIMD4 -- ARM Bifrost4 and maybe very small future GPUs
   //
-  uvec4 dispatch0 = uvec4(0, 1, 1, 0);
-  uvec4 dispatch1 = uvec4(0, 1, 1, 0);
+  uvec4 dispatch[2] = { uvec4(0, 1, 1, 0), uvec4(0, 1, 1, 0) };
 
   //
-  // load
+  // Load 8 primitive counts.
   //
-  dispatch0[0] = fill_scan_counts[gl_SubgroupInvocationID];
-
-  if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
-    dispatch1[0] = fill_scan_counts[SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID];
+  dispatch[0][0] = fill_scan_counts[0 + gl_SubgroupInvocationID];
+  dispatch[1][0] = fill_scan_counts[4 + gl_SubgroupInvocationID];
 
   //
-  // exclusive scan-add of fill_scan_counts
+  // Inclusive scan-add of commands by type.
   //
-  dispatch0[3] = subgroupExclusiveAdd(dispatch0[0]);
-
-  const uint dispatch0_total =
-    subgroupBroadcast(dispatch0[3] + dispatch0[0], SPN_FILLS_DISPATCH_SUBGROUP_SIZE - 1);
-
-  dispatch1[3] = subgroupExclusiveAdd(dispatch1[0]) + dispatch0_total;
+  dispatch[0][3] = subgroupInclusiveAdd(dispatch[0][0]);
+  dispatch[1][3] = subgroupInclusiveAdd(dispatch[1][0]) + subgroupBroadcast(dispatch[0][3], 3);
 
   //
-  // store
+  // Convert back to exclusive scan-add.
   //
-  fill_scan_counts_uvec4[gl_SubgroupInvocationID] = dispatch0;
+  dispatch[0][3] -= dispatch[0][0];
+  dispatch[1][3] -= dispatch[1][0];
 
-  if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
-    fill_scan_counts_uvec4[SPN_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID] = dispatch1;
+  //
+  // Store 8 primitive counts;
+  //
+  fill_scan_dispatch[0 + gl_SubgroupInvocationID] = dispatch[0];
+  fill_scan_dispatch[4 + gl_SubgroupInvocationID] = dispatch[1];
 
-#else
+#elif (SPN_FILLS_DISPATCH_SUBGROUP_SIZE >= 8)
   //
   // SIMD8+ -- every other GPU I'm aware of...
   //
   uvec4 dispatch = uvec4(0, 1, 1, 0);
 
-  // valid lane?
-  const bool is_valid = gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT;
+  // Is valid lane?
+#if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE > 8)
+  const bool is_valid = (gl_SubgroupInvocationID < SPN_RAST_TYPE_COUNT);
+#endif
 
-  // load
+  //
+  // Load 8 primitive counts.
+  //
+#if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE > 8)
   if (is_valid)
+#endif
     {
       //
       // FIXME(allanmac): This needs to setup the dispatch based on
@@ -114,40 +110,24 @@ main()
     }
 
   //
-  // exclusive scan-add of commands by type
+  // Exclusive scan-add of commands by type.
   //
-  // FIXME(allanmac): predicate this to only 5 lanes?
+  // FIXME(allanmac): predicate/cluster this to only 5 lanes?
   //
   dispatch[3] = subgroupExclusiveAdd(dispatch[0]);
 
-  // store
+  //
+  // Store 8 primitive counts.
+  //
+#if (SPN_FILLS_DISPATCH_SUBGROUP_SIZE > 8)
   if (is_valid)
+#endif
     {
       fill_scan_dispatch[gl_SubgroupInvocationID] = dispatch;
     }
 
-    //
-    // DEBUG -- DUMP DISPATCHES
-    //
-#if 0
-
-  uint debug_base = 0;
-
-  if (gl_SubgroupInvocationID == 0)
-    debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_ID_TAG_PATH_COUNT * 4);
-
-  debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID * 4;
-
-  if (is_valid)
-    {
-      bp_debug[debug_base + 0] = dispatch[0];
-      bp_debug[debug_base + 1] = dispatch[1];
-      bp_debug[debug_base + 2] = dispatch[2];
-      bp_debug[debug_base + 3] = dispatch[3];
-    }
-
-#endif
-
+#else
+#error "Unexpected subgroup size!"
 #endif
 }
 

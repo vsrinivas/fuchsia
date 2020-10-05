@@ -1,8 +1,8 @@
-get_status
 block_pool_init
 fills_dispatch
 fills_expand
 fills_scan
+get_status
 paths_alloc
 paths_copy
 paths_reclaim

@@ -75,13 +75,14 @@ config("spinel_vk_ext_public_config") {
 
   defines = []
   if (board_name == "astro") {
-    # TODO: add bifrost4 support
+    defines += [ "SPN_VK_TARGET_ARM_BIFROST4" ]
   } else if (board_name == "sherlock") {
     defines += [ "SPN_VK_TARGET_ARM_BIFROST8" ]
   } else {
     # Include all targets by default.
     defines += [
       "SPN_VK_TARGET_AMD_GCN3",
+      "SPN_VK_TARGET_ARM_BIFROST4",
       "SPN_VK_TARGET_ARM_BIFROST8",
       "SPN_VK_TARGET_INTEL_GEN8",
       "SPN_VK_TARGET_NVIDIA_SM50",
@@ -111,12 +112,14 @@ static_library("vk_find_target") {
   # These deps need to agree with spinel_vk_ext_public_config.
   # Future support for dynamic linking will avoid that.
   if (board_name == "astro") {
-    # TODO: add bifrost4 support
+    deps += [ "targets/vendors/arm/bifrost4:generate" ]
   } else if (board_name == "sherlock") {
     deps += [ "targets/vendors/arm/bifrost8:generate" ]
   } else {
+    # Include all targets by default.
     deps += [
       "targets/vendors/amd/gcn3:generate",
+      "targets/vendors/arm/bifrost4:generate",
       "targets/vendors/arm/bifrost8:generate",
       "targets/vendors/intel/gen8:generate",
       "targets/vendors/nvidia/sm50:generate",

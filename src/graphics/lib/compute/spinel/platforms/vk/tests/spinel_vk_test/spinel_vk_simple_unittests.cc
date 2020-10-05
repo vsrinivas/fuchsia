@@ -206,7 +206,13 @@ param const params[] = {
     .name      = "tile_collision",  // fxb:43333
     .surface   = { 3096, 256 },     //
     .checksums = {                  //
-      { 0x9FF3E860, {} }
+      { 0x9FF3E860,
+        {}
+      },
+      { 0xBFF3E840, {
+          { param::ARM, { param::ARM_MALI_G31 } } // Spinel/Bifrost4 clips to a 2048x1024 surface
+        }
+      }
     },
     .test = std::make_shared<test>(
       [](spn_path_builder_t pb) {

@@ -149,43 +149,6 @@ main()
   HS_SLAB_ROWS()
 
   //
-  // DEBUG
-  //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0],  //
-                             HS_KEY_DWORDS * HS_SLAB_THREADS * (HS_SLAB_HEIGHT + 4));
-
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-    bp_debug[debug_base + 0 * HS_SLAB_THREADS] = 0xCAFEBABE;
-    bp_debug[debug_base + 1 * HS_SLAB_THREADS] = gl_WorkGroupID.x;
-    bp_debug[debug_base + 2 * HS_SLAB_THREADS] = gmem_base;
-    bp_debug[debug_base + 3 * HS_SLAB_THREADS] = gmem_out_idx;
-    bp_debug[debug_base + 4 * HS_SLAB_THREADS] = kv_offset_in;
-    bp_debug[debug_base + 5 * HS_SLAB_THREADS] = kv_offset_out;
-    bp_debug[debug_base + 6 * HS_SLAB_THREADS] = kv_count;
-    bp_debug[debug_base + 7 * HS_SLAB_THREADS] = 0xDEADBEEF;
-
-    debug_base += HS_KEY_DWORDS * HS_SLAB_THREADS * 4;
-
-#undef HS_SLAB_ROW
-#define HS_SLAB_ROW(row, prev)                                                                     \
-  {                                                                                                \
-    const uint base = debug_base + prev * HS_SLAB_THREADS * HS_KEY_DWORDS;                         \
-                                                                                                   \
-    bp_debug[base]                   = r##row[0];                                                  \
-    bp_debug[base + HS_SLAB_THREADS] = r##row[1];                                                  \
-  }
-
-    HS_SLAB_ROWS()
-  }
-#endif
-
-  //
   // LOAD LAST REGISTER FROM COLUMN TO LEFT
   //
   // shuffle up the last key from the column to the left
@@ -241,24 +204,6 @@ main()
   HS_SLAB_ROWS()
 
   //
-  // DEBUG
-  //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], HS_SLAB_THREADS * 3);
-
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-    bp_debug[debug_base + 0 * HS_SLAB_THREADS] = 0xFEEDFACE;
-    bp_debug[debug_base + 1 * HS_SLAB_THREADS] = valid;
-    bp_debug[debug_base + 2 * HS_SLAB_THREADS] = diffs;
-  }
-#endif
-
-  //
   // SUM UP THE DIFFERENCES
   //
   const SPN_HS_COL_FLAG_TYPE valid_diffs = valid & diffs;
@@ -281,35 +226,14 @@ main()
   next = subgroupBroadcast(next, HS_SLAB_THREADS - 1) + exc;
 
   //
-  // DEBUG
+  // STORE THE INDICES
   //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], HS_SLAB_THREADS * 6);
-
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-    bp_debug[debug_base + 0 * HS_SLAB_THREADS] = 0xFEEDFACE;
-    bp_debug[debug_base + 1 * HS_SLAB_THREADS] = count;
-    bp_debug[debug_base + 2 * HS_SLAB_THREADS] = inc;
-    bp_debug[debug_base + 3 * HS_SLAB_THREADS] = exc;
-    bp_debug[debug_base + 4 * HS_SLAB_THREADS] = linear_idx;
-    bp_debug[debug_base + 5 * HS_SLAB_THREADS] = next;
-  }
-#endif
-
-//
-// STORE THE INDICES
-//
-// FIXME(allanmac): Note that this is *not* going to result in
-// coalesced stores but it probably doesn't matter.  If it is
-// determined that this impacts performance then it's
-// straightforward to accumulate these keys in local memory and
-// write them out in a coalesced fashion.
-//
+  // FIXME(allanmac): Note that this is *not* going to result in
+  // coalesced stores but it probably doesn't matter.  If it is
+  // determined that this impacts performance then it's
+  // straightforward to accumulate these keys in local memory and
+  // write them out in a coalesced fashion.
+  //
 #undef HS_SLAB_ROW
 #define HS_SLAB_ROW(row, prev)                                                                     \
   if ((valid_diffs & (1 << prev)) != 0)                                                            \
@@ -318,18 +242,6 @@ main()
     }
 
   HS_SLAB_ROWS();
-
-#if 0
-#undef HS_SLAB_ROW
-#define HS_SLAB_ROW(row, prev)                                                                     \
-  if ((valid_diffs & (1 << prev)) != 0)                                                            \
-    {                                                                                              \
-      const uint debug_base = atomicAdd(bp_debug_count[0], 1);                                     \
-      bp_debug[debug_base]  = linear_idx + prev;                                                   \
-    }
-
-  HS_SLAB_ROWS();
-#endif
 
   //
   // TRANSPOSE THE SLAB AND STORE IT

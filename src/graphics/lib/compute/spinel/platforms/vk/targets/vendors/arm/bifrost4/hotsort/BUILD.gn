@@ -1,0 +1,13 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+_hotsort_targets_dir = "../../../../../../../../hotsort/platforms/vk/targets"
+import("${_hotsort_targets_dir}/hotsort_target.gni")
+
+hotsort_target("hotsort") {
+  hotsort_target_name = "hs_arm_bifrost4_u64"
+  gpu_arch = "arm_bifrost4"
+  type_dwords = 2
+  glsl_bindings = "1,0,1,0"
+}

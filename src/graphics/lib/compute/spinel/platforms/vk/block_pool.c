@@ -4,6 +4,8 @@
 
 #include "block_pool.h"
 
+#include <stdlib.h>
+
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
 #include "device.h"
@@ -213,21 +215,17 @@ spn_device_block_pool_debug_print(struct spn_device * const device)
   //
 #if 0
   {
-    // FILE * file = fopen("debug.segs", "w");
-
     float const * bp_debug_float = (float *)mapped->bp_debug;
 
     for (uint32_t ii = 0; ii < count; ii += 4)
       {
         fprintf(stderr,
-                "{ { %10.2f, %10.2f }, { %10.2f, %10.2f } }\n",
+                "{ { %10.2f, %10.2f }, { %10.2f, %10.2f } },\n",
                 bp_debug_float[ii + 0],
                 bp_debug_float[ii + 1],
                 bp_debug_float[ii + 2],
                 bp_debug_float[ii + 3]);
       }
-
-    // fclose(file);
   }
 #endif
 
@@ -235,51 +233,219 @@ spn_device_block_pool_debug_print(struct spn_device * const device)
   // TTS
   //
 #if 0
-  fprintf(stderr,"[ %u ] = {", count);
-
-  for (uint32_t ii = 2; ii < count; ii += 2)
+  {
+    union bp_xy
     {
-      if ((ii % 2) == 0)
-        fprintf(stderr,"\n");
+      uint32_t dword;
 
-      union spn_tts const tts = { .u32 = mapped->bp_debug[ii + 1] };
+      struct
+      {
+        uint32_t x : SPN_TTRK_LO_BITS_X + SPN_TTRK_HI_BITS_X;
+        uint32_t y : SPN_TTRK_HI_BITS_Y;
+      };
+    };
 
-      fprintf(stderr,"%07X : %08X : < %4u | %3d | %4u | %3d > ",
-             mapped->bp_debug[ii + 0],
-             tts.u32,
-             tts.tx,
-             tts.dx,
-             tts.ty,
-             tts.dy);
-    }
+    union bp_tts
+    {
+      uint32_t dword;
 
-  fprintf(stderr,"\n}\n");
+      struct
+      {
+        uint32_t tx : SPN_TTS_BITS_TX;
+        int32_t  dx : SPN_TTS_BITS_DX;
+        uint32_t ty : SPN_TTS_BITS_TY;
+        int32_t  dy : SPN_TTS_BITS_DY;
+      };
+    };
+
+    uint32_t const subgroup_size = (1 << config->p.group_sizes.named.rasterize_line.subgroup_log2);
+    uint32_t const loop_size     = 16 + 7 * subgroup_size;
+
+    for (uint32_t ii = 0; ii < count; ii += loop_size)
+      {
+        uint32_t jj = ii;
+
+        fprintf(stderr, "====================================\n");
+
+        for (uint32_t kk = 0; kk < 16; kk++)
+          {
+            fprintf(stderr, "%10u ", mapped->bp_debug[jj++]);
+          }
+
+        fprintf(stderr, "\n====================================\n");
+
+        for (uint32_t kk = 0; kk < subgroup_size; kk++)
+          {
+            fprintf(stderr, "(* %10u *) ", mapped->bp_debug[jj + 2]);
+
+            union bp_tts const tts = { mapped->bp_debug[jj + 1] };
+
+            if (tts.dword != SPN_TTS_INVALID)
+              {
+                union bp_xy const xy = { mapped->bp_debug[jj + 0] };
+
+                uint32_t const tile_x = xy.x << (config->tile.width_log2 + SPN_TTS_SUBPIXEL_X_LOG2);
+                uint32_t const tile_y = xy.y
+                                        << (config->tile.height_log2 + SPN_TTS_SUBPIXEL_Y_LOG2);
+
+                uint32_t const dx_abs = abs(tts.dx);
+                uint32_t const x_lo   = tile_x + tts.tx;
+                uint32_t const x_hi   = x_lo + dx_abs;
+
+                int32_t const  dy     = tts.dy + (tts.dy >= 0 ? 1 : 0);
+                uint32_t const dy_abs = abs(dy);
+                uint32_t const y_lo   = tile_y + tts.ty;
+                uint32_t const y_hi   = y_lo + dy_abs;
+
+                fprintf(
+                  stderr,
+                  "(* %10u : %10u : %10u : %10u *) (* %10u : ( %10u, %10u ) *) { { %10u.0, %10u.0 }, { %10u.0, %10u.0 } },\n",
+                  mapped->bp_debug[jj + 3],  // part_idx
+                  mapped->bp_debug[jj + 4],  // part_msb
+                  mapped->bp_debug[jj + 5],  // entry_xy
+                  mapped->bp_debug[jj + 6],  // entry_base
+                  xy.dword,                  // xy
+                  xy.x,                      // x
+                  xy.y,                      // y
+                  tts.dx >= 0 ? x_lo : x_hi,
+                  dy > 0 ? y_lo : y_hi,
+                  tts.dx >= 0 ? x_hi : x_lo,
+                  dy > 0 ? y_hi : y_lo);
+              }
+            else
+              {
+                fprintf(stderr, "*** SPN_TTS_INVALID ***\n");
+              }
+
+            jj += 7;
+          }
+      }
+  }
 #endif
 
   //
   // TTRK
   //
 #if 0
-  fprintf(stderr,"[ %u ] = {", count);
-
-  for (uint32_t ii = 0; ii < count; ii += 2)
+  {
+    union bp_ttrk
     {
-      if ((ii % 2) == 0)
-        fprintf(stderr,"\n");
+      struct
+      {g
+        uint32_t dword_lo;
+        uint32_t dword_hi;
+      };
 
-      union spn_ttrk const ttrk = { .u32v2 = { .x = mapped->bp_debug[ii + 0],
-                                               .y = mapped->bp_debug[ii + 1] } };
+      struct
+      {
+        // clang-format off
+        uint64_t ttsb_id : SPN_TTRK_LO_BITS_TTSB_ID;
+        uint64_t new_x   : 1;
+        uint64_t new_y   : 1;
+        uint64_t x       : SPN_TTRK_LO_BITS_X + SPN_TTRK_HI_BITS_X;
+        uint64_t y       : SPN_TTRK_HI_BITS_Y;
+        uint64_t cohort  : SPN_TTRK_HI_BITS_COHORT;
+        // clang-format on
+      };
+    };
 
-      fprintf(stderr,"%08X%08X : < %08X : %4u : %4u : %4u >\n",
-             ttrk.u32v2.y,
-             ttrk.u32v2.x,
-             ttrk.ttsb_id,
-             (uint32_t)ttrk.y,
-             ttrk.x,
-             ttrk.cohort);
-    }
+    for (uint32_t ii = 0; ii < count; ii += 2)
+      {
+        union bp_ttrk const ttrk = { .dword_lo = mapped->bp_debug[ii + 0],
+                                     .dword_hi = mapped->bp_debug[ii + 1] };
 
-  fprintf(stderr,"\n}\n");
+        if ((ttrk.dword_lo == 0xFFFFFFFF) && (ttrk.dword_hi == 0xFFFFFFFF))
+          continue;
+
+        uint32_t const w = 1 << (config->tile.width_log2 + SPN_TTS_SUBPIXEL_X_LOG2);
+        uint32_t const h = 1 << (config->tile.height_log2 + SPN_TTS_SUBPIXEL_Y_LOG2);
+        uint32_t const x = ttrk.x * w;
+        uint32_t const y = ttrk.y * h;
+
+        // clang-format off
+        fprintf(stderr,
+                "(* %s *)\n"
+                "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n",
+                ttrk.new_x ? "X" : (ttrk.new_y ? "Y" : "-"),
+                x  , y  ,x+w,y  ,
+                x+w, y  ,x+w,y+h,
+                x+w, y+h,x  ,y+h,
+                x  , y+h,x  ,y  );
+        // clang-format on
+      }
+  }
+#endif
+
+  //
+  // TTXK
+  //
+#if 0
+  {
+    union bp_ttxk
+    {
+      struct
+      {
+        uint32_t dword_lo;
+        uint32_t dword_hi;
+      };
+
+      struct
+      {
+        // clang-format off
+        uint64_t ttpb_id : SPN_TTXK_LO_BITS_TTXB_ID;
+        uint64_t span    : SPN_TTXK_LO_HI_BITS_SPAN;
+        uint64_t x       : SPN_TTXK_HI_BITS_X;
+        uint64_t y       : SPN_TTXK_HI_BITS_Y;
+        // clang-format on
+      };
+    };
+
+    for (uint32_t ii = 0; ii < count; ii += 2)
+      {
+        union bp_ttxk const ttxk = { .dword_lo = mapped->bp_debug[ii + 0],
+                                     .dword_hi = mapped->bp_debug[ii + 1] };
+
+        uint32_t const w    = 1 << (config->tile.width_log2 + SPN_TTS_SUBPIXEL_X_LOG2);
+        uint32_t const h    = 1 << (config->tile.height_log2 + SPN_TTS_SUBPIXEL_Y_LOG2);
+        uint32_t const span = w * ttxk.span;
+        uint32_t const x    = ttxk.x * w;
+        uint32_t const y    = ttxk.y * h;
+
+        // clang-format off
+        if (span != 0)
+        {
+          fprintf(stderr,
+                  "(* %u *)\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n",
+                  ttxk.span,
+                  x     , y  , x+span, y  ,
+                  x+span, y  , x+span, y+h,
+                  x+span, y+h, x     , y+h,
+                  x     , y+h, x     , y  );
+        }
+        else // (span == 0)
+        {
+          fprintf(stderr,
+                  "(* %u *)\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n"
+                  "{ { %u.0, %u.0 }, { %u.0, %u.0 } },\n",
+                  ttxk.span,
+                  x  , y  , x+w, y+h,
+                  x  , y  , x+w, y+h,
+                  x  , y+h, x+w, y  ,
+                  x  , y+h, x+w, y);
+        }
+        // clang-format on
+      }
+  }
 #endif
 }
 

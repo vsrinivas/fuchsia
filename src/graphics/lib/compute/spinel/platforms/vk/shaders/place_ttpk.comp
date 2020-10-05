@@ -312,7 +312,7 @@ spn_ttik_append(SPN_SUBGROUP_UNIFORM const spn_cmd_place cmd,
         }
 
       // read-after-write
-      subgroupBarrier();
+      subgroupMemoryBarrierShared();
 
       // propagate lanes to right using max scan
       const uint src_iid  = SPN_SMEM().buf[gl_SubgroupInvocationID];
@@ -322,7 +322,11 @@ spn_ttik_append(SPN_SUBGROUP_UNIFORM const spn_cmd_place cmd,
       uvec2 src_ttck = uvec2(subgroupShuffle(ttik[0], src_lane),   //
                              subgroupShuffle(ttik[1], src_lane));  //
 
+      //
       // shuffle in src
+      //
+      // NOTE: highp = mediump - highp
+      //
       const uint delta = gl_SubgroupInvocationID - subgroupShuffle(span_exc, src_lane);
 
       // adjust ttck.x
@@ -453,8 +457,8 @@ main()
     return;
 
   // where are we in the first node of ttpk keys?
-  SPN_SUBGROUP_UNIFORM uint ttpks_first = subgroupBroadcast(header,  //
-                                                            SPN_RASTER_HEAD_LO_OFFSET_PKIDX);
+  SPN_SUBGROUP_UNIFORM uint ttpks_first =  //
+    subgroupBroadcast(header, SPN_RASTER_HEAD_LO_OFFSET_PKIDX);
 
   // get block base, offset
   SPN_SUBGROUP_UNIFORM uint ttpks_first_base = ttpks_first & ~SPN_BLOCK_POOL_BLOCK_DWORDS_MASK;  //

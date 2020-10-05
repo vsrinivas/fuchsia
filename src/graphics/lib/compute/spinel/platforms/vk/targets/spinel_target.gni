@@ -88,6 +88,7 @@ template("spinel_target") {
   _spn_target_include_dirs = [
     target_gen_dir,
     _spn_target_dir,
+    "$target_gen_dir/hotsort",
     "${graphics_compute_dir}/spinel/platforms/vk/targets",
     "${graphics_compute_dir}/spinel/platforms/vk",
     "${graphics_compute_dir}/spinel",
@@ -112,8 +113,10 @@ template("spinel_target") {
   _spn_comp_includes = [
     _spn_target_dir + "/spn_config.h",
     "${graphics_compute_dir}/hotsort/platforms/vk/targets/hs_glsl_macros.h",
+    "${graphics_compute_dir}/spinel/core.h",
     "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/core_glsl.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/shaders/partition.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/spn_macros_glsl.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/rasterize.comp",
   ]

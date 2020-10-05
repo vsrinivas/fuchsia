@@ -24,58 +24,60 @@
 // PIPELINE EXPANSIONS
 //
 // *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-// NOTE: Always update "targets/spinel_comp_names.txt" to match
-// *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 //
 // NOTE: For now, pipelines are stored in alphabetical order
+//
+// NOTE: Always update "targets/spinel_comp_names.txt" to match
+//
+// *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 //
 // NOTE: Not all kernels have push constants
 //
 
-#define SPN_VK_P_ID_GET_STATUS          get_status
-#define SPN_VK_P_ID_BLOCK_POOL_INIT     block_pool_init
-#define SPN_VK_P_ID_FILLS_DISPATCH      fills_dispatch
-#define SPN_VK_P_ID_FILLS_EXPAND        fills_expand
-#define SPN_VK_P_ID_FILLS_SCAN          fills_scan
-#define SPN_VK_P_ID_PATHS_ALLOC         paths_alloc
-#define SPN_VK_P_ID_PATHS_COPY          paths_copy
-#define SPN_VK_P_ID_PATHS_RECLAIM       paths_reclaim
-#define SPN_VK_P_ID_PLACE_TTPK          place_ttpk
-#define SPN_VK_P_ID_PLACE_TTSK          place_ttsk
-#define SPN_VK_P_ID_RASTERIZE_CUBIC     rasterize_cubic
-#define SPN_VK_P_ID_RASTERIZE_LINE      rasterize_line
-#define SPN_VK_P_ID_RASTERIZE_QUAD      rasterize_quad
-#define SPN_VK_P_ID_RASTERIZE_RAT_CUBIC rasterize_rat_cubic
-#define SPN_VK_P_ID_RASTERIZE_RAT_QUAD  rasterize_rat_quad
-#define SPN_VK_P_ID_RASTERS_ALLOC       rasters_alloc
-#define SPN_VK_P_ID_RASTERS_PREFIX      rasters_prefix
-#define SPN_VK_P_ID_RASTERS_RECLAIM     rasters_reclaim
-#define SPN_VK_P_ID_RENDER              render
-#define SPN_VK_P_ID_SEGMENT_TTCK        segment_ttck
-#define SPN_VK_P_ID_SEGMENT_TTRK        segment_ttrk
+#define SPN_VK_P_ID_BLOCK_POOL_INIT      block_pool_init
+#define SPN_VK_P_ID_FILLS_DISPATCH       fills_dispatch
+#define SPN_VK_P_ID_FILLS_EXPAND         fills_expand
+#define SPN_VK_P_ID_FILLS_SCAN           fills_scan
+#define SPN_VK_P_ID_GET_STATUS           get_status
+#define SPN_VK_P_ID_PATHS_ALLOC          paths_alloc
+#define SPN_VK_P_ID_PATHS_COPY           paths_copy
+#define SPN_VK_P_ID_PATHS_RECLAIM        paths_reclaim
+#define SPN_VK_P_ID_PLACE_TTPK           place_ttpk
+#define SPN_VK_P_ID_PLACE_TTSK           place_ttsk
+#define SPN_VK_P_ID_RASTERIZE_CUBIC      rasterize_cubic
+#define SPN_VK_P_ID_RASTERIZE_LINE       rasterize_line
+#define SPN_VK_P_ID_RASTERIZE_QUAD       rasterize_quad
+#define SPN_VK_P_ID_RASTERIZE_RAT_CUBIC  rasterize_rat_cubic
+#define SPN_VK_P_ID_RASTERIZE_RAT_QUAD   rasterize_rat_quad
+#define SPN_VK_P_ID_RASTERS_ALLOC        rasters_alloc
+#define SPN_VK_P_ID_RASTERS_PREFIX       rasters_prefix
+#define SPN_VK_P_ID_RASTERS_RECLAIM      rasters_reclaim
+#define SPN_VK_P_ID_RENDER               render
+#define SPN_VK_P_ID_SEGMENT_TTCK         segment_ttck
+#define SPN_VK_P_ID_SEGMENT_TTRK         segment_ttrk
 
-#define SPN_VK_P_EXPAND()                                                                             \
-  SPN_VK_P_EXPAND_X(0 ,SPN_VK_P_ID_GET_STATUS         ,SPN_VK_HOST_DECL_KERNEL_GET_STATUS())          \
-  SPN_VK_P_EXPAND_X(1 ,SPN_VK_P_ID_BLOCK_POOL_INIT    ,SPN_VK_HOST_DECL_KERNEL_BLOCK_POOL_INIT())     \
-  SPN_VK_P_EXPAND_X(2 ,SPN_VK_P_ID_FILLS_DISPATCH     ,SPN_VK_HOST_DECL_KERNEL_FILLS_DISPATCH())      \
-  SPN_VK_P_EXPAND_X(3 ,SPN_VK_P_ID_FILLS_EXPAND       ,SPN_VK_HOST_DECL_KERNEL_FILLS_EXPAND())        \
-  SPN_VK_P_EXPAND_X(4 ,SPN_VK_P_ID_FILLS_SCAN         ,SPN_VK_HOST_DECL_KERNEL_FILLS_SCAN())          \
-  SPN_VK_P_EXPAND_X(5 ,SPN_VK_P_ID_PATHS_ALLOC        ,SPN_VK_HOST_DECL_KERNEL_PATHS_ALLOC())         \
-  SPN_VK_P_EXPAND_X(6 ,SPN_VK_P_ID_PATHS_COPY         ,SPN_VK_HOST_DECL_KERNEL_PATHS_COPY())          \
-  SPN_VK_P_EXPAND_X(7 ,SPN_VK_P_ID_PATHS_RECLAIM      ,SPN_VK_HOST_DECL_KERNEL_PATHS_RECLAIM())       \
-  SPN_VK_P_EXPAND_X(8 ,SPN_VK_P_ID_PLACE_TTPK         ,SPN_VK_HOST_DECL_KERNEL_PLACE_TTPK())          \
-  SPN_VK_P_EXPAND_X(9 ,SPN_VK_P_ID_PLACE_TTSK         ,SPN_VK_HOST_DECL_KERNEL_PLACE_TTSK())          \
-  SPN_VK_P_EXPAND_X(10,SPN_VK_P_ID_RASTERIZE_CUBIC    ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_CUBIC())     \
-  SPN_VK_P_EXPAND_X(11,SPN_VK_P_ID_RASTERIZE_LINE     ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_LINE())      \
-  SPN_VK_P_EXPAND_X(12,SPN_VK_P_ID_RASTERIZE_QUAD     ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_QUAD())      \
-  SPN_VK_P_EXPAND_X(13,SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_RAT_CUBIC()) \
-  SPN_VK_P_EXPAND_X(14,SPN_VK_P_ID_RASTERIZE_RAT_QUAD ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_RAT_QUAD())  \
-  SPN_VK_P_EXPAND_X(15,SPN_VK_P_ID_RASTERS_ALLOC      ,SPN_VK_HOST_DECL_KERNEL_RASTERS_ALLOC())       \
-  SPN_VK_P_EXPAND_X(16,SPN_VK_P_ID_RASTERS_PREFIX     ,SPN_VK_HOST_DECL_KERNEL_RASTERS_PREFIX())      \
-  SPN_VK_P_EXPAND_X(17,SPN_VK_P_ID_RASTERS_RECLAIM    ,SPN_VK_HOST_DECL_KERNEL_RASTERS_RECLAIM())     \
-  SPN_VK_P_EXPAND_X(18,SPN_VK_P_ID_RENDER             ,SPN_VK_HOST_DECL_KERNEL_RENDER())              \
-  SPN_VK_P_EXPAND_X(19,SPN_VK_P_ID_SEGMENT_TTCK       ,SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTCK())        \
-  SPN_VK_P_EXPAND_X(20,SPN_VK_P_ID_SEGMENT_TTRK       ,SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTRK())
+#define SPN_VK_P_EXPAND()                                                                                \
+  SPN_VK_P_EXPAND_X(0 ,SPN_VK_P_ID_BLOCK_POOL_INIT      ,SPN_VK_HOST_DECL_KERNEL_BLOCK_POOL_INIT())      \
+  SPN_VK_P_EXPAND_X(1 ,SPN_VK_P_ID_FILLS_DISPATCH       ,SPN_VK_HOST_DECL_KERNEL_FILLS_DISPATCH())       \
+  SPN_VK_P_EXPAND_X(2 ,SPN_VK_P_ID_FILLS_EXPAND         ,SPN_VK_HOST_DECL_KERNEL_FILLS_EXPAND())         \
+  SPN_VK_P_EXPAND_X(3 ,SPN_VK_P_ID_FILLS_SCAN           ,SPN_VK_HOST_DECL_KERNEL_FILLS_SCAN())           \
+  SPN_VK_P_EXPAND_X(4 ,SPN_VK_P_ID_GET_STATUS           ,SPN_VK_HOST_DECL_KERNEL_GET_STATUS())           \
+  SPN_VK_P_EXPAND_X(5 ,SPN_VK_P_ID_PATHS_ALLOC          ,SPN_VK_HOST_DECL_KERNEL_PATHS_ALLOC())          \
+  SPN_VK_P_EXPAND_X(6 ,SPN_VK_P_ID_PATHS_COPY           ,SPN_VK_HOST_DECL_KERNEL_PATHS_COPY())           \
+  SPN_VK_P_EXPAND_X(7 ,SPN_VK_P_ID_PATHS_RECLAIM        ,SPN_VK_HOST_DECL_KERNEL_PATHS_RECLAIM())        \
+  SPN_VK_P_EXPAND_X(8 ,SPN_VK_P_ID_PLACE_TTPK           ,SPN_VK_HOST_DECL_KERNEL_PLACE_TTPK())           \
+  SPN_VK_P_EXPAND_X(9 ,SPN_VK_P_ID_PLACE_TTSK           ,SPN_VK_HOST_DECL_KERNEL_PLACE_TTSK())           \
+  SPN_VK_P_EXPAND_X(10,SPN_VK_P_ID_RASTERIZE_CUBIC      ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_CUBIC())      \
+  SPN_VK_P_EXPAND_X(11,SPN_VK_P_ID_RASTERIZE_LINE       ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_LINE())       \
+  SPN_VK_P_EXPAND_X(12,SPN_VK_P_ID_RASTERIZE_QUAD       ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_QUAD())       \
+  SPN_VK_P_EXPAND_X(13,SPN_VK_P_ID_RASTERIZE_RAT_CUBIC  ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_RAT_CUBIC())  \
+  SPN_VK_P_EXPAND_X(14,SPN_VK_P_ID_RASTERIZE_RAT_QUAD   ,SPN_VK_HOST_DECL_KERNEL_RASTERIZE_RAT_QUAD())   \
+  SPN_VK_P_EXPAND_X(15,SPN_VK_P_ID_RASTERS_ALLOC        ,SPN_VK_HOST_DECL_KERNEL_RASTERS_ALLOC())        \
+  SPN_VK_P_EXPAND_X(16,SPN_VK_P_ID_RASTERS_PREFIX       ,SPN_VK_HOST_DECL_KERNEL_RASTERS_PREFIX())       \
+  SPN_VK_P_EXPAND_X(17,SPN_VK_P_ID_RASTERS_RECLAIM      ,SPN_VK_HOST_DECL_KERNEL_RASTERS_RECLAIM())      \
+  SPN_VK_P_EXPAND_X(18,SPN_VK_P_ID_RENDER               ,SPN_VK_HOST_DECL_KERNEL_RENDER())               \
+  SPN_VK_P_EXPAND_X(19,SPN_VK_P_ID_SEGMENT_TTCK         ,SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTCK())         \
+  SPN_VK_P_EXPAND_X(20,SPN_VK_P_ID_SEGMENT_TTRK         ,SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTRK())
 
 #define SPN_VK_P_COUNT  21  // this is validated with a static assert
 
@@ -284,8 +286,8 @@
   };                                                                                                    \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_RASTERIZE,idx,                                                 \
                             SPN_VK_BINDING_FILL_SCAN,fill_scan) {                                       \
-    mq_fill_scan_dispatch SPN_MEMBER_FARRAY_UVEC4(fill_scan_dispatch,SPN_BLOCK_ID_TAG_PATH_COUNT);      \
-    mq_fill_scan_counts   SPN_MEMBER_FARRAY_UINT(fill_scan_counts,SPN_BLOCK_ID_TAG_PATH_COUNT);         \
+    mq_fill_scan_dispatch SPN_MEMBER_FARRAY_UVEC4(fill_scan_dispatch,SPN_RAST_TYPE_COUNT);              \
+    mq_fill_scan_counts   SPN_MEMBER_FARRAY_UINT(fill_scan_counts,SPN_RAST_TYPE_COUNT);                 \
     SPN_VK_GLSL_ALIGN_GPU_SEGMENT()                                                                     \
     mq_fill_scan_prefix   SPN_MEMBER_VARRAY_UVEC4(fill_scan_prefix);                                    \
   };                                                                                                    \
@@ -569,22 +571,6 @@
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_XXX());
 
 //
-// KERNEL: RASTERIZE_LINE
-//
-
-#define SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_LINE()    \
-  SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_XXX()
-
-#define SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE()    \
-  SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_XXX()
-
-#define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_LINE()                                            \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,0,SPN_VK_DS_ID_BLOCK_POOL)                      \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,1,SPN_VK_DS_ID_RASTERIZE)                       \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,2,SPN_VK_DS_ID_TTRKS)                           \
-  SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_LINE,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_LINE())
-
-//
 // KERNEL: RASTERIZE_CUBIC
 //
 
@@ -599,6 +585,22 @@
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,1,SPN_VK_DS_ID_RASTERIZE)                    \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,2,SPN_VK_DS_ID_TTRKS)                        \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_CUBIC,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_CUBIC())
+
+//
+// KERNEL: RASTERIZE_LINE
+//
+
+#define SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_LINE()    \
+  SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_XXX()
+
+#define SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE()    \
+  SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_XXX()
+
+#define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_LINE()                                            \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,0,SPN_VK_DS_ID_BLOCK_POOL)                      \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,1,SPN_VK_DS_ID_RASTERIZE)                       \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,2,SPN_VK_DS_ID_TTRKS)                           \
+  SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_LINE,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_LINE())
 
 //
 // KERNEL: RASTERIZE_QUAD

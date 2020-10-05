@@ -102,7 +102,8 @@ struct param_spinel_vk_render
 
   enum devices
   {
-    AMD_V1807B = 0x15DD
+    AMD_V1807B   = 0x15DD,
+    ARM_MALI_G31 = 0x70930000
   };
 
   //

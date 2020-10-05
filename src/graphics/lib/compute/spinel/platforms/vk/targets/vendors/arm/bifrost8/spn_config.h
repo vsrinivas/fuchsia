@@ -28,10 +28,9 @@
 //
 
 #define SPN_DEVICE_ARM_BIFROST8                                   1
-
 #define SPN_DEVICE_SUBGROUP_SIZE_LOG2                             3
-
 #define SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE                        256 // bytes
+#define SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS                       170
 
 //
 // TILE CONFIGURATION

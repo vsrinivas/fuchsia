@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_NVIDIA_SM50_SPN_CONFIG_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_NVIDIA_SM50_SPN_CONFIG_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_ARM_BIFROST4_SPN_CONFIG_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_ARM_BIFROST4_SPN_CONFIG_H_
 
 //
 // clang-format off
@@ -17,6 +17,8 @@
 
 #ifdef VULKAN
 
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
 #define SPN_EXT_ENABLE_SUBGROUP_UNIFORM                           1
 
 #endif
@@ -25,24 +27,24 @@
 // DEVICE-SPECIFIC
 //
 
-#define SPN_DEVICE_NVIDIA_SM50                                    1
-#define SPN_DEVICE_SUBGROUP_SIZE_LOG2                             5   // 32
+#define SPN_DEVICE_ARM_BIFROST4                                   1
+#define SPN_DEVICE_SUBGROUP_SIZE_LOG2                             2
 #define SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE                        256 // bytes
-#define SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS                       512
+#define SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS                       128
 
 //
 // TILE CONFIGURATION
 //
 
-#define SPN_DEVICE_TILE_WIDTH_LOG2                                4
-#define SPN_DEVICE_TILE_HEIGHT_LOG2                               4
+#define SPN_DEVICE_TILE_WIDTH_LOG2                                2 // 4
+#define SPN_DEVICE_TILE_HEIGHT_LOG2                               2 // 4
 
 //
 // BLOCK POOL CONFIGURATION
 //
 
 // e.g. NVIDIA, AMD, Intel, ARM Bifrost, etc.
-#define SPN_DEVICE_BLOCK_POOL_BLOCK_DWORDS_LOG2                   7
+#define SPN_DEVICE_BLOCK_POOL_BLOCK_DWORDS_LOG2                   5
 #define SPN_DEVICE_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2                SPN_DEVICE_TILE_HEIGHT_LOG2
 
 //
@@ -98,9 +100,6 @@
 #define SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2                SPN_DEVICE_SUBGROUP_SIZE_LOG2
 #define SPN_DEVICE_FILLS_EXPAND_WORKGROUP_SIZE                    ((1 << SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2) * 1)
 
-// enable nvidia partition extensiona
-#define SPN_DEVICE_FILLS_EXPAND_ENABLE_SUBGROUP_PARTITION_NV      1
-
 //
 // KERNEL: FILLS DISPATCH
 //
@@ -109,7 +108,7 @@
 #define SPN_DEVICE_FILLS_DISPATCH_WORKGROUP_SIZE                  ((1 << SPN_DEVICE_FILLS_DISPATCH_SUBGROUP_SIZE_LOG2) * 1)
 
 //
-// KERNEL: RASTERIZE_[LINES|QUADS|CUBICS|...]
+// KERNEL: RASTERIZE
 //
 
 // e.g. NVIDIA, AMD, Intel, ARM Bifrost, etc.
@@ -118,9 +117,6 @@
 
 // can reduce this to force earlier launches of smaller grids
 #define SPN_DEVICE_RASTERIZE_COHORT_SIZE                          (SPN_RASTER_COHORT_METAS_SIZE - 1)
-
-// enable nvidia partition extension
-#define SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_NV         1
 
 //
 // KERNEL: SEGMENT TTRK
@@ -163,20 +159,11 @@
 #define SPN_DEVICE_RENDER_WORKGROUP_SIZE                          ((1 << SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2) * 1)
 
 #define SPN_DEVICE_RENDER_LGF_USE_SHUFFLE
-#define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
-#define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
-#define SPN_DEVICE_RENDER_COVERAGE_USE_SHUFFLE
+#define SPN_DEVICE_RENDER_TTCKS_USE_SHARED
+#define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHARED
 
-//
-// TODO(allanmac): generate a new target for NVIDIA devices that support fp16
-//
-#if 1
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT32                 // CC: 3.0, 3.2, 3.5, 3.7, 5.0, 5.2, 6.1
-#else
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16                 // CC: 5.3, 6.0, 6.2, 7.x
-#endif
+#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16                 // Bifrost supports fp16x2
 
-// expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
 #define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
 
 //
@@ -197,4 +184,4 @@
 // clang-format on
 //
 
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_NVIDIA_SM50_SPN_CONFIG_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_ARM_BIFROST4_SPN_CONFIG_H_

@@ -351,7 +351,6 @@ shared spn_subgroup_smem smem[SPN_RENDER_SUBGROUPS];
 #define SPN_LGF_LANE(idx)     ((idx)-SPN_LGF_BANK(idx) * SPN_RENDER_SUBGROUP_SIZE)
 #define SPN_LGF_IS_LANE(idx)  (gl_SubgroupInvocationID == SPN_LGF_LANE(idx))
 
-// #define SPN_LGF_LOAD(idx)     subgroupShuffle(lgf[SPN_LGF_BANK(idx)], idx)
 #define SPN_LGF_LOAD(idx)     subgroupBroadcast(lgf[SPN_LGF_BANK(idx)], idx)
 
 uint lgf[SPN_LGF_BANKS]; // subgroup-wide register variable at global scope
@@ -387,6 +386,10 @@ spn_lgf_init()
   // SHUFFLE
   //
   lgf[0] = SPN_UINT_MAX;
+
+#if (SPN_LGF_BANKS >= 2)
+  lgf[1] = SPN_UINT_MAX;
+#endif
 
   if (SPN_LGF_IS_LANE(SPN_LGF_GROUP_RANGE_LO))
     lgf[SPN_LGF_BANK(SPN_LGF_GROUP_RANGE_LO)] = 0;
@@ -533,6 +536,12 @@ spn_lgf_layer_parent_equals_group()
 void
 spn_lgf_layer_load(SPN_SUBGROUP_UNIFORM const uint layer_id)
 {
+  //
+  // Load dwords:
+  //
+  //   SPN_LGF_LAYER_CMDS           0
+  //   SPN_LGF_LAYER_PARENT         1
+  //
 #if defined(SPN_DEVICE_RENDER_LGF_USE_SHUFFLE)
   //
   // SHUFFLE
@@ -554,6 +563,16 @@ spn_lgf_layer_load(SPN_SUBGROUP_UNIFORM const uint layer_id)
 void
 spn_lgf_group_load()
 {
+  //
+  // Load dwords:
+  //
+  //   SPN_LGF_GROUP_PARENTS_DEPTH  2  (SPN_LGF_GROUP_FIRST)
+  //   SPN_LGF_GROUP_PARENTS_BASE   3
+  //   SPN_LGF_GROUP_RANGE_LO       4
+  //   SPN_LGF_GROUP_RANGE_HI       5
+  //   SPN_LGF_GROUP_CMDS_ENTER     6
+  //   SPN_LGF_GROUP_CMDS_LEAVE     7  (SPN_LGF_GROUP_LAST)
+  //
 #if defined(SPN_DEVICE_RENDER_LGF_USE_SHUFFLE)
   //
   // SHUFFLE
@@ -565,8 +584,9 @@ spn_lgf_group_load()
   if (iid < SPN_LGF_GROUP_LAST - SPN_LGF_GROUP_FIRST + 1)
     lgf[0] = styling[lgf_group_id + iid];
 
-  // NOTE: wait for load to complete -- necessary on AMDVLK
-  subgroupBarrier();
+#if (SPN_RENDER_SUBGROUP_SIZE == 4)
+  lgf[1] = styling[lgf_group_id + 2 + gl_SubgroupInvocationID];
+#endif
 
 #elif defined(SPN_DEVICE_RENDER_LGF_USE_SHARED)
   //
@@ -753,27 +773,18 @@ int
 spn_tts_get_dy(const SPN_RENDER_TTS tts)
 {
   //
-  // The tts.dy bitfield is either [-32,-1] or [0,31].
+  // The tts.dy bitfield maps:
+  //
+  //   [-32,-1] -> [-32,-1]
+  //   [  0,31] -> [  1,32]
   //
   // After extracting the bitfield, the range must be adjusted:
   //
   //   if (dy >= 0) then ++dy
   //
-  // The branchless equivalent subtracts the twiddle shift (~tts>>31)
-  // which maps:
-  //
-  //   [  0,31] -> [  1,32]
-  //   [-32,-1] -> [-32,-1]
-  //
-  // FIXME(allanmac): evaluate performance of branchless since it was
-  // implemented this way in CUDA and OpenCL.
-  //
-  int dy = SPN_TTS_GET_DY(tts);
+  const int dy = SPN_TTS_GET_DY(tts);
 
-  if (dy >= 0)
-    ++dy;
-
-  return dy;
+  return dy + ((dy >= 0) ? 1 : 0);
 }
 
 //
@@ -1000,7 +1011,7 @@ spn_tile_cover_nonzero()
 
   SPN_RENDER_PIXEL_AREA area = 0;
 
-  subgroupBarrier();
+  subgroupMemoryBarrierShared();
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -1029,7 +1040,7 @@ spn_tile_cover_evenodd()
 
   SPN_RENDER_PIXEL_AREA area = 0;
 
-  subgroupBarrier();
+  subgroupMemoryBarrierShared();
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -1527,8 +1538,8 @@ spn_tile_color_acc_store_to_surface()
 #endif
 
 //
-// The default is to load up to subgroup size of TTCK keys in
-// registers and index them with a subgroup shuffle.
+// The default "TTCKS_USE_SHUFFLE" will load a subgroup size of TTCK
+// keys in registers and index them with a subgroup shuffle.
 //
 // The "TTCKS_USE_SHARED" switch enables loading a number of TTCK keys
 // and storing them to shared memory.
@@ -1553,6 +1564,18 @@ shared uvec2 ttck_smem[SPN_RENDER_SUBGROUP_SIZE];  // this could be smaller
 // The "STYLING_CMDS_NO_SHARED" switch is an even lower performance
 // implementation that reads commands one at a time from global
 // memory.
+//
+
+#if defined(SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE)
+
+#if SPN_RENDER_SUBGROUP_SIZE < SPN_STYLING_CMDS_MAX_COUNT
+#error "SPN_RENDER_SUBGROUP_SIZE < SPN_STYLING_CMDS_MAX_COUNT"
+#endif
+
+#endif
+
+//
+//
 //
 
 #if defined(SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHARED)
@@ -1650,7 +1673,7 @@ main()
 
     ttck_smem[gl_SubgroupInvocationID] = ttck_new;
 
-    subgroupBarrier();
+    subgroupMemoryBarrierShared();
 
     SPN_SUBGROUP_UNIFORM const uvec2 ttck_first = ttck_smem[ttck_lane];
 
@@ -1913,7 +1936,7 @@ main()
 
               ttck_smem[gl_SubgroupInvocationID] = ttck_new;
 
-              subgroupBarrier();
+              subgroupMemoryBarrierShared();
             }
         }
 
@@ -2022,7 +2045,7 @@ main()
           //
           // load a number of commands into shared
           //
-#if SPN_RENDER_SUBGROUP_SIZE >= SPN_STYLING_CMDS_COUNT_MAX
+#if SPN_RENDER_SUBGROUP_SIZE >= SPN_STYLING_CMDS_MAX_COUNT
           if (gl_SubgroupInvocationID <= cmd_count)
             spn_cmds[gl_SubgroupInvocationID] = styling[cmd_base + gl_SubgroupInvocationID];
 #else
@@ -2169,10 +2192,10 @@ main()
                     // return;  // this is an illegal opcode -- trap and die!
                 }
             }
-        }  // continue as long as tile flush isn't complete
+      }  // continue as long as tile flush isn't complete
       while (spn_lgf_flag_is_not_flush_complete());
 
-    }  // continue as long as there are still keys in this tile
+  }  // continue as long as there are still keys in this tile
   while (spn_lgf_flag_is_not_flush_finalize());
 }
 

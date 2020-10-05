@@ -96,12 +96,30 @@
 // to 13-16 bits and fit into 3 dwords but... it's easier to use a
 // uint4 with GPUs.
 //
-// FIXME: A non-affine transformation elevates a Bezier to a rational.
-// For this reason, we need to indicate with a bit flag if the
-// transform matrix has non-zero {w0,w1} elements.  The bit can be
-// part of the transform dword or stuffed into the unused cohort bits.
+// A non-affine transformation elevates a Bezier to a rational.  For this
+// reason, we indicate with a bit flag if the transform matrix has non-zero
+// {w0,w1} elements.
+//
+
 //
 // clang-format off
+//
+
+//
+// NOTE(allanmac): "PROJ" projective shaders aren't implemented in this CL.
+//
+#define SPN_RASTER_BUILDER_RAST_TYPE_EXPAND()                                     \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(line,       SPN_RAST_TYPE_PROJ_LINE,  4)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(quad,       SPN_RAST_TYPE_PROJ_QUAD,  6)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(cubic,      SPN_RAST_TYPE_PROJ_CUBIC, 8)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(line,       SPN_RAST_TYPE_LINE,       4)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(quad,       SPN_RAST_TYPE_QUAD,       6)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(cubic,      SPN_RAST_TYPE_CUBIC,      8)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(rat_quad,   SPN_RAST_TYPE_RAT_QUAD,   7)  \
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(rat_cubic,  SPN_RAST_TYPE_RAT_CUBIC, 10)
+
+//
+//
 //
 
 struct spn_cmd_fill
@@ -118,6 +136,8 @@ STATIC_ASSERT_MACRO_1(sizeof(struct spn_cmd_fill) == sizeof(uint32_t[4]));
 
 //
 // clang-format on
+//
+
 //
 // There are always as many dispatch records as there are fences in
 // the fence pool.  This simplifies reasoning about concurrency.
@@ -981,11 +1001,18 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   VkDescriptorBufferInfo * const dbi_fill_scan =
     spn_vk_ds_get_rasterize_fill_scan(instance, payload_1->ds.r);
 
+  // fill_scan_prefix[] "blocked" layout requires padding
+  uint32_t const fill_scan_subgroup_mask =
+    BITS_TO_MASK_MACRO(impl->config->p.group_sizes.named.fills_scan.subgroup_log2);
+
+  uint32_t const dispatch_cf_span_ru =
+    (dispatch->cf.span + fill_scan_subgroup_mask) & ~fill_scan_subgroup_mask;
+
   spn_allocator_device_temp_alloc(&device->allocator.device.temp.drw,
                                   device,
                                   spn_device_wait,
                                   SPN_VK_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_prefix) +
-                                    dispatch->cf.span * sizeof(SPN_TYPE_UVEC4),
+                                    dispatch_cf_span_ru * sizeof(SPN_TYPE_UVEC4) * 2,
                                   &payload_1->temp.fill_scan,
                                   dbi_fill_scan);
 
@@ -1214,8 +1241,8 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
 #define SPN_VK_P_BIND_RASTERIZE_NAME(_p) spn_vk_p_bind_rasterize_##_p
 
-#undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
-#define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n)                                            \
+#undef SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X
+#define SPN_RASTER_BUILDER_RAST_TYPE_EXPAND_X(_p, _i, _n)                                          \
   SPN_VK_P_BIND_RASTERIZE_NAME(_p)(instance, cb);                                                  \
   vkCmdDispatchIndirect(cb,                                                                        \
                         dbi_fill_scan->buffer,                                                     \
@@ -1223,7 +1250,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
                           SPN_VK_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_dispatch) +       \
                           sizeof(SPN_TYPE_UVEC4) * _i);
 
-  SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
+  SPN_RASTER_BUILDER_RAST_TYPE_EXPAND()
 
   ////////////////////////////////////////////////////////////////
   //
@@ -1478,8 +1505,7 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
       do
         {
           spn(device_wait(impl->device, __func__));
-        }
-      while (cf_ring->rem < count);
+      } while (cf_ring->rem < count);
     }
 
   //
@@ -1553,7 +1579,7 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
       // classify the transform
       //
       // if (w0==w1==0) then it's an affine matrix
-      cf.transform_type = (transforms->w0 == 0.0f) && (transforms->w1 == 0.0f)
+      cf.transform_type = ((transforms->w0 == 0.0f) && (transforms->w1 == 0.0f))
                             ? SPN_CMD_FILL_TRANSFORM_TYPE_AFFINE
                             : SPN_CMD_FILL_TRANSFORM_TYPE_PROJECTIVE;
 

@@ -72,9 +72,6 @@ SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTRK();
 //
 // MACROS
 //
-// Note that the XY bits are on a dword boundary so this may resolve
-// to two bit operations.
-//
 
 #define SPN_HS_IS_NOT_MAX(row_)         (r##row_ != HS_KEY_VAL_MAX)
 
@@ -93,8 +90,8 @@ spn_hs_ttrk_get_xy_xor(const uvec2 curr, const uvec2 prev)
 {
   const uvec2 c    = curr ^ prev;
   const uint  d_lo = SPN_BITFIELD_EXTRACT(c[0], SPN_TTRK_LO_OFFSET_X, SPN_TTRK_LO_BITS_X);
-  const uint  d_hi = SPN_BITFIELD_EXTRACT(c[1], 0, SPN_TTRK_HI_BITS_XY) << SPN_TTRK_LO_BITS_X;
-  const uint  d    = (d_lo | d_hi);
+  const uint  d_hi = SPN_BITFIELD_EXTRACT(c[1], 0, SPN_TTRK_HI_BITS_XY);
+  const uint  d    = d_lo | (d_hi << SPN_TTRK_LO_BITS_X);
 
   return d;
 }
@@ -212,15 +209,15 @@ main()
         }                                                                                          \
       else                                                                                         \
         {                                                                                          \
-          const uint xy_xor      = spn_hs_ttrk_get_xy_xor(r##row, r##prev);                        \
-          const bool is_new_x    = SPN_HS_TTRK_IS_NEW_X(xy_xor);                                   \
-          const bool is_new_xy   = SPN_HS_TTRK_IS_NEW_XY(xy_xor);                                  \
-          const uint new_x_mask  = is_new_x ? SPN_TTRK_NEW_X : SPN_TTRK_NEW_Y;                     \
-          const uint new_xy_mask = is_new_xy ? new_x_mask : 0;                                     \
+          const uint xy_xor           = spn_hs_ttrk_get_xy_xor(r##row, r##prev);                   \
+          const bool is_new_x         = SPN_HS_TTRK_IS_NEW_X(xy_xor);                              \
+          const bool is_new_xy        = SPN_HS_TTRK_IS_NEW_XY(xy_xor);                             \
+          const uint new_xy_mask_test = is_new_x ? SPN_TTRK_NEW_X : SPN_TTRK_NEW_Y;                \
+          const uint new_xy_mask      = is_new_xy ? new_xy_mask_test : 0;                          \
                                                                                                    \
           SPN_TTRK_SET_NEW_XY(r##row, new_xy_mask);                                                \
                                                                                                    \
-          pk += is_new_x ? 1 : 0;                                                                  \
+          pk += (new_xy_mask == SPN_TTRK_NEW_X) ? 1 : 0;                                           \
         }                                                                                          \
                                                                                                    \
       if (SPN_HS_TTRK_IS_BLOCK(row))                                                               \

@@ -80,20 +80,32 @@ typedef uint32_t spn_block_id_t;
 // PATH
 //
 
-union spn_path_header
+union spn_path_prims
 {
-  uint32_t           u32aN[SPN_PATH_HEAD_DWORDS];
+  uint32_t   array[SPN_BLOCK_ID_TAG_PATH_COUNT];
 
   struct {
-    uint32_t         handle;   // host handle
-    uint32_t         blocks;   // # of S-segment blocks in path
-    uint32_t         nodes;    // # of S-segment node blocks -- not including header
-    uint32_t         na;       // unused
+    uint32_t lines;
+    uint32_t quads;
+    uint32_t cubics;
+    uint32_t rat_quads;
+    uint32_t rat_cubics;
+  } named;
+};
 
-    struct spn_uvec4 prims;
+union spn_path_header
+{
+  uint32_t               array[SPN_PATH_HEAD_DWORDS];
 
-    struct spn_vec4  bounds;
-  };
+  struct {
+    uint32_t             handle; // host handle
+    uint32_t             blocks; // total number of blocks in entire path object -- includes nodes and segments
+    uint32_t             nodes;  // number of trailing path node blocks -- not including head
+
+    union spn_path_prims prims;
+
+    struct spn_vec4      bounds;
+  } named;
 };
 
 //

@@ -123,8 +123,6 @@ spn_path_builder_move_to(spn_path_builder_t path_builder, float x0, float y0)
 //
 //
 
-#include <stdio.h>
-
 spn_result_t
 spn_path_builder_line_to(spn_path_builder_t path_builder, float x1, float y1)
 {
@@ -222,7 +220,6 @@ spn_path_builder_cubic_smooth_to(spn_path_builder_t path_builder,  //
 //
 //
 //
-
 
 spn_result_t
 spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //

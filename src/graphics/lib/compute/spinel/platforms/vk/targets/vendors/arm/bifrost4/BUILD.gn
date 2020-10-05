@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../spinel_target.gni")
+
+#
+# Generate the Spinel target.
+#
+# This produces either a source set or a group that drives the
+# creation of a dumped binary image of the target.
+#
+# Note that each Spinel target depends on a HotSort target.
+#
+# For now, we need to pass the *same* HotSort vendor directory to both
+# Spinel and its HotSort implementation.  This is slated for removal.
+#
+spinel_target("generate") {
+  spinel_target_name = "spn_arm_bifrost4"
+  public_deps = [ "hotsort" ]
+}

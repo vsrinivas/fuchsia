@@ -30,6 +30,7 @@
 #define SPN_DEVICE_AMD_GCN3                                       1
 #define SPN_DEVICE_SUBGROUP_SIZE_LOG2                             6   // 64
 #define SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE                        128 // bytes
+#define SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS                       478
 
 //
 // TILE CONFIGURATION

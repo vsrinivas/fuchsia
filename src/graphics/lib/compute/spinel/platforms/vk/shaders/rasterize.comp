@@ -28,11 +28,18 @@
 // Enable NVIDIA-specific extension
 //
 
-#if SPN_DEVICE_RASTERIZE_EXT_ENABLE_SUBGROUP_PARTITION_NV && GL_NV_shader_subgroup_partitioned
+#if (defined(SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_NV) &&                                 \
+     defined(GL_NV_shader_subgroup_partitioned))
 
 #extension GL_NV_shader_subgroup_partitioned : require
 
 #endif
+
+//
+//
+//
+
+#include "partition.h"
 
 //
 //
@@ -45,34 +52,6 @@ layout(local_size_x = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE) in;
 //
 
 SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
-
-//
-// clang-format off
-//
-
-#define SPN_RASTERIZE_SUBGROUP_SIZE           (1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
-#define SPN_RASTERIZE_SUBGROUP_MASK           SPN_BITS_TO_MASK(SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
-
-#define SPN_RASTERIZE_SMEM_CACHE_XY_INVALID   SPN_UINT_MAX
-
-#define SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2  2
-#define SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2  2
-#define SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2    4
-
-#define SPN_RASTERIZE_SMEM_XY_SIZE            (SPN_RASTERIZE_SUBGROUP_SIZE * 2 + SPN_RASTERIZE_SUBGROUP_SIZE - 1)
-
-#define SPN_RASTERIZE_SMEM_CACHE_SIZE         (1 << SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2)
-
-//
-// FIXME(allanmac): expand this to fit the remaining SMEM
-//
-// The spn_bin() function can produce up to a subgroup of new TTSB
-// allocations.  The larger we make this buffer, the fewer atomic
-// appends are made to the TTRK key extent.
-//
-#define SPN_RASTERIZE_SMEM_FLUSH_SIZE         (SPN_RASTERIZE_SUBGROUP_SIZE + SPN_RASTERIZE_SUBGROUP_SIZE / 2 - 1)
-#define SPN_RASTERIZE_SMEM_FLUSH_MARK         (SPN_RASTERIZE_SMEM_FLUSH_SIZE - SPN_RASTERIZE_SUBGROUP_SIZE)
-
 
 //
 // Declare per-subgroup smem struct
@@ -103,20 +82,90 @@ SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
 // The total SMEM size is at least: SUBGROUP_SIZE * 10 + 28
 //
 //    Subgroup | SMEM dwords
-//   ----------+--------------
+//   ----------+-------------
 //        4    |     68      <- Bifrost4
 //        8    |    108      <- Intel, Bifrost8
 //       16    |    188      <- Valhall
 //       32    |    358      <- NVIDIA, AMD/RDNA
 //       64    |    668      <- AMD/GCN - results in reduced occupancy!
 //
-// A good target amount of SMEM per subgroup by arch is:
+// The required amount of SMEM dwords not including the
+// `.flush` structure is:
+//
+//   SUBGROUP_SIZE * 7 + 30
+//
+//      Vendor/Arch    | Min SMEM dwords
+//   ------------------+-----------------
+//    Bifrost4         |        58
+//    Bifrost8         |        86
+//    Intel            |        86
+//    NVIDIA, AMD/RDNA |       254
+//    AMD/GCN          |       478
+//
+// An estimate of available SMEM per subgroup is:
 //
 //      Vendor/Arch    | Available dwords
 //   ------------------+------------------
+//    Bifrost4         |       128
+//    Bifrost8         |       170
 //    Intel            |       292
 //    NVIDIA, AMD/RDNA |       512
 //    AMD/GCN          |       409
+//
+// The remainder can be used for the `.flush` structure:
+//
+//      Vendor/Arch    | Remainining dwords
+//   ------------------+--------------------
+//    Bifrost4         |   128 - 58  =  70
+//    Bifrost8         |   170 - 86  =  84
+//    Intel            |   292 - 86  = 206
+//    NVIDIA, AMD/RDNA |   512 - 256 = 256
+//    AMD/GCN          |   409 - 478 = -69 (allocate at least minimum)
+//
+
+//
+// clang-format off
+//
+
+#define SPN_RASTERIZE_SUBGROUP_SIZE           (1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
+#define SPN_RASTERIZE_SUBGROUP_MASK           SPN_BITS_TO_MASK(SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
+
+#define SPN_RASTERIZE_SMEM_CACHE_XY_INVALID   SPN_UINT_MAX
+
+#define SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2  2
+#define SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2  2
+#define SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2    4
+
+#define SPN_RASTERIZE_SMEM_XY_SIZE            (SPN_RASTERIZE_SUBGROUP_SIZE * 2 + SPN_RASTERIZE_SUBGROUP_SIZE - 1)
+
+#define SPN_RASTERIZE_SMEM_CACHE_SIZE         (1 << SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2)
+
+//
+// The .flush structure is sized to the greater of the minimum number
+// of required dwords or the remaining SMEM.
+//
+// The spn_bin() function can produce up to a subgroup of new TTSB
+// allocations.  The larger we make this buffer, the fewer atomic
+// appends are made to the TTRK key extent.
+//
+// The TTRK keys are 64-bit so we can assume a half-subgroup is an
+// efficient store.
+//
+
+#ifndef SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS
+#error "SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS undefined!"
+#endif
+
+#define SPN_RASTERIZE_SMEM_FLUSH_REM          (SPN_DEVICE_SMEM_PER_SUBGROUP_DWORDS - (SPN_RASTERIZE_SUBGROUP_SIZE * 7 + 30))
+
+#define SPN_RASTERIZE_SMEM_FLUSH_MIN          (SPN_RASTERIZE_SUBGROUP_SIZE + SPN_RASTERIZE_SUBGROUP_SIZE / 2) // half-subgroup
+#define SPN_RASTERIZE_SMEM_FLUSH_MAX          (SPN_RASTERIZE_SMEM_FLUSH_REM / 2)
+#define SPN_RASTERIZE_SMEM_FLUSH_SIZE         SPN_GLSL_MAX_MACRO(int, SPN_RASTERIZE_SMEM_FLUSH_MIN, SPN_RASTERIZE_SMEM_FLUSH_MAX)
+
+#define SPN_RASTERIZE_SMEM_FLUSH_MARK         (SPN_RASTERIZE_SMEM_FLUSH_SIZE - SPN_RASTERIZE_SUBGROUP_SIZE)
+
+//
+//
 //
 
 struct spn_rasterize_cache
@@ -127,22 +176,22 @@ struct spn_rasterize_cache
 
 struct spn_rasterize_flush
 {
-  uint ttsb[SPN_RASTERIZE_SMEM_FLUSH_SIZE];
   uint xy  [SPN_RASTERIZE_SMEM_FLUSH_SIZE];
+  uint ttsb[SPN_RASTERIZE_SMEM_FLUSH_SIZE];
 };
 
 struct spn_rasterize_smem
 {
   uint                scratch[SPN_RASTERIZE_SUBGROUP_SIZE]; // SUBGROUP_SIZE
-
-  uint                xy     [SPN_RASTERIZE_SMEM_XY_SIZE];  // SUBGROUP_SIZE *  3 -  1
-  uint                tts    [SPN_RASTERIZE_SMEM_XY_SIZE];  // SUBGROUP_SIZE *  3 -  1
-
-  spn_rasterize_cache cache;                                //                    + 32
-
-  spn_rasterize_flush flush;                                // SUBGROUP_SIZE *  3 -  2
-                                                            // -----------------------
-};                                                          // SUBGROUP_SIZE * 10 + 28
+                                                            //
+  uint                xy     [SPN_RASTERIZE_SMEM_XY_SIZE];  // SUBGROUP_SIZE * 3 -  1
+  uint                tts    [SPN_RASTERIZE_SMEM_XY_SIZE];  // SUBGROUP_SIZE * 3 -  1
+                                                            //
+  spn_rasterize_cache cache;                                //                   + 32
+                                                            // ----------------------
+                                                            // SUBGROUP_SIZE * 7 + 30
+  spn_rasterize_flush flush;
+};
 
 //
 // RASTERIZE CONTROL VARS
@@ -166,25 +215,33 @@ struct spn_rasterize_smem
 //
 // SHUFFLE ONE OR MORE SUBGROUPS OF REGISTERS
 //
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 5)
-
-uint rcv_subgroup = 0;
-
 #define SPN_RCV_cohort          0
 #define SPN_RCV_ring_base       1
 #define SPN_RCV_ring_span       2
 #define SPN_RCV_ttrk_count      3
 #define SPN_RCV_subblocks_rem   4
 
-#define SPN_RCV_LANE(n_)        SPN_RCV_##n_
+#define SPN_RCV_COUNT           5
 
-#define SPN_RCV_LD(n_)          SPN_SUBGROUP_UNIFORM(subgroupBroadcast(rcv_subgroup,SPN_RCV_LANE(n_)))
-#define SPN_RCV_ST(n_, v_)      if (gl_SubgroupInvocationID == SPN_RCV_LANE(n_)) {  rcv_subgroup  = v_; }
-#define SPN_RCV_INC(n_, v_)     if (gl_SubgroupInvocationID == SPN_RCV_LANE(n_)) {  rcv_subgroup += v_; }
-#define SPN_RCV_DEC(n_, v_)     if (gl_SubgroupInvocationID == SPN_RCV_LANE(n_)) {  rcv_subgroup -= v_; }
+#define SPN_RCV_NAME(n_)        SPN_RCV_##n_
 
+#define SPN_RCV_BANKS           ((SPN_RCV_COUNT + SPN_RASTERIZE_SUBGROUP_SIZE - 1) / SPN_RASTERIZE_SUBGROUP_SIZE)
+#define SPN_RCV_BANK(n_)        (SPN_RCV_NAME(n_) / SPN_RASTERIZE_SUBGROUP_SIZE)
+
+#define SPN_RCV_LANE(n_)        (SPN_RCV_NAME(n_) % SPN_RASTERIZE_SUBGROUP_SIZE)
+#define SPN_RCV_IS_LANE(n_)     (gl_SubgroupInvocationID == SPN_RCV_LANE(n_))
+
+#define SPN_RCV_LD(n_)          SPN_SUBGROUP_UNIFORM(subgroupBroadcast(rcv_subgroup[SPN_RCV_BANK(n_)],SPN_RCV_LANE(n_)))
+#define SPN_RCV_ST(n_, v_)      if (SPN_RCV_IS_LANE(n_)) { rcv_subgroup[SPN_RCV_BANK(n_)]  = v_; }
+#define SPN_RCV_INC(n_, v_)     if (SPN_RCV_IS_LANE(n_)) { rcv_subgroup[SPN_RCV_BANK(n_)] += v_; }
+#define SPN_RCV_DEC(n_, v_)     if (SPN_RCV_IS_LANE(n_)) { rcv_subgroup[SPN_RCV_BANK(n_)] -= v_; }
+
+#if   (SPN_RCV_BANKS == 1)
+uint rcv_subgroup[SPN_RCV_BANKS] = { 0 };
+#elif (SPN_RCV_BANKS == 2)
+uint rcv_subgroup[SPN_RCV_BANKS] = { 0, 0 };
 #else
-#error "SPN_RCV_XXX shuffle not implemented for subgroup size < 5"
+#error "SPN_RASTERIZE_SUBGROUP_SIZE < 4 not supported"
 #endif
 //
 //
@@ -283,6 +340,10 @@ uint block_ids = SPN_BLOCK_ID_INVALID;
 
 #define SPN_RASTERIZE_SUBGROUPS (SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE / SPN_RASTERIZE_SUBGROUP_SIZE)
 
+//
+//
+//
+
 #if (SPN_RASTERIZE_SUBGROUPS == 1)
 
 shared spn_rasterize_smem smem;
@@ -379,25 +440,6 @@ spn_segment_next(SPN_SUBGROUP_UNIFORM inout uint tb_id_idx,
 #define SPN_RASTERIZE_SEGMENT_QUAD        ((2.0f * 1.0f) / SPN_RASTERIZE_SEGMENT_DENOM)
 #define SPN_RASTERIZE_SEGMENT_CUBIC       ((3.0f * 2.0f) / SPN_RASTERIZE_SEGMENT_DENOM)
 // clang-format on
-
-//
-// Dump prefix sums and totals
-//
-
-#define SPN_DEBUG_SEGMENT()                                                                        \
-  {                                                                                                \
-    uint debug_base = 0;                                                                           \
-                                                                                                   \
-    if (gl_SubgroupInvocationID == 0)                                                              \
-      debug_base = atomicAdd(bp_debug_count[0], 4 * SPN_RASTERIZE_SUBGROUP_SIZE);                  \
-                                                                                                   \
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;                       \
-                                                                                                   \
-    bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = 0xFEEDFACE;                           \
-    bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = s_inc;                                \
-    bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE] = s_exc;                                \
-    bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE] = s_rem;                                \
-  }
 
 //
 //
@@ -696,203 +738,74 @@ spn_append(const ivec2 h0u, const ivec2 hmu, const ivec2 h1u)
 //
 // On non-NVIDIA platforms, this primitive can also be emulated.
 //
-// Below are two different emulations of this operation.
+#if (defined(SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_NV) &&                                 \
+     defined(GL_NV_shader_subgroup_partitioned))
 //
-
+// NVIDIA native partition
 //
-// FIXME(allanmac): Investigate if improving these primitives is
-// possible... I'm not sure if there is a better implementation than the
-// alternatives listed below?
+#define SPN_RASTERIZE_PARTITION(part_, v_) part_ = subgroupPartitionNV(v_)
+
+#elif defined(SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_BALLOT)
 //
-
+// Ballot partition
 //
-// Partition using subgroup broadcasts.
-//
-
-#define SPN_PARTITION_BROADCAST_INIT(v_, i_)                                                       \
-  part[i_ / 32] = (subgroupBroadcast(v_, i_) == v_) ? (1u << (i_ & 0x1F)) : 0
-
-#define SPN_PARTITION_BROADCAST_TEST(v_, i_)                                                       \
-  part[i_ / 32] |= (subgroupBroadcast(v_, i_) == v_) ? (1u << (i_ & 0x1F)) : 0
-
-uvec4
-spn_partition_broadcast(const uint v)
-{
-  uvec4 part;
-
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 4)
-
-  SPN_PARTITION_BROADCAST_INIT(v, 0x00);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x01);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x02);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x03);
-
-#endif
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 8)
-
-  SPN_PARTITION_BROADCAST_TEST(v, 0x04);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x05);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x06);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x07);
-
-#endif
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 16)
-
-  SPN_PARTITION_BROADCAST_TEST(v, 0x08);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x09);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x0A);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x0B);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x0C);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x0D);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x0E);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x0F);
-
-#endif
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 32)
-
-  SPN_PARTITION_BROADCAST_TEST(v, 0x10);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x11);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x12);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x13);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x14);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x15);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x16);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x17);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x18);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x19);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x1A);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x1B);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x1C);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x1D);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x1E);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x1F);
-
-#endif
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 64)
-
-  SPN_PARTITION_BROADCAST_INIT(v, 0x20);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x21);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x22);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x23);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x24);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x25);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x26);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x27);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x28);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x29);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x2A);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x2B);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x2C);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x2D);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x2E);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x2F);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x30);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x31);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x32);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x33);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x34);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x35);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x36);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x37);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x38);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x39);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x3A);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x3B);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x3C);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x3D);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x3E);
-  SPN_PARTITION_BROADCAST_TEST(v, 0x3F);
-
+#if (SPN_RASTERIZE_SUBGROUP_SIZE <= 32)
+#define SPN_RASTERIZE_PARTITION_BALLOT_UVEC SPN_PARTITION_BALLOT_UVEC1
+#elif (SPN_RASTERIZE_SUBGROUP_SIZE <= 64)
+#define SPN_RASTERIZE_PARTITION_BALLOT_UVEC SPN_PARTITION_BALLOT_UVEC2
+#else
+#error "SPN_PARTITION_BALLOT_UVEC*() subgroup size not supported!"
 #endif
 
-#if (SPN_RASTERIZE_SUBGROUP_SIZE >= 128)
-#error "subgroup size unimplemented"
-#endif
-
-  return part;
-}
-
-//
-// Partition the 24 bit XY value and 1 extra bit using ballots.
-//
-// This implementation may be preferable on wide subgroup devices.
-//
-
-#define SPN_PARTITION_BALLOT_ONE uvec4(1, 1, 1, 1)
-
-#define SPN_PARTITION_BALLOT_ZERO uvec4(0, 0, 0, 0)
-
-#define SPN_PARTITION_BALLOT_INIT(v_, i_)                                                          \
-  {                                                                                                \
-    const bool p = (v_ & (1u << i_)) != 0;                                                         \
-                                                                                                   \
-    part = subgroupBallot(p) ^ (p ? SPN_PARTITION_BALLOT_ONE : SPN_PARTITION_BALLOT_ZERO);         \
-  }
-
-#define SPN_PARTITION_BALLOT_TEST(v_, i_)                                                          \
-  {                                                                                                \
-    const bool p = (v_ & (1u << i_)) != 0;                                                         \
-                                                                                                   \
-    part &= subgroupBallot(p) ^ (p ? SPN_PARTITION_BALLOT_ONE : SPN_PARTITION_BALLOT_ZERO);        \
-  }
-
-uvec4
-spn_partition_ballot_25(const uint v)
-{
-  uvec4 part;
-
-  SPN_PARTITION_BALLOT_INIT(v, 0x00);
-  SPN_PARTITION_BALLOT_TEST(v, 0x01);
-  SPN_PARTITION_BALLOT_TEST(v, 0x02);
-  SPN_PARTITION_BALLOT_TEST(v, 0x03);
-  SPN_PARTITION_BALLOT_TEST(v, 0x04);
-  SPN_PARTITION_BALLOT_TEST(v, 0x05);
-  SPN_PARTITION_BALLOT_TEST(v, 0x06);
-  SPN_PARTITION_BALLOT_TEST(v, 0x07);
-  SPN_PARTITION_BALLOT_TEST(v, 0x08);
-  SPN_PARTITION_BALLOT_TEST(v, 0x09);
-  SPN_PARTITION_BALLOT_TEST(v, 0x0A);
-  SPN_PARTITION_BALLOT_TEST(v, 0x0B);
-  SPN_PARTITION_BALLOT_TEST(v, 0x0C);
-  SPN_PARTITION_BALLOT_TEST(v, 0x0D);
-  SPN_PARTITION_BALLOT_TEST(v, 0x0E);
-  SPN_PARTITION_BALLOT_TEST(v, 0x0F);
-  SPN_PARTITION_BALLOT_TEST(v, 0x10);
-  SPN_PARTITION_BALLOT_TEST(v, 0x11);
-  SPN_PARTITION_BALLOT_TEST(v, 0x12);
-  SPN_PARTITION_BALLOT_TEST(v, 0x13);
-  SPN_PARTITION_BALLOT_TEST(v, 0x14);
-  SPN_PARTITION_BALLOT_TEST(v, 0x15);
-  SPN_PARTITION_BALLOT_TEST(v, 0x16);
-  SPN_PARTITION_BALLOT_TEST(v, 0x17);
-  SPN_PARTITION_BALLOT_TEST(v, 0x18);  // extra invalid bit
-
-  return part;
-}
-
-//
-// We're assuming that SPN_TTRK_BITS_XY remains at 24 bits
-//
-
+// Verify that SPN_TTRK_BITS_XY remains at 24 bits
 #if (SPN_TTRK_BITS_XY != 24)
 #error "SPN_TTRK_BITS_XY != 24"
 #endif
 
+// clang-format off
+#define SPN_RASTERIZE_PARTITION(part_, v_)                                                         \
+  SPN_PARTITION_BALLOT_INIT(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  0,  0,  0)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  1,  1,  1)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  2,  2,  2)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  3,  3,  3)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  4,  4,  4)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  5,  5,  5)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  6,  6,  6)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  7,  7,  7)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  8,  8,  8)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_,  9,  9,  9)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 10, 10, 10)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 11, 11, 11)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 12, 12, 12)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 13, 13, 13)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 14, 14, 14)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 15, 15, 15)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 16, 16, 16)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 17, 17, 17)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 18, 18, 18)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 19, 19, 19)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 20, 20, 20)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 21, 21, 21)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 22, 22, 22)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 23, 23, 23)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_RASTERIZE_PARTITION_BALLOT_UVEC, part_, v_, 24, 24, 31)
+// clang-format on
+
+#else  // defined(SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_BROADCAST)
 //
-// Select a partitioning primitive
+// Broadcast partition -- default partitioning strategy
 //
-
-#if SPN_DEVICE_RASTERIZE_EXT_ENABLE_SUBGROUP_PARTITION_NV && GL_NV_shader_subgroup_partitioned
-
-#define SPN_PARTITION(v) subgroupPartitionNV(v)
-
-#elif SPN_DEVICE_RASTERIZE_ENABLE_SUBGROUP_PARTITION_BALLOT
-
-#define SPN_PARTITION(v) spn_partition_ballot_25(v)
-
-#else  // default -- good for small subgroups but needs to be benchmarked
-
-#define SPN_PARTITION(v) spn_partition_broadcast(v)
+#if (SPN_RASTERIZE_SUBGROUP_SIZE == 4)
+#define SPN_RASTERIZE_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_4(part_, v_)
+#elif (SPN_RASTERIZE_SUBGROUP_SIZE == 8)
+#define SPN_RASTERIZE_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_8(part_, v_)
+#elif (SPN_RASTERIZE_SUBGROUP_SIZE == 16)
+#define SPN_RASTERIZE_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_16(part_, v_)
+#elif (SPN_RASTERIZE_SUBGROUP_SIZE == 32)
+#define SPN_RASTERIZE_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_32(part_, v_)
+#elif (SPN_RASTERIZE_SUBGROUP_SIZE == 64)
+#define SPN_RASTERIZE_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_64(part_, v_)
+#endif
 
 #endif
 
@@ -968,8 +881,10 @@ spn_flush_ttrks(SPN_SUBGROUP_UNIFORM const uint ttrk_count)
     }
 
   SPN_SUBGROUP_UNIFORM const uint ttrks_base = subgroupBroadcast(ttrks_prev, 0);
+  SPN_SUBGROUP_UNIFORM const uint cohort     = SPN_RCV_LD(cohort);
 
-  SPN_SUBGROUP_UNIFORM const uint cohort = SPN_RCV_LD(cohort);
+  // SMEM READS: flush.ttsb, flush.xy
+  subgroupMemoryBarrierShared();
 
   for (uint ii = gl_SubgroupInvocationID; ii < ttrk_count; ii += SPN_RASTERIZE_SUBGROUP_SIZE)
     {
@@ -1047,7 +962,7 @@ spn_alloc(const uint                      xy,
         }
 
       //
-      // blindly initialize TTSB blocks
+      // Blindly initialize new TTSB blocks
       //
       // FIXME(allanmac): it *might* be better to only initialize
       // sublocks-per-subgroup at a time -- especially if the block
@@ -1095,16 +1010,13 @@ spn_alloc(const uint                      xy,
 
   if (gl_SubgroupInvocationID == ttsb_lane)
     {
-      SPN_RASTERIZE_SMEM().flush.ttsb[ttrk_idx] = subblock_id;
       SPN_RASTERIZE_SMEM().flush.xy[ttrk_idx]   = xy;
+      SPN_RASTERIZE_SMEM().flush.ttsb[ttrk_idx] = subblock_id;
     }
 
   // flush if there are too many TTRK keys
-  if (ttrk_count > SPN_RASTERIZE_SMEM_FLUSH_MARK)
+  if (ttrk_count >= SPN_RASTERIZE_SMEM_FLUSH_MARK)
     {
-      // SMEM READS: flush.ttsb, flush.xy
-      subgroupBarrier();
-
       spn_flush_ttrks(ttrk_count);
 
       ttrk_count = 0;
@@ -1158,21 +1070,6 @@ spn_free_blocks()
 uint
 spn_ballot_and_le_msb(const uvec4 a, const uvec4 b)
 {
-#if 1
-
-  const uvec4 c = a & b & gl_SubgroupLeMask;
-
-  if (subgroupBallotBitCount(c) != 0)
-    {
-      return subgroupBallotFindMSB(c);  // undefined for 0
-    }
-  else
-    {
-      return SPN_UINT_MAX;
-    }
-
-#else
-
 #if (SPN_RASTERIZE_SUBGROUP_SIZE <= 32)
 
   // returns -1 if not found
@@ -1197,8 +1094,6 @@ spn_ballot_and_le_msb(const uvec4 a, const uvec4 b)
 #else
 #error "Greater than 64 lanes isn't implemented."
 #endif
-
-#endif
 }
 
 //
@@ -1215,44 +1110,45 @@ spn_ballot_and_le_msb(const uvec4 a, const uvec4 b)
 void
 spn_bin_subgroup(const uint xy, const uint tts)
 {
+  //
+  // Partition the subgroup by value.
+  //
+  // NOTE(allanmac): Partition is a very powerful primitive but it's
+  // not cheap on wide GPUs unless it's implemented in hardware.
+  // There are a few portable implementations defined.
+  //
+  // NOTE(allanmac): there may be opportunities throughout the Spinel
+  // codebase to trim the uvec4 subgroup ballot to the native type.
+  // It's unclear if native compilation is doing a good job dropping
+  // the 3 or 2 irrelevant dwords from the overall register footprint.
+  //
+  // NOTE(allanmac): in the final spn_bin() any invalid xy values will
+  // form a partition.
+  //
+  uvec4 part;
+
+  SPN_RASTERIZE_PARTITION(part, xy);
+
+  const uint part_msb = subgroupBallotFindMSB(part);
+  uint       part_idx = subgroupBallotExclusiveBitCount(part);
+
+  // is this the high lane of a valid partition?
+  const bool is_part_msb = (part_msb == gl_SubgroupInvocationID);
+
+  //
+  // Append to cache entry
+  //
+
   // look up cache entries
   const uint hash       = spn_hash(xy);
   const uint entry_xy   = SPN_RASTERIZE_SMEM().cache.xy[hash];
   const uint entry_base = SPN_RASTERIZE_SMEM().cache.base[hash];
 
-  //
-  // partition the subgroup by value
-  //
-  // NOTE(allanmac): the partition is a very powerful primitive but it's
-  // not cheap on wide GPUs unless it's implemented in hardware.  There
-  // are a few implementations above.
-  //
-  // NOTE(allanmac): there may be opportunities throughout the Spinel
-  // codebase to trim the uvec4 subgroup ballot to the native type.
-  // It's unclear if native compilation is doing a good job dropping the
-  // 3 or 2 irrelevant dwords from the overall register footprint.
-  //
-  // NOTE(allanmac): in the final spn_bin() any invalid xy values will
-  // form a partition.
-  //
-  const uvec4 part     = SPN_PARTITION(xy);
-  const uint  part_msb = subgroupBallotFindMSB(part);
-  uint        part_idx = subgroupBallotExclusiveBitCount(part);
-
   // is this a valid cache hit?
   const bool is_entry_hit = (entry_xy == xy);
 
-  // is this the lane of a valid partition?
-  const bool is_part_msb = (part_msb == gl_SubgroupInvocationID);
-
-  //
-  // append to cache entry
-  //
-
-  // ttsb base
-  uint part_base = 0;
-
   // which lanes belong to the partial TTSB?
+  uint part_base       = 0;
   bool is_partial_ttsb = false;
 
   if (is_entry_hit)
@@ -1288,11 +1184,16 @@ spn_bin_subgroup(const uint xy, const uint tts)
   // fight for new entry
   if (is_new_entry)
     {
+#if defined(SPN_DEVICE_ARM_BIFROST4)
+      // NOTE(allanmac): it appears the G31 stores have 16-bit atomicity
+      atomicExchange(SPN_RASTERIZE_SMEM().cache.xy[hash], xy);
+#else
       SPN_RASTERIZE_SMEM().cache.xy[hash] = xy;
+#endif
     }
 
   // SMEM READS: cache.xy
-  subgroupBarrier();
+  subgroupMemoryBarrierShared();
 
   // an index of 0 is a new TTSB subblock
   const bool is_new_ttsb = (part_idx == 0);
@@ -1359,44 +1260,45 @@ spn_bin_subgroup(const uint xy, const uint tts)
 void
 spn_bin_rem(const uint xy, const uint tts)
 {
+  //
+  // Partition the subgroup by value.
+  //
+  // NOTE(allanmac): Partition is a very powerful primitive but it's
+  // not cheap on wide GPUs unless it's implemented in hardware.
+  // There are a few portable implementations defined.
+  //
+  // NOTE(allanmac): there may be opportunities throughout the Spinelg
+  // codebase to trim the uvec4 subgroup ballot to the native type.
+  // It's unclear if native compilation is doing a good job dropping
+  // the 3 or 2 irrelevant dwords from the overall register footprint.
+  //
+  // NOTE(allanmac): in the final spn_bin() any invalid xy values will
+  // form a partition.
+  //
+  uvec4 part;
+
+  SPN_RASTERIZE_PARTITION(part, xy);
+
+  const uint part_msb = subgroupBallotFindMSB(part);
+  uint       part_idx = subgroupBallotExclusiveBitCount(part);
+
+  // is this a valid xy?
+  const bool is_xy_valid = (xy != SPN_RASTERIZE_SMEM_CACHE_XY_INVALID);
+
+  //
+  // Append to cache entry
+  //
+
   // look up cache entries
   const uint hash       = spn_hash(xy);
   const uint entry_xy   = SPN_RASTERIZE_SMEM().cache.xy[hash];
   const uint entry_base = SPN_RASTERIZE_SMEM().cache.base[hash];
 
-  //
-  // partition the subgroup by value
-  //
-  // NOTE(allanmac): the partition is a very powerful primitive but it's
-  // not cheap on wide GPUs unless it's implemented in hardware.  There
-  // are a few implementations above.
-  //
-  // NOTE(allanmac): there may be opportunities throughout the Spinel
-  // codebase to trim the uvec4 subgroup ballot to the native type.
-  // It's unclear if native compilation is doing a good job dropping the
-  // 3 or 2 irrelevant dwords from the overall register footprint.
-  //
-  // NOTE(allanmac): in the final spn_bin() any invalid xy values will
-  // form a partition.
-  //
-  const uvec4 part     = SPN_PARTITION(xy);
-  const uint  part_msb = subgroupBallotFindMSB(part);
-  uint        part_idx = subgroupBallotExclusiveBitCount(part);
-
-  // is this a valid xy?
-  const bool is_xy_valid = (xy != SPN_RASTERIZE_SMEM_CACHE_XY_INVALID);
-
   // is this a valid cache hit?
   const bool is_entry_hit = is_xy_valid && (entry_xy == xy);
 
-  //
-  // append to cache entry
-  //
-
-  // ttsb base
-  uint part_base = 0;
-
   // which lanes belong to the partial TTSB?
+  uint part_base       = 0;
   bool is_partial_ttsb = false;
 
   if (is_entry_hit)
@@ -1538,7 +1440,7 @@ spn_flush_rem()
         }
 
       // SMEM READS: xy, tts
-      subgroupBarrier();
+      subgroupMemoryBarrierShared();
 
       if (is_valid)
         {
@@ -1572,7 +1474,7 @@ spn_scan_max(const int inc, const int exc)
     }
 
   // read-after-write
-  subgroupBarrier();
+  subgroupMemoryBarrierShared();
 
   // get id for lane
   const uint src_iid = SPN_RASTERIZE_SMEM().scratch[gl_SubgroupInvocationID];
@@ -1640,17 +1542,33 @@ main()
 #endif
 
   //
-  // Quads/cubics/etc. need to use the dispatch exclusive scan offset as
-  // the base for the sid in order to properly index into the rast_cmds
-  // array.
+  // Each rasterization type uses the dispatch exclusive scan offset
+  // as the base for the sid in order to properly index into the
+  // rast_cmds array.
   //
-  // The exclusive scan offset for TAG_PATH_LINE is always 0 so we can
-  // skip it.
+  // Loading the offset of the first type can be skipped since it will
+  // always be zero.
   //
-#if (SPN_RASTERIZE_PATH_PRIM_TYPE != SPN_BLOCK_ID_TAG_PATH_LINE)
+#if (SPN_RASTERIZE_PATH_PRIM_TYPE != 0)
 
   sid += fill_scan_dispatch[SPN_RASTERIZE_PATH_PRIM_TYPE][3];
 
+#endif
+
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], 4 * SPN_RASTERIZE_SUBGROUP_SIZE);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = sid;
+    bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = fill_scan_dispatch[SPN_RASTERIZE_PATH_PRIM_TYPE][3];
+    bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE] = gl_WorkGroupSize.x;
+    bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE] = fill_scan_counts[SPN_RASTERIZE_PATH_PRIM_TYPE];
+  }
 #endif
 
   //
@@ -1748,7 +1666,7 @@ main()
   a##I.x = uintBitsToFloat(bp_blocks[SPN_PATH_SEGMENT(block_id)]);                                 \
   spn_segment_next(tb_id_idx, block_id);                                                           \
   a##I.y = uintBitsToFloat(bp_blocks[SPN_PATH_SEGMENT(block_id)]);                                 \
-  if (!L || (SPN_RASTERIZE_PATH_PRIM_TYPE >= SPN_BLOCK_ID_TAG_PATH_RAT_QUAD))                      \
+  if (!L || (SPN_RASTERIZE_PATH_PRIM_TYPE >= SPN_RAST_TYPE_RAT_QUAD))                              \
     spn_segment_next(tb_id_idx, block_id);
 
   SPN_RASTERIZE_PATH_PRIM_XY_EXPAND()
@@ -1760,51 +1678,6 @@ main()
     spn_segment_next(tb_id_idx, block_id);
 
   SPN_RASTERIZE_PATH_PRIM_W_EXPAND()
-
-  //
-  // DEBUG -- dump the untransformed segments
-  //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      {
-        debug_base = atomicAdd(bp_debug_count[0],
-                               SPN_RASTERIZE_SUBGROUP_SIZE *
-#if (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_BLOCK_ID_TAG_PATH_LINE)
-                                 4
-#elif (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_BLOCK_ID_TAG_PATH_QUAD)
-                                 6
-#elif (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_BLOCK_ID_TAG_PATH_CUBIC)
-                                 8
-#elif (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)
-                                 7
-#elif (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)
-                                 10
-#endif
-        );
-      }
-
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base] = floatBitsToUint(a##I.x);                                                  \
-  debug_base += SPN_RASTERIZE_SUBGROUP_SIZE;                                                       \
-  bp_debug[debug_base] = floatBitsToUint(a##I.y);                                                  \
-  debug_base += SPN_RASTERIZE_SUBGROUP_SIZE;
-
-    SPN_RASTERIZE_PATH_PRIM_XY_EXPAND()
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base] = floatBitsToUint(a##I.x);                                                  \
-  debug_base += SPN_RASTERIZE_SUBGROUP_SIZE;
-
-    SPN_RASTERIZE_PATH_PRIM_W_EXPAND()
-  }
-#endif
 
   //
   // TRANSFORM CONTROL POINTS
@@ -1961,8 +1834,7 @@ main()
   // count | 33 15 18 13
   // ------+-------------
   // inc   | 33 48 66 79
-  // exc   |  0 33 48 66
-  //
+  // exc   |  0 33 48 66//
   // Note that we could avoid one cast of an integer to a float if the
   // scan values were floats.  But we're performing the scan with
   // integers instead of integer valued floats because we scale float
@@ -1981,7 +1853,8 @@ main()
   //
   SPN_SUBGROUP_UNIFORM int yp_sum = subgroupBroadcast(yp_inc, SPN_RASTERIZE_SUBGROUP_SIZE - 1);
 
-#if (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_BLOCK_ID_TAG_PATH_LINE)
+#if ((SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_RAST_TYPE_LINE) ||                                       \
+     (SPN_RASTERIZE_PATH_PRIM_TYPE == SPN_RAST_TYPE_PROJ_LINE))
   // return if there is nothing to do
   if (yp_sum == 0)
     return;
@@ -1998,7 +1871,9 @@ main()
   // exclusive scan
   int yp_exc = yp_inc - yp_count;
 
-  //// these values don't matter on first iteration
+  //
+  // NOTE(allanmac): The 'prev' values don't matter on first
+  // iteration.
   //
   // NOTE(allanmac): See below how on Intel we want to use their
   // specialized shuffle.
@@ -2181,7 +2056,7 @@ main()
               do
                 {
                   // SMEM READS: xy, tts, cache.xy, cache.base
-                  subgroupBarrier();
+                  subgroupMemoryBarrierShared();
 
                   spn_flush_subgroup();
               } while (--subgroup_count > 0);
@@ -2210,9 +2085,7 @@ main()
   //
   // flush remaining XY/TTS values
   //
-  spn_flush_rem();
-
-  //
+  spn_flush_rem();  //
   // return unused blocks to the block pool
   //
   spn_free_blocks();
@@ -2222,12 +2095,10 @@ main()
   //
   SPN_SUBGROUP_UNIFORM const uint ttrk_count = SPN_RCV_LD(ttrk_count);
 
-  if (ttrk_count > 0)
-    {
-      // SMEM READS: flush.ttsb, flush.xy
-      subgroupBarrier();
-      spn_flush_ttrks(ttrk_count);
-    }
+  if (ttrk_count == 0)
+    return;
+
+  spn_flush_ttrks(ttrk_count);
 }
 
 //

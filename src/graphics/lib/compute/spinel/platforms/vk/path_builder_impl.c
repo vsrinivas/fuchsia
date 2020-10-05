@@ -196,22 +196,6 @@ struct spn_path_builder_impl
     } segs;
 
     uint32_t rem;
-
-    //
-    // unpacked prim counters
-    //
-    union
-    {
-      uint32_t aN[SPN_PATH_BUILDER_PRIM_TYPE_COUNT];
-      struct
-      {
-#undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
-#define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n) uint32_t _p;
-
-        SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
-      };
-    } prims;
-
   } wip;
 
   //
@@ -414,7 +398,7 @@ spn_pbi_dispatch_append(struct spn_path_builder_impl * const impl,
 {
   spn_pbi_path_append(impl, path);
 
-  dispatch->blocks.span += impl->wip.header.blocks;
+  dispatch->blocks.span += impl->wip.header.named.blocks;
   dispatch->paths.span += 1;
 }
 
@@ -637,8 +621,7 @@ spn_pb_cn_coords_zero(float * coords, uint32_t rem)
   do
     {
       *coords++ = 0.0f;
-    }
-  while (--rem > 0);
+  } while (--rem > 0);
 }
 
 static void
@@ -647,8 +630,7 @@ spn_pb_cn_coords_finalize(float * coords[], uint32_t coords_len, uint32_t const 
   do
     {
       spn_pb_cn_coords_zero(*coords++, rem);
-    }
-  while (--coords_len > 0);
+  } while (--coords_len > 0);
 }
 
 static void
@@ -663,7 +645,6 @@ spn_pb_finalize_subgroups(struct spn_path_builder_impl * const impl)
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n)                                            \
   {                                                                                                \
     uint32_t rem = pb->cn.rem._p;                                                                  \
-                                                                                                   \
     if (rem > 0)                                                                                   \
       {                                                                                            \
         pb->cn.rem._p = 0;                                                                         \
@@ -689,7 +670,7 @@ spn_pbi_cmd_append(struct spn_path_builder_impl * const impl,
   impl->mapped.cmds[idx] = cmd;
   impl->mapped.rolling   = rolling + impl->config.rolling_one;
 
-  impl->wip.header.blocks += 1;
+  impl->wip.header.named.blocks += 1;
 }
 
 //
@@ -719,8 +700,7 @@ spn_pbi_acquire_head_block(struct spn_path_builder_impl * const impl)
       do
         {
           spn(device_wait(impl->device, __func__));
-        }
-      while (spn_ring_is_empty(ring));
+      } while (spn_ring_is_empty(ring));
     }
 
   return spn_ring_acquire_1(&impl->mapped.ring);
@@ -738,7 +718,7 @@ spn_pbi_acquire_node_segs_block(struct spn_path_builder_impl * const impl, uint3
       // then this is a fatal error. At this point, we can kill the path
       // builder instead of the device.
       //
-      if (impl->wip.header.blocks >= impl->mapped.ring.size)
+      if (impl->wip.header.named.blocks >= impl->mapped.ring.size)
         {
           spn_pbi_lost(impl);
 
@@ -756,8 +736,7 @@ spn_pbi_acquire_node_segs_block(struct spn_path_builder_impl * const impl, uint3
       do
         {
           spn(device_wait(impl->device, __func__));
-        }
-      while (spn_ring_is_empty(ring));
+      } while (spn_ring_is_empty(ring));
     }
 
   *idx = spn_ring_acquire_1(&impl->mapped.ring);
@@ -796,7 +775,7 @@ spn_pbi_acquire_node(struct spn_path_builder_impl * const impl)
 
   spn_pbi_cmd_append(impl, idx, SPN_PATHS_COPY_CMD_TYPE_NODE);
 
-  impl->wip.header.nodes += 1;
+  impl->wip.header.named.nodes += 1;
 
   uint32_t const offset = idx * impl->config.block_dwords;
 
@@ -906,16 +885,14 @@ spn_pbi_prim_acquire_subgroups(struct spn_path_builder_impl * const impl,
           *coords++ = impl->mapped.subgroups.f32;
 
           impl->mapped.subgroups.f32 += impl->config.subgroup_dwords;
-        }
-      while (--count > 0);
-    }
-  while (coords_len > 0);
+      } while (--count > 0);
+  } while (coords_len > 0);
 
   // update path builder rem count
   impl->path_builder->cn.rem.aN[tag] = impl->config.subgroup_dwords;
 
   // the prims count tracks the number of tagged block ids
-  impl->wip.prims.aN[tag] += 1;
+  impl->wip.header.named.prims.array[tag] += 1;
 
   return SPN_SUCCESS;
 }
@@ -939,30 +916,8 @@ SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
 //
 //
 
-static void
-spn_pbi_prims_zero(struct spn_path_builder_impl * const impl)
-{
-#undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
-#define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n) impl->wip.prims._p = 0;
-
-  SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
-}
-
-static void
-spn_pbi_prims_pack(struct spn_path_builder_impl * const impl)
-{
-  struct spn_uvec4 prims = SPN_PATH_PRIMS_INIT(impl->wip.prims.line,
-                                               impl->wip.prims.quad,
-                                               impl->wip.prims.cubic,
-                                               impl->wip.prims.rat_quad,
-                                               impl->wip.prims.rat_cubic);
-
-  impl->wip.header.prims = prims;
-}
-
-//
-//
-//
+STATIC_ASSERT_MACRO_1(sizeof(union spn_path_header) ==
+                      MEMBER_SIZE_MACRO(union spn_path_header, array));
 
 static void
 spn_pbi_wip_reset(struct spn_path_builder_impl * const impl)
@@ -979,18 +934,18 @@ spn_pbi_wip_reset(struct spn_path_builder_impl * const impl)
   impl->mapped.subgroups.rem = 0;
 
   // update header -- don't bother initializing .handle and .na
-  impl->wip.header.blocks = 0;
-  impl->wip.header.nodes  = 0;
-
-  // reset bounds
-  impl->wip.header.bounds = (struct spn_vec4){ +FLT_MIN, +FLT_MIN, -FLT_MIN, -FLT_MIN };
+  impl->wip.header.named.blocks = 0;
+  impl->wip.header.named.nodes  = 0;
 
   // save mapped head to wip
   impl->wip.head.idx     = impl->mapped.ring.head;
   impl->wip.head.rolling = impl->mapped.rolling;
 
   // reset prim counters
-  spn_pbi_prims_zero(impl);
+  memset(impl->wip.header.named.prims.array, 0, sizeof(impl->wip.header.named.prims.array));
+
+  // reset bounds
+  impl->wip.header.named.bounds = (struct spn_vec4){ +FLT_MIN, +FLT_MIN, -FLT_MIN, -FLT_MIN };
 }
 
 //
@@ -1035,16 +990,13 @@ spn_pbi_end(struct spn_path_builder_impl * const impl, spn_path_t * const path)
   spn_pbi_dispatch_append(impl, dispatch, path);
 
   // save path host handle
-  impl->wip.header.handle = path->handle;
-
-  // pack the prims and stuff them into the header
-  spn_pbi_prims_pack(impl);
+  impl->wip.header.named.handle = path->handle;
 
   uint32_t const   offset = impl->wip.head.idx * impl->config.block_dwords;
   uint32_t * const head   = impl->mapped.blocks.u32 + offset;
 
   // copy header to mapped coherent head block
-  memcpy(head, impl->wip.header.u32aN, sizeof(impl->wip.header));
+  memcpy(head, impl->wip.header.array, sizeof(impl->wip.header));
 
   // reset wip
   spn_pbi_wip_reset(impl);

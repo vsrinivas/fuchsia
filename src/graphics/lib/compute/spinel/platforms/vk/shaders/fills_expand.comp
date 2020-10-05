@@ -23,6 +23,23 @@
 #include "vk_layouts.h"
 
 //
+// Enable NVIDIA-specific extension
+//
+
+#if (defined(SPN_DEVICE_FILLS_EXPAND_ENABLE_SUBGROUP_PARTITION_NV) &&                              \
+     defined(GL_NV_shader_subgroup_partitioned))
+
+#extension GL_NV_shader_subgroup_partitioned : require
+
+#endif
+
+//
+//
+//
+
+#include "partition.h"
+
+//
 //
 //
 
@@ -43,15 +60,17 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND();
 #define SPN_FILLS_EXPAND_SUBGROUPS                                                                 \
   (SPN_DEVICE_FILLS_EXPAND_WORKGROUP_SIZE / SPN_FILLS_EXPAND_SUBGROUP_SIZE)
 
+#define SPN_FILLS_EXPAND_SUBGROUP_MASK SPN_BITS_TO_MASK(SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2)
+
 //
-// BLOCK EXPANSION
+// BLOCK EXPANSION SIZE
 //
 
 #define SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE                                                         \
   (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_FILLS_EXPAND_SUBGROUP_SIZE)
 
 //
-//
+// SELECT AN EXPANDER
 //
 
 #if (SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE == 1)
@@ -84,6 +103,10 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND();
 #define SPN_FILLS_EXPAND_BLOCK_EXPAND() SPN_EXPAND_32()
 #define SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST 31
 
+#else
+
+#error "SPN_FILLS_EXPAND_BLOCK_EXPAND_SIZE not supported!"
+
 #endif
 
 //
@@ -97,8 +120,98 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND();
 // UTILITY
 //
 
-#define SPN_CMD_RASTERIZE_I_TO_NODE_DWORD(I)                                                       \
+#define SPN_FILLS_EXPAND_I_TO_CMD_NODE_DWORD(I)                                                    \
   (I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID)
+
+//
+//
+//
+
+#define SPN_FILLS_SCAN_SUBGROUP_MASK SPN_BITS_TO_MASK(SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2)
+
+//
+// NOTE: fills_scan and fills_expand subgroup sizes must match
+//
+
+#if (SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2 != SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2)
+#error "(SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2 != SPN_DEVICE_FILLS_EXPAND_SUBGROUP_SIZE_LOG2)"
+#endif
+
+//
+// Test: (SPN_BLOCK_ID_TAG_PATH_RAT_QUAD <= tag <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)
+//
+
+#define SPN_FILLS_EXPAND_TAG_IS_RAT(tag_)                                                          \
+  (uint(tag_ - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD) <=                                                  \
+   SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)
+
+//
+// Unfortunately we're going to have to lean on shared memory to
+// accumulate the running base index of each raster command.
+//
+
+shared uint rast_base_smem[SPN_RAST_TYPE_COUNT];
+
+//
+// Partition SPN_RAST_TYPE_XXX values
+//
+// Note that NVIDIA provides the PTX instruction "match" on sm_70
+// devices.
+//
+// This instruction returns a ballot of all matching lanes in a
+// subgroup.
+//
+// The GLSL instruction is available via the
+// GL_NV_shader_subgroup_partitioned extension:
+//
+//   uvec4 subgroupPartitionNV()
+//
+// Pre-sm_70 NVIDIA devices emulate the instruction.
+//
+// On non-NVIDIA platforms, this primitive can also be emulated.
+//
+#if (defined(SPN_DEVICE_FILLS_EXPAND_ENABLE_SUBGROUP_PARTITION_NV) &&                              \
+     defined(GL_NV_shader_subgroup_partitioned))
+//
+// NVIDIA native partition
+//
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_) part_ = subgroupPartitionNV(v_)
+
+#elif defined(SPN_DEVICE_FILLS_EXPAND_ENABLE_SUBGROUP_PARTITION_BALLOT)
+//
+// Ballot partition
+//
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE <= 32)
+#define SPN_FILLS_EXPAND_PARTITION_BALLOT_UVEC SPN_PARTITION_BALLOT_UVEC1
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE <= 64)
+#define SPN_FILLS_EXPAND_PARTITION_BALLOT_UVEC SPN_PARTITION_BALLOT_UVEC2
+#else
+#error "SPN_PARTITION_BALLOT_UVEC*() subgroup size not supported!"
+#endif
+
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_)                                                      \
+  SPN_PARTITION_BALLOT_INIT(SPN_FILLS_EXPAND_PARTITION_BALLOT_UVEC, part_, v_, 0, 0, 0)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_FILLS_EXPAND_PARTITION_BALLOT_UVEC, part_, v_, 1, 1, 1)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_FILLS_EXPAND_PARTITION_BALLOT_UVEC, part_, v_, 2, 2, 2)            \
+  SPN_PARTITION_BALLOT_TEST(SPN_FILLS_EXPAND_PARTITION_BALLOT_UVEC, part_, v_, 3, 3, 31)
+
+#else  // defined(SPN_DEVICE_FILLS_EXPAND_ENABLE_SUBGROUP_PARTITION_BROADCAST)
+//
+// Broadcast partition -- default partitioning strategy
+//
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 4)
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_4(part_, v_)
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 8)
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_8(part_, v_)
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 16)
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_16(part_, v_)
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 32)
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_32(part_, v_)
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 64)
+#define SPN_FILLS_EXPAND_PARTITION(part_, v_) SPN_PARTITION_BROADCAST_64(part_, v_)
+#endif
+
+#endif
 
 //
 //
@@ -108,32 +221,27 @@ void
 main()
 {
   //
-  // every subgroup/simd loads the same command
+  // Every subgroup loads the same command.
   //
 #if (SPN_FILLS_EXPAND_SUBGROUPS == 1)
 
   SPN_SUBGROUP_UNIFORM
-  uint sid = gl_WorkGroupID.x;
+  const uint sid = gl_WorkGroupID.x;
 
 #else
 
   SPN_SUBGROUP_UNIFORM
-  uint sid = gl_WorkGroupID.x * SPN_FILLS_EXPAND_SUBGROUPS + gl_SubgroupID;
+  const uint sid = gl_WorkGroupID.x * SPN_FILLS_EXPAND_SUBGROUPS + gl_SubgroupID;
 
-  // if the workgroup is made up of multiple subgroups then exit if
-  // the trailing subgroups have no work to do
+  // If the workgroup is made up of multiple subgroups then exit if
+  // the trailing subgroups have no work to do.
   if (sid >= cmd_span)
     return;
 
 #endif
 
   //
-  // load the packed path primitive index -- sid is linear
-  //
-  SPN_SUBGROUP_UNIFORM const uvec4 rast_base_packed = fill_scan_prefix[sid];
-
-  //
-  // where are we in the ring?
+  // Where are we in the ring?
   //
   uint cmd_idx = sid + cmd_head;
 
@@ -143,56 +251,80 @@ main()
     }
 
   //
-  // load the fill cmd from the ring
+  // Load the fill cmd from the ring.
+  //
+  // The cmd is not subgroup uniform and may be repeatedly updated by
+  // each subgroup invocation.
   //
   uvec4 cmd = fill_cmds[cmd_idx];
 
   //
-  // get exclusive scan add of counts
+  // Load the exclusive scan add of total primitives.
   //
-  uint counts_exc = 0;
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 4)
+  //
+  // gl_SubgroupSize == 4
+  //
+  uvec2 prim_exc = { fill_scan_dispatch[0 + gl_SubgroupInvocationID][3],
+                     fill_scan_dispatch[4 + gl_SubgroupInvocationID][3] };
 
-  if (gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE >= 8)
+  //
+  // gl_SubgroupSize >= 8
+  //
+  uint prim_exc = 0;
+
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE > 8)
+  if (gl_SubgroupInvocationID < SPN_RAST_TYPE_COUNT)
+#endif
     {
-      counts_exc = fill_scan_dispatch[gl_SubgroupInvocationID][3];
+      prim_exc = fill_scan_dispatch[gl_SubgroupInvocationID][3];
     }
 
-  //
-  // unpack counts
-  //
-  // FIXME(allanmac): UNPACK THESE HORIZONTALLY / IN PARALLEL -- this
-  // is sequentially unpacking the tag counts.
-  //
-  // FIXME(allanmac): this is assuming a subgroup size of >= 5 --
-  // won't work for quad-sized subgroups (ARM Bifrost v1, iOS, ...)
-  // without updating this logic.
-  //
-  uint rast_base = 0;
-
-  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_LINE)
-    rast_base = SPN_PATH_PRIMS_GET_LINES(rast_base_packed);
-
-  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_QUAD)
-    rast_base = SPN_PATH_PRIMS_GET_QUADS(rast_base_packed);
-
-  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_CUBIC)
-    rast_base = SPN_PATH_PRIMS_GET_CUBICS(rast_base_packed);
-
-  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)
-    rast_base = SPN_PATH_PRIMS_GET_RAT_QUADS(rast_base_packed);
-
-  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)
-    rast_base = SPN_PATH_PRIMS_GET_RAT_CUBICS(rast_base_packed);
-
-  rast_base += counts_exc;
+#else
+#error "Unexpected subgroup size!"
+#endif
 
   //
-  // Convert the path_h to a node_id.
+  // Load the command's path primitive prefix base.
+  //
+  SPN_SUBGROUP_UNIFORM const uint fsp_idx = sid + (sid & ~SPN_FILLS_EXPAND_SUBGROUP_MASK);
+
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 4)
+  //
+  // gl_SubgroupSize == 4
+  //
+  uvec2 prim_base = {
+    fill_scan_prefix[fsp_idx + 0 * SPN_FILLS_EXPAND_SUBGROUP_SIZE][gl_SubgroupInvocationID],
+    fill_scan_prefix[fsp_idx + 1 * SPN_FILLS_EXPAND_SUBGROUP_SIZE][gl_SubgroupInvocationID]
+  };
+
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE >= 8)
+  //
+  // gl_SubgroupSize >= 8
+  //
+  uint prim_base = 0;
+
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE > 8)
+  if (gl_SubgroupInvocationID < SPN_RAST_TYPE_COUNT)
+#endif
+    {
+      // FIXME(allanmac): use a ~mask and multiply
+      const uint fsp_row = (gl_SubgroupInvocationID / 4) * SPN_FILLS_EXPAND_SUBGROUP_SIZE;
+      const uint uv4_idx = (gl_SubgroupInvocationID & 3);
+
+      prim_base = fill_scan_prefix[fsp_idx + fsp_row][uv4_idx];
+    }
+
+#else
+#error "Unexpected subgroup size!"
+#endif
+
+  //
+  // Convert the fill_cmd.path_h to a rast_cmd.node_id.
   //
   // Unfortunately, this is a subgroup-wide "broadcast read" of a
-  // single dword but is fairly low intensity.
-  //
-  // The cmd is not subgroup uniform because we reuse it in each lane.
+  // single dword and is fairly low intensity.
   //
   const uint                path_h  = SPN_CMD_FILL_GET_PATH_H(cmd);
   SPN_SUBGROUP_UNIFORM uint node_id = bp_host_map[path_h];
@@ -200,40 +332,12 @@ main()
   SPN_CMD_RASTERIZE_SET_NODE_ID(cmd, node_id);
 
   //
-  // vertically count tags
+  // Is the fill command's transform affine or projective?
   //
-  // clang-format off
-  //
-#if (SPN_BLOCK_ID_TAG_PATH_COUNT <= 5)
-  //
-  // 32-bits can hold 5 6-bit fields of [0,63]
-  //
-#define SPN_FILLS_EXPAND_TAG_COUNT_TYPE         uint
-#define SPN_FILLS_EXPAND_TAG_COUNT_INIT(n_)     SPN_FILLS_EXPAND_TAG_COUNT_TYPE n_ = 0
-#define SPN_FILLS_EXPAND_TAG_COUNT_GET(c_, i_)  SPN_BITFIELD_EXTRACT(c_,int(i_*6),6)
+  SPN_SUBGROUP_UNIFORM const bool is_affine = SPN_CMD_FILL_IS_TRANSFORM_TYPE_AFFINE(cmd);
 
   //
-  // Left shifting >= 32 doesn't saturate to zero. The spec speaks to
-  // this but it's still a little vague.
-  //
-  // FIXME(allanmac): make this a maskable operation by altering the
-  // invalid path flag
-  //
-#define SPN_FILLS_EXPAND_TAG_COUNT_ADD(c_, t_)                    \
-  c_ += ((t_ < SPN_BLOCK_ID_TAG_PATH_COUNT ? 0x1 : 0x0) << (t_ * 6))
-
-  //
-  // Fill this in if there are ever more than 5 path primitive types.
-  //
-#else
-#error FIXME: no support for more than 5 tags.
-#endif
-  //
-  // clang-format on
-  //
-
-  //
-  // load entire head
+  // Load entire head into registers.
   //
   const uint h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
@@ -243,27 +347,7 @@ main()
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
   //
-  // DEBUG -- dump the head
-  //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_POOL_BLOCK_DWORDS);
-
-    debug_base = subgroupBroadcast(debug_base, 0);
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID] = h##I;
-
-    SPN_FILLS_EXPAND_BLOCK_EXPAND();
-  }
-#endif
-
-  //
-  // pick out count.nodes from the header
+  // Pick out count.nodes from the header.
   //
   uint count_nodes;
 
@@ -277,7 +361,7 @@ main()
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
   //
-  // invalidate header components
+  // Invalidate header.
   //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -295,173 +379,163 @@ main()
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
   //
-  // save the next node id
+  // Save the "next" node id.
   //
-  {
-    SPN_SUBGROUP_UNIFORM const uint head_tbid =
-      subgroupBroadcast(SPN_GLSL_CONCAT(h, SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
-                        SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
+  SPN_SUBGROUP_UNIFORM const uint head_tbid =
+    subgroupBroadcast(SPN_GLSL_CONCAT(h, SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
+                      SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
 
-    node_id = SPN_TAGGED_BLOCK_ID_GET_ID(head_tbid);
-  }
-
-//
-// DEBUG -- dump the head with its header invalidated
-//
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_POOL_BLOCK_DWORDS);
-
-    debug_base = subgroupBroadcast(debug_base,0);
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID] = h##I;
-
-    SPN_FILLS_EXPAND_BLOCK_EXPAND();
-  }
-#endif
+  node_id = SPN_TAGGED_BLOCK_ID_GET_ID(head_tbid);
 
   //
-  // DEBUG
+  // All we need are the tags.
   //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], SPN_FILLS_EXPAND_SUBGROUP_SIZE);
-
-    debug_base = subgroupBroadcast(debug_base, 0);
-
-    bp_debug[debug_base + gl_SubgroupInvocationID] = rast_base;
-  }
-#endif
-
-  //
-  // FIXME(allanmac): the stores produced by this remaining code are
-  // not coalesced.  It might not matter but, if it does, we can
-  // probably do better and still retain portability.
-  //
-  // The strategy would to use local memory to accrue 5 subgroup-width
-  // arrays of OR'd column bitmasks of path primitives.
-  //
-  // Then each row of bitmasks is loaded, a ballot is taken and the key
-  // indices are stored either directly to global memory or back to
-  // local for another pass.
-  //
-  {
-    //
-    // how many tags are there per lane?
-    //
-    SPN_FILLS_EXPAND_TAG_COUNT_INIT(tags_count);
-
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
     {                                                                                              \
       h##I = SPN_TAGGED_BLOCK_ID_GET_TAG(h##I);                                                    \
-      SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count, h##I);                                            \
     }
 
-    SPN_FILLS_EXPAND_BLOCK_EXPAND();
+  SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
-    //
-    // DEBUG -- dump the head with tag counts replaced
-    //
-#if 0
-    {
-      uint debug_base = 0;
-
-      if (gl_SubgroupInvocationID == 0)
-        debug_base = atomicAdd(bp_debug_count[0], SPN_BLOCK_POOL_BLOCK_DWORDS);
-
-      debug_base = subgroupBroadcast(debug_base, 0);
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base + I * SPN_FILLS_EXPAND_SUBGROUP_SIZE + gl_SubgroupInvocationID] = h##I;
-
-      SPN_FILLS_EXPAND_BLOCK_EXPAND();
-    }
-#endif
-
-    //
-    // DEBUG -- dump the tags_count
-    //
-#if 0
-    {
-      uint debug_base = 0;
-
-      if (gl_SubgroupInvocationID == 0)
-        debug_base = atomicAdd(bp_debug_count[0], SPN_FILLS_EXPAND_SUBGROUP_SIZE);
-
-      debug_base = subgroupBroadcast(debug_base, 0);
-
-      bp_debug[debug_base + gl_SubgroupInvocationID] = tags_count;
-    }
-#endif
-
-    //
-    // we now have tag counts for this node...
-    //
-    // write out rasterize cmds for each tag type
-    //
-    // FIXME(allanmac): expand the outer tag loop so we can use broadcasts and not shuffles
-    //
-    for (uint ii = 0; ii < SPN_BLOCK_ID_TAG_PATH_COUNT; ii++)
-      {
-        const uint tag_count = SPN_FILLS_EXPAND_TAG_COUNT_GET(tags_count, ii);
-
-        if (subgroupAny(tag_count > 0))
-          {
-            const uint tag_inc = subgroupInclusiveAdd(tag_count);
-            const uint tag_exc = tag_inc - tag_count;
-
-            SPN_SUBGROUP_UNIFORM
-            const uint tag_red = subgroupBroadcast(tag_inc, SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
-
-            uint tag_rast_idx = subgroupShuffle(rast_base, ii) + tag_exc;
-
-            if (gl_SubgroupInvocationID == ii)
-              {
-                rast_base += tag_red;
-              }
+  //
+  // Map block id path tags to rasterization types:
+  //
+  //                AFFINE                TAG_PATH                 PROJECTIVE
+  //       -----------------------    ------------------    ------------------------
+  //   0:             0               TAG_PATH_LINE         SPN_RAST_TYPE_PROJ_LINE
+  //   1:             0               TAG_PATH_QUAD         SPN_RAST_TYPE_PROJ_QUAD
+  //   2:             0               TAG_PATH_CUBIC        SPN_RAST_TYPE_PROJ_CUBIC
+  //   3:  SPN_RAST_TYPE_LINE         TAG_PATH_RAT_QUAD                0
+  //   4:  SPN_RAST_TYPE_QUAD         TAG_PATH_RAT_CUBIC               0
+  //   5:  SPN_RAST_TYPE_CUBIC                                         0
+  //   6:  SPN_RAST_TYPE_RAT_QUAD                           SPN_RAST_TYPE_RAT_QUAD
+  //   7:  SPN_RAST_TYPE_RAT_CUBIC                          SPN_RAST_TYPE_RAT_CUBIC
+  //
+#if 1  // NOTE(allanmac): projective shaders aren't implemented in this CL
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
     {                                                                                              \
-      if (h##I == ii)                                                                              \
+      if (h##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                 \
+        h##I += SPN_RAST_TYPE_LINE;                                                                \
+    }
+
+      SPN_FILLS_EXPAND_BLOCK_EXPAND();
+
+#else
+
+  if (is_affine)
+    {
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
+    {                                                                                              \
+      if (h##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                 \
+        h##I += SPN_RAST_TYPE_LINE;                                                                \
+    }
+
+      SPN_FILLS_EXPAND_BLOCK_EXPAND();
+    }
+  else  // is_projective
+    {
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
+    {                                                                                              \
+      if (SPN_FILLS_EXPAND_TAG_IS_RAT(h##I))                                                       \
+        h##I += (SPN_RAST_TYPE_RAT_QUAD - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD);                         \
+    }
+
+      SPN_FILLS_EXPAND_BLOCK_EXPAND();
+    }
+
+#endif
+
+  //
+  // Compute the base index for raster commands expanded from this
+  // fill command.
+  //
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE == 4)
+  //
+  // gl_SubgroupSize == 4
+  //
+  rast_base_smem[0 + gl_SubgroupInvocationID] = prim_exc[0] + prim_base[0];
+  rast_base_smem[4 + gl_SubgroupInvocationID] = prim_exc[1] + prim_base[1];
+
+#elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE >= 8)
+    //
+    // gl_SubgroupSize >= 8
+    //
+#if (SPN_FILLS_EXPAND_SUBGROUP_SIZE > 8)
+  if (gl_SubgroupInvocationID < SPN_RAST_TYPE_COUNT)
+#endif
+    {
+      rast_base_smem[gl_SubgroupInvocationID] = prim_exc + prim_base;
+    }
+
+#else
+#error "Unexpected subgroup size!"
+#endif
+
+  //
+  // Partition and scatter store each row.
+  //
+  // Early exit from a block if it can be reasoned that there are no
+  // more valid tags.
+  //
+  // Note: testing >= TAG_PATH_NEXT will work for subgroup size 4
+  // because a rational cubic occupies 10 segments and a block will
+  // hold at least 4 segments.
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
+    {                                                                                              \
+      const bool is_valid = (h##I < SPN_RAST_TYPE_COUNT);                                          \
+                                                                                                   \
+      /* Early exit? */                                                                            \
+      if (subgroupAll(!is_valid))                                                                  \
+        return;                                                                                    \
+                                                                                                   \
+      uvec4 part;                                                                                  \
+                                                                                                   \
+      SPN_FILLS_EXPAND_PARTITION(part, h##I);                                                      \
+                                                                                                   \
+      subgroupMemoryBarrierShared();                                                               \
+                                                                                                   \
+      if (is_valid)                                                                                \
         {                                                                                          \
-          const uint node_dword = SPN_CMD_RASTERIZE_I_TO_NODE_DWORD(I);                            \
+          const uint node_dword = SPN_FILLS_EXPAND_I_TO_CMD_NODE_DWORD(I);                         \
                                                                                                    \
           SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd, node_dword);                                       \
                                                                                                    \
-          rast_cmds[tag_rast_idx++] = cmd;                                                         \
+          const uint base = rast_base_smem[h##I];                                                  \
+                                                                                                   \
+          const uint part_red = subgroupBallotBitCount(part);                                      \
+          const uint part_exc = subgroupBallotExclusiveBitCount(part);                             \
+                                                                                                   \
+          rast_base_smem[h##I]       = base + part_red;                                            \
+          rast_cmds[base + part_exc] = cmd;                                                        \
         }                                                                                          \
     }
 
-            SPN_FILLS_EXPAND_BLOCK_EXPAND();
-          }
-      }
-  }
+  SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
   //
-  // are we done?
+  // Are there more nodes?
   //
   while (count_nodes-- > 0)
     {
       //
-      // process next node
+      // Update node id in rast command.
       //
       SPN_CMD_RASTERIZE_SET_NODE_ID(cmd, node_id);
 
       //
-      // load entire node
+      // Load entire node into registers.
       //
       const uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
@@ -471,67 +545,92 @@ main()
       SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
       //
-      // save the next node id
+      // Save the "next" node id.
       //
-      {
-        SPN_SUBGROUP_UNIFORM const uint node_tbid =
-          subgroupBroadcast(SPN_GLSL_CONCAT(n, SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
-                            SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
+      SPN_SUBGROUP_UNIFORM const uint node_tbid =
+        subgroupBroadcast(SPN_GLSL_CONCAT(n, SPN_FILLS_EXPAND_BLOCK_EXPAND_I_LAST),
+                          SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
 
-        node_id = SPN_TAGGED_BLOCK_ID_GET_ID(node_tbid);
-      }
+      node_id = SPN_TAGGED_BLOCK_ID_GET_ID(node_tbid);
 
       //
-      // how many tags are there per lane?
+      // All we need are the tags.
       //
-      SPN_FILLS_EXPAND_TAG_COUNT_INIT(tags_count);
-
 #undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  {                                                                                                \
-    n##I = SPN_TAGGED_BLOCK_ID_GET_TAG(n##I);                                                      \
-    SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count, n##I);                                              \
-  }
+#define SPN_EXPAND_X(I, N, P, L) n##I = SPN_TAGGED_BLOCK_ID_GET_TAG(n##I);
 
       SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
       //
-      // we now have tag counts for this node...
+      // Map block id path tags to rasterization types.
       //
-      // write out rasterize cmds for each tag type
-      //
-      // FIXME(allanmac): expand the outer tag loop so we can use broadcasts and not shuffles
-      //
-      for (uint ii = 0; ii < SPN_BLOCK_ID_TAG_PATH_COUNT; ii++)
-        {
-          const uint tag_count = SPN_FILLS_EXPAND_TAG_COUNT_GET(tags_count, ii);
-
-          if (subgroupAny(tag_count > 0))
-            {
-              const uint tag_inc = subgroupInclusiveAdd(tag_count);
-              const uint tag_exc = tag_inc - tag_count;
-
-              SPN_SUBGROUP_UNIFORM const uint tag_red =
-                subgroupBroadcast(tag_inc, SPN_FILLS_EXPAND_SUBGROUP_SIZE - 1);
-
-              uint tag_rast_idx = subgroupShuffle(rast_base, ii) + tag_exc;
-
-              if (gl_SubgroupInvocationID == ii)
-                {
-                  rast_base += tag_red;
-                }
+#if 1  // NOTE(allanmac): projective shaders aren't implemented in this CL
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  if (n##I == ii)                                                                                  \
-    {                                                                                              \
-      SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd, SPN_CMD_RASTERIZE_I_TO_NODE_DWORD(I));                 \
-      rast_cmds[tag_rast_idx++] = cmd;                                                             \
-    }
+  if (n##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                     \
+    n##I += SPN_RAST_TYPE_LINE;
 
-              SPN_FILLS_EXPAND_BLOCK_EXPAND();
-            }
+      SPN_FILLS_EXPAND_BLOCK_EXPAND();
+
+#else
+
+      if (is_affine)
+        {
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (n##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                     \
+    n##I += SPN_RAST_TYPE_LINE;
+
+          SPN_FILLS_EXPAND_BLOCK_EXPAND();
         }
+      else  // is_projective
+        {
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (SPN_FILLS_EXPAND_TAG_IS_RAT(n##I))                                                           \
+    n##I += (SPN_RAST_TYPE_RAT_QUAD - SPN_BLOCK_ID_TAG_PATH_RAT_QUAD);
+
+          SPN_FILLS_EXPAND_BLOCK_EXPAND();
+        }
+
+#endif
+
+      //
+      // Partition and scatter store each row.
+      //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  {                                                                                                \
+    const bool is_valid = (n##I < SPN_RAST_TYPE_COUNT);                                            \
+                                                                                                   \
+    /* Early exit? */                                                                              \
+    if (subgroupAll(!is_valid))                                                                    \
+      return;                                                                                      \
+                                                                                                   \
+    uvec4 part;                                                                                    \
+                                                                                                   \
+    SPN_FILLS_EXPAND_PARTITION(part, n##I);                                                        \
+                                                                                                   \
+    subgroupMemoryBarrierShared();                                                                 \
+                                                                                                   \
+    if (is_valid)                                                                                  \
+      {                                                                                            \
+        const uint node_dword = SPN_FILLS_EXPAND_I_TO_CMD_NODE_DWORD(I);                           \
+                                                                                                   \
+        SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd, node_dword);                                         \
+                                                                                                   \
+        const uint base = rast_base_smem[n##I];                                                    \
+                                                                                                   \
+        const uint part_red = subgroupBallotBitCount(part);                                        \
+        const uint part_exc = subgroupBallotExclusiveBitCount(part);                               \
+                                                                                                   \
+        rast_base_smem[n##I]       = base + part_red;                                              \
+        rast_cmds[base + part_exc] = cmd;                                                          \
+      }                                                                                            \
+  }
+
+      SPN_FILLS_EXPAND_BLOCK_EXPAND();
     }
 }
 

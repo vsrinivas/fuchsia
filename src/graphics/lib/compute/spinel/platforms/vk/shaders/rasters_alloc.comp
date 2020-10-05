@@ -203,7 +203,7 @@ main()
       //       uint32_t nodes;   // # of nodes  -- not including header
       //       uint32_t ttsks;   // # of ttsks
       //       uint32_t ttpks;   // # of ttpks
-      //       uint32_t pkidx;   // absolute block pool qword of ttpk span
+      //       uint32_t pkidx;   // block pool dword of first ttpk.lo
       //       uint32_t blocks;  // # of blocks -- head+node+skb+pkb
       //
       //       ... uninitialized ...
@@ -229,30 +229,6 @@ main()
       header_dword5[0] = blocks;
 
       bp_blocks_uvec4[raster_head_base + 1] = header_dword5;
-
-      //
-      // DEBUG
-      //
-#if 0
-      {
-        const uint debug_words =
-          (8 + SPN_RASTERS_ALLOC_SUBGROUP_SIZE - 1) & ~(SPN_RASTERS_ALLOC_SUBGROUP_SIZE - 1);
-
-        const uint debug_base = atomicAdd(bp_debug_count[0], debug_words);
-
-        bp_debug[debug_base + 0] = header_lo[0];
-        bp_debug[debug_base + 1] = header_lo[1];
-        bp_debug[debug_base + 2] = header_lo[2];
-        bp_debug[debug_base + 3] = header_lo[3];
-        bp_debug[debug_base + 4] = header_dword5[0];
-        bp_debug[debug_base + 5] = reads;      // SPN_RASTER_COHORT_META_ALLOC_OFFSET_SK_READS
-        bp_debug[debug_base + 6] = pk0_reads;  // SPN_RASTER_COHORT_META_ALLOC_OFFSET_PK_READS
-        bp_debug[debug_base + 7] = raster_idx;
-
-        for (uint ii = 8; ii < debug_words; ii++)
-          bp_debug[debug_base + ii] = 0xFEEDFACE;
-      }
-#endif
     }
 }
 

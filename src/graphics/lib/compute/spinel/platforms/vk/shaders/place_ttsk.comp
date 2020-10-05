@@ -53,8 +53,9 @@ SPN_VK_GLSL_DECL_KERNEL_PLACE_TTSK();
 //
 
 // clang-format off
-#define SPN_PLACE_SUBGROUP_SIZE (1 << SPN_DEVICE_PLACE_SUBGROUP_SIZE_LOG2)
-#define SPN_PLACE_SUBGROUPS     (SPN_DEVICE_PLACE_WORKGROUP_SIZE / SPN_PLACE_SUBGROUP_SIZE)
+#define SPN_PLACE_SUBGROUP_SIZE  (1 << SPN_DEVICE_PLACE_SUBGROUP_SIZE_LOG2)
+#define SPN_PLACE_SUBGROUP_MASK  SPN_BITS_TO_MASK(SPN_DEVICE_PLACE_SUBGROUP_SIZE_LOG2)
+#define SPN_PLACE_SUBGROUPS      (SPN_DEVICE_PLACE_WORKGROUP_SIZE / SPN_PLACE_SUBGROUP_SIZE)
 // clang-format on
 
 //
@@ -280,6 +281,18 @@ main()
   //  - internal nodes
   //  - the final node
   //
+  // The layout of a raster node is optimized for reclamation:
+  //
+  //   union {
+  //     uvec2  qwords[block_qwords];
+  //     struct {
+  //       uint dwords_lo[block_qwords];
+  //       uint dwords_hi[block_qwords];
+  //     };
+  //   };
+  //
+  // This complicates the PREFIX and PLACE shaders.
+  //
 #if (SPN_PLACE_SUBGROUPS == 1)
 
   SPN_SUBGROUP_UNIFORM
@@ -308,74 +321,31 @@ main()
   SPN_SUBGROUP_UNIFORM const uint head_id = bp_host_map[cmd.raster_h];
 
   // where is the raster node in the pool?
-  const uint head_idx = head_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+  SPN_SUBGROUP_UNIFORM const uint head_base = head_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
 
-  //
-  // The layout of a raster node is optimized for reclamation:
-  //
-  //   union {
-  //     uvec2  qwords[block_qwords];
-  //     struct {
-  //       uint dwords_lo[block_qwords];
-  //       uint dwords_hi[block_qwords];
-  //     };
-  //   };
-  //
-  // This complicates the PREFIX and PLACE shaders.
-  //
+  // how many ttsks?
+  SPN_SUBGROUP_UNIFORM uint ttsks_rem = bp_blocks[head_base + SPN_RASTER_HEAD_LO_OFFSET_TTSKS];
 
-  //
-  // declare head node
-  //
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) uvec2 t##I;
-
-  SPN_PLACE_BLOCK_EXPAND();
-
-  //
-  // load only header uvec2 values
-  //
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  if (SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_PLACE_SUBGROUP_SIZE, I) ||                               \
-      (SPN_RASTER_HEAD_PARTIALLY_HEADER(SPN_PLACE_SUBGROUP_SIZE, I) &&                             \
-       SPN_RASTER_HEAD_IS_HEADER(SPN_PLACE_SUBGROUP_SIZE, I)))                                     \
-    {                                                                                              \
-      t##I =                                                                                       \
-        uvec2(bp_blocks[head_idx + SPN_PLACE_SUBGROUP_SIZE * I],                                   \
-              bp_blocks[head_idx + SPN_PLACE_SUBGROUP_SIZE * I + SPN_BLOCK_POOL_BLOCK_QWORDS]);    \
-    }
-
-  SPN_PLACE_BLOCK_EXPAND();
-
-  //
-  // pick out ttsks count from the header
-  //
-  SPN_SUBGROUP_UNIFORM uint ttsks_rem;
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  if (SPN_RASTER_HEAD_ELEM_IN_RANGE(SPN_PLACE_SUBGROUP_SIZE, SPN_RASTER_HEAD_LO_OFFSET_TTSKS, I))  \
-    {                                                                                              \
-      ttsks_rem = SPN_PLACE_BROADCAST(t##I[0], SPN_RASTER_HEAD_LO_OFFSET_TTSKS, I);                \
-    }
-
-  SPN_PLACE_BLOCK_EXPAND();
-
-  //
-  // if this was an empty raster then return
-  //
+  // no ttsks?
   if (ttsks_rem == 0)
     return;
 
-  {
-    //
-    // load all ttsks in head block otherwise invalidating
-    //
-    // NOTE: highp = mediump - highp
-    //
-    const uint raster_head_qwords = SPN_RASTER_HEAD_QWORDS;
-    const uint ttsks_base         = gl_SubgroupInvocationID - raster_head_qwords;
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) uvec2 t##I;
+
+  // declare the head node
+  SPN_PLACE_BLOCK_EXPAND();
+
+  // load two rows at a time
+  const uint head_idx = head_base + gl_SubgroupInvocationID;
+
+  //
+  // load all ttsks in head block otherwise invalidating
+  //
+  // NOTE: highp = mediump - highp
+  //
+  const uint raster_head_qwords = SPN_RASTER_HEAD_QWORDS;
+  const uint ttsks_base         = gl_SubgroupInvocationID - raster_head_qwords;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -390,13 +360,13 @@ main()
         }                                                                                          \
     }
 
-    SPN_PLACE_BLOCK_EXPAND();
+  SPN_PLACE_BLOCK_EXPAND();
 
-    //
-    // - translate and clip TTSK keys in the head
-    // - count total clipped TTSK keys in this slab
-    //
-    uint h_lane_keys = 0;
+  //
+  // - translate and clip TTSK keys in the head
+  // - count total clipped TTSK keys in this slab
+  //
+  uint h_lane_keys = 0;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -405,22 +375,22 @@ main()
       spn_ttsk_translate_and_clip(cmd, t##I, h_lane_keys);                                         \
     }
 
-    SPN_PLACE_BLOCK_EXPAND();
+  SPN_PLACE_BLOCK_EXPAND();
 
-    //
-    // atomically allocate space for keys in this node
-    //
-    SPN_SUBGROUP_UNIFORM const uint h_block_keys = subgroupAdd(h_lane_keys);
-    uint                            h_ttck_atomic;
+  //
+  // atomically allocate space for keys in this node
+  //
+  SPN_SUBGROUP_UNIFORM const uint h_block_keys = subgroupAdd(h_lane_keys);
+  uint                            h_ttck_atomic;
 
-    if (gl_SubgroupInvocationID == 0)
-      h_ttck_atomic = atomicAdd(ttcks_count[0], h_block_keys);
+  if (gl_SubgroupInvocationID == 0)
+    h_ttck_atomic = atomicAdd(ttcks_count[0], h_block_keys);
 
-    SPN_SUBGROUP_UNIFORM uint h_ttck_base = subgroupBroadcast(h_ttck_atomic, 0);
+  SPN_SUBGROUP_UNIFORM uint h_ttck_base = subgroupBroadcast(h_ttck_atomic, 0);
 
-    //
-    // dump the keys
-    //
+  //
+  // dump the keys
+  //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_PLACE_SUBGROUP_SIZE, I))                                \
@@ -428,19 +398,18 @@ main()
       spn_ttik_append(cmd, h_ttck_base, t##I);                                                     \
     }
 
-    SPN_PLACE_BLOCK_EXPAND();
+  SPN_PLACE_BLOCK_EXPAND();
 
-    //
-    // any more ttsk keys?
-    //
-    if (ttsks_rem <= SPN_BLOCK_POOL_BLOCK_QWORDS - 1 - SPN_RASTER_HEAD_QWORDS)
-      return;
+  //
+  // any more ttsk keys?
+  //
+  if (ttsks_rem <= SPN_BLOCK_POOL_BLOCK_QWORDS - 1 - SPN_RASTER_HEAD_QWORDS)
+    return;
 
-    //
-    // otherwise, keep processing
-    //
-    ttsks_rem -= SPN_BLOCK_POOL_BLOCK_QWORDS - 1 - SPN_RASTER_HEAD_QWORDS;
-  }
+  //
+  // otherwise, keep processing
+  //
+  ttsks_rem -= SPN_BLOCK_POOL_BLOCK_QWORDS - 1 - SPN_RASTER_HEAD_QWORDS;
 
   //
   // if more nodes, load next raster node

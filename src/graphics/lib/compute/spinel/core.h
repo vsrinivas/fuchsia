@@ -76,9 +76,12 @@
 #define SPN_BLOCK_ID_TAG_PATH_QUAD              1  // 1 -- 6  segments
 #define SPN_BLOCK_ID_TAG_PATH_CUBIC             2  // 2 -- 8  segments
 #define SPN_BLOCK_ID_TAG_PATH_RAT_QUAD          3  // 3 -- 7  segments : 6 + w1      -- w0 = w2 = 1
-#define SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC         4  // 4 -- 10 segments : 8 + w1 + w2 -- w0 = w3 = 1
+#define SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC         4  // 4 -- 10 segments : 8 + w1 + w2 -- w0 = w3 =
+#define SPN_BLOCK_ID_TAG_PATH_RESERVED_5        5
+#define SPN_BLOCK_ID_TAG_PATH_RESERVED_6        6
+#define SPN_BLOCK_ID_TAG_PATH_RESERVED_7        7
 // ...
-// tags 5-29 are available
+// tags 8-29 are available
 // ...
 #define SPN_BLOCK_ID_TAG_PATH_COUNT             5  // how many path types?  can share same value with PATH_NEXT
 #define SPN_BLOCK_ID_TAG_PATH_NEXT              (SPN_TAGGED_BLOCK_ID_MASK_TAG - 1) // 30 : 0x1E
@@ -143,21 +146,24 @@
 //
 //   struct spn_path_header
 //   {
-//     struct {
-//       uint32_t handle; // host handle
-//       uint32_t blocks; // total number of blocks in path object
-//       uint32_t nodes;  // number of path node blocks -- does not include head
-//       uint32_t na;     // unused
-//     } count;           // uvec4
+//     uint32_t   handle;     // host handle
+//     uint32_t   blocks;     // total number of blocks in entire path object -- includes nodes and segments
+//     uint32_t   nodes;      // number of trailing path node blocks -- not including head
 //
-//     uvec4      prims;  // packed counts: lines, quads, cubics, rat-quads, rat-cubics
+//     struct {
+//       uint32_t lines;      // count of segments
+//       uint32_t quads;      // count of segments
+//       uint32_t cubics;     // count of segments
+//       uint32_t rat_quads;  // count of segments
+//       uint32_t rat_cubics; // count of segments
+//     } prims;
 //
 //     struct {
 //       float    x0;
 //       float    y0;
 //       float    x1;
 //       float    y1;
-//     } bounds;
+//     } bounds;              // float4: bounds
 //   };
 //
 
@@ -168,44 +174,24 @@
 #define SPN_PATH_HEAD_OFFSET_HANDLE             0
 #define SPN_PATH_HEAD_OFFSET_BLOCKS             1
 #define SPN_PATH_HEAD_OFFSET_NODES              2
-#define SPN_PATH_HEAD_OFFSET_PRIMS              4
+#define SPN_PATH_HEAD_OFFSET_PRIMS              3
 
-//
-// Counts of the 5 path types are packed into a uvec4
-//
-// lines:      26 -- 64m
-// quads:      26 -- 64m
-// cubics:     26 -- 64m
-// rat_quads:  25 -- 32m
-// rat_cubics: 25 -- 32m
-//
+#define SPN_PATH_HEAD_OFFSET_LINES              (SPN_PATH_HEAD_OFFSET_PRIMS + SPN_BLOCK_ID_TAG_PATH_LINE)
+#define SPN_PATH_HEAD_OFFSET_QUADS              (SPN_PATH_HEAD_OFFSET_PRIMS + SPN_BLOCK_ID_TAG_PATH_QUAD)
+#define SPN_PATH_HEAD_OFFSET_CUBICS             (SPN_PATH_HEAD_OFFSET_PRIMS + SPN_BLOCK_ID_TAG_PATH_CUBIC)
+#define SPN_PATH_HEAD_OFFSET_RAT_QUADS          (SPN_PATH_HEAD_OFFSET_PRIMS + SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)
+#define SPN_PATH_HEAD_OFFSET_RAT_CUBICS         (SPN_PATH_HEAD_OFFSET_PRIMS + SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)
 
-#define SPN_PATH_PRIMS_GET_LINES(p_)       (SPN_BITFIELD_EXTRACT(p_[0], 0,26))                                             // 26
-#define SPN_PATH_PRIMS_GET_QUADS(p_)       (SPN_BITFIELD_EXTRACT(p_[0],26, 6) | (SPN_BITFIELD_EXTRACT(p_[1],0,20) <<  6))  // 26
-#define SPN_PATH_PRIMS_GET_CUBICS(p_)      (SPN_BITFIELD_EXTRACT(p_[1],20,12) | (SPN_BITFIELD_EXTRACT(p_[2],0,14) << 12))  // 26
-#define SPN_PATH_PRIMS_GET_RAT_QUADS(p_)   (SPN_BITFIELD_EXTRACT(p_[2],14,18) | (SPN_BITFIELD_EXTRACT(p_[3],0, 7) << 18))  // 25
-#define SPN_PATH_PRIMS_GET_RAT_CUBICS(p_)  (SPN_BITFIELD_EXTRACT(p_[3], 7,25))                                             // 25
-
-#define SPN_PATH_PRIMS_INIT_UNSAFE(ll_,qq_,cc_,rq_,rc_) \
-  {                                                     \
-    (ll_      ) | (qq_ << 26),                          \
-    (qq_ >>  6) | (cc_ << 20),                          \
-    (cc_ >> 12) | (rq_ << 14),                          \
-    (rq_ >> 18) | (rc_ <<  7)                           \
-  }
-
-#define SPN_PATH_PRIMS_INIT(ll_,qq_,cc_,rq_,rc_)        \
-  SPN_PATH_PRIMS_INIT_UNSAFE(ll_,qq_,cc_,rq_,rc_)
-
+#define SPN_PATH_HEAD_OFFSET_BOUNDS             8
 //
 // PATH HEAD COMPILE-TIME PREDICATES
 //
 
-#define SPN_PATH_HEAD_ELEM_GTE(sgsz_,x_,i_)     \
+#define SPN_PATH_HEAD_ELEM_GTE(sgsz_,x_,i_)                     \
   ((x_) >= (i_) * sgsz_)
 
-#define SPN_PATH_HEAD_ELEM_IN_RANGE(sgsz_,x_,i_)        \
-  (SPN_PATH_HEAD_ELEM_GTE(sgsz_,x_,i_) &&               \
+#define SPN_PATH_HEAD_ELEM_IN_RANGE(sgsz_,x_,i_)                \
+  (SPN_PATH_HEAD_ELEM_GTE(sgsz_,x_,i_) &&                       \
    !SPN_PATH_HEAD_ELEM_GTE(sgsz_,x_,(i_)+1))
 
 #define SPN_PATH_HEAD_ENTIRELY_HEADER(sgsz_,i_)                 \
@@ -218,15 +204,31 @@
   (gl_SubgroupInvocationID + i_ * sgsz_ < SPN_PATH_HEAD_DWORDS)
 
 //
+// RASTERIZATION TYPES
+//
+// Note that the projective rasterization types precede the integral and
+// rational path primitives in order to exploit a coalesced uvec4[2] path header
+// load.
+//
+
+#define SPN_RAST_TYPE_PROJ_LINE                 0 // Lines and integral beziers with
+#define SPN_RAST_TYPE_PROJ_QUAD                 1 // projective transforms applied
+#define SPN_RAST_TYPE_PROJ_CUBIC                2 // are rationals without weights.
+#define SPN_RAST_TYPE_LINE                      3
+#define SPN_RAST_TYPE_QUAD                      4
+#define SPN_RAST_TYPE_CUBIC                     5
+#define SPN_RAST_TYPE_RAT_QUAD                  6
+#define SPN_RAST_TYPE_RAT_CUBIC                 7
+
+#define SPN_RAST_TYPE_COUNT                     8
+
+//
 // FILL COMMANDS
 //
 //
-// Fill and rasterize cmds only differ in their first word semantics.
+// A fill command is expanded into one or more rasterize commands.
 //
-// The rasterize command points to a 32-bit nodeword so will need to
-// be more than 32-bits if we want to access more than 16GB of blocks.
-//
-// FIXME(allanmac): drop support for more than 16GB
+// The rasterize command points to a specific dword of a block.
 //
 // For GLSL we will use a uvec4 laid out as follows:
 //
@@ -250,7 +252,7 @@
 //      uint32_t transform_type  : 1;  // transform type: 0=affine,1=projective
 //      uint32_t transform             // transform index
 //      uint32_t clip;                 // clip index
-//    } rasterize;
+//    } rast;
 //
 //  };
 //
@@ -464,9 +466,10 @@
 //
 //                                     X/Y BITS
 //   SURFACE DIM +------------------------------------------------------+
-//               |   5     6     7     8     9    10    11    12    13  |
-//    TILE  +----+------------------------------------------------------+
-//   HEIGHT |  3 |  256   512  1024  2048  4096  8192 16384 32768 65536 |
+//               |   5     6     7     8*    9*   10    11    12    13  |
+//          +----+------------------------------------------------------+
+//    TILE  |  2 |  128   256   512  1024  2048  4096  8192 16384 32768 |
+//    AXIST |  3 |  256   512  1024  2048  4096  8192 16384 32768 65536 |
 //    LOG2  |  4 |  512  1024  2048  4096  8192 16384 32768 65536  128K |
 //          +----+------------------------------------------------------+
 //   TILES^2     | 1024  4096 16384 65536  256K    1M    4M   16M   64M |
@@ -613,14 +616,15 @@
 #define SPN_TTXK_HI_MASK_SPAN                    SPN_BITS_TO_MASK(SPN_TTXK_HI_BITS_SPAN)
 #define SPN_TTXK_HI_MASK_X                       SPN_BITS_TO_MASK_AT(SPN_TTXK_HI_OFFSET_X,SPN_TTXK_HI_BITS_X)
 #define SPN_TTXK_HI_MASK_Y                       SPN_BITS_TO_MASK_AT(SPN_TTXK_HI_OFFSET_Y,SPN_TTXK_HI_BITS_Y)
-#define SPN_TTXK_HI_MASK_XY                      SPN_BITS_TO_MASK_AT(SPN_TTXK_HI_OFFSET_Y,SPN_TTXK_HI_BITS_XY)
+#define SPN_TTXK_HI_MASK_XY                      SPN_BITS_TO_MASK_AT(SPN_TTXK_HI_OFFSET_X,SPN_TTXK_HI_BITS_XY)
 
 #define SPN_TTXK_HI_ONE_X                        (1u << SPN_TTXK_HI_OFFSET_X)
 
 #define SPN_TTXK_LO_GET_TTXB_ID(t_lo_)           SPN_BITFIELD_EXTRACT(t_lo_,0,SPN_TTXK_LO_BITS_TTXB_ID)
 #define SPN_TTXK_HI_GET_XY(t_hi_)                SPN_BITFIELD_EXTRACT(t_hi_,SPN_TTXK_HI_OFFSET_XY,SPN_TTXK_HI_BITS_XY)
 
-#define SPN_TTXK_GET_HI(t_)                      (t_)[1]
+#define SPN_TTXK_GET_MASKED_XY(t_)               ((t_)[1] & SPN_TTXK_HI_MASK_XY)
+
 #define SPN_TTXK_GET_TTXB_ID(t_)                 SPN_TTXK_LO_GET_TTXB_ID((t_)[0])
 #define SPN_TTXK_GET_SPAN(t_)                    SPN_GLSL_EXTRACT_UVEC2_INT((t_),SPN_TTXK_LO_OFFSET_SPAN,SPN_TTXK_LO_HI_BITS_SPAN)
 #define SPN_TTXK_GET_X(t_)                       SPN_BITFIELD_EXTRACT((t_)[1],SPN_TTXK_HI_OFFSET_X,SPN_TTXK_HI_BITS_X)
@@ -634,19 +638,19 @@
 #define SPN_TTXK_INVALID                         uvec2(SPN_TTXK_LO_MASK_TTXB_ID,0)
 
 //
-// YX
+// XY
 //
 //  0        32
 //  |  X |  Y |
 //  +----+----+
 //  | 12 | 22 |
 //
-// A few shaders probe the YX value.
+// A few shaders probe the XY value.
 //
 // The max value of X is 4095.
 //
 
-#define SPN_XY_GET_Y(yx_)                        SPN_BITFIELD_EXTRACT(yx_,SPN_TTXK_HI_BITS_X,32-SPN_TTXK_HI_BITS_X)
+#define SPN_XY_GET_Y(xy_)                        SPN_BITFIELD_EXTRACT(xy_,SPN_TTXK_HI_BITS_X,32-SPN_TTXK_HI_BITS_X)
 #define SPN_XY_X_MASK                            SPN_BITS_TO_MASK(SPN_TTXK_HI_BITS_X)
 
 //

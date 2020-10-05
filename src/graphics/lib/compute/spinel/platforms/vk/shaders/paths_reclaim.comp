@@ -157,22 +157,6 @@ main()
   SPN_PATHS_RECLAIM_BLOCK_EXPAND();
 
   //
-  // DEBUG
-  //
-#if 0
-      {
-        uint debug_base = 0;
-
-        if (gl_SubgroupInvocationID == 0)
-          debug_base = atomicAdd(bp_debug_count[0], SPN_PATHS_RECLAIM_SUBGROUP_SIZE);
-
-        debug_base = subgroupBroadcast(debug_base, 0);
-
-        bp_debug[debug_base + gl_SubgroupInvocationID] = count_blocks;
-      }
-#endif
-
-  //
   // acquire a span in the block pool ids ring for reclaimed ids
   //
   uint bp_ids_writes = 0;
@@ -230,31 +214,6 @@ main()
 
     node_id = node_next;
   }
-
-  //
-  // DEBUG -- dump the head block
-  //
-#if 0
-      {
-        uint debug_base = 0;
-
-        if (gl_SubgroupInvocationID == 0)
-          debug_base =
-            atomicAdd(bp_debug_count[0],
-                      SPN_BLOCK_POOL_BLOCK_DWORDS + SPN_PATHS_RECLAIM_SUBGROUP_SIZE);
-
-        debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-        bp_debug[debug_base] = 0xCAFEBABE;
-
-        debug_base += SPN_PATHS_RECLAIM_SUBGROUP_SIZE;
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L) bp_debug[debug_base + I * SPN_PATHS_RECLAIM_SUBGROUP_SIZE] = h##I;
-
-        SPN_PATHS_RECLAIM_BLOCK_EXPAND();
-      }
-#endif
 
   //
   // find ring index of all blocks and store -- FIXME -- NOT COALESCED
