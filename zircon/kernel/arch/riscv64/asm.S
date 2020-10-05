@@ -7,6 +7,7 @@
 #include <asm.h>
 #include <arch/riscv64.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
+#include <zircon/errors.h>
 
 #define REGOFF(x) ((x) * 8)
 
@@ -301,3 +302,64 @@ FUNCTION(mexec_asm)
 END_FUNCTION(mexec_asm)
 
 DATA(mexec_asm_end)
+
+// Riscv64UserCopyRet _riscv64_user_copy(void *dst, const void *src, size_t len, uint64_t *fault_return)
+.balign 64 // Align to cache line.  This code fits in one cache line.
+FUNCTION(_riscv64_user_copy)
+    addi   sp, sp, -24
+    sd     s1, 16(sp)
+    sd     s2, 8(sp)
+    sd     s3, (sp)
+
+    // Allow supervisor accesses to user memory
+    li     s1, (1 << 18)
+    csrs   sstatus, s1
+
+    // Save fault_return and the ra register
+    mv     s2, a3
+    mv     s3, ra
+
+    // Set *fault_return to fault_from_user
+    la     t0, .Lfault_from_user
+    sd     t0, (a3)
+
+    // Just call our normal memcpy.  The caller has ensured that the
+    // address range is in the user portion of the address space.
+    // While fault_return_ptr is set, userspace data faults will be
+    // redirected to .Lfault_from_user, below.
+    //
+    // NOTE! We make important assumptions here about what the memcpy
+    // code does: it never moves the stack pointer, and it never touches a6 and
+    // a7 where we saved fault_return and ra
+    jal    memcpy
+
+    // Store a successful status for the return. In this case since we do not set x1 the value of
+    // the fault address in the return struct is undefined.
+    li     a0, ZX_OK
+
+.Luser_copy_return:
+    // Restore *fault_return and the ra register
+    sd     x0, (s2)
+    mv     ra, s3
+
+    // Disable supervisor accesses to user memory
+    csrc   sstatus, s1
+
+    ld     s1, 16(sp)
+    ld     s2, 8(sp)
+    ld     s3, (sp)
+    addi   sp, sp, 24
+    ret
+END_FUNCTION(_riscv64_user_copy)
+
+// If we are capturing faults the exception handler will have placed the faulting virtual address
+// for us in a1 and the flags in a2. We do not touch a1 and rely on the caller to know if the value
+// is meaningful based on whether it specified fault capture or not, we just need to construct a
+// valid a0 before jmping to user_copy_return.
+.Lfault_from_user:
+    li     a0, ZX_ERR_INVALID_ARGS
+    // If we are capturing faults the flags will have been placed in a2 and we want them placed in
+    // the high bits of a0. If not capturing faults then we will copy some garbage bits which will
+    // be ignored by the caller.
+    //bfi a0, a2, 32, 32
+    j      .Luser_copy_return

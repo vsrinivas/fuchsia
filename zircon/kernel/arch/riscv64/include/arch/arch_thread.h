@@ -27,6 +27,9 @@ struct arch_thread {
   // Point to the current cpu pointer when the thread is running, used to
   // restore the fixed register on exception entry. Swapped on context switch.
   struct riscv64_percpu* current_percpu_ptr;
+
+  // If non-NULL, address to return to on data fault.
+  uint64_t data_fault_resume;
 };
 
 __END_CDECLS
