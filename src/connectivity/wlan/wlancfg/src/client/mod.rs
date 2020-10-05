@@ -646,13 +646,10 @@ mod tests {
 
         async fn scan(
             &mut self,
-            timeout: u8,
-            scan_type: fidl_fuchsia_wlan_common::ScanType,
+            mut scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             let (local, remote) = fidl::endpoints::create_proxy()?;
-            let mut request =
-                fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
-            let _ = self.sme_proxy.scan(&mut request, remote);
+            let _ = self.sme_proxy.scan(&mut scan_request, remote);
             Ok(local)
         }
 
@@ -1220,8 +1217,7 @@ mod tests {
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
                 req, ..
             }))) => {
-                assert_eq!(10, req.timeout);
-                assert_eq!(fidl_common::ScanType::Passive, req.scan_type);
+                assert_eq!(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest{}), req);
             }
         );
     }
@@ -1964,8 +1960,7 @@ mod tests {
 
         async fn scan(
             &mut self,
-            _timeout: u8,
-            _scan_type: fidl_fuchsia_wlan_common::ScanType,
+            _scan_request: fidl_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             Err(format_err!("No ifaces"))
         }

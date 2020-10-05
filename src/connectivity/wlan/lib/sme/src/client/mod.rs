@@ -247,10 +247,15 @@ impl ClientSme {
         // We want to default to Active scan so that for routers that support WSC, we can retrieve
         // AP metadata from the probe response. However, for SoftMAC, we default to passive scan
         // because we do not have a proper active scan implementation for DFS channels.
-        let scan_type = if self.context.is_softmac {
-            req.deprecated_scan_type
+        let scan_request = if self.context.is_softmac
+            && req.deprecated_scan_type == fidl_common::ScanType::Passive
+        {
+            fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {})
         } else {
-            fidl_common::ScanType::Active
+            fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            })
         };
         info!("SME received a connect command. Initiating a join scan with targeted SSID");
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
@@ -260,7 +265,7 @@ impl ClientSme {
                 credential: req.credential,
                 radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
             },
-            scan_type,
+            scan_request,
         });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(token) = canceled_token {
@@ -283,11 +288,11 @@ impl ClientSme {
 
     pub fn on_scan_command(
         &mut self,
-        scan_type: fidl_common::ScanType,
+        scan_request: fidl_sme::ScanRequest,
     ) -> oneshot::Receiver<BssDiscoveryResult> {
         info!("SME received a scan command, initiating a discovery scan");
         let (responder, receiver) = Responder::new();
-        let scan = DiscoveryScan::new(responder, scan_type);
+        let scan = DiscoveryScan::new(responder, scan_request);
         let req = self.scan_sched.enqueue_scan_to_discover(scan);
         self.send_scan_request(req);
         receiver
@@ -1210,7 +1215,8 @@ mod tests {
     #[test]
     fn test_info_event_dont_suppress_bss() {
         let (mut sme, _mlme_strem, _info_stream, _time_stream) = create_sme();
-        let mut recv = sme.on_scan_command(fidl_common::ScanType::Passive);
+        let mut recv =
+            sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
         let bss = fake_bss_with_bssid(b"foo".to_vec(), [3; 6]);
         sme.on_mlme_event(MlmeEvent::OnScanResult {
@@ -1236,7 +1242,11 @@ mod tests {
     fn test_info_event_discovery_scan() {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
-        let _recv = sme.on_scan_command(fidl_common::ScanType::Active);
+        let _recv =
+            sme.on_scan_command(fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }));
 
         report_fake_scan_result(&mut sme, fake_bss_with_rates(b"foo".to_vec(), vec![12]));
 

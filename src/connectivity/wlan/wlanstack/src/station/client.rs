@@ -115,7 +115,7 @@ async fn handle_fidl_request(
     request: fidl_sme::ClientSmeRequest,
 ) -> Result<(), fidl::Error> {
     match request {
-        ClientSmeRequest::Scan { req, txn, .. } => Ok(scan(sme, txn, req.scan_type)
+        ClientSmeRequest::Scan { req, txn, .. } => Ok(scan(sme, txn, req)
             .await
             .unwrap_or_else(|e| error!("Error handling a scan transaction: {:?}", e))),
         ClientSmeRequest::Connect { req, txn, .. } => Ok(connect(sme, txn, req)
@@ -132,10 +132,10 @@ async fn handle_fidl_request(
 async fn scan(
     sme: &Mutex<Sme>,
     txn: ServerEnd<fidl_sme::ScanTransactionMarker>,
-    scan_type: fidl_common::ScanType,
+    scan_request: fidl_sme::ScanRequest,
 ) -> Result<(), anyhow::Error> {
     let handle = txn.into_stream()?.control_handle();
-    let receiver = sme.lock().unwrap().on_scan_command(scan_type);
+    let receiver = sme.lock().unwrap().on_scan_command(scan_request);
     let result = receiver.await.unwrap_or(Err(fidl_mlme::ScanResultCodes::InternalError));
     let send_result = send_scan_results(handle, result);
     filter_out_peer_closed(send_result)?;

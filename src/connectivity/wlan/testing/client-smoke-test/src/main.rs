@@ -99,7 +99,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             // first check if we can get scan results
             fx_log_info!("iface {}: scanning", iface_id);
-            let scan_result = wlan_service_util::client::scan(&wlan_iface.sme_proxy).await;
+            let scan_result = wlan_service_util::client::passive_scan(&wlan_iface.sme_proxy).await;
             match scan_result {
                 Ok(results) => {
                     wlan_iface.scan_success = true;

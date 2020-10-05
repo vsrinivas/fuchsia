@@ -48,9 +48,19 @@ protocol ScanTransaction {
     -> OnError(ScanError error);
 };
 
-struct ScanRequest {
-    uint8 timeout; // seconds
-    fuchsia.wlan.common.ScanType scan_type;
+union ScanRequest {
+    1: ActiveScanRequest active;
+    2: PassiveScanRequest passive;
+};
+
+struct PassiveScanRequest {
+};
+
+struct ActiveScanRequest {
+    // The SSIDs to scan for. Leave empty for a wildcard active scan.
+    vector<vector<uint8>:32>:16 ssids;
+    // Channels to scan on. Leave empty for all supported channels.
+    vector<uint8>:500 channels;
 };
 
 enum ConnectResultCode {

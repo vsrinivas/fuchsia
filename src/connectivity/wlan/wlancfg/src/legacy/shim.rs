@@ -151,12 +151,12 @@ pub fn get_best_bss<'a>(bss_list: &'a Vec<fidl_sme::BssInfo>) -> Option<&'a fidl
     bss_list.iter().max_by(|x, y| compare_bss(x, y))
 }
 
-async fn scan(iface: IfaceRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
+async fn scan(iface: IfaceRef, _legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
     let r = async move {
         let iface = iface.get()?;
         let mut iface_manager = iface.iface_manager.lock().await;
         let scan_txn = iface_manager
-            .scan(legacy_req.timeout, fidl_common::ScanType::Passive)
+            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}))
             .map_err(|e| {
                 error!("Failed to start a scan transaction: {}", e);
                 internal_error()
@@ -640,17 +640,14 @@ mod tests {
 
         async fn scan(
             &mut self,
-            timeout: u8,
-            scan_type: fidl_fuchsia_wlan_common::ScanType,
+            mut scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, anyhow::Error> {
             if !self.scan_succeeds {
                 return Err(anyhow::format_err!("failing to scan"));
             }
 
             let (local, remote) = fidl::endpoints::create_proxy()?;
-            let mut request =
-                fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
-            let _ = self.sme_proxy.scan(&mut request, remote);
+            let _ = self.sme_proxy.scan(&mut scan_request, remote);
             Ok(local)
         }
 

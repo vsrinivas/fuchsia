@@ -49,8 +49,7 @@ pub(crate) struct RemoveIfaceRequest {
 
 #[derive(Debug)]
 pub(crate) struct ScanRequest {
-    pub timeout: u8,
-    pub scan_type: fidl_fuchsia_wlan_common::ScanType,
+    pub scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
     pub responder: oneshot::Sender<Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error>>,
 }
 

@@ -10,7 +10,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_wlan_sme,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
 };
 
@@ -45,9 +45,8 @@ pub(crate) trait IfaceManagerApi {
     /// is returned to the caller so that the scan results can be monitored.
     async fn scan(
         &mut self,
-        timeout: u8,
-        scan_type: fidl_fuchsia_wlan_common::ScanType,
-    ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error>;
+        scan_request: fidl_sme::ScanRequest,
+    ) -> Result<fidl_sme::ScanTransactionProxy, Error>;
 
     /// Disconnects all configured clients and disposes of all client ifaces before instructing
     /// the PhyManager to stop client connections.
@@ -60,7 +59,7 @@ pub(crate) trait IfaceManagerApi {
     async fn start_ap(
         &mut self,
         config: ap_fsm::ApConfig,
-    ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error>;
+    ) -> Result<oneshot::Receiver<fidl_sme::StartApResultCode>, Error>;
 
     /// Stops the AP interface corresponding to the provided configuration and destroys it.
     async fn stop_ap(&mut self, ssid: Vec<u8>, password: Vec<u8>) -> Result<(), Error>;
@@ -128,11 +127,10 @@ impl IfaceManagerApi for IfaceManager {
 
     async fn scan(
         &mut self,
-        timeout: u8,
-        scan_type: fidl_fuchsia_wlan_common::ScanType,
-    ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+        scan_request: fidl_sme::ScanRequest,
+    ) -> Result<fidl_sme::ScanTransactionProxy, Error> {
         let (responder, receiver) = oneshot::channel();
-        let req = ScanRequest { timeout, scan_type, responder };
+        let req = ScanRequest { scan_request, responder };
         self.sender.try_send(IfaceManagerRequest::Scan(req))?;
         receiver.await?
     }
@@ -154,7 +152,7 @@ impl IfaceManagerApi for IfaceManager {
     async fn start_ap(
         &mut self,
         config: ap_fsm::ApConfig,
-    ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+    ) -> Result<oneshot::Receiver<fidl_sme::StartApResultCode>, Error> {
         let (responder, receiver) = oneshot::channel();
         let req = StartApRequest { config, responder };
         self.sender.try_send(IfaceManagerRequest::StartAp(req))?;
@@ -724,8 +722,9 @@ mod tests {
         let mut test_values = test_setup();
 
         // Request a scan
-        let scan_fut =
-            test_values.iface_manager.scan(0, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = test_values
+            .iface_manager
+            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
         pin_mut!(scan_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
@@ -736,11 +735,10 @@ mod tests {
         assert_variant!(
             test_values.exec.run_until_stalled(&mut next_message),
             Poll::Ready(Some(IfaceManagerRequest::Scan(ScanRequest{
-                timeout: 0,
-                scan_type: fidl_fuchsia_wlan_common::ScanType::Passive,
+                scan_request: _,
                 responder
             }))) => {
-                let (proxy, _) = create_proxy::<fidl_fuchsia_wlan_sme::ScanTransactionMarker>()
+                let (proxy, _) = create_proxy::<fidl_sme::ScanTransactionMarker>()
                     .expect("failed to create scan proxy");
                 responder.send(Ok(proxy)).expect("failed to send scan proxy");
             }
@@ -757,8 +755,9 @@ mod tests {
         let mut test_values = test_setup();
 
         // Request a scan
-        let scan_fut =
-            test_values.iface_manager.scan(0, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = test_values
+            .iface_manager
+            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
         pin_mut!(scan_fut);
 
         let service_fut =

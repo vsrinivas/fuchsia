@@ -780,8 +780,7 @@ mod tests {
 
         async fn scan(
             &mut self,
-            _timeout: u8,
-            _scan_type: fidl_fuchsia_wlan_common::ScanType,
+            _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             unimplemented!();
         }

@@ -6,6 +6,7 @@ use {
     crate::client::{DeviceInfo, Ssid},
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanRequest, ScanResultCodes},
+    fidl_fuchsia_wlan_sme as fidl_sme,
     log::error,
     std::{
         collections::{hash_map, HashMap, HashSet},
@@ -37,23 +38,23 @@ type BssId = [u8; 6];
 pub struct JoinScan<T> {
     pub ssid: Ssid,
     pub token: T,
-    pub scan_type: fidl_common::ScanType,
+    pub scan_request: fidl_sme::ScanRequest,
 }
 
 // A "user"-initiated scan request for the purpose of discovering available networks
 #[derive(Debug, PartialEq)]
 pub struct DiscoveryScan<T> {
     tokens: Vec<T>,
-    scan_type: fidl_common::ScanType,
+    scan_request: fidl_sme::ScanRequest,
 }
 
 impl<T> DiscoveryScan<T> {
-    pub fn new(token: T, scan_type: fidl_common::ScanType) -> Self {
-        Self { tokens: vec![token], scan_type }
+    pub fn new(token: T, scan_request: fidl_sme::ScanRequest) -> Self {
+        Self { tokens: vec![token], scan_request }
     }
 
     pub fn matches(&self, scan: &DiscoveryScan<T>) -> bool {
-        self.scan_type == scan.scan_type
+        self.scan_request == scan.scan_request
     }
 
     pub fn merges(&mut self, mut scan: DiscoveryScan<T>) {
@@ -306,7 +307,7 @@ const WILDCARD_BSS_ID: [u8; 6] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
 
 fn new_scan_request(
     mlme_txn_id: u64,
-    scan_type: fidl_common::ScanType,
+    scan_request: fidl_sme::ScanRequest,
     ssid: Vec<u8>,
     device_info: &DeviceInfo,
 ) -> ScanRequest {
@@ -317,20 +318,25 @@ fn new_scan_request(
         ssid,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        channel_list: Some(get_channels_to_scan(&device_info, scan_type)),
+        channel_list: Some(get_channels_to_scan(&device_info, &scan_request)),
         min_channel_time: PASSIVE_SCAN_CHANNEL_MS,
         max_channel_time: PASSIVE_SCAN_CHANNEL_MS,
         ssid_list: None,
     };
-    match scan_type {
-        fidl_common::ScanType::Active => ScanRequest {
+    match scan_request {
+        fidl_sme::ScanRequest::Active(active_scan_params) => ScanRequest {
             scan_type: fidl_mlme::ScanTypes::Active,
             probe_delay: ACTIVE_SCAN_PROBE_DELAY_MS,
             min_channel_time: ACTIVE_SCAN_CHANNEL_MS,
             max_channel_time: ACTIVE_SCAN_CHANNEL_MS,
+            ssid_list: if active_scan_params.ssids.len() > 0 {
+                Some(active_scan_params.ssids)
+            } else {
+                None
+            },
             ..scan_req
         },
-        fidl_common::ScanType::Passive => scan_req,
+        fidl_sme::ScanRequest::Passive(_) => scan_req,
     }
 }
 
@@ -339,7 +345,12 @@ fn new_join_scan_request<T>(
     join_scan: &JoinScan<T>,
     device_info: &DeviceInfo,
 ) -> ScanRequest {
-    new_scan_request(mlme_txn_id, join_scan.scan_type, join_scan.ssid.clone(), device_info)
+    new_scan_request(
+        mlme_txn_id,
+        join_scan.scan_request.clone(),
+        join_scan.ssid.clone(),
+        device_info,
+    )
 }
 
 fn new_discovery_scan_request<T>(
@@ -347,7 +358,7 @@ fn new_discovery_scan_request<T>(
     discovery_scan: &DiscoveryScan<T>,
     device_info: &DeviceInfo,
 ) -> ScanRequest {
-    new_scan_request(mlme_txn_id, discovery_scan.scan_type, vec![], device_info)
+    new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), vec![], device_info)
 }
 
 /// Get channels to scan depending on device's capability and scan type. If scan type is passive,
@@ -368,23 +379,34 @@ fn new_discovery_scan_request<T>(
 /// Passive  | N                  | [1, 52]
 /// Active   | Y                  | [1, 52]
 /// Active   | N                  | [1]
-fn get_channels_to_scan(device_info: &DeviceInfo, scan_type: fidl_common::ScanType) -> Vec<u8> {
+fn get_channels_to_scan(device_info: &DeviceInfo, scan_request: &fidl_sme::ScanRequest) -> Vec<u8> {
     let mut device_supported_channels: HashSet<u8> = HashSet::new();
     for band in &device_info.bands {
         device_supported_channels.extend(&band.channels);
     }
-
     let supports_dfs = device_info.driver_features.contains(&fidl_common::DriverFeature::Dfs);
 
     SUPPORTED_CHANNELS
         .iter()
         .filter(|chan| device_supported_channels.contains(chan))
         .filter(|chan| {
-            if scan_type == fidl_common::ScanType::Passive || supports_dfs {
-                true
-            } else {
-                !Channel::new(**chan, Cbw::Cbw20).is_dfs()
+            if let &fidl_sme::ScanRequest::Passive(_) = scan_request {
+                return true;
+            };
+            if supports_dfs {
+                return true;
+            };
+            !Channel::new(**chan, Cbw::Cbw20).is_dfs()
+        })
+        .filter(|chan| {
+            // If this is an active scan and there are any channels specified by the caller,
+            // only include those channels.
+            if let &fidl_sme::ScanRequest::Active(ref options) = scan_request {
+                if !options.channels.is_empty() {
+                    return options.channels.contains(chan);
+                }
             }
+            true
         })
         .map(|chan| *chan)
         .collect()
@@ -413,7 +435,7 @@ mod tests {
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     fn passive_discovery_scan(token: i32) -> DiscoveryScan<i32> {
-        DiscoveryScan::new(token, fidl_common::ScanType::Passive)
+        DiscoveryScan::new(token, fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}))
     }
 
     #[test]
@@ -501,13 +523,43 @@ mod tests {
     }
 
     #[test]
-    fn test_active_discovery_scan_args() {
-        let mut sched = create_sched();
-        let scan_cmd = DiscoveryScan::new(10, fidl_common::ScanType::Active);
+    fn test_active_discovery_scan_args_empty() {
+        let device_info = device_info_with_chan(vec![1, 36, 165]);
+        let mut sched: ScanScheduler<i32, i32> = ScanScheduler::new(Arc::new(device_info));
+        let scan_cmd = DiscoveryScan::new(
+            10,
+            fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }),
+        );
         let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
 
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         assert_eq!(req.ssid, Vec::<u8>::new());
+        assert_eq!(req.ssid_list, None);
+        assert_eq!(req.channel_list, Some(vec![36, 165, 1]));
+    }
+
+    #[test]
+    fn test_active_discovery_scan_args_filled() {
+        let device_info = device_info_with_chan(vec![1, 36, 165]);
+        let mut sched: ScanScheduler<i32, i32> = ScanScheduler::new(Arc::new(device_info));
+        let ssid1 = "ssid1".as_bytes().to_vec();
+        let ssid2 = "ssid2".as_bytes().to_vec();
+        let scan_cmd = DiscoveryScan::new(
+            10,
+            fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![ssid1.clone(), ssid2.clone()],
+                channels: vec![1, 20, 100],
+            }),
+        );
+        let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
+
+        assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
+        assert_eq!(req.ssid, Vec::<u8>::new());
+        assert_eq!(req.ssid_list, Some(vec![ssid1, ssid2]));
+        assert_eq!(req.channel_list, Some(vec![1]));
     }
 
     #[test]
@@ -558,7 +610,13 @@ mod tests {
         let txn_id = mlme_req.txn_id;
 
         // Post an active scan command, which should be enqueued until the previous one finishes
-        let scan_cmd = DiscoveryScan::new(20, fidl_common::ScanType::Active);
+        let scan_cmd = DiscoveryScan::new(
+            20,
+            fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }),
+        );
         assert!(sched.enqueue_scan_to_discover(scan_cmd).is_none());
 
         // Post a passive scan command. It should be merged with the ongoing one and so should not
@@ -567,7 +625,13 @@ mod tests {
 
         // Post an active scan command. It should be merged with the active scan command that's
         // still enqueued, and so should not issue another request to MLME
-        let scan_cmd = DiscoveryScan::new(40, fidl_common::ScanType::Active);
+        let scan_cmd = DiscoveryScan::new(
+            40,
+            fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }),
+        );
         assert!(sched.enqueue_scan_to_discover(scan_cmd).is_none());
 
         // Report scan result and scan end
@@ -628,11 +692,8 @@ mod tests {
     #[test]
     fn join_scan() {
         let mut sched = create_sched();
-        let (discarded_token, req) = sched.enqueue_scan_to_join(JoinScan {
-            ssid: b"foo".to_vec(),
-            token: 10,
-            scan_type: fidl_common::ScanType::Passive,
-        });
+        let (discarded_token, req) =
+            sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         assert!(discarded_token.is_none());
         let txn_id = req.expect("expected a ScanRequest").txn_id;
 
@@ -671,19 +732,13 @@ mod tests {
     #[test]
     fn test_stale_join_scan() {
         let mut sched = create_sched();
-        let (_discarded_token, req) = sched.enqueue_scan_to_join(JoinScan {
-            ssid: b"foo".to_vec(),
-            token: 10,
-            scan_type: fidl_common::ScanType::Passive,
-        });
+        let (_discarded_token, req) =
+            sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         let txn_id = req.expect("expected a ScanRequest").txn_id;
 
         // Schedule a new one, which should make the existing one stale
-        let (discarded_token, req) = sched.enqueue_scan_to_join(JoinScan {
-            ssid: b"bar".to_vec(),
-            token: 20,
-            scan_type: fidl_common::ScanType::Passive,
-        });
+        let (discarded_token, req) =
+            sched.enqueue_scan_to_join(passive_join_scan(b"bar".to_vec(), 20));
         // Verify that token for existing scan is discarded (which indicates it's marked stale)
         assert!(discarded_token.is_some());
         // Although we have marked previous scan stale, we cannot send out a new scan request
@@ -704,7 +759,11 @@ mod tests {
     }
 
     fn passive_join_scan(ssid: Vec<u8>, token: i32) -> JoinScan<i32> {
-        JoinScan { ssid, token, scan_type: fidl_common::ScanType::Passive }
+        JoinScan {
+            ssid,
+            token,
+            scan_request: fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
+        }
     }
 
     #[test]
@@ -724,7 +783,10 @@ mod tests {
         let (_discarded_token, req) = sched.enqueue_scan_to_join(JoinScan {
             ssid: b"foo".to_vec(),
             token: 10,
-            scan_type: fidl_common::ScanType::Active,
+            scan_request: fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }),
         });
 
         let req = req.expect("expected a ScanRequest");
@@ -784,7 +846,10 @@ mod tests {
         let (_, req) = sched.enqueue_scan_to_join(JoinScan {
             ssid: b"foo".to_vec(),
             token: 10,
-            scan_type: fidl_common::ScanType::Active,
+            scan_request: fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }),
         });
         assert_eq!(req.expect("expect ScanRequest").channel_list, Some(vec![52, 1]));
     }
@@ -809,7 +874,10 @@ mod tests {
         let (_, req) = sched.enqueue_scan_to_join(JoinScan {
             ssid: b"foo".to_vec(),
             token: 10,
-            scan_type: fidl_common::ScanType::Active,
+            scan_request: fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                ssids: vec![],
+                channels: vec![],
+            }),
         });
         assert_eq!(req.expect("expect ScanRequest").channel_list, Some(vec![1]));
     }
@@ -818,7 +886,13 @@ mod tests {
     fn test_bss_map_retain_information() {
         let mut sched = create_sched();
         let req = sched
-            .enqueue_scan_to_discover(DiscoveryScan::new(10, fidl_common::ScanType::Active))
+            .enqueue_scan_to_discover(DiscoveryScan::new(
+                10,
+                fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                    ssids: vec![],
+                    channels: vec![],
+                }),
+            ))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {

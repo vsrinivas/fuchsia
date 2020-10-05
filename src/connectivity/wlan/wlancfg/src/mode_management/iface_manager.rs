@@ -496,16 +496,12 @@ impl IfaceManagerService {
 
     async fn scan(
         &mut self,
-        timeout: u8,
-        scan_type: fidl_fuchsia_wlan_common::ScanType,
+        mut scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
     ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
         let client_iface = self.get_client(None).await?;
 
         let (local, remote) = fidl::endpoints::create_proxy()?;
-        let mut request =
-            fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
-
-        let scan_result = client_iface.sme_proxy.scan(&mut request, remote);
+        let scan_result = client_iface.sme_proxy.scan(&mut scan_request, remote);
 
         self.clients.push(client_iface);
 
@@ -823,8 +819,8 @@ pub(crate) async fn serve_iface_manager_requests(
                             error!("could not respond to RemoveIfaceRequest");
                         }
                     }
-                    IfaceManagerRequest::Scan(ScanRequest { timeout, scan_type, responder }) => {
-                        if responder.send(iface_manager.scan(timeout, scan_type).await).is_err() {
+                    IfaceManagerRequest::Scan(ScanRequest {  scan_request, responder }) => {
+                        if responder.send(iface_manager.scan( scan_request).await).is_err() {
                             error!("could not respond to ScanRequest");
                         }
                     }
@@ -1214,7 +1210,9 @@ mod tests {
             create_iface_manager_with_client(&test_values, true);
 
         // Scan and ensure that the response is handled properly
-        let scan_fut = iface_manager.scan(1, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
+            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
+        ));
 
         pin_mut!(scan_fut);
         let _scan_proxy = match exec.run_until_stalled(&mut scan_fut) {
@@ -1235,7 +1233,9 @@ mod tests {
             create_iface_manager_with_client(&test_values, false);
 
         // Scan and ensure that the response is handled properly
-        let scan_fut = iface_manager.scan(1, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
+            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
+        ));
 
         pin_mut!(scan_fut);
         let _scan_proxy = match exec.run_until_stalled(&mut scan_fut) {
@@ -1262,7 +1262,9 @@ mod tests {
             test_values.device_service_proxy,
             test_values.saved_networks,
         );
-        let scan_fut = iface_manager.scan(1, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
+            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
+        ));
 
         // Ensure that the scan request results in an error.
         pin_mut!(scan_fut);
@@ -1283,7 +1285,9 @@ mod tests {
         drop(next_sme_req);
 
         // Scan and ensure that an error is returned.
-        let scan_fut = iface_manager.scan(1, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
+            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
+        ));
 
         pin_mut!(scan_fut);
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
@@ -1306,7 +1310,9 @@ mod tests {
         drop(test_values.device_service_stream);
 
         // Scan and ensure that an error is returned.
-        let scan_fut = iface_manager.scan(1, fidl_fuchsia_wlan_common::ScanType::Passive);
+        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
+            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
+        ));
 
         pin_mut!(scan_fut);
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
@@ -2990,8 +2996,7 @@ mod tests {
 
         async fn scan(
             &mut self,
-            _timeout: u8,
-            _scan_type: fidl_fuchsia_wlan_common::ScanType,
+            _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             self.scan_requested = true;
             Err(format_err!("scan failed"))
@@ -3200,8 +3205,9 @@ mod tests {
         // Make a scan request.
         let (scan_sender, scan_receiver) = oneshot::channel();
         let req = ScanRequest {
-            timeout: 10,
-            scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
+            scan_request: fidl_fuchsia_wlan_sme::ScanRequest::Passive(
+                fidl_fuchsia_wlan_sme::PassiveScanRequest {},
+            ),
             responder: scan_sender,
         };
         let req = IfaceManagerRequest::Scan(req);

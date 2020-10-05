@@ -31,8 +31,6 @@ use wlan_rsn::psk;
 mod opts;
 use crate::opts::*;
 
-const SCAN_REQUEST_TIMEOUT_SEC: u8 = 10;
-
 type WlanSvc = DeviceServiceProxy;
 
 fn main() -> Result<(), Error> {
@@ -266,8 +264,13 @@ async fn do_client_scan(cmd: opts::ClientScanCmd, wlan_svc: WlanSvc) -> Result<(
     let opts::ClientScanCmd { iface_id, scan_type } = cmd;
     let sme = get_client_sme(wlan_svc, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
-    let mut req =
-        fidl_sme::ScanRequest { timeout: SCAN_REQUEST_TIMEOUT_SEC, scan_type: scan_type.into() };
+    let mut req = match scan_type {
+        ScanTypeArg::Passive => fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
+        ScanTypeArg::Active => fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![],
+            channels: vec![],
+        }),
+    };
     sme.scan(&mut req, remote).context("error sending scan request")?;
     handle_scan_transaction(local).await
 }

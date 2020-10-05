@@ -21,7 +21,6 @@ use {
 
 // Arbitrary count of networks (ssid/security pairs) to output per request
 const OUTPUT_CHUNK_NETWORK_COUNT: usize = 5;
-const SCAN_TIMEOUT_SECONDS: u8 = 10;
 
 /// Allows for consumption of updated scan results.
 #[async_trait]
@@ -47,7 +46,7 @@ async fn sme_scan(
     let txn = {
         let mut iface_manager = iface_manager.lock().await;
         match iface_manager
-            .scan(SCAN_TIMEOUT_SECONDS, fidl_fuchsia_wlan_common::ScanType::Passive)
+            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}))
             .await
         {
             Ok(txn) => txn,
@@ -317,13 +316,10 @@ mod tests {
 
         async fn scan(
             &mut self,
-            timeout: u8,
-            scan_type: fidl_fuchsia_wlan_common::ScanType,
+            mut scan_request: fidl_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             let (local, remote) = fidl::endpoints::create_proxy()?;
-            let mut request =
-                fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
-            let _ = self.sme_proxy.scan(&mut request, remote);
+            let _ = self.sme_proxy.scan(&mut scan_request, remote);
             Ok(local)
         }
 

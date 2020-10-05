@@ -59,7 +59,8 @@ impl WlanFacade {
             .context("Scan: failed to get client iface sme proxy")?;
 
         // start the scan
-        let results = wlan_service_util::client::scan(&sme_proxy).await.context("Scan failed")?;
+        let results =
+            wlan_service_util::client::passive_scan(&sme_proxy).await.context("Scan failed")?;
 
         // send the ssids back to the test
         let mut ssids = Vec::new();

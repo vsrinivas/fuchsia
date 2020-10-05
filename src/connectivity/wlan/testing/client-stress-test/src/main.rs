@@ -98,7 +98,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             for i in 0..opt.repetitions {
                 if opt.scan_test_enabled {
                     let start = Instant::now();
-                    let result = wlan_service_util::client::scan(&wlaniface.sme_proxy).await;
+                    let result =
+                        wlan_service_util::client::passive_scan(&wlaniface.sme_proxy).await;
                     match result {
                         Ok(_ess_info) => {
                             total_scan_time_ms +=

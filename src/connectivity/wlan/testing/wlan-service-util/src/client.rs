@@ -14,8 +14,6 @@ use futures::stream::TryStreamExt;
 
 type WlanService = DeviceServiceProxy;
 
-const SCAN_TIMEOUT_SECONDS: u8 = 20;
-
 // IEEE Std. 802.11-2016 - J.4.1 mandates a password to be <= 63 bytes to distinguish from a PSK
 // represented as a HEX string.
 const WLAN_PASSWORD_MAX_LEN: usize = 63;
@@ -190,22 +188,19 @@ pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
     }
 }
 
-pub async fn scan(
+pub async fn passive_scan(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
 ) -> Result<Vec<fidl_sme::BssInfo>, Error> {
-    let scan_transaction = start_scan_transaction(&iface_sme_proxy)?;
+    let scan_transaction = start_passive_scan_transaction(&iface_sme_proxy)?;
 
     get_scan_results(scan_transaction).await.map_err(Into::into)
 }
 
-fn start_scan_transaction(
+fn start_passive_scan_transaction(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
 ) -> Result<fidl_sme::ScanTransactionProxy, Error> {
     let (scan_txn, remote) = endpoints::create_proxy()?;
-    let mut req = fidl_sme::ScanRequest {
-        timeout: SCAN_TIMEOUT_SECONDS,
-        scan_type: fidl_common::ScanType::Passive,
-    };
+    let mut req = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
     iface_sme_proxy.scan(&mut req, remote)?;
     Ok(scan_txn)
 }
@@ -1098,7 +1093,7 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
-        let fut = scan(&client_sme);
+        let fut = passive_scan(&client_sme);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -1141,7 +1136,7 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
-        let fut = scan(&client_sme);
+        let fut = passive_scan(&client_sme);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 

@@ -162,7 +162,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 let mut wlan_client_results = WlanClientResultsPerAP::new();
 
                 let scan_results_return =
-                    wlan_service_util::client::scan(&wlan_client_iface.sme_proxy).await;
+                    wlan_service_util::client::passive_scan(&wlan_client_iface.sme_proxy).await;
 
                 let scan_results = match scan_results_return {
                     Ok(scan_results) => scan_results,
