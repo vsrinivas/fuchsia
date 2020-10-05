@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher": "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx",
                 "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
                 "fuchsia.wlan.device.service.DeviceService": [
                     "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
@@ -12,20 +13,25 @@
                 ],
                 "fuchsia.wlan.policy.ClientProvider": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+                ],
+                "fuchsia.wlan.service.Wlan": [
+                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
                 ]
             }
         }
     },
     "program": {
-        "binary": "bin/configure_legacy_privacy_off"
+        "binary": "bin/legacy_configure_legacy_privacy_off"
     },
     "sandbox": {
         "services": [
+            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
-            "fuchsia.wlan.policy.ClientProvider"
+            "fuchsia.wlan.policy.ClientProvider",
+            "fuchsia.wlan.service.Wlan"
         ]
     }
 }

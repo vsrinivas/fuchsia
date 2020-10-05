@@ -197,3 +197,39 @@ fuchsia_test_package("rate-selection-package") {
     environments = [ nuc_env ]
   }
 }
+
+# Remove these legacy tests along with the legacy API.
+fuchsia_component("legacy-configure-legacy-privacy-off") {
+  testonly = true
+  manifest = "meta/legacy_configure_legacy_privacy_off.cmx"
+  deps = [
+    "legacy_configure_legacy_privacy_off",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_component("legacy-configure-legacy-privacy-on") {
+  testonly = true
+  manifest = "meta/legacy_configure_legacy_privacy_on.cmx"
+  deps = [
+    "legacy_configure_legacy_privacy_on",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_component("legacy-simulate-scan") {
+  testonly = true
+  manifest = "meta/legacy_simulate_scan.cmx"
+  deps = [
+    "legacy_simulate_scan",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_test_package("legacy-wlan-hw-sim-test") {
+  test_components = [
+    ":legacy-configure-legacy-privacy-off",
+    ":legacy-configure-legacy-privacy-on",
+    ":legacy-simulate-scan",
+  ]
+}

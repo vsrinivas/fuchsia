@@ -4,13 +4,17 @@
 
 import("//build/rust/rustc_test.gni")
 
-rustc_test("configure_legacy_privacy_on") {
+rustc_test("legacy_configure_legacy_privacy_off") {
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
+    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/lib.rs" ]

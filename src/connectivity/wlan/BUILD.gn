@@ -57,6 +57,7 @@ group("tests") {
     "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test-tests",
     "//src/connectivity/wlan/testing/client-stress-test:wlan-stress-test",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim-lib-tests",
+    "//src/connectivity/wlan/testing/hw-sim/test:legacy-wlan-hw-sim-test",
     "//src/connectivity/wlan/testing/hw-sim/test:rate-selection-package",
     "//src/connectivity/wlan/testing/hw-sim/test:wlan-hw-sim-test",
     "//src/connectivity/wlan/testing/wlan-service-util:wlan-service-util-tests",

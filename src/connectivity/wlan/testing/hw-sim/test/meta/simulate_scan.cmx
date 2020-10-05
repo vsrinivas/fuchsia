@@ -12,9 +12,6 @@
                 ],
                 "fuchsia.wlan.policy.ClientProvider": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
-                ],
-                "fuchsia.wlan.service.Wlan": [
-                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
                 ]
             }
         }
@@ -28,8 +25,7 @@
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
-            "fuchsia.wlan.policy.ClientProvider",
-            "fuchsia.wlan.service.Wlan"
+            "fuchsia.wlan.policy.ClientProvider"
         ]
     }
 }
