@@ -156,7 +156,9 @@ std::string SemanticTree::TreeUpdate::ToString() const {
   return output;
 }
 
-SemanticTree::SemanticTree() {
+SemanticTree::SemanticTree(inspect::Node inspect_node)
+    : inspect_node_(std::move(inspect_node)),
+      inspect_property_update_count_(inspect_node_.CreateUint(kUpdateCountInspectNodeName, 0)) {
   action_handler_ =
       [](uint32_t node_id, fuchsia::accessibility::semantics::Action action,
          fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
@@ -289,6 +291,7 @@ bool SemanticTree::Update(TreeUpdates updates) {
     return true;
   }
   for (auto& update : updates) {
+    inspect_property_update_count_.Set(++update_count_);
     if (update.has_delete_node_id()) {
       nodes_to_be_updated_[update.TakeDeleteNodeId()].reset();
     } else if (update.has_node()) {

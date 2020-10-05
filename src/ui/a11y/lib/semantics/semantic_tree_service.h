@@ -10,6 +10,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
@@ -118,13 +119,19 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
 // Factory class to build a new Semantic Tree Service.
 class SemanticTreeServiceFactory {
  public:
-  SemanticTreeServiceFactory() = default;
+  explicit SemanticTreeServiceFactory(inspect::Node node = inspect::Node())
+      : inspect_node_(std::move(node)) {}
   virtual ~SemanticTreeServiceFactory() = default;
 
   virtual std::unique_ptr<SemanticTreeService> NewService(
       zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
       vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,
       SemanticTree::SemanticsEventCallback semantics_event_callback);
+
+ private:
+  // Inspect node of which all new SemanticTree inspect instances will be
+  // children.
+  inspect::Node inspect_node_;
 };
 
 }  // namespace a11y

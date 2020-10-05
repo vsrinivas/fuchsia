@@ -8,6 +8,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
+#include <lib/inspect/cpp/inspect.h>
 
 #include <optional>
 #include <unordered_map>
@@ -66,9 +67,11 @@ class SemanticTree {
 
   using SemanticsEventCallback = fit::function<void(SemanticsEventType event_type)>;
 
+  static constexpr char kUpdateCountInspectNodeName[] = "tree_update_count";
+
   // A SemanticTree object is normally maintained by a semantics provider while
   // being consumed by a semantics consumer (such as a screen reader).
-  SemanticTree();
+  explicit SemanticTree(inspect::Node inspect_node = inspect::Node());
   virtual ~SemanticTree() = default;
 
   // The two methods below set the handlers for dealing with assistive technology requests.
@@ -186,6 +189,15 @@ class SemanticTree {
 
   // Callback invoked on semantics events.
   SemanticsEventCallback semantics_event_callback_;
+
+  // Inpsect node to which to publish debug info.
+  inspect::Node inspect_node_;
+
+  // Number of updates received.
+  uint64_t update_count_ = 0;
+
+  // Inspect property to store the number of updates received.
+  inspect::UintProperty inspect_property_update_count_;
 };
 
 }  // namespace a11y

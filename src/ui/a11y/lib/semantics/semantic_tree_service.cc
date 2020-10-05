@@ -5,6 +5,7 @@
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 
 #include <lib/async/default.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
@@ -167,7 +168,8 @@ std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
     zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,
     SemanticTree::SemanticsEventCallback semantics_event_callback) {
-  auto tree_ptr = std::make_unique<SemanticTree>();
+  auto inspect_name = "semantic_tree_" + std::to_string(koid);
+  auto tree_ptr = std::make_unique<SemanticTree>(inspect_node_.CreateChild(inspect_name));
   tree_ptr->set_semantics_event_callback(std::move(semantics_event_callback));
   auto semantic_tree =
       std::make_unique<SemanticTreeService>(std::move(tree_ptr), koid, std::move(semantic_listener),

@@ -23,7 +23,8 @@ int main(int argc, const char** argv) {
   inspector->Health().StartingUp();
   inspector->Health().Ok();
 
-  a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+  a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(
+                                     inspector->root().CreateChild("semantic_trees")),
                                  std::make_unique<a11y::A11yViewSemanticsFactory>(),
                                  std::make_unique<a11y::AnnotationViewFactory>(),
                                  std::make_unique<a11y::A11ySemanticsEventManager>(), context.get(),
@@ -33,7 +34,8 @@ int main(int argc, const char** argv) {
   a11y::GestureListenerRegistry gesture_listener_registry;
 
   a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager,
-                        &gesture_listener_registry, inspector->root().CreateChild("A11y Manager"));
+                        &gesture_listener_registry,
+                        inspector->root().CreateChild("a11y_manager_app"));
 
   loop.Run();
   return 0;
