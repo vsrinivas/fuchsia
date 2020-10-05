@@ -4,23 +4,22 @@
 
 use anyhow::{format_err, Context as _, Error};
 use buffer::LazyItem;
-use fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker};
-use fidl_fuchsia_diagnostics::Interest;
+use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl_fuchsia_diagnostics::{Interest, StreamMode};
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_logger::{
-    LogFilterOptions, LogInterestSelector, LogListenerSafeMarker, LogRequest, LogRequestStream,
-    LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
+    LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
 };
 use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_sys_internal::{
     LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
 };
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, Task};
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, future::FutureObj, lock::Mutex, prelude::*};
-use log::{debug, error, warn};
+use log::{debug, error, trace, warn};
 use std::sync::Arc;
 
 mod buffer;
@@ -38,7 +37,7 @@ pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 pub use message::Message;
 
 use interest::InterestDispatcher;
-use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
+use listener::{pretend_scary_listener_is_safe, Listener};
 use socket::{Encoding, Forwarder, LegacyEncoding, LogMessageSocket, StructuredEncoding};
 use stats::LogSource;
 
@@ -55,8 +54,6 @@ pub struct LogManager {
 #[derive(Inspect)]
 struct ManagerInner {
     #[inspect(skip)]
-    listeners: Pool,
-    #[inspect(skip)]
     interest_dispatcher: InterestDispatcher,
     #[inspect(skip)]
     legacy_forwarder: Forwarder<LegacyEncoding>,
@@ -72,7 +69,6 @@ impl LogManager {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(ManagerInner {
-                listeners: Pool::default(),
                 interest_dispatcher: InterestDispatcher::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
                 stats: stats::LogManagerStats::new_detached(),
@@ -289,13 +285,6 @@ impl LogManager {
         let _ = control_handle.send_on_register_interest(Interest::empty());
     }
 
-    /// Spawn a task to handle requests from components reading the shared log.
-    pub async fn handle_log(self, stream: LogRequestStream) {
-        if let Err(e) = self.handle_log_requests(stream).await {
-            warn!("error handling Log requests: {}", e);
-        }
-    }
-
     /// Handle the components v2 EventStream for attributed logs of v2
     /// components.
     pub async fn handle_event_stream(
@@ -376,9 +365,24 @@ impl LogManager {
         server_end.into_stream().map_err(|_| format_err!("Unable to create LogSinkRequestStream"))
     }
 
+    /// Spawn a task to handle requests from components reading the shared log.
+    pub fn handle_log(self, stream: LogRequestStream, sender: mpsc::UnboundedSender<Task<()>>) {
+        if let Err(e) = sender.clone().unbounded_send(Task::spawn(async move {
+            if let Err(e) = self.handle_log_requests(stream, sender).await {
+                warn!("error handling Log requests: {}", e);
+            }
+        })) {
+            warn!("Couldn't queue listener task: {:?}", e);
+        }
+    }
+
     /// Handle requests to `fuchsia.logger.Log`. All request types read the
     /// whole backlog from memory, `DumpLogs(Safe)` stops listening after that.
-    async fn handle_log_requests(self, mut stream: LogRequestStream) -> Result<(), Error> {
+    async fn handle_log_requests(
+        self,
+        mut stream: LogRequestStream,
+        mut sender: mpsc::UnboundedSender<Task<()>>,
+    ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             let (listener, options, dump_logs, selectors) = match request {
                 LogRequest::ListenSafe { log_listener, options, .. } => {
@@ -405,61 +409,41 @@ impl LogManager {
                 }
             };
 
-            self.handle_log_listener(listener, options, dump_logs, selectors).await?;
+            let listener = Listener::new(listener, options)?;
+            let mode =
+                if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
+            let logs = self.cursor(mode).await;
+            if let Some(s) = selectors {
+                self.inner.lock().await.interest_dispatcher.update_selectors(s).await;
+            }
+
+            sender.send(listener.spawn(logs, dump_logs)).await.ok();
         }
         Ok(())
     }
 
-    pub async fn snapshot(&self) -> impl Stream<Item = Arc<Message>> {
-        self.inner.lock().await.log_msg_buffer.snapshot().map(|item| match item {
+    pub async fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
+        self.inner.lock().await.log_msg_buffer.cursor(mode).map(|item| match item {
             LazyItem::Next(m) => m,
             LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
         })
     }
 
-    /// Handle a new listener, sending it all cached messages and either calling
-    /// `Done` if `dump_logs` is true or adding it to the pool of ongoing
-    /// listeners if not.
-    async fn handle_log_listener(
-        &self,
-        log_listener: ClientEnd<LogListenerSafeMarker>,
-        options: Option<Box<LogFilterOptions>>,
-        dump_logs: bool,
-        selectors: Option<Vec<LogInterestSelector>>,
-    ) -> Result<(), Error> {
-        let mut listener = Listener::new(log_listener, options)?;
-
-        let mut inner = self.inner.lock().await;
-
-        let cached = inner.log_msg_buffer.collect().await;
-        listener.backfill(cached).await;
-
-        if !listener.is_healthy() {
-            warn!("listener dropped before we finished");
-            return Ok(());
-        }
-
-        if dump_logs {
-            listener.done();
-        } else {
-            if let Some(s) = selectors {
-                inner.interest_dispatcher.update_selectors(s).await;
-            }
-            inner.listeners.add(listener);
-        }
-        Ok(())
-    }
-
     /// Ingest an individual log message.
     async fn ingest_message(&self, log_msg: Message, source: stats::LogSource) {
         let mut inner = self.inner.lock().await;
+        trace!("Ingesting {:?}", log_msg.id);
 
-        // We always record the log before sending messages to listeners because
-        // we want to be able to see that stats are updated as soon as we receive
-        // messages in tests.
+        // We always record the log before pushing onto the buffer and waking listeners because
+        // we want to be able to see that stats are updated as soon as we receive messages in tests.
         inner.stats.record_log(&log_msg, source);
-        inner.listeners.send(&log_msg).await;
         inner.log_msg_buffer.push(log_msg);
+    }
+
+    /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
+    /// consuming any messages received before this call.
+    pub async fn terminate(&self) {
+        self.inner.lock().await.log_msg_buffer.terminate();
     }
 
     /// Initializes internal log forwarders.

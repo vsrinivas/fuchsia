@@ -34,8 +34,32 @@ pub const MAX_TAGS: usize = 5;
 pub const MAX_TAG_LEN: usize = 64;
 
 /// Our internal representation for a log message.
+#[derive(Clone, Debug, Serialize)]
+pub struct Message {
+    #[serde(skip)]
+    pub id: MessageId,
+
+    #[serde(flatten)]
+    data: LogsData,
+}
+
+impl PartialEq for Message {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.data.eq(&rhs.data)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct Message(LogsData);
+pub struct MessageId(u64);
+
+impl MessageId {
+    fn next() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT_MESSAGE_ID: AtomicU64 = AtomicU64::new(0);
+
+        MessageId(NEXT_MESSAGE_ID.fetch_add(1, Ordering::Relaxed))
+    }
+}
 
 impl Accounted for Message {
     fn bytes_used(&self) -> usize {
@@ -57,29 +81,35 @@ impl Message {
         if dropped_before > 0 {
             errors.push(LogError::DroppedLogs { count: dropped_before });
         }
-        Self(LogsData::for_logs(
-            source.moniker(),
-            Some(payload),
-            timestamp,
-            source.url(),
-            severity,
-            size_bytes,
-            errors,
-        ))
+        Self {
+            id: MessageId::next(),
+            data: LogsData::for_logs(
+                source.moniker(),
+                Some(payload),
+                timestamp,
+                source.url(),
+                severity,
+                size_bytes,
+                errors,
+            ),
+        }
     }
 
     /// Returns a new Message which encodes a count of dropped messages in its metadata.
     // TODO(fxbug.dev/47661) require moniker and URL here
     pub fn for_dropped(count: u64) -> Self {
-        Self(LogsData::for_logs(
-            EMPTY_IDENTITY.moniker(),
-            None, // payload
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
-            EMPTY_IDENTITY.url(),
-            Severity::Warn,
-            0, // size_bytes
-            vec![LogError::DroppedLogs { count }],
-        ))
+        Self {
+            id: MessageId::next(),
+            data: LogsData::for_logs(
+                EMPTY_IDENTITY.moniker(),
+                Some(LogsHierarchy::new_root()), // payload
+                zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                EMPTY_IDENTITY.url(),
+                Severity::Warn,
+                0, // size_bytes
+                vec![LogError::DroppedLogs { count }],
+            ),
+        }
     }
 
     /// Parse the provided buffer as if it implements the [logger/syslog wire format].
@@ -374,13 +404,13 @@ impl Message {
 impl Deref for Message {
     type Target = LogsData;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.data
     }
 }
 
 impl DerefMut for Message {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.data
     }
 }
 

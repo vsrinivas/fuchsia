@@ -73,9 +73,15 @@ impl TestHarness {
         let inspector = inspect::Inspector::new();
         let log_manager = LogManager::new().with_inspect(inspector.root(), "log_stats").unwrap();
 
+        let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-        fasync::Task::spawn(log_manager.clone().handle_log(log_stream)).detach();
+
+        log_manager.clone().handle_log(log_stream, listen_sender);
+        fasync::Task::spawn(
+            listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }),
+        )
+        .detach();
 
         Self {
             inspector,
@@ -347,10 +353,14 @@ pub async fn debuglog_test(
     expected: impl IntoIterator<Item = LogMessage>,
     debug_log: TestDebugLog,
 ) -> inspect::Inspector {
+    let (log_sender, log_receiver) = mpsc::unbounded();
+    fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
+        .detach();
+
     let inspector = inspect::Inspector::new();
     let lm = LogManager::new().with_inspect(inspector.root(), "log_stats").unwrap();
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-    fasync::Task::spawn(lm.clone().handle_log(log_stream)).detach();
+    lm.clone().handle_log(log_stream, log_sender);
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();
 
     validate_log_stream(expected, log_proxy, None).await;

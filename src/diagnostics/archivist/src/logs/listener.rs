@@ -6,13 +6,14 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
 };
-use log::error;
-use std::sync::Arc;
+use fuchsia_async::Task;
+use futures::prelude::*;
+use log::{debug, error, trace};
+use std::{sync::Arc, task::Poll};
 use thiserror::Error;
 
 mod asbestos;
 mod filter;
-pub mod pool;
 
 pub use asbestos::pretend_scary_listener_is_safe;
 use filter::MessageFilter;
@@ -38,6 +39,7 @@ impl Listener {
         log_listener: ClientEnd<LogListenerSafeMarker>,
         options: Option<Box<LogFilterOptions>>,
     ) -> Result<Self, ListenerError> {
+        debug!("New listener with options {:?}", &options);
         Ok(Self {
             status: Status::Fine,
             listener: log_listener
@@ -47,14 +49,53 @@ impl Listener {
         })
     }
 
+    pub fn spawn(
+        self,
+        logs: impl Stream<Item = Arc<Message>> + Send + Unpin + 'static,
+        call_done: bool,
+    ) -> Task<()> {
+        Task::spawn(async move { self.run(logs, call_done).await })
+    }
+
+    /// Send messages to the listener. First eagerly collects any backlog and sends it out in
+    /// batches before waiting for wakeups.
+    async fn run(mut self, mut logs: impl Stream<Item = Arc<Message>> + Unpin, call_done: bool) {
+        debug!("Backfilling from cursor until pending.");
+        let mut backlog = vec![];
+        futures::future::poll_fn(|cx| {
+            loop {
+                match logs.poll_next_unpin(cx) {
+                    Poll::Ready(Some(next)) => backlog.push(next),
+                    _ => break,
+                }
+            }
+
+            Poll::Ready(())
+        })
+        .await;
+
+        self.backfill(backlog).await;
+        debug!("Done backfilling.");
+
+        pin_utils::pin_mut!(logs);
+        while let Some(message) = logs.next().await {
+            self.send_log(&message).await;
+        }
+
+        if call_done {
+            self.listener.done().ok();
+        }
+        debug!("Listener exiting.");
+    }
+
     /// Returns whether this listener should continue receiving messages.
-    pub fn is_healthy(&self) -> bool {
+    fn is_healthy(&self) -> bool {
         self.status == Status::Fine
     }
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
-    pub async fn backfill<'a>(&mut self, mut messages: Vec<Arc<Message>>) {
+    async fn backfill<'a>(&mut self, mut messages: Vec<Arc<Message>>) {
         messages.sort_by_key(|m| m.metadata.timestamp);
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
@@ -70,6 +111,7 @@ impl Listener {
                     batch_size = 0;
                 }
                 batch_size += size;
+                trace!("Batching {:?}.", msg.id);
                 filtered_batch.push(msg.for_listener());
             }
         }
@@ -80,7 +122,8 @@ impl Listener {
     }
 
     /// Send a batch of pre-filtered log messages to this listener.
-    pub async fn send_filtered_logs(&mut self, log_messages: &mut Vec<LogMessage>) {
+    async fn send_filtered_logs(&mut self, log_messages: &mut Vec<LogMessage>) {
+        trace!("Flushing batch.");
         self.check_result({
             let mut log_messages = log_messages.iter_mut();
             let fut = self.listener.log_many(&mut log_messages);
@@ -89,8 +132,9 @@ impl Listener {
     }
 
     /// Send a single log message if it should be sent according to this listener's filter settings.
-    pub async fn send_log(&mut self, log_message: Message) {
-        if self.filter.should_send(&log_message) {
+    async fn send_log(&mut self, log_message: &Message) {
+        if self.filter.should_send(log_message) {
+            trace!("Sending {:?}.", log_message.id);
             let mut to_send = log_message.for_listener();
             self.check_result(self.listener.log(&mut to_send).await);
         }
@@ -105,11 +149,6 @@ impl Listener {
                 error!("Error calling listener: {:?}", e);
             }
         }
-    }
-
-    /// Notify the listener that `DumpLogs` has completed.
-    pub fn done(self) {
-        self.listener.done().ok();
     }
 }
 

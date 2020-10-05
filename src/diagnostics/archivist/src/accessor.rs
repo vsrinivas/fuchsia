@@ -124,7 +124,7 @@ impl ArchiveAccessor {
                 let stats = Arc::new(DiagnosticsServerStats::for_logs(accessor_stats));
                 let logs = diagnostics_repo.read().log_manager();
 
-                AccessorServer::new_serving_arrays(logs.snapshot().await, requests, stats)?
+                AccessorServer::new_serving_arrays(logs.cursor(mode).await, requests, stats)?
                     .run()
                     .await
             }

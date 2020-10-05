@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_diagnostics::StreamMode;
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
-use futures::StreamExt;
 use inspect::NumericProperty;
-use std::sync::Arc;
 
 mod arc_list;
 use arc_list::ArcList;
@@ -61,26 +60,14 @@ where
         }
     }
 
-    /// Return a lazy cursor over the currently present items in the buffer.
-    pub fn snapshot(&self) -> Cursor<T> {
-        self.buffer.snapshot()
+    /// Return a lazy cursor over items in the buffer.
+    pub fn cursor(&self, mode: StreamMode) -> Cursor<T> {
+        self.buffer.cursor(mode)
     }
 
-    /// Returns a Vec of the current items.
-    pub async fn collect(&self) -> Vec<Arc<T>> {
-        let mut items = vec![];
-        let mut snapshot = self.buffer.snapshot();
-
-        while let Some(item) = snapshot.next().await {
-            match item {
-                arc_list::LazyItem::Next(i) => items.push(i),
-                arc_list::LazyItem::ItemsDropped(n) => {
-                    log::warn!("dropped {} messages while collecting a backfill snapshot", n);
-                }
-            }
-        }
-
-        items
+    /// Stop accepting new messages, flush cursors.
+    pub fn terminate(&mut self) {
+        self.buffer.terminate();
     }
 }
 
@@ -89,6 +76,7 @@ mod tests {
     use super::*;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect_derive::WithInspect;
+    use futures::StreamExt;
 
     impl Accounted for (i32, usize) {
         fn bytes_used(&self) -> usize {
@@ -100,8 +88,21 @@ mod tests {
     where
         T: Accounted + Clone,
     {
-        async fn collect_cloned(&self) -> Vec<T> {
-            self.collect().await.into_iter().map(|t| (*t).clone()).collect()
+        /// Returns a Vec of the current items.
+        pub async fn collect(&self) -> Vec<T> {
+            let mut items = vec![];
+            let mut snapshot = self.buffer.cursor(StreamMode::Snapshot);
+
+            while let Some(item) = snapshot.next().await {
+                match item {
+                    arc_list::LazyItem::Next(i) => items.push((*i).clone()),
+                    arc_list::LazyItem::ItemsDropped(n) => {
+                        log::warn!("dropped {} messages while collecting a backfill snapshot", n);
+                    }
+                }
+            }
+
+            items
         }
     }
 
@@ -113,7 +114,7 @@ mod tests {
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 4));
-        assert_eq!(&m.collect_cloned().await[..], &[(1, 4), (2, 4), (3, 4)]);
+        assert_eq!(&m.collect().await[..], &[(1, 4), (2, 4), (3, 4)]);
         assert_inspect_tree!(inspector,
         root: {
             buffer_stats: {
@@ -130,10 +131,10 @@ mod tests {
         m.push((1, 4));
         m.push((2, 4));
         m.push((3, 5));
-        assert_eq!(&m.collect_cloned().await[..], &[(2, 4), (3, 5)]);
+        assert_eq!(&m.collect().await[..], &[(2, 4), (3, 5)]);
         m.push((4, 4));
         m.push((5, 4));
-        assert_eq!(&m.collect_cloned().await[..], &[(4, 4), (5, 4)]);
+        assert_eq!(&m.collect().await[..], &[(4, 4), (5, 4)]);
         assert_inspect_tree!(inspector,
         root: {
             buffer_stats: {

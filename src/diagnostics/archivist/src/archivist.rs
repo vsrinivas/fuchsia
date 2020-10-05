@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_sys_internal::SourceIdentity,
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, Task},
     fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_derive::WithInspect,
@@ -38,6 +38,7 @@ fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::
     fasync::Task::spawn(
         async move {
             while let Some(ControllerRequest::Stop { .. }) = stream.try_next().await? {
+                debug!("Stop request received.");
                 stop_sender.send(()).await.ok();
                 break;
             }
@@ -101,6 +102,17 @@ pub struct Archivist {
     /// receiver must close for `Archivist::run` to return gracefully.
     log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
 
+    /// Receiver for stream which will process Log connections.
+    listen_receiver: mpsc::UnboundedReceiver<Task<()>>,
+
+    /// Sender which is used to close the stream of Log connections after log_sender
+    /// completes.
+    ///
+    /// Clones of the sender keep the receiver end of the channel open. As soon
+    /// as all clones are dropped or disconnected, the receiver will close. The
+    /// receiver must close for `Archivist::run` to return gracefully.
+    listen_sender: mpsc::UnboundedSender<Task<()>>,
+
     /// Listes for events coming from v1 and v2.
     event_stream: EventStream,
 
@@ -143,12 +155,13 @@ impl Archivist {
         let log_manager_3 = self.log_manager.clone();
         let log_sender = self.log_sender.clone();
         let log_sender2 = self.log_sender.clone();
+        let listen_sender = self.listen_sender.clone();
 
         self.fs
             .dir("svc")
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.Log connection");
-                fasync::Task::spawn(log_manager_1.clone().handle_log(stream)).detach()
+                log_manager_1.clone().handle_log(stream, listen_sender.clone());
             })
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.LogSink connection");
@@ -188,6 +201,7 @@ impl Archivist {
     /// Call `install_logger_services`, `add_event_source`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let (log_sender, log_receiver) = mpsc::unbounded();
+        let (listen_sender, listen_receiver) = mpsc::unbounded();
         let log_manager = logs::LogManager::new().with_inspect(diagnostics::root(), "log_stats")?;
 
         let mut fs = ServiceFs::new();
@@ -328,6 +342,8 @@ impl Archivist {
             state: archivist_state,
             log_receiver,
             log_sender,
+            listen_receiver,
+            listen_sender,
             pipeline_exists,
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline, legacy_pipeline],
             _pipeline_configs: vec![feedback_config, legacy_config],
@@ -360,17 +376,27 @@ impl Archivist {
             Self::collect_component_events(self.event_stream, self.state, self.pipeline_exists);
 
         // Process messages from log sink.
+        let log_manager = self.log_manager;
         let log_receiver = self.log_receiver;
-        let all_msg =
-            async { log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await };
+        let listen_receiver = self.listen_receiver;
+        let all_msg = async {
+            log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
+            debug!("Log ingestion stopped.");
+            log_manager.terminate().await;
+            debug!("Flushing to listeners.");
+            listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
+            debug!("Log listeners stopped.");
+        };
 
         let (abortable_fut, abort_handle) =
             abortable(future::join(run_outgoing, run_event_collection));
 
+        let mut listen_sender = self.listen_sender;
         let mut log_sender = self.log_sender;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => async move {
                 stop_recv.into_future().await;
+                listen_sender.disconnect();
                 log_sender.disconnect();
                 abort_handle.abort()
             }

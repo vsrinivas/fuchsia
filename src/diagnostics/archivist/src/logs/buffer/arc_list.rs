@@ -35,13 +35,14 @@ impl<T> ArcList<T> {
         self.inner.lock().pop_front()
     }
 
-    pub fn snapshot(&self) -> Cursor<T> {
-        self.cursor(StreamMode::Snapshot)
-    }
-
     pub fn cursor(&self, mode: StreamMode) -> Cursor<T> {
         let id = self.inner.lock().new_cursor_id();
         Cursor::new(id, self.clone(), mode)
+    }
+
+    /// End the stream, ignoring new values and causing Cursors to return None after the current ID.
+    pub fn terminate(&self) {
+        self.inner.lock().terminate();
     }
 }
 
@@ -67,6 +68,9 @@ struct Root<T> {
     entries_seen: u64,
     /// The number of entries ever removed from the list.
     entries_popped: u64,
+    /// The last entry this list will yield.
+    final_entry: u64,
+    /// The next cursor this list will yield.
     next_cursor_id: CursorId,
     /// Wakers from subscribed cursors blocked on their next message.
     pending_cursors: Vec<(CursorId, Waker)>,
@@ -79,6 +83,7 @@ impl<T> Default for Root<T> {
             tail: Weak::new(),
             entries_seen: 0,
             entries_popped: 0,
+            final_entry: std::u64::MAX,
             next_cursor_id: CursorId::default(),
             pending_cursors: Vec::new(),
         }
@@ -88,6 +93,11 @@ impl<T> Default for Root<T> {
 impl<T> Root<T> {
     fn push_back(&mut self, item: T) {
         self.entries_seen += 1;
+        assert!(
+            self.entries_seen <= self.final_entry,
+            "push_back() must not be called after terminate()"
+        );
+
         let new_node =
             Arc::new(Node { id: self.entries_seen, inner: Arc::new(item), next: Mutex::new(None) });
         let new_tail = Arc::downgrade(&new_node);
@@ -100,11 +110,7 @@ impl<T> Root<T> {
         }
 
         self.tail = new_tail;
-
-        for (id, waker) in self.pending_cursors.drain(..) {
-            trace!("Waking {:?} for entry {}.", id, self.entries_seen);
-            waker.wake();
-        }
+        self.wake_pending();
     }
 
     fn pop_front(&mut self) -> Option<Arc<T>> {
@@ -121,10 +127,16 @@ impl<T> Root<T> {
         std::mem::replace(&mut self.next_cursor_id, new_next)
     }
 
-    fn register_for_wakeup(&mut self, cursor: &Cursor<T>, cx: &mut Context<'_>) {
-        self.pending_cursors.push((cursor.id, cx.waker().clone()));
-        self.pending_cursors.sort_by_key(|&(id, _)| id);
-        self.pending_cursors.dedup_by_key(|&mut (id, _)| id);
+    fn wake_pending(&mut self) {
+        for (id, waker) in self.pending_cursors.drain(..) {
+            trace!("Waking {:?} for entry {}.", id, self.entries_seen);
+            waker.wake();
+        }
+    }
+
+    fn terminate(&mut self) {
+        self.final_entry = self.entries_seen;
+        self.wake_pending();
     }
 }
 
@@ -185,11 +197,26 @@ impl<T> Cursor<T> {
 
         Self { id, list, last_id_seen: from, until_id: to, last_visited }
     }
+
+    fn register_for_wakeup(&self, cx: &mut Context<'_>) -> Poll<Option<LazyItem<T>>> {
+        let mut root = self.list.inner.lock();
+        if self.last_id_seen == root.final_entry {
+            trace!("{:?} has reached the end of the terminated stream.", self.id);
+            Poll::Ready(None)
+        } else {
+            trace!("Registering {:?} for wakeup.", self.id);
+            root.pending_cursors.push((self.id, cx.waker().clone()));
+            root.pending_cursors.sort_by_key(|&(id, _)| id);
+            root.pending_cursors.dedup_by_key(|&mut (id, _)| id);
+            Poll::Pending
+        }
+    }
 }
 
 impl<T> Stream for Cursor<T> {
     type Item = LazyItem<T>;
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        trace!("{:?} polled.", self.id);
         if self.last_id_seen >= self.until_id {
             return Poll::Ready(None);
         }
@@ -230,9 +257,7 @@ impl<T> Stream for Cursor<T> {
 
             Poll::Ready(Some(item))
         } else {
-            trace!("Registering {:?} for wakeup.", self.id);
-            self.list.inner.lock().register_for_wakeup(&*self, cx);
-            Poll::Pending
+            self.register_for_wakeup(cx)
         }
     }
 }
@@ -322,19 +347,25 @@ mod tests {
         assert_eq!(poll!(&mut fourth_from_middle_sub), Poll::Pending);
         assert_eq!(poll!(&mut fourth_from_late_sub), Poll::Pending);
         assert_eq!(poll!(&mut fourth_from_nop_sub), Poll::Pending);
+
+        list.terminate();
+        assert_eq!(fourth_from_early_sub.await, None);
+        assert_eq!(fourth_from_middle_sub.await, None);
+        assert_eq!(fourth_from_late_sub.await, None);
+        assert_eq!(fourth_from_nop_sub.await, None);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn snapshot_delivered_without_drops() {
         let list = ArcList::default();
-        let mut dead_cursor = list.snapshot();
+        let mut dead_cursor = list.cursor(StreamMode::Snapshot);
         assert_eq!(dead_cursor.next().await, None, "no items in the list");
 
         list.push_back(1);
         list.push_back(2);
         list.push_back(3);
 
-        let mut middle_cursor = list.snapshot();
+        let mut middle_cursor = list.cursor(StreamMode::Snapshot);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 1);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 2);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 3);
@@ -348,7 +379,7 @@ mod tests {
         assert_eq!(dead_cursor.next().await, None, "no items in list at snapshot");
         assert_eq!(middle_cursor.next().await, None, "no items left in list at snapshot");
 
-        let mut full_cursor = list.snapshot();
+        let mut full_cursor = list.cursor(StreamMode::Snapshot);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 1);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 2);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 3);
@@ -380,6 +411,9 @@ mod tests {
 
         list.push_back(6);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 6);
+
+        list.terminate();
+        assert_eq!(middle_cursor.next().await, None);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -409,12 +443,15 @@ mod tests {
         assert_eq!(*list.pop_front().unwrap(), 4);
         middle_cursor.next().await.unwrap().expect_dropped(1);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 5);
+
+        list.terminate();
+        assert_eq!(middle_cursor.next().await, None);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn snapshot_drops_are_counted() {
         let list: ArcList<i32> = ArcList::default();
-        let mut dead_cursor = list.snapshot();
+        let mut dead_cursor = list.cursor(StreamMode::Snapshot);
         assert!(dead_cursor.next().await.is_none(), "no items in the list");
 
         list.push_back(1);
@@ -423,7 +460,7 @@ mod tests {
         list.push_back(4);
         list.push_back(5);
 
-        let mut middle_cursor = list.snapshot();
+        let mut middle_cursor = list.cursor(StreamMode::Snapshot);
         list.pop_front();
         list.pop_front();
 
@@ -434,7 +471,7 @@ mod tests {
         assert!(dead_cursor.next().await.is_none(), "no items in list at snapshot");
         assert!(middle_cursor.next().await.is_none(), "no items left in list");
 
-        let mut full_cursor = list.snapshot();
+        let mut full_cursor = list.cursor(StreamMode::Snapshot);
         full_cursor.next().await.unwrap().expect_dropped(2);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 3);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 4);
