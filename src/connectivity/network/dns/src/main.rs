@@ -69,10 +69,6 @@ impl<'a, T: ResolverLookup> SharedResolverConfigSink<'a, T> {
     fn update_resolver(&self, servers: ServerList) -> impl 'a + futures::Future<Output = ()> {
         let mut resolver_opts = ResolverOpts::default();
         resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
-        // TODO(fxbug.dev/51438): We're currently mimicking existing behavior to
-        // serialize all DNS requests. We can relax this to the default (2) once
-        // we get some more mileage out of dns-resolver.
-        resolver_opts.num_concurrent_reqs = 1;
 
         // We're going to add each server twice, once with protocol UDP and
         // then with protocol TCP.
