@@ -6,29 +6,36 @@ import("//build/dart/test.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/host_test_data.gni")
 
-rustc_binary("bin") {
-  name = "zedmon"
-  edition = "2018"
-  with_unit_tests = true
+if (is_host) {
+  rustc_binary("bin") {
+    name = "zedmon"
+    edition = "2018"
+    with_unit_tests = true
 
-  deps = [
-    "//src/lib/usb_bulk/rust:lib",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:num",
-    "//third_party/rust_crates:num-derive",
-    "//third_party/rust_crates:num-traits",
-    "//third_party/rust_crates:thiserror",
-  ]
+    deps = [
+      "//src/lib/fuchsia-async",
+      "//src/lib/usb_bulk/rust:lib",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:byteorder",
+      "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:matches",
+      "//third_party/rust_crates:num",
+      "//third_party/rust_crates:num-derive",
+      "//third_party/rust_crates:num-traits",
+      "//third_party/rust_crates:termion",
+      "//third_party/rust_crates:thiserror",
+    ]
 
-  sources = [
-    "src/lib.rs",
-    "src/main.rs",
-    "src/protocol.rs",
-  ]
+    test_deps = [ "//src/lib/test_util" ]
+
+    sources = [
+      "src/lib.rs",
+      "src/main.rs",
+      "src/protocol.rs",
+    ]
+  }
 }
 
 dart_test("zedmon_client_manual_test") {
