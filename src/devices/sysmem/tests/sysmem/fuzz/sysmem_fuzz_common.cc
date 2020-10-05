@@ -24,6 +24,7 @@ bool FakeDdkSysmem::Init() {
   if (ZX_OK == sysmem_.Bind()) {
     initialized_ = true;
   }
+  sysmem_.set_settings(sysmem_driver::Settings{.max_allocation_size = 256 * 1024});
   return initialized_;
 }
 

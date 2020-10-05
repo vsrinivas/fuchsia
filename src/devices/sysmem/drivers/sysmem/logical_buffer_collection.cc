@@ -1939,6 +1939,16 @@ LogicalBufferCollection::Allocate() {
     ZX_DEBUG_ASSERT(maybe_aux_allocator);
   }
 
+  if (buffer_settings.size_bytes() > parent_device_->settings().max_allocation_size) {
+    // This is different than max_size_bytes.  While max_size_bytes is part of the constraints,
+    // max_allocation_size isn't part of the constraints.  The latter is used for simulating OOM or
+    // preventing unpredictable memory pressure caused by a fuzzer or similar source of
+    // unpredictability in tests.
+    LogError("AllocateVmo() failed because size %u > max_allocation_size %ld",
+             buffer_settings.size_bytes(), parent_device_->settings().max_allocation_size);
+    return fit::error(ZX_ERR_NO_MEMORY);
+  }
+
   for (uint32_t i = 0; i < result.buffers().count(); ++i) {
     auto allocate_result = AllocateVmo(allocator, settings, i);
     if (!allocate_result.is_ok()) {

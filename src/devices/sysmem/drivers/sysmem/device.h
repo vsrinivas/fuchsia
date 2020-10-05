@@ -43,6 +43,11 @@ class Driver;
 class BufferCollectionToken;
 class LogicalBufferCollection;
 
+struct Settings {
+  // Maximum size of a single allocation. Mainly useful for unit tests.
+  uint64_t max_allocation_size = UINT64_MAX;
+};
+
 class Device final : public DdkDeviceType,
                      public ddk::SysmemProtocol<Device, ddk::base_protocol>,
                      public MemoryAllocator::Owner {
@@ -131,6 +136,10 @@ class Device final : public DdkDeviceType,
 
   inspect::Node& collections_node() { return collections_node_; }
 
+  void set_settings(const Settings& settings) { settings_ = settings; }
+
+  const Settings& settings() const { return settings_; }
+
  private:
   class SecureMemConnection {
    public:
@@ -200,6 +209,8 @@ class Device final : public DdkDeviceType,
   std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
 
   std::unordered_set<LogicalBufferCollection*> logical_buffer_collections_;
+
+  Settings settings_;
 };
 
 }  // namespace sysmem_driver

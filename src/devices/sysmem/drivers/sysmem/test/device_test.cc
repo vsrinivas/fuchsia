@@ -120,6 +120,22 @@ class FakeDdkSysmem : public zxtest::Test {
     EXPECT_TRUE(ddk_.Ok());
   }
 
+  zx::channel AllocateNonSharedCollection() {
+    zx::channel allocator_server, allocator_client;
+    EXPECT_OK(zx::channel::create(0u, &allocator_server, &allocator_client));
+    EXPECT_OK(
+        fuchsia_sysmem_DriverConnectorConnect(ddk_.FidlClient().get(), allocator_server.release()));
+
+    zx::channel collection_server, collection_client;
+    EXPECT_OK(zx::channel::create(0u, &collection_server, &collection_client));
+
+    // Queue up something that would be processed on the FIDL thread, so we can try to detect a
+    // use-after-free if the FidlServer outlives the sysmem device.
+    EXPECT_OK(fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator_client.get(),
+                                                                  collection_server.release()));
+    return collection_client;
+  }
+
  protected:
   sysmem_driver::Driver sysmem_ctx_;
   sysmem_driver::Device sysmem_{fake_ddk::kFakeParent, &sysmem_ctx_};
@@ -295,6 +311,28 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
     if (found_collection)
       break;
   }
+}
+
+TEST_F(FakeDdkSysmem, MaxSize) {
+  sysmem_.set_settings(sysmem_driver::Settings{.max_allocation_size = PAGE_SIZE});
+
+  zx::channel collection_client = AllocateNonSharedCollection();
+
+  fuchsia_sysmem_BufferCollectionConstraints constraints{};
+  constraints.min_buffer_count = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE * 2;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
+
+  EXPECT_OK(
+      fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, &constraints));
+
+  fuchsia_sysmem_BufferCollectionInfo_2 info;
+  zx_status_t status;
+  // Sysmem should fail the collection and return an error.
+  EXPECT_NE(ZX_OK, fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(),
+                                                                          &status, &info));
 }
 
 }  // namespace

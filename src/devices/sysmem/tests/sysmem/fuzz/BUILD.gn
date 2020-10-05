@@ -28,7 +28,10 @@ fuzzer("sysmem_fuzzer") {
   testonly = true
   output_name = "sysmem_fuzzer"
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "sysmem_fuzz.cc" ]
+  sources = [
+    "sysmem_fuzz.cc",
+    "sysmem_fuzz_common.cc",
+  ]
   corpus = "corpus"
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
