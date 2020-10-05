@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# An empty SDK atom.
+#
+# Should be used in very specific situations where SDK elements are injected in
+# SDKs in a way that's not reflected in the build graph. This allows SDK-related
+# templates to handle such a target as any other SDK target.
+
+template("sdk_noop_atom") {
+  sdk_contents = {
+    atoms = []
+    ids = []
+  }
+  write_file("$target_gen_dir/$target_name.sdk", sdk_contents, "json")
+  meta_contents = {
+  }
+  write_file("$target_gen_dir/$target_name.meta.json", meta_contents, "json")
+  group(target_name) {
+  }
+  not_needed(invoker, "*")
+}

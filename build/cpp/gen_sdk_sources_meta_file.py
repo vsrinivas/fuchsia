@@ -38,6 +38,8 @@ def main():
     for spec in args.deps:
         with open(spec, 'r') as spec_file:
             data = json.load(spec_file)
+        if not data:
+            continue
         type = data['type']
         name = data['name']
         if type == 'cc_source_library' or type == 'cc_prebuilt_library':
