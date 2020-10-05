@@ -220,6 +220,8 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// default) no bounds to concurrency are applied.
 /// If FASYNC_TEST_TIMEOUT_SECONDS is set, it specifies the maximum duration for one repetition of
 /// a test.
+/// Multiple threads will be spawned to execute the tests concurrently (to save wall time), up to a maximum of
+/// FASYNC_TEST_MAX_THREADS.
 ///
 /// ```
 /// #[fuchsia_async::run_singlethreaded(test)]
@@ -278,6 +280,8 @@ impl Parse for RunAttributes {
 /// default) no bounds to concurrency are applied.
 /// If FASYNC_TEST_TIMEOUT_SECONDS is set, it specifies the maximum duration for one repetition of
 /// a test.
+/// When running tests concurrently the thread pool size will be scaled up by the expected maximum concurrent
+/// test executions (to save wall time) - this pool size can be capped with FASYNC_TEST_MAX_THREADS.
 ///
 /// ```
 /// #[fuchsia_async::run(4, test)]
