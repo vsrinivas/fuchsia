@@ -1682,6 +1682,11 @@ LogicalBufferCollection::Allocate() {
         min_buffer_count, max_buffer_count);
     return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
+  if (min_buffer_count > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+    LogError("aggregate min_buffer_count (%d) > MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS (%d)",
+             min_buffer_count, llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS);
+    return fit::error(ZX_ERR_NOT_SUPPORTED);
+  }
 
   result.set_buffers(allocator_.make_vec_ptr<llcpp::fuchsia::sysmem2::VmoBuffer>(min_buffer_count));
   ZX_DEBUG_ASSERT(result.buffers().count() == min_buffer_count);

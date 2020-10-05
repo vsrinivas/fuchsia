@@ -2827,6 +2827,42 @@ TEST(Sysmem, TooManyFormats) {
   VerifyServerAlive(allocator_client);
 }
 
+// Check that the server checks for min_buffer_count too large.
+TEST(Sysmem, TooManyBuffers) {
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  ASSERT_EQ(status, ZX_OK, "");
+  status = fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator_client.get(),
+                                                               collection_server.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints.min_size_bytes = PAGE_SIZE;
+  constraints->min_buffer_count =
+      1024 * 1024 * 1024 / constraints->buffer_memory_constraints.min_size_bytes;
+  constraints->buffer_memory_constraints.cpu_domain_supported = true;
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageRead;
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  EXPECT_NE(status, ZX_OK, "");
+
+  VerifyServerAlive(allocator_client);
+}
+
 bool BasicAllocationSucceeds(
     fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints) {
   zx_status_t status;
