@@ -37,6 +37,7 @@ go_library("main") {
 
 go_library("lib") {
   deps = [
+    "//src/sys/pkg/bin/pm:pm_lib",
     "//tools/build",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
@@ -45,7 +46,10 @@ go_library("lib") {
 
 go_test("artifactory_lib_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/artifactory" ]
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }
 
 go_test("artifactory_main_tests") {

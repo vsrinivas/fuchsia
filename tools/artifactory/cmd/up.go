@@ -56,7 +56,7 @@ const (
 	// This is eventually consumed by crash reporting infrastructure.
 	buildIDsTxt = "build-ids.txt"
 
-	// The blobs manifest.
+	// The blobs manifest. TODO(fxbug.dev/60322) remove this.
 	blobManifestName = "blobs.json"
 
 	// The ELF sizes manifest.
@@ -109,6 +109,7 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   ├── images
 │   │   │   │   │   └── <images>
 │   │   │   │   ├── packages
+│   │   │   │   │   ├── all_blobs.json
 │   │   │   │   │   ├── blobs.json
 │   │   │   │   │   ├── elf_sizes.json
 │   │   │   │   │   ├── repository
@@ -211,6 +212,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 			Destination: path.Join(buildsUUIDDir, packageDirName, elfSizesManifestName),
 		},
 	}
+
+	allBlobsUpload, err := artifactory.BlobsUpload(m, path.Join(buildsUUIDDir, packageDirName, "all_blobs.json"))
+	if err != nil {
+		return fmt.Errorf("failed to obtain blobs upload: %w", err)
+	}
+	files = append(files, allBlobsUpload)
 
 	pkey, err := artifactory.PrivateKey(cmd.privateKeyPath)
 	if err != nil {
