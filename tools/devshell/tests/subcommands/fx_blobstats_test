@@ -13,7 +13,7 @@
 
 BT_LINKED_DEPS=(
   "prebuilt/third_party/dart"
-  "scripts/blobstats"
+  "tools/blobstats"
   "scripts/third_party"
   "third_party"
 )

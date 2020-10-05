@@ -36,10 +36,8 @@ group("infratools") {
 
   # Tools that are only needed in the context of the current host.
   current_host_tools = [
-    # TODO(olivernewman): Move blobstats code into //tools once recipes no
-    # longer have its location hardcoded.
-    "//scripts/blobstats",
     "//tools/artifactory",
+    "//tools/blobstats",
     "//tools/integration:tools",
     "//tools/size_checker/cmd:host",
   ]
@@ -101,6 +99,7 @@ group("tests") {
     "//tools/artifactory:tests",
     "//tools/bindc:tests",
     "//tools/blackout:tests",
+    "//tools/blobstats:tests",
     "//tools/bootserver:tests($host_toolchain)",
     "//tools/bootserver_old/tests($host_toolchain)",
     "//tools/botanist:tests($host_toolchain)",

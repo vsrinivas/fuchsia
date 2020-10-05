@@ -21,5 +21,5 @@ esac
 cd "${FUCHSIA_BUILD_DIR}"
 
 exec "${PREBUILT_DART}" \
-  --packages="${FUCHSIA_DIR}/scripts/blobstats/package_config.json" \
-  "${FUCHSIA_DIR}/scripts/blobstats/bin/main.dart" "$@"
+  --packages="${FUCHSIA_DIR}/tools/blobstats/package_config.json" \
+  "${FUCHSIA_DIR}/tools/blobstats/bin/main.dart" "$@"

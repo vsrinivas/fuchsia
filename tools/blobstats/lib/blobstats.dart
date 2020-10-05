@@ -286,8 +286,7 @@ class BlobStats {
     for (var file in ['LICENSE', 'd3.js']) {
       await File(d3Dir + file).copy(p.join(outputDir.path, 'd3_v3', file));
     }
-    var templateDir =
-        p.join(buildDir.path, '../../scripts/blobstats/template/');
+    var templateDir = p.join(buildDir.path, '../../tools/blobstats/template/');
     for (var file in ['index.html', 'D3BlobTreeMap.js']) {
       await File(templateDir + file).copy(p.join(outputDir.path, file));
     }
