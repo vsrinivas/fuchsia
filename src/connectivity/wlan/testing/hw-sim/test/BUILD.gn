@@ -226,10 +226,77 @@ fuchsia_component("legacy-simulate-scan") {
   ]
 }
 
+fuchsia_component("legacy-connect-to-open-network") {
+  testonly = true
+  manifest = "meta/legacy_connect_to_open_network.cmx"
+  deps = [
+    "legacy_connect_to_open_network",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_component("legacy-connect-to-wpa2-network") {
+  testonly = true
+  manifest = "meta/legacy_connect_to_wpa2_network.cmx"
+  deps = [
+    "legacy_connect_to_wpa2_network",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+fuchsia_component("legacy-ethernet-tx-rx") {
+  testonly = true
+  manifest = "meta/legacy_ethernet_tx_rx.cmx"
+  deps = [
+    "legacy_ethernet_tx_rx",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_component("legacy-multi-ifaces") {
+  testonly = true
+  manifest = "meta/legacy_multi_ifaces.cmx"
+  deps = [
+    "legacy_multi_ifaces",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_component("legacy-sim-client-vs-sim-ap") {
+  testonly = true
+  manifest = "meta/legacy_sim_client_vs_sim_ap.cmx"
+  deps = [
+    "legacy_sim_client_vs_sim_ap",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
 fuchsia_test_package("legacy-wlan-hw-sim-test") {
   test_components = [
     ":legacy-configure-legacy-privacy-off",
     ":legacy-configure-legacy-privacy-on",
     ":legacy-simulate-scan",
+    ":legacy-connect-to-open-network",
+    ":legacy-connect-to-wpa2-network",
+    ":legacy-ethernet-tx-rx",
+    ":legacy-multi-ifaces",
+    ":legacy-sim-client-vs-sim-ap",
   ]
+}
+
+fuchsia_component("legacy-rate-selection") {
+  testonly = true
+  manifest = "meta/legacy_rate_selection.cmx"
+  deps = [
+    "legacy_rate_selection",
+    "//src/connectivity/wlan/testing/wlan-devmgr",
+  ]
+}
+
+fuchsia_test_package("legacy-rate-selection-package") {
+  package_name = "legacy-rate-selection"
+  test_components = [ ":legacy-rate-selection" ]
+
+  test_specs = {
+    environments = [ nuc_env ]
+  }
 }

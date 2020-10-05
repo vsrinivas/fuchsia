@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {wlan_common::mac::Bssid, wlan_hw_sim::*};
+use {
+    fidl_fuchsia_wlan_service::WlanMarker, fuchsia_component::client::connect_to_service,
+    wlan_common::mac::Bssid, wlan_hw_sim::*,
+};
 
 /// Test a client can connect to a network with no protection by simulating an AP that sends out
 /// hard coded authentication and association response frames.
@@ -16,7 +19,12 @@ async fn connect_to_open_network() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let proxy = helper.proxy();
-    let () = connect(&proxy, &mut helper, SSID, &BSS, None).await;
+    let wlan_service =
+        connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
+
+    let is_protected = false;
+    let () = wlan_hw_sim::connect_to_open_ap(&wlan_service, &mut helper, SSID, &BSS).await;
+    let status = wlan_service.status().await.expect("getting wlan status");
+    assert_associated_state(status, &BSS, SSID, &CHANNEL, is_protected);
     helper.stop().await;
 }

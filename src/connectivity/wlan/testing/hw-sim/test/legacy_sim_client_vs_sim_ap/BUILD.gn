@@ -4,13 +4,12 @@
 
 import("//build/rust/rustc_test.gni")
 
-rustc_test("sim_client_vs_sim_ap") {
+rustc_test("legacy_sim_client_vs_sim_ap") {
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",

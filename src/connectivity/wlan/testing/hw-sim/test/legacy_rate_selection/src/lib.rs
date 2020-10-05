@@ -4,10 +4,12 @@
 
 use {
     anyhow::Error,
+    fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap::{
         WlanTxStatusEntry, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
     fuchsia_async::Interval,
+    fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, poll, StreamExt},
     log::info,
@@ -17,7 +19,7 @@ use {
     wlan_common::{appendable::Appendable, big_endian::BigEndianU16, bss::Protection, mac},
     wlan_hw_sim::*,
 };
-// Remedy for fxbug.dev/8165 (fxbug.dev/33151)
+// Remedy for FLK-24 (DNO-389)
 // Refer to |KMinstrelUpdateIntervalForHwSim| in //src/connectivity/wlan/drivers/wlan/device.cpp
 const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 
@@ -138,6 +140,8 @@ async fn eth_and_beacon_sender<'a>(
 async fn rate_selection() {
     init_syslog();
 
+    let wlan_service =
+        connect_to_service::<WlanMarker>().expect("Error connecting to wlan service");
     let mut helper = test_utils::TestHelper::begin_test(WlantapPhyConfig {
         quiet: true,
         ..default_wlantap_config_client()
@@ -145,8 +149,7 @@ async fn rate_selection() {
     .await;
     let () = loop_until_iface_is_found().await;
 
-    let phy = helper.proxy();
-    let () = connect(&phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL, None).await;
+    let () = connect_to_open_ap(&wlan_service, &mut helper, SSID_MINSTREL, &BSS_MINSTL).await;
 
     let phy = helper.proxy();
     let (sender, mut receiver) = mpsc::channel(1);
@@ -249,8 +252,8 @@ async fn rate_selection() {
         assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
     }
     info!(
-        "If the test fails due to QEMU slowness outside of the scope of WLAN (See fxbug.dev/8165, \
-         fxbug.dev/33151). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
+        "If the test fails due to QEMU slowness outside of the scope of WLAN (See FLK-24, \
+         DNO-389). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
     );
     assert_eq!(max_key_prev, MAX_SUCCESSFUL_IDX);
     helper.stop().await;

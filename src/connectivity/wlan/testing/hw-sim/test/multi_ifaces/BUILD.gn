@@ -9,14 +9,12 @@ rustc_test("multi_ifaces") {
   deps = [
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
-    "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-sys",
-    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/lib.rs" ]

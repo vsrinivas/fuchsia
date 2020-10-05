@@ -4,6 +4,8 @@
 
 use {
     anyhow::ensure,
+    fidl_fuchsia_wlan_service::WlanMarker,
+    fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     pin_utils::pin_mut,
@@ -95,8 +97,10 @@ async fn ethernet_tx_rx() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let proxy = helper.proxy();
-    connect(&proxy, &mut helper, SSID, &BSS, None).await;
+    let wlan_service =
+        connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
+
+    connect_to_open_ap(&wlan_service, &mut helper, SSID, &BSS).await;
 
     let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

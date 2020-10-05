@@ -17,7 +17,9 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
+    futures::TryStreamExt,
     log::{debug, error},
+    pin_utils::pin_mut,
     std::{future::Future, marker::Unpin},
     wlan_common::{
         bss::Protection,
@@ -530,6 +532,75 @@ pub fn assert_associated_state(
     assert_eq!(ap.chan, *channel);
     assert!(ap.is_compatible);
     assert_eq!(ap.is_secure, is_secure);
+}
+
+async fn connect_to_network(ssid: &[u8], passphrase: Option<&str>) {
+    // Connect to the client policy service and get a client controller.
+    let (client_controller, mut server_stream) = wlancfg_helper::init_client_controller().await;
+
+    // Store the config that was just passed in.
+    let network_config = match passphrase {
+        Some(passphrase) => NetworkConfigBuilder::protected(&passphrase.as_bytes().to_vec()),
+        None => NetworkConfigBuilder::open(),
+    }
+    .ssid(&ssid.to_vec());
+
+    let result = client_controller
+        .save_network(wlan_policy::NetworkConfig::from(network_config.clone()))
+        .await
+        .expect("saving network config");
+    assert!(result.is_ok());
+
+    // Issue a connect request.
+    let mut network_id = wlan_policy::NetworkConfig::from(network_config).id.unwrap();
+    client_controller.connect(&mut network_id).await.expect("connecting");
+
+    // Wait until the policy layer indicates that the client has successfully connected.
+    while let Some(update_request) = server_stream.try_next().await.expect("getting state update") {
+        let (update, responder) =
+            update_request.into_on_client_state_update().expect("converting to state update");
+        let _ = responder.send();
+
+        let networks = update.networks.expect("getting client networks");
+
+        for net_state in networks {
+            let id = net_state.id.expect("empty network ID");
+            let state = net_state.state.expect("empty network state");
+
+            if id.ssid == ssid && state == wlan_policy::ConnectionState::Connected {
+                return;
+            }
+        }
+    }
+}
+
+pub async fn connect(
+    phy: &WlantapPhyProxy,
+    helper: &mut test_utils::TestHelper,
+    ssid: &[u8],
+    bssid: &mac::Bssid,
+    passphrase: Option<&str>,
+) {
+    let connect_fut = connect_to_network(ssid, passphrase);
+    pin_mut!(connect_fut);
+
+    // Validate the connect request.
+    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p));
+    let protection = match passphrase {
+        Some(_) => Protection::Wpa2Personal,
+        None => Protection::Open,
+    };
+
+    helper
+        .run_until_complete_or_timeout(
+            30.seconds(),
+            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ssid), bssid),
+            |event| {
+                handle_connect_events(&event, &phy, ssid, bssid, &protection, &mut authenticator);
+            },
+            connect_fut,
+        )
+        .await
 }
 
 pub fn rx_wlan_data_frame(

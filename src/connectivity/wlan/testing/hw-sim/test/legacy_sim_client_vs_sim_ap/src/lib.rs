@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, WlanMarker, WlanProxy},
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
+    fuchsia_async::{Time, Timer},
+    fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
-    futures::{channel::oneshot, join, TryFutureExt, TryStreamExt},
+    futures::{channel::oneshot, join, TryFutureExt},
     log::info,
     pin_utils::pin_mut,
     std::panic,
@@ -33,34 +35,21 @@ fn packet_forwarder<'a>(
 
 // Connect stage
 
-async fn initiate_connect(
-    wlan_controller: &fidl_policy::ClientControllerProxy,
-    mut update_stream: fidl_policy::ClientStateUpdatesRequestStream,
-    config: &mut fidl_policy::NetworkIdentifier,
+async fn intiate_connect(
+    wlancfg_svc: &WlanProxy,
+    config: &mut ConnectConfig,
     sender: oneshot::Sender<()>,
 ) {
-    // Issue the connect request.
-    let response = wlan_controller.connect(config).await.expect("connecting via wlancfg");
-    assert_eq!(response, fidl_common::RequestStatus::Acknowledged);
+    let error = wlancfg_svc.connect(config).await.expect("connecting via wlancfg");
+    // Make sure Message4 reaches the AP.
+    let () = Timer::new(Time::after(500.millis())).await;
+    assert_eq!(error.code, ErrCode::Ok, "failed to connect: {:?}", error);
 
-    // Monitor the update stream for the connected notification.
-    while let Some(update_request) = update_stream.try_next().await.expect("getting state update") {
-        let (update, responder) =
-            update_request.into_on_client_state_update().expect("converting to state update");
-        let _ = responder.send();
+    let status = wlancfg_svc.status().await.expect("getting final client status");
+    let is_secure = true;
+    assert_associated_state(status, &AP_MAC_ADDR, SSID, &WLANCFG_DEFAULT_AP_CHANNEL, is_secure);
 
-        let networks = update.networks.expect("getting client networks");
-
-        for net_state in networks {
-            let id = net_state.id.expect("empty network ID");
-            let state = net_state.state.expect("empty network state");
-
-            if id.ssid == SSID.to_vec() && state == fidl_policy::ConnectionState::Connected {
-                sender.send(()).expect("done connecting, sending message to the other future");
-                return;
-            }
-        }
-    }
+    sender.send(()).expect("done connecting, sending message to the other future");
 }
 
 /// At this stage client communicates with AP only, in order to establish connection
@@ -70,23 +59,12 @@ async fn verify_client_connects_to_ap(
     client_helper: &mut test_utils::TestHelper,
     ap_helper: &mut test_utils::TestHelper,
 ) {
-    let (wlan_controller, update_stream) = wlan_hw_sim::init_client_controller().await;
+    let wlancfg_svc = connect_to_service::<WlanMarker>().expect("connecting to wlancfg service");
 
     let (sender, connect_confirm_receiver) = oneshot::channel();
-    let network_config =
-        NetworkConfigBuilder::protected(&PASS_PHRASE.as_bytes().to_vec()).ssid(&SSID.to_vec());
+    let mut connect_config = create_connect_config(SSID, PASS_PHRASE);
 
-    // The credentials need to be stored before attempting to connect.
-    wlan_controller
-        .save_network(fidl_policy::NetworkConfig::from(network_config.clone()))
-        .await
-        .expect("sending save network request")
-        .expect("saving network config.");
-
-    let network_config = fidl_policy::NetworkConfig::from(network_config);
-    let mut network_id = network_config.id.unwrap();
-
-    let connect_fut = initiate_connect(&wlan_controller, update_stream, &mut network_id, sender);
+    let connect_fut = intiate_connect(&wlancfg_svc, &mut connect_config, sender);
     pin_mut!(connect_fut);
 
     let client_fut = client_helper.run_until_complete_or_timeout(
@@ -95,7 +73,7 @@ async fn verify_client_connects_to_ap(
         |event| match event {
             WlantapPhyEvent::SetChannel { args } => {
                 if args.chan.primary == WLANCFG_DEFAULT_AP_CHANNEL.primary {
-                    // TODO(fxbug.dev/35337): use beacon frame from configure_beacon
+                    // TODO(35337): use beacon frame from configure_beacon
                     send_beacon(
                         &WLANCFG_DEFAULT_AP_CHANNEL,
                         &AP_MAC_ADDR,
@@ -129,7 +107,7 @@ async fn verify_client_connects_to_ap(
     // Both tasks need to be running at the same time to ensure "packets" can reach each other.
 
     join!(client_fut, ap_fut);
-    // TODO(fxbug.dev/35339): Once AP supports status query, verify from the AP side that client associated.
+    // TODO(35339): Once AP supports status query, verify from the AP side that client associated.
 }
 
 // Data transfer stage
@@ -219,13 +197,13 @@ async fn verify_ethernet_in_both_directions(
     pin_mut!(peer_behind_ap_fut);
 
     let client_with_timeout = client_helper.run_until_complete_or_timeout(
-        20.seconds(),
+        10.seconds(),
         "client trying to exchange data with a peer behind AP",
         packet_forwarder(&ap_proxy, "frame client -> ap"),
         client_fut,
     );
     let peer_behind_ap_with_timeout = ap_helper.run_until_complete_or_timeout(
-        20.seconds(),
+        10.seconds(),
         "AP forwarding data between client and its peer",
         packet_forwarder(&client_proxy, "frame ap ->  client"),
         peer_behind_ap_fut,
