@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_diagnostics::StreamMode;
 use futures::prelude::*;
+use log::trace;
 // we use parking_lot here instead of futures::lock because Cursor::get_next is recursive
 use parking_lot::Mutex;
 use std::{
     default::Default,
     pin::Pin,
     sync::{Arc, Weak},
-    task::{Context, Poll},
+    task::{Context, Poll, Waker},
 };
 
 /// A singly-linked-list which allows for concurrent lazy iteration and mutation of its
@@ -34,7 +36,12 @@ impl<T> ArcList<T> {
     }
 
     pub fn snapshot(&self) -> Cursor<T> {
-        Cursor::new_snapshot(self.clone())
+        self.cursor(StreamMode::Snapshot)
+    }
+
+    pub fn cursor(&self, mode: StreamMode) -> Cursor<T> {
+        let id = self.inner.lock().new_cursor_id();
+        Cursor::new(id, self.clone(), mode)
     }
 }
 
@@ -53,12 +60,6 @@ struct Node<T> {
     next: Mutex<Option<Arc<Node<T>>>>,
 }
 
-impl<T> Node<T> {
-    fn next(&self) -> Weak<Node<T>> {
-        self.next.lock().as_ref().map(Arc::downgrade).unwrap_or_default()
-    }
-}
-
 struct Root<T> {
     head: Option<Arc<Node<T>>>,
     tail: Weak<Node<T>>,
@@ -66,11 +67,21 @@ struct Root<T> {
     entries_seen: u64,
     /// The number of entries ever removed from the list.
     entries_popped: u64,
+    next_cursor_id: CursorId,
+    /// Wakers from subscribed cursors blocked on their next message.
+    pending_cursors: Vec<(CursorId, Waker)>,
 }
 
 impl<T> Default for Root<T> {
     fn default() -> Self {
-        Self { head: None, tail: Weak::new(), entries_seen: 0, entries_popped: 0 }
+        Self {
+            head: None,
+            tail: Weak::new(),
+            entries_seen: 0,
+            entries_popped: 0,
+            next_cursor_id: CursorId::default(),
+            pending_cursors: Vec::new(),
+        }
     }
 }
 
@@ -89,6 +100,11 @@ impl<T> Root<T> {
         }
 
         self.tail = new_tail;
+
+        for (id, waker) in self.pending_cursors.drain(..) {
+            trace!("Waking {:?} for entry {}.", id, self.entries_seen);
+            waker.wake();
+        }
     }
 
     fn pop_front(&mut self) -> Option<Arc<T>> {
@@ -99,7 +115,22 @@ impl<T> Root<T> {
         }
         prev_front.map(|f| f.inner.clone())
     }
+
+    fn new_cursor_id(&mut self) -> CursorId {
+        let new_next = CursorId(self.next_cursor_id.0 + 1);
+        std::mem::replace(&mut self.next_cursor_id, new_next)
+    }
+
+    fn register_for_wakeup(&mut self, cursor: &Cursor<T>, cx: &mut Context<'_>) {
+        self.pending_cursors.push((cursor.id, cx.waker().clone()));
+        self.pending_cursors.sort_by_key(|&(id, _)| id);
+        self.pending_cursors.dedup_by_key(|&mut (id, _)| id);
+    }
 }
+
+/// A unique identifier for each cursor used to manage wakers.
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
+struct CursorId(u64);
 
 /// A weak pointer into the buffer which is being concurrently iterated and modified.
 ///
@@ -108,9 +139,12 @@ impl<T> Root<T> {
 /// first returns a count of items dropped.
 ///
 /// The count is maintained by giving each successive item in a list a monotonically increasing ID
-/// and tracking the "high-water mark" of the largest/last ID seen. These IDs are also how we
-/// control snapshotting vs. subscribing. A snapshot cursor is bound to those IDs known at the time
-/// of its creation.
+/// and tracking the "high-water mark" of the largest/last ID seen.
+///
+/// # Modes
+///
+/// These IDs are also how we express snapshotting vs. subscribing. The mode determines the minimum
+/// and maximum IDs the cursor will yield.
 ///
 /// # Wraparound
 ///
@@ -119,24 +153,37 @@ impl<T> Root<T> {
 /// accounted for in the implementation. If you're reading this after observing a bug due to that,
 /// congratulations.
 pub struct Cursor<T> {
-    next: Weak<Node<T>>,
+    id: CursorId,
+    last_visited: Weak<Node<T>>,
     last_id_seen: u64,
     until_id: u64,
     list: ArcList<T>,
 }
 
 impl<T> Cursor<T> {
-    /// A snapshot cursor will return items until the ID is greater than the tail ID when the
-    /// snapshot was taken.
-    fn new_snapshot(list: ArcList<T>) -> Self {
-        let until_id = list.inner.lock().tail.upgrade().map(|t| t.id).unwrap_or_default();
-        Self::new(list, 0, until_id)
-    }
+    /// Construct a new cursor into the logs buffer. The `mode` passed determines the range over
+    /// which the cursor operates:
+    ///
+    /// | mode      | first ID yielded        | last ID yielded         |
+    /// |-----------|-------------------------|-------------------------|
+    /// | snapshot  | 0                       | max at time of snapshot |
+    /// | subscribe | max at time of snapshot | max ID possible         |
+    /// | both      | 0                       | max ID possible         |
+    fn new(id: CursorId, list: ArcList<T>, mode: StreamMode) -> Self {
+        let (from, last_visited) = match mode {
+            StreamMode::Snapshot | StreamMode::SnapshotThenSubscribe => (0, Default::default()),
+            StreamMode::Subscribe => {
+                let inner = list.inner.lock();
+                (inner.entries_seen, inner.tail.clone())
+            }
+        };
 
-    /// A cursor will return results with IDs equal to or greater than `from` and less than or
-    /// equal to `to`.
-    fn new(list: ArcList<T>, from: u64, to: u64) -> Self {
-        Self { list, last_id_seen: from, until_id: to, next: Default::default() }
+        let to = match mode {
+            StreamMode::Snapshot => list.inner.lock().entries_seen,
+            StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe => std::u64::MAX,
+        };
+
+        Self { id, list, last_id_seen: from, until_id: to, last_visited }
     }
 }
 
@@ -147,11 +194,20 @@ impl<T> Stream for Cursor<T> {
             return Poll::Ready(None);
         }
 
-        if let Some(to_return) = self.next.upgrade() {
-            // self.next is alive
+        let next = if let Some(last) = self.last_visited.upgrade() {
+            // get the next node from our last visited one
+            last.next.lock().clone()
+        } else {
+            // otherwise start again at the head
+            trace!("{:?} starting from the head of the list.", self.id);
+            self.list.inner.lock().head.clone()
+        };
+
+        if let Some(to_return) = next {
             if to_return.id > self.until_id {
                 self.last_id_seen = to_return.id;
                 // we're past the end of this cursor's valid range
+                trace!("{:?} is done.", self.id);
                 return Poll::Ready(None);
             }
 
@@ -161,33 +217,22 @@ impl<T> Stream for Cursor<T> {
             let item = if num_missed > 0 {
                 // advance the cursor's high-water mark by the number we missed
                 // so we only report each dropped item once
+                trace!("{:?} reporting {} missed items.", self.id, num_missed);
                 self.last_id_seen += num_missed;
                 LazyItem::ItemsDropped(num_missed)
             } else {
                 // we haven't missed anything, proceed normally
+                trace!("{:?} yielding item {}.", self.id, to_return.id);
                 self.last_id_seen = to_return.id;
-                self.next = to_return.next();
+                self.last_visited = Arc::downgrade(&to_return);
                 LazyItem::Next(to_return.inner.clone())
             };
 
             Poll::Ready(Some(item))
         } else {
-            // self.next is stale, either we fell off the list or this is our first call
-            let head = self.list.inner.lock().head.clone();
-            if let Some(head) = head {
-                // the list is not empty
-                if head.id > self.last_id_seen {
-                    // start playing catch-up
-                    self.next = Arc::downgrade(&head);
-                    self.poll_next(cx)
-                } else {
-                    // we're at the tail
-                    Poll::Pending
-                }
-            } else {
-                // the list is empty
-                Poll::Pending
-            }
+            trace!("Registering {:?} for wakeup.", self.id);
+            self.list.inner.lock().register_for_wakeup(&*self, cx);
+            Poll::Pending
         }
     }
 }
@@ -204,7 +249,8 @@ pub enum LazyItem<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fmt::Debug;
+    use futures::poll;
+    use std::{fmt::Debug, task::Poll};
 
     impl<T: Debug> LazyItem<T> {
         #[track_caller]
@@ -229,7 +275,57 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn all_delivered_without_drops() {
+    async fn subscription_delivered_without_drops() {
+        let list = ArcList::default();
+        let mut early_sub = list.cursor(StreamMode::Subscribe);
+
+        let mut first_from_early_sub = early_sub.next();
+        assert_eq!(poll!(&mut first_from_early_sub), Poll::Pending);
+
+        list.push_back(1);
+        assert_eq!(*first_from_early_sub.await.unwrap().unwrap(), 1);
+
+        // this subscription starts after the 1 we just pushed
+        let mut middle_sub = list.cursor(StreamMode::Subscribe);
+
+        let (mut second_from_early_sub, mut second_from_middle_sub) =
+            (early_sub.next(), middle_sub.next());
+        assert_eq!(poll!(&mut second_from_early_sub), Poll::Pending);
+        assert_eq!(poll!(&mut second_from_middle_sub), Poll::Pending);
+
+        list.push_back(2);
+        assert_eq!(*second_from_early_sub.await.unwrap().unwrap(), 2);
+        assert_eq!(*second_from_middle_sub.await.unwrap().unwrap(), 2);
+
+        let mut late_sub = list.cursor(StreamMode::Subscribe);
+
+        let (mut third_from_early_sub, mut third_from_middle_sub, mut third_from_late_sub) =
+            (early_sub.next(), middle_sub.next(), late_sub.next());
+        assert_eq!(poll!(&mut third_from_early_sub), Poll::Pending);
+        assert_eq!(poll!(&mut third_from_middle_sub), Poll::Pending);
+        assert_eq!(poll!(&mut third_from_late_sub), Poll::Pending);
+
+        list.push_back(3);
+        assert_eq!(*third_from_early_sub.await.unwrap().unwrap(), 3);
+        assert_eq!(*third_from_middle_sub.await.unwrap().unwrap(), 3);
+        assert_eq!(*third_from_late_sub.await.unwrap().unwrap(), 3);
+
+        let mut nop_sub = list.cursor(StreamMode::Subscribe);
+
+        let (
+            mut fourth_from_early_sub,
+            mut fourth_from_middle_sub,
+            mut fourth_from_late_sub,
+            mut fourth_from_nop_sub,
+        ) = (early_sub.next(), middle_sub.next(), late_sub.next(), nop_sub.next());
+        assert_eq!(poll!(&mut fourth_from_early_sub), Poll::Pending);
+        assert_eq!(poll!(&mut fourth_from_middle_sub), Poll::Pending);
+        assert_eq!(poll!(&mut fourth_from_late_sub), Poll::Pending);
+        assert_eq!(poll!(&mut fourth_from_nop_sub), Poll::Pending);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn snapshot_delivered_without_drops() {
         let list = ArcList::default();
         let mut dead_cursor = list.snapshot();
         assert_eq!(dead_cursor.next().await, None, "no items in the list");
@@ -264,7 +360,59 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn drops_are_counted() {
+    async fn snapshot_then_subscribe_gets_before_and_after() {
+        let list: ArcList<i32> = ArcList::default();
+
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+
+        let mut middle_cursor = list.cursor(StreamMode::SnapshotThenSubscribe);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 1);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 2);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 3);
+
+        list.push_back(4);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 4);
+
+        list.push_back(5);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 5);
+
+        list.push_back(6);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 6);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn subscription_drops_are_counted() {
+        let list: ArcList<i32> = ArcList::default();
+        let mut early_cursor = list.cursor(StreamMode::Subscribe);
+
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        assert_eq!(*list.pop_front().unwrap(), 1);
+
+        early_cursor.next().await.unwrap().expect_dropped(1);
+        assert_eq!(*early_cursor.next().await.unwrap().unwrap(), 2);
+
+        let mut middle_cursor = list.cursor(StreamMode::Subscribe);
+
+        assert_eq!(*list.pop_front().unwrap(), 2);
+        assert_eq!(*list.pop_front().unwrap(), 3);
+        list.push_back(4);
+        list.push_back(5);
+
+        early_cursor.next().await.unwrap().expect_dropped(1);
+        assert_eq!(*early_cursor.next().await.unwrap().unwrap(), 4);
+        assert_eq!(*early_cursor.next().await.unwrap().unwrap(), 5);
+
+        assert_eq!(*list.pop_front().unwrap(), 4);
+        middle_cursor.next().await.unwrap().expect_dropped(1);
+        assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 5);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn snapshot_drops_are_counted() {
         let list: ArcList<i32> = ArcList::default();
         let mut dead_cursor = list.snapshot();
         assert!(dead_cursor.next().await.is_none(), "no items in the list");
