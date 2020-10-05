@@ -17,7 +17,6 @@ base_package_labels += [
   "//src/experiences/bin/simple_browser:web_engine_config",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/session_shells/ermine/session:session_config",
-  "//src/experiences/settings",
   "//src/flutter",
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
