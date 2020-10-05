@@ -1186,11 +1186,14 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
   for (uint32_t i = 0; i < constraints->color_spaces().count(); ++i) {
     if (!ImageFormatIsSupportedColorSpaceForPixelFormat(constraints->color_spaces()[i],
                                                         constraints->pixel_format())) {
+      auto colorspace_type = constraints->color_spaces()[i].has_type()
+                                 ? constraints->color_spaces()[i].type()
+                                 : llcpp::fuchsia::sysmem2::ColorSpaceType::INVALID;
       LogError(
           "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
           "color_space.type: %u "
           "pixel_format.type: %u",
-          constraints->color_spaces()[i].type(), constraints->pixel_format().type());
+          colorspace_type, constraints->pixel_format().type());
       return false;
     }
   }

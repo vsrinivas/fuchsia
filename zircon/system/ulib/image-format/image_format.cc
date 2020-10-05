@@ -541,6 +541,8 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a_v1,
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(
     const llcpp::fuchsia::sysmem2::ColorSpace& color_space,
     const llcpp::fuchsia::sysmem2::PixelFormat& pixel_format) {
+  if (!color_space.has_type())
+    return false;
   // Ignore pixel format modifier - assume it has already been checked.
   auto color_space_sampling_info_iter = kColorSpaceSamplingInfo.find(color_space.type());
   if (color_space_sampling_info_iter == kColorSpaceSamplingInfo.end()) {

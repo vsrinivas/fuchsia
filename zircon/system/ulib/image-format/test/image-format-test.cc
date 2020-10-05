@@ -169,6 +169,16 @@ TEST(ImageFormat, LinearRowBytes_V1_C) {
   EXPECT_FALSE(ImageFormatMinimumRowBytes(&constraints, 101, &row_bytes));
 }
 
+TEST(ImageFormat, InvalidColorSpace_V1_LLCPP) {
+  auto sysmem_format_result = ImageFormatConvertZxToSysmem_v1(&allocator, ZX_PIXEL_FORMAT_RGB_565);
+  EXPECT_TRUE(sysmem_format_result.is_ok());
+  auto sysmem_format = sysmem_format_result.take_value();
+
+  sysmem_v1::ColorSpace color_space{sysmem_v1::ColorSpaceType::INVALID};
+  // Shouldn't crash.
+  EXPECT_FALSE(ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, sysmem_format));
+}
+
 TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
   zx_pixel_format_t pixel_formats[] = {
       ZX_PIXEL_FORMAT_RGB_565,   ZX_PIXEL_FORMAT_RGB_332,  ZX_PIXEL_FORMAT_RGB_2220,
