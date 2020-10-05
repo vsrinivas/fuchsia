@@ -64,6 +64,7 @@ json5format = "0.1.4"
 lazy_static = "1.4"
 libc = "0.2"
 libm = "0.2.1"
+linked-hash-map = "0.5.3"
 log = { version = "0.4.4", features = ["std"] }
 maplit = "1.0"
 matches = "0.1.8"

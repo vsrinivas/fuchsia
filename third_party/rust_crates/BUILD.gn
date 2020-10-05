@@ -252,6 +252,10 @@ group("libm") {
   deps = [ ":libm-v0_2_1" ]
 }
 
+group("linked-hash-map") {
+  deps = [ ":linked-hash-map-v0_5_3" ]
+}
+
 if (current_os == "fuchsia") {
   group("lipsum") {
     deps = [ ":lipsum-v0_6_0" ]
@@ -4021,10 +4025,10 @@ rust_library("link-cplusplus-v1_0_2") {
   ]
 }
 
-rust_library("linked-hash-map-v0_5_2") {
+rust_library("linked-hash-map-v0_5_3") {
   crate_name = "linked_hash_map"
   crate_root = "//third_party/rust_crates/vendor/linked-hash-map/src/lib.rs"
-  output_name = "linked_hash_map-e5551c52889e93a7"
+  output_name = "linked_hash_map-b9b35caede8d8189"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -4037,8 +4041,8 @@ rust_library("linked-hash-map-v0_5_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=e5551c52889e93a7",
-    "-Cextra-filename=-e5551c52889e93a7",
+    "-Cmetadata=b9b35caede8d8189",
+    "-Cextra-filename=-b9b35caede8d8189",
   ]
 }
 
@@ -4145,7 +4149,7 @@ rust_library("lru-cache-v0_1_2") {
   ]
 
   deps = []
-  deps += [ ":linked-hash-map-v0_5_2" ]
+  deps += [ ":linked-hash-map-v0_5_3" ]
 
   rustenv = []
 

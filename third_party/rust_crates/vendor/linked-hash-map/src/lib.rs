@@ -171,7 +171,8 @@ impl<K, V, S> LinkedHashMap<K, V, S> {
         if self.head.is_null() {
             // allocate the guard node if not present
             unsafe {
-                self.head = Box::into_raw(Box::new(mem::uninitialized()));
+                let node_layout = std::alloc::Layout::new::<Node<K, V>>();
+                self.head =  std::alloc::alloc(node_layout) as *mut Node<K, V>;
                 (*self.head).next = self.head;
                 (*self.head).prev = self.head;
             }
@@ -1134,7 +1135,7 @@ impl<K: Hash + Eq, V, S: BuildHasher> IntoIterator for LinkedHashMap<K, V, S> {
         }
         self.clear_free_list();
         // drop the HashMap but not the LinkedHashMap
-        self.map = unsafe { mem::uninitialized() };
+        unsafe { ptr::drop_in_place(&mut self.map); }
         mem::forget(self);
 
         IntoIter {

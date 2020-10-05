@@ -12,7 +12,7 @@
 
 [package]
 name = "linked-hash-map"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>", "Andrew Paseltiner <apaseltiner@gmail.com>"]
 exclude = ["/.travis.yml", "/deploy-docs.sh"]
 description = "A HashMap wrapper that holds key-value pairs in insertion order"
