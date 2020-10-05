@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -56,6 +57,10 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 	var unused []*License
 	var used []*License
 	table_of_contents := make(map[string][]*License)
+
+	// Sort the licenses in alphabetical order for consistency.
+	sort.Slice(licenses.licenses, func(i, j int) bool { return licenses.licenses[i].category < licenses.licenses[j].category })
+
 	for i := range licenses.licenses {
 		license := licenses.licenses[i]
 		if len(license.matches) == 0 {
@@ -116,6 +121,7 @@ func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics
 			for author := range license.matches {
 				authors = append(authors, author)
 			}
+			sort.Strings(authors)
 			return &authors
 		},
 	}).Parse(templateStr))

@@ -27,7 +27,11 @@
     "prebuilt/ml/tests",
     "prebuilt/third_party/qemu",
     "prebuilt/gputest",
-    "prebuilt/gputest-on-scenic"
+    "prebuilt/gputest-on-scenic",
+    "zircon/third_party/lz4/programs",
+    "zircon/third_party/lz4/tests",
+    "prebuilt/third_party/aemu",
+    "prebuilt/infra"
   ],
   "textExtensionList": [
     "ac",
@@ -55,6 +59,7 @@
     "java",
     "js",
     "m",
+    "a",
     "md",
     "py",
     "rs",
