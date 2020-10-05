@@ -16,32 +16,7 @@ import (
 	"testing"
 )
 
-func Test_formatSize(t *testing.T) {
-	tests := []struct {
-		size     int64
-		expected string
-	}{
-		{
-			0, "0.00 bytes",
-		},
-		{
-			1024, "1.00 KiB",
-		},
-		{
-			1024 * 1024, "1.00 MiB",
-		},
-		{
-			1024 * 1024 * 1024, "1.00 GiB",
-		},
-	}
-
-	for _, test := range tests {
-		if result := formatSize(test.size); result != test.expected {
-			t.Errorf("formatSize(%d) = %s; expect %s", test.size, result, test.expected)
-		}
-	}
-}
-func Test_processSizes(t *testing.T) {
+func Test_processBlobsJSON(t *testing.T) {
 	tests := []struct {
 		name     string
 		file     io.Reader
@@ -57,17 +32,17 @@ func Test_processSizes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			m, err := processSizes(test.file)
+			m, err := processBlobsJSON(test.file)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(m, test.expected) {
-				t.Fatalf("processSizes(%s) = %+v; expect %+v", test.file, m, test.expected)
+				t.Fatalf("processBlobsJSON(%s) = %+v; expect %+v", test.file, m, test.expected)
 			}
 		})
 	}
 }
-func Test_processManifest(t *testing.T) {
+func Test_processBlobsManifest(t *testing.T) {
 	tests := []struct {
 		name            string
 		blobMap         map[string]*Blob
@@ -117,8 +92,8 @@ func Test_processManifest(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if p := processManifest(test.blobMap, test.sizeMap, test.fileName, test.file); !reflect.DeepEqual(p, test.expectedPackage) {
-				t.Fatalf("processManifest(%+v, %+v, %s, %+v) = %+v; expect %+v", test.blobMap, test.sizeMap, test.fileName, test.file, p, test.expectedPackage)
+			if p := processBlobsManifest(test.blobMap, test.sizeMap, test.fileName, test.file); !reflect.DeepEqual(p, test.expectedPackage) {
+				t.Fatalf("processBlobsManifest(%+v, %+v, %s, %+v) = %+v; expect %+v", test.blobMap, test.sizeMap, test.fileName, test.file, p, test.expectedPackage)
 			}
 
 			if !reflect.DeepEqual(test.blobMap["hash"], test.expectedBlobMap["hash"]) {
@@ -127,7 +102,7 @@ func Test_processManifest(t *testing.T) {
 		})
 	}
 }
-func Test_processBlobsJSON(t *testing.T) {
+func Test_processBlobs(t *testing.T) {
 	tests := []struct {
 		name                  string
 		blobMap               map[string]*Blob
@@ -173,7 +148,7 @@ func Test_processBlobsJSON(t *testing.T) {
 				test.distributedShlibsSize,
 				newDummyNode(),
 			}
-			processBlobsJSON(&st, test.blobs, "")
+			processBlobs(&st, test.blobs, "")
 
 			if !reflect.DeepEqual(st.blobMap, test.expectedBlobMap) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
@@ -231,7 +206,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 				dummySize,
 				root,
 			}
-			processBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath)
+			processBlobs(&st, []BlobFromJSON{test.blob}, test.pkgPath)
 
 			expectedNode := root.find(test.expectedPathInTree)
 			if expectedNode == nil {
@@ -241,41 +216,6 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 			expectedSize := test.blobMap[test.blob.Merkle].size
 			if expectedNode.size != expectedSize {
 				t.Fatalf("tree.find(%s).size returns %d; expect %d", test.expectedPathInTree, expectedNode.size, expectedSize)
-			}
-		})
-	}
-}
-func Test_checkLimit(t *testing.T) {
-	tests := []struct {
-		name     string
-		size     int64
-		limit    json.Number
-		expected string
-	}{
-		{
-			"Size Smaller Than Limit",
-			1,
-			json.Number("2"),
-			"",
-		},
-		{
-			"Size Equal To Limit",
-			2,
-			json.Number("2"),
-			"",
-		},
-		{
-			"Size Greater Than Limit",
-			3,
-			json.Number("2"),
-			"foo (3.00 bytes) has exceeded its limit of 2.00 bytes.",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if result := checkLimit("foo", test.size, test.limit); result != test.expected {
-				t.Fatalf("checkLimit(foo, %d, %s) = %s; expect %s", test.size, test.limit, result, test.expected)
 			}
 		})
 	}
@@ -354,7 +294,7 @@ func Test_nodeFind(t *testing.T) {
 
 func Test_processInput(t *testing.T) {
 	fooSrcRelPath := "foo.src"
-	input := Input{
+	input := SizeLimits{
 		AssetLimit: json.Number("1"),
 		CoreLimit:  json.Number("1"),
 		AssetExt:   []string{".txt"},
@@ -429,19 +369,12 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to write blob sizes: %v", err)
 	}
 	blobSizeF.Close()
-	sizes, report, hasErr := processInput(&input, buildDir, blobListRelPath, blobSizeRelPath)
-	if !hasErr {
-		t.Fatalf("Expected processInput to return an error because size is above limit")
-	} else if !strings.Contains(report, "foo") {
-		t.Fatalf("Expected error message to mention component name \"foo\". Actual error: %v", err)
-	} else {
-		t.Logf("Error returned from processInput (probably expected): %v", err)
-	}
+	sizes := processSizeLimits(&input, buildDir, blobListRelPath, blobSizeRelPath)
 	fooSize, ok := sizes["foo"]
 	if !ok {
 		t.Fatalf("Failed to find foo in sizes: %v", sizes)
 	}
-	if fooSize != int64(2*singleBlobSize) {
+	if fooSize.Size != int64(2*singleBlobSize) {
 		t.Fatalf("Unexpected size for component foo: %v", fooSize)
 	}
 }
