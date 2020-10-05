@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/hwreg-asm-header-test"
+    }
+}

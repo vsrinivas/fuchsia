@@ -60,3 +60,8 @@ zx_library("hwreg-mock") {
     "$zx/system/ulib/mock-function:headers",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -21,7 +21,6 @@ if (current_cpu != "") {
     #
     # Where "test" is a group containing all unittest labels.
     deps = [
-      ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/kernel/phys:tests",
       "$zx/system/ulib/c/test/noop:test",
       "abi-type-validator",
@@ -31,37 +30,4 @@ if (current_cpu != "") {
       #"bad-kernel-access",
     ]
   }
-
-  group("host-tests") {
-    testonly = true
-    deps = [
-      "$zx/system/ulib/hwreg/test/asm",
-      "$zx/tools/kazoo:tests",
-    ]
-  }
-}
-
-# Build the host tests for each host.
-foreach(host, standard_build_hosts) {
-  environment_redirect("host-tests-${host.os}-${host.cpu}") {
-    testonly = true
-    environment_label = "$zx/public/gn/toolchain:host"
-    cpu = host.cpu
-    os = host.os
-    direct = true
-    deps = [ ":host-tests" ]
-  }
-}
-
-group("host-tests-all-platforms") {
-  testonly = true
-  deps = []
-  foreach(host, standard_build_hosts) {
-    deps += [ ":host-tests-${host.os}-${host.cpu}" ]
-  }
-}
-
-group("host") {
-  testonly = true
-  deps = [ ":host-tests-${host_os}-${host_cpu}" ]
 }

@@ -17,7 +17,9 @@ template("zx_host_tool") {
                              [
                                "sdk_migrated",
                                "target_name",
+                               "testonly",
                              ])
+      forward_variables_from(invoker, [ "testonly" ])
     }
 
     output_dir = root_out_dir
@@ -45,8 +47,15 @@ template("zx_host_tool") {
     file_base = "tools/$tool_name"
     tool_src = output_file
 
+    # NOTE: Don't create SDK atoms for testonly host tools, this is
+    # necessary to deal with //zircon/system/ulib/hwreg/test/asm
+    forward_variables_from(invoker, [ "testonly" ])
+    if (!defined(testonly)) {
+      testonly = false
+    }
+
     # TODO(fxbug.dev/42999): remove extra atom
-    if (current_cpu == host_cpu) {
+    if (current_cpu == host_cpu && !testonly) {
       sdk_atom("${target_name}_sdk_legacy") {
         id = "sdk://$file_base"
         category = "partner"

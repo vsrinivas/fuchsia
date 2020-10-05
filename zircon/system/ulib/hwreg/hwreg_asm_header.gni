@@ -38,8 +38,10 @@ template("hwreg_asm_header") {
                              "*",
                              [
                                "output_name",
+                               "testonly",
                                "visibility",
                              ])
+      forward_variables_from(invoker, [ "testonly" ])
       deps += [ "$zx/system/ulib/hwreg" ]
       sdk_migrated = true
     }

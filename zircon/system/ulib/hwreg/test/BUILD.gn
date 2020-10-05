@@ -70,3 +70,12 @@ bootfs_test("libhwreg-bootfs-test") {
   name = "libhwreg-test"
   deps = [ ":libhwreg" ]
 }
+
+group("tests") {
+  testonly = true
+
+  # NOTE: The other tests in this file are zbi tests which are
+  # included from //bundles/bringup:tests. The list below should
+  # instead be reachable from //src:tests.
+  deps = [ "asm:tests" ]
+}

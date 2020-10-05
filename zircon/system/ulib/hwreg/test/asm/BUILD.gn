@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
+
+hwreg_asm_header("test-header") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "test/reg32.h"
+  sources = [ "test-header.cc" ]
+}
+
+test("hwreg-asm-header-test") {
+  sources = [ "test-header-test.cc" ]
+  deps = [ ":test-header" ]
+}
+
+test_package("hwreg-asm-header-test-package") {
+  deps = [ ":hwreg-asm-header-test" ]
+  package_name = "hwreg-asm-header-test"
+  tests = [
+    {
+      name = "hwreg-asm-header-test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":hwreg-asm-header-test($host_toolchain)",
+    ":hwreg-asm-header-test-package",
+  ]
+}
