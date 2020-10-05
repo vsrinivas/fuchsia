@@ -21,7 +21,6 @@ flutter_app("scroll-flutter") {
   ]
 
   deps = [
-    "//src/experiences/settings/lib/widgets",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/args",

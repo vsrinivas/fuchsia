@@ -55,10 +55,6 @@ class AskModel extends ChangeNotifier {
       'title': 'terminal',
       'url': 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
     },
-    {
-      'title': 'settings',
-      'url': 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx',
-    },
   ];
 
   /// Constructor.
