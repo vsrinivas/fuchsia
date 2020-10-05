@@ -413,20 +413,6 @@ main()
   //   6:  SPN_RAST_TYPE_RAT_QUAD                           SPN_RAST_TYPE_RAT_QUAD
   //   7:  SPN_RAST_TYPE_RAT_CUBIC                          SPN_RAST_TYPE_RAT_CUBIC
   //
-#if 1  // NOTE(allanmac): projective shaders aren't implemented in this CL
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_FILLS_EXPAND_SUBGROUP_SIZE, I))                           \
-    {                                                                                              \
-      if (h##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                 \
-        h##I += SPN_RAST_TYPE_LINE;                                                                \
-    }
-
-      SPN_FILLS_EXPAND_BLOCK_EXPAND();
-
-#else
-
   if (is_affine)
     {
 #undef SPN_EXPAND_X
@@ -452,8 +438,6 @@ main()
       SPN_FILLS_EXPAND_BLOCK_EXPAND();
     }
 
-#endif
-
   //
   // Compute the base index for raster commands expanded from this
   // fill command.
@@ -466,9 +450,9 @@ main()
   rast_base_smem[4 + gl_SubgroupInvocationID] = prim_exc[1] + prim_base[1];
 
 #elif (SPN_FILLS_EXPAND_SUBGROUP_SIZE >= 8)
-    //
-    // gl_SubgroupSize >= 8
-    //
+  //
+  // gl_SubgroupSize >= 8
+  //
 #if (SPN_FILLS_EXPAND_SUBGROUP_SIZE > 8)
   if (gl_SubgroupInvocationID < SPN_RAST_TYPE_COUNT)
 #endif
@@ -564,17 +548,6 @@ main()
       //
       // Map block id path tags to rasterization types.
       //
-#if 1  // NOTE(allanmac): projective shaders aren't implemented in this CL
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  if (n##I <= SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)                                                     \
-    n##I += SPN_RAST_TYPE_LINE;
-
-      SPN_FILLS_EXPAND_BLOCK_EXPAND();
-
-#else
-
       if (is_affine)
         {
 #undef SPN_EXPAND_X
@@ -593,8 +566,6 @@ main()
 
           SPN_FILLS_EXPAND_BLOCK_EXPAND();
         }
-
-#endif
 
       //
       // Partition and scatter store each row.

@@ -318,6 +318,53 @@ param const params[] = {
       "</svg>\n")
   },
   {
+    .name        = "proj_quads",
+    .surface     = { 1024, 1024 },
+    .checksums = {
+      { 0xC5127E22, {
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
+      },
+      { 0xC431983B, {
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
+      },
+    },
+    .test = std::make_shared<test>(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+      "  <g transform=\"translate(16,16)\">\n"
+      "    <g>\n"
+      "      <rect width=\"592\" height=\"100\"/>\n"
+      "      <g fill=\"green\" transform=\"translate(0,8)\">\n"
+      "        <path d= \"v16 h128 v-16 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "      <g fill=\"blue\" transform=\"translate(0,24)\">\n"
+      "        <path d= \"q64,64 128,0 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "    </g>\n"
+      "    <g transform=\"project(0.506757,-0.281532,0,1,0,200,-0.00112613,0)\">\n"
+      "      <rect width=\"592\" height=\"100\"/>\n"
+      "      <g fill=\"green\" transform=\"translate(0,8)\">\n"
+      "        <path d= \"v16 h128 v-16 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "      <g fill=\"red\" transform=\"translate(0,24)\">\n"
+      "        <path d= \"q64,64 128,0 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "    </g>\n"
+      "    <g transform=\"project(0.675676,0,-3.12,0,312,400,0,-0.006)\">\n"
+      "      <rect width=\"592\" height=\"100\"/>\n"
+      "      <g fill=\"green\" transform=\"translate(0,8)\">\n"
+      "        <path d= \"v16 h128 v-16 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "      <g fill=\"yellow\" transform=\"translate(0,24)\">\n"
+      "        <path d= \"q64,64 128,0 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "    </g>\n"
+      "  </g>\n"
+      "</svg>\n")
+  },
+  {
     .name        = "rational_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
@@ -380,6 +427,53 @@ param const params[] = {
       "        <path d= \"d32,68 96,68 128,0 +1.0 +1.0 z\" transform=\"translate(160)\"/>\n"
       "        <path d= \"d32,68 96,68 128,0 +0.5 +0.5 z\" transform=\"translate(304)\"/>\n"
       "        <path d= \"d32,68 96,68 128,0 +0.0 +0.0 z\" transform=\"translate(448)\"/>\n"
+      "      </g>\n"
+      "    </g>\n"
+      "  </g>\n"
+      "</svg>\n")
+  },
+  {
+    .name        = "proj_cubics",
+    .surface     = { 1024, 1024 },
+    .checksums = {
+      { 0x138096C0, {
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
+      },
+      { 0x129FB0DA, {
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
+      },
+    },
+    .test = std::make_shared<test>(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+      "  <g transform=\"translate(16,16)\">\n"
+      "    <g>\n"
+      "      <rect width=\"592\" height=\"100\"/>\n"
+      "      <g fill=\"green\" transform=\"translate(0,8)\">\n"
+      "        <path d= \"v16 h128 v-16 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "      <g fill=\"blue\" transform=\"translate(0,24)\">\n"
+      "        <path d= \"c32,68 96,68 128,0 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "    </g>\n"
+      "    <g transform=\"project(0.506757,-0.281532,0,1,0,200,-0.00112613,0)\">\n"
+      "      <rect width=\"592\" height=\"100\"/>\n"
+      "      <g fill=\"green\" transform=\"translate(0,8)\">\n"
+      "        <path d= \"v16 h128 v-16 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "      <g fill=\"red\" transform=\"translate(0,24)\">\n"
+      "        <path d= \"c32,68 96,68 128,0 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "    </g>\n"
+      "    <g transform=\"project(0.675676,0,-3.12,0,312,400,0,-0.006)\">\n"
+      "      <rect width=\"592\" height=\"100\"/>\n"
+      "      <g fill=\"green\" transform=\"translate(0,8)\">\n"
+      "        <path d= \"v16 h128 v-16 z\" transform=\"translate(160)\"/>\n"
+      "      </g>\n"
+      "      <g fill=\"yellow\" transform=\"translate(0,24)\">\n"
+      "        <path d= \"c32,68 96,68 128,0 z\" transform=\"translate(160)\"/>\n"
       "      </g>\n"
       "    </g>\n"
       "  </g>\n"

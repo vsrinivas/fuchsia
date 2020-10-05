@@ -1,0 +1,150 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+#extension GL_GOOGLE_include_directive : require
+
+//
+// Curve rasterizers override these default macros:
+//
+
+// clang-format off
+#define SPN_RASTERIZE_PATH_PRIM_TYPE         SPN_RAST_TYPE_PROJ_QUAD
+#define SPN_RASTERIZE_PATH_PRIM_XY_EXPAND()  SPN_EXPAND_3()
+#define SPN_RASTERIZE_PATH_PRIM_W_EXPAND()   SPN_EXPAND_0()
+#define SPN_RASTERIZE_PATH_PRIM_END()        }
+// clang-format on
+
+//
+// Elevate the 2D points to 3D points
+//
+
+#define SPN_RASTERIZE_PATH_PRIM_TRANSFORM()                                                        \
+  vec3 p0;                                                                                         \
+  p0.xy = a0 * t_a + t_b[0]; /* w0 = 1 */                                                          \
+  p0.z  = dot(a0, t_b[1]) + 1.0f;                                                                  \
+                                                                                                   \
+  vec3 p1;                                                                                         \
+  p1.xy = a1 * t_a + t_b[0]; /* w1 = 1 */                                                          \
+  p1.z  = dot(a1, t_b[1]) + 1.0f;                                                                  \
+                                                                                                   \
+  vec3 p2;                                                                                         \
+  p2.xy = a2 * t_a + t_b[0]; /* w2 = 1 */                                                          \
+  p2.z  = dot(a2, t_b[1]) + 1.0f;
+
+//
+// P0, P1, P2 are 3D control points.
+//
+// Precompute quadratic polynomial coefficients from control cage so we
+// can shuffle them in on each iteration of the outer loop and then
+// evaluate the polynomial in Horner form.
+//
+//       |  1  0  0  | | P0 |   |      P0               |
+//       |           | |    |   |                       |
+//   B = | -2  2  0  | | P1 | = | -2 * P0 + 2 * P1      |
+//       |           | |    |   |                       |
+//       |  1 -2  1  | | P2 |   |      P0 - 2 * P1 + P2 |
+//
+// A homogeneous curve point C(t) is calculated with 3 FMAs:
+//
+//   C(t) = [ 1 t^1 t^2 ] * B = (B[2] * t + B[1]) * t + B[0]
+//
+// The Cartesian coordinates are obtained by dividing by the weight:
+//
+//   {x,y} = C(t).xy / C(t).z
+//
+// NOTE(allanmac): We want this to always be true so that points shared
+// by path segments remain equal under transformation:
+//
+//   P2 = (B2 * 1.0 + B1) * 1.0 + B0
+//
+
+#define SPN_RASTERIZE_PATH_PRIM_BEGIN()                                                            \
+                                                                                                   \
+  const float s_segs_f = spn_segment_rat_quad(p0, p1, p2);                                         \
+  const float s_denom  = 1.0f / s_segs_f;                                                          \
+  const int   s_segs   = int(s_segs_f);                                                            \
+                                                                                                   \
+  int                      s_inc = subgroupInclusiveAdd(s_segs);                                   \
+  SPN_SUBGROUP_UNIFORM int s_rem = subgroupBroadcast(s_inc, SPN_RASTERIZE_SUBGROUP_SIZE - 1);      \
+                                                                                                   \
+  if (s_rem == 0)                                                                                  \
+    return;                                                                                        \
+                                                                                                   \
+  if (s_segs == 0)                                                                                 \
+    s_inc = 0;                                                                                     \
+                                                                                                   \
+  int s_exc = s_inc - s_segs;                                                                      \
+                                                                                                   \
+  const vec3 b1 = 2.0f * p1 - 2.0f * p0;                                                           \
+  const vec3 b2 = p0 - 2.0f * p1 + p2;                                                             \
+                                                                                                   \
+  SPN_SUBGROUP_UNIFORM vec3 z1_prev = { 0.0f, 0.0f, 0.0f };                                        \
+                                                                                                   \
+  while (s_rem > 0)                                                                                \
+    {                                                                                              \
+      const uint s_src = spn_scan_max(s_inc, s_exc);                                               \
+                                                                                                   \
+      /* NOTE: highp = 1 + mediump - highp */                                                      \
+      const uint s_delta = 1 + gl_SubgroupInvocationID - subgroupShuffle(s_exc, s_src);            \
+      const uint s_count = subgroupShuffle(s_segs, s_src);                                         \
+                                                                                                   \
+      const bool is_s_first = (s_delta == 1);                                                      \
+      const bool is_s_last  = (s_delta >= s_count);                                                \
+                                                                                                   \
+      float s_t = subgroupShuffle(s_denom, s_src) * float(s_delta);                                \
+                                                                                                   \
+      s_inc -= SPN_RASTERIZE_SUBGROUP_SIZE;                                                        \
+      s_exc -= SPN_RASTERIZE_SUBGROUP_SIZE;                                                        \
+      s_rem -= SPN_RASTERIZE_SUBGROUP_SIZE;                                                        \
+                                                                                                   \
+      /* FIXME(allanmac): use extended subgroup types */                                           \
+      const vec3 s0 = { subgroupShuffle(p0.x, s_src),                                              \
+                        subgroupShuffle(p0.y, s_src),                                              \
+                        subgroupShuffle(p0.z, s_src) };                                            \
+      const vec3 s1 = { subgroupShuffle(b1.x, s_src),                                              \
+                        subgroupShuffle(b1.y, s_src),                                              \
+                        subgroupShuffle(b1.z, s_src) };                                            \
+      const vec3 s2 = { subgroupShuffle(b2.x, s_src),                                              \
+                        subgroupShuffle(b2.y, s_src),                                              \
+                        subgroupShuffle(b2.z, s_src) };                                            \
+      const vec3 sn = { subgroupShuffle(p2.x, s_src),                                              \
+                        subgroupShuffle(p2.y, s_src),                                              \
+                        subgroupShuffle(p2.z, s_src) };                                            \
+                                                                                                   \
+      vec3 z1 = (s2 * s_t + s1) * s_t + s0;                                                        \
+                                                                                                   \
+      if (is_s_last)                                                                               \
+        z1 = sn;                                                                                   \
+                                                                                                   \
+      /* FIXME(allanmac): use extended subgroup types */                                           \
+      vec3 z0 = { subgroupShuffleUp(z1.x, 1),                                                      \
+                  subgroupShuffleUp(z1.y, 1),                                                      \
+                  subgroupShuffleUp(z1.z, 1) };                                                    \
+                                                                                                   \
+      /* FIXME(allanmac): use Intel shuffle-up */                                                  \
+      if (gl_SubgroupInvocationID == 0)                                                            \
+        z0 = z1_prev;                                                                              \
+                                                                                                   \
+      /* FIXME(allanmac): use extended subgroup types */                                           \
+      z1_prev.x = subgroupBroadcast(z1.x, SPN_RASTERIZE_SUBGROUP_SIZE - 1);                        \
+      z1_prev.y = subgroupBroadcast(z1.y, SPN_RASTERIZE_SUBGROUP_SIZE - 1);                        \
+      z1_prev.z = subgroupBroadcast(z1.z, SPN_RASTERIZE_SUBGROUP_SIZE - 1);                        \
+                                                                                                   \
+      if (is_s_first)                                                                              \
+        z0 = s0;                                                                                   \
+                                                                                                   \
+      vec2 c0 = round(z0.xy / z0.z);                                                               \
+      vec2 c1 = round(z1.xy / z1.z);
+
+//
+//
+//
+
+#include "rasterize.comp"
+
+//
+//
+//

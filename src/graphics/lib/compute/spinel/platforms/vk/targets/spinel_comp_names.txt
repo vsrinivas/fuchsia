@@ -10,6 +10,9 @@ place_ttpk
 place_ttsk
 rasterize_cubic
 rasterize_line
+rasterize_proj_cubic
+rasterize_proj_line
+rasterize_proj_quad
 rasterize_quad
 rasterize_rat_cubic
 rasterize_rat_quad

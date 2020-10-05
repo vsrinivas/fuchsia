@@ -142,8 +142,6 @@ main()
   //   6:  SPN_RAST_TYPE_RAT_QUAD     SPN_RAST_TYPE_RAT_QUAD
   //   7:  SPN_RAST_TYPE_RAT_CUBIC    SPN_RAST_TYPE_RAT_CUBIC
   //
-#if 0  // NOTE(allanmac): projective shaders aren't implemented in this CL
-
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   {                                                                                                \
@@ -160,16 +158,6 @@ main()
         prims##I[1][1] = 0; /* SPN_RAST_TYPE_CUBIC */                                              \
       }                                                                                            \
   }
-
-#else
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  prims##I[0][0] = 0; /* SPN_RAST_TYPE_PROJ_LINE  */                                               \
-  prims##I[0][1] = 0; /* SPN_RAST_TYPE_PROJ_QUAD  */                                               \
-  prims##I[0][2] = 0; /* SPN_RAST_TYPE_PROJ_CUBIC */                                               \
-
-#endif
 
   SPN_DEVICE_FILLS_SCAN_EXPAND();
 

@@ -95,6 +95,18 @@
        .workgroup     = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE,
        .subgroup_log2 = SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2
      },
+     .rasterize_proj_cubic = {
+       .workgroup     = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE,
+       .subgroup_log2 = SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2
+     },
+     .rasterize_proj_line = {
+       .workgroup     = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE,
+       .subgroup_log2 = SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2
+     },
+     .rasterize_proj_quad = {
+       .workgroup     = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE,
+       .subgroup_log2 = SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2
+     },
      .rasterize_rat_cubic = {
        .workgroup     = SPN_DEVICE_RASTERIZE_WORKGROUP_SIZE,
        .subgroup_log2 = SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2
