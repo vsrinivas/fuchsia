@@ -68,10 +68,10 @@ struct Info {
     uint8 descriptor_version;
     /// Maximum number of items in Rx FIFO (per session).
     /// `rx_depth` is calculated based on the size of the actual backing hardware rx queue.
-    uint32 rx_depth;
+    uint16 rx_depth;
     /// Maximum number of items in Tx FIFO (per session).
     /// `tx_depth` is calculated based on the size of the actual backing hardware tx queue.
-    uint32 tx_depth;
+    uint16 tx_depth;
     /// Alignment requirement for buffers in the data VMO. All buffers in the data VMO *must* be
     /// aligned to `buffer_alignment` relative to the start of the VMO. `buffer_alignment == 0` is
     /// never reported.

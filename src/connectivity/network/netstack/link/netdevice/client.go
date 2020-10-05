@@ -454,8 +454,8 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		data:        mappedDataVmo,
 		descriptors: mappedDescVmo,
 		handler: netdevice.Handler{
-			TxDepth: deviceInfo.TxDepth,
-			RxDepth: deviceInfo.RxDepth,
+			TxDepth: uint32(deviceInfo.TxDepth),
+			RxDepth: uint32(deviceInfo.RxDepth),
 			RxFifo:  sessionResult.Response.Fifos.Rx,
 			TxFifo:  sessionResult.Response.Fifos.Tx,
 		},
@@ -468,8 +468,8 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		panic(fmt.Sprintf("Bad handler tx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
 	}
 
-	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(c.info.TxDepth)
-	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(c.info.RxDepth)
+	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(uint32(c.info.TxDepth))
+	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(uint32(c.info.RxDepth))
 
 	descriptorIndex := uint16(0)
 	vmoOffset := uint64(0)

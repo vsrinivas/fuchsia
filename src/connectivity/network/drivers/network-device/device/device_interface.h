@@ -43,8 +43,8 @@ class DeviceInterface : public netdev::Device::Interface,
   void NetworkDeviceIfcCompleteTx(const tx_result_t* tx_list, size_t tx_count);
   void NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t rx_count);
 
-  uint32_t rx_fifo_depth() const;
-  uint32_t tx_fifo_depth() const;
+  uint16_t rx_fifo_depth() const;
+  uint16_t tx_fifo_depth() const;
   // Returns the device-onwed buffers count threshold at which we should trigger RxQueue work. If
   // the number of buffers on device is less than or equal to the threshold, we should attempt to
   // fetch more buffers.

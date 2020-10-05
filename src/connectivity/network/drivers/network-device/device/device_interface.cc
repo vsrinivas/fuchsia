@@ -25,6 +25,18 @@ zx_status_t NetworkDeviceInterface::Create(async_dispatcher_t* dispatcher,
 
 namespace internal {
 
+uint16_t TransformFifoDepth(uint16_t device_depth) {
+  // We're going to say the depth is twice the depth of the device to account for in-flight
+  // buffers, as long as it doesn't go over the maximum fifo depth.
+
+  // Check for overflow.
+  if (device_depth > (std::numeric_limits<uint16_t>::max() >> 1)) {
+    return kMaxFifoDepth;
+  }
+
+  return std::min(kMaxFifoDepth, static_cast<uint16_t>(device_depth << 1));
+}
+
 zx_status_t DeviceInterface::Create(async_dispatcher_t* dispatcher,
                                     ddk::NetworkDeviceImplProtocolClient parent,
                                     const char* parent_name,
@@ -330,16 +342,12 @@ zx_status_t DeviceInterface::OpenSession(fidl::StringView name, netdev::SessionI
   return ZX_OK;
 }
 
-uint32_t DeviceInterface::rx_fifo_depth() const {
-  // We're going to say the depth is twice the depth of the device to account for in-flight
-  // buffers, as long as it doesn't go over the maximum fifo depth.
-  return std::min(kMaxFifoDepth, device_info_.rx_depth * 2);
+uint16_t DeviceInterface::rx_fifo_depth() const {
+  return TransformFifoDepth(device_info_.rx_depth);
 }
 
-uint32_t DeviceInterface::tx_fifo_depth() const {
-  // We're going to say the depth is twice the depth of the device to account for in-flight
-  // buffers, as long as it doesn't go over the maximum fifo depth;
-  return std::min(kMaxFifoDepth, device_info_.tx_depth * 2);
+uint16_t DeviceInterface::tx_fifo_depth() const {
+  return TransformFifoDepth(device_info_.tx_depth);
 }
 
 void DeviceInterface::SessionStarted(Session* session) {

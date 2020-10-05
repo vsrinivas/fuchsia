@@ -687,25 +687,28 @@ func TestPairExchangePackets(t *testing.T) {
 		}
 	}
 
-	makeTestPacket := func(prefix byte, index uint32) *stack.PacketBuffer {
-		// Use randomized buffer lengths so resetting descriptors is exercised
-		// and verified.
-		const baseLength = uint32(5)
+	makeTestPacket := func(prefix byte, index uint16) *stack.PacketBuffer {
 		rng := rand.New(rand.NewSource(int64(index)))
-		bufferLength := baseLength + rng.Uint32()%(DefaultBufferLength-baseLength)
-		view := buffer.NewView(int(bufferLength))
-		view[0] = prefix
-		binary.LittleEndian.PutUint32(view[1:], index)
-		for i := baseLength; i < bufferLength; i++ {
-			view[i] = byte(rng.Uint32())
+
+		view := []byte{prefix}
+
+		var indexBuffer [2]byte
+		binary.LittleEndian.PutUint16(indexBuffer[:], 0)
+		view = append(view, indexBuffer[:]...)
+
+		// Use randomized payload lengths so resetting descriptors is exercised
+		// and verified.
+		payloadLength := rng.Uint32() % (DefaultBufferLength - uint32(len(view)))
+		for i := uint32(0); i < payloadLength; i++ {
+			view = append(view, byte(rng.Uint32()))
 		}
 		return &stack.PacketBuffer{
-			Data: view.ToVectorisedView(),
+			Data: buffer.View(view).ToVectorisedView(),
 		}
 	}
 
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {
-		for i := uint32(0); i < packetCount; i++ {
+		for i := uint16(0); i < packetCount; i++ {
 			if err := endpoint.WritePacket(&stack.Route{}, nil, header.IPv4ProtocolNumber, makeTestPacket(prefix, i)); err != nil {
 				errs <- fmt.Errorf("WritePacket error: %v", err)
 				return
@@ -714,7 +717,7 @@ func TestPairExchangePackets(t *testing.T) {
 		errs <- nil
 	}
 
-	validate := func(pkt DeliverNetworkPacketArgs, prefix uint8, index uint32) {
+	validate := func(pkt DeliverNetworkPacketArgs, prefix uint8, index uint16) {
 		if diff := cmp.Diff(pkt, DeliverNetworkPacketArgs{
 			Protocol: header.IPv4ProtocolNumber,
 			Pkt:      makeTestPacket(prefix, index),
@@ -732,7 +735,7 @@ func TestPairExchangePackets(t *testing.T) {
 	go send(lClient, lPrefix, lSendErrs)
 	go send(rClient, rPrefix, rSendErrs)
 
-	var rReceived, lReceived uint32
+	var rReceived, lReceived uint16
 	for lReceived < packetCount || rReceived < packetCount {
 		select {
 		case err := <-lSendErrs:

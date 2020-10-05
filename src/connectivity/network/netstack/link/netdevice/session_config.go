@@ -57,8 +57,8 @@ func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo *network.Info)
 		BufferLength:      bufferLength,
 		BufferStride:      bufferLength,
 		DescriptorLength:  descriptorLength,
-		RxDescriptorCount: uint16(deviceInfo.RxDepth),
-		TxDescriptorCount: uint16(deviceInfo.TxDepth),
+		RxDescriptorCount: deviceInfo.RxDepth,
+		TxDescriptorCount: deviceInfo.TxDepth,
 		Options:           network.SessionFlagsPrimary,
 		RxFrames:          frameTypes,
 	}

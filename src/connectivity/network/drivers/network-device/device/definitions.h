@@ -15,7 +15,7 @@
 
 namespace network {
 namespace netdev = llcpp::fuchsia::hardware::network;
-constexpr uint32_t kMaxFifoDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
+constexpr uint16_t kMaxFifoDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
 
 namespace internal {
 using BufferParts = std::array<buffer_region_t, MAX_BUFFER_PARTS>;

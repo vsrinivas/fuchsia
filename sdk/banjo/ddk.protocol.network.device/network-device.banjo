@@ -255,9 +255,9 @@ struct DeviceInfo {
   /// Device features
   uint32 device_features;
   /// Maximum depth of tx frames in device's outgoing queue.
-  uint32 tx_depth;
+  uint16 tx_depth;
   /// Maximum number of rx frames in a device's incoming queue.
-  uint32 rx_depth;
+  uint16 rx_depth;
   /// Device class, as defined in [`fuchsia.hardware.network/DeviceClass`].
   uint8 device_class;
   /// Supported rx frame types, as defined by [`fuchsia.hardware.network/FrameType`].

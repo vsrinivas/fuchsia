@@ -47,12 +47,8 @@ SessionConfig NetworkDeviceClient::DefaultSessionConfig(const netdev::Info& dev_
   SessionConfig config;
   config.rx_frames = dev_info.rx_types;
   config.descriptor_length = sizeof(buffer_descriptor_t);
-  // TODO(fxbug.dev/61082): tx_depth and rx_depth definitions should really be uint16 so they match
-  // the maximum descriptor namespace that must fit uint16.
-  config.tx_descriptor_count = static_cast<uint16_t>(
-      std::min(dev_info.tx_depth, static_cast<uint32_t>(std::numeric_limits<uint16_t>::max())));
-  config.rx_descriptor_count = static_cast<uint16_t>(
-      std::min(dev_info.rx_depth, static_cast<uint32_t>(std::numeric_limits<uint16_t>::max())));
+  config.tx_descriptor_count = dev_info.tx_depth;
+  config.rx_descriptor_count = dev_info.rx_depth;
   config.options = netdev::SessionFlags::PRIMARY;
   config.buffer_length = std::min(kDefaultBufferLength, dev_info.max_buffer_length);
   config.buffer_stride = config.buffer_length;
@@ -328,7 +324,7 @@ zx_status_t NetworkDeviceClient::PrepareDescriptors() {
 }
 
 void NetworkDeviceClient::FlushRx() {
-  size_t flush = std::min(static_cast<uint32_t>(rx_out_queue_.size()), device_info_.rx_depth);
+  size_t flush = std::min(rx_out_queue_.size(), static_cast<size_t>(device_info_.rx_depth));
   ZX_ASSERT(flush != 0);
   zx_status_t status = rx_fifo_.write(sizeof(uint16_t), &rx_out_queue_[0], flush, &flush);
   bool sched_more;
@@ -345,7 +341,7 @@ void NetworkDeviceClient::FlushRx() {
 }
 
 void NetworkDeviceClient::FlushTx() {
-  size_t flush = std::min(static_cast<uint32_t>(tx_out_queue_.size()), device_info_.tx_depth);
+  size_t flush = std::min(tx_out_queue_.size(), static_cast<size_t>(device_info_.tx_depth));
   ZX_ASSERT(flush != 0);
   zx_status_t status = tx_fifo_.write(sizeof(uint16_t), &tx_out_queue_[0], flush, &flush);
   bool sched_more;
