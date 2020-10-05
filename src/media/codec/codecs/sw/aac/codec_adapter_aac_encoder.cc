@@ -437,6 +437,9 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
     case fuchsia::media::AacAudioObjectType::MPEG2_AAC_LC:
       aot = AOT_MP2_AAC_LC;
       break;
+    case fuchsia::media::AacAudioObjectType::MPEG4_AAC_LC:
+      aot = AOT_AAC_LC;
+      break;
     default:
       return fit::error(kUnsupportedObjectType);
   };

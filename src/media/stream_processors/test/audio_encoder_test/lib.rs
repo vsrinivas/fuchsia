@@ -110,6 +110,43 @@ fn aac_test_suite() -> Result<()> {
             }],
         };
 
+        fasync::Executor::new().unwrap().run_singlethreaded(aac_raw_tests.run())?;
+
+        // Test the MPEG4 AAC_LC variant. This affects encoder behavior but in this test case the
+        // resulting bit streams are identical.
+        let aac_raw_tests = AudioEncoderTestCase {
+            input_framelength: 1024,
+            settings: Rc::new(move || -> EncoderSettings {
+                EncoderSettings::Aac(AacEncoderSettings {
+                    transport: AacTransport::Raw(AacTransportRaw {}),
+                    channel_mode: AacChannelMode::Mono,
+                    bit_rate: AacBitRate::Variable(AacVariableBitRate::V5),
+                    aot: AacAudioObjectType::Mpeg4AacLc,
+                })
+            }),
+            channel_count: 1,
+            hash_tests: vec![AudioEncoderHashTest {
+                input_format: PcmFormat {
+                    pcm_mode: AudioPcmMode::Linear,
+                    bits_per_sample: 16,
+                    frames_per_second: 44100,
+                    channel_map: vec![AudioChannelId::Cf],
+                },
+                output_packet_count: 5,
+                output_file: None,
+                expected_digests: vec![
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Raw Arm",
+                        "11fe39d40b09c3158172adf86ecb715d98f5e0ca9d5b541629ac80922f79fc1c",
+                    ),
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Raw x64",
+                        "5be551b15b856508a186daa008e06b5ea2d7c2b18ae7977c5037ddee92d4ef9b",
+                    ),
+                ],
+            }],
+        };
+
         fasync::Executor::new().unwrap().run_singlethreaded(aac_raw_tests.run())
     })
 }

@@ -552,6 +552,8 @@ union AacBitRate {
 enum AacAudioObjectType {
     /// MPEG-2 Low Complexity
     MPEG2_AAC_LC = 0;
+    /// MPEG-4 Low Complexity
+    MPEG4_AAC_LC = 1;
 };
 
 struct AacEncoderSettings {
