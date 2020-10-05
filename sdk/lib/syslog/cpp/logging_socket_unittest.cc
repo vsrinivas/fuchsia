@@ -5,6 +5,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
+#include <lib/syslog/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <lib/zx/socket.h>
 
@@ -13,6 +14,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "zircon/system/ulib/syslog/include/lib/syslog/logger.h"
 
 namespace syslog {
 namespace {
@@ -23,23 +25,8 @@ struct LogPacket {
   std::string message;
 };
 
-class LoggingSocketTest : public ::testing::Test {
+class LoggingBaseSocketTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    SetLogSettings(LogSettings());
-
-    zx::socket local;
-    ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
-
-    fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                                 .console_fd = -1,
-                                 .log_service_channel = local.release(),
-                                 .tags = nullptr,
-                                 .num_tags = 0};
-
-    fx_log_reconfigure(&config);
-  }
-
   LogPacket ReadPacket() {
     LogPacket result;
     fx_log_packet_t packet;
@@ -72,6 +59,110 @@ class LoggingSocketTest : public ::testing::Test {
 
   zx::socket socket_;
 };
+
+class LoggingSocketTest : public LoggingBaseSocketTest {
+ protected:
+  void SetUp() override {
+    SetLogSettings(LogSettings());
+
+    zx::socket local;
+    ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
+
+    fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                                 .console_fd = -1,
+                                 .log_service_channel = local.release(),
+                                 .tags = nullptr,
+                                 .num_tags = 0};
+
+    fx_log_reconfigure(&config);
+  }
+};
+
+TEST_F(LoggingBaseSocketTest, LoggerCreatedNotConnected) {
+  fx_logger_t* logger = NULL;
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  fx_logger_create_internal(&config, &logger, false);
+
+  // |logger| should not have socket connection
+  ASSERT_EQ(fx_logger_get_connection_status(logger), ZX_ERR_NOT_CONNECTED);
+
+  fx_logger_destroy(logger);
+}
+
+TEST_F(LoggingBaseSocketTest, LoggerCreatedConnected) {
+  fx_logger_t* logger = NULL;
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  fx_logger_create_internal(&config, &logger, true);
+
+  // |logger| should be connected with socket
+  ASSERT_EQ(fx_logger_get_connection_status(logger), ZX_OK);
+
+  fx_logger_destroy(logger);
+}
+
+TEST_F(LoggingBaseSocketTest, LoggerReconfiguredConnected) {
+  fx_logger_t* logger = NULL;
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  fx_logger_create_internal(&config, &logger, false);
+
+  // |logger| should not have socket connection
+  ASSERT_EQ(fx_logger_get_connection_status(logger), ZX_ERR_NOT_CONNECTED);
+
+  zx::socket local;
+  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
+
+  config = {.min_severity = FX_LOG_INFO,
+            .console_fd = -1,
+            .log_service_channel = local.release(),
+            .tags = nullptr,
+            .num_tags = 0};
+
+  fx_logger_reconfigure(logger, &config);
+
+  // |logger| should be connected with socket
+  ASSERT_EQ(fx_logger_get_connection_status(logger), ZX_OK);
+
+  fx_logger_destroy(logger);
+}
+
+TEST_F(LoggingBaseSocketTest, LoggerSetConnected) {
+  fx_logger_t* logger = NULL;
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  fx_logger_create_internal(&config, &logger, false);
+
+  // |logger| should not have socket connection
+  ASSERT_EQ(fx_logger_get_connection_status(logger), ZX_ERR_NOT_CONNECTED);
+
+  zx::socket local;
+  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
+
+  fx_logger_set_connection(logger, local.release());
+
+  // |logger| should be connected with socket
+  ASSERT_EQ(fx_logger_get_connection_status(logger), ZX_OK);
+
+  fx_logger_destroy(logger);
+}
 
 TEST_F(LoggingSocketTest, LogSimple) {
   const char* msg = "test message";

@@ -33,7 +33,7 @@ zx_koid_t GetCurrentThreadKoid() {
 }  // namespace
 
 void fx_logger::ActivateFallback(int fallback_fd) {
-  fbl::AutoLock lock(&fallback_mutex_);
+  fbl::AutoLock lock(&logger_mutex_);
   if (logger_fd_.load(std::memory_order_relaxed) != -1) {
     return;
   }
@@ -69,6 +69,25 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
 
   SetSeverity(config->min_severity);
   return SetTags(config->tags, config->num_tags);
+}
+
+zx_status_t fx_logger::GetLogConnectionStatus() {
+  auto has_socket = socket_.is_valid();
+  auto has_fallback = logger_fd_.load(std::memory_order_relaxed) != -1;
+  if (has_socket)
+    return ZX_OK;
+  if (has_fallback)
+    return ZX_ERR_NOT_CONNECTED;
+  return ZX_ERR_BAD_STATE;
+}
+
+void fx_logger::SetLogConnection(zx_handle_t handle) {
+  fbl::AutoLock lock(&logger_mutex_);
+  if (handle != ZX_HANDLE_INVALID) {
+    socket_.reset(handle);
+    fd_to_close_.reset(logger_fd_.load(std::memory_order_relaxed));
+    logger_fd_.store(-1);
+  }
 }
 
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char* tag,

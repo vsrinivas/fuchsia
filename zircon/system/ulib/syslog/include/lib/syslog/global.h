@@ -16,6 +16,8 @@ __BEGIN_CDECLS
 // using the FX_LOG macros will be written. This function returns the same
 // logger on all threads and is thread-safe. The returned pointer is never
 // null and it does not get invalidated when the logger is reconfigured.
+// The returned logger is guaranteed to have either a valid socket
+// connection or be using the fallback mechanism (fd).
 fx_logger_t* fx_log_get_logger(void);
 
 // Returns true if writing messages with the given severity is enabled in the

@@ -57,12 +57,28 @@ zx_status_t fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t se
 }
 
 SYSLOG_EXPORT
+zx_status_t fx_logger_get_connection_status(fx_logger_t* logger) {
+  return logger->GetLogConnectionStatus();
+}
+
+SYSLOG_EXPORT
+void fx_logger_set_connection(fx_logger_t* logger, zx_handle_t handle) {
+  return logger->SetLogConnection(handle);
+}
+
+SYSLOG_EXPORT
 void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd) {
   logger->ActivateFallback(fallback_fd);
 }
 
 SYSLOG_EXPORT
-zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger) {
+zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t* config) {
+  return logger->Reconfigure(config);
+}
+
+SYSLOG_EXPORT
+zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger,
+                                      bool connect) {
   if (config->num_tags > FX_LOG_MAX_TAGS) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -71,7 +87,7 @@ zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out
   // should continue to instantiate the logger (which defaults to using stderr)
   // and the client can provide the appropriate channel / fd later.
 #ifndef SYSLOG_STATIC
-  if (config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID) {
+  if (connect && config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID) {
     zx::socket sock = connect_to_logger();
     if (sock.is_valid())
       c.log_service_channel = sock.release();
@@ -79,6 +95,11 @@ zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out
 #endif
   *out_logger = new fx_logger(&c);
   return ZX_OK;
+}
+
+SYSLOG_EXPORT
+zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger) {
+  return fx_logger_create_internal(config, out_logger, true);
 }
 
 SYSLOG_EXPORT

@@ -27,12 +27,12 @@
 // Log entry severity. Used for coarse filtering of log messages.
 typedef int fx_log_severity_t;
 #define FX_LOG_ALL (-0x7F)
-#define FX_LOG_TRACE (0x10)    // 1 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_DEBUG (0x20)    // 2 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_INFO (0x30)     // 3 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_TRACE (0x10)  // 1 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_DEBUG (0x20)  // 2 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_INFO (0x30)  // 3 * FX_LOG_SEVERITY_STEP_SIZE
 #define FX_LOG_WARNING (0x40)  // 4 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_ERROR (0x50)    // 5 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_FATAL (0x60)    // 6 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_ERROR (0x50)  // 5 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_FATAL (0x60)  // 6 * FX_LOG_SEVERITY_STEP_SIZE
 #define FX_LOG_NONE (0x7F)
 
 #define FX_LOG_SEVERITY_MAX (6)  // FX_LOG_FATAL
@@ -81,6 +81,23 @@ typedef struct fx_logger fx_logger_t;
 // |config| can be safely deleted after this function returns.
 zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger);
 
+// Creates a logger object with a given configuration and an
+// explicit directive to connect (eager initialization) or not
+// (lazy). A logger initialized with |connect| 'false' will use fallback
+// logging (fd) until it is provided with a connection (i.e. via
+// fx)_logger_set_connection() or fx_logger_reconfigure()). A logger
+// initialized with |connect| will attempt to create a connection to the
+// logging service in the event that it is not explicitly provided with
+// a connection.
+//
+// This will return ZX_ERR_INVALID_ARGS if |num_tags| is more than
+// |FX_LOG_MAX_TAGS|.
+// |config| can be safely deleted after this function returns.
+// |connect| true to attempt early, auto-connection to logging service.
+// Otherwise, false to defer logger connection.
+zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger,
+                                      bool connect);
+
 // Destroys a logger object.
 //
 // This closes |console_fd| or |log_service_channel| which were passed in
@@ -93,6 +110,13 @@ fx_log_severity_t fx_logger_get_min_severity(fx_logger_t* logger);
 // Sets the logger's minimum log severity.
 zx_status_t fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t severity);
 
+// Get the loggers current connection status.
+zx_status_t fx_logger_get_connection_status(fx_logger_t* logger);
+
+// Sets the loggers current connection to the given handle, which
+// is expected to be a socket connection to the LogSink protocol.
+void fx_logger_set_connection(fx_logger_t* logger, zx_handle_t handle);
+
 // Activates fallback mode and logger starts writing to |fallback_fd|.
 // There is no way to revert this action.
 //
@@ -102,6 +126,16 @@ zx_status_t fx_logger_set_min_severity(fx_logger_t* logger, fx_log_severity_t se
 //
 // This function is thread unsafe.
 void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd);
+
+// Reconfigures the given logger with the specified configuration.
+// If |console_fd| and |log_service_channel| are invalid in |config|,
+// this function doesn't change the currently used file descriptor or channel.
+//
+// Returns:
+// - ZX_ERR_INVALID_ARGS if config is invalid (i.e. is null or has more than
+//   FX_LOG_MAX_TAGS tags),
+// - ZX_OK if the reconfiguration succeeds
+zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t* config);
 
 // Writes formatted message to a logger.
 // The message will be discarded if |severity| is less than the logger's

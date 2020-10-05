@@ -43,7 +43,7 @@ struct fx_logger {
     pid_ = GetCurrentProcessKoid();
     dropped_logs_.store(0, std::memory_order_relaxed);
     Reconfigure(config);
-    if (config->log_service_channel == ZX_HANDLE_INVALID && config->console_fd == -1) {
+    if (GetLogConnectionStatus() == ZX_ERR_BAD_STATE) {
       ActivateFallback(-1);
     }
   }
@@ -74,6 +74,13 @@ struct fx_logger {
 
   zx_status_t Reconfigure(const fx_logger_config_t* config);
 
+  zx_status_t GetLogConnectionStatus();
+
+  // Set the log connection for this logger using a handle which
+  // is presumed to come from a socket connection with the logging
+  // service.
+  void SetLogConnection(zx_handle_t handle);
+
  private:
   zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* format,
                         va_list args, bool perform_format);
@@ -100,7 +107,7 @@ struct fx_logger {
   // string representation to print in fallback mode
   fbl::String tagstr_;
 
-  fbl::Mutex fallback_mutex_;
+  fbl::Mutex logger_mutex_;
 };
 
 #endif  // ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_
