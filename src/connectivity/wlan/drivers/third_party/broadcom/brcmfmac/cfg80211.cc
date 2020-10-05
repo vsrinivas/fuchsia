@@ -469,14 +469,13 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
 static bool brcmf_is_existing_macaddr(brcmf_pub* drvr, const uint8_t mac_addr[ETH_ALEN],
                                       bool is_ap) {
   if (is_ap) {
-    for (uint16_t i = 0; i < BRCMF_MAX_IFS; i++) {
-      if (drvr->iflist[i] != nullptr && !memcmp(drvr->iflist[i]->mac_addr, mac_addr, ETH_ALEN)) {
+    for (const auto& iface : drvr->iflist) {
+      if (iface != nullptr && !memcmp(iface->mac_addr, mac_addr, ETH_ALEN)) {
         return true;
       }
     }
   } else {
-    for (uint16_t i = 0; i < BRCMF_MAX_IFS; i++) {
-      struct brcmf_if* iface = drvr->iflist[i];
+    for (const auto& iface : drvr->iflist) {
       if (iface != nullptr && iface->vif->wdev.iftype != WLAN_INFO_MAC_ROLE_CLIENT &&
           !memcmp(iface->mac_addr, mac_addr, ETH_ALEN)) {
         return true;
@@ -1644,9 +1643,8 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     if (!wpa_ie) {
       BRCMF_ERR("No WPA IE found");
       return ZX_ERR_INVALID_ARGS;
-    } else {
-      BRCMF_DBG(CONN, "Found WPA IE, len: %d", wpa_ie->len);
     }
+    BRCMF_DBG(CONN, "Found WPA IE, len: %d", wpa_ie->len);
     is_rsn_ie = false;
     ie_len = wpa_ie->len + TLV_HDR_LEN;
     ie = wpa_ie;
@@ -4427,13 +4425,14 @@ static bool brcmf_is_client_connected(brcmf_if* ifp) {
 static const char* brcmf_get_client_connect_state_string(brcmf_if* ifp) {
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
     return "Connected";
-  } else if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
-    return "Connecting";
-  } else if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
-    return "Disconnecting";
-  } else {
-    return "Not connected";
   }
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+    return "Connecting";
+  }
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
+    return "Disconnecting";
+  }
+  return "Not connected";
 }
 
 static void brcmf_clear_assoc_ies(struct brcmf_cfg80211_info* cfg) {
@@ -4590,14 +4589,12 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
       // Workaround to update SoftAP channel once client has associated.
       // TODO(karthikrish): This check can be removed once the issue is fixed in FW.
       if (cfg->ap_started) {
-        for (auto ifidx = 0; ifidx < BRCMF_MAX_IFS; ifidx++) {
-          brcmf_if* tmp_ifp = cfg->pub->iflist[ifidx];
-          if (!tmp_ifp ||
-              !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &tmp_ifp->vif->sme_state)) {
+        for (const auto& iface : cfg->pub->iflist) {
+          if (!iface ||
+              !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &iface->vif->sme_state)) {
             continue;
-          } else {
-            brcmf_notify_channel_switch(tmp_ifp, nullptr, nullptr);
           }
+          brcmf_notify_channel_switch(iface, nullptr, nullptr);
         }
       }
     }
@@ -4809,28 +4806,29 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
       BRCMF_DBG(CONN, "AP mode link down\n");
       sync_completion_signal(&cfg->vif_disabled);
       return ZX_OK;
-    } else {
-      BRCMF_DBG(CONN, "AP mode link up\n");
-      struct brcmf_if* ifp = ndev_to_if(ndev);
+    }
+    BRCMF_DBG(CONN, "AP mode link up\n");
+    struct brcmf_if* ifp = ndev_to_if(ndev);
 
-      // Indicate status only if AP is in start pending state (could have been cleared if
-      // a stop request comes in before this event is received).
-      if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
-                                            &ifp->vif->sme_state)) {
-        // confirm AP Start
-        brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
-        // Set AP_CREATED
-        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
-        // Update channel (in case it changed because of client IF).
-        brcmf_notify_channel_switch(ifp, e, data);
-      }
+    // Indicate status only if AP is in start pending state (could have been cleared if
+    // a stop request comes in before this event is received).
+    if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
+                                          &ifp->vif->sme_state)) {
+      // confirm AP Start
+      brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
+      // Set AP_CREATED
+      brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+      // Update channel (in case it changed because of client IF).
+      brcmf_notify_channel_switch(ifp, e, data);
     }
   } else {
     if (e->status == BRCMF_E_STATUS_SUCCESS && (e->flags & BRCMF_EVENT_MSG_LINK)) {
       return brcmf_indicate_client_connect(ifp, e, data);
-    } else if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
+    }
+    if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
       return brcmf_indicate_client_disconnect(ifp, e, data);
-    } else if (e->status == BRCMF_E_STATUS_NO_NETWORKS) {
+    }
+    if (e->status == BRCMF_E_STATUS_NO_NETWORKS) {
       brcmf_indicate_no_network(ifp);
     }
   }
@@ -4862,15 +4860,15 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
 
     wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
     return ZX_OK;
-  } else {
-    // Sometimes FW sends E_DEAUTH when a unicast packet is received before association
-    // is complete. Ignore it.
-    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state) &&
-        e->reason == BRCMF_E_REASON_UCAST_FROM_UNASSOC_STA) {
-      BRCMF_DBG(EVENT, "E_DEAUTH because data rcvd before assoc...ignore");
-      return ZX_OK;
-    }
   }
+  // Sometimes FW sends E_DEAUTH when a unicast packet is received before association
+  // is complete. Ignore it.
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state) &&
+      e->reason == BRCMF_E_REASON_UCAST_FROM_UNASSOC_STA) {
+    BRCMF_DBG(EVENT, "E_DEAUTH because data rcvd before assoc...ignore");
+    return ZX_OK;
+  }
+
   return brcmf_indicate_client_disconnect(ifp, e, data);
 }
 
@@ -4899,8 +4897,8 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
     wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
 
     return ZX_OK;
-  } else
-    return brcmf_indicate_client_disconnect(ifp, e, data);
+  }
+  return brcmf_indicate_client_disconnect(ifp, e, data);
 }
 
 static zx_status_t brcmf_process_set_ssid_event(struct brcmf_if* ifp,
