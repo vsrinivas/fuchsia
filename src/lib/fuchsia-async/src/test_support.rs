@@ -32,7 +32,6 @@ macro_rules! apply_timeout {
 pub trait TestResult: Sized {
     /// How to repeatedly run a test with this result in a single threaded executor.
     fn run_singlethreaded<F: 'static + Fn(usize) -> Fut, Fut: 'static + Future<Output = Self>>(
-        executor: &mut crate::Executor,
         test: F,
         cfg: Config,
     ) -> Self;
@@ -50,7 +49,6 @@ pub trait TestResult: Sized {
 pub trait MultithreadedTestResult: Sized {
     /// How to repeatedly run a test with this result in a multi threaded executor.
     fn run<F: 'static + Send + Fn(usize) -> Fut, Fut: 'static + Send + Future<Output = Self>>(
-        executor: &mut crate::Executor,
         test: F,
         threads: usize,
         cfg: Config,
@@ -59,11 +57,10 @@ pub trait MultithreadedTestResult: Sized {
 
 impl<E: 'static> TestResult for Result<(), E> {
     fn run_singlethreaded<F: 'static + Fn(usize) -> Fut, Fut: 'static + Future<Output = Self>>(
-        executor: &mut crate::Executor,
         test: F,
         cfg: Config,
     ) -> Self {
-        executor.run_singlethreaded(
+        crate::Executor::new().expect("Failed to create executor").run_singlethreaded(
             stream::iter(0..cfg.repeat_count)
                 .map(Ok)
                 .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
@@ -86,12 +83,11 @@ impl<E: 'static> TestResult for Result<(), E> {
 
 impl<E: 'static + Send> MultithreadedTestResult for Result<(), E> {
     fn run<F: 'static + Send + Fn(usize) -> Fut, Fut: 'static + Send + Future<Output = Self>>(
-        executor: &mut crate::Executor,
         test: F,
         threads: usize,
         cfg: Config,
     ) -> Self {
-        executor.run(
+        crate::Executor::new().expect("Failed to create executor").run(
             stream::iter(0..cfg.repeat_count)
                 .map(Ok)
                 .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
@@ -102,11 +98,10 @@ impl<E: 'static + Send> MultithreadedTestResult for Result<(), E> {
 
 impl TestResult for () {
     fn run_singlethreaded<F: 'static + Fn(usize) -> Fut, Fut: 'static + Future<Output = Self>>(
-        executor: &mut crate::Executor,
         test: F,
         cfg: Config,
     ) -> Self {
-        executor.run_singlethreaded(
+        crate::Executor::new().expect("Failed to create executor").run_singlethreaded(
             stream::iter(0..cfg.repeat_count)
                 .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
         )
@@ -134,12 +129,11 @@ impl TestResult for () {
 
 impl MultithreadedTestResult for () {
     fn run<F: 'static + Send + Fn(usize) -> Fut, Fut: 'static + Send + Future<Output = Self>>(
-        executor: &mut crate::Executor,
         test: F,
         threads: usize,
         cfg: Config,
     ) -> Self {
-        executor.run(
+        crate::Executor::new().expect("Failed to create executor").run(
             stream::iter(0..cfg.repeat_count)
                 .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
             threads,
@@ -170,13 +164,13 @@ impl Config {
 }
 
 /// Runs a test in an executor, potentially repeatedly and concurrently
-pub fn run_singlethreaded_test<F, Fut, R>(executor: &mut crate::Executor, test: F) -> R
+pub fn run_singlethreaded_test<F, Fut, R>(test: F) -> R
 where
     F: 'static + Fn(usize) -> Fut,
     Fut: 'static + Future<Output = R>,
     R: TestResult,
 {
-    TestResult::run_singlethreaded(executor, test, Config::get())
+    TestResult::run_singlethreaded(test, Config::get())
 }
 
 /// Runs a test in an executor until it's stalled
@@ -196,13 +190,13 @@ where
 }
 
 /// Runs a test in an executor, potentially repeatedly and concurrently
-pub fn run_test<F, Fut, R>(executor: &mut crate::Executor, test: F, threads: usize) -> R
+pub fn run_test<F, Fut, R>(test: F, threads: usize) -> R
 where
     F: 'static + Send + Fn(usize) -> Fut,
     Fut: 'static + Send + Future<Output = R>,
     R: MultithreadedTestResult,
 {
-    MultithreadedTestResult::run(executor, test, threads, Config::get())
+    MultithreadedTestResult::run(test, threads, Config::get())
 }
 
 #[cfg(test)]
@@ -220,7 +214,6 @@ mod tests {
         let pending_runs: Rc<Mutex<HashSet<_>>> = Rc::new(Mutex::new((0..REPEAT_COUNT).collect()));
         let pending_runs_child = pending_runs.clone();
         TestResult::run_singlethreaded(
-            &mut crate::Executor::new().unwrap(),
             move |i| {
                 let pending_runs_child = pending_runs_child.clone();
                 async move {
@@ -238,7 +231,6 @@ mod tests {
     #[should_panic]
     fn run_singlethreaded_with_timeout() {
         TestResult::run_singlethreaded(
-            &mut crate::Executor::new().unwrap(),
             move |_| async move {
                 futures::future::pending::<()>().await;
             },
@@ -276,7 +268,6 @@ mod tests {
             Arc::new(Mutex::new((0..REPEAT_COUNT).collect()));
         let pending_runs_child = pending_runs.clone();
         MultithreadedTestResult::run(
-            &mut crate::Executor::new().unwrap(),
             move |i| {
                 let pending_runs_child = pending_runs_child.clone();
                 async move {
@@ -296,7 +287,6 @@ mod tests {
     fn run_with_timeout() {
         const THREADS: usize = 4;
         MultithreadedTestResult::run(
-            &mut crate::Executor::new().unwrap(),
             move |_| async move {
                 futures::future::pending::<()>().await;
             },

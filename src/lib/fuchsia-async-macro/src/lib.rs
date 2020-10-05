@@ -85,12 +85,7 @@ fn executor_ident() -> Ident {
     Ident::new("executor", Span::call_site())
 }
 
-fn common(
-    item: TokenStream,
-    executor: Ident,
-    run_executor: TokenStream,
-    test: bool,
-) -> TokenStream {
+fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStream {
     let item = parse_macro_input!(item as syn::ItemFn);
     let syn::ItemFn { attrs, sig, vis: _, block } = item;
     if let Err(e) = (|| {
@@ -161,8 +156,6 @@ fn common(
                 #block
             }
             #adapt_func;
-            let mut #executor = ::fuchsia_async::Executor::new()
-                .expect("Failed to create executor");
 
             #run_executor
           }
@@ -196,10 +189,14 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
     let executor = executor_ident();
     let run_executor = if test {
         quote! {
+            let mut #executor = ::fuchsia_async::Executor::new()
+                .expect("Failed to create executor");
             ::fuchsia_async::test_support::run_until_stalled_test(&mut #executor, func)
         }
     } else {
         quote! {
+            let mut #executor = ::fuchsia_async::Executor::new()
+                .expect("Failed to create executor");
             let mut fut = func();
             ::fuchsia_async::pin_mut!(fut);
             match #executor.run_until_stalled(&mut fut) {
@@ -209,7 +206,7 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
     };
-    common(item, executor, run_executor.into(), test)
+    common(item, run_executor.into(), test)
 }
 
 /// Define an `async` function that should run to completion on a single thread.
@@ -241,17 +238,18 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn run_singlethreaded(attr: TokenStream, item: TokenStream) -> TokenStream {
     let test = parse_macro_input!(attr as Option<kw::test>).is_some();
-    let executor = executor_ident();
     let run_executor = if test {
         quote! {
-            ::fuchsia_async::test_support::run_singlethreaded_test(&mut #executor, func)
+            ::fuchsia_async::test_support::run_singlethreaded_test(func)
         }
     } else {
         quote! {
-            #executor.run_singlethreaded(func())
+            ::fuchsia_async::Executor::new()
+                .expect("Failed to create executor")
+                .run_singlethreaded(func())
         }
     };
-    common(item, executor, run_executor.into(), test)
+    common(item, run_executor.into(), test)
 }
 
 struct RunAttributes {
@@ -299,15 +297,16 @@ impl Parse for RunAttributes {
 pub fn run(attr: TokenStream, item: TokenStream) -> TokenStream {
     let RunAttributes { threads, test } = parse_macro_input!(attr as RunAttributes);
 
-    let executor = executor_ident();
     let run_executor = if test {
         quote! {
-            ::fuchsia_async::test_support::run_test(&mut #executor, func, #threads)
+            ::fuchsia_async::test_support::run_test(func, #threads)
         }
     } else {
         quote! {
-            #executor.run(func(), #threads)
+            ::fuchsia_async::Executor::new()
+                .expect("Failed to create executor")
+                .run(func(), #threads)
         }
     };
-    common(item, executor, run_executor.into(), test)
+    common(item, run_executor.into(), test)
 }

@@ -764,11 +764,11 @@ impl Drop for Executor {
         // Drop all of the packet receivers
         self.inner.receivers.lock().clear();
 
-        // Drop all of the uncompleted tasks
-        while let Ok(_) = self.inner.ready_tasks.pop() {}
-
         // Drop all tasks
         self.inner.active_tasks.lock().clear();
+
+        // Drop all of the uncompleted tasks
+        while let Ok(_) = self.inner.ready_tasks.pop() {}
 
         // Remove the thread-local executor set in `new`.
         EHandle::rm_local();

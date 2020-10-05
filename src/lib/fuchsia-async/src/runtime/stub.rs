@@ -40,6 +40,8 @@ pub mod task {
 }
 
 pub mod executor {
+    use fuchsia_zircon_status as zx_status;
+
     /// Stub spawn, panics if used.
     //pub fn spawn<T>(_: T) {
     //    unimplemented!()
@@ -54,6 +56,11 @@ pub mod executor {
     pub struct Executor {}
 
     impl Executor {
+        /// Stub run, panics if used.
+        pub fn new() -> Result<Self, zx_status::Status> {
+            unimplemented!();
+        }
+
         /// Stub run, panics if used.
         pub fn run<F>(&mut self, _: F, __: usize) -> F::Output
         where
