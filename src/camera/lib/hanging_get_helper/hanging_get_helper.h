@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
+#include <optional>
 #include <type_traits>
 
 namespace camera {
@@ -39,7 +40,7 @@ class HangingGetHelper<T, Compare, true> {
       ZX_DEBUG_ASSERT(!callback_);
       callback(pending_.value());
       sent_ = pending_;
-      pending_.reset();
+      pending_ = std::nullopt;
       return false;
     }
 
@@ -94,7 +95,7 @@ class HangingGetHelper<T, Compare, false> {
     if (pending_) {
       ZX_DEBUG_ASSERT(!callback_);
       callback(std::move(pending_.value()));
-      pending_.reset();
+      pending_ = std::nullopt;
       return false;
     }
 

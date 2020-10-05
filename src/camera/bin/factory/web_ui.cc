@@ -17,10 +17,12 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 namespace camera {
 
 fit::result<std::unique_ptr<WebUI>, zx_status_t> WebUI::Create(WebUIControl* control) {
-  auto webui = std::unique_ptr<WebUI>(new WebUI());
+  auto webui = std::make_unique<WebUI>();
   webui->control_ = control;
   zx_status_t status = webui->loop_.StartThread("WebUI Thread");
   if (status != ZX_OK) {
@@ -95,7 +97,7 @@ void WebUI::OnListenReady(zx_status_t success, uint32_t events) {
   fd_set r;
   FD_ZERO(&r);
   FD_SET(fd, &r);
-  struct timeval to = { 0, 200000 };
+  struct timeval to = {0, 200000};
   if (select(fd + 1, &r, NULL, NULL, &to) != 1) {
     FX_LOGS(INFO) << "hanging up on slow client";
   } else {
@@ -140,9 +142,8 @@ void WebUI::HandleClient(FILE* fp) {
                 )HTML",
           fp);
     fprintf(fp, "Bayer mode is %s.<br>\n", is_bayer_ ? "ON" : "OFF");
-    fprintf(fp, "Crop is %d %d %d %d, CENTER is %s.<br>\n",
-            crop_.x, crop_.y, crop_.width, crop_.height,
-            is_center_ ? "ON" : "OFF");
+    fprintf(fp, "Crop is %d %d %d %d, CENTER is %s.<br>\n", crop_.x, crop_.y, crop_.width,
+            crop_.height, is_center_ ? "ON" : "OFF");
     fputs(R"HTML(<br>
                  The follow may be useful for debugging:<br>
                  <a href="frame/png">frame/png</a> - same as /frame but as png<br>
@@ -179,25 +180,25 @@ void WebUI::HandleClient(FILE* fp) {
     return;
   }
   if (strcmp(cmd, "/crop/upper-left") == 0) {
-    crop_ = { 0, 0, 500, 500 };
+    crop_ = {0, 0, 500, 500};
     is_center_ = false;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is upper-left\n", fp);
     return;
   }
   if (strcmp(cmd, "/crop/lower-right") == 0) {
-    crop_ = { 1500, 1500, 500, 500 };
+    crop_ = {1500, 1500, 500, 500};
     is_center_ = false;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is lower-right\n", fp);
     return;
   }
   if (strcmp(cmd, "/crop/center") == 0) {
-    crop_ = { 0, 0, 500, 500 };
+    crop_ = {0, 0, 500, 500};
     is_center_ = true;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is center\n", fp);
     return;
   }
   if (strcmp(cmd, "/crop/off") == 0) {
-    crop_ = { 0, 0, 0, 0 };
+    crop_ = {0, 0, 0, 0};
     is_center_ = false;
     fputs("HTTP/1.1 200 OK\nContent-Type: text/html\n\ncrop is off\n", fp);
     return;
@@ -213,8 +214,8 @@ void WebUI::HandleClient(FILE* fp) {
     return;
   }
   if (strcmp(cmd, "/frame/bayer8") == 0) {
-    RequestCapture(fp, WriteFlags::IN_BAYER8 | WriteFlags::OUT_PNG_GRAY |
-                   WriteFlags::MOD_BAYER8HACK, false);
+    RequestCapture(
+        fp, WriteFlags::IN_BAYER8 | WriteFlags::OUT_PNG_GRAY | WriteFlags::MOD_BAYER8HACK, false);
     return;
   }
   if (strcmp(cmd, "/frame/bayer16") == 0) {
@@ -222,8 +223,8 @@ void WebUI::HandleClient(FILE* fp) {
     return;
   }
   if (strcmp(cmd, "/frame/unprocessed") == 0) {
-    RequestCapture(fp, WriteFlags::IN_DEFAULT | WriteFlags::OUT_PNG_GRAY |
-                       WriteFlags::MOD_UNPROCESSED, false);
+    RequestCapture(
+        fp, WriteFlags::IN_DEFAULT | WriteFlags::OUT_PNG_GRAY | WriteFlags::MOD_UNPROCESSED, false);
     return;
   }
 
@@ -258,10 +259,10 @@ void WebUI::RequestCapture(FILE* fp, WriteFlags flags, bool saveToStorage) {
       }
     }
 
-    const char* mime = saveToStorage ? "text/html"
+    const char* mime = saveToStorage                            ? "text/html"
                        : (flags & kPNGMask) != WriteFlags::NONE ? "image/png"
                        : (flags & kPNMMask) != WriteFlags::NONE ? "image/x-portable-anymap"
-                       : "application/octet-stream";
+                                                                : "application/octet-stream";
 
     fprintf(fp2, "HTTP/1.1 200 OK\nContent-Type: %s\n", mime);
     fprintf(fp2, "Content-Disposition: filename=\"%s\"\n\n", file.c_str());

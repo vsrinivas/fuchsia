@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include <cmath>
+#include <optional>
 #include <sstream>
 
 namespace camera {
@@ -203,7 +204,7 @@ void VirtualCameraImpl::OnDestruction() {
 
 void VirtualCameraImpl::OnSetBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  buffers_.reset();
+  buffers_ = std::nullopt;
   while (!free_buffers_.empty()) {
     free_buffers_.pop();
   }

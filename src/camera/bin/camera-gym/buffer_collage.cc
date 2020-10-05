@@ -23,6 +23,7 @@
 #include <zircon/types.h>
 
 #include <cmath>
+#include <optional>
 
 #include "src/lib/fsl/vmo/file.h"
 
@@ -698,7 +699,7 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
       auto aabb = event.gfx().view_properties_changed().properties.bounding_box;
       // TODO(fxbug.dev/49069): bounding box should never be empty
       if (aabb.max.x == aabb.min.x || aabb.max.y == aabb.min.y || aabb.max.z == aabb.min.z) {
-        view_extents_.reset();
+        view_extents_ = std::nullopt;
       } else {
         view_extents_ = aabb;
       }

@@ -4,9 +4,10 @@
 
 #include "src/camera/bin/factory/capture.h"
 
-#include <functional>
-
 #include <lib/syslog/cpp/macros.h>
+
+#include <functional>
+#include <memory>
 
 namespace camera {
 
@@ -14,7 +15,7 @@ fit::result<std::unique_ptr<Capture>, zx_status_t> Capture::Create(uint32_t stre
                                                                    const std::string path,
                                                                    bool want_image,
                                                                    CaptureResponse callback) {
-  auto capture = std::unique_ptr<Capture>(new Capture);
+  auto capture = std::make_unique<Capture>();
   capture->stream_ = stream;
   capture->want_image_ = want_image;
   capture->image_ = std::make_unique<std::basic_string<uint8_t>>();
@@ -81,20 +82,26 @@ void Capture::IntersectCrop(Crop& crop, WriteFlags flags) {
     uint32_t x0, y0, x1, y1;
   };
 
-  Rect max = { 0, 0, width - 1, height - 1 };
-  Rect want = { crop.x, crop.y, crop.x + crop.width, crop.y + crop.height };
+  Rect max = {0, 0, width - 1, height - 1};
+  Rect want = {crop.x, crop.y, crop.x + crop.width, crop.y + crop.height};
 
-  if (want.x0 > max.x1) want.x0 = max.x1;
-  if (want.y0 > max.y1) want.y0 = max.y1;
-  if (want.x1 > max.x1) want.x1 = max.x1;
-  if (want.y1 > max.y1) want.y1 = max.y1;
+  if (want.x0 > max.x1)
+    want.x0 = max.x1;
+  if (want.y0 > max.y1)
+    want.y0 = max.y1;
+  if (want.x1 > max.x1)
+    want.x1 = max.x1;
+  if (want.y1 > max.y1)
+    want.y1 = max.y1;
 
   // & ~1 means round down to even; +1 & ~1 means round up to even; even is for YUV and bayer
 
   crop.width = (want.x1 - want.x0 + 1) & ~1;
   crop.height = (want.y1 - want.y0 + 1) & ~1;
-  if (crop.width < 2) crop.width = 2;
-  if (crop.height < 2) crop.height = 2;
+  if (crop.width < 2)
+    crop.width = 2;
+  if (crop.height < 2)
+    crop.height = 2;
 
   if (center_flag) {
     crop.x = (width / 2 - crop.width / 2) & ~1;
@@ -192,10 +199,10 @@ zx_status_t Capture::WriteImage(FILE* fp, WriteFlags flags, Crop& crop) {
   // else: raw has no header
 
   auto stride = iformat.bytes_per_row;
-  ImageIter plane[2] = {  // for YUV, [0] is Y, [1] is UV; [1] used for NV12 only
-      { crop.x * in_pixel_size + crop.y * stride, stride },
-      { iformat.coded_height * stride + crop.x * in_pixel_size + crop.y / 2, stride }
-  };
+  ImageIter plane[2] = {
+      // for YUV, [0] is Y, [1] is UV; [1] used for NV12 only
+      {crop.x * in_pixel_size + crop.y * stride, stride},
+      {iformat.coded_height * stride + crop.x * in_pixel_size + crop.y / 2, stride}};
 
   std::vector<uint8_t> row;
   row.resize(crop.width * out_pixel_size);
@@ -269,9 +276,9 @@ void Capture::YUVToRGB(ImageIter plane[2], Crop& crop, std::vector<uint8_t>& row
     int32_t u = uvpos[(j / 2) * 2];
     int32_t v = uvpos[(j / 2) * 2 + 1];
     // android algorithm
-    int rTmp = y + (1.370705 * (v-128));
-    int gTmp = y - (0.698001 * (v-128)) - (0.337633 * (u-128));
-    int bTmp = y + (1.732446 * (u-128));
+    int rTmp = y + (1.370705 * (v - 128));
+    int gTmp = y - (0.698001 * (v - 128)) - (0.337633 * (u - 128));
+    int bTmp = y + (1.732446 * (u - 128));
 #define CLIP(x) ((x) < 0 ? 0 : (x) > 255 ? 255 : (x))
     uint32_t r = CLIP(rTmp);
     uint32_t g = CLIP(gTmp);
@@ -321,14 +328,16 @@ void Capture::PNGFinish() {
 }
 
 void Capture::WritePNGAsNV12(FILE* fp) {
-  Crop crop = { 0, 0, 0, 0 };
+  Crop crop = {0, 0, 0, 0};
   WriteImage(fp, WriteFlags::IN_NV12 | WriteFlags::OUT_PNG_RGB, crop);
 }
 
 void Capture::WritePNGUnprocessed(FILE* fp, bool is_bayer) {
-  Crop crop = { 0, 0, 0, 0 };
-  WriteImage(fp, WriteFlags::IN_DEFAULT | WriteFlags::OUT_PNG_GRAY | WriteFlags::MOD_UNPROCESSED |
-             (is_bayer ? WriteFlags::MOD_BAYER8HACK : WriteFlags::NONE), crop);
+  Crop crop = {0, 0, 0, 0};
+  WriteImage(fp,
+             WriteFlags::IN_DEFAULT | WriteFlags::OUT_PNG_GRAY | WriteFlags::MOD_UNPROCESSED |
+                 (is_bayer ? WriteFlags::MOD_BAYER8HACK : WriteFlags::NONE),
+             crop);
 }
 
 }  // namespace camera
