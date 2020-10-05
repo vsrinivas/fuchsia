@@ -1530,7 +1530,7 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   xfs->vol = ftl;
 
 #if FTLN_DEBUG > 1
-  logger.debug("[XFS] num_pages       = %u\n\n", xfs->num_pages);
+  ftl->logger.debug("[XFS] num_pages       = %u\n\n", xfs->num_pages);
 #endif
 
   // Register FTL volume with user.
