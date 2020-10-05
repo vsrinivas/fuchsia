@@ -27,11 +27,11 @@ class SymbolServer : public ClientObject {
   using CheckFetchCallback = fit::callback<void(const Err&, fit::callback<void(FetchCallback)>)>;
 
   enum class State {
-    kInitializing,
-    kAuth,
-    kBusy,
-    kReady,
-    kUnreachable,
+    kInitializing,  // The server just gets created. It will become kBusy or kAuth shortly.
+    kAuth,          // The authentication is missing or invalid.
+    kBusy,          // The server is doing authentication.
+    kReady,         // The authentication is done and the server is ready to use.
+    kUnreachable,   // Too many failed downloads and the server is unusable.
   };
 
   enum class AuthType {

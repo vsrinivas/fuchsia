@@ -25,6 +25,9 @@ class SystemObserver {
   // Called immediately after createion of a symbol server.
   virtual void DidCreateSymbolServer(SymbolServer* server) {}
 
+  // Called immediately after the status of a symbol server changes.
+  virtual void OnSymbolServerStatusChanged(SymbolServer* server) {}
+
   // Called immediately after creation / before destruction of a breakpoint.
   virtual void DidCreateBreakpoint(Breakpoint* breakpoint) {}
   virtual void WillDestroyBreakpoint(Breakpoint* breakpoint) {}

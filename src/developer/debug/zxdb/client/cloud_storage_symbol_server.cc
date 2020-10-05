@@ -166,6 +166,7 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
   });
 
   curl->Perform([this, cb = std::move(cb), document](Curl*, Curl::Error result) mutable {
+    // TODO(dangyi): `this` might be deleted here! Consider to use a weak pointer.
     if (result) {
       std::string error = "Could not contact authentication server: ";
       error += result.ToString();

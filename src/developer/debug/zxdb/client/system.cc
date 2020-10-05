@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
+#include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/exception_settings.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job.h"
@@ -841,8 +842,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
 
     for (const auto& url : urls) {
       if (existing.find(url) == existing.end()) {
-        symbol_servers_.push_back(SymbolServer::FromURL(session(), url));
-        AddSymbolServer(symbol_servers_.back().get());
+        AddSymbolServer(SymbolServer::FromURL(session(), url));
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
@@ -868,8 +868,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
 }
 
 void System::InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server) {
-  symbol_servers_.push_back(std::move(server));
-  AddSymbolServer(symbol_servers_.back().get());
+  AddSymbolServer(std::move(server));
 }
 
 void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) {
@@ -914,17 +913,10 @@ void System::AttachToProcess(uint64_t pid, Target::Callback callback) {
   open_slot->Attach(pid, std::move(callback));
 }
 
-void System::ServerStartedInitializing() { servers_initializing_++; }
+void System::AddSymbolServer(std::unique_ptr<SymbolServer> unique_server) {
+  SymbolServer* server = unique_server.get();
+  symbol_servers_.push_back(std::move(unique_server));
 
-void System::ServerFinishedInitializing() {
-  FX_DCHECK(servers_initializing_ > 0);
-
-  if (!--servers_initializing_) {
-    suspended_downloads_.clear();
-  }
-}
-
-void System::AddSymbolServer(SymbolServer* server) {
   for (auto& observer : observers_) {
     observer.DidCreateSymbolServer(server);
   }
@@ -934,7 +926,7 @@ void System::AddSymbolServer(SymbolServer* server) {
   if (server->state() == SymbolServer::State::kInitializing ||
       server->state() == SymbolServer::State::kBusy) {
     initializing = true;
-    ServerStartedInitializing();
+    servers_initializing_++;
   }
 
   server->set_state_change_callback([weak_this = weak_factory_.GetWeakPtr(), initializing](
@@ -943,13 +935,19 @@ void System::AddSymbolServer(SymbolServer* server) {
       return;
     }
 
+    for (auto& observer : weak_this->observers_)
+      observer.OnSymbolServerStatusChanged(server);
+
     if (state == SymbolServer::State::kReady)
       weak_this->OnSymbolServerBecomesReady(server);
 
     if (initializing && state != SymbolServer::State::kBusy &&
         state != SymbolServer::State::kInitializing) {
       initializing = false;
-      weak_this->ServerFinishedInitializing();
+      weak_this->servers_initializing_--;
+      if (!weak_this->servers_initializing_) {
+        weak_this->suspended_downloads_.clear();
+      }
     }
   });
 

@@ -164,6 +164,7 @@ class System : public ClientObject,
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
   void AddNewJob(std::unique_ptr<Job> job);
+  void AddSymbolServer(std::unique_ptr<SymbolServer> server);
 
   // Called when we have attempted to download debug symbols and failed. If err is set then
   // something went wrong during the attempt, otherwise the symbols simply weren't available from
@@ -180,12 +181,6 @@ class System : public ClientObject,
   // Called every time a download ends.
   void DownloadFinished();
 
-  // Called when we get a new server and it is still initializing.
-  void ServerStartedInitializing();
-
-  // Called when a new server is no longer initializing.
-  void ServerFinishedInitializing();
-
   // Create a new download obect for downloading a given build ID. If quiet is set, don't report the
   // status of this download.
   //
@@ -193,9 +188,6 @@ class System : public ClientObject,
   // to each. The first caller's preference is taken for the quiet parameter.
   std::shared_ptr<Download> GetDownload(std::string build_id, DebugSymbolFileType file_type,
                                         bool quiet);
-
-  // Set up a symbol server after it has been added to symbol_servers_.
-  void AddSymbolServer(SymbolServer* server);
 
   // Number of symbol servers currently initializing.
   size_t servers_initializing_ = 0;

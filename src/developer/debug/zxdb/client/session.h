@@ -11,8 +11,6 @@
 #include <vector>
 
 #include "lib/fit/function.h"
-#include "src/developer/debug/zxdb/client/download_observer.h"
-#include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -28,6 +26,8 @@ namespace zxdb {
 
 class ArchInfo;
 class BreakpointObserver;
+class DownloadObserver;
+class FilterObserver;
 class ProcessImpl;
 class ProcessObserver;
 class RemoteAPI;

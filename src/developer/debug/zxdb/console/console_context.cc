@@ -84,6 +84,8 @@ ConsoleContext::~ConsoleContext() {
   session_->process_observers().RemoveObserver(this);
   session_->thread_observers().RemoveObserver(this);
   session_->RemoveBreakpointObserver(this);
+  session_->RemoveDownloadObserver(this);
+  session_->RemoveObserver(this);
 }
 
 int ConsoleContext::IdForTarget(const Target* target) const {
