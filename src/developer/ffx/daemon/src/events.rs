@@ -4,18 +4,22 @@
 use {
     crate::ok_or_return,
     crate::target,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, Context as _, Result},
     async_std::future::timeout,
     async_trait::async_trait,
     fuchsia_async::Task,
     futures::channel::mpsc,
+    futures::future::Future,
     futures::lock::Mutex,
     futures::prelude::*,
+    futures::task::{Context, Poll},
+    pin_project::pin_project,
     std::cmp::Eq,
     std::default::Default,
     std::fmt::Debug,
     std::hash::Hash,
     std::net::SocketAddr,
+    std::pin::Pin,
     std::sync::{Arc, Weak},
     std::time::Duration,
 };
@@ -134,10 +138,34 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
     }
 }
 
+#[pin_project]
+struct PredicateHandlerFuture<F: Future<Output = Result<()>>> {
+    // Hack to track whether this future has been dropped, so that eventually
+    // the dispatcher will clean the handler up later.
+    _inner: Arc<()>,
+    #[pin]
+    fut: F,
+}
+
+impl<F: Future<Output = Result<()>>> PredicateHandlerFuture<F> {
+    fn new(inner: Arc<()>, fut: F) -> Self {
+        Self { _inner: inner, fut }
+    }
+}
+
+impl<F: Future<Output = Result<()>>> Future for PredicateHandlerFuture<F> {
+    type Output = F::Output;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        self.project().fut.poll(cx)
+    }
+}
+
 struct PredicateHandler<T: EventTrait, F>
 where
     F: Future<Output = bool> + Send + Sync,
 {
+    parent_link: Weak<()>,
     predicate_matched: mpsc::UnboundedSender<()>,
     predicate: Box<dyn Fn(T) -> F + Send + Sync + 'static>,
 }
@@ -147,10 +175,11 @@ where
     F: Future<Output = bool> + Send + Sync,
 {
     fn new(
+        parent_link: Weak<()>,
         predicate: impl (Fn(T) -> F) + Send + Sync + 'static,
     ) -> (Self, mpsc::UnboundedReceiver<()>) {
         let (tx, rx) = mpsc::unbounded::<()>();
-        let s = Self { predicate_matched: tx, predicate: Box::new(predicate) };
+        let s = Self { parent_link, predicate_matched: tx, predicate: Box::new(predicate) };
 
         (s, rx)
     }
@@ -163,6 +192,11 @@ where
     F: Future<Output = bool> + Send + Sync,
 {
     async fn on_event(&self, event: T) -> Result<bool> {
+        // This is a bit of a race, but will eventually clean things up by the
+        // time the next event fires (if the wait_for future is dropped).
+        if self.parent_link.upgrade().is_none() {
+            return Ok(true);
+        }
         if (self.predicate)(event).await {
             self.predicate_matched.unbounded_send(()).context("sending 'done' signal to waiter")?;
             return Ok(true);
@@ -256,26 +290,32 @@ impl<T: 'static + EventTrait> Queue<T> {
     }
 
     /// The async version of `wait_for` (See: `wait_for`).
-    pub async fn wait_for_async<F>(
+    pub async fn wait_for_async<F1>(
         &self,
         timeout_opt: Option<Duration>,
-        predicate: impl Fn(T) -> F + Send + Sync + 'static,
+        predicate: impl Fn(T) -> F1 + Send + Sync + 'static,
     ) -> Result<()>
     where
-        F: Future<Output = bool> + Send + Sync + 'static,
+        F1: Future<Output = bool> + Send + Sync + 'static,
     {
-        let (handler, mut handler_done) = PredicateHandler::new(move |t| predicate(t));
-        self.add_handler(handler).await;
+        let link = Arc::new(());
+        let parent_link = Arc::downgrade(&link);
+        let (handler, mut handler_done) = PredicateHandler::new(parent_link, move |t| predicate(t));
         let fut = async move {
             handler_done
                 .next()
                 .await
-                .unwrap_or_else(|| log::warn!("unable to get 'done' signal from handler."))
+                .unwrap_or_else(|| log::warn!("unable to get 'done' signal from handler."));
+            Result::<()>::Ok(())
         };
-
-        match timeout_opt {
-            None => Ok(fut.await),
-            Some(t) => timeout(t, fut).await.map_err(|e| anyhow!("waiting for event: {:#}", e)),
+        self.add_handler(handler).await;
+        if let Some(t) = timeout_opt {
+            PredicateHandlerFuture::new(link, async move {
+                timeout(t, fut).await.map_err(|e| anyhow!("waiting for event: {:#}", e))?
+            })
+            .await
+        } else {
+            PredicateHandlerFuture::new(link, fut).await
         }
     }
 

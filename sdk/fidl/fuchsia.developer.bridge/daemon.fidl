@@ -5,11 +5,14 @@
 library fuchsia.developer.bridge;
 using fuchsia.developer.remotecontrol as rc;
 using fuchsia.device;
+using zx;
 
 enum DaemonError {
     TARGET_CACHE_ERROR = 1;
     TARGET_STATE_ERROR = 2;
     RCS_CONNECTION_ERROR = 3;
+    /// A generic timeout error.
+    TIMEOUT = 4;
 };
 
 [Discoverable]
@@ -40,4 +43,20 @@ protocol Daemon {
     GetFastboot(
         string:fuchsia.device.DEVICE_NAME_MAX target,
         request<Fastboot> fastboot) -> () error FastbootError;
+
+    /// Attempts to get the SSH address for a given target.
+    ///
+    /// Waits for:
+    /// 1.) A target of the given nodename to appear (if it hasn't already).
+    /// 2.) For the target to have an SSH-friendly address.
+    ///
+    /// Returns:
+    /// * First address found for the target that satisfies step 2.
+    ///
+    /// Errors:
+    /// * Timeout error if steps 1 and 2 don't happen in time.
+    /// * Cache error if a target has appeared but suddenly disappears before
+    ///   running the function to completion.
+    GetSshAddress(string:fuchsia.device.DEVICE_NAME_MAX target, zx.duration timeout)
+        -> (TargetAddrInfo ip) error DaemonError;
 };

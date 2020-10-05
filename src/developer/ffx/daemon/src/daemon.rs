@@ -8,18 +8,22 @@ use {
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::fastboot::{spawn_fastboot_discovery, Fastboot},
     crate::mdns::MdnsTargetFinder,
-    crate::target::{RcsConnection, Target, TargetCollection, TargetEvent, ToFidlTarget},
+    crate::target::{
+        RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent, ToFidlTarget,
+    },
+    crate::util::FailAtEnd,
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError,
+        DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, TargetAddrInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
+    std::convert::TryInto,
     std::sync::{Arc, Weak},
     std::time::Duration,
 };
@@ -113,10 +117,22 @@ impl Daemon {
     }
 
     pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
+        // This is a bit of a hack around how FIDL streams work. When the final
+        // message comes in from the client, the connection is closed.
+        // Any processing we are doing should then end immediately. However,
+        // the only way to force polling the futures to stop is to pop an error
+        // on the end of the stream, which is what this does.
+        //
+        // Without this change, the daemon will crash in the event that, for
+        // example, a zombie timeout is triggered, as polling on all the
+        // client's futures will continue long after the client is disconnected,
+        // as ending the stream does not cause the futures to stop being polled.
         stream
-            .map_err(|e| anyhow!("fidl stream err").context(e))
-            .try_for_each_concurrent(None, |req| self.handle_request(req))
+            .fail_at_end()
+            .try_for_each_concurrent(None, |r| async move { self.handle_request(r?).await })
             .await
+            .unwrap_or_else(|e| log::info!("FIDL stream complete: {:#}", e));
+        Ok(())
     }
 
     pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
@@ -303,6 +319,58 @@ impl Daemon {
 
                 std::process::exit(0);
             }
+            DaemonRequest::GetSshAddress { responder, target, timeout } => {
+                let nodename = target.clone();
+                let fut = async move {
+                    let _res = self
+                        .event_queue
+                        .wait_for(None, move |e| {
+                            if let DaemonEvent::NewTarget(n) = e {
+                                n == nodename || nodename == "".to_owned()
+                            } else {
+                                false
+                            }
+                        })
+                        .await
+                        .map_err(|e| log::warn!("event wait err: {:?}", e));
+
+                    // TODO(awdavies): It's possible something might happen between the new
+                    // target event and now, so it would make sense to give the
+                    // user some information on what happened: likely something
+                    // to do with the target suddenly being forced out of the cache
+                    // (this isn't a problem yet, but will be once more advanced
+                    // lifetime tracking is implemented).
+                    let target = match self.target_from_cache(target).await {
+                        Ok(t) => t,
+                        Err(e) => {
+                            log::warn!("{}", e);
+                            return Err(DaemonError::TargetCacheError);
+                        }
+                    };
+
+                    let poll_duration = std::time::Duration::from_millis(15);
+                    loop {
+                        let addrs = target.addrs().await;
+                        if let Some(addr) = (&addrs).to_ssh_addr() {
+                            let res: TargetAddrInfo = addr.into();
+                            return Ok(res);
+                        }
+                        task::sleep(poll_duration).await;
+                    }
+                };
+
+                return responder
+                    .send(&mut match async_std::future::timeout(
+                        Duration::from_nanos(timeout.try_into()?),
+                        fut,
+                    )
+                    .await
+                    {
+                        Ok(mut r) => r,
+                        Err(_) => Err(DaemonError::Timeout),
+                    })
+                    .context("sending client response");
+            }
         }
         Ok(())
     }
@@ -318,9 +386,11 @@ mod test {
     use fidl_fuchsia_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol as rcs;
     use fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy};
+    use fidl_fuchsia_net as fidl_net;
     use fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet};
     use fidl_fuchsia_overnet_protocol::NodeId;
     use fuchsia_async::Task;
+    use std::net::{SocketAddr, SocketAddrV6};
 
     struct TestHookFakeRcs {
         tc: Weak<TargetCollection>,
@@ -337,7 +407,7 @@ mod test {
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
                     nodename: t.nodename(),
-                    addresses: Vec::new(),
+                    addresses: t.addrs().await.iter().cloned().collect(),
                     ..Default::default()
                 })))
                 .await
@@ -407,7 +477,13 @@ mod test {
         stream: DaemonRequestStream,
     ) -> TargetControl {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
-        res.send_mdns_discovery_event(Target::new(nodename)).await;
+        let fake_target = Target::new(nodename);
+        fake_target
+            .addrs_insert(
+                SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)).into(),
+            )
+            .await;
+        res.send_mdns_discovery_event(fake_target).await;
         res
     }
 
@@ -551,6 +627,36 @@ mod test {
         assert!(r);
 
         assert!(!std::path::Path::new(&socket).is_file());
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_ssh_address() -> Result<()> {
+        let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let timeout = std::i64::MAX;
+        let r = daemon_proxy.get_ssh_address("foobar", timeout).await?;
+
+        // This is from the `spawn_daemon_server_with_fake_target` impl.
+        let want = Ok(bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+            ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
+                addr: [254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            }),
+            scope_id: 0,
+        }));
+        assert_eq!(r, want);
+
+        let r = daemon_proxy.get_ssh_address("toothpaste", 1000).await?;
+        assert_eq!(r, Err(DaemonError::Timeout));
+
+        // Target with empty addresses should timeout.
+        ctrl.send_mdns_discovery_event(Target::new("baz")).await;
+        let r = daemon_proxy.get_ssh_address("baz", 10000).await?;
+        assert_eq!(r, Err(DaemonError::Timeout));
+
+        let r = daemon_proxy.get_ssh_address("foobar", timeout).await?;
+        assert_eq!(r, want);
 
         Ok(())
     }

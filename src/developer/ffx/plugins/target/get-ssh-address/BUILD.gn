@@ -4,17 +4,14 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_target") {
+ffx_plugin("ffx_get_ssh_address") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [
-    "flash:ffx_flash",
-    "get-ssh-address:ffx_get_ssh_address",
-    "list:ffx_list",
-    "off:ffx_off",
-    "reboot:ffx_reboot",
-    "update:ffx_update",
-  ]
+  with_unit_tests = true
+  deps = [ "//src/developer/ffx/daemon:lib" ]
 
-  sources = [ "src/args.rs" ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

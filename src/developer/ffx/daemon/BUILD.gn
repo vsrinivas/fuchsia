@@ -39,6 +39,7 @@ if (is_host) {
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:nix",
+      "//third_party/rust_crates:pin-project",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:socket2",
       "//third_party/rust_crates:tempfile",

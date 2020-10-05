@@ -29,10 +29,79 @@ use {
     std::fmt,
     std::fmt::{Debug, Display},
     std::hash::Hash,
+    std::io::Write,
     std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
     std::sync::Arc,
     usb_bulk::Interface,
 };
+
+pub trait SshFormatter {
+    fn ssh_fmt<W: Write>(&self, f: &mut W) -> std::io::Result<()>;
+}
+
+impl SshFormatter for TargetAddr {
+    fn ssh_fmt<W: Write>(&self, f: &mut W) -> std::io::Result<()> {
+        if self.ip.is_ipv6() {
+            write!(f, "[")?;
+        }
+        write!(f, "{}", self.ip)?;
+        if self.ip.is_ipv6() {
+            if self.scope_id > 0 {
+                write!(f, "%{}", self.scope_id)?;
+            }
+            write!(f, "]")?;
+        }
+        Ok(())
+    }
+}
+
+/// A trait for returning a consistent SSH address.
+///
+/// Based on the structure from which the SSH address is coming, this will
+/// return:
+/// -- The first IPv4 address found, if there are only IPv4 addresses available
+/// -- The first IPv6 address found, if these are available.
+pub trait SshAddrFetcher {
+    fn to_ssh_addr(self) -> Option<TargetAddr>;
+}
+
+macro_rules! assign_and_break_if_link_local {
+    ($res:ident, $addr:ident $(,)?) => {
+        $res = Some($addr.clone());
+        if $addr.ip().is_link_local_addr() {
+            break;
+        }
+    };
+}
+
+impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T {
+    fn to_ssh_addr(self) -> Option<TargetAddr> {
+        let mut res: Option<TargetAddr> = None;
+        for addr in self.into_iter() {
+            match res {
+                Some(res_addr) => match SocketAddr::from(addr) {
+                    SocketAddr::V6(_) => match res_addr.ip {
+                        IpAddr::V6(_) => {
+                            // Only overwrite if this is a link-local addr, else
+                            // keep the first one found.
+                            if addr.ip().is_link_local_addr() {
+                                assign_and_break_if_link_local!(res, addr);
+                            }
+                        }
+                        IpAddr::V4(_) => {
+                            assign_and_break_if_link_local!(res, addr);
+                        }
+                    },
+                    SocketAddr::V4(_) => {}
+                },
+                None => {
+                    assign_and_break_if_link_local!(res, addr);
+                }
+            }
+        }
+        res
+    }
+}
 
 #[async_trait]
 pub trait TargetAddrFetcher: Send + Sync {
@@ -268,7 +337,7 @@ impl Target {
     }
 
     #[cfg(test)]
-    async fn addrs_insert(&self, t: TargetAddr) {
+    pub(crate) async fn addrs_insert(&self, t: TargetAddr) {
         self.inner.addrs.write().await.insert(t);
     }
 
@@ -1102,5 +1171,51 @@ mod test {
         // event queue, but either way this should succeed.
         let (res, ()) = futures::join!(fut, t.update_state(new_state));
         res.unwrap();
+    }
+
+    #[test]
+    fn test_to_ssh_addr() {
+        let sockets = vec![
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
+            SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 0)),
+        ];
+        let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
+        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[2]));
+
+        let sockets = vec![
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)),
+        ];
+        let addrs = sockets.iter().map(|s| TargetAddr::from(*s)).collect::<Vec<_>>();
+        assert_eq!((&addrs).to_ssh_addr(), Some(addrs[0]));
+
+        let addrs = Vec::<TargetAddr>::new();
+        assert_eq!((&addrs).to_ssh_addr(), None);
+    }
+
+    #[test]
+    fn test_ssh_formatting() {
+        struct SshFormatTest {
+            addr: TargetAddr,
+            expect: &'static str,
+        };
+        let tests_pre = vec![
+            (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)), "127.0.0.1"),
+            (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)), "129.0.0.1"),
+            (SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)), "[f111::3]"),
+            (SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)), "[fe80::1]"),
+            (SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 2)), "[fe80::2%2]"),
+        ];
+        let tests = tests_pre
+            .iter()
+            .map(|t| SshFormatTest { addr: TargetAddr::from(t.0), expect: t.1 })
+            .collect::<Vec<_>>();
+        for test in tests.iter() {
+            let mut res = Vec::<u8>::new();
+            test.addr.ssh_fmt(&mut res).unwrap();
+            assert_eq!(std::str::from_utf8(&res[..]).unwrap(), test.expect);
+        }
     }
 }
