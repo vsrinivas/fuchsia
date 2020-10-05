@@ -38,7 +38,8 @@ int main() {
                              SystemLogRecorder::WriteParameters{
                                  .period = kWritePeriod,
                                  .max_write_size_bytes = kMaxWriteSizeInBytes,
-                                 .log_file_paths = kCurrentLogsFilePaths,
+                                 .logs_dir = kCurrentLogsDir,
+                                 .max_num_files = kMaxNumLogFiles,
                                  .total_log_size_bytes = kPersistentLogsMaxSizeInKb * 1024,
                              },
                              std::unique_ptr<Encoder>(new ProductionEncoder()));

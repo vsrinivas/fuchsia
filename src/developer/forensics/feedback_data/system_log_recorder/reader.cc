@@ -4,18 +4,20 @@
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 
-#include <assert.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
-#include <stdio.h>
+#include <lib/zx/time.h>
 
 #include <cmath>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "src/developer/forensics/feedback_data/constants.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -146,13 +148,39 @@ std::string PostProcess(const std::string& log) {
 
 }  // namespace
 
-bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder* decoder,
-                 const std::string& output_file_path, float* compression_ratio) {
+bool Concatenate(const std::vector<const std::string>& input_file_paths,
+                 const std::string& logs_dir, Decoder* decoder, const std::string& output_file_path,
+                 float* compression_ratio) {
   // Set the default compression to NAN in case Concatenate() fails.
   *compression_ratio = NAN;
 
+  FX_CHECK(files::IsDirectory(logs_dir) | !input_file_paths.empty());
+
+  std::vector<std::string> file_paths;
+  if (!files::IsDirectory(logs_dir)) {
+    // TODO(fxbug.dev/61101): Stop using |input_file_paths|.
+    file_paths = std::vector(input_file_paths.cbegin(), input_file_paths.cend());
+  } else {
+    files::ReadDirContents(logs_dir, &file_paths);
+
+    // Remove the current directory from the files.
+    file_paths.erase(std::find(file_paths.begin(), file_paths.end(), "."));
+
+    // Sort the files based on the number the previous writer assigned them. The lower the number,
+    // the older the file.
+    std::sort(file_paths.begin(), file_paths.end(),
+              [](const std::string& lhs, const std::string& rhs) {
+                return std::strtoull(lhs.c_str(), nullptr, /*base=*/10) >
+                       std::strtoull(rhs.c_str(), nullptr, /*base=*/10);
+              });
+
+    // Turn each file name into a complete path.
+    for (auto& fname : file_paths) {
+      fname = files::JoinPath(logs_dir, fname);
+    }
+  }
   uint64_t total_compressed_log_size{0};
-  for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
+  for (auto path = file_paths.crbegin(); path != file_paths.crend(); ++path) {
     uint64_t size;
     // To get a valid size, the file must exist!
     if (files::IsFile(*path)) {
@@ -168,7 +196,7 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
 
   // Decode logs.
   std::string uncompressed_log;
-  for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
+  for (auto path = file_paths.crbegin(); path != file_paths.crend(); ++path) {
     std::string block;
     if (!files::ReadFileToString(*path, &block)) {
       continue;

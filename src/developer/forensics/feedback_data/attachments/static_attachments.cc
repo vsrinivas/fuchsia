@@ -54,8 +54,8 @@ void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
   // We read the set of /cache files into a single /tmp file.
   system_log_recorder::ProductionDecoder decoder;
   float compression_ratio;
-  if (system_log_recorder::Concatenate(kCurrentLogsFilePaths, &decoder, kPreviousLogsFilePath,
-                                       &compression_ratio)) {
+  if (system_log_recorder::Concatenate(kLegacyCurrentLogFilePaths, kCurrentLogsDir, &decoder,
+                                       kPreviousLogsFilePath, &compression_ratio)) {
     FX_LOGS(INFO) << fxl::StringPrintf(
         "Found logs from previous boot cycle (compression ratio %.2f), available at %s\n",
         compression_ratio, kPreviousLogsFilePath);
@@ -63,10 +63,12 @@ void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
     cobalt->LogCount(system_log_recorder::ToCobalt(decoder.GetEncodingVersion()),
                      (uint64_t)(compression_ratio * 100));
 
+    // TODO(fxbug.dev/61101): Stop deleting the legacy files.
     // Clean up the /cache files now that they have been concatenated into a single /tmp file.
-    for (const auto& file : kCurrentLogsFilePaths) {
+    for (const auto& file : kLegacyCurrentLogFilePaths) {
       files::DeletePath(file, /*recursive=*/false);
     }
+    files::DeletePath(kCurrentLogsDir, /*recusive=*/true);
   } else {
     FX_LOGS(WARNING) << "No logs found from previous boot cycle";
   }

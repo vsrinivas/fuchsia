@@ -98,7 +98,11 @@ constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
 // at least 512 kb of data, we can expect between 448 kb and 512 kb of logs to be persisted due to
 // the log rotation.
 constexpr uint64_t kPersistentLogsMaxSizeInKb = 512;
-const std::vector<const std::string> kCurrentLogsFilePaths({
+constexpr char kCurrentLogsDir[] = "/cache/current_system_logs";
+constexpr size_t kMaxNumLogFiles = 8u;
+
+// TODO(fxbug.dev/61101): Delete this when all devices have migrated to using |kCurrentLogsDir|.
+const std::vector<const std::string> kLegacyCurrentLogFilePaths({
     "/cache/current_system_log_0.txt",
     "/cache/current_system_log_1.txt",
     "/cache/current_system_log_2.txt",

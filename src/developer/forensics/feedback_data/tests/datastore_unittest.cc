@@ -43,6 +43,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/developer/forensics/utils/time.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -73,6 +74,17 @@ const AttachmentKeys kDefaultAttachmentsToAvoidSpuriousLogs = {
     kAttachmentBuildSnapshot,
 };
 
+std::string MakeFilepath(const std::string& dir, const size_t file_num) {
+  return files::JoinPath(dir, std::to_string(file_num));
+}
+
+const std::vector<std::string> kCurrentLogFilePaths = {
+    MakeFilepath(kCurrentLogsDir, 0), MakeFilepath(kCurrentLogsDir, 1),
+    MakeFilepath(kCurrentLogsDir, 2), MakeFilepath(kCurrentLogsDir, 3),
+    MakeFilepath(kCurrentLogsDir, 4), MakeFilepath(kCurrentLogsDir, 5),
+    MakeFilepath(kCurrentLogsDir, 6), MakeFilepath(kCurrentLogsDir, 7),
+};
+
 class DatastoreTest : public UnitTestFixture {
  public:
   DatastoreTest() : executor_(dispatcher()), device_id_provider_(kDeviceIdPath) {}
@@ -80,7 +92,10 @@ class DatastoreTest : public UnitTestFixture {
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
+    FX_CHECK(files::CreateDirectory(kCurrentLogsDir));
   }
+
+  void TearDown() override { FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true)); }
 
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
@@ -457,10 +472,10 @@ MATCHER_P2(MatchesCobaltEvent, expected_type, expected_metric_id, "") {
 
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   std::string previous_log_contents = "";
-  for (const auto& filepath : kCurrentLogsFilePaths) {
+  for (const auto& filepath : kCurrentLogFilePaths) {
     auto encoder = system_log_recorder::ProductionEncoder();
     const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
-    previous_log_contents = str + previous_log_contents;
+    previous_log_contents = previous_log_contents + str;
     WriteFile(filepath, encoder.Encode(str));
   }
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
@@ -476,7 +491,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
                   {Pair(kAttachmentLogSystemPrevious, AttachmentValue(previous_log_contents))}));
 
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-  for (const auto& file : kCurrentLogsFilePaths) {
+  for (const auto& file : kCurrentLogFilePaths) {
     ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
   }
 
@@ -530,7 +545,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogNotFirstInstance) {
   // Simulate a case where there is no logs from the previous boot cycle and then a restart during
   // the current boot cycle. We want to make sure that we are not including the logs for the
   // current boot cycle as "previous boot logs".
-  for (const auto& filepath : kCurrentLogsFilePaths) {
+  for (const auto& filepath : kCurrentLogFilePaths) {
     WriteFile(filepath, "Test data.");
   }
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious},
@@ -547,7 +562,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogNotFirstInstance) {
                   {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kFileReadFailure))}));
 
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
-  for (const auto& file : kCurrentLogsFilePaths) {
+  for (const auto& file : kCurrentLogFilePaths) {
     ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
   }
 }

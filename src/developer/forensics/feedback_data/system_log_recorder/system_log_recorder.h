@@ -22,7 +22,8 @@ class SystemLogRecorder {
   struct WriteParameters {
     zx::duration period;
     size_t max_write_size_bytes;
-    const std::vector<const std::string> log_file_paths;
+    std::string logs_dir;
+    size_t max_num_files;
     size_t total_log_size_bytes;
   };
 

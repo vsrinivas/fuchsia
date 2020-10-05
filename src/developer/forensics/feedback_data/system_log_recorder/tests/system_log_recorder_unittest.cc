@@ -42,23 +42,6 @@ TEST(Encoding, VerifyProductionEncoderDecoderVersion) {
   EXPECT_EQ(encoder.GetEncodingVersion(), decoder.GetEncodingVersion());
 }
 
-// Returns auto-generated valid file paths
-std::vector<const std::string> MakeLogFilePaths(files::ScopedTempDir& temp_dir, size_t num_files) {
-  std::vector<const std::string> file_names;
-
-  for (size_t file_idx = 0; file_idx < num_files; file_idx++) {
-    file_names.push_back("file" + std::to_string(file_idx) + ".txt");
-  }
-
-  std::vector<const std::string> file_paths;
-
-  for (const auto& file : file_names) {
-    file_paths.push_back(files::JoinPath(temp_dir.path(), file));
-  }
-
-  return file_paths;
-}
-
 using SystemLogRecorderTest = UnitTestFixture;
 
 TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
@@ -112,7 +95,6 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   InjectServiceProvider(&logger);
 
   files::ScopedTempDir temp_dir;
-  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/2);
 
   const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
@@ -120,8 +102,9 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
                              SystemLogRecorder::WriteParameters{
                                  .period = kWriterPeriod,
                                  .max_write_size_bytes = kWriteSize,
-                                 .log_file_paths = file_paths,
-                                 .total_log_size_bytes = file_paths.size() * kWriteSize,
+                                 .logs_dir = temp_dir.path(),
+                                 .max_num_files = 2u,
+                                 .total_log_size_bytes = 2u * kWriteSize,
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
@@ -130,13 +113,15 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  files::ScopedTempDir output_dir;
+  const std::string output_path = files::JoinPath(output_dir.path(), "output.txt");
 
   IdentityDecoder decoder;
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+                            output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -149,7 +134,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+                            output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -163,7 +149,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+                            output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -178,7 +165,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+                            output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -192,7 +180,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+                            output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -207,7 +196,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(std::vector<const std::string>(), temp_dir.path(), &decoder,
+                            output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
