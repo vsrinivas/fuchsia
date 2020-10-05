@@ -8,6 +8,12 @@
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <cstdint>
+#include <map>
+#include <memory>
+
+#include "src/lib/fsl/io/device_watcher.h"
+
 namespace sys {
 class ComponentContext;
 }  // namespace sys
@@ -36,6 +42,13 @@ class HardwareDisplayControllerProviderImpl : public fuchsia::hardware::display:
 
  private:
   fidl::BindingSet<fuchsia::hardware::display::Provider> bindings_;
+
+  // The currently outstanding DeviceWatcher closures.  The closures will remove
+  // themselves from here if they are invoked before shutdown.  Any closures
+  // still outstanding will be handled by the destructor.
+  // This approach assumes that the event loop is attached to
+  // the main thread, else race conditions may occur.
+  std::map<uint64_t, std::unique_ptr<fsl::DeviceWatcher>> holders_;
 };
 
 }  // namespace ui_display

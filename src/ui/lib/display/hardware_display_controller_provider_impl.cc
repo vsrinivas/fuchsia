@@ -11,6 +11,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include <cstdint>
+
 #include "src/lib/fsl/io/device_watcher.h"
 
 namespace ui_display {
@@ -26,13 +28,17 @@ HardwareDisplayControllerProviderImpl::HardwareDisplayControllerProviderImpl(
 void HardwareDisplayControllerProviderImpl::OpenController(
     zx::channel device, ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> request,
     OpenControllerCallback callback) {
-  // We want the lifetime of |watcher| below to be the same as the closure passed into its
-  // constructor.
-  auto holder = std::make_shared<std::unique_ptr<fsl::DeviceWatcher>>();
+  // Watcher's lifetime needs to be at most as long as the lifetime of |this|,
+  // and otherwise as long as the lifetime of |callback|.  |this| will own
+  // the references to outstanding watchers, and each watcher will notify |this|
+  // when it is done, so that |this| can remove a reference to it.
+  static uint64_t last_id = 0;
+  const uint64_t id = ++last_id;
 
-  auto watcher = fsl::DeviceWatcher::Create(
-      kDisplayDir, [holder, device = std::move(device), request = std::move(request),
-                    callback = std::move(callback)](int dir_fd, std::string filename) mutable {
+  std::unique_ptr<fsl::DeviceWatcher> watcher = fsl::DeviceWatcher::Create(
+      kDisplayDir,
+      [id, holders = &holders_, device = std::move(device), request = std::move(request),
+       callback = std::move(callback)](int dir_fd, std::string filename) mutable {
         // Get display info.
         std::string path = kDisplayDir + "/" + filename;
 
@@ -72,10 +78,12 @@ void HardwareDisplayControllerProviderImpl::OpenController(
         }
 
         callback(status);
-      });
 
-  // Keep the device-watcher alive until the callback fires.
-  *holder = std::move(watcher);
+        // We no longer need |this| to store this closure, remove it. Do not do
+        // any work after this point.
+        holders->erase(id);
+      });
+  holders_[id] = std::move(watcher);
 }
 
 }  // namespace ui_display
