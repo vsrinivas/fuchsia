@@ -214,11 +214,15 @@
             "properties": {
               "driver_path": {
                 "type": "string"
+              },
+              "cache_duration_ms": {
+                "type": "integer"
               }
             },
             "additionalProperties": false,
             "required": [
-              "driver_path"
+              "driver_path",
+              "cache_duration_ms"
             ]
           }
         },

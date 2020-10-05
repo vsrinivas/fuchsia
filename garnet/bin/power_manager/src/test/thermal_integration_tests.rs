@@ -324,8 +324,10 @@ impl<'a> ThermalPolicyTest<'a> {
         policy_params: ThermalPolicyParams,
         futures: &FuturesUnordered<LocalBoxFuture<'a, ()>>,
     ) -> Rc<ThermalPolicy> {
-        let temperature_node =
-            temperature_handler::tests::setup_test_node(Simulator::make_temperature_fetcher(&sim));
+        let temperature_node = temperature_handler::tests::setup_test_node(
+            Simulator::make_temperature_fetcher(&sim),
+            fuchsia_zircon::Duration::from_millis(50),
+        );
         let cpu_stats_node =
             cpu_stats_handler::tests::setup_test_node(Simulator::make_idle_times_fetcher(&sim))
                 .await;

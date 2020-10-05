@@ -52,7 +52,8 @@
     "type": "TemperatureHandler",
     "name": "temperature_soc_pll",
     "config": {
-      "driver_path": "/dev/aml-thermal-pll/thermal"
+      "driver_path": "/dev/aml-thermal-pll/thermal",
+      "cache_duration_ms": 50
     }
   },
   {

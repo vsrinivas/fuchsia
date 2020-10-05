@@ -52,21 +52,24 @@
     "type": "TemperatureHandler",
     "name": "temperature_soc_pll",
     "config": {
-      "driver_path": "/dev/sys/platform/05:03:a/thermal"
+      "driver_path": "/dev/sys/platform/05:03:a/thermal",
+      "cache_duration_ms": 50
     }
   },
   {
     "type": "TemperatureHandler",
     "name": "temperature_therm_dsp",
     "config": {
-      "driver_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-dsp"
+      "driver_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-dsp",
+      "cache_duration_ms": 50
     }
   },
   {
     "type": "TemperatureHandler",
     "name": "temperature_therm_wifi",
     "config": {
-      "driver_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-wifi"
+      "driver_path": "/dev/sys/platform/03:03:27/thermistor-device/therm-wifi",
+      "cache_duration_ms": 50
     }
   },
   {

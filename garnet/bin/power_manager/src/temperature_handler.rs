@@ -11,6 +11,7 @@ use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_thermal as fthermal;
+use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_zircon as zx;
@@ -24,7 +25,9 @@ use std::rc::Rc;
 /// Node: TemperatureHandler
 ///
 /// Summary: Responds to temperature requests from other nodes by polling the specified driver
-///          using the thermal FIDL protocol
+///          using the thermal FIDL protocol. May be configured to cache the polled temperature
+///          for a while to prevent excessive polling of the sensor. (Polling errors are not
+///          cached.)
 ///
 /// Handles Messages:
 ///     - ReadTemperature
@@ -39,23 +42,30 @@ use std::rc::Rc;
 pub struct TemperatureHandlerBuilder<'a> {
     driver_path: String,
     driver_proxy: Option<fthermal::DeviceProxy>,
+    cache_duration: zx::Duration,
     inspect_root: Option<&'a inspect::Node>,
 }
 
 impl<'a> TemperatureHandlerBuilder<'a> {
-    pub fn new_with_driver_path(driver_path: String) -> Self {
-        Self { driver_path, driver_proxy: None, inspect_root: None }
+    pub fn new(driver_path: String, cache_duration: zx::Duration) -> Self {
+        Self { driver_path, driver_proxy: None, cache_duration, inspect_root: None }
     }
 
     #[cfg(test)]
     pub fn new_with_proxy(driver_path: String, proxy: fthermal::DeviceProxy) -> Self {
-        Self { driver_path, driver_proxy: Some(proxy), inspect_root: None }
+        Self {
+            driver_path,
+            driver_proxy: Some(proxy),
+            cache_duration: zx::Duration::from_millis(0),
+            inspect_root: None,
+        }
     }
 
     pub fn new_from_json(json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
         #[derive(Deserialize)]
         struct Config {
             driver_path: String,
+            cache_duration_ms: u32,
         };
 
         #[derive(Deserialize)]
@@ -64,7 +74,16 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         };
 
         let data: JsonData = json::from_value(json_data).unwrap();
-        Self::new_with_driver_path(data.config.driver_path)
+        Self::new(
+            data.config.driver_path,
+            zx::Duration::from_millis(data.config.cache_duration_ms as i64),
+        )
+    }
+
+    #[cfg(test)]
+    pub fn with_cache_duration(mut self, duration: zx::Duration) -> Self {
+        self.cache_duration = duration;
+        self
     }
 
     #[cfg(test)]
@@ -87,6 +106,9 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         Ok(Rc::new(TemperatureHandler {
             driver_path: self.driver_path.clone(),
             driver_proxy: proxy,
+            last_temperature: RefCell::new(Celsius(std::f64::NAN)),
+            last_poll_time: RefCell::new(fasync::Time::INFINITE_PAST),
+            cache_duration: self.cache_duration,
             inspect: InspectData::new(
                 inspect_root,
                 format!("TemperatureHandler ({})", self.driver_path),
@@ -99,6 +121,16 @@ pub struct TemperatureHandler {
     driver_path: String,
     driver_proxy: fthermal::DeviceProxy,
 
+    /// Last temperature returned by the handler.
+    last_temperature: RefCell<Celsius>,
+
+    /// Time of the last temperature poll, for determining cache freshness.
+    last_poll_time: RefCell<fasync::Time>,
+
+    /// Duration for which a polled temperature is cached. This prevents excessive polling of the
+    /// sensor.
+    cache_duration: zx::Duration,
+
     /// A struct for managing Component Inspection data
     inspect: InspectData,
 }
@@ -110,11 +142,14 @@ impl TemperatureHandler {
             "TemperatureHandler::handle_read_temperature",
             "driver" => self.driver_path.as_str()
         );
-        // TODO(pshickel): What if multiple other nodes want to know about the current
-        // temperature from the same driver? If two requests come back to back, does it mean we
-        // should blindly query the driver twice, or maybe we want to cache the last value with
-        // some staleness tolerance parameter? There isn't a use-case for this yet, but it's
-        // something to think about.
+
+        // If the last temperature value is sufficiently fresh, return it instead of polling.
+        // Note that if the previous poll generated an error, `last_poll_time` was not updated,
+        // and (barring clock glitches) a new poll will occur.
+        if fasync::Time::now() <= *self.last_poll_time.borrow() + self.cache_duration {
+            return Ok(MessageReturn::ReadTemperature(*self.last_temperature.borrow()));
+        }
+
         let result = self.read_temperature().await;
         log_if_err!(
             result,
@@ -128,14 +163,19 @@ impl TemperatureHandler {
             "result" => format!("{:?}", result).as_str()
         );
 
-        if result.is_ok() {
-            self.inspect.log_temperature_reading(*result.as_ref().unwrap())
-        } else {
-            self.inspect.read_errors.add(1);
-            self.inspect.last_read_error.set(format!("{}", result.as_ref().unwrap_err()).as_str());
+        match result {
+            Ok(temperature) => {
+                *self.last_temperature.borrow_mut() = temperature;
+                *self.last_poll_time.borrow_mut() = fasync::Time::now();
+                self.inspect.log_temperature_reading(temperature);
+                Ok(MessageReturn::ReadTemperature(temperature))
+            }
+            Err(e) => {
+                self.inspect.read_errors.add(1);
+                self.inspect.last_read_error.set(format!("{}", e).as_str());
+                Err(e.into())
+            }
         }
-
-        Ok(MessageReturn::ReadTemperature(result?))
     }
 
     async fn read_temperature(&self) -> Result<Celsius, Error> {
@@ -204,10 +244,10 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use fuchsia_async as fasync;
     use fuchsia_inspect::testing::TreeAssertion;
     use futures::TryStreamExt;
     use inspect::assert_inspect_tree;
+    use std::task::Poll;
 
     /// Spawns a new task that acts as a fake thermal driver for testing purposes. The driver only
     /// handles requests for GetTemperatureCelsius - trying to send any other requests to it is a
@@ -238,11 +278,13 @@ pub mod tests {
     /// provided closure.
     pub fn setup_test_node(
         get_temperature: impl FnMut() -> Celsius + 'static,
+        cache_duration: zx::Duration,
     ) -> Rc<TemperatureHandler> {
         TemperatureHandlerBuilder::new_with_proxy(
             "Fake".to_string(),
             setup_fake_driver(get_temperature),
         )
+        .with_cache_duration(cache_duration)
         .build()
         .unwrap()
     }
@@ -266,7 +308,7 @@ pub mod tests {
             index = (index + 1) % temperature_readings.len();
             Celsius(value)
         };
-        let node = setup_test_node(get_temperature);
+        let node = setup_test_node(get_temperature, zx::Duration::from_millis(0));
 
         // Send ReadTemperature message and check for expected value.
         for expected_reading in expected_readings {
@@ -280,10 +322,48 @@ pub mod tests {
         }
     }
 
+    #[test]
+    fn test_caching() -> Result<(), Error> {
+        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(Seconds(0.0).into());
+
+        let sensor_temperature = Rc::new(Cell::new(Celsius(0.0)));
+
+        let sensor_temperature_clone = sensor_temperature.clone();
+        let get_temperature = move || sensor_temperature_clone.get();
+        let node = setup_test_node(get_temperature, zx::Duration::from_millis(500));
+
+        let mut run = move |duration_ms| {
+            executor.set_fake_time(executor.now() + zx::Duration::from_millis(duration_ms));
+
+            let poll =
+                executor.run_until_stalled(&mut node.handle_message(&Message::ReadTemperature));
+            if let Poll::Ready(Ok(MessageReturn::ReadTemperature(temperature))) = poll {
+                temperature
+            } else {
+                panic!("Unexpected poll: {:?}", poll);
+            }
+        };
+
+        // When advancing longer than the cache duration, we'll always poll the sensor.
+        sensor_temperature.set(Celsius(20.0));
+        assert_eq!(run(1000), Celsius(20.0));
+        sensor_temperature.set(Celsius(21.0));
+        assert_eq!(run(1000), Celsius(21.0));
+
+        // If insufficient time has passed, we'll see the cached value.
+        sensor_temperature.set(Celsius(22.0));
+        assert_eq!(run(200), Celsius(21.0));
+        assert_eq!(run(200), Celsius(21.0));
+        assert_eq!(run(200), Celsius(22.0));
+
+        Ok(())
+    }
+
     /// Tests that an unsupported message is handled gracefully and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = setup_test_node(|| Celsius(0.0));
+        let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0));
         match node.handle_message(&Message::GetTotalCpuLoad).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -333,7 +413,8 @@ pub mod tests {
             "type": "TemperatureHandler",
             "name": "temperature",
             "config": {
-                "driver_path": "/dev/class/thermal/000"
+                "driver_path": "/dev/class/thermal/000",
+                "cache_duration_ms": 1000
             }
         });
         let _ = TemperatureHandlerBuilder::new_from_json(json_data, &HashMap::new());

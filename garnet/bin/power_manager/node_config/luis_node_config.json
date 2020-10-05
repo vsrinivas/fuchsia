@@ -24,7 +24,8 @@
     "type": "TemperatureHandler",
     "name": "temperature",
     "config": {
-      "driver_path": "/dev/sys/platform/05:04:a/thermal"
+      "driver_path": "/dev/sys/platform/05:04:a/thermal",
+      "cache_duration_ms": 50
     }
   },
   {
