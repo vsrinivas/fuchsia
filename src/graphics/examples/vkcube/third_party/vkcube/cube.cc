@@ -1104,8 +1104,8 @@ static void demo_prepare_texture_image(struct demo* demo, const char* filename,
     err = vkMapMemory(demo->device, tex_obj->mem, 0, tex_obj->mem_alloc.allocationSize, 0, &data);
     assert(!err);
 
-    if (!loadTexture(filename, reinterpret_cast<uint8_t*>(data), mem_reqs.size, &layout, &tex_width,
-                     &tex_height)) {
+    if (!loadTexture(filename, reinterpret_cast<uint8_t*>(data),
+                     static_cast<uint32_t>(mem_reqs.size), &layout, &tex_width, &tex_height)) {
       fprintf(stderr, "Error loading texture: %s\n", filename);
     }
 
@@ -1186,7 +1186,7 @@ static void demo_prepare_textures(struct demo* demo) {
 
     } else {
       /* Can't support VK_FORMAT_R8G8B8A8_UNORM !? */
-      assert(!"No support for R8G8B8A8_UNORM as texture image format");
+      assert(0 && "No support for R8G8B8A8_UNORM as texture image format");
     }
 
 #if USE_YUV_TEXTURE
@@ -2116,10 +2116,10 @@ static void demo_update_magma_one_frame(struct demo* demo) {
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = t1 - t0;
 
-    float fps = num_frames / (elapsed.count() / kMsPerSec);
+    float fps = static_cast<float>(num_frames / (elapsed.count() / kMsPerSec));
     printf("Framerate average for last %u frames: %f frames per second\n", num_frames, fps);
     // attempt to log once per second
-    num_frames = fps;
+    num_frames = static_cast<uint32_t>(fps);
     elapsed_frames = 0;
     t0 = t1;
   }
@@ -2976,8 +2976,8 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
       [demo](fuchsia::ui::views::ViewToken view_token,
              fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref) {
         auto resize_callback = [demo](float width, float height) {
-          demo->width = width;
-          demo->height = height;
+          demo->width = static_cast<uint32_t>(width);
+          demo->height = static_cast<uint32_t>(height);
           if (demo->prepared) {
             demo_resize(demo);
           } else {
@@ -3016,7 +3016,7 @@ static void demo_run_magma(struct demo* demo) {
   uint32_t elapsed_frames = 0;
   static const float kMsPerSec = std::chrono::milliseconds(std::chrono::seconds(1)).count();
 
-  float total_ms = 0;
+  double total_ms = 0;
   auto t0 = std::chrono::high_resolution_clock::now();
 
   while (!demo->quit) {
@@ -3028,11 +3028,11 @@ static void demo_run_magma(struct demo* demo) {
     t0 = t1;
 
     if (elapsed_frames && (elapsed_frames % num_frames) == 0) {
-      float fps = num_frames / (total_ms / kMsPerSec);
+      float fps = static_cast<float>(num_frames / (total_ms / kMsPerSec));
       printf("Framerate average for last %u frames: %f frames per second\n", num_frames, fps);
       total_ms = 0;
       // attempt to log once per second
-      num_frames = fps;
+      num_frames = static_cast<uint32_t>(fps);
       elapsed_frames = 0;
     }
 

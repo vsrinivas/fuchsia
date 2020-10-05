@@ -121,9 +121,6 @@ executable("vkcube-on-scenic-executable") {
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-reorder-init-list" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("vkcube-on-fb-executable") {
@@ -150,9 +147,6 @@ executable("vkcube-on-fb-executable") {
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-reorder-init-list" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("vkcube-skip-present-executable") {
@@ -182,7 +176,4 @@ executable("vkcube-skip-present-executable") {
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-reorder-init-list" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

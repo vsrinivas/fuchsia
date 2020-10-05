@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
   printf("buffer_size %lu iterations %lu copy rate %.2f MB/s\n", buffer_size, iterations,
-         (double)buffer_size * iterations / 1024 / 1024 / elapsed.count());
+         static_cast<double>(buffer_size * iterations) / 1024 / 1024 / elapsed.count());
 
   return 0;
 }

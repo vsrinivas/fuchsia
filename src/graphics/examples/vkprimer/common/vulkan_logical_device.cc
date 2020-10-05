@@ -46,7 +46,7 @@ bool VulkanLogicalDevice::Init() {
 
   if (enable_validation_) {
     VulkanLayer::AppendRequiredDeviceLayers(&layers_);
-    device_info.setEnabledLayerCount(layers_.size());
+    device_info.setEnabledLayerCount(static_cast<uint32_t>(layers_.size()));
   } else {
     device_info.enabledLayerCount = 0;
   }

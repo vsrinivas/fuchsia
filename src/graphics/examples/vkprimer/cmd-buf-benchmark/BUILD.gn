@@ -102,9 +102,6 @@ executable("bin") {
     "../common/shaders/frag.spv",
     "../common/shaders/vert.spv",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 copy("spirv_copy") {

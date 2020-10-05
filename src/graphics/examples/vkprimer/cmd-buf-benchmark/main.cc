@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
 bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
                    const VulkanCommandBuffers& command_buffers) {
   vk::SubmitInfo submit_info;
-  submit_info.commandBufferCount = command_buffers.command_buffers().size();
+  submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers.command_buffers().size());
   std::vector<vk::CommandBuffer> command_buffer(submit_info.commandBufferCount);
   for (uint32_t i = 0; i < submit_info.commandBufferCount; i++) {
     command_buffer[i] = command_buffers.command_buffers()[i].get();
