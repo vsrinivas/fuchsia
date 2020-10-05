@@ -6,6 +6,7 @@
 
 #include <asm.h>
 #include <arch/riscv64.h>
+#include <lib/syscalls/zx-syscall-numbers.h>
 
 #define REGOFF(x) ((x) * 8)
 
@@ -208,3 +209,89 @@ restore_iframe:
 
     sret
 END_FUNCTION(riscv64_exception_entry)
+
+//
+// Syscall args are in a0-a7 already.
+// pc is in t1 and needs to go in the next available register,
+// or the stack if the regs are full.
+//
+.macro syscall_dispatcher nargs, syscall
+.balign 16
+.if \nargs == 8
+    addi   sp, sp, -8
+    sd     t1, (sp)
+    jal    wrapper_\syscall
+    addi   sp, sp, 8
+.else
+    mv a\nargs, t1
+    jal    wrapper_\syscall
+.endif
+    j .Lpost_syscall
+.endm
+
+// riscv64_syscall_dispatcher receives an iframe pointer. Registers are parsed
+// using the following convention:
+//
+// a0-a7 - contains syscall arguments
+// t0    - contains syscall_num
+//
+FUNCTION(riscv64_syscall_dispatcher)
+    addi   sp, sp, -8
+    sd     ra, (sp)
+
+    ld     t1, REGOFF(2)(a0)
+    ld     t0, REGOFF(14)(a0)
+    ld     a7, REGOFF(13)(a0)
+    ld     a6, REGOFF(12)(a0)
+    ld     a5, REGOFF(11)(a0)
+    ld     a4, REGOFF(10)(a0)
+    ld     a3, REGOFF(9)(a0)
+    ld     a2, REGOFF(8)(a0)
+    ld     a1, REGOFF(7)(a0)
+    ld     a0, REGOFF(6)(a0)
+
+    // Verify syscall number and call the unknown handler if bad.
+    li     t2, ZX_SYS_COUNT
+    bge    t0, t2, .Lunknown_syscall
+
+    // Jump to the right syscall wrapper. The syscall table is an
+    // array of 16 byte aligned routines for each syscall. Each routine
+    // marshalls some arguments, jumps to the routine, and then branches
+    // back to .Lpost_syscall (see syscall_dispatcher macro above).
+    slli   t0, t0, 4
+    lla    t2, .Lsyscall_table
+    add    t2, t2, t0
+    jr     t2
+
+.Lunknown_syscall:
+    mv     a0, t0 // move the syscall number into the 0 arg slot
+    mv     a1, t1 // pc into arg 1
+    jal    unknown_syscall
+    // fall through
+
+// Adds the label for the jump table.
+.balign 16
+.Lsyscall_table:
+
+// One of these macros is invoked by kernel.inc for each syscall.
+// These are the direct kernel entry points.
+#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) \
+  syscall_dispatcher nargs, name
+#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+// These don't have kernel entry points.
+#define VDSO_SYSCALL(...)
+
+#include <lib/syscalls/kernel.inc>
+
+#undef KERNEL_SYSCALL
+#undef INTERNAL_SYSCALL
+#undef BLOCKING_SYSCALL
+#undef VDSO_SYSCALL
+
+.Lpost_syscall:
+    ld     ra, (sp)
+    addi   sp, sp, 8
+    ret
+
+END_FUNCTION(riscv64_syscall_dispatcher)
