@@ -198,6 +198,7 @@ if (target_cpu == "arm64") {
       "//src/media/lib/codec_impl",
       "//third_party/boringssl:crypto",
       "//third_party/googletest:gtest",
+      "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
     ]
     sources = [
       "tests/integration/bear_h264_hashes.h",

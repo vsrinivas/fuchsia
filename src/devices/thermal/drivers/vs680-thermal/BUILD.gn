@@ -66,6 +66,7 @@ test("vs680-thermal-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }
 

@@ -63,6 +63,7 @@ test("vs680-clk-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }
 

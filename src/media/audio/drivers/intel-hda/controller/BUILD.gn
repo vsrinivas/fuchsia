@@ -123,6 +123,7 @@ test("controller_test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/intel-hda",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }
 

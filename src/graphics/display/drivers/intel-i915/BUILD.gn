@@ -93,6 +93,7 @@ test("intel-i915-test") {
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
     "//zircon/system/ulib/region-alloc",
   ]
 }

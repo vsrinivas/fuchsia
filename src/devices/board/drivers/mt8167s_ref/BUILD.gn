@@ -125,6 +125,7 @@ test("mt8167s-ref-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }
 

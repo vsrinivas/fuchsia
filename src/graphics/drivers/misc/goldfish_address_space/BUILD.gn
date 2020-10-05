@@ -62,6 +62,7 @@ test("goldfish-address-space-test") {
            "//sdk/banjo/ddk.protocol.pci:ddk.protocol.pci_mock",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake_ddk",
+           "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
            "//zircon/public/lib/mock-function",
            "//zircon/public/lib/sync",
            "//zircon/public/lib/zircon-internal",

@@ -11,7 +11,10 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
 
   sources = [ "mt8167-test.cc" ]
 
-  deps = [ "../../mtk:driver_sources" ]
+  deps = [
+    "../../mtk:driver_sources",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+  ]
 
   public_deps = [
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",

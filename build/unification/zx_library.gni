@@ -347,7 +347,6 @@ template("zx_library") {
       "//zircon/system/ulib/fidl:fidl",
       "//zircon/system/ulib/fidl:fidl-llcpp",
       "//zircon/system/ulib/fidl:fidl_base",
-      "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
       "//zircon/system/ulib/zircon:zircon-headers",
     ]
     _target_label = get_label_info(":$main_target_name", "label_no_toolchain")

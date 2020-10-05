@@ -105,7 +105,10 @@ test("xhci-unittest") {
     "xhci-enumeration-test.cc",
     "xhci-enumeration.cc",
   ]
-  deps = [ ":test-libs" ]
+  deps = [
+    ":test-libs",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+  ]
 
   # TODO(fxbug.dev/54318): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
