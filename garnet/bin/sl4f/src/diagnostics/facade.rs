@@ -9,6 +9,10 @@ use fuchsia_component::client;
 use fuchsia_inspect_contrib::reader::{ArchiveReader, DataType};
 use serde_json::Value;
 
+// Give components 5 minutes to respond with their Inspect data in case the system is under heavy
+// load. This can happen especially when running unoptimized on emulators.
+const BATCH_RETRIEVAL_TIMEOUT_SECONDS: i64 = 300;
+
 /// Facade providing access to diagnostics interface.
 #[derive(Debug)]
 pub struct DiagnosticsFacade {}
@@ -26,7 +30,7 @@ impl DiagnosticsFacade {
             .retry_if_empty(false)
             .with_archive(proxy)
             .add_selectors(args.selectors.into_iter())
-            .with_batch_retrieval_timeout_seconds(60)
+            .with_batch_retrieval_timeout_seconds(BATCH_RETRIEVAL_TIMEOUT_SECONDS)
             .snapshot_raw(DataType::Inspect)
             .await
     }
