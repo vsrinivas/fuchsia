@@ -8,8 +8,9 @@
 
 use {
     fuchsia_runtime::vmar_root_self,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, AsHandleRef},
     shared_buffer::SharedBuffer,
+    std::ffi::CString,
     std::ops::{Deref, DerefMut},
 };
 
@@ -44,6 +45,22 @@ impl Mapping {
     /// The resulting VMO will not be resizeable.
     pub fn allocate(size: usize) -> Result<(Self, zx::Vmo), zx::Status> {
         let vmo = zx::Vmo::create(size as u64)?;
+        let flags = zx::VmarFlags::PERM_READ
+            | zx::VmarFlags::PERM_WRITE
+            | zx::VmarFlags::MAP_RANGE
+            | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
+        let mapping = Self::create_from_vmo(&vmo, size, flags)?;
+        Ok((mapping, vmo))
+    }
+
+    /// Create a `Mapping` and map it in the root address space.
+    /// Returns the VMO that was mapped.
+    ///
+    /// The resulting VMO will not be resizeable.
+    pub fn allocate_with_name(size: usize, name: &str) -> Result<(Self, zx::Vmo), zx::Status> {
+        let cname = CString::new(name).map_err(|_e| Err(zx::Status::INVALID_ARGS))?;
+        let vmo = zx::Vmo::create(size as u64)?;
+        vmo.set_name(&cname)?;
         let flags = zx::VmarFlags::PERM_READ
             | zx::VmarFlags::PERM_WRITE
             | zx::VmarFlags::MAP_RANGE
@@ -130,6 +147,16 @@ mod tests {
             let mapping = Mapping::create_from_vmo(&vmo, size, flags).unwrap();
             assert_eq!(size, mapping.len());
         }
+    }
+
+    #[test]
+    fn test_create_with_name() {
+        let size = PAGE_SIZE;
+        let (mapping, vmo) = Mapping::allocate_with_name(size, "TestName").unwrap();
+        assert_eq!(size, mapping.len());
+        assert_eq!(CString::new("TestName").unwrap(), vmo.get_name().expect("Has name"));
+        let res = Mapping::allocate_with_name(size, "Invalid\0TestName");
+        assert_eq!(zx::Status::INVALID_ARGS, res.unwrap_err());
     }
 
     #[test]

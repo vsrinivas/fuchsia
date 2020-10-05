@@ -34,6 +34,14 @@ TEST(Inspect, CreateDeleteActive) {
   EXPECT_TRUE(bool(child));
 }
 
+TEST(Inspect, VmoName) {
+  char name[ZX_MAX_NAME_LEN];
+  auto inspector = std::make_unique<Inspector>();
+  auto state = inspect::internal::GetState(inspector.get());
+  EXPECT_OK(state->GetVmo().get_property(ZX_PROP_NAME, name, sizeof(name)));
+  EXPECT_EQ(std::string(name), "InspectHeap");
+}
+
 TEST(Inspect, CreateChildren) {
   auto inspector = std::make_unique<Inspector>();
   Node child = inspector->GetRoot().CreateChild("child");

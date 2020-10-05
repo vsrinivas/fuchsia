@@ -252,7 +252,7 @@ impl Inspector {
             size =
                 (1 + size / constants::MINIMUM_VMO_SIZE_BYTES) * constants::MINIMUM_VMO_SIZE_BYTES;
         }
-        let (mapping, vmo) = Mapping::allocate(size)
+        let (mapping, vmo) = Mapping::allocate_with_name(size, "InspectHeap")
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Arc::new(mapping))?;
         let state = State::create(heap)?;
@@ -1177,8 +1177,10 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_component::client,
         fuchsia_component::server::ServiceObj,
+        fuchsia_zircon::AsHandleRef,
         glob::glob,
         mapped_vmo::Mapping,
+        std::ffi::CString,
     };
 
     const TEST_COMPONENT_CMX: &str = "inspect_test_component.cmx";
@@ -1246,6 +1248,10 @@ mod tests {
     fn inspector_new_with_size() {
         let test_object = Inspector::new_with_size(8192);
         assert_eq!(test_object.vmo.as_ref().unwrap().get_size().unwrap(), 8192);
+        assert_eq!(
+            CString::new("InspectHeap").unwrap(),
+            test_object.vmo.as_ref().unwrap().get_name().expect("Has name")
+        );
 
         // If size is not a multiple of 4096, it'll be rounded up.
         let test_object = Inspector::new_with_size(10000);
@@ -1263,6 +1269,7 @@ mod tests {
         assert_eq!(vmo.get_size().unwrap(), 4096);
         let inner = root_node.inner.inner_ref().unwrap();
         assert_eq!(inner.block_index, 0);
+        assert_eq!(CString::new("InspectHeap").unwrap(), vmo.get_name().expect("Has name"));
     }
 
     #[test]

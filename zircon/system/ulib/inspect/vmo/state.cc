@@ -168,6 +168,8 @@ std::shared_ptr<State> State::CreateWithSize(size_t size) {
   if (size == 0 || ZX_OK != zx::vmo::create(size, 0, &vmo)) {
     return nullptr;
   }
+  static const char kName[] = "InspectHeap";
+  vmo.set_property(ZX_PROP_NAME, kName, strlen(kName));
   return State::Create(std::make_unique<Heap>(std::move(vmo)));
 }
 
