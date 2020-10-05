@@ -5,7 +5,7 @@
 """
 Example usage:
 $ fx set ...
-$ scripts/suppress_errors.py\
+$ scripts/gn/suppress_errors.py\
 --error=-Wconversion
 --config="//build/config:Wno-conversion"
 """
