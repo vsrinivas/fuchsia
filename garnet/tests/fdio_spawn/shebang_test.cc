@@ -17,8 +17,8 @@
 
 namespace {
 
-static constexpr char kEchoArgumentsBin[] = "/pkg/bin/echo_arguments.sh";
 static constexpr char kUseScriptAsInterpreterBin[] = "/pkg/bin/use_script_as_interpreter";
+static constexpr char kShebangEchoArgumentsBin[] = "/pkg/bin/shebang_echo_arguments";
 static constexpr char kShebangInfiniteLoopBin[] = "/pkg/bin/shebang_infinite_loop";
 static constexpr char kAttemptToUseShellOutsidePackageBin[] =
     "/pkg/bin/attempt_use_shell_outside_package.sh";
@@ -62,9 +62,11 @@ class ShebangTest : public ::testing::Test {
 
 // Should be able to spawn a shell script, assuming it uses a shell that is packaged
 TEST_F(ShebangTest, SpawnShellScriptPath) {
-  const char* path = kEchoArgumentsBin;
+  const char* path = kShebangEchoArgumentsBin;
   const char* argv[] = {path, "original_arg1", "original_arg2", nullptr};
-  const char* expected = "/pkg/bin/echo_arguments.sh\noriginal_arg1\noriginal_arg2\n";
+  const char* expected =
+      "/pkg/bin/echo_arguments_bin\n/pkg/bin/shebang_echo_arguments\n"
+      "original_arg1\noriginal_arg2\n";
   RunTest(path, argv, expected);
 }
 
@@ -73,10 +75,11 @@ TEST_F(ShebangTest, SpawnScriptThatUsesOtherScript) {
   const char* path = kUseScriptAsInterpreterBin;
   const char* argv[] = {path, "original_arg1", "original_arg2", nullptr};
 
-  // Note that the interpreter argument in use_script_as_interpreter.sh becomes a single argument
+  // Note that the interpreter argument in use_script_as_interpreter becomes a single argument
   // containing a space.
   const char* expected =
-      "/pkg/bin/echo_arguments.sh\nextra_arg1 extra_arg2\n/pkg/bin/use_script_as_interpreter\n"
+      "/pkg/bin/echo_arguments_bin\n/pkg/bin/shebang_echo_arguments\n"
+      "extra_arg1 extra_arg2\n/pkg/bin/use_script_as_interpreter\n"
       "original_arg1\noriginal_arg2\n";
   RunTest(path, argv, expected);
 }

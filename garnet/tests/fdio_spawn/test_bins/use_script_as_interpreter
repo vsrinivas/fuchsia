@@ -1,1 +1,1 @@
-#!/pkg/bin/echo_arguments.sh extra_arg1 extra_arg2
+#!/pkg/bin/shebang_echo_arguments extra_arg1 extra_arg2

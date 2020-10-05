@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/shebang_echo_arguments"
+    }
+}

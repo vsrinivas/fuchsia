@@ -84,6 +84,18 @@ fuchsia_component("return-arg-test-util-component") {
   deps = [ ":return-arg-test-util-bin" ]
 }
 
+# A simple program that prints the arguments with newline delimiter.
+executable("echo-arguments-bin") {
+  output_name = "echo_arguments_bin"
+  sources = [ "echo_arguments.cc" ]
+}
+
+fuchsia_component("echo-arguments-bin-component") {
+  testonly = true
+  manifest = "meta/echo-arguments-bin-component.cmx"
+  deps = [ ":echo-arguments-bin" ]
+}
+
 # The 'binaries' in the components below are really just text files with either
 # a "#!resolve" or "#!" directive.
 resource("resolve-once-bin") {
@@ -130,15 +142,15 @@ fuchsia_component("resolve-to-not-found-component") {
   deps = [ ":resolve-to-not-found-bin" ]
 }
 
-resource("echo-arguments-script") {
-  sources = [ "test_bins/echo_arguments.sh" ]
-  outputs = [ "bin/echo_arguments.sh" ]
+resource("shebang-echo-arguments-bin") {
+  sources = [ "test_bins/shebang_echo_arguments" ]
+  outputs = [ "bin/shebang_echo_arguments" ]
 }
 
-fuchsia_component("echo-arguments-component") {
+fuchsia_component("shebang-echo-arguments-component") {
   testonly = true
-  manifest = "meta/echo-arguments-component.cmx"
-  deps = [ ":echo-arguments-script" ]
+  manifest = "meta/shebang-echo-arguments-component.cmx"
+  deps = [ ":shebang-echo-arguments-bin" ]
 }
 
 resource("use-script-as-interpreter-bin") {
@@ -212,20 +224,20 @@ fuchsia_test_package("fdio-spawn-tests") {
 
   deps = [
     ":attempt-use-shell-outside-package-component",
-    ":echo-arguments-component",
+    ":echo-arguments-bin-component",
     ":fake-launcher-util-component",
     ":resolve-infinite-loop-component",
     ":resolve-once-component",
     ":resolve-to-not-found-component",
     ":resolve-twice-component",
     ":return-arg-test-util-component",
+    ":shebang-echo-arguments-component",
     ":shebang-infinite-loop-component",
     ":spawn-child-util-component",
     ":too-long-shebang-component",
     ":use-resolve-from-shebang-component",
     ":use-script-as-interpreter-component",
     ":use-shebang-from-resolve-component",
-    "//zircon/third_party/uapp/dash",
   ]
 }
 
