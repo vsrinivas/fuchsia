@@ -41,7 +41,7 @@ pub struct SetCommand {
     /// value to associate with name
     pub value: String,
 
-    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User", short = 'l')]
+    #[argh(option, default = "ConfigLevel::User", short = 'l')]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
@@ -113,7 +113,7 @@ pub struct RemoveCommand {
     /// name of the config property
     pub name: String,
 
-    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User", short = 'l')]
+    #[argh(option, default = "ConfigLevel::User", short = 'l')]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
@@ -145,7 +145,7 @@ pub struct AddCommand {
     /// value to add to name
     pub value: String,
 
-    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User", short = 'l')]
+    #[argh(option, default = "ConfigLevel::User", short = 'l')]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
@@ -178,7 +178,7 @@ pub struct EnvSetCommand {
     /// path to the config file for the configruation level provided
     pub file: String,
 
-    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User", short = 'l')]
+    #[argh(option, default = "ConfigLevel::User", short = 'l')]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
     pub level: ConfigLevel,
 
@@ -191,20 +191,9 @@ pub struct EnvSetCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get", description = "list environment for a given level")]
 pub struct EnvGetCommand {
-    #[argh(positional, from_str_fn(parse_level))]
+    #[argh(positional)]
     /// config level. Possible values are "user", "build", "global".
     pub level: Option<ConfigLevel>,
-}
-
-fn parse_level(value: &str) -> Result<ConfigLevel, String> {
-    match value {
-        "u" | "user" => Ok(ConfigLevel::User),
-        "b" | "build" => Ok(ConfigLevel::Build),
-        "g" | "global" => Ok(ConfigLevel::Global),
-        _ => Err(String::from(
-            "Unrecognized value. Possible values are \"user\",\"build\",\"global\".",
-        )),
-    }
 }
 
 fn parse_mapping_mode(value: &str) -> Result<MappingMode, String> {

@@ -54,6 +54,19 @@ pub enum ConfigLevel {
     Runtime,
 }
 
+impl argh::FromArgValue for ConfigLevel {
+    fn from_arg_value(val: &str) -> Result<Self, String> {
+        match val {
+            "u" | "user" => Ok(ConfigLevel::User),
+            "b" | "build" => Ok(ConfigLevel::Build),
+            "g" | "global" => Ok(ConfigLevel::Global),
+            _ => Err(String::from(
+                "Unrecognized value. Possible values are \"user\",\"build\",\"global\".",
+            )),
+        }
+    }
+}
+
 pub async fn raw<'a, T, U>(query: U) -> std::result::Result<T, T::Error>
 where
     T: TryFrom<ConfigValue> + ValueStrategy,
@@ -170,7 +183,7 @@ fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result
             if let None = environment.global {
                 bail!(
                     "Global configuration not set. Use 'ffx config env set' command \
-                    to setup the environment."
+                     to setup the environment."
                 );
             }
         }
@@ -178,14 +191,14 @@ fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result
             Some(b_dir) => match environment.build {
                 None => bail!(
                     "Build configuration not set for '{}'. Use 'ffx config env set' command \
-                    to setup the environment.",
+                     to setup the environment.",
                     b_dir
                 ),
                 Some(b) => {
                     if let None = b.get(b_dir) {
                         bail!(
                             "Build configuration not set for '{}'. Use 'ffx config env \
-                            set' command to setup the environment.",
+                             set' command to setup the environment.",
                             b_dir
                         );
                     }
