@@ -198,14 +198,14 @@ impl ClientSme {
         cfg: ClientConfig,
         info: DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-        inspect_hash_key: [u8; 8],
+        inspect_hasher: wlan_inspect::InspectHasher,
         is_softmac: bool,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
         let (mut timer, time_stream) = timer::create_timer();
-        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, inspect_hash_key));
+        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, inspect_hasher));
         iface_tree_holder.add_iface_subtree(inspect.clone());
         timer.schedule(event::InspectPulseCheck);
 
@@ -733,7 +733,7 @@ mod tests {
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
-            DUMMY_HASH_KEY,
+            wlan_inspect::InspectHasher::new(DUMMY_HASH_KEY),
             true, // is_softmac
         );
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
@@ -1329,7 +1329,7 @@ mod tests {
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
-            DUMMY_HASH_KEY,
+            wlan_inspect::InspectHasher::new(DUMMY_HASH_KEY),
             true, // is_softmac
         )
     }

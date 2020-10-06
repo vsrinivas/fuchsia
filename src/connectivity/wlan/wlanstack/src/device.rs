@@ -147,7 +147,7 @@ pub fn create_and_serve_sme(
         stats_reqs,
         cobalt_sender,
         iface_tree_holder.clone(),
-        inspect_tree.hash_key.clone(),
+        inspect_tree.hasher.clone(),
         shutdown_receiver,
     );
 
@@ -194,7 +194,7 @@ fn create_sme<S>(
     stats_requests: S,
     cobalt_sender: CobaltSender,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-    inspect_hash_key: [u8; 8],
+    inspect_hasher: wlan_inspect::InspectHasher,
     mut shutdown_receiver: mpsc::Receiver<()>,
 ) -> (SmeServer, impl Future<Output = Result<(), Error>>)
 where
@@ -213,7 +213,7 @@ where
                 stats_requests,
                 cobalt_sender,
                 iface_tree_holder,
-                inspect_hash_key,
+                inspect_hasher,
             );
             (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
         }

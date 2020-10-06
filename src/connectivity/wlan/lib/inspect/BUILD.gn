@@ -14,12 +14,16 @@ rustc_library("wlan-inspect") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/mundane",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:parking_lot",
   ]
 
   sources = [
+    "src/hasher.rs",
     "src/iface_mgr.rs",
     "src/lib.rs",
     "src/wrappers.rs",

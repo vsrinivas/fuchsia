@@ -7,17 +7,12 @@ use {
     fuchsia_inspect::{BoolProperty, IntProperty, Node, Property, StringProperty, UintProperty},
     fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty},
     fuchsia_zircon as zx,
-    mundane::{
-        hash::{Digest, Sha256},
-        hmac::hmac,
-    },
     parking_lot::Mutex,
     wlan_common::{
         format::MacFmt,
         ie::{self, wsc},
-        mac::MacAddr,
     },
-    wlan_inspect::iface_mgr::IfaceTree,
+    wlan_inspect::{IfaceTree, InspectHasher},
 };
 
 /// These limits are set to capture roughly 5 to 10 recent connection attempts. An average
@@ -51,7 +46,7 @@ pub struct SmeTree {
 }
 
 impl SmeTree {
-    pub fn new(node: &Node, hash_key: [u8; 8]) -> Self {
+    pub fn new(node: &Node, hasher: InspectHasher) -> Self {
         let state_events =
             BoundedListNode::new(node.create_child("state_events"), STATE_EVENTS_LIMIT);
         let rsn_events = BoundedListNode::new(node.create_child("rsn_events"), RSN_EVENTS_LIMIT);
@@ -63,29 +58,12 @@ impl SmeTree {
             rsn_events: Mutex::new(rsn_events),
             join_scan_events: Mutex::new(join_scan_events),
             last_pulse: Mutex::new(pulse),
-            hasher: InspectHasher { hash_key },
+            hasher,
         }
     }
 
     pub fn update_pulse(&self, new_status: SmeStatus) {
         self.last_pulse.lock().update(new_status, &self.hasher)
-    }
-}
-
-/// Hasher used to hash sensitive information, preserving user privacy.
-pub struct InspectHasher {
-    hash_key: [u8; 8],
-}
-
-impl InspectHasher {
-    pub fn hash(&self, bytes: &[u8]) -> String {
-        hex::encode(hmac::<Sha256>(&self.hash_key, bytes).bytes())
-    }
-
-    pub fn hash_mac_addr(&self, addr: MacAddr) -> String {
-        addr.to_mac_str_partial_hashed(|bytes| {
-            hex::encode(hmac::<Sha256>(&self.hash_key, bytes).bytes())
-        })
     }
 }
 
@@ -409,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_inspect_update_pulse() {
-        let hasher = InspectHasher { hash_key: [7; 8] };
+        let hasher = InspectHasher::new([7; 8]);
         let inspector = Inspector::new();
         let root = inspector.root();
         let mut pulse = PulseNode::new(root.create_child("last_pulse"));

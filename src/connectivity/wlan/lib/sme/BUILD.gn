@@ -33,7 +33,6 @@ rustc_library("wlan-sme") {
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:nom",

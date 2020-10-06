@@ -2124,13 +2124,13 @@ mod tests {
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
             let inspector = Inspector::new();
-            let inspect_hash_key = [88, 77, 66, 55, 44, 33, 22, 11];
+            let inspect_hasher = wlan_inspect::InspectHasher::new([88, 77, 66, 55, 44, 33, 22, 11]);
             let context = Context {
                 device_info: Arc::new(fake_device_info()),
                 mlme_sink: MlmeSink::new(mlme_sink),
                 timer,
                 att_id: 0,
-                inspect: Arc::new(inspect::SmeTree::new(inspector.root(), inspect_hash_key)),
+                inspect: Arc::new(inspect::SmeTree::new(inspector.root(), inspect_hasher)),
                 info: InfoReporter::new(InfoSink::new(info_sink)),
                 is_softmac: true,
             };
