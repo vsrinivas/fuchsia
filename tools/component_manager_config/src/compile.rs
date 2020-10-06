@@ -29,6 +29,7 @@ struct Config {
     maintain_utc_clock: Option<bool>,
     num_threads: Option<u32>,
     builtin_pkg_resolver: Option<BuiltinPkgResolver>,
+    out_dir_contents: Option<OutDirContents>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -57,6 +58,20 @@ pub struct JobPolicyAllowlists {
     ambient_mark_vmo_exec: Option<Vec<String>>,
 
     main_process_critical: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(u32)]
+pub enum OutDirContents {
+    None,
+    Hub,
+    Svc,
+}
+
+impl std::default::Default for OutDirContents {
+    fn default() -> Self {
+        OutDirContents::None
+    }
 }
 
 impl TryFrom<Config> for component_internal::Config {
@@ -95,6 +110,7 @@ impl TryFrom<Config> for component_internal::Config {
                 .map(|c| cml::translate::translate_capabilities(c))
                 .transpose()?,
             num_threads: config.num_threads,
+            out_dir_contents: Some(translate_out_dir_contents(config.out_dir_contents)),
         })
     }
 }
@@ -122,6 +138,19 @@ fn translate_job_policy(
             main_process_critical: p.main_process_critical,
         },
     )
+}
+
+fn translate_out_dir_contents(
+    out_dir_contents: Option<OutDirContents>,
+) -> component_internal::OutDirContents {
+    match out_dir_contents {
+        Some(target) => match target {
+            OutDirContents::None => component_internal::OutDirContents::None,
+            OutDirContents::Hub => component_internal::OutDirContents::Hub,
+            OutDirContents::Svc => component_internal::OutDirContents::Svc,
+        },
+        None => component_internal::OutDirContents::None,
+    }
 }
 
 macro_rules! extend_if_unset {
@@ -162,6 +191,7 @@ impl Config {
         extend_if_unset!(self, another, namespace_capabilities);
         extend_if_unset!(self, another, num_threads);
         extend_if_unset!(self, another, builtin_pkg_resolver);
+        extend_if_unset!(self, another, out_dir_contents);
         Ok(self)
     }
 
@@ -277,6 +307,7 @@ mod tests {
                 },
             ],
             num_threads: 321,
+            out_dir_contents: "Svc"
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -305,6 +336,7 @@ mod tests {
                     }),
                 ]),
                 num_threads: Some(321),
+                out_dir_contents: Some(component_internal::OutDirContents::Svc),
             }
         );
     }

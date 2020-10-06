@@ -51,6 +51,10 @@ table Config {
 
     /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
     8: BuiltinPkgResolver builtin_pkg_resolver;
+
+    /// Determine what content to expose through the component manager's
+    /// outgoing directory. If no value is set, this defaults to NONE.
+    9: OutDirContents out_dir_contents;
 };
 
 /// The builtin resolver to use, if any.
@@ -90,4 +94,17 @@ table JobPolicyAllowlists {
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their CML's `program` section and must be using the ELF runner.
     2: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE main_process_critical;
+};
+
+/// Determine what content to expose through component manager's outgoing
+/// directory.
+enum OutDirContents : uint8 {
+    /// Don't expose anything through the outgoing directory.
+    NONE = 1;
+
+    /// Expose component manager's `hub` directory.
+    HUB = 2;
+
+    /// Expose root component's `expose/svc`.
+    SVC = 3;
 };

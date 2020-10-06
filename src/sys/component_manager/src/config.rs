@@ -9,7 +9,9 @@ use {
     },
     anyhow::{format_err, Context, Error},
     cm_rust::FidlIntoNative,
-    fidl_fuchsia_component_internal::{self as component_internal, BuiltinPkgResolver},
+    fidl_fuchsia_component_internal::{
+        self as component_internal, BuiltinPkgResolver, OutDirContents,
+    },
     fidl_fuchsia_sys2 as fsys,
     std::{convert::TryFrom, path::PathBuf, sync::Weak},
     thiserror::Error,
@@ -59,6 +61,9 @@ pub struct RuntimeConfig {
 
     /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
     pub builtin_pkg_resolver: BuiltinPkgResolver,
+
+    /// Determine which directory to bind ServiceFs to.
+    pub out_dir_contents: OutDirContents,
 }
 /// Runtime security policy.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -99,6 +104,7 @@ impl Default for RuntimeConfig {
             num_threads: 1,
             namespace_capabilities: vec![],
             builtin_pkg_resolver: BuiltinPkgResolver::None,
+            out_dir_contents: OutDirContents::None,
         }
     }
 }
@@ -171,6 +177,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
         let list_children_batch_size =
             as_usize_or_default(config.list_children_batch_size, default.list_children_batch_size);
         let num_threads = as_usize_or_default(config.num_threads, default.num_threads);
+
         Ok(RuntimeConfig {
             list_children_batch_size,
             security_policy: SecurityPolicy { job_policy },
@@ -186,6 +193,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             builtin_pkg_resolver: config
                 .builtin_pkg_resolver
                 .unwrap_or(default.builtin_pkg_resolver),
+            out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
         })
     }
 }
@@ -290,6 +298,7 @@ mod tests {
             }),
             num_threads: None,
             namespace_capabilities: None,
+            out_dir_contents: None,
         };
 
         assert_matches!(RuntimeConfig::try_from(config), Err(_));
@@ -305,6 +314,7 @@ mod tests {
             num_threads: None,
             namespace_capabilities: None,
             builtin_pkg_resolver: None,
+            out_dir_contents: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
@@ -320,6 +330,7 @@ mod tests {
             }),
             num_threads: Some(10),
             namespace_capabilities: None,
+            out_dir_contents: None,
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
             maintain_utc_clock: false, use_builtin_process_launcher:true,
@@ -351,6 +362,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                     }),
                 ]),
+                out_dir_contents: Some(component_internal::OutDirContents::Svc),
             },
             RuntimeConfig {
                 debug: true,
@@ -381,6 +393,7 @@ mod tests {
                     }),
                 ],
                 builtin_pkg_resolver: BuiltinPkgResolver::None,
+                out_dir_contents: OutDirContents::Svc,
             }
         ),
     }
@@ -435,6 +448,7 @@ mod tests {
             use_builtin_process_launcher: None,
             num_threads: None,
             builtin_pkg_resolver: None,
+            out_dir_contents: None,
         };
         install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 
