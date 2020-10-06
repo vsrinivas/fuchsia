@@ -65,16 +65,21 @@ static_assert(sizeof(AcpiSdtHeader) == 36);
 // Root System Description Table (RSDT) and Extended System Description Table (XSDT)
 //
 // Reference: ACPI v6.3 Section 5.2.7 -- 5.2.8.
-struct AcpiRsdtXsdt {
+struct AcpiRsdt {
   AcpiSdtHeader header;
 
-  // array of uint32s or uint64 addresses are placed immediately afterwards
-  union {
-    uint32_t addr32[0];
-    uint64_t addr64[0];
-  };
+  // array of uint32s are placed immediately afterwards
+  uint32_t addr32[0];
 } __PACKED;
-static_assert(sizeof(AcpiRsdtXsdt) == 36);
+static_assert(sizeof(AcpiRsdt) == 36);
+
+struct AcpiXsdt {
+  AcpiSdtHeader header;
+
+  // array of uint64s are placed immediately afterwards
+  uint32_t addr64[0];
+} __PACKED;
+static_assert(sizeof(AcpiXsdt) == 36);
 
 // ACPI Generic Address
 //
