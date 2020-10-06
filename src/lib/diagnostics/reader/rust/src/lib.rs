@@ -11,11 +11,16 @@ use fidl_fuchsia_diagnostics::{
     ClientSelectorConfiguration, Format, FormattedContent, SelectorArgument, StreamMode,
     StreamParameters,
 };
-use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+use fuchsia_async::{self as fasync, DurationExt, Task, TimeoutExt};
 use fuchsia_component::client;
 use fuchsia_zircon::{Duration, DurationNum};
-use futures::sink::{Sink, SinkExt};
+use futures::{channel::mpsc, prelude::*, sink::SinkExt};
+use pin_project::pin_project;
 use serde_json::Value as JsonValue;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 pub use diagnostics_data::{Inspect, Lifecycle, Logs};
 pub use fidl_fuchsia_diagnostics::DataType;
@@ -166,6 +171,16 @@ impl ArchiveReader {
         Ok(serde_json::from_value(raw_json)?)
     }
 
+    pub fn snapshot_then_subscribe<M>(
+        &self,
+    ) -> Result<(Subscription<M>, mpsc::Receiver<Error>), Error>
+    where
+        M: DiagnosticsData + 'static,
+    {
+        let iterator = self.batch_iterator(M::DATA_TYPE, StreamMode::SnapshotThenSubscribe)?;
+        Ok(Subscription::new(iterator))
+    }
+
     /// Use `snapshot::<Inspect>()` instead for identical functionality.
     pub async fn get(self) -> Result<Vec<InspectData>, Error> {
         // TODO delete after internal CL 238572 lands
@@ -188,7 +203,11 @@ impl ArchiveReader {
         loop {
             let mut result = Vec::new();
             let iterator = self.batch_iterator(data_type, StreamMode::Snapshot)?;
-            drain_batch_iterator(iterator, &mut result).await?;
+            drain_batch_iterator(iterator, |d| {
+                result.push(d);
+                async {}
+            })
+            .await?;
 
             if result.len() < self.minimum_schema_count && self.should_retry {
                 fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
@@ -234,13 +253,12 @@ impl ArchiveReader {
     }
 }
 
-async fn drain_batch_iterator<S, E>(
+async fn drain_batch_iterator<Fut>(
     iterator: BatchIteratorProxy,
-    mut results: S,
+    mut send: impl FnMut(serde_json::Value) -> Fut,
 ) -> Result<(), Error>
 where
-    S: Sink<JsonValue, Error = E> + Unpin,
-    E: std::error::Error + Send + Sync + 'static,
+    Fut: Future<Output = ()>,
 {
     loop {
         let next_batch = iterator.get_next().await.context("getting batch")?.unwrap();
@@ -258,11 +276,11 @@ where
 
                     match output {
                         output @ JsonValue::Object(_) => {
-                            results.send(output).await.context("sending result")?;
+                            send(output).await;
                         }
                         JsonValue::Array(values) => {
                             for value in values {
-                                results.send(value).await.context("sending result")?;
+                                send(value).await;
                             }
                         }
                         _ => unreachable!(
@@ -273,6 +291,59 @@ where
                 _ => unreachable!("JSON was requested, no other data type should be received"),
             }
         }
+    }
+}
+
+#[pin_project]
+pub struct Subscription<M: DiagnosticsData> {
+    #[pin]
+    recv: mpsc::Receiver<Data<M>>,
+    _drain_task: Task<()>,
+}
+
+const DATA_CHANNEL_SIZE: usize = 32;
+const ERROR_CHANNEL_SIZE: usize = 2;
+
+impl<M> Subscription<M>
+where
+    M: DiagnosticsData + 'static,
+{
+    fn new(iterator: BatchIteratorProxy) -> (Self, mpsc::Receiver<Error>) {
+        let (send, recv) = mpsc::channel(DATA_CHANNEL_SIZE);
+        let (send_error, errors) = mpsc::channel(ERROR_CHANNEL_SIZE);
+        let mut send_drain_error = send_error.clone();
+
+        let _drain_task = Task::spawn(async move {
+            let drain_result = drain_batch_iterator(iterator, |d| {
+                let mut send = send.clone();
+                let mut send_error = send_error.clone();
+                async move {
+                    match serde_json::from_value(d) {
+                        Ok(d) => send.send(d).await.unwrap(),
+                        Err(e) => send_error.send(e.into()).await.unwrap(),
+                    }
+                }
+            })
+            .await;
+
+            if let Err(e) = drain_result {
+                send_drain_error.send(e).await.unwrap();
+            }
+        });
+
+        (Subscription { recv, _drain_task }, errors)
+    }
+}
+
+impl<M> Stream for Subscription<M>
+where
+    M: DiagnosticsData + 'static,
+{
+    type Item = Data<M>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+        this.recv.poll_next(cx)
     }
 }
 

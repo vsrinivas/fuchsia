@@ -42,17 +42,17 @@ pub struct FormattedContentBatcher<C> {
     stats: Arc<DiagnosticsServerStats>,
 }
 
-impl<I, E> FormattedContentBatcher<futures::stream::Chunks<I>>
+impl<I, E> FormattedContentBatcher<futures::stream::ReadyChunks<I>>
 where
     I: Stream<Item = Result<JsonString, E>>,
     E: Into<ServerError>,
 {
     pub fn new(items: I, stats: Arc<DiagnosticsServerStats>) -> Self {
-        Self { items: items.chunks(MAXIMUM_ENTRIES_PER_BATCH as _), stats }
+        Self { items: items.ready_chunks(MAXIMUM_ENTRIES_PER_BATCH as _), stats }
     }
 }
 
-impl<I, T, E> Stream for FormattedContentBatcher<futures::stream::Chunks<I>>
+impl<I, T, E> Stream for FormattedContentBatcher<futures::stream::ReadyChunks<I>>
 where
     I: Stream<Item = Result<T, E>>,
     T: TryInto<FormattedContent, Error = ServerError>,
@@ -144,13 +144,18 @@ where
             self.stats.add_result();
         }
 
+        let mut items_is_pending = false;
         loop {
             let item = match self.items.poll_next_unpin(cx) {
                 Poll::Ready(Some(item)) => item,
-                Poll::Ready(None) | Poll::Pending => break,
+                Poll::Ready(None) => break,
+                Poll::Pending => {
+                    items_is_pending = true;
+                    break;
+                }
             };
 
-            let item = serde_json::to_string_pretty(&*item)?;
+            let item = serde_json::to_string(&*item)?;
             if item.len() >= self.max_packet_size {
                 warn!(
                     "serializing oversize item into packet (limit={} actual={})",
@@ -160,8 +165,8 @@ where
             }
 
             let is_first = batch.len() == 1;
-            // items after the first will have a comma *and* ending array bracket
-            let pending_len = item.len() + if is_first { 1 } else { 2 };
+            // items after the first will have a comma *and* newline *and* ending array bracket
+            let pending_len = item.len() + if is_first { 1 } else { 3 };
 
             // existing batch + item + array end bracket
             if batch.len() + pending_len > self.max_packet_size {
@@ -170,7 +175,7 @@ where
             }
 
             if !is_first {
-                batch.push_str(",");
+                batch.push_str(",\n");
             }
             batch.push_str(&item);
             self.stats.add_result();
@@ -185,12 +190,17 @@ where
             )
         }
 
-        Poll::Ready(if batch.len() > 2 {
-            Some(Ok(JsonString(batch)))
+        // we only want to return an item if we wrote more than opening & closing brackets,
+        // and as a string the batch's length is measured in bytes
+        if batch.len() > 2 {
+            Poll::Ready(Some(Ok(JsonString(batch))))
         } else {
-            // only brackets were in the string so we didn't write anything
-            None
-        })
+            if items_is_pending {
+                Poll::Pending
+            } else {
+                Poll::Ready(None)
+            }
+        }
     }
 }
 
@@ -203,7 +213,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn two_items_joined_and_split() {
         let inputs = &[&"FFFFFFFFFF", &"GGGGGGGGGG"];
-        let joined = &[r#"["FFFFFFFFFF","GGGGGGGGGG"]"#];
+        let joined = &["[\"FFFFFFFFFF\",\n\"GGGGGGGGGG\"]"];
         let split = &[r#"["FFFFFFFFFF"]"#, r#"["GGGGGGGGGG"]"#];
         let smallest_possible_joined_len = joined[0].len();
 

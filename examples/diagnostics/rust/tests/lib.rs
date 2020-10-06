@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use diagnostics_testing::{assert_data_tree, EnvWithDiagnostics, Launched, Logs, Severity};
+use diagnostics_testing::{assert_data_tree, EnvWithDiagnostics, Launched, Severity};
 use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;
 use futures::prelude::*;
@@ -11,14 +11,15 @@ use futures::prelude::*;
 async fn launch_example_and_read_hello_world() {
     let mut test_env = EnvWithDiagnostics::new().await;
     let url = "fuchsia-pkg://fuchsia.com/rust-logs-example-tests#meta/rust-logs-example.cmx";
-    let Launched { mut app, reader } = test_env.launch(url, None);
+    let Launched { mut app, mut reader } = test_env.launch(url, None);
     let status = app.wait().await.unwrap();
     assert!(status.success());
 
-    let mut logs = test_env.listen_to_logs().take(3).collect::<Vec<_>>().await.into_iter();
-    let mut new_logs = reader.snapshot::<Logs>().await.into_iter();
+    let logs = test_env.listen_to_logs();
+    pin_utils::pin_mut!(logs);
+    let mut new_logs = reader.logs();
 
-    let (next, new_next) = (logs.next().unwrap(), new_logs.next().unwrap());
+    let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::DEBUG);
     assert_eq!(next.tags, vec!["rust_logs_example"]);
     assert_eq!(next.msg, "should print ");
@@ -33,7 +34,7 @@ async fn launch_example_and_read_hello_world() {
         "message": "should print ",
     });
 
-    let (next, new_next) = (logs.next().unwrap(), new_logs.next().unwrap());
+    let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::INFO);
     assert_eq!(next.tags, vec!["rust_logs_example"]);
     assert_eq!(next.msg, "hello, world! foo=1 bar=\"baz\" ");
@@ -49,7 +50,7 @@ async fn launch_example_and_read_hello_world() {
         "message": "hello, world! foo=1 bar=\"baz\" ",
     });
 
-    let (next, new_next) = (logs.next().unwrap(), new_logs.next().unwrap());
+    let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
     assert_eq!(next.severity, syslog::levels::WARN);
     assert_eq!(next.tags, vec!["rust_logs_example"]);
     assert_eq!(next.msg, "warning: using old api");

@@ -16,6 +16,7 @@ use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, prelude::*};
+use tracing::*;
 
 pub use diagnostics_data::{Inspect, Lifecycle, LifecycleType, Logs, Severity};
 pub use fuchsia_inspect_node_hierarchy::assert_data_tree;
@@ -106,6 +107,7 @@ impl EnvWithDiagnostics {
         tx
     }
 
+    /// Returns a stream of logs for the whole environment.
     pub fn listen_to_logs(&mut self) -> impl Stream<Item = LogMessage> {
         // start listening
         let log_proxy = self.archivist.connect_to_service::<LogMarker>().unwrap();
@@ -147,6 +149,7 @@ pub struct Launched {
 /// A reader for a launched component's inspect.
 pub struct AppReader {
     reader: ArchiveReader,
+    _logs_tasks: Vec<Task<()>>,
 }
 
 impl AppReader {
@@ -162,6 +165,7 @@ impl AppReader {
                 .with_archive(archive)
                 .with_minimum_schema_count(1)
                 .add_selector(ComponentSelector::new(moniker)),
+            _logs_tasks: Vec::new(),
         }
     }
 
@@ -173,6 +177,22 @@ impl AppReader {
     /// Returns inspect data for this component.
     pub async fn inspect(&self) -> InspectData {
         self.snapshot::<Inspect>().await.into_iter().next().expect(">=1 item in results")
+    }
+
+    /// Returns a stream of log messages for this component.
+    pub fn logs(&mut self) -> impl Stream<Item = Data<Logs>> {
+        let (sub, mut errors) = self.reader.snapshot_then_subscribe::<Logs>().unwrap();
+
+        self._logs_tasks.push(Task::spawn(async move {
+            loop {
+                match errors.next().await {
+                    Some(error) => error!(%error, "log testing client encountered an error"),
+                    None => break,
+                }
+            }
+        }));
+
+        sub
     }
 }
 

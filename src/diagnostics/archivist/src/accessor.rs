@@ -78,12 +78,12 @@ impl ArchiveAccessor {
             return Err(ServerError::UnsupportedFormat);
         }
         let mode = params.stream_mode.ok_or(ServerError::MissingMode)?;
-        if !matches!(mode, StreamMode::Snapshot) {
-            return Err(ServerError::UnsupportedMode);
-        }
 
         match params.data_type.ok_or(ServerError::MissingDataType)? {
             DataType::Inspect => {
+                if !matches!(mode, StreamMode::Snapshot) {
+                    return Err(ServerError::UnsupportedMode);
+                }
                 let stats = Arc::new(DiagnosticsServerStats::for_inspect(accessor_stats));
 
                 let selectors =
@@ -106,6 +106,10 @@ impl ArchiveAccessor {
                 server.serve(mode, requests).await
             }
             DataType::Lifecycle => {
+                // TODO(fxbug.dev/61350) support other modes
+                if !matches!(mode, StreamMode::Snapshot) {
+                    return Err(ServerError::UnsupportedMode);
+                }
                 let stats = Arc::new(DiagnosticsServerStats::for_lifecycle(accessor_stats));
 
                 let selectors =
