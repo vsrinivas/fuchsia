@@ -22,7 +22,7 @@ __BEGIN_CDECLS
 
 // standard heap definitions
 void* malloc(size_t size) __MALLOC;
-void* memalign(size_t boundary, size_t size) __MALLOC;
+void* memalign(size_t alignment, size_t size) __MALLOC;
 void* calloc(size_t count, size_t size) __MALLOC;
 void* realloc(void* ptr, size_t size);
 void free(void* ptr);

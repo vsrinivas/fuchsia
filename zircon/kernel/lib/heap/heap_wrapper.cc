@@ -146,21 +146,21 @@ void* malloc(size_t size) {
   return ptr;
 }
 
-void* memalign(size_t boundary, size_t size) {
+void* memalign(size_t alignment, size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
-  LTRACEF("boundary %zu, size %zu\n", boundary, size);
+  LTRACEF("alignment %zu, size %zu\n", alignment, size);
 
   add_stat(__GET_CALLER(), size);
 
-  void* ptr = cmpct_memalign(boundary, size);
+  void* ptr = cmpct_memalign(alignment, size);
   if (unlikely(heap_trace)) {
-    printf("caller %p memalign %zu, %zu -> %p\n", __GET_CALLER(), boundary, size, ptr);
+    printf("caller %p memalign %zu, %zu -> %p\n", __GET_CALLER(), alignment, size, ptr);
   }
 
   if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr)) {
-    panic("memalign of size %zu align %zu failed\n", size, boundary);
+    panic("memalign of size %zu align %zu failed\n", size, alignment);
   }
 
   return ptr;
