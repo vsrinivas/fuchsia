@@ -189,6 +189,7 @@ func (t *fuchsiaSSHTester) runSerialDiagnostics(ctx context.Context) error {
 	if t.serialSocketPath == "" {
 		return fmt.Errorf("serialSocketPath not set")
 	}
+	logger.Debugf(ctx, "attempting to run diagnostics over serial")
 	socket, err := newSerialSocket(ctx, t.serialSocketPath)
 	if err != nil {
 		return fmt.Errorf("newSerialSocket failed: %v", err)
@@ -359,9 +360,11 @@ func newSerialSocket(ctx context.Context, path string) (io.ReadWriteCloser, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to open serial socket connection: %v", err)
 	}
-	// Wait until the system has had a chance to boot and then look for the
-	// cursor, which should indicate that the console is ready for
-	// user-input.
+	// Trigger a new cursor print by sending a newline. This may do nothing if the
+	// system was not ready to process input, but in that case it will print a
+	// new cursor anyways when it is ready to receive input.
+	io.WriteString(socket, asSerialCmd([]string{}))
+	// Look for the cursor, which should indicate that the console is ready for input.
 	m := iomisc.NewSequenceMatchingReader(socket, serialConsoleCursor)
 	if _, err = iomisc.ReadUntilMatch(ctx, m, nil); err != nil {
 		return nil, fmt.Errorf("failed to find cursor: %v", err)

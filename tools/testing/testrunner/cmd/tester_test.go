@@ -390,7 +390,7 @@ func (s *fakeSerialServer) Serve() error {
 		return fmt.Errorf("Accept() failed: %v", err)
 	}
 	defer conn.Close()
-	// Simulate booting.
+	// Signal we're ready to accept input.
 	if _, err := conn.Write([]byte(serialConsoleCursor)); err != nil {
 		return fmt.Errorf("conn.Write() failed: %v", err)
 	}
@@ -412,7 +412,6 @@ func TestNewSerialSocket(t *testing.T) {
 	socketPath := fmt.Sprintf("%d.sock", rand.Uint32())
 	defer os.Remove(socketPath)
 	server := fakeSerialServer{
-		received:       make([]byte, 1024),
 		shutdownString: "dm shutdown",
 		socketPath:     socketPath,
 		listeningChan:  make(chan bool),
@@ -440,6 +439,10 @@ func TestNewSerialSocket(t *testing.T) {
 	}
 	if err = clientSocket.Close(); err != nil {
 		t.Errorf("clientSocket.Close() returned: %v", err)
+	}
+	// First newline should be sent by newSerialSocket to trigger a cursor.
+	if diff := cmp.Diff("\r\n"+server.shutdownString, string(server.received)); diff != "" {
+		t.Errorf("Unexpected server.received (-want +got):\n%s", diff)
 	}
 }
 
