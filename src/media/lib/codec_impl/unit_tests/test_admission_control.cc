@@ -47,7 +47,7 @@ TEST(AdmissionControl, DelayedAdmission) {
   EXPECT_FALSE(got_callback);
   loop.RunUntilIdle();
   EXPECT_FALSE(got_callback);
-  admission.reset();
+  admission = nullptr;
   EXPECT_FALSE(got_callback);
   loop.RunUntilIdle();
   EXPECT_TRUE(got_callback);
@@ -86,12 +86,12 @@ TEST(AdmissionControl, DelayedMultiAdmission) {
   loop.RunUntilIdle();
   EXPECT_FALSE(got_callback);
 
-  admission[0].reset();
+  admission[0] = nullptr;
   EXPECT_FALSE(got_callback);
   loop.RunUntilIdle();
   EXPECT_FALSE(got_callback);
 
-  admission[1].reset();
+  admission[1] = nullptr;
   loop.RunUntilIdle();
   EXPECT_TRUE(got_callback);
 }
@@ -138,7 +138,7 @@ TEST(AdmissionControl, ChannelClose) {
   loop.RunUntilIdle();
   EXPECT_FALSE(got_callback);
 
-  admission.reset();
+  admission = nullptr;
   loop.RunUntilIdle();
   EXPECT_TRUE(got_callback);
 }

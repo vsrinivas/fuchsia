@@ -55,7 +55,7 @@ DeviceCtx::~DeviceCtx() {
   // This code is only run when we switch between test and production drivers.
   sync_completion_t completion;
   driver_->PostToSharedFidl([this, &completion]() {
-    device_fidl_.reset();
+    device_fidl_ = nullptr;
     sync_completion_signal(&completion);
   });
   sync_completion_wait(&completion, ZX_TIME_INFINITE);

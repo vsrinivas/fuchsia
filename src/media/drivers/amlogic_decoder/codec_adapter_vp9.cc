@@ -8,6 +8,8 @@
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
+#include <optional>
+
 #include "amlogic_codec_adapter.h"
 #include "device_ctx.h"
 #include "hevcdec.h"
@@ -708,9 +710,9 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     all_output_buffers_.clear();
     all_output_packets_.clear();
     free_output_packets_.clear();
-    output_buffer_collection_info_.reset();
+    output_buffer_collection_info_ = std::nullopt;
   }
-  buffer_settings_[port].reset();
+  buffer_settings_[port] = std::nullopt;
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>

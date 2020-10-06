@@ -10,6 +10,7 @@
 #include <lib/closure-queue/closure_queue.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/optional.h>
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/codec_vmo_range.h>
 #include <lib/media/codec_impl/log.h>
@@ -1802,7 +1803,7 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock, C
   // This ~FakeMapRange (which calls zx::vmar::destroy()) is among the motivations for calling
   // EnsureBuffersNotConfigured() during the Unbind() sequence / during ~CodecImpl.
   if (fake_map_range_[port]) {
-    fake_map_range_[port].reset();
+    fake_map_range_[port] = fit::nullopt;
   }
 
   all_packets_[port].clear();

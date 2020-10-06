@@ -34,7 +34,7 @@ TEST(OggOpusTests, DemuxDecodeTestFile) {
   auto size = result.value().size();
 
   // Do a simple hash of the data and compare against a golden value.
-  std::unique_ptr<int16_t[]> buffer(new int16_t[size / sizeof(int16_t)]);
+  auto buffer = std::make_unique<int16_t[]>(size / sizeof(int16_t));
   EXPECT_EQ(ZX_OK, result.value().vmo().read(buffer.get(), 0, size));
 
   int16_t* p = buffer.get();

@@ -7,6 +7,8 @@
 #include <endian.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
+
 #include "third_party/opus/include/opus.h"
 
 namespace soundplayer {
@@ -96,7 +98,7 @@ bool OpusDecoder::ProcessPacket(const uint8_t* data, size_t size, bool first, bo
 
   FX_DCHECK(decoder_);
 
-  std::unique_ptr<int16_t[]> output_buffer(new int16_t[kOutputBufferMaxFrameCount * channels_]);
+  auto output_buffer = std::make_unique<int16_t[]>(kOutputBufferMaxFrameCount * channels_);
 
   int decoded_frame_count_or_error =
       opus_decode(decoder_.get(), data, size, output_buffer.get(), kOutputBufferMaxFrameCount, 0);

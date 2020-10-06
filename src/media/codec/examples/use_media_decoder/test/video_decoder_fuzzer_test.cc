@@ -140,7 +140,7 @@ int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunctio
 
   fidl_loop.Quit();
   fidl_loop.JoinThreads();
-  component_context.reset();
+  component_context = nullptr;
   fidl_loop.Shutdown();
   fprintf(stderr, "Fuzzed, got frame count: %d\n", frame_index);
 

@@ -317,7 +317,7 @@ void LocalCodecFactory::CreateDecoder(
           return;
         }
 
-        std::unique_ptr<CodecImpl> codec =
+        auto codec =
             std::make_unique<CodecImpl>(std::move(sysmem), std::move(codec_admission),
                                         device_->driver()->shared_fidl_loop()->dispatcher(),
                                         device_->driver()->shared_fidl_thread(),

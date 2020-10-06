@@ -8,6 +8,8 @@
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
+#include <optional>
+
 #include "amlogic_codec_adapter.h"
 #include "device_ctx.h"
 #include "h264_decoder.h"
@@ -464,7 +466,7 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     all_output_packets_.clear();
     free_output_packets_.clear();
   }
-  buffer_settings_[port].reset();
+  buffer_settings_[port] = std::nullopt;
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
@@ -492,8 +494,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
 
   uint32_t per_packet_buffer_bytes = min_stride_ * height_ * 3 / 2;
 
-  std::unique_ptr<fuchsia::media::StreamOutputConstraints> config =
-      std::make_unique<fuchsia::media::StreamOutputConstraints>();
+  auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
   config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
@@ -1129,7 +1130,7 @@ bool CodecAdapterH264::ParseVideoAvcc(const uint8_t* data, uint32_t length) {
   static constexpr uint32_t kStartCodeBytes = 4;
   uint32_t local_length = length - pseudo_nal_count * pseudo_nal_length_field_bytes_ +
                           pseudo_nal_count * kStartCodeBytes;
-  std::unique_ptr<uint8_t[]> local_buffer = std::make_unique<uint8_t[]>(local_length);
+  auto local_buffer = std::make_unique<uint8_t[]>(local_length);
   uint8_t* local_data = local_buffer.get();
 
   i = 0;

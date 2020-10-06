@@ -79,7 +79,7 @@ size_t RawVideoWriter<enabled>::WriteNv12(uint32_t width_pixels, uint32_t height
     uv_offset = height_pixels * stride_bytes;
   }
   // This buffer isn't small.
-  std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(size);
+  auto buffer = std::make_unique<uint8_t[]>(size);
   uint8_t* dst = &buffer[0];
   const uint8_t* src = y_base;
   // Y

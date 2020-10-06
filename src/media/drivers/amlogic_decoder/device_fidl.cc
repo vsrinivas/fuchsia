@@ -24,7 +24,7 @@ DeviceFidl::~DeviceFidl() {
 }
 
 void DeviceFidl::ConnectChannelBoundCodecFactory(zx::channel request) {
-  std::unique_ptr<LocalCodecFactory> factory = std::make_unique<LocalCodecFactory>(device_);
+  auto factory = std::make_unique<LocalCodecFactory>(device_);
   factory->SetErrorHandler([this, raw_factory_ptr = factory.get()] {
     ZX_DEBUG_ASSERT(thrd_current() == device_->driver()->shared_fidl_thread());
     auto iter = factories_.find(raw_factory_ptr);

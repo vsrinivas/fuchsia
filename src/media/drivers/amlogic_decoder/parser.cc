@@ -28,7 +28,7 @@ Parser::~Parser() {
   CancelParsing();
   if (parser_input_) {
     io_buffer_release(parser_input_.get());
-    parser_input_.reset();
+    parser_input_ = nullptr;
   }
   io_buffer_release(&search_pattern_);
 }
@@ -225,7 +225,7 @@ zx_status_t Parser::ParseVideo(const void* data, uint32_t len) {
     zx_status_t status = io_buffer_init(parser_input_.get(), owner_->bti()->get(), len,
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-      parser_input_.reset();
+      parser_input_ = nullptr;
       DECODE_ERROR("Failed to create input file");
       return ZX_ERR_NO_MEMORY;
     }

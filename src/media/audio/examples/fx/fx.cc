@@ -452,7 +452,7 @@ void FxProcessor::Shutdown(const char* reason) {
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
   audio_renderer_.Unbind();
-  input_.reset();
+  input_ = nullptr;
   quit_callback_();
 }
 

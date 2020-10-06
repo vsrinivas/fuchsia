@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <thread>
 
 #include <ddk/binding.h>
@@ -107,10 +108,10 @@ AmlogicVideo::~AmlogicVideo() {
       vdec1_interrupt_thread_.join();
   }
   swapped_out_instances_.clear();
-  current_instance_.reset();
+  current_instance_ = nullptr;
   core_ = nullptr;
-  hevc_core_.reset();
-  vdec1_core_.reset();
+  hevc_core_ = nullptr;
+  vdec1_core_ = nullptr;
 }
 
 // TODO: Remove once we can add single-instance decoders through
@@ -169,7 +170,7 @@ void AmlogicVideo::ClearDecoderInstance() {
   assert(current_instance_);
   assert(swapped_out_instances_.size() == 0);
   LOG(DEBUG, "current_instance_.reset()...");
-  current_instance_.reset();
+  current_instance_ = nullptr;
   core_ = nullptr;
   video_decoder_ = nullptr;
   stream_buffer_ = nullptr;
@@ -184,7 +185,7 @@ void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
   DLOG("Removing decoder: %p", decoder);
   ZX_DEBUG_ASSERT(decoder);
   if (current_instance_ && current_instance_->decoder() == decoder) {
-    current_instance_.reset();
+    current_instance_ = nullptr;
     video_decoder_ = nullptr;
     stream_buffer_ = nullptr;
     core_ = nullptr;
@@ -707,7 +708,7 @@ zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t b
       LOG(ERROR, "secmem_session_->GetVp9HeaderSize() failed - status: %d", status);
 
       // Explicitly disconnect and clean up `secmem_session_`.
-      secmem_session_.reset();
+      secmem_session_ = std::nullopt;
       continue;
     }
 

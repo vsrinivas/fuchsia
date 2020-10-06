@@ -19,6 +19,7 @@
 #include <string.h>
 #include <zircon/time.h>
 
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -621,7 +622,7 @@ void VideoDecoderRunner::Run() {
   unbind_done_event.Wait();
 
   VLOGF("before starting in_thread...");
-  std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>([this]() {
+  auto in_thread = std::make_unique<std::thread>([this]() {
     auto& in_stream = params_.in_stream;
     auto& test_params = params_.test_params;
     VLOGF("in_thread start");
@@ -682,7 +683,7 @@ void VideoDecoderRunner::Run() {
   //
   // codec_client outlives the thread (and for separate reasons below, all the
   // frame_sink activity started by out_thread).
-  std::unique_ptr<std::thread> out_thread = std::make_unique<std::thread>([this]() {
+  auto out_thread = std::make_unique<std::thread>([this]() {
     VLOGF("out_thread start");
     // We allow the server to send multiple output constraint updates if it
     // wants; see implementation of BlockingGetEmittedOutput() which will hide
@@ -1042,7 +1043,7 @@ void VideoDecoderRunner::Run() {
   codec_client_->Stop();
   VLOGF("after codec_client stop.");
 
-  codec_client_.reset();
+  codec_client_ = std::nullopt;
 
   // success
   return;

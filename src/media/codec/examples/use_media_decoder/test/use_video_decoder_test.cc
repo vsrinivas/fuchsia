@@ -87,8 +87,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   // default 1
   const int64_t loop_stream_count = test_params->loop_stream_count;
   if (loop_stream_count >= 2) {
-    std::unique_ptr<InStream> next_in_stream;
-    next_in_stream =
+    std::unique_ptr<InStream> next_in_stream =
         std::make_unique<InStreamBuffer>(&fidl_loop, fidl_thread, component_context.get(),
                                          std::move(in_stream_so_far), kMaxBufferBytes);
     in_stream_so_far = std::move(next_in_stream);
@@ -205,7 +204,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
 
   fidl_loop.Quit();
   fidl_loop.JoinThreads();
-  component_context.reset();
+  component_context = nullptr;
   fidl_loop.Shutdown();
 
   return 0;

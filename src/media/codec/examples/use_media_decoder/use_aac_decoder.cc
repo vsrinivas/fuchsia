@@ -57,7 +57,7 @@ constexpr bool kWavWriterEnabled = true;
 
 std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
     std::unique_ptr<uint8_t[]>* input_bytes) {
-  std::unique_ptr<uint8_t[]> asc = std::make_unique<uint8_t[]>(2);
+  auto asc = std::make_unique<uint8_t[]>(2);
 
   // TODO(dustingreen): Remove this function as we don't need to be synthesizing
   // oob_bytes from ADTS header data.
@@ -271,7 +271,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // The captures here require the main thread to call in_thread->join() before
   // the captures go out of scope.
   VLOGF("before starting in_thread...");
-  std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
+  auto in_thread = std::make_unique<std::thread>(
       [&codec_client, full_input_details = std::move(full_input_details), &input_bytes,
        input_size]() mutable {
         // First queue the full_input_details.
@@ -352,9 +352,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // Separate thread to process the output.
   //
   // codec_client outlives the thread.
-  std::unique_ptr<std::thread> out_thread = std::make_unique<std::thread>([&codec_client,
-                                                                           output_wav_file,
-                                                                           out_md]() {
+  auto out_thread = std::make_unique<std::thread>([&codec_client, output_wav_file, out_md]() {
     // The codec_client lock_ is not held for long durations in here, which is
     // good since we're using this thread to do things like write to a WAV
     // file.

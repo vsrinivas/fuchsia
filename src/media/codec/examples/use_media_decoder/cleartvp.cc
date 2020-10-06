@@ -52,7 +52,7 @@ ClearTvpSession::~ClearTvpSession() {
 void ClearTvpSession::EnsureSessionClosed() {
   if (session_) {
     TEEC_CloseSession(session_.get());
-    session_.reset();
+    session_ = nullptr;
   }
 }
 
@@ -66,7 +66,7 @@ zx_status_t ClearTvpSession::Init() {
   context_ = std::make_unique<TEEC_Context>();
   TEEC_Result result = TEEC_InitializeContext(NULL, context_.get());
   if (result != TEEC_SUCCESS) {
-    context_.reset();
+    context_ = nullptr;
     FX_LOGS(ERROR) << "TEEC_InitializeContext failed " << std::hex << result;
     return ZX_ERR_INVALID_ARGS;
   }
@@ -89,7 +89,7 @@ zx_status_t ClearTvpSession::OpenSession() {
     TEEC_Result result = TEEC_OpenSession(context_.get(), session_.get(), &kClearTvpUuid,
                                           TEEC_LOGIN_PUBLIC, NULL, NULL, &return_origin);
     if (result != TEEC_SUCCESS) {
-      session_.reset();
+      session_ = nullptr;
       FX_LOGS(ERROR) << "TEEC_OpenSession failed with result " << std::hex << result << " origin "
                      << return_origin << ". Maybe the bootloader version is incorrect.";
       status = ZX_ERR_INTERNAL;

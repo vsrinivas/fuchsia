@@ -4,27 +4,30 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 
 #include "media/gpu/h264_decoder.h"
 #include "media/video/h264_level_limits.h"
 
 namespace {
 
-// This heuristic is not conformant to the h264 spec.  It is very possible to construct an h264
-// stream that will cause this heuristic to output frames in the wrong order near the start of the
-// stream, and potential interaction with no_output_of_prior_pics_flag == 1 has not been fully
-// evaluated.
+// This heuristic is not conformant to the h264 spec.  It is very possible to
+// construct an h264 stream that will cause this heuristic to output frames in
+// the wrong order near the start of the stream, and potential interaction with
+// no_output_of_prior_pics_flag == 1 has not been fully evaluated.
 //
-// Unfortunately, in some situations, we don't have access to max_num_reorder_frames due to HW/FW
-// limitations, so without this heuristic we'd be stuck with higher frame decode delay than we'd
-// expect of a decoder that pays attention to max_num_reorder_frames == 0.
+// Unfortunately, in some situations, we don't have access to
+// max_num_reorder_frames due to HW/FW limitations, so without this heuristic
+// we'd be stuck with higher frame decode delay than we'd expect of a decoder
+// that pays attention to max_num_reorder_frames == 0.
 //
-// Even with this heuristic, for a stream with only even POCs, we still need a few frames at the
-// start to determine (make a fairly reasonable guess) that there aren't any odd POCs, so those
-// frames experience delay if the stream has only even POCs.
+// Even with this heuristic, for a stream with only even POCs, we still need a
+// few frames at the start to determine (make a fairly reasonable guess) that
+// there aren't any odd POCs, so those frames experience delay if the stream has
+// only even POCs.
 //
-// If the stream POC skips by more than 2 per output frame, the heuristic doesn't help reduce
-// latency.
+// If the stream POC skips by more than 2 per output frame, the heuristic
+// doesn't help reduce latency.
 constexpr bool kEnableQuickOutputHeuristic = true;
 constexpr uint64_t kNumPocSeenToAssumeOnlyEvenPocUnlessProvenOtherwise = 3;
 
@@ -1016,17 +1019,18 @@ bool H264Decoder::FinishPicture(scoped_refptr<H264Picture> pic) {
   auto output_candidate = not_outputted.begin();
   size_t num_remaining = not_outputted.size();
   DCHECK_EQ(!!num_remaining, (output_candidate != not_outputted.end()));
-  while (num_remaining &&
-         (num_remaining > max_num_reorder_frames_ ||
-         // If the condition below is used, this is an invalid stream. We should
-         // not be forced to output beyond max_num_reorder_frames in order to
-         // make room in DPB to store the current picture (if we need to do so).
-         // However, if this happens, ignore max_num_reorder_frames and try
-         // to output more. This may cause out-of-order output, but is not
-         // fatal, and better than failing instead.
-         (dpb_.IsFull() && (!pic->outputted || pic->ref)) ||
-         // See comments above definition of kEnableQuickOutputHeuristic.
-         IsQuickOutputHeuristicSatisfied((*output_candidate)->pic_order_cnt))) {
+  while (
+      num_remaining &&
+      (num_remaining > max_num_reorder_frames_ ||
+       // If the condition below is used, this is an invalid stream. We should
+       // not be forced to output beyond max_num_reorder_frames in order to
+       // make room in DPB to store the current picture (if we need to do so).
+       // However, if this happens, ignore max_num_reorder_frames and try
+       // to output more. This may cause out-of-order output, but is not
+       // fatal, and better than failing instead.
+       (dpb_.IsFull() && (!pic->outputted || pic->ref)) ||
+       // See comments above definition of kEnableQuickOutputHeuristic.
+       IsQuickOutputHeuristicSatisfied((*output_candidate)->pic_order_cnt))) {
     DVLOG_IF(1, num_remaining <= max_num_reorder_frames_)
         << "Invalid stream: max_num_reorder_frames not preserved";
 
@@ -1068,23 +1072,25 @@ bool H264Decoder::IsQuickOutputHeuristicSatisfied(int pic_order_cnt) {
     return false;
   }
   if (max_num_reorder_frames_ < dpb_.max_num_pics()) {
-    // The heuristic is disabled if we have a real max_num_reorder_frames_ from the stream, because
-    // in that case the stream knows best.
+    // The heuristic is disabled if we have a real max_num_reorder_frames_ from
+    // the stream, because in that case the stream knows best.
     return false;
   }
   if (last_output_poc_ == std::numeric_limits<int>::min()) {
-    // Assume first frame is ok to output immediately.  For most normal streams this is correct, but
-    // it _may_ be possible to construct a valid stream for which this guess isn't correct.
+    // Assume first frame is ok to output immediately.  For most normal streams
+    // this is correct, but it _may_ be possible to construct a valid stream for
+    // which this guess isn't correct.
     //
-    // This also has the nice effect of providing pixels to put on the screen ASAP, even if we
-    // aren't sure (enough) for a few frames whether we're likely to see any odd POC values.
+    // This also has the nice effect of providing pixels to put on the screen
+    // ASAP, even if we aren't sure (enough) for a few frames whether we're
+    // likely to see any odd POC values.
     return true;
   }
   if (last_output_poc_ + 1 == pic_order_cnt) {
-    // If the POC is exactly one more than previous outputted POC, then output early because no
-    // other POC to be decoded after can fit between the two frames.  I believe this is always a
-    // completely valid thing to do.  However, not all streams increment their POC values by 1
-    // unfortunately.
+    // If the POC is exactly one more than previous outputted POC, then output
+    // early because no other POC to be decoded after can fit between the two
+    // frames.  I believe this is always a completely valid thing to do.
+    // However, not all streams increment their POC values by 1 unfortunately.
     return true;
   }
   if (num_poc_seen_ < kNumPocSeenToAssumeOnlyEvenPocUnlessProvenOtherwise) {
@@ -1092,26 +1098,30 @@ bool H264Decoder::IsQuickOutputHeuristicSatisfied(int pic_order_cnt) {
     return false;
   }
   if (!odd_poc_seen_ && (last_output_poc_ + 2 == pic_order_cnt)) {
-    // We haven't seen any odd POCs yet.  So far it looks like POC values are only even in this
-    // stream which is common (apparently starting with a reference encoder from way back).  So
-    // until we see an odd POC, assume there are only even POCs and allow output of this "next" POC
-    // since we can "reasonably" guess that there won't be any odd POC that shows up between the
-    // previous POC and this POC.  While this guess may be wrong near the start of a stream, and
-    // even may be wrong _far_ into a specially-constructed stream, it's unlikely (enough) to be a
-    // wrong guess for normal streams if kNumPocSeenToAssumeOnlyEvenPocUnlessProvenOtherwise is
-    // large enough.  As for exactly how large kNumPocSeenToAssumeOnlyEvenPocUnlessProvenOtherwise
-    // needs to be to handle all the normal streams we encounter, that's a tuning thing.
+    // We haven't seen any odd POCs yet.  So far it looks like POC values are
+    // only even in this stream which is common (apparently starting with a
+    // reference encoder from way back).  So until we see an odd POC, assume
+    // there are only even POCs and allow output of this "next" POC since we can
+    // "reasonably" guess that there won't be any odd POC that shows up between
+    // the previous POC and this POC.  While this guess may be wrong near the
+    // start of a stream, and even may be wrong _far_ into a
+    // specially-constructed stream, it's unlikely (enough) to be a wrong guess
+    // for normal streams if kNumPocSeenToAssumeOnlyEvenPocUnlessProvenOtherwise
+    // is large enough.  As for exactly how large
+    // kNumPocSeenToAssumeOnlyEvenPocUnlessProvenOtherwise needs to be to handle
+    // all the normal streams we encounter, that's a tuning thing.
     return true;
   }
   // Wait until a more suitable lowest-POC frame is decoded.
   //
-  // Or, if the stream isn't being helpful with it's POC values, wait until max_num_reorder_frames_
-  // is satisfied even though max_num_reorder_frames_ may be larger than the actual
-  // max_num_reorder_frames from the stream, possibly due to lack of availability of
-  // max_num_reorder_frames from FW.  In such cases it may be worth asking the sender of the stream
-  // to consider encoding with POC values that start at 0 and increment by 1 each frame (better),
-  // or start at 0 and increment by 2 each frame (still works but with a tad more decoder delay at
-  // first).
+  // Or, if the stream isn't being helpful with it's POC values, wait until
+  // max_num_reorder_frames_ is satisfied even though max_num_reorder_frames_
+  // may be larger than the actual max_num_reorder_frames from the stream,
+  // possibly due to lack of availability of max_num_reorder_frames from FW.  In
+  // such cases it may be worth asking the sender of the stream to consider
+  // encoding with POC values that start at 0 and increment by 1 each frame
+  // (better), or start at 0 and increment by 2 each frame (still works but with
+  // a tad more decoder delay at first).
   return false;
 }
 
@@ -1461,7 +1471,7 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
 
     if (!curr_nalu_) {
       if (nalu_injection_mode_ == NaluInjectionMode::kOff) {
-        curr_nalu_.reset(new H264NALU());
+        curr_nalu_ = std::make_unique<H264NALU>();
         par_res = parser_.AdvanceToNextNALU(curr_nalu_.get());
         if (par_res == H264Parser::kEOStream)
           return kRanOutOfStreamData;
@@ -1506,7 +1516,7 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
         // steps will be executed.
         if (!curr_slice_hdr_) {
           if (nalu_injection_mode_ == NaluInjectionMode::kOff) {
-            curr_slice_hdr_.reset(new H264SliceHeader());
+            curr_slice_hdr_ = std::make_unique<H264SliceHeader>();
             par_res =
                 parser_.ParseSliceHeader(*curr_nalu_, curr_slice_hdr_.get());
             if (par_res != H264Parser::kOk)
@@ -1550,7 +1560,7 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
 
         DCHECK_EQ(state_, kTryCurrentSlice);
         CHECK_ACCELERATOR_RESULT(ProcessCurrentSlice());
-        curr_slice_hdr_.reset();
+        curr_slice_hdr_ = nullptr;
         state_ = kDecoding;
         break;
       }
@@ -1624,7 +1634,7 @@ H264Decoder::DecodeResult H264Decoder::Decode() {
     }
 
     DVLOG(4) << "NALU done";
-    curr_nalu_.reset();
+    curr_nalu_ = nullptr;
   }
 }
 

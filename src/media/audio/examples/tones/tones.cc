@@ -99,7 +99,7 @@ Tones::Tones(bool interactive, fit::closure quit_callback)
 Tones::~Tones() = default;
 
 void Tones::Quit() {
-  midi_keyboard_.reset();
+  midi_keyboard_ = nullptr;
   audio_renderer_.Unbind();
   quit_callback_();
 }

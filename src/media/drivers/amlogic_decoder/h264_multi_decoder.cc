@@ -11,6 +11,7 @@
 #include <cmath>
 #include <iterator>
 #include <limits>
+#include <optional>
 
 #include <fbl/algorithm.h>
 
@@ -1138,7 +1139,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       memcpy(&current_sps_, sps.get(), sizeof(current_sps_));
       sps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264SPS>>(std::move(sps));
     } else {
-      sps_nalu.reset();
+      sps_nalu = nullptr;
     }
   }  // ~sps
 
@@ -1223,7 +1224,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       memcpy(&current_pps_, pps.get(), sizeof(current_pps_));
       pps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264PPS>>(std::move(pps));
     } else {
-      pps_nalu.reset();
+      pps_nalu = nullptr;
     }
   }  // ~pps
 
@@ -1773,7 +1774,7 @@ void H264MultiDecoder::HandlePicDataDone() {
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
   per_frame_seen_first_mb_in_slice_ = -1;
-  frame_num_.reset();
+  frame_num_ = std::nullopt;
 
   // Bring the decoder into sync that the frame is done decoding.  This way media_decoder_ can
   // output frames and do post-decode DPB or MMCO updates.  This pushes media_decoder_ from

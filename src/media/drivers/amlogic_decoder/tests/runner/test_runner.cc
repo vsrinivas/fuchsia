@@ -98,7 +98,7 @@ TEST(TestRunner, RunTests) {
   auto test_device = std::make_unique<TestDeviceBase>();
   test_device->InitializeFromFileName("/dev/aml-video/amlogic_video");
   zx::channel parent_device = test_device->GetParentDevice();
-  test_device.reset();
+  test_device = nullptr;
 
   TestDeviceBase::UnbindChildren(parent_device);
 
@@ -123,7 +123,7 @@ TEST(TestRunner, RunTests) {
 
   // UnbindChildren seems to block for some reason.
   test_device2->Unbind();
-  test_device2.reset();
+  test_device2 = nullptr;
 
   // Try to rebind the correct driver.
   TestDeviceBase::BindDriver(parent_device, "/system/driver/amlogic_video_decoder.so");

@@ -1321,7 +1321,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     for (uint32_t i = 0; i < frames_.size(); i++) {
       // Resetting on_deck_frame should avoid leaking if dimensions change in quick succession, with
       // first buffer collection having more buffers than second.
-      frames_[i]->on_deck_frame.reset();
+      frames_[i]->on_deck_frame = nullptr;
       if (use_compressed_output_) {
         // In normal operation (outside decoder self-tests) this reset() is relied
         // upon to essentially signal to the CodecBuffer::frame weak_ptr<> that
@@ -1329,7 +1329,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         // (for now) that the VideoFrame must not be shared outside transients
         // under video_decoder_lock_.  See comment on Vp9Decoder::Frame::frame for
         // more.
-        frames_[i]->frame.reset();
+        frames_[i]->frame = nullptr;
 
         // After the frames are cleared ReturnFrame can't be called on them, so we
         // need to decrement the refcounts now.

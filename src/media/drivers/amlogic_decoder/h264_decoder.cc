@@ -10,6 +10,8 @@
 #include <lib/trace/event.h>
 #include <lib/zx/vmo.h>
 
+#include <optional>
+
 #include <fbl/algorithm.h>
 
 #include "firmware_blob.h"
@@ -545,7 +547,7 @@ zx_status_t H264Decoder::InitializeStream() {
   state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
   // Ensure empty; may or may not be set at this point.
-  reference_mv_buffer_.reset();
+  reference_mv_buffer_ = std::nullopt;
   // StreamInfo AKA AvScratch1.
   auto stream_info = StreamInfo::Get().ReadFrom(owner_->dosbus());
   // SequenceInfo AKA AvScratch2.

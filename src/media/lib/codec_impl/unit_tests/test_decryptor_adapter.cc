@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <random>
 #include <unordered_map>
 #include <variant>
@@ -547,7 +548,7 @@ TEST_F(ClearDecryptorAdapterTest, UnmappedOutputBuffers) {
   // The decryptor should have failed (since unmapped buffers are unsupported),
   // and nothing else should have failed.
   EXPECT_TRUE(decryptor_error_.has_value());
-  decryptor_error_.reset();
+  decryptor_error_ = std::nullopt;
   AssertNoChannelErrors();
 }
 

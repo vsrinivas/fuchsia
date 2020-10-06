@@ -148,7 +148,7 @@ class Reporter {
         if (ptr_) {
           ptr_->Destroy();
           container_->Kill(ptr_);
-          ptr_.reset(static_cast<T*>(nullptr));
+          ptr_ = nullptr;
         }
       }
 

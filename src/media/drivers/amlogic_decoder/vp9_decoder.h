@@ -312,7 +312,7 @@ class Vp9Decoder : public VideoDecoder {
   Frame* current_frame_ = nullptr;
   std::unique_ptr<loop_filter_info_n> loop_filter_info_;
   std::unique_ptr<loopfilter> loop_filter_;
-  std::unique_ptr<segmentation> segmentation_ = {};
+  std::unique_ptr<segmentation> segmentation_;
   // Waiting for an available frame buffer (with reference count 0).
   bool waiting_for_empty_frames_ = false;
   // Waiting for an available output packet, to avoid show_existing_frame potentially allowing too

@@ -28,7 +28,7 @@ extern zx_status_t amlogic_video_init(void** out_ctx) {
 // ctx is the driver ctx (not device ctx)
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
   DriverCtx* driver = reinterpret_cast<DriverCtx*>(ctx);
-  std::unique_ptr<DeviceCtx> device = std::make_unique<DeviceCtx>(driver);
+  auto device = std::make_unique<DeviceCtx>(driver);
 
   AmlogicVideo* video = device->video();
 

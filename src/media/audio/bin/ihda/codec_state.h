@@ -227,7 +227,7 @@ struct VendorFunctionGroupState : public FunctionGroupState {
 };
 
 struct CodecState {
-  void reset() { fn_groups_.reset(); }
+  void reset() { fn_groups_ = nullptr; }
 
   uint16_t vendor_id_;
   uint16_t device_id_;
