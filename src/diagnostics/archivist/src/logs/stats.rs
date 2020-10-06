@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::message::{Message, Severity};
+use super::message::Severity;
 use anyhow::*;
-use fidl_fuchsia_sys_internal::SourceIdentity;
+use diagnostics_data::LogsData;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_derive::Inspect;
@@ -29,7 +29,7 @@ const COMPONENT_STATS_FRESHNESS_EXPIRY_HOURS: i64 = 1;
 
 /// Structure that holds stats for the log manager.
 #[derive(Default, Inspect)]
-pub(super) struct LogManagerStats {
+pub struct LogManagerStats {
     total_logs: inspect::UintProperty,
     kernel_logs: inspect::UintProperty,
     logsink_logs: inspect::UintProperty,
@@ -91,20 +91,16 @@ impl LogStatsByComponent {
         }
     }
 
-    pub async fn get_component_log_stats(
-        &self,
-        identity: &SourceIdentity,
-    ) -> Arc<ComponentLogStats> {
-        let url = identity.component_url.clone().unwrap_or("(unattributed)".to_string());
+    pub async fn get_component_log_stats(&self, url: &str) -> Arc<ComponentLogStats> {
         let mut components = self.components.lock().await;
-        match components.get(&url) {
+        match components.get(url) {
             Some(stats) => stats.clone(),
             None => {
                 let mut stats = ComponentLogStats::default();
                 // TODO(fxbug.dev/60396): Report failure to attach somewhere.
-                let _ = stats.iattach(&self.inspect_node, url.clone());
+                let _ = stats.iattach(&self.inspect_node, url);
                 let stats = Arc::new(stats);
-                components.insert(url, stats.clone());
+                components.insert(url.to_string(), stats.clone());
                 stats
             }
         }
@@ -132,7 +128,7 @@ struct GranularLogStats {
 }
 
 impl GranularLogStats {
-    pub fn record_log(&mut self, msg: &Message) {
+    pub fn record_log(&mut self, msg: &LogsData) {
         self.ensure_bucket().record_log(msg);
     }
 
@@ -160,10 +156,10 @@ struct LogIdentifier {
     line_no: u64,
 }
 
-impl TryFrom<&Message> for LogIdentifier {
+impl TryFrom<&LogsData> for LogIdentifier {
     type Error = anyhow::Error;
 
-    fn try_from(msg: &Message) -> Result<Self, Self::Error> {
+    fn try_from(msg: &LogsData) -> Result<Self, Self::Error> {
         let re = Regex::new(r"^\[([^\(\]:]+)\((\d+)\)\]").unwrap();
         let msg_str = msg.msg().ok_or_else(|| format_err!("No message"))?;
         let cap =
@@ -195,7 +191,7 @@ struct GranularLogStatsBucket {
 }
 
 impl GranularLogStatsBucket {
-    pub fn record_log(&mut self, msg: &Message) {
+    pub fn record_log(&mut self, msg: &LogsData) {
         if msg.metadata.severity != Severity::Error && msg.metadata.severity != Severity::Fatal {
             return;
         }
@@ -238,7 +234,7 @@ pub struct ComponentLogStats {
 }
 
 impl ComponentLogStats {
-    pub fn record_log(&self, msg: &Message) {
+    pub fn record_log(&self, msg: &LogsData) {
         self.last_log_monotonic_nanos.set(fasync::Time::now().into_nanos());
         self.total_logs.add(1);
         match msg.metadata.severity {
@@ -262,7 +258,7 @@ impl LogManagerStats {
     /// Record an incoming log from a given source.
     ///
     /// This method updates the counters based on the contents of the log message.
-    pub fn record_log(&mut self, msg: &Message, source: LogSource) {
+    pub fn record_log(&mut self, msg: &LogsData, source: LogSource) {
         self.total_logs.add(1);
         self.granular_stats.record_log(msg);
         match source {
@@ -284,11 +280,8 @@ impl LogManagerStats {
     }
 
     /// Returns the stats for a particular component specified by `identity`.
-    pub async fn get_component_log_stats(
-        &self,
-        identity: &SourceIdentity,
-    ) -> Arc<ComponentLogStats> {
-        self.by_component.get_component_log_stats(identity).await
+    pub async fn get_component_log_stats(&self, url: &str) -> Arc<ComponentLogStats> {
+        self.by_component.get_component_log_stats(url).await
     }
 
     /// Record that we rejected a message.
@@ -303,7 +296,7 @@ impl LogManagerStats {
 }
 
 /// Denotes the source of a particular log message.
-pub(super) enum LogSource {
+pub enum LogSource {
     /// Log came from the kernel log (klog)
     Kernel,
     /// Log came from log sink
@@ -806,7 +799,7 @@ mod tests {
         let inspector = Inspector::new();
         let mut component_stats = LogStatsByComponent::default();
         component_stats.iattach(inspector.root(), "component_stats")?;
-        let component_a = source_id_with_url("a");
+        let component_a = "a";
         let gc_interval_nanos =
             zx::Duration::from_hours(COMPONENT_STATS_GC_INTERVAL_HOURS).into_nanos();
 
@@ -864,7 +857,7 @@ mod tests {
 
         // Access from another component, "b". Should not be GC'd in the next cycle (but rather,
         // the following) cycle.
-        let component_b = source_id_with_url("b");
+        let component_b = "b";
         state.run(&mut Box::pin(async {
             let component_stats = component_stats.get_component_log_stats(&component_b).await;
             let msg =
@@ -1002,15 +995,6 @@ mod tests {
         match tree_assertion.run(state.inspector.get_node_hierarchy().as_ref()) {
             Ok(()) => Ok(()),
             Err(e) => Err(format_err!("Parsing failed for message: {} \n {}", msg_str, e)),
-        }
-    }
-
-    fn source_id_with_url(component_url: &str) -> SourceIdentity {
-        SourceIdentity {
-            realm_path: None,
-            component_url: Some(component_url.to_string()),
-            component_name: None,
-            instance_id: None,
         }
     }
 }

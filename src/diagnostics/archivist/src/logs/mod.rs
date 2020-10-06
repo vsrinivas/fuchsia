@@ -29,7 +29,7 @@ mod interest;
 mod listener;
 pub mod message;
 mod socket;
-mod stats;
+pub mod stats;
 #[cfg(test)]
 pub mod testing;
 
@@ -86,12 +86,9 @@ impl LogManager {
         K: debuglog::DebugLog + Send + Sync + 'static,
     {
         debug!("Draining debuglog.");
-        let mut source = SourceIdentity::empty();
-        source.component_name = Some("(klog)".to_string());
-        source.component_url = Some("fuchsia-boot://klog".to_string());
         let component_log_stats = {
             let inner = self.inner.lock().await;
-            inner.stats.get_component_log_stats(&source).await
+            inner.stats.get_component_log_stats("fuchsia-boot://klog").await
         };
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
         let mut messages = match kernel_logger.existing_logs().await {
@@ -240,7 +237,7 @@ impl LogManager {
     {
         let component_log_stats = {
             let inner = self.inner.lock().await;
-            inner.stats.get_component_log_stats(log_stream.source()).await
+            inner.stats.get_component_log_stats(log_stream.source_url()).await
         };
         loop {
             match log_stream.next().await {
@@ -251,7 +248,7 @@ impl LogManager {
                 Err(error::StreamError::Closed) => return,
                 Err(e) => {
                     self.inner.lock().await.stats.record_closed_stream();
-                    warn!("closing socket from {:?}: {}", log_stream.source(), e);
+                    warn!("closing socket from {:?}: {}", log_stream.source_url(), e);
                     return;
                 }
             }

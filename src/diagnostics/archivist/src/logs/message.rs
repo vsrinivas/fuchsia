@@ -335,18 +335,6 @@ impl Message {
         })
     }
 
-    /// Returns the string log associated with the message, if one exists.
-    pub fn msg(&self) -> Option<&str> {
-        self.payload()
-            .properties
-            .iter()
-            .filter_map(|property| match property {
-                LogsProperty::String(LogsField::Msg, msg) => Some(msg.as_str()),
-                _ => None,
-            })
-            .next()
-    }
-
     /// Returns number of dropped logs if reported in the message.
     pub fn dropped_logs(&self) -> Option<u64> {
         self.metadata

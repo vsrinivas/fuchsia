@@ -49,9 +49,9 @@ pub struct LogMessageSocket<E> {
 }
 
 impl<E> LogMessageSocket<E> {
-    /// Description of the source of the items.
-    pub fn source(&self) -> &SourceIdentity {
-        &self.source
+    /// URL from which the items were produced.
+    pub fn source_url(&self) -> &str {
+        self.source.component_url.as_ref().map(String::as_str).unwrap_or("(unattributed)")
     }
 }
 

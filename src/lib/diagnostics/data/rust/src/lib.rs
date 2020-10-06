@@ -416,6 +416,22 @@ impl Data<Logs> {
             },
         }
     }
+
+    /// Returns the string log associated with the message, if one exists.
+    pub fn msg(&self) -> Option<&str> {
+        self.payload
+            .as_ref()
+            .map(|p| {
+                p.properties
+                    .iter()
+                    .filter_map(|property| match property {
+                        LogsProperty::String(LogsField::Msg, msg) => Some(msg.as_str()),
+                        _ => None,
+                    })
+                    .next()
+            })
+            .flatten()
+    }
 }
 
 /// An enum containing well known argument names passed through logs, as well
