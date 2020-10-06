@@ -21,6 +21,7 @@ generated_file("system_package.manifest_args") {
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "system_image_barrier" ]
   deps = [ "//build/images:packages" ]
+  deps += board_system_image_deps + product_system_image_deps
 }
 
 generate_manifest("boot.manifest") {

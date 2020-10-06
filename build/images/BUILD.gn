@@ -223,9 +223,9 @@ generated_file(system_image_manifest_args) {
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "system_image_barrier" ]
   deps = [
-    ":base_packages",
-    ":meta_packages",
-  ]
+           ":base_packages",
+           ":meta_packages",
+         ] + board_system_image_deps + product_system_image_deps
 }
 
 # The system_image "package" manifest is everything that appears in /system.
