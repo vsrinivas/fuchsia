@@ -157,6 +157,8 @@ class TestHarnessBuilder final {
   TestHarnessBuilder& AddServiceFromServiceDirectory(
       const std::string& service_name, std::shared_ptr<sys::ServiceDirectory> services);
 
+  TestHarnessBuilder& UseSessionShellForStoryShellFactory();
+
   // Make the templated service from |services| available in the test
   // harness environment. |services| and the service are both kept alive for the
   // duration of this builder object's life time.

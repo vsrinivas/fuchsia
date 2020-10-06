@@ -99,6 +99,7 @@ fuchsia::session::Annotations ToSessionAnnotations(
 
   fuchsia::session::Annotations session_annotations;
   session_annotations.set_custom_annotations(std::move(custom_annotations));
+
   return session_annotations;
 }
 

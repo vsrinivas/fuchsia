@@ -188,11 +188,13 @@ executable("sessionmgr_integration_test") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/testing",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gmock",
   ]

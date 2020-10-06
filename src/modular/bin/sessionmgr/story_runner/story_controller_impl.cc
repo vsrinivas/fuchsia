@@ -912,8 +912,7 @@ void StoryControllerImpl::StartStoryShell() {
 
   story_shell_holder_ = story_provider_impl_->StartStoryShell(story_id_, std::move(view_token),
                                                               story_shell_.NewRequest());
-
-  story_provider_impl_->AttachView(story_id_, std::move(view_holder_token));
+  story_provider_impl_->AttachOrPresentView(story_id_, std::move(view_holder_token));
 
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());
@@ -923,7 +922,7 @@ void StoryControllerImpl::StartStoryShell() {
 }
 
 void StoryControllerImpl::DetachView(fit::function<void()> done) {
-  story_provider_impl_->DetachView(story_id_, std::move(done));
+  story_provider_impl_->DetachOrDismissView(story_id_, std::move(done));
 }
 
 void StoryControllerImpl::SetRuntimeState(const fuchsia::modular::StoryState new_state) {
@@ -1010,6 +1009,7 @@ void StoryControllerImpl::Annotate(std::vector<fuchsia::modular::Annotation> ann
       callback(std::move(result));
       return;
     }
+
     auto error = weak_this->session_storage_->MergeStoryAnnotations(weak_this->story_id_,
                                                                     std::move(annotations));
     fuchsia::modular::StoryController_Annotate_Result result{};

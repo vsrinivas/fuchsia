@@ -19,6 +19,8 @@ source_set("test_harness_fixture") {
   public_configs = [ "//sdk/config" ]
 
   sources = [
+    "fake_graphical_presenter.cc",
+    "fake_graphical_presenter.h",
     "fake_module.cc",
     "fake_module.h",
     "fake_session_launcher_component.cc",
@@ -38,6 +40,7 @@ source_set("test_harness_fixture") {
   deps = [
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",

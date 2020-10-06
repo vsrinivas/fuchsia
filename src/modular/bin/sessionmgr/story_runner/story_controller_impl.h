@@ -10,6 +10,7 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>

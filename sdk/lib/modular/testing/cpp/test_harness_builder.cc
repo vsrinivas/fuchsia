@@ -155,6 +155,11 @@ TestHarnessBuilder& TestHarnessBuilder::AddServiceFromServiceDirectory(
   });
 }
 
+TestHarnessBuilder& TestHarnessBuilder::UseSessionShellForStoryShellFactory() {
+  spec_.mutable_basemgr_config()->set_use_session_shell_for_story_shell_factory(true);
+  return *this;
+}
+
 // static
 std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) {
   name.erase(std::remove_if(name.begin(), name.end(),

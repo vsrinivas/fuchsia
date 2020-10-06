@@ -4,6 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/annotations.h"
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
 
 #include <memory>
