@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "bin/timekeeper_integration_test"
     },
