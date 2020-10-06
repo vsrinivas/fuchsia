@@ -344,7 +344,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 
 		client, err := sshutil.NewClient(ctx, &sshAddr, config, sshutil.DefaultConnectBackoff())
 		if err != nil {
-			return fmt.Errorf("failed to establish SSH connection: %w", err)
+			return err
 		}
 		defer client.Close()
 
