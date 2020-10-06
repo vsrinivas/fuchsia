@@ -33,7 +33,7 @@ func TestKernelLockupDetector(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	d := distro.Create(qemu.Params{
 		Arch: arch,
 		ZBI:  zbiPath(t),
 
@@ -42,24 +42,30 @@ func TestKernelLockupDetector(t *testing.T) {
 		// Upon booting run "k", which will print a usage message.  By waiting for the usage
 		// message, we can be sure the system has booted and is ready to accept "k"
 		// commands.
-		AppendCmdline: "kernel.lockup-detector.threshold-ms=1000 " +
+		AppendCmdline: "kernel.lockup-detector.threshold-ms=500 " +
 			"zircon.autorun.boot=/boot/bin/sh+-c+k",
 	})
 
 	// Boot.
-	i.Start()
+	d.Start()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer d.Kill()
 
 	// Wait for the system to finish booting.
-	i.WaitForLogMessage("usage: k <command>")
+	d.WaitForLogMessage("usage: k <command>")
 
-	// For a lockup and see that an OOPS is emitted.
-	i.RunCommand("k lockup test 1 1100")
-	i.WaitForLogMessage("locking up CPU")
-	i.WaitForLogMessage("ZIRCON KERNEL OOPS")
-	i.WaitForLogMessage("CPU-1 in critical section for")
-	i.WaitForLogMessage("done")
+	// Force two lockups and see that an OOPS is emitted for each one.
+	//
+	// Why force two lockups?  Because emitting an OOPS will call back into the lockup detector,
+	// we want to verify that doing so does not mess up the lockup detector's state and prevent
+	// subsequent events from being detected.
+	for i := 0; i < 2; i++ {
+		d.RunCommand("k lockup test 1 600")
+		d.WaitForLogMessage("locking up CPU")
+		d.WaitForLogMessage("ZIRCON KERNEL OOPS")
+		d.WaitForLogMessage("CPU-1 in critical section for")
+		d.WaitForLogMessage("done")
+	}
 }

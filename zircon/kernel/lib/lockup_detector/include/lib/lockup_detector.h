@@ -22,6 +22,10 @@ __BEGIN_CDECLS
 // initialized since it needs to perform ticks to time conversion.
 void lockup_init(void);
 
+// Accessors exposed for testing.
+zx_ticks_t lockup_get_threshold_ticks(void);
+void lockup_set_threshold_ticks(zx_ticks_t ticks);
+
 #if DEBUG_ASSERT_IMPLEMENTED
 #define LOCKUP_BEGIN() \
   do {                 \
