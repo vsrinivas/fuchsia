@@ -993,10 +993,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/utest/trace:*",
 
-    # TODO(fxbug.dev/41663): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/third_party/lib/acpica:*",
-
     # TODO(fxbug.dev/41901): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/uapp/dash:*",
