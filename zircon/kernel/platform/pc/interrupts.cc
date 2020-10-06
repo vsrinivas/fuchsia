@@ -64,12 +64,11 @@ static void platform_init_apic(uint level) {
   pic_map(PIC1_BASE, PIC2_BASE);
   pic_disable();
 
-  AcpiTableProvider table_provider;
-  AcpiTables apic_tables(&table_provider);
+  const AcpiTables& acpi_tables = AcpiTables::Default();
 
   // Enumerate the IO APICs
   uint32_t num_io_apics;
-  zx_status_t status = apic_tables.io_apic_count(&num_io_apics);
+  zx_status_t status = acpi_tables.io_apic_count(&num_io_apics);
   // TODO: If we want to support x86 without IO APICs, we should do something
   // better here.
   ASSERT(status == ZX_OK);
@@ -77,19 +76,19 @@ static void platform_init_apic(uint level) {
       static_cast<io_apic_descriptor*>(calloc(num_io_apics, sizeof(*io_apics)));
   ASSERT(io_apics != NULL);
   uint32_t num_found = 0;
-  status = apic_tables.io_apics(io_apics, num_io_apics, &num_found);
+  status = acpi_tables.io_apics(io_apics, num_io_apics, &num_found);
   ASSERT(status == ZX_OK);
   ASSERT(num_io_apics == num_found);
 
   // Enumerate the IO APICs
   uint32_t num_isos;
-  status = apic_tables.interrupt_source_overrides_count(&num_isos);
+  status = acpi_tables.interrupt_source_overrides_count(&num_isos);
   ASSERT(status == ZX_OK);
   io_apic_isa_override* isos = NULL;
   if (num_isos > 0) {
     isos = static_cast<io_apic_isa_override*>(calloc(num_isos, sizeof(*isos)));
     ASSERT(isos != NULL);
-    status = apic_tables.interrupt_source_overrides(isos, num_isos, &num_found);
+    status = acpi_tables.interrupt_source_overrides(isos, num_isos, &num_found);
     ASSERT(status == ZX_OK);
     ASSERT(num_isos == num_found);
   }

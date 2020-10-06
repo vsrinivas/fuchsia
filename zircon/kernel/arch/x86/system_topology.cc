@@ -445,11 +445,9 @@ static constexpr zbi_topology_node_t kFallbackTopology = {
 // clang-format on
 
 zx_status_t GenerateAndInitSystemTopology() {
-  const AcpiTableProvider table_provider;
   fbl::Vector<zbi_topology_node_t> topology;
 
-  const auto status =
-      x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables(&table_provider), &topology);
+  const auto status = x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables::Default(), &topology);
   if (status != ZX_OK) {
     dprintf(CRITICAL, "ERROR: failed to generate flat topology from cpuid and acpi data! : %d\n",
             status);

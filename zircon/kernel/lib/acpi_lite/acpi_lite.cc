@@ -11,7 +11,6 @@
 #include <zircon/compiler.h>
 
 #include <ktl/algorithm.h>
-#include <ktl/optional.h>
 #include <pretty/hexdump.h>
 #include <vm/physmap.h>
 
@@ -387,40 +386,3 @@ zx_status_t AcpiParser::EnumerateMadtEntries(const uint8_t search_type,
 }
 
 }  // namespace acpi_lite
-
-namespace {
-// Global state for the C-style API.
-ktl::optional<acpi_lite::AcpiParser> parser;
-}  // namespace
-
-zx_status_t acpi_lite_init(zx_paddr_t rsdp_pa) {
-  ASSERT(!parser.has_value());
-
-  zx::status<acpi_lite::AcpiParser> parser_or = acpi_lite::AcpiParser::Init(rsdp_pa);
-  if (parser_or.is_error()) {
-    return parser_or.error_value();
-  }
-
-  parser.emplace(parser_or.value());
-  return ZX_OK;
-}
-
-void acpi_lite_dump_tables() {
-  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
-  parser->DumpTables();
-}
-
-const acpi_sdt_header* acpi_get_table_by_sig(const char* sig) {
-  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
-  return parser->GetTableBySignature(sig);
-}
-
-const acpi_sdt_header* acpi_get_table_at_index(size_t index) {
-  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
-  return parser->GetTableAtIndex(index);
-}
-
-zx_status_t acpi_process_madt_entries_etc(uint8_t search_type, const MadtEntryCallback& callback) {
-  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
-  return parser->EnumerateMadtEntries(search_type, callback);
-}

@@ -68,8 +68,7 @@ static uint64_t min_ticks_ahead;
 #define TIMER_CAP_IRQS(reg) static_cast<uint32_t>(BITS_SHIFT(reg, 63, 32))
 
 static void hpet_init(uint level) {
-  AcpiTableProvider provider;
-  zx_status_t status = AcpiTables(&provider).hpet(&hpet_desc);
+  zx_status_t status = AcpiTables::Default().hpet(&hpet_desc);
   if (status != ZX_OK) {
     return;
   }

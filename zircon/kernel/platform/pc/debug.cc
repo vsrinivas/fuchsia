@@ -463,9 +463,8 @@ static bool handle_serial_zbi() {
 // Return "true" if a debug port was found.
 static bool handle_serial_acpi() {
   // Fetch ACPI debug port information, if present.
-  AcpiTableProvider provider;
   AcpiDebugPortDescriptor desc;
-  zx_status_t status = AcpiTables(&provider).debug_port(&desc);
+  zx_status_t status = AcpiTables::Default().debug_port(&desc);
   if (status != ZX_OK) {
     dprintf(INFO, "UART: no DBG2 ACPI entry found, or unsupported port type.\n");
     return false;

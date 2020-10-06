@@ -72,21 +72,4 @@ class PhysMemReader {
 
 }  // namespace acpi_lite
 
-// C-style API.
-
-// Initialise the ACPI lite library. Must be called precisely once prior to other
-// functions being called.
-zx_status_t acpi_lite_init(zx_paddr_t rsdp_pa);
-
-// Dump ACPI tables to debug log.
-void acpi_lite_dump_tables();
-
-// Get a pointer to an ACPI table by signature/index.
-const acpi_sdt_header* acpi_get_table_by_sig(const char* sig);
-const acpi_sdt_header* acpi_get_table_at_index(size_t index);
-
-// Iterate over the MADT entries.
-using MadtEntryCallback = fbl::Function<void(const void* entry, size_t entry_len)>;
-zx_status_t acpi_process_madt_entries_etc(uint8_t search_type, const MadtEntryCallback&);
-
 #endif  // ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_H_

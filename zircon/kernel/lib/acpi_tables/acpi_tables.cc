@@ -3,6 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include "lib/acpi_tables.h"
 
 #include <assert.h>
@@ -10,10 +11,13 @@
 #include <lib/acpi_lite.h>
 #include <trace.h>
 
+#include <ktl/optional.h>
 #include <ktl/span.h>
 #include <lk/init.h>
 
 #define LOCAL_TRACE 0
+
+using acpi_lite::AcpiParser;
 
 namespace {
 
@@ -496,12 +500,19 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(
   return ZX_OK;
 }
 
-// Wraps acpi_lite functions to allow testing.
+void AcpiTables::SetDefault(const AcpiTables* table) { default_ = table; }
+
+const AcpiTables& AcpiTables::Default() {
+  ASSERT_MSG(default_ != nullptr, "AcpiTables::SetDefault() must be called.");
+  return *default_;
+}
+
+// Look up the given ACPI table. On success, sets header to point to table.
+// Maintains ownership of the table's memory.
 //
-// Looks up table, on success sets header to point to table. Maintains ownership of the table's
-// memory.
-zx_status_t AcpiTableProvider::GetTable(char* signature, char** header_out) const {
-  auto header = acpi_get_table_by_sig(signature);
+// Wraps acpi_lite to allow testing.
+zx_status_t AcpiLiteTableProvider::GetTable(char* signature, char** header_out) const {
+  auto header = parser_->GetTableBySignature(signature);
   if (header) {
     *header_out = (char*)header;
     return ZX_OK;
