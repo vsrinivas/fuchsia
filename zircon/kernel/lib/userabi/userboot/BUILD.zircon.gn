@@ -4,53 +4,101 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# TODO(fxbug.dev/54160) Keep in sync with BUILD.gn
+if (zx == "/") {
+  import("$zx/public/gn/config/levels.gni")
+  import("$zx/public/gn/config/standard.gni")
+  import("$zx/public/gn/test/zbi_test.gni")
+  import("$zx/public/gn/toolchain/c_utils.gni")
+  import("$zx/public/gn/toolchain/environment.gni")
+  import("$zx/public/gn/toolchain/environment_redirect.gni")
+  #import("$zx/public/gn/zbi.gni")
+} else {
+  import("//build/config/zircon/standard.gni")
+  import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+  import("//build/unification/global_variables.gni")
+}
 
-import("$zx/public/gn/config/levels.gni")
-import("$zx/public/gn/config/standard.gni")
-import("$zx/public/gn/test/zbi_test.gni")
+import("$zx/public/gn/test/zbi_test_success.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
-import("$zx/public/gn/toolchain/environment.gni")
-import("$zx/public/gn/toolchain/environment_redirect.gni")
-import("$zx/public/gn/zbi.gni")
 
 # userboot gets its own toolchain for its special build requirements.
 if (current_toolchain == default_toolchain) {
   # Define the special toolchain itself only in the default toolchain.
   foreach(cpu, standard_fuchsia_cpus) {
-    environment("userboot") {
-      cpu = cpu
-      configs += standard_fuchsia_configs + [
-                   ":userboot_config",
+    if (zx == "/") {
+      environment("userboot") {
+        cpu = cpu
+        configs +=
+            standard_fuchsia_configs + [
+              ":userboot_config",
 
-                   # TODO(fxbug.dev/48501): This is needed pervasively and not just
-                   # in the linking target so its compile-time flags can
-                   # work around fxbug.dev/48501.  It's separate from
-                   # userboot_config so it can be removed by other links
-                   # reusing this environment, e.g. hermetic_module().
-                   "$zx_build_config:rodso",
-                 ]
+              # TODO(fxbug.dev/48501): This is needed pervasively and not just
+              # in the linking target so its compile-time flags can
+              # work around fxbug.dev/48501.  It's separate from
+              # userboot_config so it can be removed by other links
+              # reusing this environment, e.g. hermetic_module().
+              "$zx_build_config:rodso",
+            ]
 
-      # This doesn't get a separate shlib sub-toolchain, but the main one
-      # can do loadable_module().
-      solink = true
+        # This doesn't get a separate shlib sub-toolchain, but the main one
+        # can do loadable_module().
+        solink = true
 
-      toolchain_args = {
-        if (optimize == "none" || optimize == "debug") {
-          # userboot doesn't stay sufficiently pure without optimization.
-          optimize = "default"
+        toolchain_args = {
+          if (optimize == "none" || optimize == "debug") {
+            # userboot doesn't stay sufficiently pure without optimization.
+            optimize = "default"
+          }
+
+          # No runtime to print asserts, so can't compile them in.
+          assert_level = 0
         }
 
-        # No runtime to print asserts, so can't compile them in.
-        assert_level = 0
+        # userboot can't use any instrumentation runtimes.
+        exclude_variant_tags = [ "instrumented" ]
+        tags = [ "hermetic" ]
       }
+    } else {
+      zircon_toolchain_suite("userboot_$cpu") {
+        cpu = cpu
+        os = "fuchsia"
+        environment = "userboot"
+        toolchain_variant_args = {
+          configs = [
+            "//zircon/kernel/lib/userabi/userboot:userboot_config",
 
-      # userboot can't use any instrumentation runtimes.
-      exclude_variant_tags = [ "instrumented" ]
-      tags = [ "hermetic" ]
+            # TODO(fxbug.dev/48501): This is needed pervasively and not just
+            # in the linking target so its compile-time flags can
+            # work around fxbug.dev/48501.  It's separate from
+            # userboot_config so it can be removed by other links
+            # reusing this environment, e.g. hermetic_module().
+            "$zx_build_config:rodso",
+          ]
+        }
+
+        # This doesn't get a separate shlib sub-toolchain, but the main one
+        # can do loadable_module().
+        with_shared = false
+        is_pic_default = true
+
+        toolchain_args = {
+          if (zircon_optimize == "none" || zircon_optimize == "debug") {
+            # userboot doesn't stay sufficiently pure without optimization.
+            zircon_optimize = "default"
+          }
+
+          # No runtime to print asserts, so can't compile them in.
+          zx_assert_level = 0
+        }
+
+        # userboot can't use any instrumentation runtimes.
+        exclude_variant_tags = [ "instrumented" ]
+      }
     }
   }
-} else if (toolchain.environment == "userboot") {
+}
+
+if (toolchain.environment == "userboot") {
   # Everything in userboot gets compiled this way.
   config("userboot_config") {
     configs = [
@@ -70,6 +118,9 @@ if (current_toolchain == default_toolchain) {
       rebase_path("$zx/kernel/include/hidden.h", root_build_dir),
     ]
     defines = [ "HIDDEN" ]
+  }
+
+  group("userboot_config_deps") {
   }
 
   # This is the output of target ":gen-vdso-syms-ld", below.
@@ -163,10 +214,18 @@ if (current_toolchain == default_toolchain) {
     ]
   }
 } else {
-  # In any other toolchain, just redirect to the proper toolchain.
-  environment_redirect("userboot") {
-    environment_label = ":userboot"
-    direct = true
-    deps = [ ":userboot" ]
+  if (zx == "/") {
+    if (current_toolchain != default_toolchain) {
+      # In any other toolchain, just redirect to the proper toolchain.
+      environment_redirect("userboot") {
+        environment_label = ":userboot"
+        direct = true
+        deps = [ ":userboot" ]
+      }
+    }
+  } else {
+    group("userboot") {
+      public_deps = [ ":userboot(//zircon/kernel/lib/userabi/userboot:userboot_${target_cpu})" ]
+    }
   }
 }
