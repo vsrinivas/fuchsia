@@ -48,6 +48,7 @@ const (
 	buildAPIDirName = "build_api"
 	buildidDirName  = "buildid"
 	debugDirName    = "debug"
+	hostTestDirName = "host_tests"
 	imageDirName    = "images"
 	packageDirName  = "packages"
 	toolDirName     = "tools"
@@ -120,6 +121,8 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   │       └── <package repo keys>
 │   │   │   │   ├── build_api
 │   │   │   │   │   └── <build API module JSON>
+|   |   |   |   ├── host_tests
+│   │   │   │   │   └── <host tests and deps, same hierarchy as build dir>
 │   │   │   │   ├── tools
 │   │   │   │   │   └── <OS>-<CPU>
 │   │   │   │   │       └── <tool names>
@@ -282,6 +285,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		}
 		files = append(files, *publicKey)
 	}
+
+	hostTests, err := artifactory.HostTestUploads(m.TestSpecs(), m.BuildDir(), path.Join(buildsUUIDDir, hostTestDirName))
+	if err != nil {
+		return fmt.Errorf("failed to get host test files: %v", err)
+	}
+	files = append(files, hostTests...)
 
 	for _, dir := range dirs {
 		contents, err := dirToFiles(ctx, dir)
