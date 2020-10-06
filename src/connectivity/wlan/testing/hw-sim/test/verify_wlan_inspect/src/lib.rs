@@ -260,6 +260,18 @@ async fn verify_wlan_inspect() {
             last_pulse: contains {
                 status: contains {
                     status_str: "idle",
+                    prev_connected_to: contains {
+                        bssid: BSSID.0.to_mac_str(),
+                        bssid_hash: AnyProperty,
+                        ssid: String::from_utf8_lossy(SSID).to_string(),
+                        ssid_hash: AnyProperty,
+                        wsc: {
+                            device_name: "ASUS Router",
+                            manufacturer: "ASUSTek Computer Inc.",
+                            model_name: "RT-AC58U",
+                            model_number: "123",
+                        }
+                    }
                 }
             },
             state_events: contains {

@@ -24,6 +24,9 @@ const RSN_EVENTS_LIMIT: usize = 50;
 /// Limit set to capture roughly join scans for 10 recent connection attempts.
 const JOIN_SCAN_EVENTS_LIMIT: usize = 10;
 
+/// Display idle status str
+const IDLE_STR: &'static str = "idle";
+
 /// Wrapper struct SME inspection nodes
 pub struct SmeTree {
     /// Inspection node to log recent state transitions, or cases where an event would that would
@@ -116,7 +119,7 @@ impl PulseNode {
             // Safe to unwrap because value was inserted two lines above
             let new_status = self.last_status.as_ref().unwrap();
             match self.status.as_mut() {
-                Some(status_node) => status_node.update(new_status, hasher),
+                Some(status_node) => status_node.update(old_status, new_status, hasher),
                 None => {
                     self.status =
                         Some(StatusNode::new(self.node.create_child("status"), new_status, hasher))
@@ -129,27 +132,54 @@ impl PulseNode {
 pub struct StatusNode {
     node: Node,
     status_str: StringProperty,
+    prev_connected_to: Option<BssInfoNode>,
     connected_to: Option<BssInfoNode>,
     connecting_to: Option<ConnectingToNode>,
 }
 
 impl StatusNode {
     fn new(node: Node, status: &SmeStatus, hasher: &InspectHasher) -> Self {
-        let status_str = node.create_string("status_str", "idle");
-        let mut status_node = Self { node, status_str, connected_to: None, connecting_to: None };
-        status_node.update(status, hasher);
+        let status_str = node.create_string("status_str", IDLE_STR);
+        let mut status_node = Self {
+            node,
+            status_str,
+            prev_connected_to: None,
+            connected_to: None,
+            connecting_to: None,
+        };
+        status_node.update(None, status, hasher);
         status_node
     }
 
-    pub fn update(&mut self, new_status: &SmeStatus, hasher: &InspectHasher) {
+    pub fn update(
+        &mut self,
+        old_status: Option<SmeStatus>,
+        new_status: &SmeStatus,
+        hasher: &InspectHasher,
+    ) {
         let status_str = if new_status.connected_to.is_some() {
             "connected"
         } else if new_status.connecting_to.is_some() {
             "connecting"
         } else {
-            "idle"
+            IDLE_STR
         };
         self.status_str.set(status_str);
+
+        if status_str == IDLE_STR {
+            if let Some(bss_info) = old_status.map(|s| s.connected_to).flatten() {
+                match self.prev_connected_to.as_mut() {
+                    Some(prev_connected_to) => prev_connected_to.update(&bss_info, hasher),
+                    None => {
+                        self.prev_connected_to = Some(BssInfoNode::new(
+                            self.node.create_child("prev_connected_to"),
+                            &bss_info,
+                            hasher,
+                        ));
+                    }
+                }
+            }
+        }
 
         match &new_status.connected_to {
             Some(bss_info) => match self.connected_to.as_mut() {
@@ -442,6 +472,7 @@ mod tests {
         });
 
         // SME is idle. The "connected_to" field is cleared out.
+        // The "prev_connected_to" field is logged.
         let status = SmeStatus { connected_to: None, connecting_to: None };
         pulse.update(status, &hasher);
         assert_inspect_tree!(inspector, root: {
@@ -449,7 +480,15 @@ mod tests {
                 started: AnyProperty,
                 last_updated: AnyProperty,
                 last_link_up: AnyProperty,
-                status: { status_str: "idle" },
+                status: {
+                    status_str: "idle",
+                    prev_connected_to: contains {
+                        ssid: "foo",
+                        ssid_hash: AnyProperty,
+                        bssid: AnyProperty,
+                        bssid_hash: AnyProperty,
+                    },
+                },
             }
         });
     }
