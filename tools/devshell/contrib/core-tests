@@ -20,4 +20,4 @@ for arg in "$@"; do
   esac
 done
 
-fx-command-exec contrib/run-zbi-test "${ARGS[@]}" core-tests
+fx-command-exec run-zbi-test "${ARGS[@]}" core-tests
