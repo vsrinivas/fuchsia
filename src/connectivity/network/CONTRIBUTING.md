@@ -63,8 +63,8 @@ identifier][blank_identifier]. In *Rust*, prefer destructuring assignment
 whenever possible, including when the return value is unit (`()`). When
 discarding primitive types where destructuring is not possible, use type
 annotations:
-```
-rust let _useless_rand: u8 = rand::thread_rng().gen();
+```rust
+let _useless_rand: u8 = rand::thread_rng().gen();
 ```
 Apply the same rules to unused closure parameters.
 
