@@ -32,6 +32,7 @@
   <string name="role_list">Elenco</string>
   <string name="list_items">{num_items,plural, =0{senza voci}=1{con una voce}other{con # voci}}</string>
   <string name="normal_navigation_granularity">Navigazione normale</string>
+  <string name="default_navigation_granularity">Predefinita</string>
   <string name="adjust_value_granularity">Regola valore</string>
   <string name="heading_granularity">Intestazione</string>
   <string name="form_control_granularity">Controllo modulo</string>

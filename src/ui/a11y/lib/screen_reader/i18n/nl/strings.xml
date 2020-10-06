@@ -32,6 +32,7 @@
   <string name="role_list">Lijst</string>
   <string name="list_items">{num_items,plural, =0{met geen items}=1{met één item}other{met # items}}</string>
   <string name="normal_navigation_granularity">Normale navigatie</string>
+  <string name="default_navigation_granularity">Standaard</string>
   <string name="adjust_value_granularity">Waarde aanpassen</string>
   <string name="heading_granularity">Kop</string>
   <string name="form_control_granularity">Formulierbesturingselement</string>

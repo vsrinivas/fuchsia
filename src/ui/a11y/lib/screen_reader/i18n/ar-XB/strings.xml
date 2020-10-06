@@ -32,6 +32,7 @@
   <string name="role_list">‏‮List‬‏</string>
   <string name="list_items">{num_items,plural, =0{‏‮with‬‏ ‏‮no‬‏ ‏‮items‬‏}=1{‏‮with‬‏ ‏‮one‬‏ ‏‮item‬‏}two{‏‮with‬‏ # ‏‮items‬‏}few{‏‮with‬‏ # ‏‮items‬‏}many{‏‮with‬‏ # ‏‮items‬‏}other{‏‮with‬‏ # ‏‮items‬‏}}</string>
   <string name="normal_navigation_granularity">‏‮Normal‬‏ ‏‮navigation‬‏</string>
+  <string name="default_navigation_granularity">‏‮Default‬‏</string>
   <string name="adjust_value_granularity">‏‮Adjust‬‏ ‏‮value‬‏</string>
   <string name="heading_granularity">‏‮Heading‬‏</string>
   <string name="form_control_granularity">‏‮Form‬‏ ‏‮control‬‏</string>

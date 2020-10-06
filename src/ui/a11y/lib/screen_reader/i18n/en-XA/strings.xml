@@ -32,6 +32,7 @@
   <string name="role_list">[Ļîšţ one]</string>
   <string name="list_items">{num_items,plural, =0{[ŵîţĥ ñö îţémš one two]}=1{[ŵîţĥ öñé îţém one two]}other{[ŵîţĥ ᐅ#ᐊ îţémš one two three]}}</string>
   <string name="normal_navigation_granularity">[Ñöŕmåļ ñåvîĝåţîöñ one two three]</string>
+  <string name="default_navigation_granularity">[Ðéƒåûļţ one]</string>
   <string name="adjust_value_granularity">[Åðĵûšţ våļûé one two]</string>
   <string name="heading_granularity">[Ĥéåðîñĝ one]</string>
   <string name="form_control_granularity">[Föŕm çöñţŕöļ one two]</string>

@@ -32,6 +32,7 @@
   <string name="role_list">リスト</string>
   <string name="list_items">{num_items,plural, =0{アイテムなし}=1{1 個のアイテム}other{# 個のアイテム}}</string>
   <string name="normal_navigation_granularity">標準の移動</string>
+  <string name="default_navigation_granularity">デフォルト</string>
   <string name="adjust_value_granularity">値の調整</string>
   <string name="heading_granularity">見出し</string>
   <string name="form_control_granularity">フォームコントロール</string>

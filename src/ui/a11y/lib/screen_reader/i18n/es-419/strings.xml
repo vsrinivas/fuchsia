@@ -32,6 +32,7 @@
   <string name="role_list">Lista</string>
   <string name="list_items">{num_items,plural, =0{sin elementos}=1{con un elemento}other{con # elementos}}</string>
   <string name="normal_navigation_granularity">Navegación normal</string>
+  <string name="default_navigation_granularity">Predeterminada</string>
   <string name="adjust_value_granularity">Ajustar valor</string>
   <string name="heading_granularity">Encabezado</string>
   <string name="form_control_granularity">Control de formularios</string>

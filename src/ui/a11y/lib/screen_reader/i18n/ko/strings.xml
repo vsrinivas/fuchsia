@@ -32,6 +32,7 @@
   <string name="role_list">목록</string>
   <string name="list_items">{num_items,plural, =0{항목 포함 안함}=1{항목 1개 포함}other{항목 #개 포함}}</string>
   <string name="normal_navigation_granularity">일반 탐색</string>
+  <string name="default_navigation_granularity">기본값</string>
   <string name="adjust_value_granularity">값 조정</string>
   <string name="heading_granularity">제목</string>
   <string name="form_control_granularity">양식 컨트롤</string>

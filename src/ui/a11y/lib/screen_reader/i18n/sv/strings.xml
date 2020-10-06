@@ -32,6 +32,7 @@
   <string name="role_list">Lista</string>
   <string name="list_items">{num_items,plural, =0{utan objekt}=1{med ett objekt}other{med # objekt}}</string>
   <string name="normal_navigation_granularity">Normal navigering</string>
+  <string name="default_navigation_granularity">Standard</string>
   <string name="adjust_value_granularity">Justera värdet</string>
   <string name="heading_granularity">Rubrik</string>
   <string name="form_control_granularity">Formulärkontroll</string>

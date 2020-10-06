@@ -32,6 +32,7 @@
   <string name="role_list">Liste</string>
   <string name="list_items">{num_items,plural, =0{uten elementer}=1{med ett element}other{med # elementer}}</string>
   <string name="normal_navigation_granularity">Normal navigering</string>
+  <string name="default_navigation_granularity">Standard</string>
   <string name="adjust_value_granularity">Juster verdien</string>
   <string name="heading_granularity">Overskrift</string>
   <string name="form_control_granularity">Skjemakontroll</string>
