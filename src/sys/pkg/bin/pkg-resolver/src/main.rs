@@ -58,7 +58,9 @@ use crate::{
 // package resolver's executor is multi-threaded, a trace duration that includes an 'await' may not
 // end on the same thread it starts on, resulting in invalid trace events.
 // const SERVER_THREADS: usize = 2;
-const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
+// TODO(61367): increase the concurrency limit back to 5 once blobfs memory usage during OTAs is
+// under control
+const MAX_CONCURRENT_BLOB_FETCHES: usize = 1;
 const MAX_CONCURRENT_PACKAGE_FETCHES: usize = 5;
 // Each fetch_blob call emits an event, and a system update fetches about 1,000 blobs in about a
 // minute.
