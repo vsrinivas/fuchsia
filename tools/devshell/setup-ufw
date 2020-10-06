@@ -55,4 +55,5 @@ fi
 dryer sudo ufw allow proto udp from fe80::/10 to any port 33331:33340 comment 'Fuchsia Netboot Protocol'
 dryer sudo ufw allow proto tcp from fe80::/10 to any port 8083 comment 'Fuchsia Package Server'
 dryer sudo ufw allow proto udp from fe80::/10 port 33340 comment 'Fuchsia Netboot TFTP Source Port'
+dryer sudo ufw allow proto udp from fe80::/10 port 5353 comment 'Fuchsia MDNS'
 echo "Done!"
