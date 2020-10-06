@@ -65,10 +65,11 @@ enum {
 enum {
   BOARD_REV_P1 = 0,
   BOARD_REV_P2 = 1,
-  BOARD_REV_EVT_1 = 2,
-  BOARD_REV_EVT_2 = 3,
-  BOARD_REV_DVT = 4,
-  BOARD_REV_PVT = 5,
+  BOARD_REV_P2_DOE = 2,
+  BOARD_REV_PRE_EVT = 3,
+  BOARD_REV_EVT = 4,
+  BOARD_REV_DVT = 5,
+  BOARD_REV_DVT2 = 6,
 
   MAX_SUPPORTED_REV,  // This must be last entry
 };
