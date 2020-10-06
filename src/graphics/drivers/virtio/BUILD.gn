@@ -22,9 +22,6 @@ source_set("gpu_lib") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/image-format",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("virtio_gpu") {

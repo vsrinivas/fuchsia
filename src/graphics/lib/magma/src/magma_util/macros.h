@@ -157,8 +157,8 @@ static inline bool is_pow2(uint64_t val) {
 }
 
 // Note, alignment must be a power of 2
-template <class T>
-static inline T round_up(T val, uint64_t alignment) {
+template <class T, class U>
+static inline T round_up(T val, U alignment) {
   DASSERT(is_pow2(alignment));
   return ((val - 1) | (alignment - 1)) + 1;
 }

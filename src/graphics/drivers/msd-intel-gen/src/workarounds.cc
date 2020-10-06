@@ -11,7 +11,7 @@ namespace {
 constexpr uint32_t kRegisterWriteCount = 2;
 }
 
-uint64_t Workarounds::InstructionBytesRequired() {
+uint32_t Workarounds::InstructionBytesRequired() {
   const uint32_t num_dwords =
       MiLoadDataImmediate::dword_count(kRegisterWriteCount) + MiNoop::kDwordCount;
   return num_dwords * sizeof(uint32_t);
@@ -40,7 +40,8 @@ bool Workarounds::Init(magma::InstructionWriter* writer, EngineCommandStreamerId
   DASSERT(offsets.size() == kRegisterWriteCount);
   DASSERT(values.size() == offsets.size());
 
-  MiLoadDataImmediate::write(writer, offsets.size(), offsets.data(), values.data());
+  MiLoadDataImmediate::write(writer, magma::to_uint32(offsets.size()), offsets.data(),
+                             values.data());
 
   MiNoop::write(writer);
 

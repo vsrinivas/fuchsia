@@ -80,7 +80,8 @@ void EngineCommandStreamer::InitHardware() {
 
   HardwareStatusPage* status_page = hardware_status_page(id());
 
-  registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, status_page->gpu_addr());
+  uint32_t gtt_addr = magma::to_uint32(status_page->gpu_addr());
+  registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, gtt_addr);
 
   uint32_t initial_sequence_number = sequencer()->next_sequence_number();
   status_page->write_sequence_number(initial_sequence_number);
@@ -173,9 +174,10 @@ class RegisterStateHelper {
   }
 
   // RING_BUFFER_START - Ring Buffer Start
-  void write_ring_buffer_start(uint32_t ring_buffer_start) {
+  void write_ring_buffer_start(uint32_t gtt_ring_buffer_start) {
+    DASSERT(magma::is_page_aligned(gtt_ring_buffer_start));
     state_[8] = mmio_base_ + 0x38;
-    state_[9] = ring_buffer_start;
+    state_[9] = gtt_ring_buffer_start;
   }
 
   // RING_BUFFER_CTL - Ring Buffer Control
@@ -317,7 +319,7 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
   helper.write_ring_head_pointer(ringbuffer->head());
   // Ring buffer tail and start is patched in later (see UpdateContext).
   helper.write_ring_tail_pointer(0);
-  helper.write_ring_buffer_start(~0);
+  helper.write_ring_buffer_start(0);
   helper.write_ring_buffer_control(ringbuffer->size());
   helper.write_batch_buffer_upper_head_pointer();
   helper.write_batch_buffer_head_pointer();
@@ -376,8 +378,9 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
 
   DLOG("UpdateContext ringbuffer gpu_addr 0x%lx tail 0x%x", gpu_addr, tail);
 
+  uint32_t gtt_addr = magma::to_uint32(gpu_addr);
+  helper.write_ring_buffer_start(gtt_addr);
   helper.write_ring_tail_pointer(tail);
-  helper.write_ring_buffer_start(gpu_addr);
 
   return true;
 }
@@ -415,7 +418,8 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
   // Use most significant bits of context gpu_addr as globally unique context id
   DASSERT(PAGE_SIZE == 4096);
   uint64_t descriptor0 = registers::ExeclistSubmitPort::context_descriptor(
-      gpu_addr, gpu_addr >> 12, context->exec_address_space()->type() == ADDRESS_SPACE_PPGTT);
+      gpu_addr, magma::to_uint32(gpu_addr >> 12),
+      context->exec_address_space()->type() == ADDRESS_SPACE_PPGTT);
   uint64_t descriptor1 = 0;
 
   registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
@@ -730,7 +734,7 @@ void RenderEngineCommandStreamer::ResetCurrentContext() {
 }
 
 std::vector<MappedBatch*> RenderEngineCommandStreamer::GetInflightBatches() {
-  uint32_t num_sequences = inflight_command_sequences_.size();
+  size_t num_sequences = inflight_command_sequences_.size();
   std::vector<MappedBatch*> inflight_batches;
   inflight_batches.reserve(num_sequences);
   for (uint32_t i = 0; i < num_sequences; i++) {

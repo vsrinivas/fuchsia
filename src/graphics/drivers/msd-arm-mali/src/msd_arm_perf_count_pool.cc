@@ -28,10 +28,10 @@ void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
       return;
     }
     uint8_t* out_addr = reinterpret_cast<uint8_t*>(data) + buffer.offset;
-    uint32_t size_to_write = dumped.size() * sizeof(uint32_t);
+    uint32_t size_to_write = magma::to_uint32(dumped.size() * sizeof(uint32_t));
     if (size_to_write > buffer.size) {
       DLOG("Truncating write to perf count buffer");
-      size_to_write = buffer.size;
+      size_to_write = magma::to_uint32(buffer.size);
     }
     if (i == 0) {
       memcpy(out_addr, dumped.data(), size_to_write);
@@ -45,7 +45,7 @@ void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
         .type = MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED};
     notification.u.perf_counter_result.pool_id = pool_id_;
     notification.u.perf_counter_result.buffer_id = buffer.buffer_id;
-    notification.u.perf_counter_result.buffer_offset = buffer.offset;
+    notification.u.perf_counter_result.buffer_offset = magma::to_uint32(buffer.offset);
     notification.u.perf_counter_result.result_flags =
         discontinuous_ ? MAGMA_PERF_COUNTER_RESULT_DISCONTINUITY : 0;
     discontinuous_ = false;

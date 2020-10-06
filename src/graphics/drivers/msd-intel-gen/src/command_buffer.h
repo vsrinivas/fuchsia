@@ -79,7 +79,9 @@ class CommandBuffer : public MappedBatch {
 
   uint32_t signal_semaphore_count() const { return command_buffer_->signal_semaphore_count; }
 
-  uint32_t batch_start_offset() const { return command_buffer_->batch_start_offset; }
+  uint32_t batch_start_offset() const {
+    return magma::to_uint32(command_buffer_->batch_start_offset);
+  }
 
   // maps all execution resources into the given |address_space|.
   // fills |resource_gpu_addresses_out| with the mapped addresses of every object in

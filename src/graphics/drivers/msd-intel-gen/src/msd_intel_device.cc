@@ -610,10 +610,10 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
   std::bitset<registers::MirrorEuDisable::kMaxSliceCount> slice_bitset(slice_enable_mask);
   std::bitset<registers::MirrorEuDisable::kMaxSubsliceCount> subslice_bitset(subslice_enable_mask);
 
-  *subslice_total_out = slice_bitset.count() * subslice_bitset.count();
+  *subslice_total_out = magma::to_uint32(slice_bitset.count() * subslice_bitset.count());
   *eu_total_out = 0;
 
-  for (uint32_t slice = 0; slice < registers::MirrorEuDisable::kMaxSliceCount; slice++) {
+  for (uint8_t slice = 0; slice < registers::MirrorEuDisable::kMaxSliceCount; slice++) {
     if ((slice_enable_mask & (1 << slice)) == 0)
       continue;  // skip disabled slice
 
@@ -626,7 +626,7 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
 
       DLOG("subslice %u eu_disable_mask 0x%x", subslice, eu_disable_mask[subslice]);
 
-      uint32_t eu_disable_count =
+      size_t eu_disable_count =
           std::bitset<registers::MirrorEuDisable::kEuPerSubslice>(eu_disable_mask[subslice])
               .count();
       *eu_total_out += registers::MirrorEuDisable::kEuPerSubslice - eu_disable_count;

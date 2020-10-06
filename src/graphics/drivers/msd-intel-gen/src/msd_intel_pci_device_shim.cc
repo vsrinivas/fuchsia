@@ -117,7 +117,8 @@ class MsdIntelPciDeviceShim : public MsdIntelPciDevice,
   magma::PlatformPciDevice* platform_device() override { return this; }
 
   bool ReadPciConfig16(uint64_t addr, uint16_t* value) override {
-    zx_status_t status = ops()->read_pci_config16(context(), addr, value);
+    DASSERT(addr <= std::numeric_limits<uint16_t>::max());
+    zx_status_t status = ops()->read_pci_config16(context(), static_cast<uint16_t>(addr), value);
     if (status != ZX_OK)
       return DRETF(false, "read_pci_config16 failed: %d", status);
     return true;

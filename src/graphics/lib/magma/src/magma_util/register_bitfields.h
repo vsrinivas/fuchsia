@@ -186,7 +186,7 @@ class BitfieldRef {
   BitfieldRef(IntType* value_ptr, uint32_t bit_high_incl, uint32_t bit_low)
       : value_ptr_(value_ptr),
         shift_(bit_low),
-        mask_((1ull << (bit_high_incl - bit_low + 1)) - 1) {}
+        mask_(magma::to_uint32((1ul << (bit_high_incl - bit_low + 1)) - 1)) {}
 
   uint32_t get() const { return (*value_ptr_ >> shift_) & mask_; }
 

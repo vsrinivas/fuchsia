@@ -177,13 +177,13 @@ std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpa
       return mapping;
 
     // Allocate new mapping (trying to avoid evicting).
-    for (size_t i = 0; i < address_slots_.size(); ++i) {
+    for (uint32_t i = 0; i < address_slots_.size(); ++i) {
       if (!address_slots_[i].address_space)
         return AssignToSlot(connection, i);
     }
 
     // TODO(fxbug.dev/12997): Evict the LRU slot.
-    for (size_t i = 0; i < address_slots_.size(); ++i) {
+    for (uint32_t i = 0; i < address_slots_.size(); ++i) {
       if (address_slots_[i].mapping.expired())
         return AssignToSlot(connection, i);
     }
@@ -287,7 +287,7 @@ void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t
   uint64_t num_pages = length >> PAGE_SHIFT;
   uint8_t log2_num_pages = 0;
   if (num_pages > 0) {
-    log2_num_pages = 63 - __builtin_clzl(num_pages);
+    log2_num_pages = static_cast<uint8_t>(63 - __builtin_clzl(num_pages));
     if ((1ul << log2_num_pages) < num_pages)
       log2_num_pages++;
   }

@@ -45,7 +45,7 @@ class SemaphorePort {
 
       DASSERT(completed_count_ < semaphore_count());
       ++completed_count_;
-      DLOG("completed_count %u semaphore count %u", completed_count_, semaphore_count());
+      DLOG("completed_count %u semaphore count %zu", completed_count_, semaphore_count());
       if (completed_count_ == semaphore_count()) {
         for (auto semaphore : semaphores_) {
           semaphore->Reset();
@@ -54,7 +54,7 @@ class SemaphorePort {
       }
     }
 
-    uint32_t semaphore_count() { return semaphores_.size(); }
+    size_t semaphore_count() { return semaphores_.size(); }
 
     magma::PlatformSemaphore* semaphore(uint32_t index) {
       DASSERT(index < semaphore_count());

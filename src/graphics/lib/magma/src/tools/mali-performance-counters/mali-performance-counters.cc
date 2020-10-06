@@ -69,7 +69,7 @@ int CapturePerformanceCounters(fxl::CommandLine command_line) {
   std::string period = command_line.GetOptionValueWithDefault("period", "1000");
 
   char* endptr;
-  int period_int = strtol(period.c_str(), &endptr, 10);
+  long int period_int = strtol(period.c_str(), &endptr, 10);
   if (!endptr || *endptr != '\0') {
     LogError("Invalid period value of %s\n", period.c_str());
     PrintUsage();

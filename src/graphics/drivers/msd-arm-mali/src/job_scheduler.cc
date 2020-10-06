@@ -276,7 +276,7 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
   ValidateCanSwitchProtected();
 }
 
-void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code, uint64_t tail) {
+void JobScheduler::JobCompleted(uint32_t slot, ArmMaliResultCode result_code, uint64_t tail) {
   TRACE_DURATION("magma", "JobCompleted");
   std::shared_ptr<MsdArmAtom>& atom = executing_atoms_[slot];
   DASSERT(atom);

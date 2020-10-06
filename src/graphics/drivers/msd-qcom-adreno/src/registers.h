@@ -277,7 +277,8 @@ class A6xxCpRingbufferControl : public magma::RegisterBase {
     DASSERT(success);
     success = magma::get_pow2(ringbuffer_block_size / 8, &block_size_pow2);
     DASSERT(success);
-    uint64_t value = (size_pow2 << kBufferSizeShift) | (block_size_pow2 << kBlockSizeShift);
+    uint32_t value =
+        magma::to_uint32((size_pow2 << kBufferSizeShift) | (block_size_pow2 << kBlockSizeShift));
     set_reg_value(value);
   }
 

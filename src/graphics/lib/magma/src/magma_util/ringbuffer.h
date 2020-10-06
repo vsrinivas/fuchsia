@@ -23,7 +23,7 @@ class Ringbuffer : public InstructionWriter {
   // If specified, |size| must be less than the buffer size.
   Ringbuffer(std::unique_ptr<typename GpuMapping::BufferType>&& buffer, uint32_t size = 0);
 
-  uint64_t size() { return size_; }
+  uint32_t size() { return size_; }
 
   uint32_t tail() { return tail_; }
 
@@ -68,7 +68,7 @@ class Ringbuffer : public InstructionWriter {
  private:
   std::shared_ptr<typename GpuMapping::BufferType> buffer_;
   std::shared_ptr<GpuMapping> gpu_mapping_;
-  uint64_t size_;
+  uint32_t size_;
   uint32_t head_;
   uint32_t tail_;
   uint32_t* vaddr_{};  // mapped virtual address
@@ -83,7 +83,7 @@ Ringbuffer<GpuMapping>::Ringbuffer(std::unique_ptr<typename GpuMapping::BufferTy
   uint64_t buffer_size =
       BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())->size();
   if (size_ == 0) {
-    size_ = buffer_size;
+    size_ = magma::to_uint32(buffer_size);
   }
   DASSERT(size_ <= buffer_size);
   DASSERT((size_ & (sizeof(*vaddr_) - 1)) == 0);

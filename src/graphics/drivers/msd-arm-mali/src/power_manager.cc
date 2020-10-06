@@ -28,7 +28,7 @@ void PowerManager::EnableCores(magma::RegisterIo* io, uint64_t shader_bitmask) {
 }
 
 void PowerManager::DisableShaders(magma::RegisterIo* io) {
-  uint32_t powered_on_shaders =
+  uint64_t powered_on_shaders =
       registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
                                              registers::CoreReadyState::StatusType::kReady) |
       registers::CoreReadyState::ReadBitmask(
@@ -49,7 +49,7 @@ void PowerManager::DisableL2(magma::RegisterIo* io) {
 
 bool PowerManager::WaitForShaderDisable(magma::RegisterIo* io) {
   while (true) {
-    uint32_t powered_on =
+    uint64_t powered_on =
         registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
                                                registers::CoreReadyState::StatusType::kReady) |
         registers::CoreReadyState::ReadBitmask(

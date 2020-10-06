@@ -35,9 +35,6 @@ source_set("common_srcs") {
 
   cflags = [ "-fno-sanitize=shadow-call-stack" ]
   configs -= [ "//build/config:no_exceptions" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("mali-performance-counters") {

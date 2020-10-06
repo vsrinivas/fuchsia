@@ -804,7 +804,7 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
   dump_state->mmu_irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(io).reg_value();
   dump_state->mmu_irq_mask = registers::MmuIrqFlags::GetIrqMask().ReadFrom(io).reg_value();
 
-  for (size_t i = 0; i < features.job_slot_count; i++) {
+  for (uint32_t i = 0; i < features.job_slot_count; i++) {
     DumpState::JobSlotStatus status;
     auto js_regs = registers::JobSlotRegisters(i);
     status.status = js_regs.Status().ReadFrom(io).reg_value();
@@ -814,7 +814,7 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
     dump_state->job_slot_status.push_back(status);
   }
 
-  for (size_t i = 0; i < features.address_space_count; i++) {
+  for (uint32_t i = 0; i < features.address_space_count; i++) {
     DumpState::AddressSpaceStatus status;
     auto as_regs = registers::AsRegisters(i);
     status.status = as_regs.Status().ReadFrom(io).reg_value();

@@ -39,13 +39,15 @@ std::unique_ptr<GpuMapping> RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer
 
   memcpy(dst, batch_, batch_size_);
 
+  const uint32_t size = magma::to_uint32(platform_buffer->size());
+
   for (unsigned int i = 0; i < relocation_count_; i++) {
     uint32_t offset = relocs_[i];
     uint32_t val = read_src(batch_, offset, batch_size_);
     uint64_t reloc = val + mapping->gpu_addr();
     DLOG("writing reloc 0x%lx offset 0x%x", reloc, offset);
-    write_dst(magma::lower_32_bits(reloc), dst, offset, platform_buffer->size());
-    write_dst(magma::upper_32_bits(reloc), dst, offset + 4, platform_buffer->size());
+    write_dst(magma::lower_32_bits(reloc), dst, offset, size);
+    write_dst(magma::upper_32_bits(reloc), dst, offset + 4, size);
   }
 
   if (!platform_buffer->UnmapCpu())

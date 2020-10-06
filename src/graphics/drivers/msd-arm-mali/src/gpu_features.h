@@ -82,10 +82,10 @@ struct GpuFeatures {
     thread_features = registers::ThreadFeatures::Get().ReadFrom(io);
     coherency_features = registers::CoherencyFeatures::GetPresent().ReadFrom(io);
 
-    for (size_t i = 0; i < kMaxJobSlots; i++)
+    for (uint32_t i = 0; i < kMaxJobSlots; i++)
       job_slot_features[i] = io->Read32(kJsFeaturesOffset + i * 4);
 
-    for (size_t i = 0; i < kNumTextureFeaturesRegisters; i++)
+    for (uint32_t i = 0; i < kNumTextureFeaturesRegisters; i++)
       texture_features[i] = io->Read32(kTextureFeaturesOffset + i * 4);
 
     shader_present = ReadPair(io, kShaderPresentLowOffset);

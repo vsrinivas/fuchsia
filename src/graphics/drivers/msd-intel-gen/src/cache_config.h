@@ -16,7 +16,7 @@
 class CacheConfig {
  public:
   // Returns the number of bytes required to write into the instruction stream.
-  static uint64_t InstructionBytesRequired();
+  static uint32_t InstructionBytesRequired();
 
   // Assumes there is sufficient space available to write into the instruction stream.
   static bool InitCacheConfig(magma::InstructionWriter* writer, EngineCommandStreamerId engine_id);

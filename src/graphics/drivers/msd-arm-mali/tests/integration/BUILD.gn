@@ -36,7 +36,4 @@ executable("msd_arm_mali_integration_tests") {
   ]
 
   deps = [ "../../include" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

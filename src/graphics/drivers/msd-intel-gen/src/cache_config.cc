@@ -12,7 +12,7 @@
 
 using namespace registers;
 
-uint64_t CacheConfig::InstructionBytesRequired() {
+uint32_t CacheConfig::InstructionBytesRequired() {
   uint32_t num_dwords = MiLoadDataImmediate::dword_count(kMemoryObjectControlStateEntries) +
                         MiLoadDataImmediate::dword_count(kLncfMemoryObjectControlStateEntries) +
                         MiNoop::kDwordCount * 2 + MiBatchBufferEnd::kDwordCount;
@@ -27,7 +27,7 @@ bool CacheConfig::InitCacheConfig(magma::InstructionWriter* writer,
   GetMemoryObjectControlState(graphics_mocs);
 
   MiLoadDataImmediate::write(writer, MemoryObjectControlState::kGraphicsOffset,
-                             graphics_mocs.size(), graphics_mocs.data());
+                             magma::to_uint32(graphics_mocs.size()), graphics_mocs.data());
   MiNoop::write(writer);
 
   std::vector<uint16_t> lncf_mocs;
@@ -40,8 +40,8 @@ bool CacheConfig::InitCacheConfig(magma::InstructionWriter* writer,
     lncf_mocs_32.push_back(entry);
   }
 
-  MiLoadDataImmediate::write(writer, LncfMemoryObjectControlState::kOffset, lncf_mocs_32.size(),
-                             lncf_mocs_32.data());
+  MiLoadDataImmediate::write(writer, LncfMemoryObjectControlState::kOffset,
+                             magma::to_uint32(lncf_mocs_32.size()), lncf_mocs_32.data());
   MiNoop::write(writer);
 
   return true;

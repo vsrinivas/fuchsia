@@ -109,7 +109,7 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer,
   DLOG("ReleaseBuffer %lu\n", buffer->id());
 
   for (const auto& mapping : mappings) {
-    uint32_t use_count = mapping.use_count();
+    size_t use_count = mapping.use_count();
 
     if (use_count > 1) {
       // It's an error to release a buffer while it has inflight mappings, as that can fault the
@@ -119,7 +119,7 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer,
       // We observe this happening in at least one multithreaded CTS case.
       // Intel says their DRM system driver will stall to handle the unlikely case when it happens,
       // so we do the same here.
-      DLOG("ReleaseBuffer %lu mapping has use count %u", mapping->BufferId(), use_count);
+      DLOG("ReleaseBuffer %lu mapping has use count %zu", mapping->BufferId(), use_count);
 
       if (!sent_context_killed()) {
         constexpr uint32_t kRetries = 10;
@@ -136,7 +136,7 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer,
         if (use_count > 1) {
           MAGMA_LOG(
               WARNING,
-              "ReleaseBuffer %lu mapping has use count %u after stall, sending context killed",
+              "ReleaseBuffer %lu mapping has use count %zu after stall, sending context killed",
               mapping->BufferId(), use_count);
           SendContextKilled();
         }

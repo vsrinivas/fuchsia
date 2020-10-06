@@ -53,9 +53,6 @@ source_set("msd_intel_entry") {
     "//src/zircon/lib/zircon",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("msd_intel_test_entry") {
@@ -85,9 +82,6 @@ source_set("msd_intel_test_entry") {
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

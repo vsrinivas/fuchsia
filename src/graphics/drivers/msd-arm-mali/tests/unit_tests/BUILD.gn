@@ -37,9 +37,6 @@ source_set("tests_not_requiring_hardware") {
     ":test_deps",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # These tests require ARM Mali graphics hardware to run.  They can be
@@ -53,9 +50,6 @@ source_set("tests_requiring_hardware") {
   ]
 
   deps = [ ":test_deps" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("test_deps") {

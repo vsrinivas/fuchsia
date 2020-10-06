@@ -142,7 +142,7 @@ bool PerProcessGtt::ClearLocked(uint64_t start, magma::PlatformBusMapper::BusMap
   uint32_t page_table_index = (start >>= PAGE_SHIFT) & kPageTableMask;
   uint32_t page_directory_index = (start >>= kPageTableShift) & kPageDirectoryMask;
   uint32_t page_directory_ptr_index = (start >>= kPageDirectoryShift) & kPageDirectoryPtrMask;
-  uint32_t pml4_index = (start >>= kPageDirectoryPtrShift);
+  uint32_t pml4_index = magma::to_uint32(start >>= kPageDirectoryPtrShift);
 
   DLOG("start pml4 %u pdp %u pd %i pt %u", pml4_index, page_directory_ptr_index,
        page_directory_index, page_table_index);
@@ -196,7 +196,7 @@ bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMap
   uint32_t page_table_index = (addr >>= PAGE_SHIFT) & kPageTableMask;
   uint32_t page_directory_index = (addr >>= kPageTableShift) & kPageDirectoryMask;
   uint32_t page_directory_ptr_index = (addr >>= kPageDirectoryShift) & kPageDirectoryPtrMask;
-  uint32_t pml4_index = (addr >>= kPageDirectoryPtrShift);
+  uint32_t pml4_index = magma::to_uint32(addr >>= kPageDirectoryPtrShift);
 
   DLOG("addr pml4 %u pdp %u pd %i pt %u", pml4_index, page_directory_ptr_index,
        page_directory_index, page_table_index);
@@ -252,7 +252,7 @@ gen_pte_t PerProcessGtt::get_pte(gpu_addr_t gpu_addr) {
       (addr_copy >>= PerProcessGtt::kPageTableShift) & PerProcessGtt::kPageDirectoryMask;
   uint32_t page_directory_ptr_index =
       (addr_copy >>= PerProcessGtt::kPageDirectoryShift) & PerProcessGtt::kPageDirectoryPtrMask;
-  uint32_t pml4_index = (addr_copy >>= PerProcessGtt::kPageDirectoryPtrShift);
+  uint32_t pml4_index = magma::to_uint32(addr_copy >>= PerProcessGtt::kPageDirectoryPtrShift);
 
   DLOG("gpu_addr 0x%lx pml4 0x%x pdp 0x%x pd 0x%x pt 0x%x", gpu_addr, pml4_index,
        page_directory_ptr_index, page_directory_index, page_table_index);

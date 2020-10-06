@@ -57,8 +57,8 @@ class Packet7 : public Packet {
 
   static void write(magma::InstructionWriter* writer, OpCode opcode,
                     const std::vector<uint32_t>& packet) {
-    uint16_t count = packet.size();
-    DASSERT(static_cast<uint32_t>(count) == packet.size());
+    uint16_t count = static_cast<uint16_t>(packet.size());
+    DASSERT(count == packet.size());
     DASSERT(!(count & 0x8000));
     uint32_t op = static_cast<uint32_t>(opcode);
     DASSERT(!(op & 0x80));
