@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1166
+From //build/config/BUILDCONFIG.gn:1192
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -661,7 +661,7 @@ From //build/dart/config.gni:16
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/55c26f05375a45fd4912a8e05c0acd5a7f6da643/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#24)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -669,14 +669,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/55c26f05375a45fd4912a8e05c0acd5a7f6da643/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/55c26f05375a45fd4912a8e05c0acd5a7f6da643/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -854,7 +854,7 @@ From //build/images/manifest.gni:16
 
 **Current value (from the default):** `[]`
 
-From //third_party/cobalt/BUILD.gn:9
+From //third_party/cobalt/BUILD.gn:10
 
 ### extra_variants
 Additional variant toolchain configs to support.
@@ -862,7 +862,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:929
+From //build/config/BUILDCONFIG.gn:955
 
 ### fastboot_product
 
@@ -910,7 +910,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/55c26f05375a45fd4912a8e05c0acd5a7f6da643/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#13)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -925,14 +925,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/55c26f05375a45fd4912a8e05c0acd5a7f6da643/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/55c26f05375a45fd4912a8e05c0acd5a7f6da643/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1526,7 +1526,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:839
+From //build/config/BUILDCONFIG.gn:865
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2224,7 +2224,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1156
+From //build/config/BUILDCONFIG.gn:1182
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2233,7 +2233,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1161
+From //build/config/BUILDCONFIG.gn:1187
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2271,7 +2271,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:975
+From //build/config/BUILDCONFIG.gn:1001
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2531,7 +2531,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:949
+From //build/config/BUILDCONFIG.gn:975
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
