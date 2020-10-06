@@ -43,6 +43,8 @@ KCOUNTER(syscalls_zx_clock_get_monotonic, "syscalls.zx_clock_get_monotonic")
 KCOUNTER(syscalls_zx_clock_get_type_monotonic, "syscalls.zx_clock_get.zx_clock_monotonic")
 KCOUNTER(syscalls_zx_clock_get_type_utc, "syscalls.zx_clock_get.zx_clock_utc")
 KCOUNTER(syscalls_zx_clock_get_type_thread, "syscalls.zx_clock_get.zx_clock_thread")
+KCOUNTER(syscalls_zx_nanosleep, "syscalls.zx_nanosleep")
+KCOUNTER(syscalls_zx_nanosleep_zero_duration, "syscalls.zx_nanosleep_zero_duration")
 
 constexpr size_t kMaxCPRNGDraw = ZX_CPRNG_DRAW_MAX_LEN;
 constexpr size_t kMaxCPRNGSeed = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
@@ -50,8 +52,10 @@ constexpr size_t kMaxCPRNGSeed = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
 // zx_status_t zx_nanosleep
 zx_status_t sys_nanosleep(zx_time_t deadline) {
   LTRACEF("nseconds %" PRIi64 "\n", deadline);
+  kcounter_add(syscalls_zx_nanosleep, 1);
 
   if (deadline <= 0) {
+    kcounter_add(syscalls_zx_nanosleep_zero_duration, 1);
     Thread::Current::Yield();
     return ZX_OK;
   }
