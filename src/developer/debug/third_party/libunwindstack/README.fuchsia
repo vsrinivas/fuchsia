@@ -1,3 +1,9 @@
+Name: libunwindstack
+URL: https://android.googlesource.com/platform/system/core/+/ef6401091fbd047abcf08511f2d4d0b3a52c903f/libunwindstack/
+License: Apache 2.0 / 2-Clause BSD
+License File: NOTICE
+Description:
+
 This library is the Android pulled from:
 https://android.googlesource.com/platform/system/core/+/ef6401091fbd047abcf08511f2d4d0b3a52c903f/libunwindstack/
 
