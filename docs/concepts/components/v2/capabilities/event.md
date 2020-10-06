@@ -12,7 +12,7 @@ protocols routed to them:
 -   [`fuchsia.sys2.BlockingEventSource`][blocking-event-source]: allows the
     component to listen for events synchronously. Component manager will wait
     for the component to handle the event. This is used for
-    [black box tests][blackbox-tests].
+    [hermetic tests][hermetic-tests].
 
 At the moment, events can only originate from the framework itself and are
 limited to lifecycle events. Refer to [`fuchsia.sys2.EventType`][event-type] for
@@ -126,7 +126,7 @@ component decided to not use the `stopped` event it was offered. Instead the
 component used the event from `framework`, which means that it will only see
 `stopped` and `destroyed` events for components in its own realm.
 
-[blackbox-tests]: ../black_box_testing.md
+[hermetic-tests]: ../opaque_test.md
 [blocking-event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#BlockingEventSource
 [event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventSource
 [event-type]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventType

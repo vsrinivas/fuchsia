@@ -46,7 +46,7 @@ the transition to the new architecture is complete.
 ## Debugging and troubleshooting
 
 - [Hub](hub.md): A live view of the component topology at runtime.
-- [Black box testing](black_box_testing.md): Integration testing framework.
+- [OpaqueTest](opaque_test.md): Hermetic testing framework.
 
 ## Internals
 

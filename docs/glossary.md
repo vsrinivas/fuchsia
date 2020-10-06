@@ -48,12 +48,12 @@ Banjo is a language for defining protocols that are used to communicate between
 [drivers](#driver). It is different from [FIDL](#fidl) in that it specifies an
 ABI for drivers to use to call into each other, rather than an IPC protocol.
 
-### **BlackBoxTest** {#black-box-test}
+### **OpaqueTest** {#opaque-test}
 
-`BlackBoxTest` is a Rust client-side library that sets up black box integration
-tests for a v2 component.
+`OpaqueTest` is a Rust client-side library that sets up hermetic tests
+for a v2 component.
 
--   [Documentation](/docs/concepts/components/v2/black_box_testing.md#blackboxtest)
+-   [Hermetic testing using OpaqueTest](/docs/concepts/components/v2/opaque_test.md)
 
 ### **bootfs** {#bootfs}
 
@@ -72,15 +72,6 @@ the same bootfs. After starting these services, it loads the third program,
 which defaults to `component_manager`.
 
 -   [Documentation](/docs/concepts/booting/bootsvc.md)
-
-### **BreakpointSystemClient** {#breakpoint-system-client}
-
-`BreakpointSystemClient` is a Rust client-side library that connects to
-the breakpoint system in component manager. It allows setting breakpoints on
-system events in component manager. Integration tests use this library to
-verify the state of components.
-
--   [Documentation](/docs/concepts/components/v2/black_box_testing.md#breakpointsystemclient)
 
 ### **Bus Driver** {#bus-driver}
 

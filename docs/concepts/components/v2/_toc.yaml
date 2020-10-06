@@ -45,8 +45,8 @@ toc:
   section:
   - title: "Hub"
     path: /docs/concepts/components/v2/hub.md
-  - title: "Black box testing"
-    path: /docs/concepts/components/v2/black_box_testing.md
+  - title: "Hermetic testing using OpaqueTest"
+    path: /docs/concepts/components/v2/opaque_test.md
 - title: "Internals"
   section:
   - title: "Design principles"

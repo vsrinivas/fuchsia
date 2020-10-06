@@ -1,8 +1,8 @@
-# Black box testing with component manager
+# Hermetic testing using OpaqueTest
 
 ## Motivation
 
-The black box testing framework enables an integration test to observe or
+The OpaqueTest framework enables an integration test to observe or
 influence the behavior of component manager without depending on its internal
 libraries.
 
@@ -16,8 +16,7 @@ is normally started.
 
 ## Features
 
-To test the behavior of a component or a component manager feature, you must be
-able to write a black box test that can:
+To test the behavior of a v2 component, OpaqueTest lets you:
 
 - Start component manager in a hermetic environment.
 - Communicate with component manager using only FIDL and the [hub](hub.md).
@@ -27,26 +26,10 @@ able to write a black box test that can:
 - Inject or mock out capabilities.
 - Interpose between a client and a service.
 
-Note: The black box testing framework covers all of these points.
+## Minimum requirements
 
-## Libraries
-
-The testing framework provides two Rust libraries for black box testing:
-
-- `BlackBoxTest`
-- `EventSource`
-
-### BlackBoxTest
-
-`BlackBoxTest` is a Rust library provided by the testing framework. You can use
-the classes and methods in this library to automate large parts of the setup
-needed for a black box test.
-
-#### Minimum requirements
-
-For the `BlackBoxTest` library to function correctly, the integration test
-component manifest must specify (at minimum) the following features and
-services:
+For the OpaqueTest framework to function correctly, the test cmx manifest
+must specify (at minimum) the following features and services:
 
 ```rust
 "sandbox": {
@@ -62,15 +45,15 @@ services:
 }
 ```
 
-These services and features ensure that `BlackBoxTest` can set up a hermetic
+These services and features ensure that OpaqueTest can set up a hermetic
 environment and launch component manager.
 
-#### Usage
+## Usage
 
-In the simplest case, a black box test looks like the following:
+In the simplest case, a test can be started as follows:
 
 ```rust
-let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
+let test = OpaqueTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
 ```
 
 By the end of this statement:
@@ -78,8 +61,7 @@ By the end of this statement:
 - A component manager instance has been created in a hermetic environment.
 - The root component is specified by the given URL.
 - Component manager is waiting to be unblocked by the `EventSource`.
-- The root [component manifest](component_manifests.md) (`root.cm`) has been
-resolved.
+- The root [component manifest](component_manifests.md) (`root.cm`) has been resolved.
 - No component has been started.
 - Component manager’s outgoing directory is serving:
   - The hub of the root component at `$out/hub`.
@@ -107,10 +89,10 @@ By the end of this code block:
 - Component manager’s execution has begun.
 - The root component (and its eager children, if any) will be started soon.
 
-#### Custom tests and convenience methods
+## Custom tests
 
-In some cases, you may want to customize `BlackBoxTest::default`.
-`BlackBoxTest::custom` allows you to specify:
+In some cases, you may want to customize `OpaqueTest::default`.
+Use an `OpaqueTestBuilder` to specify:
 
 - The component manager manifest to be used for the test.
 
@@ -118,29 +100,21 @@ In some cases, you may want to customize `BlackBoxTest::default`.
 
 - A file descriptor to redirect output from components.
 
-```rust
-let test = BlackBoxTest::custom(
-    "fuchsia-pkg://fuchsia.com/my_custom_cm#meta/component_manager.cmx",
-    "fuchsia-pkg://fuchsia.com/foo#meta/root.cm",
-    vec![("my_dir", my_dir_handle)],
-    output_file_descriptor
-).await?;
-```
+- The configuration file to be used by component manager.
 
-The `BlackBoxTest` library also provides convenience methods for starting up
-component manager and expecting a particular output:
+- Additional command-line args to be used by component manager.
 
 ```rust
-launch_component_and_expect_output(
-    "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm",
-    "Hippos rule!",
-).await?;
+let test = OpaqueTestBuilder::new("fuchsia-boot:///#meta/root.cm")
+    .component_manager_url("fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx")
+    .add_dir_handle("/boot", pkg_channel.into())
+    .build()
+    .await?;
 ```
 
-### EventSource
+## EventSource
 
-The `EventSource` addresses the problem of verifying state in component
-manager and is analogous to a debugger's breakpoint system.
+An `EventSource` is used to subscribe to system events sent by component manager.
 
 Since the `EventSource` is built on top of system events:
 
@@ -158,22 +132,22 @@ For reliable state verification, a test must be able to:
 - Expect or wait for various events to occur in component manager.
 - Halt the component manager task that is processing the event.
 
-The workflow for the `EventSource` library looks something like this:
+The workflow for an `EventSource` looks something like this:
 
 ```rust
-// Create a EventSource using ::new() or use the client
-// provided by BlackBoxTest
-let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
+// Create an EventSource using ::new_sync() or use the source
+// provided by OpaqueTest
+let test = OpaqueTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
 
 // Get an event stream of the `Started` event.
 let event_source = test.connect_to_event_source().await?;
 let event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
-// Unblock component manager
-event_source.start_component_tree().await?;
+// Unblock component manager.
+event_source.start_component_tree().await;
 
 // Wait for an event
-let event = event_stream.expect_type::<Started>().await?;
+let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
 
 // Verify state
 ...
@@ -182,40 +156,56 @@ let event = event_stream.expect_type::<Started>().await?;
 event.resume().await?;
 ```
 
+Note: Subscribing to an event stream after the component tree has been started is racy.
+`start_component_tree()` consumes the `EventSource` object to prevent future subscriptions.
+
+Calling `resume()` on an event unblocks component manager and allows it to proceed with the
+event dispatch.
+
+Note: It is not strictly necessary to invoke `resume()` on an event. When the event object
+goes out of scope, `resume()` is called implicitly.
+
 ### Scoping of events
 
-The `EventSource` can be requested by any component instance within the
-component topology served by the component manager if it is available to the component.
-Events are capailities themselves so they have to be requested as well. Refer
+The `BlockingEventSource` FIDL protocol can be requested by any component instance within the
+component topology and is served by the component manager.
+
+Events are capailities themselves so they have to be routed as well. Refer
 to [event capabilities][event-capabilities] for more details on this.
 
 A component instance can request a scoped `BlockingEventSource` in its manifest
 file as follows:
 
-```
+```json5
 {
     program: {
         binary: "bin/client",
     },
     use: [
         {
-            protocol: "fuchsia.sys2.BlockingEventSource",
+            protocol: [
+                "/svc/fuchsia.sys2.BlockingEventSource",
+            ],
             from: "framework"
         },
         {
-            event: [ "started", "stopped" ],
-            from: "framework",
+          event: [ "started", "stopped" ],
+          from: "framework",
         }
     ],
 }
 ```
+
+Note: To receive asynchronous events, use the `EventSource` FIDL protocol instead.
+Asynchronous events do not block component manager and the events do not have `resume()`
+methods on them.
 
 Another component can pass along its scope of system events by passing along the
 `BlockingEventSource` capability through the conventional routing operations `offer`,
 `expose` and `use`.
 
 If a component requests a `BlockingEventSource` then its children cannot start until it explicitly
-calls `start_component_tree`.
+calls `start_component_tree()`.
 
 ### Additional functionality
 
@@ -226,6 +216,7 @@ functionality:
 
 - [Multiple event streams](#multiple-event-streams)
 - [Discardable event streams](#discardable-event-streams)
+- [Event sequences](#event-sequences)
 - [Capability injection](#capability-injection)
 - [Capability interposition](#capability-interposition)
 - [Event logs](#event-logs)
@@ -242,14 +233,20 @@ let start_event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 let route_event_stream =
     event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
+// Unblock component manager
+event_source.start_component_tree().await;
+
 // Expect 5 components to start
 for _ in 1..=5 {
-    let event = start_event_stream.expect_type::<Started>().await?;
+    let event = EventMatcher::ok().expect_match::<Started>(&mut start_event_stream).await;
     event.resume().await?;
 }
 
 // Expect a CapabilityRouted event from ./foo:0
-let event = route_event_stream.expect_exact::<CapabilityRouted>("./foo:0").await?;
+let event = EventMatcher::ok()
+    .moniker("./foo:0")
+    .expect_match::<CapabilityRouted>(&mut route_event_stream)
+    .await;
 event.resume().await?;
 ```
 
@@ -264,10 +261,10 @@ let stop_event_stream = event_source.subscribe(vec![Stopped::TYPE]).await?;
 
 {
     // Temporarily subscribe to CapabilityRouted events
-    let use_event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+    let route_event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
     // Expect a CapabilityRouted event from ./bar:0
-    let event = route_event_stream.expect_exact::<CapabilityRouted>("./bar:0").await?;
+    let event = EventMatcher::ok().moniker("./bar:0").expect_match::<CapabilityRouted>(&mut route_event_stream).await;
     println!("/bar:0 used capability -> {}", event.capability_id);
     event.resume().await?;
 }
@@ -277,16 +274,55 @@ let stop_event_stream = event_source.subscribe(vec![Stopped::TYPE]).await?;
 // component manager would halt on future CapabilityRouted events.
 
 // Expect a Stopped event
-let event = stop_event_stream.expect_type::<Stopped>().await?;
+let event = EventMatcher::ok().expect_match::<Stopped>(&mut stop_event_stream).await?;
 println!("{} was stopped!", event.target_moniker);
 event.resume().await?;
 ```
 
+#### Event sequences {#event-sequences}
+
+When writing tests, it is useful to expect events to occur in some order.
+Event Sequences allow writers to verify ordering of events:
+
+```rust
+// This test expects the following events to occur:
+// 1. the two trigger components stop in any order
+// 2. the parent component stops
+// 3. the two trigger components are destroyed in any order
+// 4. the parent component is destroyed
+let expectation = EventSequence::new()
+    .all_of(
+        vec![
+            EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1/trigger_a:0"),
+            EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+        ],
+        Ordering::Unordered,
+    )
+    .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1"))
+    .all_of(
+        vec![
+            EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1/trigger_a:0"),
+            EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+        ],
+        Ordering::Unordered,
+    )
+    .then(EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1"))
+    .subscribe_and_expect(&mut event_source)
+    .await
+    .unwrap();
+
+// Start the component tree
+event_source.start_component_tree().await;
+
+// Wait for the event sequence to occur
+expectation.await.unwrap();
+```
+
 #### Capability injection {#capability-injection}
 
-Several tests need to communicate with components directly. It is often also
-desirable to mock out capabilities that a component connects to in the test. The
-simplest way to do this is to implement an `Injector`.
+Several tests need to mock out capabilities that a component connects to in the test.
+Sometimes, tests may wish to communicate with components directly. The simplest way to do
+this is to implement an `Injector`.
 
 ```rust
 /// Client <---> EchoCapability
@@ -309,14 +345,13 @@ impl Injector for EchoCapability {
 }
 ```
 
-The `BlockingEventSource` can automatically install an injector
-matching the capability requested by any component in the test.
+Injectors can automatically install themselves on `CapabilityRouted` events.
 
 ```rust
-let echo_capability = EchoCapability::new();
-event_source.install_injector(echo_capability, None).await?;
+let echo_capability: Arc<EchoCapability> = EchoCapability::new();
 
-// Subscribe to other events.
+// Inject the Echo capability when /foo:0 successfully connects to the Echo service
+echo_capability.inject(&event_source, EventMatcher::ok().moniker("/foo:0")).await;
 
 event_source.start_component_tree().await?;
 ```
@@ -364,14 +399,13 @@ impl Interposer for EchoInterposer {
 }
 ```
 
-The `BlockingEventSource` can automatically install an interposer
-matching the capability requested by any component in the test.
+Interposers can automatically install themselves on `CapabilityRouted` events.
 
 ```rust
-let (interposer, mut rx) = EchoInterposer::new();
-event_source.install_interposer(interposer, None).await?;
+let interposer = EchoInterposer::new();
 
-// Subscribe to other events.
+// Interpose the Echo capability when any component successfully connects to the Echo service
+echo_interposer.interpose(&event_source, EventMatcher::ok()).await;
 
 event_source.start_component_tree().await?;
 ```
@@ -383,10 +417,11 @@ point in time:
 
 ```rust
 let event_stream = event_source.subscribe(vec![Destroyed::TYPE]).await?;
-let event_log = event_source.record_events(vec![Started::TYPE]).await?;
+let event_log = EventLog::record_events(&mut event_source, vec![Started::NAME]).await?;
+event_source.start_component_tree().await;
 
-// Wait for the root component to be destroyed
-let event = event_stream.expect_exact::<Destroyed>(".").await?;
+// Wait for the component to be destroyed
+let event = EventMatcher::ok().expect_match::<Destroyed>(&mut event_stream).await;
 event.resume().await?;
 
 // Flush events from the log
@@ -409,17 +444,20 @@ assert_eq!(events, vec![
 ]);
 ```
 
-Note that recording of events will continue until the `EventLog` object goes out
+Note: Recording of events will continue until the `EventLog` object goes out
 of scope.
 
 ## Debug Mode {#debug-mode}
 
-Both `BlackBoxTest` and `EventSource` rely on component manager’s
+Both `OpaqueTest` and `EventSource` rely on component manager’s
 debug mode.
 
-To start component manager in debug mode, pass in `--debug` as an additional
-argument to the `component_manager.cmx` component. In fact, this is exactly what
-`BlackBoxTest::default` does when setting up a black box test.
+Component manager's startup behavior can be configued via the `--config` flag
+which accepts a path to a JSON configuration file.
+
+To start component manager in debug mode, use the `--config` flag to pass in a
+JSON configuration file that has `debug` set to `true`. This is exactly what
+`OpaqueTest::default` does.
 
 When component manager is in debug mode, it does the following:
 
