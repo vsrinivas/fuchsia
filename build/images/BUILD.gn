@@ -2400,6 +2400,7 @@ group("images") {
   deps = [
     ":archive-extras",
     ":default-images",
+    "system",
   ]
 
   if (!bootfs_only) {

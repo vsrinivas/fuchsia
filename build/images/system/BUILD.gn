@@ -1,0 +1,56 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Whether to check and enforce that contributions to the system image package
+  # are coming from the proper board and product file GN arguments
+  # (respectively board_system_image_deps and product_system_image_deps).
+  #
+  # If this argument is set to false, the verification step can still be
+  # manually performed with:
+  #  ninja out/default obj/build/images/system/verify_system_package_entries.success.stamp
+  verify_system_package_entries = false
+}
+
+system_entries_file = "$target_gen_dir/system_entries.txt"
+
+generated_file("system_entries_in_packages") {
+  testonly = true
+
+  outputs = [ system_entries_file ]
+
+  data_keys = [ "system_image_rsps" ]
+  walk_keys = [ "system_image_barrier" ]
+
+  deps = [ "//build/images:packages" ]
+}
+
+# Entries are references to response files listing the contents of each package.
+action("verify_system_package_entries") {
+  script = "verify_system_package_entries.py"
+
+  testonly = true
+
+  deps = [ ":system_entries_in_packages" ]
+
+  inputs = [ system_entries_file ]
+
+  outputs = [ "$target_out_dir/$target_name.success.stamp" ]
+
+  args = [
+    "--list",
+    rebase_path(system_entries_file, root_build_dir),
+    "--stamp",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+group("system") {
+  testonly = true
+
+  deps = []
+  if (verify_system_package_entries) {
+    deps += [ ":verify_system_package_entries" ]
+  }
+}
