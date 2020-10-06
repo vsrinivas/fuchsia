@@ -46,7 +46,7 @@ var (
 	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A (default: from -zbi)")
 	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B (default: from -zbi)")
 	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R (default: zircon-r from image manifests)")
-	abrSize = flag.Int64("abr-size", 16*1024*1024, "Kernel partition size for A/B/R")
+	abrSize = flag.Int64("abr-size", 64*1024*1024, "Kernel partition size for A/B/R")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
