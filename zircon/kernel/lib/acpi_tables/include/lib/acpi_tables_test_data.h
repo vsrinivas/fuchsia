@@ -11,7 +11,7 @@ namespace acpi_test_data {
 
 struct FakeTable {
   char sig[5];
-  acpi_sdt_header* header = nullptr;
+  const AcpiSdtHeader* header = nullptr;
 };
 
 class FakeTableProvider : public AcpiTableProvider {
@@ -55,11 +55,11 @@ const uint8_t kEveHpetTableData[]{
 const FakeTable kEveTables[]{
     {
         .sig = ACPI_MADT_SIG,
-        .header = (acpi_sdt_header*)kEveMadtTableData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(kEveMadtTableData),
     },
     {
         .sig = ACPI_HPET_SIG,
-        .header = (acpi_sdt_header*)kEveHpetTableData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(kEveHpetTableData),
     },
 };
 
@@ -524,11 +524,11 @@ const uint8_t kZ840SratTableData[]{
 const FakeTable kZ840Tables[]{
     {
         .sig = ACPI_MADT_SIG,
-        .header = (acpi_sdt_header*)kZ840MadtTableData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(kZ840MadtTableData),
     },
     {
         .sig = ACPI_SRAT_SIG,
-        .header = (acpi_sdt_header*)kZ840SratTableData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(kZ840SratTableData),
     },
 
 };
@@ -676,11 +676,11 @@ const uint8_t k2970wxSratTableData[]{
 const FakeTable k2970wxTables[]{
     {
         .sig = ACPI_MADT_SIG,
-        .header = (acpi_sdt_header*)k2970wxMadtTableData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(k2970wxMadtTableData),
     },
     {
         .sig = ACPI_SRAT_SIG,
-        .header = (acpi_sdt_header*)k2970wxSratTableData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(k2970wxSratTableData),
     },
 
 };
@@ -698,7 +698,7 @@ const uint8_t kDbg2TestData[]{
 const FakeTable kDbg2Table[]{
     {
         .sig = ACPI_DBG2_SIG,
-        .header = (acpi_sdt_header*)kDbg2TestData,
+        .header = reinterpret_cast<const AcpiSdtHeader*>(kDbg2TestData),
     },
 };
 

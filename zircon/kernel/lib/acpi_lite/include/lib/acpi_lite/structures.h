@@ -24,18 +24,18 @@ constexpr size_t kBiosReadOnlyAreaLength = 0x20'000;
 #define ACPI_RSDP_SIG_LENGTH 8
 #define ACPI_RSDP_SIG "RSD PTR "
 
-struct acpi_rsdp {
+struct AcpiRsdp {
   uint8_t sig[ACPI_RSDP_SIG_LENGTH];
   uint8_t checksum;
   uint8_t oemid[6];
   uint8_t revision;
   uint32_t rsdt_address;
 } __PACKED;
-static_assert(sizeof(acpi_rsdp) == 20);
+static_assert(sizeof(AcpiRsdp) == 20);
 
-struct acpi_rsdp_v2 {
+struct AcpiRsdpV2 {
   // rev 1
-  acpi_rsdp v1;
+  AcpiRsdp v1;
 
   // rev 2+
   uint32_t length;
@@ -43,13 +43,13 @@ struct acpi_rsdp_v2 {
   uint8_t extended_checksum;
   uint8_t reserved[3];
 } __PACKED;
-static_assert(sizeof(acpi_rsdp_v2) == 36);
+static_assert(sizeof(AcpiRsdpV2) == 36);
 
 // Standard system description table header, used as the header of
 // multiple structures below.
 //
 // Reference: ACPI v6.3 Section 5.2.6.
-struct acpi_sdt_header {
+struct AcpiSdtHeader {
   uint8_t sig[4];
   uint32_t length;
   uint8_t revision;
@@ -60,13 +60,13 @@ struct acpi_sdt_header {
   uint32_t creator_id;
   uint32_t creator_revision;
 } __PACKED;
-static_assert(sizeof(acpi_sdt_header) == 36);
+static_assert(sizeof(AcpiSdtHeader) == 36);
 
 // Root System Description Table (RSDT) and Extended System Description Table (XSDT)
 //
 // Reference: ACPI v6.3 Section 5.2.7 -- 5.2.8.
-struct acpi_rsdt_xsdt {
-  acpi_sdt_header header;
+struct AcpiRsdtXsdt {
+  AcpiSdtHeader header;
 
   // array of uint32s or uint64 addresses are placed immediately afterwards
   union {
@@ -74,19 +74,19 @@ struct acpi_rsdt_xsdt {
     uint64_t addr64[0];
   };
 } __PACKED;
-static_assert(sizeof(acpi_rsdt_xsdt) == 36);
+static_assert(sizeof(AcpiRsdtXsdt) == 36);
 
 // ACPI Generic Address
 //
 // Reference: ACPI v6.3 Section 5.2.3.2
-struct acpi_generic_address {
+struct AcpiGenericAddress {
   uint8_t address_space_id;
   uint8_t register_bit_width;
   uint8_t register_bit_offset;
   uint8_t access_size;
   uint64_t address;
 } __PACKED;
-static_assert(sizeof(acpi_generic_address) == 12);
+static_assert(sizeof(AcpiGenericAddress) == 12);
 
 #define ACPI_ADDR_SPACE_MEMORY 0
 #define ACPI_ADDR_SPACE_IO 1
@@ -99,56 +99,56 @@ static_assert(sizeof(acpi_generic_address) == 12);
 // Multiple APIC Description Table
 //
 // The table is followed by interrupt control structures, each with
-// a "acpi_sub_table_header" header.
+// a "AcpiSubTableHeader" header.
 //
 // Reference: ACPI v6.3 5.2.12.
-struct acpi_madt_table {
-  acpi_sdt_header header;
+struct AcpiMadtTable {
+  AcpiSdtHeader header;
 
   uint32_t local_int_controller_address;
   uint32_t flags;
 } __PACKED;
-static_assert(sizeof(acpi_madt_table) == 44);
+static_assert(sizeof(AcpiMadtTable) == 44);
 
 #define ACPI_MADT_SIG "APIC"
 
-struct acpi_sub_table_header {
+struct AcpiSubTableHeader {
   uint8_t type;
   uint8_t length;
 } __PACKED;
-static_assert(sizeof(acpi_sub_table_header) == 2);
+static_assert(sizeof(AcpiSubTableHeader) == 2);
 
 // High Precision Event Timer Table
 //
 // Reference: IA-PC HPET (High Precision Event Timers) v1.0a, Section 3.2.4.
 #define ACPI_HPET_SIG "HPET"
-struct acpi_hpet_table {
-  acpi_sdt_header header;
+struct AcpiHpetTable {
+  AcpiSdtHeader header;
   uint32_t id;
-  acpi_generic_address address;
+  AcpiGenericAddress address;
   uint8_t sequence;
   uint16_t minimum_tick;
   uint8_t flags;
 } __PACKED;
-static_assert(sizeof(acpi_hpet_table) == 56);
+static_assert(sizeof(AcpiHpetTable) == 56);
 
 // SRAT table and descriptors.
 //
 // Reference: ACPI v6.3 Section 5.2.16.
 #define ACPI_SRAT_SIG "SRAT"
-struct acpi_srat_table {
-  acpi_sdt_header header;
+struct AcpiSratTable {
+  AcpiSdtHeader header;
   uint32_t _reserved;  // should be 1
   uint64_t _reserved2;
 } __PACKED;
-static_assert(sizeof(acpi_srat_table) == 48);
+static_assert(sizeof(AcpiSratTable) == 48);
 
 // Type 0: processor local apic/sapic affinity structure
 //
 // Reference: ACPI v6.3 Section 5.2.16.1.
 #define ACPI_SRAT_TYPE_PROCESSOR_AFFINITY 0
-struct acpi_srat_processor_affinity_entry {
-  acpi_sub_table_header header;
+struct AcpiSratProcessorAffinityEntry {
+  AcpiSubTableHeader header;
   uint8_t proximity_domain_low;
   uint8_t apic_id;
   uint32_t flags;
@@ -156,7 +156,7 @@ struct acpi_srat_processor_affinity_entry {
   uint8_t proximity_domain_high[3];
   uint32_t clock_domain;
 } __PACKED;
-static_assert(sizeof(acpi_srat_processor_affinity_entry) == 16);
+static_assert(sizeof(AcpiSratProcessorAffinityEntry) == 16);
 
 #define ACPI_SRAT_FLAG_ENABLED 1
 
@@ -164,8 +164,8 @@ static_assert(sizeof(acpi_srat_processor_affinity_entry) == 16);
 //
 // Reference: ACPI v6.3 Section 5.2.16.2.
 #define ACPI_SRAT_TYPE_MEMORY_AFFINITY 1
-struct acpi_srat_memory_affinity_entry {
-  acpi_sub_table_header header;
+struct AcpiSratMemoryAffinityEntry {
+  AcpiSubTableHeader header;
   uint32_t proximity_domain;
   uint16_t _reserved;
   uint32_t base_address_low;
@@ -177,14 +177,14 @@ struct acpi_srat_memory_affinity_entry {
   uint32_t _reserved3;
   uint32_t _reserved4;
 } __PACKED;
-static_assert(sizeof(acpi_srat_memory_affinity_entry) == 40);
+static_assert(sizeof(AcpiSratMemoryAffinityEntry) == 40);
 
 // Type 2: processor x2apic affinity structure
 //
 // Reference: ACPI v6.3 Section 5.2.16.3.
 #define ACPI_SRAT_TYPE_PROCESSOR_X2APIC_AFFINITY 2
-struct acpi_srat_processor_x2apic_affinity_entry {
-  acpi_sub_table_header header;
+struct AcpiSratProcessorX2ApicAffinityEntry {
+  AcpiSubTableHeader header;
   uint16_t _reserved;
   uint32_t proximity_domain;
   uint32_t x2apic_id;
@@ -192,43 +192,43 @@ struct acpi_srat_processor_x2apic_affinity_entry {
   uint32_t clock_domain;
   uint32_t _reserved2;
 } __PACKED;
-static_assert(sizeof(acpi_srat_processor_x2apic_affinity_entry) == 24);
+static_assert(sizeof(AcpiSratProcessorX2ApicAffinityEntry) == 24);
 
 // Multiple APIC Description Table (MADT) entries.
 
 // MADT entry type 0: Processor Local APIC (ACPI v6.3 Section 5.2.12.2)
 #define ACPI_MADT_TYPE_LOCAL_APIC 0
-struct acpi_madt_local_apic_entry {
-  acpi_sub_table_header header;
+struct AcpiMadtLocalApicEntry {
+  AcpiSubTableHeader header;
   uint8_t processor_id;
   uint8_t apic_id;
   uint32_t flags;
 } __PACKED;
-static_assert(sizeof(acpi_madt_local_apic_entry) == 8);
+static_assert(sizeof(AcpiMadtLocalApicEntry) == 8);
 
 #define ACPI_MADT_FLAG_ENABLED 0x1
 
 // MADT entry type 1: I/O APIC (ACPI v6.3 Section 5.2.12.3)
 #define ACPI_MADT_TYPE_IO_APIC 1
-struct acpi_madt_io_apic_entry {
-  acpi_sub_table_header header;
+struct AcpiMadtIoApicEntry {
+  AcpiSubTableHeader header;
   uint8_t io_apic_id;
   uint8_t reserved;
   uint32_t io_apic_address;
   uint32_t global_system_interrupt_base;
 } __PACKED;
-static_assert(sizeof(acpi_madt_io_apic_entry) == 12);
+static_assert(sizeof(AcpiMadtIoApicEntry) == 12);
 
 // MADT entry type 2: Interrupt Source Override (ACPI v6.3 Section 5.2.12.5)
 #define ACPI_MADT_TYPE_INT_SOURCE_OVERRIDE 2
-struct acpi_madt_int_source_override_entry {
-  acpi_sub_table_header header;
+struct AcpiMadtIntSourceOverrideEntry {
+  AcpiSubTableHeader header;
   uint8_t bus;
   uint8_t source;
   uint32_t global_sys_interrupt;
   uint16_t flags;
 } __PACKED;
-static_assert(sizeof(acpi_madt_int_source_override_entry) == 10);
+static_assert(sizeof(AcpiMadtIntSourceOverrideEntry) == 10);
 
 #define ACPI_MADT_FLAG_POLARITY_CONFORMS 0b00
 #define ACPI_MADT_FLAG_POLARITY_HIGH 0b01
@@ -242,14 +242,14 @@ static_assert(sizeof(acpi_madt_int_source_override_entry) == 10);
 
 // DBG2 table
 #define ACPI_DBG2_SIG "DBG2"
-struct acpi_dbg2_table {
-  acpi_sdt_header header;
+struct AcpiDbg2Table {
+  AcpiSdtHeader header;
   uint32_t offset;
   uint32_t num_entries;
 } __PACKED;
-static_assert(sizeof(acpi_dbg2_table) == 44);
+static_assert(sizeof(AcpiDbg2Table) == 44);
 
-struct acpi_dbg2_device {
+struct AcpiDbg2Device {
   uint8_t revision;
   uint16_t length;
   uint8_t register_count;
@@ -263,7 +263,7 @@ struct acpi_dbg2_device {
   uint16_t base_address_offset;
   uint16_t address_size_offset;
 } __PACKED;
-static_assert(sizeof(acpi_dbg2_device) == 22);
+static_assert(sizeof(AcpiDbg2Device) == 22);
 
 // debug port types
 #define ACPI_DBG2_TYPE_SERIAL_PORT 0x8000

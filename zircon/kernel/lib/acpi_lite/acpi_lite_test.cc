@@ -88,7 +88,7 @@ bool TestParseQemuTables() {
   ASSERT_EQ(4u, result.num_tables());
 
   // Ensure we can read the HPET table.
-  const acpi_sdt_header* hpet_table = result.GetTableBySignature("HPET");
+  const AcpiSdtHeader* hpet_table = result.GetTableBySignature("HPET");
   ASSERT_TRUE(hpet_table != nullptr);
   EXPECT_TRUE(memcmp(hpet_table, "HPET", 4) == 0);
 

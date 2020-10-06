@@ -36,10 +36,10 @@ class AcpiParser {
   inline size_t num_tables() const { return num_tables_; }
 
   // Get the first table matching the given signature. Return nullptr if no table found.
-  const acpi_sdt_header* GetTableBySignature(const char* sig) const;
+  const AcpiSdtHeader* GetTableBySignature(const char* sig) const;
 
   // Return the i'th table. Return nullptr if the index is out of range.
-  const acpi_sdt_header* GetTableAtIndex(size_t index) const;
+  const AcpiSdtHeader* GetTableAtIndex(size_t index) const;
 
   // Print tables to debug output.
   void DumpTables() const;
@@ -53,13 +53,13 @@ class AcpiParser {
   // Create a new AcpiParser.
   //
   // |reader| and |sdt| must outlive the created instance.
-  AcpiParser(PhysMemReader& reader, const acpi_rsdt_xsdt& sdt, size_t num_tables, bool xsdt)
+  AcpiParser(PhysMemReader& reader, const AcpiRsdtXsdt& sdt, size_t num_tables, bool xsdt)
       : reader_(&reader), sdt_(&sdt), num_tables_(num_tables), xsdt_(xsdt) {}
 
-  PhysMemReader* reader_;      // Owned elsewhere. Non-null.
-  const acpi_rsdt_xsdt* sdt_;  // Owned elsewhere. Non-null.
-  size_t num_tables_;          // Number of top level tables
-  bool xsdt_;                  // If true, we are using the extended format and pointers are 64 bit.
+  PhysMemReader* reader_;    // Owned elsewhere. Non-null.
+  const AcpiRsdtXsdt* sdt_;  // Owned elsewhere. Non-null.
+  size_t num_tables_;        // Number of top level tables
+  bool xsdt_;                // If true, we are using the extended format and pointers are 64 bit.
 };
 
 // A PhysMemReader translates physical addresses (such as those in the ACPI tables and the RSDT
