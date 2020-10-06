@@ -24,7 +24,6 @@ if (current_cpu != "") {
       "$zx/kernel/phys:tests",
       "$zx/system/ulib/c/test/noop:test",
       "abi-type-validator",
-      "libc",
 
       # disabled for now:
       #"bad-kernel-access",

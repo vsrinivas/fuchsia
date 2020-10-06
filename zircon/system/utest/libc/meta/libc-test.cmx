@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/libc-test"
+    }
+}

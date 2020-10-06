@@ -41,7 +41,6 @@ group("images") {
 aggregate_manifest("legacy-aux") {
   deps = [
     ":lib.c",
-    ":test.sys.libc-test",
     ":test.sys.noop-test",
     ":test.sys.noop-test.asan",
     ":test.sys.noop-test.asan-ubsan",
