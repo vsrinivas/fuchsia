@@ -30,6 +30,25 @@ fx test go-test-runner-example
 Test cases are executed concurrently (max 10 test cases at a time by default).
 [Instruction to override][override-parallel].
 
+## Arguments
+
+Test authors can specify command line arguments to their tests in their
+component manifest file. These will be passed to the test when it is run.
+
+Note the following known behavior change:
+
+`-test.failfast`: As each test case is executed in a different process, this
+flag will only influence sub-tests.
+
+Following flags are restricted and the test fails if they are passed.
+
+- `test.run`
+- `test.v`
+- `test.parallel`
+
+Other go test standard flags might be supported by test runner
+(fuchsia.test.Suite) protocol.
+
 ## Limitations
 
 ### Test Enumeration

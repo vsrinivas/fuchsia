@@ -12,7 +12,6 @@ use {
     std::sync::Arc,
     thiserror::Error,
 };
-
 /// Error encountered while enumerating test.
 ///
 /// This must be `Clone`-able because enumeration futures are memoized.
@@ -94,6 +93,13 @@ pub enum IoError {
 pub enum NamespaceError {
     #[error("can't clone namespace: {:?}", _0)]
     Clone(#[from] ComponentNamespaceError),
+}
+
+/// Error returned when validating arguments.
+#[derive(Debug, Error)]
+pub enum ArgumentError {
+    #[error("Restricted argument passed: {}", _0)]
+    RestrictedArg(String),
 }
 
 /// Error encountered while running test.

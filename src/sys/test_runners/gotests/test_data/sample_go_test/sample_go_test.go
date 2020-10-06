@@ -5,9 +5,12 @@
 package sample_go_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 )
+
+var custom_flag = flag.Bool("my_custom_flag", false, "My custom flag")
 
 func TestPassing(t *testing.T) {
 	fmt.Println("This test will pass")
@@ -48,4 +51,10 @@ func TestPrintMultiline(t *testing.T) {
 	fmt.Print("This test will ")
 	fmt.Print("print the msg ")
 	fmt.Println("in multi-line.")
+}
+
+func TestCustomArg(t *testing.T) {
+	if !*custom_flag {
+		t.Errorf("test should be passed -my_custom_flag")
+	}
 }

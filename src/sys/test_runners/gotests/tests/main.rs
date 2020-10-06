@@ -113,7 +113,7 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
 
     let mut expected_events = vec![
         TestEvent::test_case_started("TestFailing"),
-        TestEvent::log_message("TestFailing", "    sample_go_test.go:20: This will fail"),
+        TestEvent::log_message("TestFailing", "    sample_go_test.go:23: This will fail"),
         TestEvent::test_case_finished("TestFailing", TestResult::Failed),
         TestEvent::test_case_started("TestPassing"),
         TestEvent::test_case_started("TestPrefix"),
@@ -127,7 +127,7 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         TestEvent::log_message("TestCrashing", "Test exited abnormally"),
         TestEvent::test_case_finished("TestCrashing", TestResult::Failed),
         TestEvent::test_case_started("TestSkipped"),
-        TestEvent::log_message("TestSkipped", "    sample_go_test.go:28: Skipping this test"),
+        TestEvent::log_message("TestSkipped", "    sample_go_test.go:31: Skipping this test"),
         TestEvent::test_case_finished("TestSkipped", TestResult::Skipped),
         TestEvent::test_case_started("TestSubtests"),
         TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
@@ -143,6 +143,8 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         TestEvent::test_case_started("TestPrintMultiline"),
         TestEvent::log_message("TestPrintMultiline", "This test will print the msg in multi-line."),
         TestEvent::test_case_finished("TestPrintMultiline", TestResult::Passed),
+        TestEvent::test_case_started("TestCustomArg"),
+        TestEvent::test_case_finished("TestCustomArg", TestResult::Passed),
         TestEvent::test_finished(),
     ];
     assert_eq!(events.last(), Some(&TestEvent::test_finished()));

@@ -1,6 +1,7 @@
 {
     program: {
         binary: "test/sample_go_test",
+        args: [ "-my_custom_flag" ],
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },

@@ -53,7 +53,8 @@ async fn start_runner(
     while let Some(event) = stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let _ = elf::start_component(start_info, controller, get_new_test_server);
+                let _ =
+                    elf::start_component(start_info, controller, get_new_test_server, |_| Ok(()));
             }
         }
     }

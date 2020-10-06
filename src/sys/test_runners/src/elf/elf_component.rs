@@ -4,6 +4,7 @@
 
 use {
     super::SuiteServer,
+    crate::errors::ArgumentError,
     async_trait::async_trait,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_component_runner as fcrunner,
@@ -101,9 +102,13 @@ pub struct Component {
 impl Component {
     /// Create new object using `ComponentStartInfo`.
     /// On sucess returns self and outgoing_dir from `ComponentStartInfo`.
-    pub fn new(
+    pub fn new<F>(
         start_info: fcrunner::ComponentStartInfo,
-    ) -> Result<(Self, ServerEnd<DirectoryMarker>), ComponentError> {
+        validate_args: F,
+    ) -> Result<(Self, ServerEnd<DirectoryMarker>), ComponentError>
+    where
+        F: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
+    {
         let url =
             runner::get_resolved_url(&start_info).map_err(ComponentError::InvalidStartInfo)?;
         let name = Path::new(&url)
@@ -115,7 +120,7 @@ impl Component {
 
         let args = runner::get_program_args(&start_info)
             .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
-        // TODO validate args
+        validate_args(&args).map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
 
         let binary = runner::get_program_binary(&start_info)
             .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
@@ -217,17 +222,21 @@ impl ComponentRuntime {
 /// Setup and run test component in background.
 ///
 /// * `F`: Function which returns new instance of `SuiteServer`.
-pub fn start_component<F, S>(
+pub fn start_component<F, U, S>(
     start_info: fcrunner::ComponentStartInfo,
     mut server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
     get_test_server: F,
+    validate_args: U,
 ) -> Result<(), ComponentError>
 where
     F: 'static + Fn() -> S,
+    U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     S: SuiteServer,
 {
     let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
-    if let Err(e) = start_component_inner(start_info, &mut server_end, get_test_server) {
+    if let Err(e) =
+        start_component_inner(start_info, &mut server_end, get_test_server, validate_args)
+    {
         // Take ownership of `server_end`.
         let server_end = take_server_end(&mut server_end);
         runner::component::report_start_error(
@@ -241,16 +250,18 @@ where
     Ok(())
 }
 
-fn start_component_inner<F, S>(
+fn start_component_inner<F, U, S>(
     start_info: fcrunner::ComponentStartInfo,
     server_end: &mut ServerEnd<fcrunner::ComponentControllerMarker>,
     get_test_server: F,
+    validate_args: U,
 ) -> Result<(), ComponentError>
 where
     F: 'static + Fn() -> S,
+    U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     S: SuiteServer,
 {
-    let (component, outgoing_dir) = Component::new(start_info)?;
+    let (component, outgoing_dir) = Component::new(start_info, validate_args)?;
     let component = Arc::new(component);
 
     let job_runtime_dup = component
@@ -266,7 +277,6 @@ where
 
     let suite_server_abortable_handles = Arc::new(Mutex::new(vec![]));
     let weak_test_suite_abortable_handles = Arc::downgrade(&suite_server_abortable_handles);
-
     let weak_component = Arc::downgrade(&component);
 
     let url = component.url.clone();
@@ -435,7 +445,7 @@ mod tests {
         };
         let (client_controller, server_controller) = endpoints::create_proxy().unwrap();
         let get_test_server = || DummyServer {};
-        let err = start_component(start_info, server_controller, get_test_server);
+        let err = start_component(start_info, server_controller, get_test_server, |_| Ok(()));
         assert_matches!(err, Err(ComponentError::InvalidStartInfo(_)));
         assert_matches!(
             client_controller.take_event_stream().next().await,

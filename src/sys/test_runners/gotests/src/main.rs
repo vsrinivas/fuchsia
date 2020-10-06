@@ -45,7 +45,12 @@ async fn start_runner(
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 let url = start_info.resolved_url.clone().unwrap_or("".to_owned());
-                if let Err(e) = elf::start_component(start_info, controller, TestServer::new) {
+                if let Err(e) = elf::start_component(
+                    start_info,
+                    controller,
+                    TestServer::new,
+                    TestServer::validate_args,
+                ) {
                     warn!("Cannot start component '{}': {:?}", url, e);
                 }
             }

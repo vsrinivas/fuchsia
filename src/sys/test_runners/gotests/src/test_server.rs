@@ -18,9 +18,11 @@ use {
         prelude::*,
         TryStreamExt,
     },
+    lazy_static::lazy_static,
     log::{debug, error},
     regex::bytes::Regex,
     std::{
+        collections::HashSet,
         str::from_utf8,
         sync::{Arc, Weak},
     },
@@ -81,7 +83,7 @@ impl SuiteServer for TestServer {
         invocations
             .map(Ok)
             .try_for_each_concurrent(num_parallel, |invocation| {
-                self.run_test(invocation, test_component.clone(), run_listener)
+                self.run_test(invocation, test_component.clone(), run_listener, num_parallel)
             })
             .await
     }
@@ -113,11 +115,31 @@ impl SuiteServer for TestServer {
     }
 }
 
+lazy_static! {
+    static ref RESTRICTED_FLAGS: HashSet<&'static str> =
+        vec!["-test.run", "-test.v", "-test.parallel"].into_iter().collect();
+}
+
 impl TestServer {
     /// Creates new test server.
     /// Clients should call this function to create new object and then call `serve_test_suite`.
     pub fn new() -> Self {
         Self { tests_future_container: Arc::new(Mutex::new(None)) }
+    }
+
+    pub fn validate_args(args: &Vec<String>) -> Result<(), ArgumentError> {
+        let restricted_flags = args
+            .iter()
+            .filter(|arg| {
+                return RESTRICTED_FLAGS.contains(arg.as_str());
+            })
+            .map(|s| s.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        if restricted_flags.len() > 0 {
+            return Err(ArgumentError::RestrictedArg(restricted_flags));
+        }
+        Ok(())
     }
 
     /// Retrieves and memoizes the full list of tests from the test binary.
@@ -170,11 +192,18 @@ impl TestServer {
         invocation: Invocation,
         component: Arc<Component>,
         run_listener: &'a RunListenerProxy,
+        parallel: usize,
     ) -> Result<(), RunTestError> {
         let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
         debug!("Running test {}", test);
 
-        let mut args = vec!["-test.run".to_owned(), format!("^{}$", test), "-test.v".to_owned()];
+        let mut args = vec![
+            "-test.run".to_owned(),
+            format!("^{}$", test),
+            "-test.parallel".to_owned(),
+            parallel.to_string(),
+            "-test.v".to_owned(),
+        ];
         args.extend(component.args.clone());
 
         // run test.
@@ -426,10 +455,33 @@ mod tests {
             url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
             name: "test/sample_go_test".to_owned(),
             binary: "test/sample_go_test".to_owned(),
-            args: vec![],
+            args: vec!["-my_custom_flag".to_string()],
             ns: ns,
             job: current_job!(),
         }))
+    }
+
+    #[test]
+    fn validate_args_test() {
+        // choose a subset of restricted flags and run them through validation function.
+        let restricted_flags = vec!["-test.v", "-test.run", "-test.parallel"];
+
+        for flag in restricted_flags {
+            let args = vec![flag.to_string()];
+            let err = TestServer::validate_args(&args)
+                .expect_err(&format!("should error out for flag: {}", flag));
+            match err {
+                ArgumentError::RestrictedArg(f) => assert_eq!(f, flag),
+            }
+        }
+
+        let allowed_flags = vec!["-test.short", "-test.anyflag", "-test.timeout", "-mycustomflag"];
+
+        for flag in allowed_flags {
+            let args = vec![flag.to_string()];
+            TestServer::validate_args(&args)
+                .expect(&format!("should not error out for flag: {}", flag));
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -445,6 +497,7 @@ mod tests {
             TestCaseInfo { name: "TestPrintMultiline".to_string(), enabled: true },
             TestCaseInfo { name: "TestSkipped".to_string(), enabled: true },
             TestCaseInfo { name: "TestSubtests".to_string(), enabled: true },
+            TestCaseInfo { name: "TestCustomArg".to_string(), enabled: true },
         ]
         .into_iter()
         .sorted()
@@ -556,6 +609,7 @@ mod tests {
                 "TestPrefix",
                 "TestSkipped",
                 "TestPrefixExtra",
+                "TestCustomArg",
             ]),
             RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
         )
@@ -576,6 +630,11 @@ mod tests {
             ListenerEvent::start_test("TestPrefixExtra"),
             ListenerEvent::finish_test(
                 "TestPrefixExtra",
+                TestResult { status: Some(Status::Passed) },
+            ),
+            ListenerEvent::start_test("TestCustomArg"),
+            ListenerEvent::finish_test(
+                "TestCustomArg",
                 TestResult { status: Some(Status::Passed) },
             ),
             ListenerEvent::finish_all_test(),
