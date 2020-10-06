@@ -7,6 +7,7 @@
 #ifndef KERNEL_LIB_ACPI_TABLES_H
 #define KERNEL_LIB_ACPI_TABLES_H
 
+#include <lib/acpi_lite/structures.h>
 #include <zircon/types.h>
 
 #include <arch/x86/apic.h>
@@ -60,7 +61,7 @@ class AcpiTableProvider {
 
   // Looks up table, on success sets header to point to table. Maintains
   // ownership of the table's memory.
-  virtual zx_status_t GetTable(char* signature, char** header) const = 0;
+  virtual zx_status_t GetTable(AcpiSignature signature, char** header) const = 0;
 };
 
 // Implementation of AcpiTableProvider that is backed by the acpi_lite library.
@@ -69,7 +70,7 @@ class AcpiLiteTableProvider final : public AcpiTableProvider {
   explicit AcpiLiteTableProvider(const acpi_lite::AcpiParser* parser) : parser_(parser) {}
 
   // |AcpiTableProvider| implementation.
-  zx_status_t GetTable(char* signature, char** header) const final;
+  zx_status_t GetTable(AcpiSignature signature, char** header) const final;
 
  private:
   const acpi_lite::AcpiParser* parser_;  // Owned elsewhere.

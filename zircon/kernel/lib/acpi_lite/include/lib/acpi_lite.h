@@ -36,7 +36,7 @@ class AcpiParser {
   inline size_t num_tables() const { return num_tables_; }
 
   // Get the first table matching the given signature. Return nullptr if no table found.
-  const AcpiSdtHeader* GetTableBySignature(const char* sig) const;
+  const AcpiSdtHeader* GetTableBySignature(AcpiSignature sig) const;
 
   // Return the i'th table. Return nullptr if the index is out of range.
   const AcpiSdtHeader* GetTableAtIndex(size_t index) const;

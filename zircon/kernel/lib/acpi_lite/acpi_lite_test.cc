@@ -88,7 +88,7 @@ bool TestParseQemuTables() {
   ASSERT_EQ(4u, result.num_tables());
 
   // Ensure we can read the HPET table.
-  const AcpiSdtHeader* hpet_table = result.GetTableBySignature("HPET");
+  const AcpiSdtHeader* hpet_table = result.GetTableBySignature(AcpiSignature("HPET"));
   ASSERT_TRUE(hpet_table != nullptr);
   EXPECT_TRUE(memcmp(hpet_table, "HPET", 4) == 0);
 
@@ -124,7 +124,7 @@ bool TestReadMissingTable() {
   AcpiParser result = AcpiParser::Init(reader, kQemuTables.rsdp).value();
 
   // Read a missing table.
-  EXPECT_EQ(result.GetTableBySignature("AAAA"), nullptr);
+  EXPECT_EQ(result.GetTableBySignature(AcpiSignature("AAAA")), nullptr);
 
   // Read a bad index.
   EXPECT_EQ(result.GetTableAtIndex(result.num_tables()), nullptr);
@@ -196,6 +196,29 @@ bool TestRsdPtrAutodetect() {
 }
 #endif
 
+bool TestAcpiSignatureConstruct() {
+  BEGIN_TEST;
+
+  AcpiSignature sig("ABCD");
+
+  // Ensure the in-memory representation is correct.
+  EXPECT_TRUE(memcmp(&sig, "ABCD", 4) == 0);
+
+  END_TEST;
+}
+
+bool TestAcpiSignatureWriteToBuffer() {
+  BEGIN_TEST;
+
+  // Write out the signature.
+  AcpiSignature sig("ABCD");
+  char buff[5];
+  sig.WriteToBuffer(buff);
+  EXPECT_TRUE(strcmp("ABCD", buff) == 0);
+
+  END_TEST;
+}
+
 }  // namespace
 }  // namespace acpi_lite
 
@@ -210,4 +233,6 @@ UNITTEST("Dump tables", acpi_lite::TestDumpTables)
 #if __x86_64__
 UNITTEST("RSDP searching", acpi_lite::TestRsdPtrAutodetect)
 #endif
+UNITTEST("AcpiSignature representation", acpi_lite::TestAcpiSignatureConstruct)
+UNITTEST("AcpiSignature WriteToBuffer", acpi_lite::TestAcpiSignatureWriteToBuffer)
 UNITTEST_END_TESTCASE(acpi_lite_tests, "acpi_lite", "Test ACPI parsing.")

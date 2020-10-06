@@ -6,7 +6,10 @@
 
 zx_library("acpi_lite") {
   kernel = true
-  sources = [ "acpi_lite.cc" ]
+  sources = [
+    "acpi_lite.cc",
+    "structures.cc",
+  ]
   deps = [ "$zx/system/ulib/pretty" ]
 
   # TODO: testonly = true

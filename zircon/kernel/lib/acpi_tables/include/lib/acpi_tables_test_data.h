@@ -10,7 +10,7 @@
 namespace acpi_test_data {
 
 struct FakeTable {
-  char sig[5];
+  AcpiSignature sig;
   const AcpiSdtHeader* header = nullptr;
 };
 
@@ -19,10 +19,10 @@ class FakeTableProvider : public AcpiTableProvider {
   FakeTableProvider(const FakeTable* tables, uint32_t table_count)
       : tables_(tables), table_count_(table_count) {}
 
-  zx_status_t GetTable(char* signature, char** header) const override {
+  zx_status_t GetTable(AcpiSignature signature, char** header) const override {
     for (uint32_t i = 0; i < table_count_; i++) {
       const FakeTable& table = tables_[i];
-      if (strcmp(signature, table.sig) == 0) {
+      if (signature == table.sig) {
         *header = (char*)table.header;
         return ZX_OK;
       }
@@ -54,11 +54,11 @@ const uint8_t kEveHpetTableData[]{
 };
 const FakeTable kEveTables[]{
     {
-        .sig = ACPI_MADT_SIG,
+        .sig = AcpiMadtTable::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(kEveMadtTableData),
     },
     {
-        .sig = ACPI_HPET_SIG,
+        .sig = AcpiHpetTable::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(kEveHpetTableData),
     },
 };
@@ -523,11 +523,11 @@ const uint8_t kZ840SratTableData[]{
 
 const FakeTable kZ840Tables[]{
     {
-        .sig = ACPI_MADT_SIG,
+        .sig = AcpiMadtTable::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(kZ840MadtTableData),
     },
     {
-        .sig = ACPI_SRAT_SIG,
+        .sig = AcpiSratTable::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(kZ840SratTableData),
     },
 
@@ -675,11 +675,11 @@ const uint8_t k2970wxSratTableData[]{
 
 const FakeTable k2970wxTables[]{
     {
-        .sig = ACPI_MADT_SIG,
+        .sig = AcpiMadtTable::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(k2970wxMadtTableData),
     },
     {
-        .sig = ACPI_SRAT_SIG,
+        .sig = AcpiSratTable::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(k2970wxSratTableData),
     },
 
@@ -697,7 +697,7 @@ const uint8_t kDbg2TestData[]{
 
 const FakeTable kDbg2Table[]{
     {
-        .sig = ACPI_DBG2_SIG,
+        .sig = AcpiDbg2Table::kSignature,
         .header = reinterpret_cast<const AcpiSdtHeader*>(kDbg2TestData),
     },
 };

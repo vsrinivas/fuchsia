@@ -97,7 +97,7 @@ bool AcpiChecksumValid(const void* _buf, size_t len) {
 
 bool ValidateRsdp(const AcpiRsdp* rsdp) {
   // Verify the RSDP signature.
-  if (memcmp(ACPI_RSDP_SIG, &rsdp->sig, ACPI_RSDP_SIG_LENGTH) != 0) {
+  if (rsdp->sig1 != AcpiRsdp::kSignature1 || rsdp->sig2 != AcpiRsdp::kSignature2) {
     return false;
   }
 
@@ -190,7 +190,7 @@ zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa
   }
 
   // Ensure we have an RSDT signature.
-  if (memcmp(rsdt.value()->header.sig, ACPI_RSDT_SIG, ACPI_RSDT_SIG_LENGTH) != 0) {
+  if (rsdt.value()->header.sig != AcpiRsdt::kSignature) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
@@ -220,7 +220,7 @@ zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa
   }
 
   // Ensure we have an XSDT signature.
-  if (memcmp(xsdt.value()->header.sig, ACPI_XSDT_SIG, ACPI_XSDT_SIG_LENGTH) != 0) {
+  if (xsdt.value()->header.sig != AcpiXsdt::kSignature) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
@@ -256,7 +256,7 @@ const AcpiSdtHeader* AcpiParser::GetTableAtIndex(size_t index) const {
       .value_or(nullptr);
 }
 
-const AcpiSdtHeader* AcpiParser::GetTableBySignature(const char* sig) const {
+const AcpiSdtHeader* AcpiParser::GetTableBySignature(AcpiSignature sig) const {
   for (size_t i = 0; i < num_tables_; i++) {
     const AcpiSdtHeader* header = GetTableAtIndex(i);
     if (!header) {
@@ -264,7 +264,7 @@ const AcpiSdtHeader* AcpiParser::GetTableBySignature(const char* sig) const {
     }
 
     // Continue searching if the header doesn't match.
-    if (memcmp(sig, header->sig, sizeof(header->sig)) != 0) {
+    if (sig != header->sig) {
       continue;
     }
 
@@ -376,8 +376,9 @@ void AcpiParser::DumpTables() const {
       continue;
     }
 
-    printf("table %zu: '%c%c%c%c' len %u\n", i, header->sig[0], header->sig[1], header->sig[2],
-           header->sig[3], header->length);
+    char name[AcpiSignature::kAsciiLength + 1];
+    header->sig.WriteToBuffer(name);
+    printf("table %zu: '%s' len %u\n", i, name, header->length);
     hexdump(header, header->length);
   }
 }
@@ -385,7 +386,7 @@ void AcpiParser::DumpTables() const {
 zx_status_t AcpiParser::EnumerateMadtEntries(const uint8_t search_type,
                                              const MadtEntryCallback& callback) const {
   const AcpiMadtTable* madt =
-      reinterpret_cast<const AcpiMadtTable*>(GetTableBySignature(ACPI_MADT_SIG));
+      reinterpret_cast<const AcpiMadtTable*>(GetTableBySignature(AcpiMadtTable::kSignature));
   if (!madt) {
     return ZX_ERR_NOT_FOUND;
   }

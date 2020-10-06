@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_STRUCTURES_H_
 #define ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_STRUCTURES_H_
 
+#include <lib/acpi_lite/internal.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -17,19 +18,52 @@
 constexpr zx_paddr_t kBiosReadOnlyAreaStart = 0xe0'000;
 constexpr size_t kBiosReadOnlyAreaLength = 0x20'000;
 
+// ACPI signature.
+//
+// Signatures are 4 byte ASCII strings. We represent them as an integer.
+struct AcpiSignature {
+  // Value, in big-endian format to match the in-memory representation.
+  //
+  // For example, on little-endian systems the signature "1234" will have a value
+  // 0x34'33'32'31, with bytes reversed.
+  uint32_t value;
+
+  // Create an AcpiSignature from a C-style string.
+  AcpiSignature() = default;
+  explicit constexpr AcpiSignature(const char name[4])
+      : value(acpi_lite::HostToBe32(name[0] << 24 | name[1] << 16 | name[2] << 8 | name[3])) {}
+
+  // Operators.
+  friend bool operator==(const AcpiSignature& left, const AcpiSignature& right) {
+    return left.value == right.value;
+  }
+  friend bool operator!=(const AcpiSignature& left, const AcpiSignature& right) {
+    return left.value != right.value;
+  }
+
+  // Write the signature into the given buffer.
+  //
+  // Buffer must have a length of at least 5.
+  void WriteToBuffer(char* buffer) const;
+
+  // Length of the signature when represented as ASCII.
+  static constexpr int kAsciiLength = 4;
+} __PACKED;
+
 // Root System Description Pointer (RSDP)
 //
 // Reference: ACPI v6.3 Section 5.2.5.3.
 
-#define ACPI_RSDP_SIG_LENGTH 8
-#define ACPI_RSDP_SIG "RSD PTR "
-
 struct AcpiRsdp {
-  uint8_t sig[ACPI_RSDP_SIG_LENGTH];
+  AcpiSignature sig1;  // "RSD "
+  AcpiSignature sig2;  // "PTR "
   uint8_t checksum;
   uint8_t oemid[6];
   uint8_t revision;
   uint32_t rsdt_address;
+
+  static constexpr auto kSignature1 = AcpiSignature("RSD ");
+  static constexpr auto kSignature2 = AcpiSignature("PTR ");
 } __PACKED;
 static_assert(sizeof(AcpiRsdp) == 20);
 
@@ -50,7 +84,7 @@ static_assert(sizeof(AcpiRsdpV2) == 36);
 //
 // Reference: ACPI v6.3 Section 5.2.6.
 struct AcpiSdtHeader {
-  uint8_t sig[4];
+  AcpiSignature sig;
   uint32_t length;
   uint8_t revision;
   uint8_t checksum;
@@ -70,6 +104,8 @@ struct AcpiRsdt {
 
   // array of uint32s are placed immediately afterwards
   uint32_t addr32[0];
+
+  static constexpr auto kSignature = AcpiSignature("RSDT");
 } __PACKED;
 static_assert(sizeof(AcpiRsdt) == 36);
 
@@ -78,6 +114,8 @@ struct AcpiXsdt {
 
   // array of uint64s are placed immediately afterwards
   uint32_t addr64[0];
+
+  static constexpr auto kSignature = AcpiSignature("XSDT");
 } __PACKED;
 static_assert(sizeof(AcpiXsdt) == 36);
 
@@ -96,11 +134,6 @@ static_assert(sizeof(AcpiGenericAddress) == 12);
 #define ACPI_ADDR_SPACE_MEMORY 0
 #define ACPI_ADDR_SPACE_IO 1
 
-#define ACPI_RSDT_SIG "RSDT"
-#define ACPI_RSDT_SIG_LENGTH 4
-#define ACPI_XSDT_SIG "XSDT"
-#define ACPI_XSDT_SIG_LENGTH 4
-
 // Multiple APIC Description Table
 //
 // The table is followed by interrupt control structures, each with
@@ -112,10 +145,10 @@ struct AcpiMadtTable {
 
   uint32_t local_int_controller_address;
   uint32_t flags;
+
+  static constexpr auto kSignature = AcpiSignature("APIC");
 } __PACKED;
 static_assert(sizeof(AcpiMadtTable) == 44);
-
-#define ACPI_MADT_SIG "APIC"
 
 struct AcpiSubTableHeader {
   uint8_t type;
@@ -126,7 +159,6 @@ static_assert(sizeof(AcpiSubTableHeader) == 2);
 // High Precision Event Timer Table
 //
 // Reference: IA-PC HPET (High Precision Event Timers) v1.0a, Section 3.2.4.
-#define ACPI_HPET_SIG "HPET"
 struct AcpiHpetTable {
   AcpiSdtHeader header;
   uint32_t id;
@@ -134,17 +166,20 @@ struct AcpiHpetTable {
   uint8_t sequence;
   uint16_t minimum_tick;
   uint8_t flags;
+
+  static constexpr auto kSignature = AcpiSignature("HPET");
 } __PACKED;
 static_assert(sizeof(AcpiHpetTable) == 56);
 
 // SRAT table and descriptors.
 //
 // Reference: ACPI v6.3 Section 5.2.16.
-#define ACPI_SRAT_SIG "SRAT"
 struct AcpiSratTable {
   AcpiSdtHeader header;
   uint32_t _reserved;  // should be 1
   uint64_t _reserved2;
+
+  static constexpr auto kSignature = AcpiSignature("SRAT");
 } __PACKED;
 static_assert(sizeof(AcpiSratTable) == 48);
 
@@ -246,11 +281,12 @@ static_assert(sizeof(AcpiMadtIntSourceOverrideEntry) == 10);
 #define ACPI_MADT_FLAG_TRIGGER_MASK 0b1100
 
 // DBG2 table
-#define ACPI_DBG2_SIG "DBG2"
 struct AcpiDbg2Table {
   AcpiSdtHeader header;
   uint32_t offset;
   uint32_t num_entries;
+
+  static constexpr auto kSignature = AcpiSignature("DBG2");
 } __PACKED;
 static_assert(sizeof(AcpiDbg2Table) == 44);
 
