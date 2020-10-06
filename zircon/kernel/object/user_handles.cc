@@ -103,6 +103,11 @@ zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Disp
       (desired_rights == ZX_RIGHT_SAME_RIGHTS) ? source->rights() : desired_rights;
 
   *raw_handle = Handle::Dup(source, dest_rights).release();
+  if (!*raw_handle) {
+    // It's possible for the dup operation to fail if we run out of handles exactly
+    // at this point.
+    return ZX_ERR_NO_MEMORY;
+  }
 
   // Use !ZX_HANDLE_OP_DUPLICATE so that we handle the case where operation
   // is an invalid value.
