@@ -16,6 +16,7 @@ RFC                                                     | Submitted  | Reviewed 
 [RFC-0004](0004_units_of_bytes.md)                      | 2020-06-09 | 2020-07-31 | Units of Bytes
 [RFC-0005](0005_blobfs_snapshots.md)                    | 2020-09-07 | 2020-09-19 | Blobfs Snapshots
 [RFC-0006](0006_addendum_to_rfc_process_for_zircon.md)  | 2020-08-17 | 2020-09-24 | Addendum of the RFC Process for Zircon
+[RFC-0007](0007_remove_thread_killing.md)               | 2020-09-25 | 2020-10-06 | Zircon Removal of Thread Killing
 
 
 ## Rejected proposals

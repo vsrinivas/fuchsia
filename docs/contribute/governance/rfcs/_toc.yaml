@@ -16,5 +16,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0005_blobfs_snapshots.md
 - title: "RFC-0006: Addendum of the RFC Process for Zircon"
   path: /docs/contribute/governance/rfcs/0006_addendum_to_rfc_process_for_zircon.md
+- title: "RFC-0007: Zircon Removal of Thread Killing"
+  path: /docs/contribute/governance/rfcs/0007_remove_thread_killing.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
