@@ -28,9 +28,6 @@ executable("nonhardware_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # These tests require a graphics device to run.
@@ -59,9 +56,6 @@ source_set("hardware_tests") {
     "//src/graphics/lib/magma/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test_package("msd-vsi-vip-nonhardware-tests") {

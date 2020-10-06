@@ -114,7 +114,7 @@ class CommandBuffer : public MappedBatch<Context, typename GpuMapping::BufferTyp
  protected:
   uint32_t batch_buffer_index() const { return command_buffer_->batch_buffer_resource_index; }
 
-  uint32_t batch_start_offset() const { return command_buffer_->batch_start_offset; }
+  uint64_t batch_start_offset() const { return command_buffer_->batch_start_offset; }
 
   uint32_t num_resources() const { return command_buffer_->resource_count; }
 

@@ -16,7 +16,7 @@ class PageTableSlotAllocator {
  public:
   PageTableSlotAllocator(uint32_t size) : slot_busy_(size), next_index_(size - 1) {}
 
-  uint32_t size() { return slot_busy_.size(); }
+  uint64_t size() { return slot_busy_.size(); }
 
   bool Alloc(uint32_t* index_out) {
     std::lock_guard<std::mutex> lock(mutex_);

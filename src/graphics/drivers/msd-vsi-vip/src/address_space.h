@@ -77,7 +77,8 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
     // Must be a 4k page address.
     DASSERT(magma::is_page_aligned(bus_addr));
     DASSERT(fits_in_40_bits(bus_addr));
-    pte_t pte = (bus_addr & 0xFFFFFFFF) | (((bus_addr >> 32) & 0xFF) << 4);
+    pte_t pte =
+        magma::to_uint32(bus_addr & 0xFFFFFFFF) | ((magma::to_uint32(bus_addr >> 32) & 0xFF) << 4);
     if (valid)
       pte |= 1;
     if (exception)

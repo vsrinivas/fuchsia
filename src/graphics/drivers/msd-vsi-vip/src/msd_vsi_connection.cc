@@ -86,7 +86,7 @@ void msd_connection_set_notification_callback(struct msd_connection_t* connectio
 void MsdVsiConnection::QueueReleasedMappings(std::vector<std::shared_ptr<GpuMapping>> mappings) {
   bool killed = false;
   for (const auto& mapping : mappings) {
-    uint32_t use_count = mapping.use_count();
+    size_t use_count = mapping.use_count();
     if (use_count == 1) {
       // Bus mappings are held in the connection and passed through the command stream to
       // ensure the memory isn't released until the tlbs are invalidated, which happens
@@ -99,7 +99,7 @@ void MsdVsiConnection::QueueReleasedMappings(std::vector<std::shared_ptr<GpuMapp
     } else {
       // It's an error to release a buffer while it has inflight mappings, as that
       // can fault the gpu.
-      DMESSAGE("buffer %lu mapping use_count %d", mapping->BufferId(), use_count);
+      DMESSAGE("buffer %lu mapping use_count %zd", mapping->BufferId(), use_count);
       if (!killed) {
         SendContextKilled();
         killed = true;

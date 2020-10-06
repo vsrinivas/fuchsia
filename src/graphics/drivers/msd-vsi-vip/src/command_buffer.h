@@ -59,8 +59,8 @@ class CommandBuffer : public magma::CommandBuffer<MsdVsiContext, GpuMapping> {
 
   // Returns the offset into the batch buffer that points to the end of the user data.
   uint32_t GetBatchBufferWriteOffset() {
-    uint32_t length = magma::round_up(GetLength(), sizeof(uint64_t));
-    return batch_start_offset() + length;
+    uint64_t length = magma::round_up(GetLength(), sizeof(uint64_t));
+    return magma::to_uint32(batch_start_offset() + length);
   }
 
   // Returns a pointer to the resource for the context state buffer.
