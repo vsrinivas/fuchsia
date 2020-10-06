@@ -28,9 +28,9 @@ BT_FILE_DEPS=(
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/blob.manifest"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/blobs.csv"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/blobs.json"
-  "tools/devshell/tests/subcommands/data/fx_blobstats_test/bugreport_blobs.json"
-  "tools/devshell/tests/subcommands/data/fx_blobstats_test/bugreport_meta.far"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/packages.csv"
+  "tools/devshell/tests/subcommands/data/fx_blobstats_test/snapshot_blobs.json"
+  "tools/devshell/tests/subcommands/data/fx_blobstats_test/snapshot_meta.far"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif_blobs.json"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif_meta.far"
   "tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif.so"
@@ -49,10 +49,10 @@ BT_SET_UP() {
   mkdir -p ${IMAGES_DIR}
   cp "${DATA_DIR}/blob.manifest" "${IMAGES_DIR}/blob.manifest"
 
-  BUGREPORT_DIR="${BT_TEMP_DIR}/out/default/obj/src/developer/feedback/bugreport/bugreport"
-  mkdir -p ${BUGREPORT_DIR}
-  cp "${DATA_DIR}/bugreport_meta.far" "${BUGREPORT_DIR}/meta.far"
-  cp "${DATA_DIR}/bugreport_blobs.json" "${BUGREPORT_DIR}/blobs.json"
+  SNAPSHOT_DIR="${BT_TEMP_DIR}/out/default/obj/src/developer/forensics/snapshot/snapshot"
+  mkdir -p ${SNAPSHOT_DIR}
+  cp "${DATA_DIR}/snapshot_meta.far" "${SNAPSHOT_DIR}/meta.far"
+  cp "${DATA_DIR}/snapshot_blobs.json" "${SNAPSHOT_DIR}/blobs.json"
 
   WLANIF_DIR="${BT_TEMP_DIR}/out/default/obj/src/connectivity/wlan/drivers/wlanif/wlanif"
   mkdir -p ${WLANIF_DIR}

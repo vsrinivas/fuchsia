@@ -1,3 +1,3 @@
 98af05f927a21388ce087137372a36c8ab14fc2379b0ad30df5166f75ce93dc6=../../src/connectivity/wlan/drivers/wlanif/wlanif/meta.far
 b5541e63cfe3851040a36c91b2b3330ccf5c862f240192149751e7cadf7423b0=../../../arm64-shared/wlanif.so
-d00f568deaf0db2a298b970cf9e411faf300db52831c5d30742f08c697ce8764=../../src/developer/feedback/bugreport/bugreport/meta.far
+d00f568deaf0db2a298b970cf9e411faf300db52831c5d30742f08c697ce8764=../../src/developer/forensics/snapshot/snapshot/meta.far

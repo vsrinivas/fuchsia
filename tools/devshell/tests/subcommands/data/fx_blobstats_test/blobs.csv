@@ -1,4 +1,4 @@
 Size,Share,Prop,Saved,Path
 73728,1,73728,0,arm64-shared/wlanif.so
 24576,1,24576,0,obj/src/connectivity/wlan/drivers/wlanif/wlanif/meta.far
-24576,1,24576,0,obj/src/developer/feedback/bugreport/bugreport/meta.far
+24576,1,24576,0,obj/src/developer/forensics/snapshot/snapshot/meta.far

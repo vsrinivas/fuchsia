@@ -1,6 +1,6 @@
 [
     {
-        "source_path": "obj/src/developer/feedback/bugreport/bugreport/meta.far",
+        "source_path": "obj/src/developer/forensics/snapshot/snapshot/meta.far",
         "path": "meta/",
         "merkle": "d00f568deaf0db2a298b970cf9e411faf300db52831c5d30742f08c697ce8764",
         "size": 16384
@@ -18,8 +18,8 @@
         "size": 198040
     },
     {
-        "source_path": "bugreport",
-        "path": "bin/bugreport",
+        "source_path": "snapshot",
+        "path": "bin/snapshot",
         "merkle": "ac7c38600ced2e25c2692eba4f7e82df550233480e04e51c5fd5d611b36602cd",
         "size": 133456
     },

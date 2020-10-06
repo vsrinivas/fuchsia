@@ -66,13 +66,13 @@
     "size": 122880
   },
   {
-    "source_path": "obj/src/developer/feedback/bugreport/bugreport/meta.far",
+    "source_path": "obj/src/developer/forensics/snapshot/snapshot/meta.far",
     "merkle": "d00f568deaf0db2a298b970cf9e411faf300db52831c5d30742f08c697ce8764",
     "bytes": 16384,
     "size": 24576
   },
   {
-    "source_path": "bugreport",
+    "source_path": "snapshot",
     "merkle": "ac7c38600ced2e25c2692eba4f7e82df550233480e04e51c5fd5d611b36602cd",
     "bytes": 133456,
     "size": 40960
