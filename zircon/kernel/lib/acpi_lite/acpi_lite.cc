@@ -49,31 +49,28 @@ class ZirconPhysmemReader final : public PhysMemReader {
   }
 };
 
+// Map a variable-length structure into memory.
+//
 // Perform a two-phase PhysToPtr conversion:
 //
 //   1. We first read a fixed-sized header.
-//   2. We next call the function |bytes_to_read|, passing in this header.
-//   3. We next map in the number of bytes indicated by the function.
+//   2. We next determine the length of the structure by reading the fields.
+//   3. We finally map in the full size of the structure.
 //
 // This allows us to handle the common use-case where the number of bytes that need
 // to be accessed at a particular address cannot be determined until we first read
 // a header at that address.
-//
-// |bytes_to_read| is a function of type "size_t F(const T&)". We use a lambda
-// (and not a member pointer, for example) because the length does not have a fixed
-// name and/or may be inside a nested struct.
-template <typename T, typename F>
-zx::status<const T*> PhysToPtrDynamicSize(PhysMemReader& reader, zx_paddr_t phys, F bytes_to_read) {
+template <typename T>
+zx::status<const T*> MapStructure(PhysMemReader& reader, zx_paddr_t phys) {
   // Try and read the header.
   zx::status<const void*> result = reader.PhysToPtr(phys, sizeof(T));
   if (result.is_error()) {
     return result.take_error();
   }
+  const T* header = static_cast<const T*>(result.value());
 
   // Get the number of bytes the full structure needs, as determined by its header.
-  size_t bytes_needed = ktl::max(
-      static_cast<size_t>(bytes_to_read(static_cast<const T*>(result.value()))), sizeof(T));
-  result = reader.PhysToPtr(phys, bytes_needed);
+  result = reader.PhysToPtr(phys, header->size());
   if (result.is_error()) {
     return result.take_error();
   }
@@ -136,8 +133,7 @@ zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t r
   }
 
   // Try and map the larger V2 structure.
-  zx::status<const AcpiRsdpV2*> rsdp_v2 = PhysToPtrDynamicSize<AcpiRsdpV2>(
-      reader, rsdp_pa, [](const AcpiRsdpV2* v) { return v->length; });
+  zx::status<const AcpiRsdpV2*> rsdp_v2 = MapStructure<AcpiRsdpV2>(reader, rsdp_pa);
   if (rsdp_v2.is_error()) {
     return rsdp_v2.take_error();
   }
@@ -183,8 +179,7 @@ zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
 zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
                                          size_t* num_tables) {
   // Map in the RSDT.
-  zx::status<const AcpiRsdt*> rsdt = PhysToPtrDynamicSize<AcpiRsdt>(
-      reader, rsdt_pa, [](const AcpiRsdt* v) { return v->header.length; });
+  zx::status<const AcpiRsdt*> rsdt = MapStructure<AcpiRsdt>(reader, rsdt_pa);
   if (rsdt.is_error()) {
     return rsdt.take_error();
   }
@@ -213,8 +208,7 @@ zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa
 zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa,
                                          size_t* num_tables) {
   // Map in the XSDT.
-  zx::status<const AcpiXsdt*> xsdt = PhysToPtrDynamicSize<AcpiXsdt>(
-      reader, xsdt_pa, [](const AcpiXsdt* v) { return v->header.length; });
+  zx::status<const AcpiXsdt*> xsdt = MapStructure<AcpiXsdt>(reader, xsdt_pa);
   if (xsdt.is_error()) {
     return xsdt.take_error();
   }
@@ -251,9 +245,7 @@ const AcpiSdtHeader* AcpiParser::GetTableAtIndex(size_t index) const {
   zx_paddr_t pa = xsdt_ != nullptr ? xsdt_->addr64[index] : rsdt_->addr32[index];
 
   // Map it in.
-  return PhysToPtrDynamicSize<AcpiSdtHeader>(*reader_, pa,
-                                             [](const AcpiSdtHeader* v) { return v->length; })
-      .value_or(nullptr);
+  return MapStructure<AcpiSdtHeader>(*reader_, pa).value_or(nullptr);
 }
 
 const AcpiSdtHeader* AcpiParser::GetTableBySignature(AcpiSignature sig) const {

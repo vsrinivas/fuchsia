@@ -76,6 +76,8 @@ struct AcpiRsdpV2 {
   uint64_t xsdt_address;
   uint8_t extended_checksum;
   uint8_t reserved[3];
+
+  size_t size() const { return length; }
 } __PACKED;
 static_assert(sizeof(AcpiRsdpV2) == 36);
 
@@ -93,6 +95,8 @@ struct AcpiSdtHeader {
   uint32_t oem_revision;
   uint32_t creator_id;
   uint32_t creator_revision;
+
+  size_t size() const { return length; }
 } __PACKED;
 static_assert(sizeof(AcpiSdtHeader) == 36);
 
@@ -105,6 +109,7 @@ struct AcpiRsdt {
   // array of uint32s are placed immediately afterwards
   uint32_t addr32[0];
 
+  size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("RSDT");
 } __PACKED;
 static_assert(sizeof(AcpiRsdt) == 36);
@@ -115,6 +120,7 @@ struct AcpiXsdt {
   // array of uint64s are placed immediately afterwards
   uint32_t addr64[0];
 
+  size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("XSDT");
 } __PACKED;
 static_assert(sizeof(AcpiXsdt) == 36);
@@ -146,6 +152,7 @@ struct AcpiMadtTable {
   uint32_t local_int_controller_address;
   uint32_t flags;
 
+  size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("APIC");
 } __PACKED;
 static_assert(sizeof(AcpiMadtTable) == 44);
@@ -167,6 +174,7 @@ struct AcpiHpetTable {
   uint16_t minimum_tick;
   uint8_t flags;
 
+  size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("HPET");
 } __PACKED;
 static_assert(sizeof(AcpiHpetTable) == 56);
@@ -179,6 +187,7 @@ struct AcpiSratTable {
   uint32_t _reserved;  // should be 1
   uint64_t _reserved2;
 
+  size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("SRAT");
 } __PACKED;
 static_assert(sizeof(AcpiSratTable) == 48);
@@ -195,6 +204,8 @@ struct AcpiSratProcessorAffinityEntry {
   uint8_t sapic_eid;
   uint8_t proximity_domain_high[3];
   uint32_t clock_domain;
+
+  size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiSratProcessorAffinityEntry) == 16);
 
@@ -216,6 +227,8 @@ struct AcpiSratMemoryAffinityEntry {
   uint32_t flags;
   uint32_t _reserved3;
   uint32_t _reserved4;
+
+  size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiSratMemoryAffinityEntry) == 40);
 
@@ -231,6 +244,8 @@ struct AcpiSratProcessorX2ApicAffinityEntry {
   uint32_t flags;
   uint32_t clock_domain;
   uint32_t _reserved2;
+
+  size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiSratProcessorX2ApicAffinityEntry) == 24);
 
@@ -243,6 +258,8 @@ struct AcpiMadtLocalApicEntry {
   uint8_t processor_id;
   uint8_t apic_id;
   uint32_t flags;
+
+  size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiMadtLocalApicEntry) == 8);
 
@@ -256,6 +273,8 @@ struct AcpiMadtIoApicEntry {
   uint8_t reserved;
   uint32_t io_apic_address;
   uint32_t global_system_interrupt_base;
+
+  size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiMadtIoApicEntry) == 12);
 
@@ -267,6 +286,8 @@ struct AcpiMadtIntSourceOverrideEntry {
   uint8_t source;
   uint32_t global_sys_interrupt;
   uint16_t flags;
+
+  size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiMadtIntSourceOverrideEntry) == 10);
 
@@ -286,6 +307,7 @@ struct AcpiDbg2Table {
   uint32_t offset;
   uint32_t num_entries;
 
+  size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("DBG2");
 } __PACKED;
 static_assert(sizeof(AcpiDbg2Table) == 44);
@@ -303,6 +325,8 @@ struct AcpiDbg2Device {
   uint16_t reserved;
   uint16_t base_address_offset;
   uint16_t address_size_offset;
+
+  size_t size() const { return length; }
 } __PACKED;
 static_assert(sizeof(AcpiDbg2Device) == 22);
 
