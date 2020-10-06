@@ -23,7 +23,8 @@ namespace feedback_data {
 class Metadata {
  public:
   Metadata(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
-           const AnnotationKeys& annotation_allowlist, const AttachmentKeys& attachment_allowlist);
+           bool is_first_instance, const AnnotationKeys& annotation_allowlist,
+           const AttachmentKeys& attachment_allowlist);
 
   // Return a JSON metadata string.
   //

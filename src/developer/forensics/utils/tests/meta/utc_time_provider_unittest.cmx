@@ -3,6 +3,10 @@
         "binary": "bin/utc_time_provider_unittest_exe"
     },
     "sandbox": {
+        "features": [
+            "isolated-cache-storage",
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.logger.LogSink"
         ]

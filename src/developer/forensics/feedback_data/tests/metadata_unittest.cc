@@ -22,6 +22,8 @@
 #include "src/developer/forensics/testing/stubs/utc_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/timekeeper/test_clock.h"
 // TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
 #include "zircon/third_party/rapidjson/include/rapidjson/document.h"
@@ -110,12 +112,24 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
+constexpr zx::duration kPreviousBootUtcMonotonicDifference = zx::sec(100);
+
 class MetadataTest : public UnitTestFixture {
  protected:
+  void SetUp() override {
+    FX_CHECK(files::WriteFile(files::JoinPath("/cache", kUtcMonotonicDifferenceFile),
+                              std::to_string(kPreviousBootUtcMonotonicDifference.get())));
+  }
+
+  void TearDown() override {
+    files::DeletePath(files::JoinPath("/tmp", kUtcMonotonicDifferenceFile), /*recursive=*/false);
+    files::DeletePath(files::JoinPath("/cache", kUtcMonotonicDifferenceFile), /*recursive=*/false);
+  }
+
   void SetUpMetadata(const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist) {
-    metadata_ =
-        std::make_unique<Metadata>(services(), &clock_, annotation_allowlist, attachment_allowlist);
+    metadata_ = std::make_unique<Metadata>(services(), &clock_, /*is_first_instance=*/true,
+                                           annotation_allowlist, attachment_allowlist);
   }
 
   // Get the integrity metadata for the provided annotations and attachments, check that it adheres
@@ -393,7 +407,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
       {kAttachmentInspect, AttachmentValue("")},
       {kAttachmentLogKernel, AttachmentValue("")},
       {kAttachmentLogSystem, AttachmentValue("")},
-      {kPreviousLogsFilePath, AttachmentValue("")},
+      {kAttachmentLogSystemPrevious, AttachmentValue("")},
   };
 
   SetUpMetadata(annotation_allowlist, attachment_allowlist);
@@ -415,9 +429,8 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentInspect, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogKernel, utc_monotonic_difference);
   UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogSystem, utc_monotonic_difference);
-
-  ASSERT_TRUE(metadata_json["files"].HasMember(kPreviousLogsFilePath));
-  ASSERT_FALSE(metadata_json["files"][kPreviousLogsFilePath].HasMember("utc_monotonic_difference"));
+  UTC_MONOTONIC_DIFFERENCE_IS(metadata_json, kAttachmentLogSystemPrevious,
+                              kPreviousBootUtcMonotonicDifference);
 
   ASSERT_TRUE(metadata_json["files"].HasMember(kAttachmentAnnotations));
   ASSERT_FALSE(

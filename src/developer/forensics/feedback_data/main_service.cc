@@ -48,7 +48,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       device_id_provider_(kDeviceIdPath),
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
                  config.attachment_allowlist, &device_id_provider_, is_first_instance),
-      data_provider_(dispatcher_, services, &clock_, config.annotation_allowlist,
+      data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
                      config.attachment_allowlist, &cobalt_, &datastore_),
       data_register_(&datastore_, kDataRegisterPath) {}
 

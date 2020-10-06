@@ -116,6 +116,7 @@ source_set("utc_time_provider") {
   ]
 
   public_deps = [
+    ":previous_boot_file",
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//src/lib/timekeeper:system",
@@ -124,5 +125,6 @@ source_set("utc_time_provider") {
   deps = [
     ":time",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
   ]
 }

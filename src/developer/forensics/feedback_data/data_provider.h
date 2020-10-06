@@ -25,7 +25,8 @@ namespace feedback_data {
 class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               timekeeper::Clock* clock, const AnnotationKeys& annotation_allowlist,
+               timekeeper::Clock* clock, bool is_first_instance,
+               const AnnotationKeys& annotation_allowlist,
                const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
                Datastore* datastore);
 

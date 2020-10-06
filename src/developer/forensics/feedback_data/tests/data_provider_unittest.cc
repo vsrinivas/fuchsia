@@ -156,9 +156,9 @@ class DataProviderTest : public UnitTestFixture {
     datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
                                              annotation_allowlist, attachment_allowlist,
                                              &device_id_provider_, /*is_first_instance=*/true);
-    data_provider_ =
-        std::make_unique<DataProvider>(dispatcher(), services(), clock_, annotation_allowlist,
-                                       attachment_allowlist, cobalt_.get(), datastore_.get());
+    data_provider_ = std::make_unique<DataProvider>(
+        dispatcher(), services(), clock_, /*is_first_instance=*/true, annotation_allowlist,
+        attachment_allowlist, cobalt_.get(), datastore_.get());
   }
 
   void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {

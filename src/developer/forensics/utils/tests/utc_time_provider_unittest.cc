@@ -14,6 +14,8 @@
 
 #include "src/developer/forensics/testing/stubs/utc_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -109,9 +111,54 @@ TEST_F(UtcTimeProviderTest, Check_CurrentUtcMonotonicDifference) {
   ASSERT_EQ(clock_.Now(&monotonic), ZX_OK);
   ASSERT_EQ(clock_.Now(&utc), ZX_OK);
 
-  const auto utc_offset = utc_provider_->CurrentUtcMonotonicDifference();
-  ASSERT_TRUE(utc_offset.has_value());
-  EXPECT_EQ(monotonic.get() + utc_offset.value().get(), utc.get());
+  const auto utc_monotonic_difference = utc_provider_->CurrentUtcMonotonicDifference();
+  ASSERT_TRUE(utc_monotonic_difference.has_value());
+  EXPECT_EQ(monotonic.get() + utc_monotonic_difference.value().get(), utc.get());
+}
+
+TEST_F(UtcTimeProviderTest, Check_ReadsPreviousBootUtcMonotonicDifference) {
+  ASSERT_TRUE(files::WriteFile("/cache/current_utc_monotonic_difference.txt", "1234"));
+
+  // |is_first_instance| is true becuase the previous UTC-monotonic difference should be read.
+  utc_provider_ = std::make_unique<UtcTimeProvider>(
+      services(), &clock_,
+      PreviousBootFile::FromCache(/*is_first_instance=*/true,
+                                  "current_utc_monotonic_difference.txt"));
+
+  const auto previous_utc_monotonic_difference =
+      utc_provider_->PreviousBootUtcMonotonicDifference();
+
+  ASSERT_TRUE(previous_utc_monotonic_difference.has_value());
+  EXPECT_EQ(previous_utc_monotonic_difference.value().get(), 1234);
+
+  ASSERT_TRUE(files::DeletePath("/cache/curren_utc_monotonic_difference.txt", /*recursive=*/true));
+  ASSERT_TRUE(files::DeletePath("/tmp/curren_utc_monotonic_difference.txt", /*recursive=*/true));
+}
+
+TEST_F(UtcTimeProviderTest, Check_WritesPreviousBootUtcMonotonicDifference) {
+  SetUpUtcProviderServer({
+      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
+      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
+  });
+  RunLoopUntilIdle();
+
+  // |is_first_instance| is true becuase the previous UTC-monotonic difference should be read.
+  utc_provider_ = std::make_unique<UtcTimeProvider>(
+      services(), &clock_,
+      PreviousBootFile::FromCache(/*is_first_instance=*/true,
+                                  "current_utc_monotonic_difference.txt"));
+  RunLoopUntilIdle();
+
+  const auto utc_monotonic_difference = utc_provider_->CurrentUtcMonotonicDifference();
+  ASSERT_TRUE(utc_monotonic_difference.has_value());
+
+  std::string content;
+  ASSERT_TRUE(files::ReadFileToString("/cache/current_utc_monotonic_difference.txt", &content));
+
+  EXPECT_EQ(content, std::to_string(utc_monotonic_difference.value().get()));
+
+  ASSERT_TRUE(files::DeletePath("/cache/curren_utc_monotonic_difference.txt", /*recursive=*/true));
+  ASSERT_TRUE(files::DeletePath("/tmp/curren_utc_monotonic_difference.txt", /*recursive=*/true));
 }
 
 }  // namespace

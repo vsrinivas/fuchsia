@@ -32,6 +32,10 @@ std::set<std::string> kUtcMonotonicDifferenceAllowlist = {
     kAttachmentLogSystem,
 };
 
+std::set<std::string> kPreviousBootUtcMonotonicDifferenceAllowlist = {
+    kAttachmentLogSystemPrevious,
+};
+
 std::string ToString(const enum AttachmentValue::State state) {
   switch (state) {
     case AttachmentValue::State::kComplete:
@@ -104,10 +108,31 @@ void AddUtcMonotonicDifference(const std::optional<zx::duration>& utc_monotonic_
                   Value().SetInt64(utc_monotonic_difference.value().get()), allocator);
 }
 
+void AddUtcMonotonicDifferences(
+    const std::optional<zx::duration> utc_monotonic_difference,
+    const std::optional<zx::duration> previous_boot_utc_monotonic_difference,
+    Document* metadata_json) {
+  if (!metadata_json->HasMember("files")) {
+    return;
+  }
+
+  for (auto& file : (*metadata_json)["files"].GetObject()) {
+    if (kUtcMonotonicDifferenceAllowlist.find(file.name.GetString()) !=
+        kUtcMonotonicDifferenceAllowlist.end()) {
+      AddUtcMonotonicDifference(utc_monotonic_difference, &file.value,
+                                metadata_json->GetAllocator());
+    }
+
+    if (kPreviousBootUtcMonotonicDifferenceAllowlist.find(file.name.GetString()) !=
+        kPreviousBootUtcMonotonicDifferenceAllowlist.end()) {
+      AddUtcMonotonicDifference(previous_boot_utc_monotonic_difference, &file.value,
+                                metadata_json->GetAllocator());
+    }
+  }
+}
+
 void AddAttachments(const AttachmentKeys& attachment_allowlist,
-                    const ::fit::result<Attachments>& attachments_result,
-                    const std::optional<zx::duration> utc_monotonic_difference,
-                    Document* metadata_json) {
+                    const ::fit::result<Attachments>& attachments_result, Document* metadata_json) {
   if (attachment_allowlist.empty()) {
     return;
   }
@@ -121,10 +146,6 @@ void AddAttachments(const AttachmentKeys& attachment_allowlist,
     file.AddMember("state", MakeValue(ToString(v.State())), allocator);
     if (v.HasError()) {
       file.AddMember("error", MakeValue(ToReason(v.Error())), allocator);
-    }
-
-    if (kUtcMonotonicDifferenceAllowlist.find(name) != kUtcMonotonicDifferenceAllowlist.end()) {
-      AddUtcMonotonicDifference(utc_monotonic_difference, &file, allocator);
     }
 
     (*metadata_json)["files"].AddMember(MakeValue(name), file, allocator);
@@ -194,11 +215,12 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
 }  // namespace
 
 Metadata::Metadata(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
-                   const AnnotationKeys& annotation_allowlist,
+                   const bool is_first_instance, const AnnotationKeys& annotation_allowlist,
                    const AttachmentKeys& attachment_allowlist)
     : annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      utc_provider_(services, clock) {}
+      utc_provider_(services, clock,
+                    PreviousBootFile::FromCache(is_first_instance, kUtcMonotonicDifferenceFile)) {}
 
 std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations_result,
                                    const ::fit::result<Attachments>& attachments_result,
@@ -230,12 +252,11 @@ std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations
     return MetadataString();
   }
 
-  const auto utc_monotonic_difference = utc_provider_.CurrentUtcMonotonicDifference();
-
-  AddAttachments(attachment_allowlist_, attachments_result, utc_monotonic_difference,
-                 &metadata_json);
+  AddAttachments(attachment_allowlist_, attachments_result, &metadata_json);
   AddAnnotationsJson(annotation_allowlist_, annotations_result, missing_non_platform_annotations,
                      &metadata_json);
+  AddUtcMonotonicDifferences(utc_provider_.CurrentUtcMonotonicDifference(),
+                             utc_provider_.PreviousBootUtcMonotonicDifference(), &metadata_json);
 
   return MetadataString();
 }

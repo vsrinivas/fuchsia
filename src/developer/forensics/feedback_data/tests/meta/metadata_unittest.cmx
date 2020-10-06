@@ -1,5 +1,11 @@
 {
     "program": {
         "binary": "bin/metadata_unittest_exe"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage",
+            "isolated-temp"
+        ]
     }
 }
