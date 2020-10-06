@@ -2376,8 +2376,6 @@ compiled_action("uefi-disk") {
   testonly = true
   tool = "//tools/make-fuchsia-vol"
   args = [
-    "-zircon-build-dir",
-    rebase_path("$zircon_root_build_dir"),
     "-fuchsia-build-dir",
     rebase_path("$root_build_dir"),
     "-resize",

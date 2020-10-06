@@ -31,7 +31,6 @@ import (
 var (
 	verbose         = flag.Bool("verbose", false, "enable verbose logging")
 	fuchsiaBuildDir = flag.String("fuchsia-build-dir", os.Getenv("FUCHSIA_BUILD_DIR"), "fuchsia build dir")
-	zirconBuildDir  = flag.String("zircon-build-dir", os.Getenv("ZIRCON_BUILDROOT"), "zircon build dir")
 
 	bootloader = flag.String("bootloader", "", "path to bootx64.efi")
 	zbi        = flag.String("zbi", "", "path to zbi (default: zircon-a from image manifests)")
@@ -113,18 +112,12 @@ func needFuchsiaBuildDir() {
 	}
 }
 
-func needZirconBuildDir() {
-	if *zirconBuildDir == "" {
-		log.Fatalf("either pass -zircon-build-dir or set $ZIRCON_BUILDROOT")
-	}
-}
-
 func main() {
 	flag.Parse()
 	tryLoadManifests()
 
 	if *bootloader == "" {
-		needZirconBuildDir()
+		needFuchsiaBuildDir()
 		*bootloader = filepath.Join(*fuchsiaBuildDir, "efi_x64/bootx64.efi")
 	}
 	if _, err := os.Stat(*bootloader); err != nil {
@@ -132,7 +125,7 @@ func main() {
 	}
 
 	if *zbi == "" {
-		needZirconBuildDir()
+		needFuchsiaBuildDir()
 		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("zbi_zircon-a"))
 	}
 	if _, err := os.Stat(*zbi); err != nil {
