@@ -8,7 +8,7 @@ use crate::key::exchange::{
     handshake::{fourway::Fourway, group_key::GroupKey},
     Key,
 };
-use crate::key::{gtk::Gtk, ptk::Ptk};
+use crate::key::{gtk::Gtk, igtk::Igtk, ptk::Ptk};
 use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
@@ -134,6 +134,19 @@ impl Gtksa {
     }
 }
 
+/// Igtksa is super simple because there's currently no method for populating it other than an adjacent Gtksa.
+#[derive(Debug)]
+enum Igtksa {
+    Uninitialized,
+    Established { installed_igtks: HashSet<Igtk> },
+}
+
+impl Igtksa {
+    fn reset(self) -> Self {
+        Igtksa::Uninitialized
+    }
+}
+
 /// An ESS Security Association is composed of three security associations, namely, PMKSA, PTKSA and
 /// GTKSA. The individual security associations have dependencies on each other. For example, the
 /// PMKSA must be established first as it yields the PMK used in the PTK and GTK key hierarchy.
@@ -157,6 +170,7 @@ pub(crate) struct EssSa {
     pmksa: StateMachine<Pmksa>,
     ptksa: StateMachine<Ptksa>,
     gtksa: StateMachine<Gtksa>,
+    igtksa: StateMachine<Igtksa>,
 }
 
 // IEEE Std 802.11-2016, 12.6.1.3.2
@@ -178,6 +192,7 @@ impl EssSa {
             pmksa: StateMachine::new(Pmksa::Initialized { method: auth_method }),
             ptksa: StateMachine::new(Ptksa::Uninitialized { cfg: ptk_exch_cfg }),
             gtksa: StateMachine::new(Gtksa::Uninitialized { cfg: gtk_exch_cfg }),
+            igtksa: StateMachine::new(Igtksa::Uninitialized),
         };
         Ok(rsna)
     }
@@ -212,6 +227,7 @@ impl EssSa {
         self.pmksa.replace_state(|state| state.reset());
         self.ptksa.replace_state(|state| state.reset());
         self.gtksa.replace_state(|state| state.reset());
+        self.igtksa.replace_state(|state| state.reset());
     }
 
     fn is_established(&self) -> bool {
@@ -296,6 +312,26 @@ impl EssSa {
                     Gtksa::Uninitialized { cfg } => {
                         error!("received GTK in unexpected GTKSA state");
                         Gtksa::Uninitialized { cfg }
+                    }
+                });
+            }
+            Key::Igtk(igtk) => {
+                self.igtksa.replace_state(|state| match state {
+                    Igtksa::Uninitialized => {
+                        info!("established IGTKSA");
+                        let mut installed_igtks = HashSet::default();
+                        installed_igtks.insert(igtk.clone());
+                        update_sink.push(SecAssocUpdate::Key(Key::Igtk(igtk)));
+                        Igtksa::Established { installed_igtks }
+                    }
+                    Igtksa::Established { mut installed_igtks } => {
+                        info!("re-established new IGTKSA; invalidating previous one");
+
+                        if !installed_igtks.contains(&igtk) {
+                            installed_igtks.insert(igtk.clone());
+                            update_sink.push(SecAssocUpdate::Key(Key::Igtk(igtk)));
+                        }
+                        Igtksa::Established { installed_igtks }
                     }
                 });
             }
@@ -957,7 +993,7 @@ mod tests {
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
-        let msg = test_util::get_4whs_msg1(&ANONCE[..], msg_modifier);
+        let msg = test_util::get_wpa2_4whs_msg1(&ANONCE[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
@@ -971,7 +1007,7 @@ mod tests {
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
-        let msg = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
+        let msg = test_util::get_wpa2_4whs_msg3(ptk, &ANONCE[..], &GTK, msg_modifier);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)

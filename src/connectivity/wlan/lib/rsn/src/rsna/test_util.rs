@@ -9,6 +9,7 @@ use crate::key::exchange::handshake::fourway::{self, Fourway};
 use crate::key::exchange::{compute_mic, compute_mic_from_buf};
 use crate::key::{
     gtk::{Gtk, GtkProvider},
+    igtk::Igtk,
     ptk::Ptk,
 };
 use crate::key_data::kde;
@@ -24,7 +25,7 @@ use wlan_common::{
         rsn::{
             akm,
             cipher::{self, Cipher},
-            fake_wpa2_a_rsne, fake_wpa2_s_rsne,
+            fake_wpa2_a_rsne, fake_wpa2_s_rsne, fake_wpa3_rsne,
             suite_selector::OUI,
         },
         write_wpa1_ie,
@@ -79,9 +80,26 @@ pub fn get_wpa1_protection() -> NegotiatedProtection {
         .expect("error creating WPA1 NegotiatedProtection")
 }
 
+pub fn get_wpa3_protection() -> NegotiatedProtection {
+    NegotiatedProtection::from_rsne(&fake_wpa3_rsne())
+        .expect("error creating WPA3 NegotiatedProtection")
+}
+
 pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
     let akm = get_akm();
     let s_rsne = fake_wpa2_s_rsne();
+    let cipher = s_rsne
+        .pairwise_cipher_suites
+        .get(0)
+        .expect("Supplicant's RSNE holds no Pairwise Cipher suite");
+    let pmk = get_pmk();
+    Ptk::new(&pmk[..], &A_ADDR, &S_ADDR, anonce, snonce, &akm, cipher.clone())
+        .expect("error deriving PTK")
+}
+
+pub fn get_wpa3_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
+    let s_rsne = fake_wpa3_rsne();
+    let akm = &s_rsne.akm_suites[0];
     let cipher = s_rsne
         .pairwise_cipher_suites
         .get(0)
@@ -178,15 +196,28 @@ pub fn get_cipher() -> cipher::Cipher {
     fake_wpa2_s_rsne().pairwise_cipher_suites.remove(0)
 }
 
-pub fn get_4whs_msg1<'a, F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrameBuf
+enum FourwayConfig {
+    Wpa2,
+    Wpa3,
+}
+
+fn get_4whs_msg1<'a, F>(config: FourwayConfig, anonce: &[u8], msg_modifier: F) -> eapol::KeyFrameBuf
 where
     F: Fn(&mut KeyFrameTx),
 {
+    let (protocol_version, key_info) = match config {
+        FourwayConfig::Wpa2 => {
+            (eapol::ProtocolVersion::IEEE802DOT1X2001, eapol::KeyInformation(0x008a))
+        }
+        FourwayConfig::Wpa3 => {
+            (eapol::ProtocolVersion::IEEE802DOT1X2004, eapol::KeyInformation(0x0088))
+        }
+    };
     let mut msg1 = KeyFrameTx::new(
-        eapol::ProtocolVersion::IEEE802DOT1X2001,
+        protocol_version,
         eapol::KeyFrameFields::new(
             eapol::KeyDescriptor::IEEE802DOT11,
-            eapol::KeyInformation(0x008a),
+            key_info,
             16,
             1,
             eapol::to_array(anonce),
@@ -200,26 +231,59 @@ where
     msg1.serialize().finalize_without_mic().expect("failed to construct 4whs msg 1")
 }
 
-pub fn get_4whs_msg3<'a, F>(
+pub fn get_wpa2_4whs_msg1<'a, F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrameBuf
+where
+    F: Fn(&mut KeyFrameTx),
+{
+    get_4whs_msg1(FourwayConfig::Wpa2, anonce, msg_modifier)
+}
+
+pub fn get_wpa3_4whs_msg1(anonce: &[u8]) -> eapol::KeyFrameBuf {
+    get_4whs_msg1(FourwayConfig::Wpa3, anonce, |_| {})
+}
+
+fn get_4whs_msg3<'a, F>(
+    config: FourwayConfig,
     ptk: &Ptk,
     anonce: &[u8],
     gtk: &[u8],
+    igtk: Option<&[u8]>,
     msg_modifier: F,
 ) -> eapol::KeyFrameBuf
 where
     F: Fn(&mut KeyFrameTx),
 {
+    let (protocol_version, key_info, a_rsne, s_rsne) = match config {
+        FourwayConfig::Wpa2 => (
+            eapol::ProtocolVersion::IEEE802DOT1X2001,
+            eapol::KeyInformation(0x13ca),
+            fake_wpa2_a_rsne(),
+            fake_wpa2_s_rsne(),
+        ),
+        FourwayConfig::Wpa3 => (
+            eapol::ProtocolVersion::IEEE802DOT1X2004,
+            eapol::KeyInformation(0x13c8),
+            fake_wpa3_rsne(),
+            fake_wpa3_rsne(),
+        ),
+    };
     let mut w = kde::Writer::new(vec![]);
     w.write_gtk(&kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
-    w.write_protection(&ProtectionInfo::Rsne(fake_wpa2_a_rsne())).expect("error writing RSNE");
+    if let Some(igtk) = igtk {
+        w.write_igtk(&kde::Igtk::new(4, &[0u8; 6], igtk)).expect("error writing IGTK KDE");
+    }
+    w.write_protection(&ProtectionInfo::Rsne(a_rsne)).expect("error writing RSNE");
+
+    let protection =
+        NegotiatedProtection::from_rsne(&s_rsne).expect("error creating RSNE NegotiatedProtection");
     let key_data = w.finalize_for_encryption().expect("error finalizing key data");
-    let encrypted_key_data = encrypt_key_data(ptk.kek(), &get_rsne_protection(), &key_data[..]);
+    let encrypted_key_data = encrypt_key_data(ptk.kek(), &protection, &key_data[..]);
 
     let mut msg3 = KeyFrameTx::new(
-        eapol::ProtocolVersion::IEEE802DOT1X2001,
+        protocol_version,
         eapol::KeyFrameFields::new(
             eapol::KeyDescriptor::IEEE802DOT11,
-            eapol::KeyInformation(0x13ca),
+            key_info,
             16,
             2, // replay counter
             eapol::to_array(anonce),
@@ -231,9 +295,30 @@ where
     );
     msg_modifier(&mut msg3);
     let msg3 = msg3.serialize();
-    let mic = compute_mic_from_buf(ptk.kck(), &get_rsne_protection(), msg3.unfinalized_buf())
+    let mic = compute_mic_from_buf(ptk.kck(), &protection, msg3.unfinalized_buf())
         .expect("failed to compute msg3 mic");
     msg3.finalize_with_mic(&mic[..]).expect("failed to construct 4whs msg 3")
+}
+
+pub fn get_wpa2_4whs_msg3<'a, F>(
+    ptk: &Ptk,
+    anonce: &[u8],
+    gtk: &[u8],
+    msg_modifier: F,
+) -> eapol::KeyFrameBuf
+where
+    F: Fn(&mut KeyFrameTx),
+{
+    get_4whs_msg3(FourwayConfig::Wpa2, ptk, anonce, gtk, None, msg_modifier)
+}
+
+pub fn get_wpa3_4whs_msg3(
+    ptk: &Ptk,
+    anonce: &[u8],
+    gtk: &[u8],
+    igtk: Option<&[u8]>,
+) -> eapol::KeyFrameBuf {
+    get_4whs_msg3(FourwayConfig::Wpa3, ptk, anonce, gtk, igtk, |_| {})
 }
 
 pub fn get_group_key_hs_msg1(
@@ -272,41 +357,56 @@ pub fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
 }
 
-pub fn make_fourway_cfg(role: Role) -> fourway::Config {
-    let gtk_provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
-        .expect("error creating GtkProvider");
+fn make_fourway_cfg(
+    role: Role,
+    cipher: Cipher,
+    s_protection: ProtectionInfo,
+    a_protection: ProtectionInfo,
+) -> fourway::Config {
+    let gtk_provider = GtkProvider::new(cipher).expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     fourway::Config::new(
         role,
         test_util::S_ADDR,
-        ProtectionInfo::Rsne(fake_wpa2_s_rsne()),
+        s_protection,
         test_util::A_ADDR,
-        ProtectionInfo::Rsne(fake_wpa2_a_rsne()),
+        a_protection,
         nonce_rdr,
         Some(Arc::new(Mutex::new(gtk_provider))),
     )
     .expect("could not construct PTK exchange method")
 }
 
+pub fn make_wpa2_fourway_cfg(role: Role) -> fourway::Config {
+    let cipher = Cipher { oui: OUI, suite_type: cipher::CCMP_128 };
+    let s_protection = ProtectionInfo::Rsne(fake_wpa2_s_rsne());
+    let a_protection = ProtectionInfo::Rsne(fake_wpa2_a_rsne());
+    make_fourway_cfg(role, cipher, s_protection, a_protection)
+}
+
+pub fn make_wpa3_fourway_cfg(role: Role) -> fourway::Config {
+    let cipher = Cipher { oui: OUI, suite_type: cipher::CCMP_128 };
+    let s_protection = ProtectionInfo::Rsne(fake_wpa3_rsne());
+    let a_protection = ProtectionInfo::Rsne(fake_wpa3_rsne());
+    make_fourway_cfg(role, cipher, s_protection, a_protection)
+}
+
 pub fn make_wpa1_fourway_cfg() -> fourway::Config {
-    let gtk_provider = GtkProvider::new(Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP })
-        .expect("error creating GtkProvider");
-    let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
-    fourway::Config::new(
-        Role::Supplicant,
-        test_util::S_ADDR,
-        ProtectionInfo::LegacyWpa(fake_wpa_ie()),
-        test_util::A_ADDR,
-        ProtectionInfo::LegacyWpa(fake_wpa_ie()),
-        nonce_rdr,
-        Some(Arc::new(Mutex::new(gtk_provider))),
-    )
-    .expect("could not construct PTK exchange method")
+    let cipher = Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP };
+    let s_protection = ProtectionInfo::LegacyWpa(fake_wpa_ie());
+    let a_protection = ProtectionInfo::LegacyWpa(fake_wpa_ie());
+    make_fourway_cfg(Role::Supplicant, cipher, s_protection, a_protection)
 }
 
 pub fn make_handshake(role: Role) -> Fourway {
     let pmk = test_util::get_pmk();
-    Fourway::new(make_fourway_cfg(role), pmk).expect("error while creating 4-Way Handshake")
+    Fourway::new(make_wpa2_fourway_cfg(role), pmk).expect("error while creating 4-Way Handshake")
+}
+
+pub fn make_wpa3_handshake(role: Role) -> Fourway {
+    let pmk = test_util::get_pmk();
+    Fourway::new(make_wpa3_fourway_cfg(role), pmk)
+        .expect("error while creating WPA3 4-Way Handshake")
 }
 
 pub fn finalize_key_frame(frame: &mut eapol::KeyFrameRx<&mut [u8]>, kck: Option<&[u8]>) {
@@ -370,6 +470,21 @@ pub fn get_reported_gtk(updates: &[SecAssocUpdate]) -> Option<Gtk> {
 
 pub fn expect_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
     get_reported_gtk(updates).expect("updates do not contain GTK")
+}
+
+pub fn get_reported_igtk(updates: &[SecAssocUpdate]) -> Option<Igtk> {
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::Key(Key::Igtk(igtk)) => Some(igtk),
+            _ => None,
+        })
+        .next()
+        .map(|x| x.clone())
+}
+
+pub fn expect_reported_igtk(updates: &[SecAssocUpdate]) -> Igtk {
+    get_reported_igtk(updates).expect("updates do not contain IGTK")
 }
 
 pub fn get_reported_status(updates: &[SecAssocUpdate]) -> Option<SecAssocStatus> {

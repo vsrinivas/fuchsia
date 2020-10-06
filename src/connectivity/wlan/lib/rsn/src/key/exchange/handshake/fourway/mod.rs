@@ -411,6 +411,7 @@ fn is_zero(slice: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::Fourway;
+    use crate::key::ptk::Ptk;
     use crate::rsna::{test_util, SecAssocUpdate, UpdateSink};
     use wlan_common::big_endian::BigEndianU64;
 
@@ -433,6 +434,46 @@ mod tests {
         // Finally verify that Supplicant and Authenticator derived the same keys.
         assert_eq!(s_ptk, a_ptk);
         assert_eq!(s_gtk, a_gtk);
+    }
+
+    fn run_wpa3_handshake(gtk: &[u8], igtk: Option<&[u8]>) -> (Ptk, Vec<SecAssocUpdate>) {
+        let anonce = [0xab; 32];
+        let mut supplicant = test_util::make_wpa3_handshake(super::Role::Supplicant);
+        let protection = test_util::get_wpa3_protection();
+        let msg1_buf = test_util::get_wpa3_4whs_msg1(&anonce[..]);
+        let msg1 = msg1_buf.keyframe();
+        let updates = test_util::send_msg_to_fourway(&mut supplicant, msg1, 0, &protection);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let a_ptk =
+            test_util::get_wpa3_ptk(&anonce[..], &msg2.keyframe().key_frame_fields.key_nonce[..]);
+        let msg3_buf = &test_util::get_wpa3_4whs_msg3(&a_ptk, &anonce[..], &gtk[..], igtk);
+        let msg3 = msg3_buf.keyframe();
+        (a_ptk, test_util::send_msg_to_fourway(&mut supplicant, msg3, 0, &protection))
+    }
+
+    #[test]
+    fn test_wpa3_handshake_generates_igtk() {
+        let gtk = [0xbb; 32];
+        let igtk = [0xcc; 32];
+        let (ptk, updates) = run_wpa3_handshake(&gtk[..], Some(&igtk[..]));
+
+        test_util::expect_eapol_resp(&updates[..]);
+        let s_ptk = test_util::expect_reported_ptk(&updates[..]);
+        let s_gtk = test_util::expect_reported_gtk(&updates[..]);
+        let s_igtk = test_util::expect_reported_igtk(&updates[..]);
+        assert_eq!(s_ptk, ptk);
+        assert_eq!(&s_gtk.gtk[..], &gtk[..]);
+        assert_eq!(&s_igtk.igtk[..], &igtk[..]);
+    }
+
+    #[test]
+    fn test_wpa3_handshake_requires_igtk() {
+        let gtk = [0xbb; 32];
+        let (_ptk, updates) = run_wpa3_handshake(&gtk[..], None);
+        assert!(
+            test_util::get_eapol_resp(&updates[..]).is_none(),
+            "WPA3 should not send EAPOL msg4 without IGTK"
+        );
     }
 
     #[test]
@@ -505,7 +546,7 @@ mod tests {
         // Modify GTK to simulate GTK rotation while 4-Way Handshake was in progress.
         let mut other_gtk = s_gtk.gtk.clone();
         other_gtk[0] ^= 0xFF;
-        let msg3 = test_util::get_4whs_msg3(&s_ptk, &anonce[..], &other_gtk[..], |msg3| {
+        let msg3 = test_util::get_wpa2_4whs_msg3(&s_ptk, &anonce[..], &other_gtk[..], |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(42);
         });
         let mut update_sink = UpdateSink::default();

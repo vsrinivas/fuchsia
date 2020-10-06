@@ -8,8 +8,7 @@ use self::handshake::{
     fourway::{self, Fourway},
     group_key::{self, GroupKey},
 };
-use crate::key::gtk::Gtk;
-use crate::key::ptk::Ptk;
+use crate::key::{gtk::Gtk, igtk::Igtk, ptk::Ptk};
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, UpdateSink};
 use crate::Error;
 use zerocopy::ByteSlice;
@@ -19,7 +18,7 @@ pub enum Key {
     Pmk(Vec<u8>),
     Ptk(Ptk),
     Gtk(Gtk),
-    Igtk(Vec<u8>),
+    Igtk(Igtk),
     MicRx(Vec<u8>),
     MicTx(Vec<u8>),
     Smk(Vec<u8>),

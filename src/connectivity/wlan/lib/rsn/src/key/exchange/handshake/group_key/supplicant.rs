@@ -7,11 +7,12 @@ use crate::key::exchange::{
     handshake::group_key::{self, Config, GroupKeyHandshakeFrame},
     Key,
 };
-use crate::key::gtk::Gtk;
+use crate::key::{gtk::Gtk, igtk::Igtk};
 use crate::key_data;
 use crate::key_data::kde::GtkInfoTx;
 use crate::rsna::{
-    Dot11VerifiedKeyFrame, ProtectionType, SecAssocUpdate, UnverifiedKeyData, UpdateSink,
+    Dot11VerifiedKeyFrame, IgtkSupport, ProtectionType, SecAssocUpdate, UnverifiedKeyData,
+    UpdateSink,
 };
 use crate::{format_rsn_err, Error};
 use bytes::Bytes;
@@ -69,40 +70,60 @@ impl Supplicant {
         };
 
         // Extract GTK from data.
-        let gtk = self.extract_gtk(&frame, &key_data[..])?;
+        let (gtk, igtk) = self.extract_key_data(&frame, &key_data[..])?;
+
+        match (igtk.is_some(), self.cfg.protection.igtk_support()) {
+            (true, IgtkSupport::Unsupported) | (false, IgtkSupport::Required) => {
+                return Err(Error::InvalidKeyDataContent);
+            }
+            _ => (),
+        }
 
         // Construct second message of handshake.
         let msg2 = self.create_message_2(&frame)?;
         update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
         update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
+        if let Some(igtk) = igtk {
+            update_sink.push(SecAssocUpdate::Key(Key::Igtk(igtk)));
+        }
 
         Ok(())
     }
 
-    fn extract_gtk<B: ByteSlice>(
+    fn extract_key_data<B: ByteSlice>(
         &self,
         frame: &eapol::KeyFrameRx<B>,
         key_data: &[u8],
-    ) -> Result<Gtk, Error> {
-        let gtk = match self.cfg.protection.protection_type {
+    ) -> Result<(Gtk, Option<Igtk>), Error> {
+        let (gtk, igtk) = match self.cfg.protection.protection_type {
             ProtectionType::LegacyWpa1 => {
                 let key_id = frame.key_frame_fields.key_info().legacy_wpa1_key_id() as u8;
-                key_data::kde::Gtk::new(key_id, GtkInfoTx::BothRxTx, key_data)
+                (key_data::kde::Gtk::new(key_id, GtkInfoTx::BothRxTx, key_data), None)
             }
-            _ => key_data::extract_elements(key_data)?
-                .into_iter()
-                .filter_map(|element| match element {
-                    key_data::Element::Gtk(_, e) => Some(e),
-                    _ => None,
-                })
-                .next()
-                .ok_or(format_rsn_err!(
-                    "GTK KDE not present in key data of Group-Key Handshakes's 1st message"
-                ))?,
+            _ => {
+                let mut gtk = None;
+                let mut igtk = None;
+                for element in key_data::extract_elements(key_data)? {
+                    match element {
+                        key_data::Element::Gtk(_, e) => gtk = Some(e),
+                        key_data::Element::Igtk(_, e) => igtk = Some(e),
+                        _ => (),
+                    }
+                }
+                (
+                    gtk.ok_or(format_rsn_err!(
+                        "GTK KDE not present in key data of Group-Key Handshakes's 1st message"
+                    ))?,
+                    igtk,
+                )
+            }
         };
 
         let rsc = frame.key_frame_fields.key_rsc.to_native();
-        Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.protection.group_data.clone(), rsc)
+        Ok((
+            Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.protection.group_data.clone(), rsc)?,
+            igtk.map(|element| Igtk::from_kde(element, self.cfg.protection.group_mgmt_cipher())),
+        ))
     }
 
     // IEEE Std 802.11-2016, 12.7.7.3
@@ -153,15 +174,18 @@ mod tests {
     use crate::key_data::kde;
     use crate::rsna::{test_util, Dot11VerifiedKeyFrame, NegotiatedProtection, Role};
     use wlan_common::big_endian::BigEndianU64;
-    use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128, TKIP};
+    use wlan_common::ie::rsn::cipher::{Cipher, BIP_CMAC_128, CCMP_128, TKIP};
     use wlan_common::organization::Oui;
 
     const KCK: [u8; 16] = [1; 16];
     const KEK: [u8; 16] = [2; 16];
     const GTK: [u8; 16] = [3; 16];
+    const IGTK: [u8; 16] = [4; 16];
     const WPA1_GTK: [u8; 32] = [3; 32];
     const GTK_RSC: u64 = 81234;
     const GTK_KEY_ID: u8 = 2;
+    const IGTK_IPN: [u8; 6] = [0xab; 6];
+    const IGTK_KEY_ID: u16 = 4;
 
     fn make_verified<B: ByteSlice>(
         key_frame: eapol::KeyFrameRx<B>,
@@ -171,16 +195,34 @@ mod tests {
         Dot11VerifiedKeyFrame::from_frame(key_frame, &role, protection, 0)
     }
 
-    fn fake_msg1() -> eapol::KeyFrameBuf {
+    enum Msg1Config {
+        Wpa2,
+        Wpa3,
+    }
+
+    fn fake_msg1(protection_type: Msg1Config) -> eapol::KeyFrameBuf {
         let mut w = kde::Writer::new(vec![]);
         w.write_gtk(&kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]))
             .expect("error writing GTK KDE");
+        if let Msg1Config::Wpa3 = &protection_type {
+            w.write_igtk(&kde::Igtk::new(IGTK_KEY_ID, &IGTK_IPN[..], &IGTK[..]))
+                .expect("error writing IGTK KDE");
+        }
         let key_data = w.finalize_for_encryption().expect("error finalizing key data");
         let encrypted_key_data =
             test_util::encrypt_key_data(&KEK[..], &test_util::get_rsne_protection(), &key_data[..]);
 
+        let mut key_info = eapol::KeyInformation::default();
+        key_info.set_key_ack(true);
+        key_info.set_key_mic(true);
+        key_info.set_secure(true);
+        key_info.set_encrypted_key_data(true);
+        key_info.set_key_descriptor_version(match &protection_type {
+            Msg1Config::Wpa2 => 2,
+            Msg1Config::Wpa3 => 0,
+        });
         let mut key_frame_fields: eapol::KeyFrameFields = Default::default();
-        key_frame_fields.set_key_info(eapol::KeyInformation(0b01001110000010));
+        key_frame_fields.set_key_info(key_info);
         key_frame_fields.key_rsc = BigEndianU64::from_native(GTK_RSC);
         key_frame_fields.descriptor_type = eapol::KeyDescriptor::IEEE802DOT11;
         let key_frame = eapol::KeyFrameTx::new(
@@ -190,12 +232,12 @@ mod tests {
             16,
         )
         .serialize();
-        let mic = compute_mic_from_buf(
-            &KCK[..],
-            &test_util::get_rsne_protection(),
-            key_frame.unfinalized_buf(),
-        )
-        .expect("error updating MIC");
+        let protection = match &protection_type {
+            Msg1Config::Wpa2 => test_util::get_rsne_protection(),
+            Msg1Config::Wpa3 => test_util::get_wpa3_protection(),
+        };
+        let mic = compute_mic_from_buf(&KCK[..], &protection, key_frame.unfinalized_buf())
+            .expect("error updating MIC");
         key_frame.finalize_with_mic(&mic[..]).expect("error finalizing keyframe")
     }
 
@@ -204,7 +246,16 @@ mod tests {
             .expect("error creating expected GTK")
     }
 
-    fn fake_msg1_wpa1() -> eapol::KeyFrameBuf {
+    fn fake_igtk() -> Igtk {
+        Igtk {
+            igtk: IGTK.to_vec(),
+            ipn: IGTK_IPN,
+            key_id: IGTK_KEY_ID,
+            cipher: Cipher::new_dot11(BIP_CMAC_128),
+        }
+    }
+
+    fn fake_msg1_wpa1_deprecated() -> eapol::KeyFrameBuf {
         let encrypted_key_data =
             test_util::encrypt_key_data(&KEK[..], &test_util::get_wpa1_protection(), &WPA1_GTK[..]);
 
@@ -257,7 +308,7 @@ mod tests {
 
         // Let Supplicant handle key frame.
         let mut update_sink = UpdateSink::default();
-        let msg1 = fake_msg1();
+        let msg1 = fake_msg1(Msg1Config::Wpa2);
         let keyframe = msg1.keyframe();
         let msg1_verified = make_verified(keyframe, Role::Supplicant, &protection)
             .expect("error verifying group frame");
@@ -272,6 +323,35 @@ mod tests {
     }
 
     #[test]
+    fn full_wpa3_supplicant_test() {
+        let protection = test_util::get_wpa3_protection();
+        let mut handshake = GroupKey::new(
+            Config { role: Role::Supplicant, protection: protection.clone() },
+            &KCK[..],
+            &KEK[..],
+        )
+        .expect("error creating Group Key Handshake");
+
+        // Let Supplicant handle key frame.
+        let mut update_sink = UpdateSink::default();
+        let msg1 = fake_msg1(Msg1Config::Wpa3);
+        let keyframe = msg1.keyframe();
+        let msg1_verified = make_verified(keyframe, Role::Supplicant, &protection)
+            .expect("error verifying group frame");
+        handshake
+            .on_eapol_key_frame(&mut update_sink, 0, msg1_verified)
+            .expect("error processing msg1 of Group Key Handshake");
+
+        // Verify correct GTK was derived.
+        let actual_gtk = test_util::expect_reported_gtk(&update_sink);
+        let expected_gtk = fake_gtk();
+        assert_eq!(actual_gtk, expected_gtk);
+        let actual_igtk = test_util::expect_reported_igtk(&update_sink);
+        let expected_igtk = fake_igtk();
+        assert_eq!(actual_igtk, expected_igtk);
+    }
+
+    #[test]
     fn full_wpa1_supplicant_test() {
         let protection = test_util::get_wpa1_protection();
         let mut handshake = GroupKey::new(
@@ -283,7 +363,7 @@ mod tests {
 
         // Let Supplicant handle key frame.
         let mut update_sink = UpdateSink::default();
-        let msg1 = fake_msg1_wpa1();
+        let msg1 = fake_msg1_wpa1_deprecated();
         let keyframe = msg1.keyframe();
         let msg1_verified = make_verified(keyframe, Role::Supplicant, &protection)
             .expect("error verifying group frame");

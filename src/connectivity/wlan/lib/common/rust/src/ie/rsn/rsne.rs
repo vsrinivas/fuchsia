@@ -79,7 +79,7 @@ impl Rsne {
             Some(_) => length += 2,
         };
 
-        if self.pmkids.is_empty() {
+        if self.pmkids.is_empty() && self.group_mgmt_cipher_suite.is_none() {
             return length;
         }
         length += 2 + 16 * self.pmkids.len();
@@ -131,7 +131,7 @@ impl Rsne {
             Some(caps) => buf.append_value(&caps.0)?,
         };
 
-        if self.pmkids.is_empty() {
+        if self.pmkids.is_empty() && self.group_mgmt_cipher_suite.is_none() {
             return Ok(());
         }
         buf.append_value(&(self.pmkids.len() as u16))?;

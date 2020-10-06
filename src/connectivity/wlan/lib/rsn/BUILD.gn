@@ -54,6 +54,7 @@ rustc_library("wlan-rsn") {
     "src/key/exchange/handshake/mod.rs",
     "src/key/exchange/mod.rs",
     "src/key/gtk.rs",
+    "src/key/igtk.rs",
     "src/key/mod.rs",
     "src/key/ptk.rs",
     "src/key_data/kde.rs",

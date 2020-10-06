@@ -6,12 +6,13 @@ use crate::crypto_utils::nonce::Nonce;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
 use crate::key::exchange::{compute_mic_from_buf, Key};
 use crate::key::gtk::Gtk;
+use crate::key::igtk::Igtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{
-    Dot11VerifiedKeyFrame, NegotiatedProtection, ProtectionType, SecAssocUpdate, UnverifiedKeyData,
-    UpdateSink,
+    Dot11VerifiedKeyFrame, IgtkSupport, NegotiatedProtection, ProtectionType, SecAssocUpdate,
+    UnverifiedKeyData, UpdateSink,
 };
 use crate::Error;
 use crate::ProtectionInfo;
@@ -93,7 +94,7 @@ fn handle_message_3<B: ByteSlice>(
     kck: &[u8],
     kek: &[u8],
     msg3: FourwayHandshakeFrame<B>,
-) -> Result<(KeyFrameBuf, Option<Gtk>), anyhow::Error> {
+) -> Result<(KeyFrameBuf, Option<Gtk>, Option<Igtk>), anyhow::Error> {
     let negotiated_protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let (frame, key_data_elements) = match msg3.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
@@ -124,11 +125,15 @@ fn handle_message_3<B: ByteSlice>(
         }
     };
     let mut gtk: Option<key_data::kde::Gtk> = None;
+    let mut igtk: Option<Igtk> = None;
     let mut protection: Option<ProtectionInfo> = None;
     let mut _second_protection: Option<ProtectionInfo> = None;
     for element in key_data_elements {
         match (element, &protection) {
             (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
+            (key_data::Element::Igtk(_, e), _) => {
+                igtk = Some(Igtk::from_kde(e, negotiated_protection.group_mgmt_cipher()))
+            }
             (key_data::Element::Rsne(e), None) => protection = Some(ProtectionInfo::Rsne(e)),
             (key_data::Element::Rsne(e), Some(_)) => {
                 _second_protection = Some(ProtectionInfo::Rsne(e))
@@ -138,6 +143,12 @@ fn handle_message_3<B: ByteSlice>(
             }
             _ => (),
         }
+    }
+    match (igtk.is_some(), negotiated_protection.igtk_support()) {
+        (true, IgtkSupport::Unsupported) | (false, IgtkSupport::Required) => {
+            return Err(format_err!(Error::InvalidKeyDataContent));
+        }
+        _ => (),
     }
 
     // Proceed if key data held a protection element matching the Authenticator's announced one.
@@ -159,11 +170,12 @@ fn handle_message_3<B: ByteSlice>(
                     negotiated_protection.group_data,
                     rsc,
                 )?),
+                igtk,
             ))
         }
         // In WPA1 a GTK is not specified until a subsequent GroupKey handshake.
         None if negotiated_protection.protection_type == ProtectionType::LegacyWpa1 => {
-            Ok((msg4, None))
+            Ok((msg4, None, None))
         }
         None => return Err(format_err!(Error::InvalidKeyDataContent)),
     }
@@ -209,7 +221,7 @@ fn create_message_4<B: ByteSlice>(
 pub enum State {
     AwaitingMsg1 { pmk: Vec<u8>, cfg: Config, snonce: Nonce },
     AwaitingMsg3 { pmk: Vec<u8>, ptk: Ptk, snonce: Nonce, anonce: Nonce, cfg: Config },
-    KeysInstalled { pmk: Vec<u8>, ptk: Ptk, gtk: Option<Gtk>, cfg: Config },
+    KeysInstalled { pmk: Vec<u8>, ptk: Ptk, gtk: Option<Gtk>, igtk: Option<Igtk>, cfg: Config },
 }
 
 pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
@@ -289,13 +301,16 @@ impl State {
                                 // dropped.
                                 State::AwaitingMsg1 { pmk, cfg, snonce }
                             }
-                            Ok((msg4, gtk)) => {
+                            Ok((msg4, gtk, igtk)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                                 if let Some(gtk) = gtk.as_ref() {
                                     update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())))
                                 }
-                                State::KeysInstalled { pmk, ptk, gtk, cfg }
+                                if let Some(igtk) = igtk.as_ref() {
+                                    update_sink.push(SecAssocUpdate::Key(Key::Igtk(igtk.clone())))
+                                }
+                                State::KeysInstalled { pmk, ptk, gtk, igtk, cfg }
                             }
                         }
                     }
@@ -309,9 +324,15 @@ impl State {
                     }
                 }
             }
-            State::KeysInstalled { ref ptk, gtk: ref expected_gtk, ref cfg, .. } => {
+            State::KeysInstalled {
+                ref ptk,
+                gtk: ref expected_gtk,
+                igtk: ref expected_igtk,
+                ref cfg,
+                ..
+            } => {
                 match frame.message_number() {
-                    // Allow message 3 replays for robustness but never reinstall PTK or GTK.
+                    // Allow message 3 replays for robustness but never reinstall PTK, GTK or IGTK.
                     // Reinstalling keys could create an attack surface for vulnerabilities such as
                     // KRACK.
                     fourway::MessageNumber::Message3 => {
@@ -323,17 +344,24 @@ impl State {
                             // Fuchsia decided to require all GTKs to match; if the GTK doesn't
                             // match with the original one Fuchsia drops the received message. This
                             // includes the case where no GTK has been set.
-                            Ok((msg4, gtk)) => {
-                                if match (&gtk, expected_gtk) {
+                            Ok((msg4, gtk, igtk)) => {
+                                let keys_unchanged = match (&gtk, expected_gtk) {
                                     (Some(gtk), Some(expected_gtk)) => {
                                         fixed_time_eq(&gtk.gtk[..], &expected_gtk.gtk[..])
                                     }
                                     (None, None) => true,
                                     _ => false,
-                                } {
+                                } && match (&igtk, expected_igtk) {
+                                    (Some(igtk), Some(expected_igtk)) => {
+                                        fixed_time_eq(&igtk.igtk[..], &expected_igtk.igtk[..])
+                                    }
+                                    (None, None) => true,
+                                    _ => false,
+                                };
+                                if keys_unchanged {
                                     update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 } else {
-                                    error!("error: GTK differs in replayed 3rd message");
+                                    error!("error: GTK or IGTK differs in replayed 3rd message");
                                     // TODO(hahnr): Cancel RSNA and deauthenticate from network.
                                     // Client won't be able to recover from this state. For now,
                                     // Authenticator will timeout the client.

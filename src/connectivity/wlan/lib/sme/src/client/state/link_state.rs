@@ -348,6 +348,21 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
                 }],
             }));
         }
+        Key::Igtk(igtk) => {
+            let mut rsc = [0u8; 8];
+            rsc[2..].copy_from_slice(&igtk.ipn[..]);
+            mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
+                keylist: vec![fidl_mlme::SetKeyDescriptor {
+                    key_type: fidl_mlme::KeyType::Igtk,
+                    key: igtk.igtk,
+                    key_id: igtk.key_id,
+                    address: [0xFFu8; 6],
+                    cipher_suite_oui: eapol::to_array(&igtk.cipher.oui[..]),
+                    cipher_suite_type: igtk.cipher.suite_type,
+                    rsc: u64::from_be_bytes(rsc),
+                }],
+            }));
+        }
         _ => error!("derived unexpected key"),
     };
 }

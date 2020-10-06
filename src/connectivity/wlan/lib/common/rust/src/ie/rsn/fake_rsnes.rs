@@ -3,25 +3,37 @@
 // found in the LICENSE file.
 
 use crate::ie::rsn::{
-    akm::{Akm, PSK},
-    cipher::{Cipher, CCMP_128, TKIP},
-    rsne::Rsne,
-    suite_selector::OUI,
+    akm::{Akm, PSK, SAE},
+    cipher::{Cipher, BIP_CMAC_128, CCMP_128, TKIP},
+    rsne::{RsnCapabilities, Rsne},
 };
 
 pub fn fake_wpa2_a_rsne() -> Rsne {
     let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite = Some(Cipher { oui: OUI, suite_type: CCMP_128 });
-    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: CCMP_128 });
-    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: TKIP });
-    rsne.akm_suites.push(Akm { oui: OUI, suite_type: PSK });
+    rsne.group_data_cipher_suite = Some(Cipher::new_dot11(CCMP_128));
+    rsne.pairwise_cipher_suites.push(Cipher::new_dot11(CCMP_128));
+    rsne.pairwise_cipher_suites.push(Cipher::new_dot11(TKIP));
+    rsne.akm_suites.push(Akm::new_dot11(PSK));
     rsne
 }
 
 pub fn fake_wpa2_s_rsne() -> Rsne {
     let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite = Some(Cipher { oui: OUI, suite_type: CCMP_128 });
-    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: CCMP_128 });
-    rsne.akm_suites.push(Akm { oui: OUI, suite_type: PSK });
+    rsne.group_data_cipher_suite = Some(Cipher::new_dot11(CCMP_128));
+    rsne.pairwise_cipher_suites.push(Cipher::new_dot11(CCMP_128));
+    rsne.akm_suites.push(Akm::new_dot11(PSK));
+    rsne
+}
+
+pub fn fake_wpa3_rsne() -> Rsne {
+    let mut rsne = Rsne::new();
+    rsne.group_data_cipher_suite = Some(Cipher::new_dot11(CCMP_128));
+    rsne.pairwise_cipher_suites.push(Cipher::new_dot11(CCMP_128));
+    rsne.akm_suites.push(Akm::new_dot11(SAE));
+    rsne.group_mgmt_cipher_suite = Some(Cipher::new_dot11(BIP_CMAC_128));
+    let mut caps = RsnCapabilities(0);
+    caps.set_mgmt_frame_protection_cap(true);
+    caps.set_mgmt_frame_protection_req(true);
+    rsne.rsn_capabilities = Some(caps);
     rsne
 }
