@@ -5,4 +5,5 @@
 # Variables shared between BUILD.gn and python_host_test.gni.
 python_version = "3.8"
 python_out_dir = "${root_out_dir}/python${python_version}"
+python_exe_src = "//prebuilt/third_party/python3/${host_platform}/bin/python${python_version}"
 python_exe_path = "${python_out_dir}/bin/python${python_version}"

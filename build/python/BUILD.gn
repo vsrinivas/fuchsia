@@ -14,7 +14,7 @@ host_test_data("lib") {
 }
 
 host_test_data("exe") {
-  sources = [ "//prebuilt/third_party/python3/${host_platform}/bin/python${python_version}" ]
+  sources = [ python_exe_src ]
   outputs = [ python_exe_path ]
   visibility = [ ":*" ]
 }
