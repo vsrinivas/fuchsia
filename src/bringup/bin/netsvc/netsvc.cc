@@ -4,6 +4,8 @@
 
 #include "netsvc.h"
 
+#include <fcntl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/clock.h>
 #include <unistd.h>
 #include <zircon/boot/netboot.h>
@@ -14,7 +16,9 @@
 #include <climits>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
+#include <fbl/unique_fd.h>
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 
@@ -86,16 +90,25 @@ static const char* zedboot_banner =
     "\n";
 
 int main(int argc, char** argv) {
-  const char* interface = NULL;
-  bool print_nodename_and_exit = false;
-  bool should_advertise = false;
+  fbl::unique_fd svc_root(open("/svc", O_RDWR | O_DIRECTORY));
+  fdio_cpp::UnownedFdioCaller caller(svc_root.get());
 
+  NetsvcArgs args;
   const char* error;
-  if (parse_netsvc_args(argc, argv, &error, &g_netbootloader, &print_nodename_and_exit,
-                        &should_advertise, &g_all_features, &interface) < 0) {
+  if (ParseArgs(argc, argv, *caller.channel(), &error, &args) < 0) {
     printf("netsvc: fatal error: %s\n", error);
     return -1;
   };
+  if (args.disable) {
+    printf("netsvc: Disabled. Exiting.\n");
+    return 0;
+  }
+
+  bool print_nodename_and_exit = args.nodename;
+  bool should_advertise = args.advertise;
+  g_netbootloader = args.netboot;
+  g_all_features = args.all_features;
+  const char* interface = args.interface.empty() ? nullptr : args.interface.c_str();
 
   if (g_netbootloader && !g_all_features) {
     printf("netsvc: fatal: --netboot requires --all-features\n");
@@ -118,7 +131,7 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  if (interface != NULL) {
+  if (interface != nullptr) {
     printf("netsvc: looking for interface %s\n", interface);
   }
 

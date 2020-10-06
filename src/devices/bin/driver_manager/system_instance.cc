@@ -572,7 +572,7 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
 
     launcher_.Launch(svc_job_, "device-name-provider", args, nullptr, -1,
                      coordinator->root_resource(), handles, types, countof(handles), nullptr,
-                     FS_DEV);
+                     FS_DEV | FS_SVC);
   }
 
   if (!params.virtcon_disable) {

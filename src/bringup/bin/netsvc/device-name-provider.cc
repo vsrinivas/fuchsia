@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/svc/outgoing.h>
 #include <limits.h>
@@ -59,28 +60,29 @@ class DeviceNameProviderServer final : public llcpp::fuchsia::device::NameProvid
 };
 
 int main(int argc, char** argv) {
+  fbl::unique_fd svc_root(open("/svc", O_RDWR | O_DIRECTORY));
+  fdio_cpp::UnownedFdioCaller caller(svc_root.get());
+
+  DeviceNameProviderArgs args;
   const char* errmsg = nullptr;
-  const char* interface = nullptr;
-  const char* nodename = nullptr;
-  const char* ethdir = "/dev/class/ethernet";
-  char device_name[HOST_NAME_MAX];
-  int err = parse_device_name_provider_args(argc, argv, &errmsg, &interface, &nodename, &ethdir);
+  int err = ParseArgs(argc, argv, *caller.channel(), &errmsg, &args);
   if (err) {
-    printf("device-name-provider: FATAL: parse_device_name_provider_args(_) = %d; %s\n", err,
-           errmsg);
+    printf("device-name-provider: FATAL: ParseArgs(_) = %d; %s\n", err, errmsg);
     return err;
   }
 
-  if (nodename != nullptr) {
-    strlcpy(device_name, nodename, sizeof(device_name));
+  char device_name[HOST_NAME_MAX];
+  if (!args.nodename.empty()) {
+    strlcpy(device_name, args.nodename.c_str(), sizeof(device_name));
   } else {
     uint8_t mac[6];
-    if ((err = netifc_discover(ethdir, interface, nullptr, mac))) {
+    const char* interface = args.interface.empty() ? nullptr : args.interface.c_str();
+    if ((err = netifc_discover(args.ethdir.c_str(), interface, nullptr, mac))) {
       strlcpy(device_name, llcpp::fuchsia::device::DEFAULT_DEVICE_NAME, sizeof(device_name));
       printf(
           "device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %d: "
           "%s\n",
-          device_name, ethdir, err, strerror(errno));
+          device_name, args.ethdir.c_str(), err, strerror(errno));
     } else {
       device_id_get(mac, device_name);
       printf("device-name-provider: generated device name: %s\n", device_name);

@@ -67,6 +67,7 @@ executable("device-name-provider") {
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/inet6:netifc-discover",
@@ -76,6 +77,11 @@ executable("device-name-provider") {
 
 source_set("args") {
   sources = [ "args.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
+  ]
 }
 
 source_set("netsvc_common") {
@@ -132,6 +138,7 @@ test("netsvc-test") {
   deps = [
     ":args",
     ":netsvc_common",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
@@ -143,6 +150,7 @@ test("netsvc-test") {
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/ramdevice-client",
   ]
 
