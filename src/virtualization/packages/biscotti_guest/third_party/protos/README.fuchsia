@@ -1,6 +1,8 @@
 Name: chromiumos/platform2
 URL: https://chromium.googlesource.com/chromiumos/platform2/+/master/vm_tools/proto/
+License: 3-clause BSD
 License File: LICENSE
+Description:
 
 This directory contains the .proto files that define the set of services used
 to communicate with a Termina virtual machine. No modifications have been made.
