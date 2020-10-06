@@ -20,12 +20,14 @@
 #include "src/sys/appmgr/lifecycle.h"
 #include "src/sys/appmgr/moniker.h"
 #include "src/sys/appmgr/realm.h"
+#include "src/sys/appmgr/startup_service.h"
 #include "src/sys/appmgr/storage_watchdog.h"
 #include "src/sys/appmgr/util.h"
 
 namespace component {
 
 struct AppmgrArgs {
+  // outgoing service directory
   zx_handle_t pa_directory_request;
   zx_handle_t lifecycle_request;
   std::unordered_set<Moniker> lifecycle_allowlist;
@@ -88,6 +90,7 @@ class Appmgr {
   LifecycleServer lifecycle_server_;
   async::Executor lifecycle_executor_;
   std::unordered_set<Moniker> lifecycle_allowlist_;
+  StartupServiceImpl startup_service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Appmgr);
 };

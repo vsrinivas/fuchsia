@@ -8,10 +8,20 @@
         {
             name: "core",
             url: "fuchsia-pkg://fuchsia.com/core#meta/core.cm",
+        },
+        {
+            name: "startup",
+            url: "fuchsia-boot:///#meta/startup.cm",
             startup: "eager",
         },
     ],
     offer: [
+        {
+            protocol: [ "fuchsia.appmgr.Startup" ],
+            from: "#core",
+            to: [ "#startup" ],
+        },
+
         // Capabilities routed from "parent" at the root are either provided by
         // bootsvc through component_manager's namespace or by component_manager
         // itself as a builtin service

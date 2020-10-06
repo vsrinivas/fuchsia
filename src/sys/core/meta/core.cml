@@ -5,7 +5,6 @@
         {
             name: "appmgr",
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
-            startup: "eager",
         },
         {
             name: "archivist",
@@ -39,6 +38,7 @@
             subdir: "persistent",
             backing_dir: "/minfs",
         },
+        { protocol: "fuchsia.appmgr.Startup" },
     ],
     offer: [
         {
@@ -304,6 +304,10 @@
                 "/svc/fuchsia.tracing.provider.Registry",
                 "/svc/fuchsia.wlan.service.Wlan",
             ],
+            from: "#appmgr",
+        },
+        {
+            protocol: [ "fuchsia.appmgr.Startup" ],
             from: "#appmgr",
         },
 

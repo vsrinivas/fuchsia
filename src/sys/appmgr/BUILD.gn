@@ -115,10 +115,13 @@ source_set("appmgr_for_test") {
     "appmgr.h",
     "lifecycle.cc",
     "lifecycle.h",
+    "startup_service.cc",
+    "startup_service.h",
   ]
 
   public_deps = [
     ":lib",
+    "fidl/fuchsia.appmgr",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/fidl/fuchsia.sys",
@@ -141,10 +144,13 @@ executable("bin") {
     "lifecycle.cc",
     "lifecycle.h",
     "main.cc",
+    "startup_service.cc",
+    "startup_service.h",
   ]
 
   deps = [
     ":lib",
+    "fidl/fuchsia.appmgr",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/sys/cpp",

@@ -334,12 +334,15 @@ group("tests") {
 group("bootfs") {
   deps = [
     ":bin",
-    ":component_manager_config_bootfs_resource",
+    "//src/sys/startup:bootfs",
   ]
 }
 
 component_config("component_manager_config") {
-  sources = [ "config.json" ]
+  sources = [
+    "config.json",
+    "resolver_pkgfs.json",
+  ]
 }
 
 resource("component_manager_config_resource") {
@@ -361,6 +364,7 @@ resource("component_manager_test_config_resource") {
 component_config("component_manager_bootfs_config") {
   sources = [
     "config.json",
+    "resolver_pkgfs.json",
     rebase_path("//src/security/policy/component_manager_policy.json"),
   ]
 }
@@ -369,4 +373,18 @@ resource("component_manager_config_bootfs_resource") {
   sources = [ "$target_gen_dir/component_manager_bootfs_config" ]
   outputs = [ "config/component_manager" ]
   deps = [ ":component_manager_bootfs_config" ]
+}
+
+component_config("component_manager_bootfs_config_no_pkgresolver") {
+  sources = [
+    "config.json",
+    "pkgfs_resolver_disabled.json",
+    rebase_path("//src/security/policy/component_manager_policy.json"),
+  ]
+}
+
+resource("config_no_pkgresolver_resource") {
+  sources = [ "$target_gen_dir/component_manager_bootfs_config_no_pkgresolver" ]
+  outputs = [ "config/component_manager" ]
+  deps = [ ":component_manager_bootfs_config_no_pkgresolver" ]
 }

@@ -1,0 +1,11 @@
+{
+    program: {
+        binary: "bin/startup",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "fuchsia.appmgr.Startup" ],
+        },
+    ],
+}

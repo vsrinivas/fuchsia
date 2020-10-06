@@ -81,3 +81,9 @@ base_package_labels += [ "//tools/cargo-gnaw:install-cargo-gnaw" ]
 cache_package_labels += [ "//src/developer/ffx:runtime" ]
 
 universe_package_labels += [ "//bundles:tools" ]
+
+product_bootfs_labels -=
+    [ "//src/sys/component_manager:config_no_pkgresolver_resource" ]
+
+product_bootfs_labels +=
+    [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]

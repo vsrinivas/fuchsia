@@ -7,6 +7,12 @@
         // implement the v1 'deprecated-ambient-replace-as-executable' feature.
         job_policy_ambient_mark_vmo_exec: "true",
     },
+    capabilities: [
+        {
+            protocol: "fuchsia.appmgr.Startup",
+            path: "/appmgr_svc/fuchsia.appmgr.Startup",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -289,6 +295,10 @@
             protocol: "/appmgr_svc/fuchsia.sys.internal.ComponentEventProvider",
             from: "self",
             as: "/svc/fuchsia.sys.internal.ComponentEventProvider",
+        },
+        {
+            protocol: "fuchsia.appmgr.Startup",
+            from: "self",
         },
     ],
 }

@@ -1,0 +1,80 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/component_manifest_resources.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+executable("startup") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/sys/appmgr/fidl/fuchsia.appmgr:fuchsia.appmgr_llcpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
+component_manifest_resources("meta") {
+  sources = [ "meta/startup.cml" ]
+}
+
+group("bootfs") {
+  deps = [
+    ":meta",
+    ":startup",
+  ]
+}
+
+fuchsia_component("component_for_test") {
+  component_name = "startup_for_test"
+  deps = [ ":startup" ]
+  manifest = "meta/startup.cml"
+}
+
+fuchsia_component("fake_appmgr") {
+  component_name = "appmgr"
+  manifest = "src/tests/meta/fake-appmgr.cml"
+}
+
+fuchsia_component("test_root") {
+  component_name = "root"
+  manifest = "src/tests/meta/root.cml"
+}
+
+rustc_test("startup_integration_test_bin") {
+  name = "startup_integration_test"
+  edition = "2018"
+  source_root = "src/tests/integration_test.rs"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/testing:test_utils_lib",
+  ]
+
+  sources = [ "src/tests/integration_test.rs" ]
+}
+
+fuchsia_component("startup_integration_test_component") {
+  testonly = true
+  component_name = "startup-integration-test-component"
+  deps = [ ":startup_integration_test_bin" ]
+  manifest = "src/tests/meta/integration-test.cmx"
+}
+
+fuchsia_test_package("startup_integration_test") {
+  package_name = "startup-integration-test"
+  test_components = [ ":startup_integration_test_component" ]
+  deps = [
+    ":component_for_test",
+    ":fake_appmgr",
+    ":test_root",
+    "//src/sys/component_manager:component-manager-cmp",
+  ]
+}

@@ -1,0 +1,20 @@
+{
+    children: [
+        {
+            name: "startup",
+            url: "fuchsia-pkg://fuchsia.com/startup-integration-test#meta/startup_for_test.cm",
+            startup: "eager",
+        },
+        {
+            name: "fake-appmgr",
+            url: "fuchsia-pkg://fuchsia.com/startup-integration-test#meta/appmgr.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.appmgr.Startup" ],
+            from: "#fake-appmgr",
+            to: [ "#startup" ],
+        },
+    ],
+}

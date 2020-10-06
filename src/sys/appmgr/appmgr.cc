@@ -5,6 +5,7 @@
 #include "src/sys/appmgr/appmgr.h"
 
 #include <fcntl.h>
+#include <fuchsia/appmgr/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -25,6 +26,7 @@
 #include "lib/inspect/cpp/inspector.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/sys/appmgr/constants.h"
+#include "src/sys/appmgr/startup_service.h"
 
 using fuchsia::sys::TerminationReason;
 
@@ -45,7 +47,8 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
       lifecycle_server_(this, std::move(args.stop_callback)),
       lifecycle_executor_(dispatcher),
-      lifecycle_allowlist_(std::move(args.lifecycle_allowlist)) {
+      lifecycle_allowlist_(std::move(args.lifecycle_allowlist)),
+      startup_service_() {
   RecordSelfCpuStats();
   inspector_.GetRoot().CreateLazyNode(
       "inspect_stats",
@@ -179,6 +182,13 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
           return root_realm_->BindComponentEventProvider(
               fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
                   std::move(channel)));
+        })));
+
+    appmgr_svc->AddEntry(
+        fuchsia::appmgr::Startup::Name_,
+        fbl::AdoptRef(new fs::Service([this, dispatcher](zx::channel channel) {
+          return startup_service_.Bind(
+              dispatcher, fidl::InterfaceRequest<fuchsia::appmgr::Startup>(std::move(channel)));
         })));
 
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
