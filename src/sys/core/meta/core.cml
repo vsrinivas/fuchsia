@@ -36,6 +36,7 @@
         {
             storage: "data",
             from: "parent",
+            subdir: "persistent",
             backing_dir: "/minfs",
         },
     ],
