@@ -1,6 +1,9 @@
+Name: granite
 Source: https://github.com/Themaister/Granite.git
 Git Commit: 897afe51b5257653cc498e3d91a037f5650ebc5b
 License: MIT
+License File: LICENSE
+Description:
 
 Heavily-modified versions of a small number of files from the Granite rendering
 engine.  These files now bear little immediate resemblance to the originals;

@@ -1,6 +1,9 @@
+Name: Magic Enum C++
 Source: https://github.com/Neargye/magic_enum
 Git Commit: 7063621bce226c8925905c5643650b680e3a4b3b
 License: MIT
+License File: LICENSE
+Description:
 
 enum_utils.h is a header-only library adding support to get count / maximum /
 minimum values of an enum or enum class type using gcc / clang's

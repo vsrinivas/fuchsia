@@ -1,6 +1,9 @@
+Name: Vulkan Memory Allocator
 Source: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
 Git Commit: b8d34d5e6a1c0f8be737cce5df5be413267c9ea5
 License: MIT
+License File: LICENSE.txt
+Description:
 
 Only src/vk_mem_alloc.h and LICENSE.txt files were imported.
 
