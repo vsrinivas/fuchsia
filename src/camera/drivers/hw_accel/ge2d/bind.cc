@@ -7,6 +7,7 @@
 
 #include <ddk/binding.h>
 
+#include "src/camera/drivers/hw_accel/ge2d/ge2d-bind.h"
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 
 namespace ge2d {
@@ -52,10 +53,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace ge2d
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ge2d, ge2d::driver_ops, "ge2d", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GE2D),
-ZIRCON_DRIVER_END(ge2d)
+ZIRCON_DRIVER(ge2d, ge2d::driver_ops, "ge2d", "0.1");

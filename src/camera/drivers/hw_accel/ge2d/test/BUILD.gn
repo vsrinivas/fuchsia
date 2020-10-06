@@ -33,6 +33,7 @@ executable("test") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/syslog/cpp",
+    "//src/camera/drivers/hw_accel/ge2d:ge2d_bind",
     "//src/camera/drivers/hw_accel/ge2d:lib",
     "//src/camera/drivers/test_utils",
     "//src/devices/lib/driver",
