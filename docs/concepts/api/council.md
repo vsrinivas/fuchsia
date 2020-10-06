@@ -132,7 +132,7 @@ Members are appointed by each functional area of the project:
 | Bluetooth         | jamuraa@google.com       |
 | Component Runtime | geb@google.com           |
 | DDK               | jocelyndang@google.com   |
-| Developer         | dschulyer@google.com     |
+| Developer         | dschuyler@google.com     |
 | Diagnostics       | crjohns@google.com       |
 | Drivers           | ravoorir@google.com      |
 | Experiences       | chaselatta@google.com    |
