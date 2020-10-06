@@ -8,4 +8,17 @@ zx_library("acpi_lite") {
   kernel = true
   sources = [ "acpi_lite.cc" ]
   deps = [ "$zx/system/ulib/pretty" ]
+
+  # TODO: testonly = true
+  deps += [ ":test" ]
+}
+
+source_set("test") {
+  # TODO: testonly = true
+  sources = [ "acpi_lite_test.cc" ]
+
+  deps = [
+    "$zx/kernel/lib/acpi_lite:headers",
+    "$zx/kernel/lib/unittest",
+  ]
 }

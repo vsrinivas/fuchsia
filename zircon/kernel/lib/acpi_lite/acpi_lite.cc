@@ -10,232 +10,345 @@
 #include <trace.h>
 #include <zircon/compiler.h>
 
+#include <ktl/algorithm.h>
+#include <ktl/optional.h>
 #include <pretty/hexdump.h>
 #include <vm/physmap.h>
 
 #define LOCAL_TRACE 0
 
-// global state of the acpi lite library
-struct acpi_lite_state {
-  const acpi_rsdp* rsdp;
-  const acpi_rsdt_xsdt* sdt;
-  size_t num_tables;  // number of top level tables
-  bool xsdt;          // are the pointers 64 or 32bit?
-} acpi;
+namespace acpi_lite {
+namespace {
 
-static const void* phys_to_ptr(uintptr_t pa) {
-  if (!is_physmap_phys_addr(pa)) {
-    return nullptr;
+// Maximum supported RSDP table size.
+//
+// We assume RSDP values larger than this size are invalid.
+constexpr size_t kMaxRsdpSize = 4096;
+
+// Convert physical addresses to virtual addresses using Zircon's standard conversion
+// functions.
+class ZirconPhysmemReader final : public PhysMemReader {
+ public:
+  constexpr ZirconPhysmemReader() = default;
+
+  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) final {
+    // We don't support the 0 physical address or 0-length ranges.
+    if (length == 0 || phys == 0) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+
+    // Get the last byte of the specified range, ensuring we don't wrap around the address
+    // space.
+    uintptr_t phys_end;
+    if (add_overflow(phys, length - 1, &phys_end)) {
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
+
+    // Ensure that both "phys" and "phys + length - 1" have valid addresses.
+    //
+    // The Zircon physmap is contiguous, so we don't have to worry about intermediate addresses.
+    if (!is_physmap_phys_addr(phys) || !is_physmap_phys_addr(phys_end)) {
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
+
+    return zx::success(paddr_to_physmap(phys));
   }
-  // consider 0 to be invalid
-  if (pa == 0) {
-    return nullptr;
+};
+
+// Perform a two-phase PhysToPtr conversion:
+//
+//   1. We first read a fixed-sized header.
+//   2. We next call the function |bytes_to_read|, passing in this header.
+//   3. We next map in the number of bytes indicated by the function.
+//
+// This allows us to handle the common use-case where the number of bytes that need
+// to be accessed at a particular address cannot be determined until we first read
+// a header at that address.
+//
+// |bytes_to_read| is a function of type "size_t F(const T&)". We use a lambda
+// (and not a member pointer, for example) because the length does not have a fixed
+// name and/or may be inside a nested struct.
+template <typename T, typename F>
+zx::status<const T*> PhysToPtrDynamicSize(PhysMemReader& reader, uintptr_t phys, F bytes_to_read) {
+  // Try and read the header.
+  zx::status<const void*> result = reader.PhysToPtr(phys, sizeof(T));
+  if (result.is_error()) {
+    return result.take_error();
   }
 
-  return static_cast<const void*>(paddr_to_physmap(pa));
+  // Get the number of bytes the full structure needs, as determined by its header.
+  size_t bytes_needed = ktl::max(
+      static_cast<size_t>(bytes_to_read(static_cast<const T*>(result.value()))), sizeof(T));
+  result = reader.PhysToPtr(phys, bytes_needed);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+
+  return zx::success(static_cast<const T*>(result.value()));
 }
 
-static uint8_t acpi_checksum(const void* _buf, size_t len) {
+// Calculate a checksum of the given range of memory.
+//
+// The checksum is valid if the sum of bytes mod 256 == 0.
+bool AcpiChecksumValid(const void* _buf, size_t len) {
   uint8_t c = 0;
 
   const uint8_t* buf = static_cast<const uint8_t*>(_buf);
   for (size_t i = 0; i < len; i++) {
-    c = (uint8_t)(c + buf[i]);
+    c = static_cast<uint8_t>(c + buf[i]);
   }
 
-  return c;
+  return c == 0;
 }
 
-static bool validate_rsdp(const acpi_rsdp* rsdp) {
-  // check the signature
-  if (memcmp(ACPI_RSDP_SIG, rsdp->sig, 8)) {
+bool ValidateRsdp(const acpi_rsdp_v2* rsdp, size_t max_length) {
+  // Ensure the range is large enough to handle a RSDP header.
+  if (max_length < sizeof(acpi_rsdp)) {
     return false;
   }
 
-  // validate the v1 checksum on the first 20 bytes of the table
-  uint8_t c = acpi_checksum(rsdp, 20);
-  if (c) {
+  // Verify the RSDP signature.
+  if (memcmp(ACPI_RSDP_SIG, &rsdp->v1.sig, ACPI_RSDP_SIG_LENGTH) != 0) {
     return false;
   }
 
-  // is it v2?
-  if (rsdp->revision >= 2) {
-    if (rsdp->length < 36 || rsdp->length > 4096) {
-      // keep the table length within reason
+  // Validate the checksum on the V1 header.
+  if (!AcpiChecksumValid(&rsdp->v1, sizeof(acpi_rsdp))) {
+    return false;
+  }
+
+  // If the RSDP header states that we are a full V2 structure, also verify the additional data.
+  if (rsdp->v1.revision >= 2) {
+    // Ensure we have enough bytes for the entire V2 header.
+    if (max_length < sizeof(acpi_rsdp_v2)) {
       return false;
     }
 
-    c = acpi_checksum(rsdp, rsdp->length);
-    if (c) {
+    // Ensure the length looks reasonable.
+    if (rsdp->length < sizeof(acpi_rsdp_v2) || rsdp->length > max_length) {
+      return false;
+    }
+
+    // Verify the extended checksump.
+    if (!AcpiChecksumValid(rsdp, rsdp->length)) {
       return false;
     }
   }
 
-  // seems okay
   return true;
 }
 
-static zx_paddr_t find_rsdp_pc() {
-  // search for it in the BIOS EBDA area (0xe0000..0xfffff) on 16 byte boundaries
-  for (zx_paddr_t ptr = 0xe0000; ptr <= 0xfffff; ptr += 16) {
-    const auto rsdp = static_cast<const acpi_rsdp*>(phys_to_ptr(ptr));
+// Search for a valid RSDP in the BIOS read-only memory space in [0xe0000..0xfffff],
+// on 16 byte boundaries.
+//
+// Return 0 if no RSDP found.
+//
+// Reference: ACPI v6.3, Section 5.2.5.1
+zx::status<const acpi_rsdp_v2*> FindRsdpPc(PhysMemReader& reader) {
+  // Get a virtual address for the read-only BIOS range.
+  zx::status<const void*> maybe_bios_section =
+      reader.PhysToPtr(kBiosReadOnlyAreaStart, kBiosReadOnlyAreaLength);
+  if (maybe_bios_section.is_error()) {
+    return maybe_bios_section.take_error();
+  }
+  auto* bios_section = static_cast<const uint8_t*>(maybe_bios_section.value());
 
-    if (validate_rsdp(rsdp)) {
-      return ptr;
+  // Try every 16-byte offset from 0xe0'0000.
+  for (size_t offset = 0x0; offset < kBiosReadOnlyAreaLength; offset += 16) {
+    const auto rsdp = reinterpret_cast<const acpi_rsdp_v2*>(bios_section + offset);
+    if (ValidateRsdp(rsdp, /*max_length=*/kBiosReadOnlyAreaLength - offset)) {
+      return zx::success(reinterpret_cast<const acpi_rsdp_v2*>(rsdp));
     }
   }
 
-  return 0;
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-static bool validate_sdt(const acpi_rsdt_xsdt* sdt, size_t* num_tables, bool* xsdt) {
-  LTRACEF("%p\n", sdt);
+bool ValidateSdt(const acpi_rsdt_xsdt& sdt, size_t* num_tables, bool* xsdt) {
+  LTRACEF("%p\n", &sdt);
 
-  // bad pointer
-  if (!sdt) {
-    return false;
-  }
-
-  // check the signature and see if it's a rsdt or xsdt
-  if (!memcmp(sdt->header.sig, "XSDT", 4)) {
+  // Check the signature to see if it's a RSDT or XSDT.
+  if (!memcmp(sdt.header.sig, ACPI_XSDT_SIG, ACPI_XSDT_SIG_LENGTH)) {
     *xsdt = true;
-  } else if (!memcmp(sdt->header.sig, "RSDT", 4)) {
+  } else if (!memcmp(sdt.header.sig, ACPI_RSDT_SIG, ACPI_RSDT_SIG_LENGTH)) {
     *xsdt = false;
   } else {
     return false;
   }
 
-  // is the length sane?
-  if (sdt->header.length < 36 || sdt->header.length > 4096) {
+  // Ensure the length field is reasonable.
+  if (sdt.header.length < sizeof(acpi_sdt_header) || sdt.header.length > 4096) {
     return false;
   }
 
-  // is it a revision we understand?
-  if (sdt->header.revision != 1) {
+  // Ensure this is a revision we understand.
+  if (sdt.header.revision != 1) {
     return false;
   }
 
-  // checksum the entire table
-  uint8_t c = acpi_checksum(sdt, sdt->header.length);
-  if (c) {
+  // Validate SDT checksum.
+  if (!AcpiChecksumValid(&sdt, sdt.header.length)) {
     return false;
   }
 
-  // compute the number of pointers to tables we have
-  *num_tables = (sdt->header.length - 36u) / (*xsdt ? 8u : 4u);
+  // Compute the number of tables we have.
+  *num_tables =
+      (sdt.header.length - sizeof(acpi_sdt_header)) / (*xsdt ? sizeof(uint64_t) : sizeof(uint32_t));
 
-  // looks okay
   return true;
 }
 
-const acpi_sdt_header* acpi_get_table_at_index(size_t index) {
-  if (index >= acpi.num_tables) {
+}  // namespace
+
+const acpi_sdt_header* AcpiParser::GetTableAtIndex(size_t index) const {
+  if (index >= num_tables_) {
     return nullptr;
   }
 
-  zx_paddr_t pa;
-  if (acpi.xsdt) {
-    pa = acpi.sdt->addr64[index];
-  } else {
-    pa = acpi.sdt->addr32[index];
-  }
+  // Get the physical address for the index'th table.
+  zx_paddr_t pa = xsdt_ ? sdt_->addr64[index] : sdt_->addr32[index];
 
-  return static_cast<const acpi_sdt_header*>(phys_to_ptr(pa));
+  // Map it in.
+  return PhysToPtrDynamicSize<acpi_sdt_header>(*reader_, pa,
+                                               [](const acpi_sdt_header* v) { return v->length; })
+      .value_or(nullptr);
 }
 
-const acpi_sdt_header* acpi_get_table_by_sig(const char* sig) {
-  // walk the list of tables
-  for (size_t i = 0; i < acpi.num_tables; i++) {
-    const auto header = acpi_get_table_at_index(i);
+const acpi_sdt_header* AcpiParser::GetTableBySignature(const char* sig) const {
+  for (size_t i = 0; i < num_tables_; i++) {
+    const acpi_sdt_header* header = GetTableAtIndex(i);
     if (!header) {
       continue;
     }
 
-    if (!memcmp(sig, header->sig, 4)) {
-      // validate the checksum
-      uint8_t c = acpi_checksum(header, header->length);
-      if (c == 0) {
-        return header;
-      }
+    // Continue searching if the header doesn't match.
+    if (memcmp(sig, header->sig, sizeof(header->sig)) != 0) {
+      continue;
     }
+
+    // If the checksum is invalid, keep searching.
+    if (!AcpiChecksumValid(header, header->length)) {
+      continue;
+    }
+
+    return header;
   }
 
   return nullptr;
 }
 
-zx_status_t acpi_lite_init(zx_paddr_t rsdp_pa) {
-  LTRACEF("passed in rsdp %#" PRIxPTR "\n", rsdp_pa);
+zx::status<AcpiParser> AcpiParser::Init(zx_paddr_t rsdp_pa) {
+  // AcpiParser requires a ZirconPhysmemReader instance that outlives
+  // it. We share a single static instance for all AcpiParser instances.
+  static ZirconPhysmemReader reader;
 
-  // see if the rsdp pointer is valid
-  if (rsdp_pa == 0) {
-    // search around for it in a platform-specific way
-#if __x86_64__
-    rsdp_pa = find_rsdp_pc();
-    if (rsdp_pa == 0) {
-      dprintf(INFO, "ACPI LITE: couldn't find ACPI RSDP in BIOS area\n");
-    }
-#endif
-
-    if (rsdp_pa == 0) {
-      return ZX_ERR_NOT_FOUND;
-    }
-  }
-
-  const void* ptr = phys_to_ptr(rsdp_pa);
-  if (!ptr) {
-    dprintf(INFO, "ACPI LITE: failed to translate RSDP address %#" PRIxPTR " to virtual\n",
-            rsdp_pa);
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // see if the RSDP is there
-  acpi.rsdp = static_cast<const acpi_rsdp*>(ptr);
-  if (!validate_rsdp(acpi.rsdp)) {
-    dprintf(INFO, "ACPI LITE: RSDP structure does not check out\n");
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  dprintf(SPEW, "ACPI LITE: RSDP checks out, found at %#lx\n", rsdp_pa);
-
-  // find the pointer to either the RSDT or XSDT
-  acpi.sdt = nullptr;
-  if (acpi.rsdp->revision < 2) {
-    // v1 RSDP, pointing at a RSDT
-    acpi.sdt = static_cast<const acpi_rsdt_xsdt*>(phys_to_ptr(acpi.rsdp->rsdt_address));
-  } else {
-    // v2+ RSDP, pointing at a XSDT
-    // try to use the 64bit address first
-    acpi.sdt = static_cast<const acpi_rsdt_xsdt*>(phys_to_ptr(acpi.rsdp->xsdt_address));
-    if (!acpi.sdt) {
-      acpi.sdt = static_cast<const acpi_rsdt_xsdt*>(phys_to_ptr(acpi.rsdp->rsdt_address));
-    }
-  }
-
-  if (!validate_sdt(acpi.sdt, &acpi.num_tables, &acpi.xsdt)) {
-    dprintf(INFO, "ACPI LITE: RSDT/XSDT structure does not check out\n");
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  dprintf(SPEW, "ACPI LITE: RSDT/XSDT checks out, %zu tables\n", acpi.num_tables);
-
-  if (LOCAL_TRACE) {
-    acpi_lite_dump_tables();
-  }
-
-  return ZX_OK;
+  return Init(reader, rsdp_pa);
 }
 
-void acpi_lite_dump_tables() {
-  if (!acpi.sdt) {
-    return;
+zx::status<const acpi_rsdp_v2*> FindRsdp(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa) {
+  // If the user gave us an explicit RSDP, just use that directly.
+  if (rsdp_pa != 0) {
+    zx::status<const acpi_rsdp_v2*> result = PhysToPtrDynamicSize<acpi_rsdp_v2>(
+        physmem_reader, rsdp_pa, [](const acpi_rsdp_v2* v) { return v->length; });
+    if (result.is_error()) {
+      dprintf(INFO, "ACPI LITE: failed to map RSDP address %#" PRIxPTR " to virtual\n", rsdp_pa);
+      return result.take_error();
+    }
+
+    return result;
   }
 
+  // Otherwise, attempt to find it in a platform-specific way.
+#if __x86_64__
+  {
+    zx::status<const acpi_rsdp_v2*> result = FindRsdpPc(physmem_reader);
+    if (result.is_ok()) {
+      return result.take_value();
+    }
+    dprintf(INFO, "ACPI LITE: couldn't find ACPI RSDP in BIOS area\n");
+  }
+#endif
+
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+// Find the pointer to either the RSDT or XSDT.
+zx::status<const acpi_rsdt_xsdt*> FindRsdtOrXsdt(PhysMemReader& physmem_reader,
+                                                 const acpi_rsdp_v2* rsdp) {
+  // Prefer using the XSDT if it is valid.
+  if (rsdp->v1.revision >= 2) {
+    // Try XSDT.
+    zx::status<const acpi_rsdt_xsdt*> sdt = PhysToPtrDynamicSize<acpi_rsdt_xsdt>(
+        physmem_reader, rsdp->xsdt_address,
+        [](const acpi_rsdt_xsdt* v) { return v->header.length; });
+    if (sdt.is_ok()) {
+      return sdt.take_value();
+    }
+    dprintf(INFO, "ACPI LITE: RSDP points to invalid XSDT. Falling back to RSDT.\n");
+  }
+
+  // Fall back to the RSDT.
+  return PhysToPtrDynamicSize<acpi_rsdt_xsdt>(
+      physmem_reader, rsdp->v1.rsdt_address,
+      [](const acpi_rsdt_xsdt* v) { return v->header.length; });
+}
+
+zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa) {
+  LTRACEF("passed in rsdp %#" PRIxPTR "\n", rsdp_pa);
+
+  // Get the RSDP.
+  zx::status<const acpi_rsdp_v2*> rsdp = FindRsdp(physmem_reader, rsdp_pa);
+  if (rsdp.is_error()) {
+    return rsdp.take_error();
+  }
+
+  // Attempt to validate the RSDP.
+  if (!ValidateRsdp(rsdp.value(), kMaxRsdpSize)) {
+    dprintf(INFO, "ACPI LITE: Could not validate RSDP structure.\n");
+    if (DPRINTF_ENABLED_FOR_LEVEL(SPEW)) {
+      hexdump(rsdp.value(), sizeof(acpi_rsdp_v2));
+    }
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  dprintf(SPEW, "ACPI LITE: Valid RSDP found at %#lx\n", rsdp_pa);
+
+  // Find the pointer to either the RSDT or XSDT.
+  //
+  // We prefer using the XSDT, falling back to the RSDT if no XSDT is available or it is invalid.
+  zx::status<const acpi_rsdt_xsdt*> sdt = FindRsdtOrXsdt(physmem_reader, rsdp.value());
+  if (sdt.is_error()) {
+    dprintf(INFO, "ACPI LITE: Could not map valid RSDT.\n");
+    return sdt.take_error();
+  }
+
+  // Validate the SDT.
+  size_t num_tables;
+  bool xsdt;
+  if (!ValidateSdt(*sdt.value(), &num_tables, &xsdt)) {
+    dprintf(INFO, "ACPI LITE: Invalid RSDT/XSDT structure.\n");
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  dprintf(SPEW, "ACPI LITE: RSDT/XSDT valid, %zu tables\n", num_tables);
+
+  // Create the table.
+  AcpiParser parser(physmem_reader, *sdt.value(), num_tables, xsdt);
+
+  if (LOCAL_TRACE) {
+    parser.DumpTables();
+  }
+
+  return zx::ok(parser);
+}
+
+void AcpiParser::DumpTables() const {
+  DEBUG_ASSERT(sdt_ != nullptr);
+
   printf("root table:\n");
-  hexdump(acpi.sdt, acpi.sdt->header.length);
+  hexdump(sdt_, sdt_->header.length);
 
   // walk the table list
-  for (size_t i = 0; i < acpi.num_tables; i++) {
-    const auto header = acpi_get_table_at_index(i);
+  for (size_t i = 0; i < num_tables_; i++) {
+    const auto header = GetTableAtIndex(i);
     if (!header) {
       continue;
     }
@@ -246,10 +359,10 @@ void acpi_lite_dump_tables() {
   }
 }
 
-zx_status_t acpi_process_madt_entries_etc(const uint8_t search_type,
-                                          const MadtEntryCallback& callback) {
+zx_status_t AcpiParser::EnumerateMadtEntries(const uint8_t search_type,
+                                             const MadtEntryCallback& callback) const {
   const acpi_madt_table* madt =
-      reinterpret_cast<const acpi_madt_table*>(acpi_get_table_by_sig(ACPI_MADT_SIG));
+      reinterpret_cast<const acpi_madt_table*>(GetTableBySignature(ACPI_MADT_SIG));
   if (!madt) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -271,4 +384,43 @@ zx_status_t acpi_process_madt_entries_etc(const uint8_t search_type,
   }
 
   return ZX_OK;
+}
+
+}  // namespace acpi_lite
+
+namespace {
+// Global state for the C-style API.
+ktl::optional<acpi_lite::AcpiParser> parser;
+}  // namespace
+
+zx_status_t acpi_lite_init(zx_paddr_t rsdp_pa) {
+  ASSERT(!parser.has_value());
+
+  zx::status<acpi_lite::AcpiParser> parser_or = acpi_lite::AcpiParser::Init(rsdp_pa);
+  if (parser_or.is_error()) {
+    return parser_or.error_value();
+  }
+
+  parser.emplace(parser_or.value());
+  return ZX_OK;
+}
+
+void acpi_lite_dump_tables() {
+  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
+  parser->DumpTables();
+}
+
+const acpi_sdt_header* acpi_get_table_by_sig(const char* sig) {
+  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
+  return parser->GetTableBySignature(sig);
+}
+
+const acpi_sdt_header* acpi_get_table_at_index(size_t index) {
+  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
+  return parser->GetTableAtIndex(index);
+}
+
+zx_status_t acpi_process_madt_entries_etc(uint8_t search_type, const MadtEntryCallback& callback) {
+  DEBUG_ASSERT_MSG(parser.has_value(), "acpi_lite_init() not called.");
+  return parser->EnumerateMadtEntries(search_type, callback);
 }
