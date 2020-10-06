@@ -95,8 +95,7 @@ using PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
 /// authentication state.
 [MaxHandles = "0"]
 struct PositiveEvent {
-
-    /// The time on `ZX_CLOCK_UTC` when the event completed.
+    /// The UTC time when the event completed.
     zx.time timestamp;
 
     // TODO(dnordstrom): Add fields for account, confidence, range, engagement
@@ -107,7 +106,7 @@ struct PositiveEvent {
 /// authentication state.
 [MaxHandles = "0"]
 struct NegativeEvent {
-    /// The time on `ZX_CLOCK_UTC` when the event completed.
+    /// The UTC time when the event completed.
     zx.time timestamp;
 
     // TODO(dnordstrom): Add fields for account, range and disengagement.
@@ -118,7 +117,7 @@ struct NegativeEvent {
 /// Otherwise, it does not affect the authentication state.
 [MaxHandles = "0"]
 struct AttemptedEvent {
-    /// The time on `ZX_CLOCK_UTC` when the event completed.
+    /// The UTC time when the event completed.
     zx.time timestamp;
 
     /// The id of the enrollment used to produce this attempt.
