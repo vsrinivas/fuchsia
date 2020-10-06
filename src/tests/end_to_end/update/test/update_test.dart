@@ -23,6 +23,8 @@ void main() {
     sl4fDriver.close();
   });
 
+  tearDownAll(printErrorHelp);
+
   group(sl4f.Update, () {
     test('update sanity test', () async {
       // Trigger an update check without initiator set so we get invalid options.
@@ -37,4 +39,10 @@ void main() {
       await update.getChannelList();
     });
   }, timeout: _timeout);
+}
+
+void printErrorHelp() {
+  print('If this test fails, see '
+      'https://fuchsia.googlesource.com/a/fuchsia/+/master/src/tests/end_to_end/update/README.md'
+      ' for details!');
 }
