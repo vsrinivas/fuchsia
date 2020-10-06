@@ -226,6 +226,7 @@ mod tests {
                 "root_version": 1,
                 "root_threshold": 1,
                 "use_local_mirror": false,
+                "repo_storage_type": "ephemeral",
             }),
         );
     }

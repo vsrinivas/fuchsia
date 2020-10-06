@@ -13,6 +13,15 @@ use {
     std::{fmt, mem},
 };
 
+/// Convenience wrapper for the FIDL RepositoryStorageType.
+#[derive(Clone, Hash, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RepositoryStorageType {
+    /// Store the repository in-memory. This metadata will be lost if the process or device is
+    /// restarted.
+    Ephemeral,
+}
+
 /// Convenience wrapper for the FIDL RepositoryKeyConfig type
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
@@ -227,6 +236,22 @@ impl From<MirrorConfig> for fidl::MirrorConfig {
     }
 }
 
+impl From<fidl::RepositoryStorageType> for RepositoryStorageType {
+    fn from(other: fidl::RepositoryStorageType) -> Self {
+        match other {
+            fidl::RepositoryStorageType::Ephemeral => RepositoryStorageType::Ephemeral,
+        }
+    }
+}
+
+impl From<RepositoryStorageType> for fidl::RepositoryStorageType {
+    fn from(storage_type: RepositoryStorageType) -> Self {
+        match storage_type {
+            RepositoryStorageType::Ephemeral => fidl::RepositoryStorageType::Ephemeral,
+        }
+    }
+}
+
 fn blob_mirror_url_from_mirror_url(mirror_url: &http::Uri) -> http::Uri {
     // Safe because mirror_url has a scheme and "blobs" is a valid path segment.
     mirror_url.to_owned().extend_dir_with_path("blobs").unwrap()
@@ -260,6 +285,8 @@ pub struct RepositoryConfig {
     update_package_url: Option<PkgUrl>,
     #[serde(default = "default_use_local_mirror")]
     use_local_mirror: bool,
+    #[serde(default = "default_storage_type")]
+    repo_storage_type: RepositoryStorageType,
 }
 
 fn default_root_version() -> u32 {
@@ -272,6 +299,10 @@ fn default_root_threshold() -> u32 {
 
 fn default_use_local_mirror() -> bool {
     false
+}
+
+fn default_storage_type() -> RepositoryStorageType {
+    RepositoryStorageType::Ephemeral
 }
 
 impl RepositoryConfig {
@@ -365,6 +396,8 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
             1
         };
 
+        let storage_type = RepositoryStorageType::Ephemeral;
+
         Ok(Self {
             repo_url: repo_url,
             root_version: root_version,
@@ -383,6 +416,7 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
                 .collect::<Result<_, _>>()?,
             update_package_url: update_package_url,
             use_local_mirror: other.use_local_mirror.unwrap_or(false),
+            repo_storage_type: storage_type.into(),
         })
     }
 }
@@ -397,6 +431,7 @@ impl From<RepositoryConfig> for fidl::RepositoryConfig {
             mirrors: Some(config.mirrors.into_iter().map(MirrorConfig::into).collect()),
             update_package_url: config.update_package_url.map(|url| url.to_string()),
             use_local_mirror: Some(config.use_local_mirror),
+            storage_type: Some(RepositoryStorageType::into(config.repo_storage_type)),
         }
     }
 }
@@ -424,6 +459,7 @@ impl RepositoryConfigBuilder {
                 mirrors: vec![],
                 update_package_url: None,
                 use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
             },
         }
     }
@@ -460,6 +496,11 @@ impl RepositoryConfigBuilder {
 
     pub fn use_local_mirror(mut self, use_local_mirror: bool) -> Self {
         self.config.use_local_mirror = use_local_mirror;
+        self
+    }
+
+    pub fn repo_storage_type(mut self, repo_storage_type: RepositoryStorageType) -> Self {
+        self.config.repo_storage_type = repo_storage_type;
         self
     }
 
@@ -935,6 +976,7 @@ mod tests {
             }],
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: true,
+            repo_storage_type: RepositoryStorageType::Ephemeral,
         };
         let as_fidl: fidl::RepositoryConfig = config.into();
         assert_eq!(
@@ -952,7 +994,45 @@ mod tests {
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
-                use_local_mirror: Some(true)
+                use_local_mirror: Some(true),
+                storage_type: Some(fidl::RepositoryStorageType::Ephemeral),
+            }
+        );
+    }
+
+    #[test]
+    fn test_repository_config_from_fidl_without_storage_type() {
+        let as_fidl = fidl::RepositoryConfig {
+            repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
+            root_version: Some(1),
+            root_threshold: Some(1),
+            root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
+            mirrors: Some(vec![fidl::MirrorConfig {
+                mirror_url: Some("http://example.com/tuf/repo/".into()),
+                subscribe: Some(true),
+                blob_mirror_url: None,
+            }]),
+            update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            use_local_mirror: None,
+            storage_type: None,
+        };
+        assert_matches!(
+            RepositoryConfig::try_from(as_fidl),
+            Ok(repository_config) if repository_config == RepositoryConfig {
+                repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
+                root_version: 1,
+                root_threshold: 1,
+                root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3]),],
+                mirrors: vec![MirrorConfig {
+                    mirror_url: "http://example.com/tuf/repo/".parse::<Uri>().unwrap(),
+                    subscribe: true,
+                    blob_mirror_url: "http://example.com/tuf/repo/blobs".parse::<Uri>().unwrap(),
+                },],
+                update_package_url: Some(
+                    "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
+                ),
+                use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
             }
         );
     }
@@ -971,6 +1051,7 @@ mod tests {
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: None,
+            storage_type: None,
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -988,6 +1069,7 @@ mod tests {
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
                 use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
             }
         );
     }
@@ -1006,6 +1088,7 @@ mod tests {
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: Some(true),
+            storage_type: None,
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -1023,6 +1106,7 @@ mod tests {
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
                 use_local_mirror: true,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
             }
         );
     }
@@ -1037,6 +1121,7 @@ mod tests {
             mirrors: Some(vec![]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: None,
+            storage_type: None,
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -1058,6 +1143,7 @@ mod tests {
             }],
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: true,
+            repo_storage_type: RepositoryStorageType::Ephemeral,
         };
         let as_fidl: fidl::RepositoryConfig = config.clone().into();
         assert_eq!(RepositoryConfig::try_from(as_fidl).unwrap(), config);
@@ -1084,6 +1170,7 @@ mod tests {
                 mirrors: vec![],
                 update_package_url: None,
                 use_local_mirror: false,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
             },
         );
     }
@@ -1099,6 +1186,7 @@ mod tests {
                 mirrors: vec![],
                 update_package_url: None,
                 use_local_mirror: true,
+                repo_storage_type: RepositoryStorageType::Ephemeral,
             }]),
             json!({
                 "version": "1",
@@ -1110,6 +1198,7 @@ mod tests {
                     "mirrors": [],
                     "update_package_url": null,
                     "use_local_mirror": true,
+                    "repo_storage_type": "ephemeral",
                 }],
             }),
         );

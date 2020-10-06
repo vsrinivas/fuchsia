@@ -104,6 +104,10 @@ table RepositoryConfig {
     /// Whether the package resolver should check attached storage for blobs and
     /// repository metadata.
     7: bool use_local_mirror;
+
+    /// Controls how repository metadata is persisted across reboots. Default
+    /// value is EPHEMERAL.
+    8: RepositoryStorageType storage_type;
 };
 
 /// The keys used by the repository to authenticate its packages.
@@ -112,6 +116,13 @@ table RepositoryConfig {
 flexible union RepositoryKeyConfig {
     /// The raw ed25519 public key as binary data.
     1: bytes ed25519_key;
+};
+
+/// Where the repository storage is written to.
+enum RepositoryStorageType {
+    /// Ephemeral, or in-memory storage. This repository metadata will be lost
+    /// when the process or device is restarted. The default type.
+    EPHEMERAL = 1;
 };
 
 /// The configuration necessary to connect to a mirror.

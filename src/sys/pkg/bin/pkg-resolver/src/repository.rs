@@ -27,7 +27,10 @@ use {
         error::Error as TufError,
         interchange::Json,
         metadata::{MetadataVersion, TargetPath},
-        repository::{EphemeralRepository, HttpRepositoryBuilder, RepositoryProvider},
+        repository::{
+            EphemeralRepository, HttpRepositoryBuilder, RepositoryProvider,
+            RepositoryStorageProvider,
+        },
     },
 };
 
@@ -59,8 +62,7 @@ struct LogContext {
 
 pub struct Repository {
     log_ctx: LogContext,
-    updating_client:
-        Arc<AsyncMutex<updating_tuf_client::UpdatingTufClient<EphemeralRepository<Json>>>>,
+    updating_client: Arc<AsyncMutex<updating_tuf_client::UpdatingTufClient>>,
     inspect: RepositoryInspectState,
 }
 
@@ -82,7 +84,8 @@ impl Repository {
         node: inspect::Node,
         local_mirror: Option<LocalMirrorProxy>,
     ) -> Result<Self, anyhow::Error> {
-        let local = EphemeralRepository::<Json>::new();
+        let local = EphemeralRepository::new();
+        let local: Box<dyn RepositoryStorageProvider<_> + Send> = Box::new(local);
 
         if config.use_local_mirror() && !config.mirrors().is_empty() {
             return Err(format_err!("Cannot have a local mirror and remote mirrors!"));

@@ -24,17 +24,14 @@ use {
         error::Error as TufError,
         interchange::Json,
         metadata::{TargetDescription, TargetPath},
-        repository::{RepositoryProvider, RepositoryStorage},
+        repository::{RepositoryProvider, RepositoryStorageProvider},
     },
 };
 
-pub struct UpdatingTufClient<L>
-where
-    L: RepositoryStorage<Json> + RepositoryProvider<Json>,
-{
+pub struct UpdatingTufClient {
     client: tuf::client::Client<
         Json,
-        L,
+        Box<dyn RepositoryStorageProvider<Json> + Send>,
         Box<dyn RepositoryProvider<Json> + Send>,
         tuf::client::DefaultTranslator,
     >,
@@ -112,14 +109,11 @@ pub struct RepoVersions {
     targets: Option<u32>,
 }
 
-impl<L> UpdatingTufClient<L>
-where
-    L: RepositoryStorage<Json> + RepositoryProvider<Json> + 'static,
-{
+impl UpdatingTufClient {
     pub fn from_tuf_client_and_mirror_config(
         client: tuf::client::Client<
             Json,
-            L,
+            Box<dyn RepositoryStorageProvider<Json> + Send>,
             Box<dyn RepositoryProvider<Json> + Send>,
             tuf::client::DefaultTranslator,
         >,
@@ -269,11 +263,8 @@ where
 
 pub const SUBSCRIBE_CACHE_STALE_TIMEOUT: zx::Duration = zx::Duration::from_minutes(5);
 
-struct AutoClient<L>
-where
-    L: RepositoryStorage<Json> + RepositoryProvider<Json>,
-{
-    updating_client: Weak<AsyncMutex<UpdatingTufClient<L>>>,
+struct AutoClient {
+    updating_client: Weak<AsyncMutex<UpdatingTufClient>>,
     auto_url: String,
     inspect: AutoClientInspectState,
 }
@@ -291,12 +282,9 @@ const AUTO_CLIENT_SSE_RECONNECT_DELAY: zx::Duration = zx::Duration::from_minutes
 #[cfg(test)]
 const AUTO_CLIENT_SSE_RECONNECT_DELAY: zx::Duration = zx::Duration::from_minutes(0);
 
-impl<L> AutoClient<L>
-where
-    L: RepositoryStorage<Json> + RepositoryProvider<Json> + 'static,
-{
+impl AutoClient {
     fn from_updating_client_and_auto_url(
-        updating_client: Weak<AsyncMutex<UpdatingTufClient<L>>>,
+        updating_client: Weak<AsyncMutex<UpdatingTufClient>>,
         auto_url: String,
         node: inspect::Node,
     ) -> Self {
@@ -408,10 +396,7 @@ where
     }
 }
 
-impl<L> Drop for AutoClient<L>
-where
-    L: RepositoryStorage<Json> + RepositoryProvider<Json>,
-{
+impl Drop for AutoClient {
     fn drop(&mut self) {
         fx_log_info!("AutoClient for {:?} stopping.", self.auto_url);
     }
