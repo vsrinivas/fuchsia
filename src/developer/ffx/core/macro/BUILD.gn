@@ -19,7 +19,7 @@ if (is_host) {
     sources = [ "src/lib.rs" ]
   }
 
-  #Implementation needs to be seperate for unit tests.
+  # Implementation needs to be seperate for unit tests.
   rustc_library("ffx_core_impl") {
     version = "0.1.0"
     edition = "2018"
@@ -27,6 +27,7 @@ if (is_host) {
 
     source_root = "src/impl.rs"
     deps = [
+      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
       "//src/diagnostics/lib/selectors",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:proc-macro2",

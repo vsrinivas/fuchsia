@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_diagnostics::{ComponentSelector, Selector, StringSelector, TreeSelector},
     proc_macro2::{Punct, Span, TokenStream},
     quote::quote,
     std::collections::HashMap,
@@ -326,6 +327,85 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     })
 }
 
+fn cmp_string_selector(selector: &StringSelector, expected: &str) -> bool {
+    match selector {
+        StringSelector::ExactMatch(s) => s == expected,
+        StringSelector::StringPattern(s) => s == expected,
+        _ => false,
+    }
+}
+
+fn is_v1_moniker(span: Span, selector: ComponentSelector) -> Result<bool, Error> {
+    let segments = selector
+        .moniker_segments
+        .as_ref()
+        .ok_or(Error::new(span, format!("Got an invalid component selector. {:?}", selector)))?;
+    return Ok(segments.len() == 2
+        && cmp_string_selector(segments.get(0).unwrap(), "core")
+        && cmp_string_selector(segments.get(1).unwrap(), "appmgr"));
+}
+
+fn is_expose_dir(span: Span, selector: TreeSelector) -> Result<bool, Error> {
+    match selector {
+        TreeSelector::SubtreeSelector(ref subtree) => {
+            if subtree.node_path.is_empty() {
+                return Err(Error::new(
+                    span,
+                    format!("Got an invalid tree selector. {:?}", selector),
+                ));
+            }
+            Ok(cmp_string_selector(subtree.node_path.get(0).unwrap(), "expose"))
+        }
+        TreeSelector::PropertySelector(ref selector) => {
+            if selector.node_path.is_empty() {
+                return Err(Error::new(
+                    span,
+                    format!("Got an invalid tree selector. {:?}", selector),
+                ));
+            }
+            Ok(cmp_string_selector(selector.node_path.get(0).unwrap(), "expose"))
+        }
+        _ => Err(Error::new(span, "Compiled with an unexpected TreeSelector variant.")),
+    }
+}
+
+fn has_wildcard(span: Span, selector: &StringSelector) -> Result<bool, Error> {
+    match selector {
+        StringSelector::ExactMatch(_) => Ok(false),
+        StringSelector::StringPattern(s) => Ok(s.contains("*")),
+        _ => Err(Error::new(span, "Compiled with an unexpected StringSelector variant.")),
+    }
+}
+
+fn any_wildcards(span: Span, selectors: &Vec<StringSelector>) -> Result<bool, Error> {
+    for selector in selectors.iter() {
+        if has_wildcard(span, selector)? {
+            return Ok(true);
+        }
+    }
+    return Ok(false);
+}
+
+fn has_wildcards(span: Span, selector: &Selector) -> Result<bool, Error> {
+    let moniker = selector.component_selector.as_ref().unwrap();
+    if any_wildcards(span, moniker.moniker_segments.as_ref().unwrap())? {
+        return Ok(true);
+    }
+
+    let tree_selector = selector.tree_selector.as_ref().unwrap();
+    match tree_selector {
+        TreeSelector::SubtreeSelector(subtree) => Ok(any_wildcards(span, &subtree.node_path)?),
+        TreeSelector::PropertySelector(selector) => {
+            if any_wildcards(span, &selector.node_path)? {
+                Ok(true)
+            } else {
+                has_wildcard(span, &selector.target_properties)
+            }
+        }
+        _ => Err(Error::new(span, "Compiled with an unexpected TreeSelector variant.")),
+    }
+}
+
 #[derive(Debug)]
 pub struct ProxyMap {
     experiment_key: Option<String>,
@@ -352,9 +432,24 @@ impl Parse for ProxyMap {
                             // Parse the trailing comma
                             let _: Punct = input.parse()?;
                         }
-                        let _ = selectors::parse_selector(&selection.value()).map_err(|e| {
-                            Error::new(selection.span(), format!("Invalid selection string: {}", e))
-                        })?;
+                        let parsed_selector = selectors::parse_selector(&selection.value())
+                            .map_err(|e| {
+                                Error::new(
+                                    selection.span(),
+                                    format!("Invalid component selector string: {}", e),
+                                )
+                            })?;
+
+                        if has_wildcards(selection.span(), &parsed_selector)? {
+                            return Err(Error::new(selection.span(), format!("Component selectors in plugin definitions cannot use wildcards ('*').")));
+                        }
+                        let moniker = parsed_selector.component_selector.unwrap();
+                        let subdir = parsed_selector.tree_selector.unwrap();
+                        if !is_v1_moniker(selection.span(), moniker)?
+                            && !is_expose_dir(selection.span(), subdir)?
+                        {
+                            return Err(Error::new(selection.span(), format!("Selectors for V2 in plugin definitions must use `expose`, not `out`. See fxbug.dev/60910.")));
+                        }
                         map.insert(qualified_name(&path), selection.value());
                     }
                 }
@@ -400,6 +495,8 @@ mod test {
             parse2, parse_quote, ItemType,
         },
     };
+
+    const V1_SELECTOR: &str = "core/appmgr";
 
     struct WrappedCommand {
         original: ItemStruct,
@@ -1210,19 +1307,32 @@ mod test {
     }
 
     #[test]
-    fn test_empty_proxy_map_should_not_err() -> Result<(), Error> {
+    fn test_empty_proxy_map_should_not_err() {
         let _proxy_map: ProxyMap = parse_quote! {};
-        Ok(())
     }
 
     #[test]
-    fn test_simple_proxy_map_should_not_err() -> Result<(), Error> {
-        let _proxy_map: ProxyMap = parse_quote! {test = "test:test"};
-        Ok(())
+    fn test_v2_proxy_map_succeeds() {
+        let _proxy_map: ProxyMap = parse_quote! {test = "test:expose"};
+    }
+
+    #[test]
+    fn test_v2_proxy_map_expose_with_service_succeeds() {
+        let _proxy_map: ProxyMap = parse_quote! {test = "test:expose:anything"};
+    }
+
+    #[test]
+    fn test_v1_proxy_map_using_out_succeeds() {
+        let _proxy_map: ProxyMap = parse_quote! {test = "core/appmgr:out"};
+    }
+
+    #[test]
+    fn test_v1_proxy_map_using_out_and_service_succeeds() {
+        let _proxy_map: ProxyMap = parse_quote! {test = "core/appmgr:out:anything"};
     }
 
     fn proxy_map_test_value(test: String) -> (String, String, TokenStream) {
-        let test_value = format!("{}:{}", test, test);
+        let test_value = format!("{}:{}", V1_SELECTOR, test);
         let test_ident = Ident::new(&test, Span::call_site());
         let mapping_lit = LitStr::new(&test_value, Span::call_site());
         (test.to_string(), test_value.clone(), quote! {#test_ident = #mapping_lit})
@@ -1268,21 +1378,35 @@ mod test {
     }
 
     #[test]
-    fn test_invalid_selection_should_err() -> Result<(), Error> {
+    fn test_invalid_selection_should_err() {
         let result: Result<ProxyMap, Error> = parse2(quote! {
             test = "test"
         });
         assert!(result.is_err());
-        Ok(())
     }
 
     #[test]
-    fn test_invalid_mapping_should_err() -> Result<(), Error> {
+    fn test_v2_proxy_map_using_out_fails() {
+        let result: Result<ProxyMap, Error> = parse2(quote! {
+            test = "test:out"
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_v2_proxy_map_not_using_expose_and_service_fails() {
+        let result: Result<ProxyMap, Error> = parse2(quote! {
+            test = "test:anything:anything"
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_mapping_should_err() {
         let result: Result<ProxyMap, Error> = parse2(quote! {
             test, "test"
         });
         assert!(result.is_err());
-        Ok(())
     }
 
     #[test]
