@@ -751,7 +751,7 @@ zx_status_t Controller::AddDisplay(std::unique_ptr<DisplayDevice>&& display) {
 
   if (ac.check()) {
     display_devices_.push_back(std::move(display), &ac);
-    assert(ac.check());
+    ZX_ASSERT(ac.check());
 
     std::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
     LOG_INFO("Display %ld connected\n", new_device->id());
