@@ -15,10 +15,16 @@ group("tests") {
 
 source_set("lib") {
   sources = [ "record.h" ]
+
+  public_deps = [ "//zircon/public/lib/async" ]
 }
 
 source_set("llcpp") {
   sources = [
+    "logger.cc",
+    "logger.h",
+    "namespace.cc",
+    "namespace.h",
     "start_args.cc",
     "start_args.h",
   ]
@@ -27,17 +33,30 @@ source_set("llcpp") {
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+    "//sdk/lib/fdio",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/syslog",
   ]
 }
 
 executable("llcpp_test") {
   testonly = true
-  sources = [ "start_args_test.cc" ]
+  sources = [
+    "logger_test.cc",
+    "namespace_test.cc",
+    "start_args_test.cc",
+    "test_base.h",
+  ]
 
   deps = [
     ":llcpp",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/fidl/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
