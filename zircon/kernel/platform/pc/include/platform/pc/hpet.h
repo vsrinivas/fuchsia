@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_HPET_H_
 #define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_HPET_H_
 
-#include <lib/acpi_tables.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

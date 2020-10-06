@@ -28,6 +28,7 @@ zx_library("pc") {
     ":tests",
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pcie",
+    "$zx/kernel/lib/acpi_lite",
     "$zx/kernel/lib/acpi_tables",
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/cbuf",
@@ -48,15 +49,11 @@ zx_library("pc") {
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/smbios",
     "$zx/system/ulib/zbi",
-    "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/cksum",
   ]
   public_deps = [
     # <platform/pc/smbios.h> has #include <lib/smbios/smbios.h>.
     "$zx/system/ulib/smbios:headers",
-
-    # <platform/pc/acpi.h> has #include <acpica/acpi.h>.
-    "$zx/third_party/lib/acpica:headers",
   ]
 
   if (toolchain.environment == "kernel") {

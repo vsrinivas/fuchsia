@@ -25,6 +25,7 @@
 #include <dev/pcie_bus_driver.h>
 #endif
 #include <err.h>
+#include <lib/acpi_lite.h>
 #include <lib/acpi_tables.h>
 #include <lib/cksum.h>
 #include <lib/cmdline.h>
@@ -698,6 +699,9 @@ void platform_early_init(void) {
 
   /* if the bootloader has framebuffer info, use it for early console */
   platform_early_display_init();
+
+  /* initialize the ACPI parser */
+  acpi_lite_init(bootloader.acpi_rsdp);
 
   /* initialize the boot memory reservation system */
   boot_reserve_init();

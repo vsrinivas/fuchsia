@@ -4,14 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/acpi_lite.h>
 #include <lib/acpi_tables.h>
 
 namespace acpi_test_data {
 
 struct FakeTable {
   char sig[5];
-  uint32_t instance = 0xFFFFFF;
-  ACPI_TABLE_HEADER* header = nullptr;
+  acpi_sdt_header* header = nullptr;
 };
 
 class FakeTableProvider : public AcpiTableProvider {
@@ -19,16 +19,15 @@ class FakeTableProvider : public AcpiTableProvider {
   FakeTableProvider(const FakeTable* tables, uint32_t table_count)
       : tables_(tables), table_count_(table_count) {}
 
-  ACPI_STATUS GetTable(char* signature, uint32_t instance,
-                       ACPI_TABLE_HEADER** header) const override {
+  zx_status_t GetTable(char* signature, char** header) const override {
     for (uint32_t i = 0; i < table_count_; i++) {
       const FakeTable& table = tables_[i];
-      if (strcmp(signature, table.sig) == 0 && instance == table.instance) {
-        *header = table.header;
-        return AE_OK;
+      if (strcmp(signature, table.sig) == 0) {
+        *header = (char*)table.header;
+        return ZX_OK;
       }
     }
-    return AE_NOT_FOUND;
+    return ZX_ERR_NOT_FOUND;
   }
 
  private:
@@ -55,14 +54,12 @@ const uint8_t kEveHpetTableData[]{
 };
 const FakeTable kEveTables[]{
     {
-        .sig = ACPI_SIG_MADT,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)kEveMadtTableData,
+        .sig = ACPI_MADT_SIG,
+        .header = (acpi_sdt_header*)kEveMadtTableData,
     },
     {
-        .sig = ACPI_SIG_HPET,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)kEveHpetTableData,
+        .sig = ACPI_HPET_SIG,
+        .header = (acpi_sdt_header*)kEveHpetTableData,
     },
 };
 
@@ -526,14 +523,12 @@ const uint8_t kZ840SratTableData[]{
 
 const FakeTable kZ840Tables[]{
     {
-        .sig = ACPI_SIG_MADT,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)kZ840MadtTableData,
+        .sig = ACPI_MADT_SIG,
+        .header = (acpi_sdt_header*)kZ840MadtTableData,
     },
     {
-        .sig = ACPI_SIG_SRAT,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)kZ840SratTableData,
+        .sig = ACPI_SRAT_SIG,
+        .header = (acpi_sdt_header*)kZ840SratTableData,
     },
 
 };
@@ -680,14 +675,12 @@ const uint8_t k2970wxSratTableData[]{
 
 const FakeTable k2970wxTables[]{
     {
-        .sig = ACPI_SIG_MADT,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)k2970wxMadtTableData,
+        .sig = ACPI_MADT_SIG,
+        .header = (acpi_sdt_header*)k2970wxMadtTableData,
     },
     {
-        .sig = ACPI_SIG_SRAT,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)k2970wxSratTableData,
+        .sig = ACPI_SRAT_SIG,
+        .header = (acpi_sdt_header*)k2970wxSratTableData,
     },
 
 };
@@ -704,9 +697,8 @@ const uint8_t kDbg2TestData[]{
 
 const FakeTable kDbg2Table[]{
     {
-        .sig = ACPI_SIG_DBG2,
-        .instance = 1,
-        .header = (ACPI_TABLE_HEADER*)kDbg2TestData,
+        .sig = ACPI_DBG2_SIG,
+        .header = (acpi_sdt_header*)kDbg2TestData,
     },
 };
 
