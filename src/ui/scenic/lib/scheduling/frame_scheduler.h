@@ -101,11 +101,12 @@ class FrameScheduler {
   virtual void SetRenderContinuously(bool render_continuously) = 0;
 
   // Registers per-present information with the frame scheduler and returns an incrementing
-  // PresentId unique to that session. The |present_id| argument should only be set when
-  // transferring sessions between frame schedulers.
+  // PresentId unique to that session. When not equal to scheduling::kInvalidPresentId, the
+  // |present_id| argument will be used in place of a new PresentId, allowing feed-forward
+  // semantics for clients that need them.
   virtual PresentId RegisterPresent(
       SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
-      std::vector<zx::event> release_fences, PresentId present_id = 0) = 0;
+      std::vector<zx::event> release_fences, PresentId present_id = kInvalidPresentId) = 0;
 
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.

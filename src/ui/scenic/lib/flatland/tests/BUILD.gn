@@ -12,6 +12,7 @@ executable("unittests") {
   output_name = "flatland_unittests"
   testonly = true
   sources = [
+    "default_flatland_presenter_unittest.cc",
     "flatland_manager_unittest.cc",
     "flatland_unittest.cc",
     "global_matrix_data_unittest.cc",
@@ -31,6 +32,7 @@ executable("unittests") {
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gmock",
   ]
 }

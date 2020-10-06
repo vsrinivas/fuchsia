@@ -92,7 +92,7 @@ void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
 PresentId DefaultFrameScheduler::RegisterPresent(
     SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
     std::vector<zx::event> release_fences, PresentId present_id) {
-  present_id = present_id == 0 ? scheduling::GetNextPresentId() : present_id;
+  present_id = present_id == kInvalidPresentId ? scheduling::GetNextPresentId() : present_id;
 
   SchedulingIdPair id_pair{session_id, present_id};
   presents_[id_pair] = std::nullopt;  // Initialize an empty entry in |presents_|.

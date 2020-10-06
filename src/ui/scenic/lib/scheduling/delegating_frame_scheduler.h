@@ -43,8 +43,7 @@ class DelegatingFrameScheduler : public FrameScheduler {
 
   // |FrameScheduler|
   // Calls RegisterPresent() immediately if a FrameScheduler has been set, otherwise defers the call
-  // until one has been set. Returns a PresentId unique to the session. |present_id| should only be
-  // set when transferring sessions between frame schedulers.
+  // until one has been set. Returns a PresentId unique to the session.
   PresentId RegisterPresent(SessionId session_id,
                             std::variant<OnPresentedCallback, Present2Info> present_information,
                             std::vector<zx::event> release_fences,

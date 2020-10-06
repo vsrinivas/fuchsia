@@ -40,10 +40,7 @@ void DelegatingFrameScheduler::SetRenderContinuously(bool render_continuously) {
 PresentId DelegatingFrameScheduler::RegisterPresent(
     SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
     std::vector<zx::event> release_fences, PresentId present_id) {
-  // Assuming we never have several levels of delegating frame schedulers |present_id| should never
-  // be set.
-  FX_CHECK(present_id == kInvalidPresentId);
-  present_id = scheduling::GetNextPresentId();
+  present_id = present_id == kInvalidPresentId ? scheduling::GetNextPresentId() : present_id;
   CallWhenFrameSchedulerAvailable([session_id, present_information = std::move(present_information),
                                    release_fences = std::move(release_fences),
                                    present_id](FrameScheduler* frame_scheduler) mutable {

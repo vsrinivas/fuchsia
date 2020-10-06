@@ -50,7 +50,7 @@ class DefaultFrameScheduler final : public FrameScheduler {
   PresentId RegisterPresent(SessionId session_id,
                             std::variant<OnPresentedCallback, Present2Info> present_information,
                             std::vector<zx::event> release_fences,
-                            PresentId present_id = 0) override;
+                            PresentId present_id = kInvalidPresentId) override;
 
   // |FrameScheduler|
   //
@@ -164,9 +164,9 @@ class DefaultFrameScheduler final : public FrameScheduler {
   // presentation time for each present.
   std::map<SchedulingIdPair, zx::time> pending_present_requests_;
 
-  // TODO(fxbug.dev/47308): A lot of logic is temporarily duplicated while clients are being converted over.
-  // When both session and and image pipes have been converted to handling their own callbacks,
-  // delete unnecessary tracking state.
+  // TODO(fxbug.dev/47308): A lot of logic is temporarily duplicated while clients are being
+  // converted over. When both session and and image pipes have been converted to handling their own
+  // callbacks, delete unnecessary tracking state.
   struct FrameUpdate {
     uint64_t frame_number;
     std::unordered_map<SessionId, PresentId> updated_sessions;
