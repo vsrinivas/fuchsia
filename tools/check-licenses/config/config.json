@@ -14,13 +14,20 @@
     "cipd.gni",
     "code_coverage.pb.go",
     "goldens.txt",
-    "all_selectors.txt"
+    "all_selectors.txt",
+    "LICENSE-APACHE.old",
+    "LICENSE-MIT.old"
   ],
   "skipDirs": [
     ".git",
     "out",
     ".cipd",
     "testdata",
+    "test",
+    "tests",
+    "testing",
+    "test-apps",
+    "examples",
     "prebuilt/third_party/sysroot/linux",
     "prebuilt/third_party/gcc",
     "tools/check-licenses/golden",
@@ -86,7 +93,11 @@
     "notice",
     "copying",
     "copyright",
-    "ofl"
+    "ofl",
+    "license-apache",
+    "license-mit",
+    "LICENCE.iwlwifi_firmware",
+    "about_os_credits.html"
   ],
   "customProjectLicenses" : [
     {

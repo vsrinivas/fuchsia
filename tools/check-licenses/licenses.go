@@ -77,12 +77,16 @@ func (licenses *Licenses) Init(root string, prohibitedLicenseTypes []string) err
 		if err != nil {
 			return err
 		}
-		str := string(bytes)
-		// Update regex to ignore multiple white spaces, newlines, comments.
-		updatedRegex := strings.ReplaceAll(str, "\n", `[\s\\#\*\/]*`)
-		updatedRegex = strings.ReplaceAll(updatedRegex, " ", `[\s\\#\*\/]*`)
+		regex := string(bytes)
+		// Skip updating white spaces, newlines, etc for files that end
+		// in full.lic since they are larger.
+		if !strings.HasSuffix(info.Name(), "full.lic") {
+			// Update regex to ignore multiple white spaces, newlines, comments.
+			regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
+			regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
+		}
 		licenses.add(&License{
-			pattern:   regexp.MustCompile(updatedRegex),
+			pattern:   regexp.MustCompile(regex),
 			category:  info.Name(),
 			validType: licenses.isLicenseAValidType(prohibitedLicenseTypes, info.Name()),
 		})

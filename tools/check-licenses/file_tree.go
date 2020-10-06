@@ -159,7 +159,7 @@ func isValidExtension(path string, config *Config) bool {
 	return found
 }
 
-func readFromFile(path string, max_read_size int) ([]byte, error) {
+func readFromFile(path string, max_read_size int64) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err

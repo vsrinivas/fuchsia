@@ -6,6 +6,7 @@ package checklicenses
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -57,9 +58,16 @@ func Walk(config *Config) error {
 }
 
 func processSingleLicenseFile(base string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) error {
-	// TODO(solomonkinard) larger limit for single license files?
 	path := strings.TrimSpace(file_tree.getPath() + base)
-	data, err := readFromFile(path, config.MaxReadSize)
+
+	// For singe license files, we increase the max read size
+	// to be the size of the file.
+	max_read_size := config.MaxReadSize
+	file_stats, err := os.Stat(path)
+	if err == nil {
+		max_read_size = file_stats.Size()
+	}
+	data, err := readFromFile(path, max_read_size)
 	if err != nil {
 		return err
 	}

@@ -24,7 +24,7 @@ type Config struct {
 	TextExtensionList            []string               `json:"textExtensionList"`
 	ExitOnProhibitedLicenseTypes bool                   `json:"exitOnProhibitedLicenseTypes"`
 	ExitOnUnlicensedFiles        bool                   `json:"exitOnUnlicensedFiles"`
-	MaxReadSize                  int                    `json:"maxReadSize"`
+	MaxReadSize                  int64                  `json:"maxReadSize"`
 	SeparatorWidth               int                    `json:"separatorWidth"`
 	OutputFilePrefix             string                 `json:"outputFilePrefix"`
 	OutputFileExtension          string                 `json:"outputFileExtension"`

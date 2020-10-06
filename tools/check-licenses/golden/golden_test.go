@@ -45,9 +45,15 @@ func TestPatternsMatchExamples(t *testing.T) {
 		if err != nil {
 			t.Errorf("%v, got %v", t.Name(), err)
 		}
-		updatedRegex := strings.ReplaceAll(string(pattern), "\n", `[\s\\#\*\/]*`)
-		updatedRegex = strings.ReplaceAll(updatedRegex, " ", `[\s\\#\*\/]*`)
-		if !regexp.MustCompile(updatedRegex).Match(example) {
+		regex := string(pattern)
+		// Skip updating white spaces, newlines, etc. for files that end
+		// in full.lic since they are larger.
+		if !strings.HasSuffix(pattern_file.Name(), "full.lic") {
+			// Update regex to ignore multiple white spaces, newlines, comments.
+			regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
+			regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
+		}
+		if !regexp.MustCompile(regex).Match(example) {
 			t.Errorf("%v, %v pattern doesn't match example", t.Name(), pattern_file.Name())
 		}
 	}
