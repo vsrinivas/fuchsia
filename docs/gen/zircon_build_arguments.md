@@ -113,13 +113,6 @@ From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:13
 
 From //kernel/params.gni:51
 
-### enable_acpi_debug
-Enable debug output in the ACPI library (used by the ACPI bus driver).
-
-**Current value (from the default):** `false`
-
-From //third_party/lib/acpica/BUILD.zircon.gn:11
-
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
 
