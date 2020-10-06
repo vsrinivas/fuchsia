@@ -317,7 +317,7 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
     return zx::error(status);
   }
   auto path = fbl::StringPrintf("svc/%s", fdf::DriverHost::Name);
-  status = fdio_service_connect_at(create.value().get(), path.data(), server_end.release());
+  status = fdio_service_connect_at(create->get(), path.data(), server_end.release());
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to connect to service '%s': %s", path.data(), zx_status_get_string(status));
     return zx::error(status);

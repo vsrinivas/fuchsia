@@ -635,8 +635,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   ASSERT_EQ(ZX_OK, second_driver_controller.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
                                                      &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
-  ASSERT_EQ(ZX_OK,
-            root_driver.value().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
+  ASSERT_EQ(ZX_OK, root_driver->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
 
   Unbind();
