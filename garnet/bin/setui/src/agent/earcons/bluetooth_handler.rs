@@ -8,16 +8,22 @@ use crate::agent::earcons::sound_ids::{
 };
 use crate::agent::earcons::utils::connect_to_sound_player;
 use crate::agent::earcons::utils::play_sound;
+use crate::call;
 use crate::internal::event::Publisher;
-use anyhow::Context;
-use fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy, Peer, TechnologyType};
+
+use anyhow::{format_err, Context, Error};
+use fidl::encoding::Decodable;
+use fidl::endpoints::create_request_stream;
+use fidl_fuchsia_media_sessions2::{
+    DiscoveryMarker, SessionsWatcherRequest, SessionsWatcherRequestStream, WatchOptions,
+};
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
-use futures::lock::Mutex;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use futures::stream::TryStreamExt;
 use std::collections::HashSet;
-use std::iter::FromIterator;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+
+/// Type for uniquely identifying bluetooth media sessions.
+type SessionId = u64;
 
 /// The file path for the earcon to be played for bluetooth connecting.
 const BLUETOOTH_CONNECTED_FILE_PATH: &str = "bluetooth-connected.wav";
@@ -25,25 +31,147 @@ const BLUETOOTH_CONNECTED_FILE_PATH: &str = "bluetooth-connected.wav";
 /// The file path for the earcon to be played for bluetooth disconnecting.
 const BLUETOOTH_DISCONNECTED_FILE_PATH: &str = "bluetooth-disconnected.wav";
 
+pub const BLUETOOTH_DOMAIN: &str = "Bluetooth";
+
 /// The `BluetoothHandler` takes care of the earcons functionality on bluetooth connection
 /// and disconnection.
 #[derive(Debug)]
-struct BluetoothHandler {
+pub struct BluetoothHandler {
     // Parameters common to all earcons handlers.
     common_earcons_params: CommonEarconsParams,
-    connected_peers: Vec<Peer>,
+    // The publisher to use for connecting to services.
+    publisher: Publisher,
+    // The ids of the media sessions that are currently active.
+    active_sessions: HashSet<SessionId>,
 }
 
-/// Differentiates type of bluetooth earcons sound.
+/// The type of bluetooth earcons sound.
 enum BluetoothSoundType {
     CONNECTED,
     DISCONNECTED,
 }
 
+impl BluetoothHandler {
+    pub async fn create(publisher: Publisher, params: CommonEarconsParams) -> Result<(), Error> {
+        let mut handler = Self {
+            common_earcons_params: params,
+            publisher,
+            active_sessions: HashSet::<SessionId>::new(),
+        };
+        handler.watch_bluetooth_connections().await
+    }
+
+    /// Watch for media session changes. The media sessions that have the
+    /// Bluetooth mode in their metadata signify a bluetooth connection.
+    /// The id of a disconnected device will be received on removal.
+    pub async fn watch_bluetooth_connections(&mut self) -> Result<(), Error> {
+        // Connect to media session Discovery service.
+        let discovery_connection_result = self
+            .common_earcons_params
+            .service_context
+            .lock()
+            .await
+            .connect_with_publisher::<DiscoveryMarker>(self.publisher.clone())
+            .await
+            .context("Connecting to fuchsia.media.sessions2.Discovery");
+
+        let discovery_proxy = discovery_connection_result.map_err(|e| {
+            format_err!("Failed to connect to fuchsia.media.sessions2.Discovery: {:?}", e)
+        })?;
+
+        // Create and handle the request stream of media sessions.
+        let (watcher_client, watcher_requests) = create_request_stream()
+            .map_err(|e| format_err!("Error creating watcher request stream: {:?}", e))?;
+
+        call!(discovery_proxy =>
+            watch_sessions(WatchOptions::new_empty(), watcher_client))
+        .map_err(|e| format_err!("Unable to start discovery of MediaSessions: {:?}", e))?;
+
+        self.handle_bluetooth_connections(watcher_requests);
+        Ok(())
+    }
+
+    /// Handles the stream of media session updates, and possibly plays earcons
+    /// sounds based on what type of update is received.
+    fn handle_bluetooth_connections(&mut self, mut watcher_requests: SessionsWatcherRequestStream) {
+        let mut active_sessions_clone = self.active_sessions.clone();
+        let publisher = self.publisher.clone();
+        let common_earcons_params = self.common_earcons_params.clone();
+
+        fasync::Task::spawn(async move {
+            while let Ok(Some(req)) = watcher_requests.try_next().await {
+                match req {
+                    SessionsWatcherRequest::SessionUpdated {
+                        session_id: id,
+                        session_info_delta: delta,
+                        responder,
+                    } => {
+                        if let Err(e) = responder.send() {
+                            fx_log_err!("Failed to acknowledge delta from SessionWatcher: {:?}", e);
+                            return;
+                        }
+
+                        if active_sessions_clone.contains(&id)
+                            || !matches!(delta.domain, Some(name) if name == BLUETOOTH_DOMAIN)
+                        {
+                            continue;
+                        }
+                        active_sessions_clone.insert(id);
+
+                        let publisher = publisher.clone();
+                        let common_earcons_params = common_earcons_params.clone();
+                        fasync::Task::spawn(async move {
+                            play_bluetooth_sound(
+                                common_earcons_params,
+                                publisher,
+                                BluetoothSoundType::CONNECTED,
+                            )
+                            .await;
+                        })
+                        .detach();
+                    }
+                    SessionsWatcherRequest::SessionRemoved { session_id, responder } => {
+                        if let Err(e) = responder.send() {
+                            fx_log_err!(
+                                "Failed to acknowledge session removal from SessionWatcher: {:?}",
+                                e
+                            );
+                            return;
+                        }
+
+                        if !active_sessions_clone.contains(&session_id) {
+                            fx_log_warn!(
+                                "Tried to remove nonexistent media session id {:?}",
+                                session_id
+                            );
+                            continue;
+                        }
+                        active_sessions_clone.remove(&session_id);
+                        let publisher = publisher.clone();
+                        let common_earcons_params = common_earcons_params.clone();
+                        fasync::Task::spawn(async move {
+                            play_bluetooth_sound(
+                                common_earcons_params,
+                                publisher,
+                                BluetoothSoundType::DISCONNECTED,
+                            )
+                            .await;
+                        })
+                        .detach();
+                    }
+                }
+            }
+            // try_next failed, print error and exit.
+            fx_log_err!("Failed to serve Watcher service");
+        })
+        .detach();
+    }
+}
+
 /// Play a bluetooth earcons sound.
 async fn play_bluetooth_sound(
-    publisher: Publisher,
     common_earcons_params: CommonEarconsParams,
+    publisher: Publisher,
     sound_type: BluetoothSoundType,
 ) {
     // Connect to the SoundPlayer if not already connected.
@@ -60,135 +188,34 @@ async fn play_bluetooth_sound(
 
     if let Some(sound_player_proxy) = sound_player_connection_lock.as_ref() {
         match sound_type {
-            BluetoothSoundType::CONNECTED => play_sound(
-                &sound_player_proxy,
-                BLUETOOTH_CONNECTED_FILE_PATH,
-                BLUETOOTH_CONNECTED_SOUND_ID,
-                sound_player_added_files.clone(),
-            )
-            .await
-            .ok(),
-            BluetoothSoundType::DISCONNECTED => play_sound(
-                &sound_player_proxy,
-                BLUETOOTH_DISCONNECTED_FILE_PATH,
-                BLUETOOTH_DISCONNECTED_SOUND_ID,
-                sound_player_added_files.clone(),
-            )
-            .await
-            .ok(),
+            BluetoothSoundType::CONNECTED => {
+                if play_sound(
+                    &sound_player_proxy,
+                    BLUETOOTH_CONNECTED_FILE_PATH,
+                    BLUETOOTH_CONNECTED_SOUND_ID,
+                    sound_player_added_files.clone(),
+                )
+                .await
+                .is_err()
+                {
+                    fx_log_err!("[bluetooth_earcons_handler] failed to play bluetooth earcon connection sound");
+                }
+            }
+            BluetoothSoundType::DISCONNECTED => {
+                if play_sound(
+                    &sound_player_proxy,
+                    BLUETOOTH_DISCONNECTED_FILE_PATH,
+                    BLUETOOTH_DISCONNECTED_SOUND_ID,
+                    sound_player_added_files.clone(),
+                )
+                .await
+                .is_err()
+                {
+                    fx_log_err!("[bluetooth_earcons_handler] failed to play bluetooth earcon disconnection sound");
+                }
+            }
         };
     } else {
         fx_log_err!("[bluetooth_earcons_handler] failed to play bluetooth earcon sound: no sound player connection");
     }
-}
-
-/// Watch for peer changes on bluetoogh connection/disconnection.
-pub fn watch_bluetooth_connections(
-    publisher: Publisher,
-    common_earcons_params: CommonEarconsParams,
-    connection_active: Arc<AtomicBool>,
-) {
-    let handler = Arc::new(Mutex::new(BluetoothHandler {
-        common_earcons_params: common_earcons_params.clone(),
-        connected_peers: Vec::new(),
-    }));
-    fasync::Task::spawn(async move {
-        let access_proxy = match common_earcons_params
-            .service_context
-            .lock()
-            .await
-            .connect_with_publisher::<AccessMarker>(publisher.clone())
-            .await
-            .context("[bluetooth_earcons_handler] Connecting to fuchsia.bluetooth.sys.Access")
-        {
-            Ok(proxy) => proxy,
-            Err(e) => {
-                fx_log_err!("[bluetooth_earcons_handler] Failed to connect to fuchsia.bluetooth.sys.Access: {}", e);
-                return;
-            }
-        };
-        while connection_active.load(Ordering::SeqCst) {
-            match access_proxy.call_async(AccessProxy::watch_peers).await {
-                Ok((updated, removed)) => {
-                    let mut bluetooth_handler = handler.lock().await;
-                    if updated.len() > 0 {
-                        // TODO(fxbug.dev/50246): Add logging for updating bluetooth connections.
-                        // Figure out which peers are connected.
-                        let new_connected_peers: Vec<Peer> = updated
-                            .into_iter()
-                            .filter(|peer| peer.connected.unwrap_or(false))
-                            .collect();
-
-                        let bt_type_filter = |peer: &&Peer| {
-                            peer.technology == Some(TechnologyType::Classic)
-                                || peer.technology == Some(TechnologyType::DualMode)
-                        };
-
-                        // Create sets of the old and new connected peers.
-                        let new_connected_peer_ids: HashSet<u64> = HashSet::from_iter(
-                            new_connected_peers
-                                .iter()
-                                .filter(bt_type_filter)
-                                .map(|x| x.id.unwrap().value),
-                        );
-                        let old_connected_peer_ids: HashSet<u64> = HashSet::from_iter(
-                            bluetooth_handler
-                                .connected_peers
-                                .iter()
-                                .filter(bt_type_filter)
-                                .map(|x| x.id.unwrap().value),
-                        );
-
-                        // Figure out which ids are newly added or newly removed.
-                        let added_peer_ids = new_connected_peer_ids
-                            .difference(&old_connected_peer_ids)
-                            .collect::<Vec<&u64>>();
-                        let removed_peer_ids = old_connected_peer_ids
-                            .difference(&new_connected_peer_ids)
-                            .collect::<Vec<&u64>>();
-
-                        // Update the set of connected peers.
-                        bluetooth_handler.connected_peers = new_connected_peers;
-
-                        // Play the earcon sound.
-                        if added_peer_ids.len() > 0 {
-                            // TODO(fxbug.dev/50246): Add logging for connecting bluetooth peer.
-                            let common_earcons_params_clone =
-                                bluetooth_handler.common_earcons_params.clone();
-                            let publisher = publisher.clone();
-                            fasync::Task::spawn(async move {
-                                play_bluetooth_sound(
-                                    publisher,
-                                    common_earcons_params_clone,
-                                    BluetoothSoundType::CONNECTED,
-                                )
-                                .await;
-                            }).detach();
-                        }
-                        if removed_peer_ids.len() > 0 || removed.len() > 0 {
-                            // TODO(fxbug.dev/50246): Add logging for disconnecting bluetooth peer.
-                            let common_earcons_params_clone =
-                                bluetooth_handler.common_earcons_params.clone();
-                            let publisher = publisher.clone();
-                            fasync::Task::spawn(async move {
-                                play_bluetooth_sound(
-                                    publisher,
-                                    common_earcons_params_clone,
-                                    BluetoothSoundType::DISCONNECTED,
-                                )
-                                .await;
-                            }).detach();
-                        }
-                    }
-                }
-                Err(e) => {
-                    fx_log_err!(
-                        "[bluetooth_earcons_handler] Failed on call to watch bluetooth peers: {}",
-                        e
-                    );
-                    return;
-                }
-            }
-        }
-    }).detach();
 }

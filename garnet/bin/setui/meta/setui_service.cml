@@ -7,7 +7,6 @@
         {
             protocol: [
                 "/svc/fuchsia.accessibility.SettingsManager",
-                "/svc/fuchsia.bluetooth.sys.Access",
                 "/svc/fuchsia.deprecatedtimezone.Timezone",
                 "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.hardware.light.Light",
@@ -16,6 +15,7 @@
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.media.audio.VolumeControl",
                 "/svc/fuchsia.media.AudioCore",
+                "/svc/fuchsia.media.sessions2.Discovery",
                 "/svc/fuchsia.media.sounds.Player",
                 "/svc/fuchsia.media.UsageReporter",
                 "/svc/fuchsia.netstack.Netstack",

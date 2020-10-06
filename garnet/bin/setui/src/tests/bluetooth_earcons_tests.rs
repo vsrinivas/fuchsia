@@ -5,20 +5,17 @@
 #[cfg(test)]
 use {
     crate::agent::earcons,
+    crate::agent::earcons::bluetooth_handler::BLUETOOTH_DOMAIN,
     crate::agent::earcons::sound_ids::{
         BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
     },
     crate::agent::restore_agent,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::tests::fakes::bluetooth_service::BluetoothService,
-    crate::tests::fakes::fake_hanging_get_handler::HangingGetHandler,
-    crate::tests::fakes::fake_hanging_get_types::ChangedPeers,
+    crate::tests::fakes::discovery_service::{DiscoveryService, SessionId},
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
     crate::EnvironmentBuilder,
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth::PeerId,
-    fidl_fuchsia_bluetooth_sys::AccessWatchPeersResponder,
     fidl_fuchsia_media::AudioRenderUsage,
     fuchsia_component::server::NestedEnvironment,
     futures::lock::Mutex,
@@ -26,6 +23,11 @@ use {
     std::sync::Arc,
 };
 
+const ID_1: SessionId = 1;
+const ID_2: SessionId = 2;
+const ID_3: SessionId = 3;
+const NON_BLUETOOTH_DOMAIN_1: &str = "Cast App";
+const NON_BLUETOOTH_DOMAIN_2: &str = "Cast App Helper";
 const ENV_NAME: &str = "bluetooth_earcons_test_environment";
 
 /// Used to store fake services for mocking dependencies and checking input/outputs.
@@ -34,8 +36,7 @@ const ENV_NAME: &str = "bluetooth_earcons_test_environment";
 #[allow(dead_code)]
 struct FakeServices {
     sound_player: Arc<Mutex<SoundPlayerService>>,
-    bluetooth: Arc<Mutex<BluetoothService>>,
-    hanging_get_handler: Arc<Mutex<HangingGetHandler<ChangedPeers, AccessWatchPeersResponder>>>,
+    discovery: Arc<Mutex<DiscoveryService>>,
 }
 
 /// Builds the test environment.
@@ -55,36 +56,24 @@ async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> Ne
 async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     let service_registry = ServiceRegistry::create();
 
-    // Channel to send test updates on the bluetooth service.
-    let (on_update_sender, on_update_receiver) =
-        futures::channel::mpsc::unbounded::<ChangedPeers>();
-
-    // Create a hanging get handler.
-    let hanging_get_handler = HangingGetHandler::create(on_update_receiver).await;
-
     let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
-    let bluetooth_service_handle =
-        Arc::new(Mutex::new(BluetoothService::new(hanging_get_handler.clone(), on_update_sender)));
+    let discovery_service_handle = Arc::new(Mutex::new(DiscoveryService::new()));
     service_registry.lock().await.register_service(sound_player_service_handle.clone());
-    service_registry.lock().await.register_service(bluetooth_service_handle.clone());
+    service_registry.lock().await.register_service(discovery_service_handle.clone());
 
     (
         service_registry,
         FakeServices {
             sound_player: sound_player_service_handle,
-            bluetooth: bluetooth_service_handle,
-            hanging_get_handler: hanging_get_handler,
+            discovery: discovery_service_handle,
         },
     )
 }
 
-/// Tests to ensure that when the bluetooth connections change, the SoundPlayer receives requests to play the sounds
-/// with the correct ids.
+/// Tests to ensure that when the bluetooth connections change, the SoundPlayer receives requests
+/// to play the sounds with the correct ids.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_sounds() {
-    const PEER_ID_1: PeerId = PeerId { value: 1 };
-    const PEER_ID_2: PeerId = PeerId { value: 2 };
-
     let (service_registry, fake_services) = create_services().await;
     let _env = create_environment(service_registry).await;
 
@@ -94,7 +83,7 @@ async fn test_sounds() {
         fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     // Add first connection.
-    fake_services.bluetooth.lock().await.connect(PEER_ID_1, false).await.ok();
+    fake_services.discovery.lock().await.update_session(ID_1, BLUETOOTH_DOMAIN).await;
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
     assert_eq!(
@@ -103,7 +92,7 @@ async fn test_sounds() {
     );
 
     // Add second connection.
-    fake_services.bluetooth.lock().await.connect(PEER_ID_2, false).await.unwrap();
+    fake_services.discovery.lock().await.update_session(ID_2, BLUETOOTH_DOMAIN).await;
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
@@ -111,7 +100,7 @@ async fn test_sounds() {
     );
 
     // Disconnect the first connection.
-    fake_services.bluetooth.lock().await.disconnect(PEER_ID_1, false).await.unwrap();
+    fake_services.discovery.lock().await.remove_session(ID_1).await;
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert!(
         fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
@@ -127,7 +116,7 @@ async fn test_sounds() {
     );
 
     // Disconnect the second connection.
-    fake_services.bluetooth.lock().await.disconnect(PEER_ID_2, false).await.unwrap();
+    fake_services.discovery.lock().await.remove_session(ID_2).await;
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
         fake_services
@@ -140,12 +129,51 @@ async fn test_sounds() {
     );
 }
 
+/// Tests to ensure that only bluetooth domains play sounds, and that when others
+/// are present, they do not duplicate the sounds.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_bluetooth_domain() {
+    let (service_registry, fake_services) = create_services().await;
+    let _env = create_environment(service_registry).await;
+
+    // Create channel to receive notifications for when sounds are played. Used to know when to
+    // check the sound player fake that the sound has been played.
+    let mut sound_played_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
+
+    // Add multiple updates, only one of which is the Bluetooth domain.
+    fake_services.discovery.lock().await.update_session(ID_1, BLUETOOTH_DOMAIN).await;
+    fake_services.discovery.lock().await.update_session(ID_2, NON_BLUETOOTH_DOMAIN_1).await;
+    fake_services.discovery.lock().await.update_session(ID_3, NON_BLUETOOTH_DOMAIN_2).await;
+    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
+
+    // Ensure the connection sound only played once.
+    assert_eq!(
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
+        Some(1)
+    );
+
+    // Disconnect the bluetooth connection.
+    fake_services.discovery.lock().await.remove_session(ID_1).await;
+    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    assert!(
+        fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
+    );
+    assert_eq!(
+        fake_services
+            .sound_player
+            .lock()
+            .await
+            .get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID)
+            .await,
+        Some(1)
+    );
+}
+
 // Test that the bluetooth earcons aren't played for oobe connections.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_oobe_connection() {
-    const PEER_ID_1: PeerId = PeerId { value: 1 };
-    const PEER_ID_2: PeerId = PeerId { value: 2 };
-
     let (service_registry, fake_services) = create_services().await;
     let _env = create_environment(service_registry).await;
 
@@ -155,7 +183,7 @@ async fn test_oobe_connection() {
         fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     // Add oobe bluetooth connection.
-    fake_services.bluetooth.lock().await.connect(PEER_ID_1, true).await.ok();
+    fake_services.discovery.lock().await.update_session(ID_1, BLUETOOTH_DOMAIN).await;
     assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
@@ -163,7 +191,7 @@ async fn test_oobe_connection() {
     );
 
     // Disconnect the oobe blueooth connection.
-    fake_services.bluetooth.lock().await.disconnect(PEER_ID_1, true).await.unwrap();
+    fake_services.discovery.lock().await.remove_session(ID_1).await;
     assert!(
         !fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
     );
@@ -178,7 +206,7 @@ async fn test_oobe_connection() {
     );
 
     // Add regular bluetooth connection.
-    fake_services.bluetooth.lock().await.connect(PEER_ID_2, false).await.unwrap();
+    fake_services.discovery.lock().await.update_session(ID_2, BLUETOOTH_DOMAIN).await;
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
@@ -186,7 +214,7 @@ async fn test_oobe_connection() {
     );
 
     // Disconnect the regular bluetooth connection.
-    fake_services.bluetooth.lock().await.disconnect(PEER_ID_2, false).await.unwrap();
+    fake_services.discovery.lock().await.remove_session(ID_2).await;
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
         fake_services

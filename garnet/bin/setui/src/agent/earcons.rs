@@ -10,5 +10,5 @@ pub mod sound_ids;
 pub mod utils;
 
 /// Earcons handlers.
-mod bluetooth_handler;
+pub mod bluetooth_handler;
 mod volume_change_handler;

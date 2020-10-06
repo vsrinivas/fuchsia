@@ -25,8 +25,6 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
@@ -36,6 +34,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio-rustc",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
@@ -194,10 +193,8 @@ rustc_library("lib") {
     "src/tests/fakes.rs",
     "src/tests/fakes/audio_core_service.rs",
     "src/tests/fakes/base.rs",
-    "src/tests/fakes/bluetooth_service.rs",
     "src/tests/fakes/brightness_service.rs",
-    "src/tests/fakes/fake_hanging_get_handler.rs",
-    "src/tests/fakes/fake_hanging_get_types.rs",
+    "src/tests/fakes/discovery_service.rs",
     "src/tests/fakes/hardware_light_service.rs",
     "src/tests/fakes/hardware_power_statecontrol_service.rs",
     "src/tests/fakes/input_device_registry_service.rs",

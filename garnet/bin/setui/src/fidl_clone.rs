@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fuchsia_bluetooth_sys::Peer, fidl_fuchsia_settings::*,
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
-};
+use {fidl_fuchsia_settings::*, fidl_fuchsia_ui_input::MediaButtonsEvent};
 
 /// A placeholder for real cloning support in FIDL generated Rust code.
 /// TODO(fxbug.dev/37456): Remove
@@ -156,25 +153,5 @@ impl FIDLClone for LightValue {
 impl FIDLClone for MediaButtonsEvent {
     fn clone(&self) -> Self {
         MediaButtonsEvent { volume: self.volume, mic_mute: self.mic_mute, pause: self.pause }
-    }
-}
-
-impl FIDLClone for Peer {
-    fn clone(&self) -> Self {
-        return Peer {
-            id: self.id.clone(),
-            address: self.address.clone(),
-            technology: self.technology,
-            connected: self.connected,
-            bonded: self.bonded,
-            name: self.name.clone(),
-            appearance: self.appearance,
-            device_class: self.device_class.clone(),
-            rssi: self.rssi,
-            tx_power: self.tx_power,
-            services: self.services.clone(),
-            le_services: self.le_services.clone(),
-            bredr_services: self.bredr_services.clone(),
-        };
     }
 }

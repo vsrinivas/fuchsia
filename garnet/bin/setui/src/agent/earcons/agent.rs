@@ -5,7 +5,7 @@
 use crate::agent::base::{
     AgentError, Context as AgentContext, Descriptor, Invocation, InvocationResult, Lifespan,
 };
-use crate::agent::earcons::bluetooth_handler::watch_bluetooth_connections;
+use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
@@ -18,7 +18,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use std::collections::HashSet;
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::Arc;
 
 blueprint_definition!(Descriptor::Component("earcons_agent"), Agent::create);
 
@@ -85,20 +85,19 @@ impl Agent {
         {
             // For now, report back as an error to prevent issues on
             // platforms that don't support the handler's dependencies.
+            // TODO(fxbug.dev/61341): Handle with config
             fx_log_err!("Could not set up VolumeChangeHandler");
         }
 
-        let publisher = self.publisher.clone();
-        fasync::Task::spawn(async move {
-            // Watch for bluetooth connections and play sounds on change.
-            let bluetooth_connection_active = Arc::new(AtomicBool::new(true));
-            watch_bluetooth_connections(
-                publisher,
-                common_earcons_params,
-                bluetooth_connection_active,
-            );
-        })
-        .detach();
+        if BluetoothHandler::create(self.publisher.clone(), common_earcons_params.clone())
+            .await
+            .is_err()
+        {
+            // For now, report back as an error to prevent issues on
+            // platforms that don't support the handler's dependencies.
+            // TODO(fxbug.dev/61341): Handle with config
+            fx_log_err!("Could not set up BluetoothHandler");
+        }
 
         return Ok(());
     }

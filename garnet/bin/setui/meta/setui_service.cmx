@@ -13,7 +13,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.bluetooth.sys.Access",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.light.Light",
@@ -23,6 +22,7 @@
             "fuchsia.media.AudioCore",
             "fuchsia.media.UsageReporter",
             "fuchsia.media.audio.VolumeControl",
+            "fuchsia.media.sessions2.Discovery",
             "fuchsia.media.sounds.Player",
             "fuchsia.stash.Store",
             "fuchsia.ui.brightness.Control",
