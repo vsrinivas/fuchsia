@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_USER_HANDLES_H_
 
 #include <lib/user_copy/user_ptr.h>
+#include <lib/zx/status.h>
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
@@ -46,14 +47,16 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
   return status;
 }
 
-// Given |handle| it returns a |raw_handle| that should be sent over |channel|. In case
+// Returns a |raw_handle| that should be sent over |channel|. In case
 // of error, the return value should be reflected back to the user.
-zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Dispatcher* channel,
-                                          const zx_handle_t* handle_val, Handle** raw_handle)
+zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
+                                                  const Dispatcher* channel,
+                                                  const zx_handle_t* handle_val)
     TA_REQ(process->handle_table_lock());
 
-zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Dispatcher* channel,
-                                          zx_handle_disposition_t* handle_disposition,
-                                          Handle** raw_handle) TA_REQ(process->handle_table_lock());
+zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
+                                                  const Dispatcher* channel,
+                                                  zx_handle_disposition_t* handle_disposition)
+    TA_REQ(process->handle_table_lock());
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_USER_HANDLES_H_

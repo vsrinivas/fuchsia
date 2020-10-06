@@ -272,14 +272,13 @@ static __WARN_UNUSED_RESULT zx_status_t msg_put_handles(ProcessDispatcher* up, M
     Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table_lock()};
 
     for (size_t ix = 0; ix != num_handles; ++ix) {
-      Handle* handle = nullptr;
-      auto inner_status = get_handle_for_message_locked(up, channel, &handles[ix], &handle);
-      if ((inner_status != ZX_OK) && (status == ZX_OK)) {
+      zx::status<Handle*> inner_status = get_handle_for_message_locked(up, channel, &handles[ix]);
+      if (!inner_status.is_ok() && (status == ZX_OK)) {
         // Latch the first error encountered. It will be what the function returns.
-        status = inner_status;
+        status = inner_status.error_value();
       }
 
-      msg->mutable_handles()[ix] = handle;
+      msg->mutable_handles()[ix] = inner_status.is_ok() ? inner_status.value() : nullptr;
     }
   }
 
