@@ -33,7 +33,7 @@ class TestFile : public fio::testing::File_TestBase {
 
  private:
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override {
-    EXPECT_EQ(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC, flags);
+    EXPECT_EQ(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE, flags);
     zx::channel client_end, server_end;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
     EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,

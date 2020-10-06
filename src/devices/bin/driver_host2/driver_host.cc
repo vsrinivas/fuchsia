@@ -181,5 +181,6 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
     }
     LOGF(INFO, "Started '%s'", binary.data());
   };
-  file_ptr->GetBuffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC, std::move(callback));
+  file_ptr->GetBuffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE,
+                      std::move(callback));
 }
