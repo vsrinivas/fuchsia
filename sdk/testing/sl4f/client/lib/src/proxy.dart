@@ -30,4 +30,11 @@ class TcpProxyController {
   /// to dropProxy with [targetPort] are made.
   Future<void> dropProxy(int targetPort) async =>
       await _sl4f.request('proxy_facade.DropProxy', targetPort);
+
+  /// Forcibly terminate all proxies.
+  ///
+  /// Terminates all proxies, ignoring the number of clients that requested proxies.
+  /// This method is intended for cleanup after a test only.
+  Future<void> stopAllProxies() async =>
+      await _sl4f.request('proxy_facade.StopAllProxies');
 }

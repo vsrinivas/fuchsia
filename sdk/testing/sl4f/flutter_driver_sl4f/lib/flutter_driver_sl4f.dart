@@ -60,6 +60,7 @@ class FlutterDriverConnector {
   Future<void> tearDown() async {
     _logger.info('(Tearing down FlutterDriver connection.)');
     await _connection?.stop();
+    await _proxyController.stopAllProxies();
     _connection = null;
   }
 

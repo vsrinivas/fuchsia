@@ -47,5 +47,17 @@ void main() {
       expect(http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/')),
           throwsException);
     });
+
+    test('stopAllProxies force terminates proxies', () async {
+      final proxyPort = await tcpProxyController.openProxy(80);
+      await http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/'));
+      // Attempting to create a proxy to the same port should return the existing port.
+      final dupProxyPort = await tcpProxyController.openProxy(80);
+      expect(dupProxyPort, equals(proxyPort));
+      // stopAllProxies should tear down the proxy even though 2 requests were made
+      await tcpProxyController.stopAllProxies();
+      expect(http.get(Uri.http('${sl4fDriver.target}:$proxyPort', '/')),
+          throwsException);
+    });
   });
 }

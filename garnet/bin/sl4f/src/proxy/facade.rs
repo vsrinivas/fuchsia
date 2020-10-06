@@ -41,9 +41,17 @@ impl ProxyFacade {
     /// Indicate that the proxy to |target_port| is no longer needed. The proxy is
     /// stopped once all clients that requested the proxy call `drop_proxy`. Note
     /// that this means the proxy may still be running after a call to `drop_proxy`.
-    pub async fn drop_proxy(&self, target_port: u16) {
+    pub fn drop_proxy(&self, target_port: u16) {
         if let Some(ref mut internal) = *self.internal.lock() {
-            internal.drop_proxy(target_port).await;
+            internal.drop_proxy(target_port);
+        }
+    }
+
+    /// Forcibly stop all proxies, regardless of whether or not any clients are still
+    /// using them. This method is intended for cleanup after a test.
+    pub fn stop_all_proxies(&self) {
+        if let Some(ref mut internal) = *self.internal.lock() {
+            internal.stop_all_proxies();
         }
     }
 }
@@ -99,12 +107,16 @@ impl ProxyFacadeInternal {
         }
     }
 
-    async fn drop_proxy(&mut self, target_port: u16) {
+    fn drop_proxy(&mut self, target_port: u16) {
         if let Some(mut proxy) = self.open_proxies.remove(&target_port) {
             proxy.num_users -= 1;
             if proxy.num_users > 0 {
                 self.open_proxies.insert(target_port, proxy);
             }
         }
+    }
+
+    fn stop_all_proxies(&mut self) {
+        self.open_proxies.clear();
     }
 }
