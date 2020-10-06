@@ -144,18 +144,18 @@ def main():
         bootserver = find_bootserver(build_dir)
         cmd = [bootserver, '--boot'] + zbis + args.args
     else:
-        if args.qemu:
-            cmd = ['fx', 'qemu']
-        else:
+        if args.emu:
             cmd = ['fx', 'emu', '--headless', '--experiment-arm64']
+        else:
+            cmd = ['fx', 'qemu']
         cmd += args.args
 
         if zbis:
             cmd += ['-z'] + zbis
-        elif args.qemu:
-            cmd += ['-t'] + qemus
-        else:
+        elif args.emu:
             cmd += ['-K'] + qemus
+        else:
+            cmd += ['-t'] + qemus
 
     for arg in args.cmdline:
         cmd += ['-c', arg]
