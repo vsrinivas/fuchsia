@@ -2,15 +2,18 @@
     program: {
         binary: "bin/huge_rust_tests",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

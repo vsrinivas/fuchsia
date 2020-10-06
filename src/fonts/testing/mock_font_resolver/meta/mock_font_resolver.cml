@@ -2,13 +2,16 @@
     program: {
         binary: "bin/mock_font_resolver",
     },
+    capabilities: [
+        { protocol: "fuchsia.pkg.FontResolver" },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.pkg.FontResolver",
+            protocol: "fuchsia.pkg.FontResolver",
             from: "self",
         },
     ],

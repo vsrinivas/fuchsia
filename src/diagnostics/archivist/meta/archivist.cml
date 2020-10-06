@@ -7,6 +7,11 @@
             "/config/data/archivist_config.json",
         ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -63,6 +68,10 @@
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",
             ],
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "self",
         },
 

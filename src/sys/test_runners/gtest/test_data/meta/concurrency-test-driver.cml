@@ -4,18 +4,21 @@
     program: {
         binary: "bin/concurrency_test_driver_gtest",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "gtest_runner" },
         {
             protocol: [
-                "/svc/fidl.examples.routing.echo.Echo",
-                "/svc/fuchsia.logger.LogSink",
+                "fidl.examples.routing.echo.Echo",
+                "fuchsia.logger.LogSink",
             ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

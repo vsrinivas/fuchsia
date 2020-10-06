@@ -35,19 +35,20 @@
         {
             storage: "data",
             from: "#runner_memfs",
-            backing_dir: "/memfs",
+            backing_dir: "memfs",
         },
+        { protocol: "fuchsia.test.manager.Harness" },
     ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     offer: [
-        // Offer name-based capabilities LogSink to tests.
+        // Offer name-based capabilities from namespace to tests.
         // TODO(56604): Stop offering the path-based capabilities once tests have converted to
         // name-based.
         {
@@ -62,7 +63,37 @@
             to: [ "#tests" ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            as: "/svc/fuchsia.boot.WriteOnlyLog",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            as: "/svc/fuchsia.logger.LogSink",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: "fuchsia.sys2.BlockingEventSource",
+            from: "parent",
+            as: "/svc/fuchsia.sys2.BlockingEventSource",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            as: "/svc/fuchsia.sys2.EventSource",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            as: "/svc/fuchsia.process.Launcher",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
                 "#go_test_runner",
@@ -70,26 +101,15 @@
                 "#runner_memfs",
                 "#rust_test_runner",
                 "#test_tmpfs",
-                "#tests",
             ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.sys2.BlockingEventSource",
-                "/svc/fuchsia.sys2.EventSource",
-            ],
-            from: "parent",
-            to: [ "#tests" ],
-        },
-        {
-            protocol: "/svc/fuchsia.process.Launcher",
+            protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: [
                 "#go_test_runner",
                 "#gtest_runner",
                 "#rust_test_runner",
-                "#tests",
             ],
         },
         {
@@ -103,31 +123,50 @@
 
         // Some components run under test need access to /config/data.
         {
-            directory: "/config/data",
+            directory: "config-data",
             from: "parent",
+            to: [ "#tests" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            as: "/config/data",
             to: [ "#tests" ],
         },
 
         // temporary solution to provide /tmp. All tests will share same /tmp.
         {
-            directory: "/memfs",
+            directory: "memfs",
+            from: "#test_tmpfs",
+            as: "tmp",
+            to: [ "#tests" ],
+        },
+        {
+            directory: "memfs",
             from: "#test_tmpfs",
             as: "/tmp",
             to: [ "#tests" ],
         },
 
         // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
-        // access to /dev/class/input-report.
+        // needs access to /dev/class/input-report.
         {
-            directory: "/dev/class/input-report",
+            directory: "dev-input-report",
             from: "parent",
+            to: [ "#tests" ],
+            rights: [ "r*" ],
+        },
+        {
+            directory: "dev-input-report",
+            from: "parent",
+            as: "/dev/class/input-report",
             to: [ "#tests" ],
             rights: [ "r*" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.manager.Harness",
+            protocol: "fuchsia.test.manager.Harness",
             from: "self",
         },
     ],

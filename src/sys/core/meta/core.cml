@@ -52,7 +52,7 @@
             to: [ "#appmgr" ],
         },
         {
-            protocol: [ "/svc/fuchsia.pkg.FontResolver" ],
+            protocol: [ "fuchsia.pkg.FontResolver" ],
             from: "#appmgr",
             to: [ "#font_provider" ],
             dependency: "weak_for_migration",
@@ -137,6 +137,11 @@
             ],
         },
         {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "#archivist",
+            to: [ "#font_provider" ],
+        },
+        {
             protocol: [
                 "/svc/fuchsia.sys2.BlockingEventSource",
                 "/svc/fuchsia.sys2.EventSource",
@@ -150,7 +155,7 @@
                 "/svc/fuchsia.overnet.Overnet",
                 "/svc/fuchsia.overnet.ServicePublisher",
                 "/svc/fuchsia.sys.Launcher",
-                "/svc/fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.Harness",
             ],
             from: "#appmgr",
             to: [ "#remote-control" ],
@@ -177,10 +182,15 @@
             subdir: "config/archivist",
         },
         {
-            directory: "/config/data",
+            directory: "config-data",
             from: "parent",
             to: [ "#font_provider" ],
             subdir: "fonts",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#test_manager" ],
         },
         {
             directory: "/config/data",

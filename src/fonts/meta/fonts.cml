@@ -2,17 +2,31 @@
     program: {
         binary: "bin/font_provider",
     },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.fonts.experimental.Provider",
+                "fuchsia.fonts.Provider",
+            ],
+        },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.pkg.FontResolver",
+                "fuchsia.logger.LogSink",
+                "fuchsia.pkg.FontResolver",
             ],
         },
         {
-            directory: "/config/data",
+            directory: "config-data",
             rights: [ "r*" ],
+            path: "/config/data",
         },
     ],
     expose: [
@@ -24,10 +38,16 @@
             from: "self",
         },
         {
-            directory: "/diagnostics",
+            protocol: [
+                "fuchsia.fonts.experimental.Provider",
+                "fuchsia.fonts.Provider",
+            ],
+            from: "self",
+        },
+        {
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
     ],
 }

@@ -2,13 +2,16 @@
     program: {
         binary: "bin/huge_gtest_runner_example",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "gtest_runner" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

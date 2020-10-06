@@ -1,4 +1,25 @@
 {
-  "debug": true,
-  "builtin_pkg_resolver": "appmgr_bridge",
+    debug: true,
+    maintain_utc_clock: false,
+    use_builtin_process_launcher: false,
+    builtin_pkg_resolver: "appmgr_bridge",
+    namespace_capabilities: [
+        {
+            directory: "dev-input-report",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages/config-data/0/data",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+        }
+    ],
 }

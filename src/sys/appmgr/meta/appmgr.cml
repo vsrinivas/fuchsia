@@ -12,6 +12,12 @@
             protocol: "fuchsia.appmgr.Startup",
             path: "/appmgr_svc/fuchsia.appmgr.Startup",
         },
+        {
+            protocol: [
+                "fuchsia.pkg.FontResolver",
+                "fuchsia.test.manager.Harness",
+            ],
+        },
     ],
     use: [
         { runner: "elf" },
@@ -269,7 +275,6 @@
                 "/svc/fuchsia.netstack.Netstack",
                 "/svc/fuchsia.overnet.Overnet",
                 "/svc/fuchsia.overnet.ServicePublisher",
-                "/svc/fuchsia.pkg.FontResolver",
                 "/svc/fuchsia.pkg.PackageResolver",
                 "/svc/fuchsia.pkg.RepositoryManager",
                 "/svc/fuchsia.pkg.rewrite.Engine",
@@ -279,10 +284,11 @@
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher",
                 "/svc/fuchsia.sys.Loader",
-                "/svc/fuchsia.test.manager.Harness",
                 "/svc/fuchsia.tracing.controller.Controller",
                 "/svc/fuchsia.tracing.provider.Registry",
                 "/svc/fuchsia.wlan.service.Wlan",
+                "fuchsia.pkg.FontResolver",
+                "fuchsia.test.manager.Harness",
             ],
             from: "self",
         },

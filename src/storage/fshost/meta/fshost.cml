@@ -4,6 +4,14 @@
         args: [ "--log-to-debuglog" ],
         lifecycle: { stop_event: "notify" },
     },
+    capabilities: [
+        {
+            directory: "config-data",
+            from: "self",
+            rights: [ "r*" ],
+            path: "/delayed/fs/pkgfs/packages/config-data/0/data",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -93,6 +101,10 @@
             from: "self",
             as: "/pkgfs",
             rights: [ "rx*" ],
+        },
+        {
+            directory: "config-data",
+            from: "self",
         },
         {
             directory: "/delayed/fs/pkgfs/packages/config-data/0/data",

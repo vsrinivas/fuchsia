@@ -15,23 +15,21 @@
             startup: "eager",
         },
     ],
-
-    // Route Echo service from server to client.
     offer: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
             to: [ "#echo_gtest_client" ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#echo_gtest_client" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#echo_gtest_client",
         },
     ],

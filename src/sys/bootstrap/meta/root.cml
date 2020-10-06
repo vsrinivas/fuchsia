@@ -96,6 +96,11 @@
             to: [ "#core" ],
         },
         {
+            directory: "config-data",
+            from: "#bootstrap",
+            to: [ "#core" ],
+        },
+        {
             directory: "/config/data",
             from: "#bootstrap",
             to: [ "#core" ],

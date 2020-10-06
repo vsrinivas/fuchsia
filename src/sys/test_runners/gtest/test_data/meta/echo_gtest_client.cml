@@ -4,14 +4,17 @@
     program: {
         binary: "bin/echo_gtest_client",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "gtest_runner" },
-        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fidl.examples.routing.echo.Echo" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

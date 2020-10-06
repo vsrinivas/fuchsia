@@ -8,27 +8,29 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
         },
     ],
     offer: [
-        // Some components run under test get fonts from /config/data.
         {
-            directory: "/config/data",
+            directory: "config-data",
             from: "parent",
             to: [ "#coll" ],
         },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.pkg.FontResolver",
+                "fuchsia.logger.LogSink",
+                "fuchsia.pkg.FontResolver",
             ],
             from: "parent",
             to: [ "#coll" ],
@@ -36,7 +38,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

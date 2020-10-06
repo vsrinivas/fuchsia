@@ -1,5 +1,6 @@
 // We need this cml so that we can transform paths from appmgr's namespace like
 //  "/pkgfs/packages/config-data/0/data" to "/config/data" and present them to test_manager.
+// TODO(56604): I don't think we need this component anymore?
 {
     children: [
         {
@@ -9,36 +10,27 @@
         },
     ],
     offer: [
-        // Offer the ELF runner to test_manager.
-        {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-            ],
-            from: "parent",
-            to: [ "#test_manager" ],
-        },
-
         // Some components run under test need access to /config/data.
         {
-            directory: "/pkgfs/packages/config-data/0/data",
+            directory: "config-data",
             from: "parent",
-            as: "/config/data",
             to: [ "#test_manager" ],
         },
 
         // Some tests access dev/class. We should provide those till we can mock it.
         {
-            directory: "/dev/class/input-report",
+            directory: "dev-input-report",
             from: "parent",
             to: [ "#test_manager" ],
             rights: [ "r*" ],
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.sys2.BlockingEventSource",
-                "/svc/fuchsia.sys2.EventSource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.BlockingEventSource",
+                "fuchsia.sys2.EventSource",
             ],
             from: "parent",
             to: [ "#test_manager" ],
@@ -46,7 +38,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.manager.Harness",
+            protocol: "fuchsia.test.manager.Harness",
             from: "#test_manager",
         },
     ],

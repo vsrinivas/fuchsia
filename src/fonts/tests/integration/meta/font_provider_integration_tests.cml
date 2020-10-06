@@ -11,28 +11,31 @@
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.pkg.FontResolver",
+            protocol: "fuchsia.pkg.FontResolver",
             from: "#font_resolver",
             to: [ "#driver" ],
         },
 
         // Some components run under test get fonts from /config/data.
         {
-            directory: "/config/data",
+            directory: "config-data",
             from: "parent",
-            as: "/config/data",
+            as: "config-data",
             to: [ "#driver" ],
             subdir: "fonts",
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: [ "#driver" ],
+            to: [
+                "#driver",
+                "#font_resolver",
+            ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#driver",
         },
     ],

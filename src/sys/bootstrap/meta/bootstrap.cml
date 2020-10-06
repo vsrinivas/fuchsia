@@ -472,6 +472,10 @@
             from: "#driver_manager",
         },
         {
+            directory: "config-data",
+            from: "#fshost",
+        },
+        {
             directory: "/config/data",
             from: "#fshost",
         },
