@@ -5,12 +5,14 @@
 mod convert;
 
 use {
-    crate::{device::IfaceMap, telemetry::convert::*},
+    crate::{device::IfaceMap, inspect, telemetry::convert::*},
     fidl_fuchsia_cobalt::HistogramBucket,
     fidl_fuchsia_wlan_stats as fidl_stats,
     fidl_fuchsia_wlan_stats::MlmeStats::{ApMlmeStats, ClientMlmeStats},
     fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
+    fuchsia_inspect_contrib::{inspect_log, make_inspect_loggable},
+    fuchsia_zircon as zx,
     fuchsia_zircon::DurationNum,
     futures::prelude::*,
     futures::stream::FuturesUnordered,
@@ -37,6 +39,11 @@ type StatsRef = Arc<Mutex<fidl_stats::IfaceStats>>;
 
 /// How often to request RSSI stats and dispatcher packet counts from MLME.
 const REPORT_PERIOD_MINUTES: i64 = 1;
+
+struct ReconnectInfo {
+    gap_time: zx::Duration,
+    same_ssid: bool,
+}
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
 pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
@@ -164,7 +171,12 @@ where
     }
 }
 
-pub fn log_scan_stats(sender: &mut CobaltSender, scan_stats: &ScanStats, is_join_scan: bool) {
+pub fn log_scan_stats(
+    sender: &mut CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+    scan_stats: &ScanStats,
+    is_join_scan: bool,
+) {
     let (scan_result_dim, error_code_dim) = convert_scan_result(&scan_stats.result);
     let scan_type_dim = convert_scan_type(scan_stats.scan_type);
     let is_join_scan_dim = convert_bool_dim(is_join_scan);
@@ -189,6 +201,7 @@ pub fn log_scan_stats(sender: &mut CobaltSender, scan_stats: &ScanStats, is_join
     );
 
     if let Some(error_code_dim) = error_code_dim {
+        inspect_log!(inspect_tree.client_stats.scan_failures.lock(), {});
         sender.log_event_count(
             metrics::SCAN_FAILURE_METRIC_ID,
             [
@@ -226,15 +239,29 @@ pub fn log_scan_stats(sender: &mut CobaltSender, scan_stats: &ScanStats, is_join
     );
 }
 
-pub fn log_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
+pub fn log_connect_stats(
+    sender: &mut CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+    connect_stats: &ConnectStats,
+) {
     if let Some(scan_stats) = connect_stats.join_scan_stats() {
-        log_scan_stats(sender, &scan_stats, true);
+        log_scan_stats(sender, inspect_tree.clone(), &scan_stats, true);
     }
 
     log_connect_attempts_stats(sender, connect_stats);
     log_connect_result_stats(sender, connect_stats);
     log_time_to_connect_stats(sender, connect_stats);
-    log_connection_gap_time_stats(sender, connect_stats);
+    let reconnect_info = log_connection_gap_time_stats(sender, connect_stats);
+
+    if let ConnectResult::Success = connect_stats.result {
+        inspect_log!(inspect_tree.client_stats.connect.lock(), {
+            attempts: connect_stats.attempts,
+            reconnect_info?: reconnect_info.map(|info| make_inspect_loggable!({
+                gap_time: info.gap_time.into_nanos(),
+                same_ssid: info.same_ssid,
+            })),
+        });
+    }
 }
 
 fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
@@ -493,19 +520,25 @@ fn log_time_to_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectS
     }
 }
 
-pub fn log_connection_gap_time_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
+/// If there was a reconnect, log connection gap time stats to Cobalt. Return the duration
+/// and whether the reconnect was to the same SSID as last connected.
+fn log_connection_gap_time_stats(
+    sender: &mut CobaltSender,
+    connect_stats: &ConnectStats,
+) -> Option<ReconnectInfo> {
     if connect_stats.result != ConnectResult::Success {
-        return;
+        return None;
     }
 
     let ssid = match &connect_stats.candidate_network {
         Some(bss) => &bss.ssid,
         None => {
             warn!("No candidate_network in successful connect stats");
-            return;
+            return None;
         }
     };
 
+    let mut reconnect_info = None;
     if let Some(previous_disconnect_info) = &connect_stats.previous_disconnect_info {
         let duration = connect_stats.connect_end_at - previous_disconnect_info.disconnect_at;
         let ssids_dim = if ssid == &previous_disconnect_info.ssid {
@@ -521,8 +554,13 @@ pub fn log_connection_gap_time_stats(sender: &mut CobaltSender, connect_stats: &
             metrics::CONNECTION_GAP_TIME_BREAKDOWN_METRIC_ID,
             [ssids_dim as u32, previous_disconnect_cause_dim as u32],
             duration.into_micros(),
-        )
+        );
+        reconnect_info.replace(ReconnectInfo {
+            gap_time: duration,
+            same_ssid: ssid == &previous_disconnect_info.ssid,
+        });
     }
+    reconnect_info
 }
 
 pub fn log_connection_ping(sender: &mut CobaltSender, info: &ConnectionPingInfo) {
@@ -544,7 +582,27 @@ pub fn log_connection_ping(sender: &mut CobaltSender, info: &ConnectionPingInfo)
     }
 }
 
-pub fn log_disconnect(sender: &mut CobaltSender, info: &DisconnectInfo) {
+pub fn log_disconnect(
+    sender: &mut CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+    info: &DisconnectInfo,
+) {
+    inspect_log!(inspect_tree.client_stats.disconnect.lock(), {
+        connected_duration: info.connected_duration.into_nanos(),
+        last_rssi: info.last_rssi,
+        last_snr: info.last_snr,
+        bssid: info.bssid.to_mac_str(),
+        bssid_hash: inspect_tree.hasher.hash_mac_addr(info.bssid),
+        ssid: String::from_utf8_lossy(&info.ssid[..]).to_string(),
+        ssid_hash: inspect_tree.hasher.hash(&info.ssid[..]),
+        reason_code: info.reason_code,
+        disconnect_source: match info.disconnect_source {
+            DisconnectSource::User => "user",
+            DisconnectSource::Mlme => "mlme",
+            DisconnectSource::Ap => "ap",
+        },
+    });
+
     if let DisconnectSource::Mlme = info.disconnect_source {
         use metrics::LostConnectionCountMetricDimensionConnectedTime::*;
 
@@ -583,6 +641,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker},
         fidl_fuchsia_wlan_stats::{Counter, DispatcherStats, IfaceStats, PacketCounter},
+        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
         fuchsia_zircon as zx,
         futures::channel::mpsc,
         maplit::hashset,
@@ -599,6 +658,7 @@ mod tests {
     };
 
     const IFACE_ID: u16 = 1;
+    const DURATION_SINCE_LAST_DISCONNECT: zx::Duration = zx::Duration::from_seconds(10);
 
     #[test]
     fn test_report_telemetry_periodically() {
@@ -659,7 +719,8 @@ mod tests {
     #[test]
     fn test_log_connect_stats_success() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        log_connect_stats(&mut cobalt_sender, &fake_connect_stats());
+        let inspect_tree = fake_inspect_tree();
+        log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), &fake_connect_stats());
 
         let mut expected_metrics = hashset! {
             metrics::CONNECTION_ATTEMPTS_METRIC_ID,
@@ -839,6 +900,7 @@ mod tests {
     #[test]
     fn test_log_disconnect_initiated_from_mlme() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
@@ -848,7 +910,7 @@ mod tests {
             reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
             disconnect_source: DisconnectSource::Mlme,
         };
-        log_disconnect(&mut cobalt_sender, &disconnect_info);
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
 
         assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::LOST_CONNECTION_COUNT_METRIC_ID);
@@ -858,6 +920,7 @@ mod tests {
     #[test]
     fn test_log_disconnect_initiated_from_user_request() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
@@ -867,7 +930,7 @@ mod tests {
             reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
             disconnect_source: DisconnectSource::User,
         };
-        log_disconnect(&mut cobalt_sender, &disconnect_info);
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
 
         // Nothing should be logged
         assert_variant!(cobalt_receiver.try_next(), Err(_));
@@ -876,6 +939,7 @@ mod tests {
     #[test]
     fn test_log_disconnect_initiated_from_ap() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
@@ -885,10 +949,97 @@ mod tests {
             reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
             disconnect_source: DisconnectSource::Ap,
         };
-        log_disconnect(&mut cobalt_sender, &disconnect_info);
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
 
         // Nothing should be logged
         assert_variant!(cobalt_receiver.try_next(), Err(_));
+    }
+
+    #[test]
+    fn test_inspect_log_connect_stats() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let connect_stats = fake_connect_stats();
+        log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), &connect_stats);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                connect: {
+                    "0": {
+                        "@time": AnyProperty,
+                        attempts: 1u64,
+                        reconnect_info: {
+                            gap_time: DURATION_SINCE_LAST_DISCONNECT.into_nanos(),
+                            same_ssid: true,
+                        },
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_inspect_log_disconnect_stats() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let disconnect_info = DisconnectInfo {
+            connected_duration: 30.seconds(),
+            bssid: [1u8; 6],
+            ssid: b"foo".to_vec(),
+            last_rssi: -90,
+            last_snr: 1,
+            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            disconnect_source: DisconnectSource::Mlme,
+        };
+        log_disconnect(&mut cobalt_sender, inspect_tree.clone(), &disconnect_info);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                disconnect: {
+                    "0": {
+                        "@time": AnyProperty,
+                        connected_duration: 30.seconds().into_nanos(),
+                        bssid: "01:01:01:01:01:01",
+                        bssid_hash: AnyProperty,
+                        ssid: "foo",
+                        ssid_hash: AnyProperty,
+                        last_rssi: -90i64,
+                        last_snr: 1i64,
+                        reason_code: 1u64,
+                        disconnect_source: "mlme",
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_inspect_log_scan_failures() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let now = now();
+        let scan_stats = ScanStats {
+            scan_start_at: now - 3.seconds(),
+            scan_end_at: now,
+            scan_type: fidl_mlme::ScanTypes::Active,
+            scan_start_while_connected: true,
+            result: ScanResult::Failed(fidl_mlme::ScanResultCodes::InvalidArgs),
+            bss_count: 5,
+        };
+        log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                scan_failures: {
+                    "0": {
+                        "@time": AnyProperty,
+                    }
+                }
+            }
+        });
     }
 
     fn test_metric_subset(
@@ -897,7 +1048,8 @@ mod tests {
         unexpected_metrics: HashSet<u32>,
     ) {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        log_connect_stats(&mut cobalt_sender, connect_stats);
+        let inspect_tree = fake_inspect_tree();
+        log_connect_stats(&mut cobalt_sender, inspect_tree.clone(), connect_stats);
 
         while let Ok(Some(event)) = cobalt_receiver.try_next() {
             assert!(
@@ -956,7 +1108,7 @@ mod tests {
             previous_disconnect_info: Some(PreviousDisconnectInfo {
                 ssid: fake_bss_description().ssid,
                 disconnect_source: DisconnectSource::User,
-                disconnect_at: now - 10.seconds(),
+                disconnect_at: now - DURATION_SINCE_LAST_DISCONNECT,
             }),
         }
     }
@@ -1122,5 +1274,10 @@ mod tests {
         const BUFFER_SIZE: usize = 100;
         let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
         (CobaltSender::new(sender), receiver)
+    }
+
+    fn fake_inspect_tree() -> Arc<inspect::WlanstackTree> {
+        let inspector = Inspector::new();
+        Arc::new(inspect::WlanstackTree::new(inspector))
     }
 }

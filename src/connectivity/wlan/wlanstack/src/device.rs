@@ -146,6 +146,7 @@ pub fn create_and_serve_sme(
         &device_info,
         stats_reqs,
         cobalt_sender,
+        inspect_tree.clone(),
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
         shutdown_receiver,
@@ -193,6 +194,7 @@ fn create_sme<S>(
     device_info: &DeviceInfo,
     stats_requests: S,
     cobalt_sender: CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     inspect_hasher: wlan_inspect::InspectHasher,
     mut shutdown_receiver: mpsc::Receiver<()>,
@@ -212,6 +214,7 @@ where
                 receiver,
                 stats_requests,
                 cobalt_sender,
+                inspect_tree,
                 iface_tree_holder,
                 inspect_hasher,
             );

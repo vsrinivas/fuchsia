@@ -21,6 +21,7 @@ use wlan_sme::client::{
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
+use crate::inspect;
 use crate::stats_scheduler::StatsRequest;
 use crate::telemetry;
 use fuchsia_cobalt::CobaltSender;
@@ -36,6 +37,7 @@ pub async fn serve<S>(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
     cobalt_sender: CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     inspect_hasher: wlan_inspect::InspectHasher,
 ) -> Result<(), anyhow::Error>
@@ -57,7 +59,7 @@ where
         stats_requests,
         time_stream,
     );
-    let sme_fidl = serve_fidl(sme, new_fidl_clients, info_stream, cobalt_sender);
+    let sme_fidl = serve_fidl(sme, new_fidl_clients, info_stream, cobalt_sender, inspect_tree);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
     Ok(select! {
@@ -71,6 +73,7 @@ async fn serve_fidl(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     info_stream: InfoStream,
     mut cobalt_sender: CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
 ) -> Result<Void, anyhow::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut info_stream = info_stream.fuse();
@@ -78,7 +81,7 @@ async fn serve_fidl(
     loop {
         select! {
             info_event = info_stream.next() => match info_event {
-                Some(e) => handle_info_event(e, &mut cobalt_sender),
+                Some(e) => handle_info_event(e, &mut cobalt_sender, inspect_tree.clone()),
                 None => return Err(format_err!("Info Event stream unexpectedly ended")),
             },
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
@@ -177,17 +180,23 @@ fn status(sme: &Mutex<Sme>) -> fidl_sme::ClientStatusResponse {
     }
 }
 
-fn handle_info_event(e: InfoEvent, cobalt_sender: &mut CobaltSender) {
+fn handle_info_event(
+    e: InfoEvent,
+    cobalt_sender: &mut CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+) {
     match e {
         InfoEvent::DiscoveryScanStats(scan_stats) => {
             let is_join_scan = false;
-            telemetry::log_scan_stats(cobalt_sender, &scan_stats, is_join_scan);
+            telemetry::log_scan_stats(cobalt_sender, inspect_tree, &scan_stats, is_join_scan);
         }
         InfoEvent::ConnectStats(connect_stats) => {
-            telemetry::log_connect_stats(cobalt_sender, &connect_stats)
+            telemetry::log_connect_stats(cobalt_sender, inspect_tree, &connect_stats)
         }
         InfoEvent::ConnectionPing(info) => telemetry::log_connection_ping(cobalt_sender, &info),
-        InfoEvent::DisconnectInfo(info) => telemetry::log_disconnect(cobalt_sender, &info),
+        InfoEvent::DisconnectInfo(info) => {
+            telemetry::log_disconnect(cobalt_sender, inspect_tree, &info)
+        }
     }
 }
 

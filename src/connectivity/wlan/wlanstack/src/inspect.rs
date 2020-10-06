@@ -24,11 +24,19 @@ const MAX_DEAD_IFACE_NODES: usize = 2;
 /// destroy events.
 const DEVICE_EVENTS_LIMIT: usize = 20;
 
+/// Limit for these stat events were chosen arbitrarily. At minimum, we just need to have
+/// enough so they can be used to trigger bug reports.
+const CONNECT_EVENTS_LIMIT: usize = 7;
+const DISCONNECT_EVENTS_LIMIT: usize = 7;
+const SCAN_FAILURE_EVENTS_LIMIT: usize = 5;
+
 pub struct WlanstackTree {
     /// Root of the tree
     pub inspector: Inspector,
     /// Key used to hash privacy-sensitive values in the tree
     pub hasher: InspectHasher,
+    /// "client_stats" node
+    pub client_stats: ClientStatsNode,
     /// "device_events" subtree
     pub device_events: Mutex<BoundedListNode>,
     /// "iface-<n>" subtrees, where n is the iface ID.
@@ -40,6 +48,7 @@ pub struct WlanstackTree {
 
 impl WlanstackTree {
     pub fn new(inspector: Inspector) -> Self {
+        let client_stats = inspector.root().create_child("client_stats");
         let device_events = inspector.root().create_child("device_events");
         let ifaces_trees = IfacesTrees::new(MAX_DEAD_IFACE_NODES);
         Self {
@@ -47,6 +56,7 @@ impl WlanstackTree {
             // According to doc, `rand::random` uses ThreadRng, which is cryptographically secure:
             // https://docs.rs/rand/0.5.0/rand/rngs/struct.ThreadRng.html
             hasher: InspectHasher::new(rand::random::<u64>().to_le_bytes()),
+            client_stats: ClientStatsNode::new(client_stats),
             device_events: Mutex::new(BoundedListNode::new(device_events, DEVICE_EVENTS_LIMIT)),
             ifaces_trees: Mutex::new(ifaces_trees),
             latest_active_client_iface: Mutex::new(None),
@@ -128,6 +138,30 @@ impl WlanstackTree {
                     active_iface.take();
                 }
             }
+        }
+    }
+}
+
+pub struct ClientStatsNode {
+    _node: Node,
+    pub connect: Mutex<BoundedListNode>,
+    pub disconnect: Mutex<BoundedListNode>,
+    pub scan_failures: Mutex<BoundedListNode>,
+}
+
+impl ClientStatsNode {
+    fn new(node: Node) -> Self {
+        let connect = node.create_child("connect");
+        let disconnect = node.create_child("disconnect");
+        let scan_failures = node.create_child("scan_failures");
+        Self {
+            _node: node,
+            connect: Mutex::new(BoundedListNode::new(connect, CONNECT_EVENTS_LIMIT)),
+            disconnect: Mutex::new(BoundedListNode::new(disconnect, DISCONNECT_EVENTS_LIMIT)),
+            scan_failures: Mutex::new(BoundedListNode::new(
+                scan_failures,
+                SCAN_FAILURE_EVENTS_LIMIT,
+            )),
         }
     }
 }

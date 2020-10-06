@@ -167,6 +167,14 @@ async fn verify_wlan_inspect() {
     let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
     assert_inspect_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
+        client_stats: contains {
+            connect: {
+                "0": {
+                    "@time": AnyProperty,
+                    attempts: 1u64,
+                },
+            }
+        },
         device_events: contains {
             "0": contains {},
             "1": contains {},
@@ -219,6 +227,28 @@ async fn verify_wlan_inspect() {
     let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
     assert_inspect_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
+        client_stats: contains {
+            connect: {
+                "0": {
+                    "@time": AnyProperty,
+                    attempts: 1u64,
+                },
+            },
+            disconnect: {
+                "0": contains {
+                    "@time": AnyProperty,
+                    connected_duration: AnyProperty,
+                    bssid: BSSID.0.to_mac_str(),
+                    bssid_hash: AnyProperty,
+                    ssid: "open",
+                    ssid_hash: AnyProperty,
+                    last_rssi: AnyProperty,
+                    last_snr: AnyProperty,
+                    reason_code: AnyProperty,
+                    disconnect_source: "user",
+                },
+            },
+        },
         device_events: contains {
             "0": contains {},
             "1": contains {},
