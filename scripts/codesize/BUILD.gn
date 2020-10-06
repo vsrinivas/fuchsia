@@ -33,6 +33,7 @@ dart_test("codesize_tests") {
     "cli.dart",
     "codesize.dart",
     "common_util.dart",
+    "crash_handling.dart",
     "io.dart",
     "queries/categories/categories.dart",
     "queries/categories/fidl_cpp.dart",
@@ -60,6 +61,7 @@ dart_test("codesize_tests") {
   # Tests
   sources += [
     "cli_test.dart",
+    "crash_handling_test.dart",
     "queries/categories/fidl_cpp_test.dart",
     "queries/categories/fidl_rust_test.dart",
     "queries/crates_test.dart",
@@ -74,6 +76,7 @@ dart_test("codesize_tests") {
 
   # Note: keep in sync with `codesize.packages`.
   deps = [
+    "//scripts/fxutils",
     "//third_party/dart-pkg/pub/_discoveryapis_commons",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/async",

@@ -8,6 +8,7 @@
 BT_LINKED_DEPS=(
   "prebuilt/third_party/dart"
   "scripts/codesize"
+  "scripts/fxutils"
   "scripts/third_party"
   "third_party"
 )

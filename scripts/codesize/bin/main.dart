@@ -16,6 +16,7 @@ import 'package:path/path.dart' as path;
 import 'package:googleapis/discovery/v1.dart' as discovery;
 
 import 'package:codesize/codesize.dart';
+import 'package:codesize/crash_handling.dart' as crash_handling;
 import 'package:codesize/cli.dart' as cli;
 import 'package:codesize/io.dart' as io;
 
@@ -32,11 +33,13 @@ Future<void> mainImpl(List<String> args) async {
   final parsedArgs = cli.parseArgs(args);
   if (parsedArgs == null) return;
 
-  // The high-level flow of the program:
-  // - Generate bloaty reports if they aren't already cached.
-  // - Run requested queries on those reports.
-  // - Present the results in the specified format.
-  try {
+  await crash_handling.withExceptionHandler(() async {
+    // The high-level flow of the program:
+    // - Generate bloaty reports if they aren't already cached.
+    // - Run requested queries on those reports.
+    // - Present the results in the specified format.
+    await preflightChecks();
+
     final cs = CodeSize(parsedArgs.buildDir);
 
     AnalysisRequest allBloatyReportFiles = await ensureReportFiles(cs,
@@ -54,24 +57,17 @@ Future<void> mainImpl(List<String> args) async {
 
     await presentResults(
         parsedArgs.format, parsedArgs.output, populatedQueries);
-    // ignore: avoid_catches_without_on_clauses
-  } catch (e) {
-    // Generic top-level exception handler
-    final io = Io.get();
-    io.err.writeln('''
-════════════════════════════════════════════════
-Oops, `fx codesize` has crashed.
-Did you use the correct product when building?
-(e.g. check the `Product:` line in `fx status`)
-The tool is only supported on shipping products.
+  });
+}
 
-In case of actual bug, please file a Monorail
-with component `Tools>codesize`.
-════════════════════════════════════════════════
-
-Detailed exception below.'''
-        .trim());
-    rethrow;
+/// Checks preconditions for running codesize:
+/// - The CPU architecture should be arm64.
+Future<void> preflightChecks() async {
+  final fxEnv = Io.get().fxEnv;
+  if (fxEnv.fuchsiaArch != 'arm64') {
+    throw crash_handling.KnownFailure('`fx codesize` is only supported '
+        'in arm64 builds. The current architecture is ${fxEnv.fuchsiaArch}.\n'
+        'Please switch to the correct product using `fx set`.');
   }
 }
 

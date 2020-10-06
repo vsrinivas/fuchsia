@@ -143,7 +143,13 @@ fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: tr
         'If [QUERY] is absent, defaults to CodeCategory and SourceLang\n\n'
         '${parser.usage}\n\n'
         'Supported queries:\n\n$queryHelp'
-        'Some examples:\n\n$examples');
+        'Some examples:\n\n$examples\n\n'
+        '''Exit codes:
+
+    0: Success
+    1: General unhandled exception (indicates a bug in codesize)
+    2: Known errors/unsatisfied preconditions (not a bug in codesize)
+''');
     return null;
   }
 

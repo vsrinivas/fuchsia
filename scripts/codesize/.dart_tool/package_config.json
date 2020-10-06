@@ -230,6 +230,12 @@
       "languageVersion": "2.2"
     },
     {
+      "name": "fxutils",
+      "rootUri": "../../fxutils",
+      "packageUri": "lib/",
+      "languageVersion": "2.8"
+    },
+    {
       "name": "codesize",
       "rootUri": "../",
       "packageUri": "lib/"
