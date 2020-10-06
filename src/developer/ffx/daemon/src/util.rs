@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{anyhow, Result},
-    futures::stream::once,
-    futures::stream::{BoxStream, StreamExt, TryStream, TryStreamExt},
-};
-
 /// Attempts to run an operation that has a Result<T> inside of a
 /// loop which intends not to exit/crash when errors are encountered,
 /// instead logging a warning and continuing the loop.
@@ -76,19 +70,4 @@ macro_rules! ok_or_return {
             }
         }
     };
-}
-
-impl<T: ?Sized + TryStream> FailAtEnd for T where T: TryStream {}
-
-pub trait FailAtEnd: TryStream {
-    /// Append the end of a stream with an error.
-    fn fail_at_end<'a>(self) -> BoxStream<'a, Result<Self::Item>>
-    where
-        Self: Sized + Send + 'a,
-    {
-        self.map(Result::<Self::Item>::Ok)
-            .map_err(|e| anyhow!("stream err").context(e))
-            .chain(once(async { Err(anyhow!("end of stream")) }))
-            .boxed()
-    }
 }

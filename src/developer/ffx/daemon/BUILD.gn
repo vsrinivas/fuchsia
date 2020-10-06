@@ -21,6 +21,7 @@ if (is_host) {
       "//src/connectivity/overnet/tools/ascendd:lib",
       "//src/developer/ffx:ffx_lib_args",
       "//src/developer/ffx/config:lib",
+      "//src/developer/ffx/core:lib",
       "//src/developer/ffx/fastboot:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",

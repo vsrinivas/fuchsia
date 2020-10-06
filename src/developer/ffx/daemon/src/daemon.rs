@@ -11,10 +11,10 @@ use {
     crate::target::{
         RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent, ToFidlTarget,
     },
-    crate::util::FailAtEnd,
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
+    ffx_core::TryStreamUtilExt,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, TargetAddrInfo,
@@ -117,22 +117,10 @@ impl Daemon {
     }
 
     pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
-        // This is a bit of a hack around how FIDL streams work. When the final
-        // message comes in from the client, the connection is closed.
-        // Any processing we are doing should then end immediately. However,
-        // the only way to force polling the futures to stop is to pop an error
-        // on the end of the stream, which is what this does.
-        //
-        // Without this change, the daemon will crash in the event that, for
-        // example, a zombie timeout is triggered, as polling on all the
-        // client's futures will continue long after the client is disconnected,
-        // as ending the stream does not cause the futures to stop being polled.
         stream
-            .fail_at_end()
-            .try_for_each_concurrent(None, |r| async move { self.handle_request(r?).await })
+            .map_err(|e| anyhow!("reading FIDL stream: {:#}", e))
+            .try_for_each_concurrent_while_connected(None, |r| self.handle_request(r))
             .await
-            .unwrap_or_else(|e| log::info!("FIDL stream complete: {:#}", e));
-        Ok(())
     }
 
     pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
