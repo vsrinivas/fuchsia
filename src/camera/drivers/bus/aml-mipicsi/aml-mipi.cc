@@ -10,10 +10,10 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 
 #include "src/camera/drivers/bus/aml-mipicsi/aml-mipi-regs.h"
+#include "src/camera/drivers/bus/aml-mipicsi/aml_mipi-bind.h"
 
 // NOTE: A lot of magic numbers, they come from vendor
 //       source code.
@@ -250,8 +250,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace camera
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_mipi, camera::driver_ops, "aml-mipi-csi2", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MIPI_CSI),
-ZIRCON_DRIVER_END(aml_mipi)
+ZIRCON_DRIVER(aml_mipi, camera::driver_ops, "aml-mipi-csi2", "0.1");

@@ -5,3 +5,8 @@
 group("bus") {
   deps = [ "aml-mipicsi" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "aml-mipicsi:tests" ]
+}
