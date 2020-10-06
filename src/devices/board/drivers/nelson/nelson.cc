@@ -118,6 +118,10 @@ int Nelson::Thread() {
   //   zxlogf(ERROR, "TouchInit failed: %d", status);
   // }
 
+  if ((status = DsiInit()) != ZX_OK) {
+    zxlogf(ERROR, "DsiInit failed: %d", status);
+  }
+
   if ((status = DisplayInit()) != ZX_OK) {
     zxlogf(ERROR, "DisplayInit failed: %d", status);
   }

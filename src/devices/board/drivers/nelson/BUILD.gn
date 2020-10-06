@@ -23,6 +23,7 @@ driver_module("nelson") {
     "nelson-clk.cc",
     "nelson-cpu.cc",
     "nelson-display.cc",
+    "nelson-dsi.cc",
     "nelson-emmc.cc",
     "nelson-gpio.cc",
     "nelson-i2c.cc",

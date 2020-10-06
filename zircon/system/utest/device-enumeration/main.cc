@@ -361,6 +361,9 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "sys/platform/00:00:1e/dw-dsi",
+      "display/amlogic-display/display-controller",
+      "class/dsi-base/000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
