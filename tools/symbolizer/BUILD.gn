@@ -14,6 +14,8 @@ if (is_host) {
       "symbolizer_impl.cc",
     ]
     deps = [
+      "//src/developer/debug/zxdb/client",
+      "//src/developer/debug/zxdb/symbols",
       "//src/lib/fxl",
       "//zircon/system/ulib/cmdline",
     ]
@@ -37,6 +39,7 @@ if (is_host) {
     sources = [
       "command_line_options_test.cc",
       "log_parser_test.cc",
+      "symbolizer_impl_test.cc",
     ]
     deps = [
       ":src",

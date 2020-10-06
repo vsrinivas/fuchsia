@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fstream>
 #include <iostream>
 
 #include "src/lib/fxl/strings/trim.h"
@@ -22,7 +23,7 @@ int Main(int argc, const char* argv[]) {
   }
 
   Printer printer(std::cout);
-  SymbolizerImpl symbolizer(&printer);
+  SymbolizerImpl symbolizer(&printer, options);
   LogParser parser(std::cin, &printer, &symbolizer);
 
   while (parser.ProcessOneLine()) {
