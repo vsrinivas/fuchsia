@@ -18,7 +18,7 @@ use {
             vmex::VmexService,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
-        config::{BuiltinPkgResolver, RuntimeConfig},
+        config::RuntimeConfig,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
         fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
@@ -46,6 +46,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     cm_rust::CapabilityName,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
+    fidl_fuchsia_component_internal::BuiltinPkgResolver,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,

@@ -9,7 +9,8 @@ use {
     },
     anyhow::{format_err, Context, Error},
     cm_rust::FidlIntoNative,
-    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_internal::{self as component_internal, BuiltinPkgResolver},
+    fidl_fuchsia_sys2 as fsys,
     std::{convert::TryFrom, path::PathBuf, sync::Weak},
     thiserror::Error,
 };
@@ -59,28 +60,6 @@ pub struct RuntimeConfig {
     /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
     pub builtin_pkg_resolver: BuiltinPkgResolver,
 }
-#[derive(Debug, PartialEq, Eq, Clone)]
-/// Which builtin resolver to use, if any. Default value is `None`.
-pub enum BuiltinPkgResolver {
-    /// No builtin package resolver is used. This is likely the right choice for an environment
-    /// which lacks a pkgfs.
-    None,
-
-    /// Serve the base package set using a resolver backed by pkgfs. This is the most common option
-    /// and the one that products which include pkgfs probably want.
-    PkgfsBase,
-
-    /// Try to use the `fuchsia.sys.Loader` protocol from the namespace, typically this is provided
-    /// by `appmgr`. Test scenarios commonly use this option.
-    AppmgrBridge,
-}
-
-impl Default for BuiltinPkgResolver {
-    fn default() -> Self {
-        BuiltinPkgResolver::None
-    }
-}
-
 /// Runtime security policy.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SecurityPolicy {
@@ -119,7 +98,7 @@ impl Default for RuntimeConfig {
             maintain_utc_clock: false,
             num_threads: 1,
             namespace_capabilities: vec![],
-            builtin_pkg_resolver: Default::default(),
+            builtin_pkg_resolver: BuiltinPkgResolver::None,
         }
     }
 }
@@ -171,27 +150,6 @@ fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
     }
 }
 
-impl From<&component_internal::BuiltinPkgResolver> for BuiltinPkgResolver {
-    fn from(input: &component_internal::BuiltinPkgResolver) -> Self {
-        match input {
-            component_internal::BuiltinPkgResolver::None => BuiltinPkgResolver::None,
-            component_internal::BuiltinPkgResolver::PkgfsBase => BuiltinPkgResolver::PkgfsBase,
-            component_internal::BuiltinPkgResolver::AppmgrBridge => {
-                BuiltinPkgResolver::AppmgrBridge
-            }
-        }
-    }
-}
-
-impl From<Option<&component_internal::BuiltinPkgResolver>> for BuiltinPkgResolver {
-    fn from(input: Option<&component_internal::BuiltinPkgResolver>) -> Self {
-        match input {
-            None => BuiltinPkgResolver::default(),
-            Some(i) => i.into(),
-        }
-    }
-}
-
 impl TryFrom<component_internal::Config> for RuntimeConfig {
     type Error = Error;
 
@@ -225,7 +183,9 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 .unwrap_or(default.use_builtin_process_launcher),
             maintain_utc_clock: config.maintain_utc_clock.unwrap_or(default.maintain_utc_clock),
             num_threads,
-            builtin_pkg_resolver: config.builtin_pkg_resolver.as_ref().into(),
+            builtin_pkg_resolver: config
+                .builtin_pkg_resolver
+                .unwrap_or(default.builtin_pkg_resolver),
         })
     }
 }
