@@ -156,7 +156,7 @@ class Controller : public DeviceType,
   void InitDisplays();
   std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
   bool LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) __TA_REQUIRES(display_lock_);
-  zx_status_t AddDisplay(std::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
+  zx_status_t AddDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);
   bool BringUpDisplayEngine(bool resume) __TA_REQUIRES(display_lock_);
   void InitDisplayBuffers();
   DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);

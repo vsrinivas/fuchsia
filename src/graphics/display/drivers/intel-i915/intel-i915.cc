@@ -745,21 +745,18 @@ void Controller::InitDisplays() {
   }
 }
 
-zx_status_t Controller::AddDisplay(std::unique_ptr<DisplayDevice>&& display) {
+zx_status_t Controller::AddDisplay(std::unique_ptr<DisplayDevice> display) {
+  uint64_t display_id = display->id();
+
+  // Add the new device.
   fbl::AllocChecker ac;
-  display_devices_.reserve(display_devices_.size() + 1, &ac);
-
-  if (ac.check()) {
-    display_devices_.push_back(std::move(display), &ac);
-    ZX_ASSERT(ac.check());
-
-    std::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
-    LOG_INFO("Display %ld connected\n", new_device->id());
-  } else {
+  display_devices_.push_back(std::move(display), &ac);
+  if (!ac.check()) {
     LOG_WARN("Failed to add display device\n");
     return ZX_ERR_NO_MEMORY;
   }
 
+  LOG_INFO("Display %ld connected\n", display_id);
   next_id_++;
   return ZX_OK;
 }
