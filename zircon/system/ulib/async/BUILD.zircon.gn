@@ -68,3 +68,8 @@ zx_library("async-cpp") {
     "$zx/system/ulib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}

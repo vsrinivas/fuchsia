@@ -453,3 +453,8 @@ source_set("crt1") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}

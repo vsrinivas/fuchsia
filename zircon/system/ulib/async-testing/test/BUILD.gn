@@ -13,11 +13,11 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":async-testing" ]
+  deps = [ ":async-testing-pkg" ]
 }
 
 test("async-testing") {
@@ -38,7 +38,7 @@ test("async-testing") {
   ]
 }
 
-bootfs_test("async-testing-bootfs-test") {
-  name = "async-testing-test"
+fuchsia_unittest_package("async-testing-pkg") {
+  executable_path = "test/async-testing-test"
   deps = [ ":async-testing" ]
 }

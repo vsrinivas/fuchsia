@@ -8,7 +8,7 @@ import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-axg-gpio-test-package" ]
+  deps = [ ":aml-axg-gpio-test-pkg" ]
 }
 
 driver_module("aml-axg-gpio") {
@@ -70,7 +70,7 @@ test("aml-axg-gpio-test") {
   ]
 }
 
-unittest_package("aml-axg-gpio-test-package") {
+unittest_package("aml-axg-gpio-test-pkg") {
   package_name = "aml-axg-gpio-test"
   deps = [ ":aml-axg-gpio-test" ]
   tests = [

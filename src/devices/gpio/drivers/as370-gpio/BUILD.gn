@@ -59,7 +59,7 @@ test("as370-gpio-test") {
   ]
 }
 
-unittest_package("as370-gpio-test-package") {
+unittest_package("as370-gpio-test-pkg") {
   package_name = "as370-gpio-test"
   deps = [ ":as370-gpio-test" ]
 
@@ -73,5 +73,5 @@ unittest_package("as370-gpio-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":as370-gpio-test-package" ]
+  deps = [ ":as370-gpio-test-pkg" ]
 }

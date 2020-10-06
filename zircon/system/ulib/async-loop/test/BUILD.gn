@@ -13,12 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
-
-group("test") {
-  testonly = true
-  deps = [ ":async-loop" ]
-}
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("async-loop") {
   output_name = "async-loop-test"
@@ -40,7 +35,7 @@ test("async-loop") {
   ]
 }
 
-bootfs_test("async-loop-bootfs-test") {
-  name = "async-loop-test"
+fuchsia_unittest_package("async-loop-test-pkg") {
+  executable_path = "test/async-loop-test"
   deps = [ ":async-loop" ]
 }

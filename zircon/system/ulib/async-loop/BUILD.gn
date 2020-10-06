@@ -57,3 +57,8 @@ zx_library("async-loop-default") {
   ]
   runtime_deps = [ "//zircon/system/ulib/async-default:async-default_sdk" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:async-loop-test-pkg" ]
+}

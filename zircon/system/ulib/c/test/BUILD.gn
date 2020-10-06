@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 default_stack_size_cases = [
   {
@@ -51,8 +52,8 @@ foreach(case, default_stack_size_cases) {
     }
   }
 
-  bootfs_test("default-stack-size-${case.name}-bootfs-test") {
-    name = "default-stack-size-${case.name}"
+  fuchsia_unittest_package("default-stack-size-${case.name}-pkg") {
+    executable_path = "test/default-stack-size-${case.name}"
     deps = [ ":default-stack-size-${case.name}" ]
   }
 }
@@ -73,7 +74,7 @@ executable("debugdata-test-helper") {
   deps = [ "//zircon/public/lib/zx" ]
 }
 
-test("debugdata") {
+test("cdebugdata-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -104,7 +105,7 @@ test("debugdata") {
   output_dir = "$root_out_dir/zircon-migrated"
 }
 
-test("posix-clocks") {
+test("posix-clocks-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -123,7 +124,7 @@ test("posix-clocks") {
   ]
 }
 
-test("atexit") {
+test("atexit-test") {
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -146,29 +147,26 @@ test("atexit") {
 group("test") {
   testonly = true
   deps = [
-    ":atexit",
-    ":debugdata",
-    ":posix-clocks",
+    ":atexit-test-pkg",
+    ":posix-clocks-test-pkg",
   ]
   foreach(case, default_stack_size_cases) {
-    deps += [ ":default-stack-size-${case.name}" ]
+    deps += [ ":default-stack-size-${case.name}-pkg" ]
   }
 }
 
-foreach(case, default_stack_size_cases) {
+fuchsia_unittest_package("atexit-test-pkg") {
+  executable_path = "test/atexit-test"
+  deps = [ ":atexit-test" ]
 }
 
-bootfs_test("atexit-bootfs-test") {
-  name = "atexit"
-  deps = [ ":atexit" ]
+# TODO(gboone): Convert to fuchsia_unittest_package() and move to core.
+bootfs_test("cdebugdata-test-bootfs-test") {
+  name = "cdebugdata-test"
+  deps = [ ":cdebugdata-test" ]
 }
 
-bootfs_test("debugdata-bootfs-test") {
-  name = "debugdata"
-  deps = [ ":debugdata" ]
-}
-
-bootfs_test("posix-clocks-bootfs-test") {
-  name = "posix-clocks"
-  deps = [ ":posix-clocks" ]
+fuchsia_unittest_package("posix-clocks-test-pkg") {
+  executable_path = "test/posix-clocks-test"
+  deps = [ ":posix-clocks-test" ]
 }

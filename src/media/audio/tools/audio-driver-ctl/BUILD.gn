@@ -3,14 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("audio-driver-ctl") {
   testonly = true
   deps = [
+    ":audio-driver-ctl-test",
     ":bin",
     ":src",
-    ":test",
   ]
 }
 
@@ -52,9 +52,9 @@ executable("bin") {
   deps = [ ":src" ]
 }
 
-test("test") {
+test("audio-driver-ctl-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "audio-test"
+  output_name = "audio-driver-ctl-test"
   sources = [
     "noise-source-test.cc",
     "sine-source-test.cc",
@@ -70,7 +70,12 @@ test("test") {
   ]
 }
 
-bootfs_test("test-bootfs-test") {
-  name = "audio-test"
-  deps = [ ":test" ]
+fuchsia_unittest_package("audio-driver-ctl-test-pkg") {
+  executable_path = "test/audio-driver-ctl-test"
+  deps = [ ":audio-driver-ctl-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio-driver-ctl-test-pkg" ]
 }

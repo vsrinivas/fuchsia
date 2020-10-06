@@ -28,6 +28,7 @@ group("tests") {
   deps = [
     ":audio_fuzzers",
     "drivers:tests",
+    "tools:tests",
     "//src/media/audio/audio_core:tests",
     "//src/media/audio/drivers:tests",
     "//src/media/audio/examples:tests",

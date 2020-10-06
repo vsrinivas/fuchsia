@@ -25,3 +25,8 @@ zx_library("abs_clock") {
   ]
   public_deps = [ "//zircon/public/lib/zx" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}

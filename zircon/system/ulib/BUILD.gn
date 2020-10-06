@@ -16,8 +16,13 @@ import("//build/fuzzing/fuzzer.gni")
 group("tests") {
   testonly = true
   deps = [
+    "abs_clock:tests",
     "affine:tests",
+    "async:tests",
+    "async-loop:tests",
+    "async-testing:tests",
     "bitmap:tests",
+    "c:tests",
     "digest:tests",
     "edid:tests",
     "elfload:tests",

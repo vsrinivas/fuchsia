@@ -13,3 +13,8 @@ group("tools") {
     "wav_recorder",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "audio-driver-ctl:tests" ]
+}

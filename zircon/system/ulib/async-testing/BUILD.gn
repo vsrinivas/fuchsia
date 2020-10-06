@@ -44,3 +44,8 @@ zx_library("async-testing") {
     "//zircon/system/ulib/async-default",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}

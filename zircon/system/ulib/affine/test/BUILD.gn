@@ -14,11 +14,14 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":affine-fuzzers" ]
+  deps = [
+    ":affine-fuzzers-pkg",
+    ":affine-test-pkg",
+  ]
 }
 
 test("affine") {
@@ -49,8 +52,8 @@ test("affine") {
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
-bootfs_test("affine-bootfs-test") {
-  name = "affine-test"
+fuchsia_unittest_package("affine-test-pkg") {
+  executable_path = "test/affine-test"
   deps = [ ":affine" ]
 }
 
@@ -59,6 +62,6 @@ fuzzer("affine-fuzzer") {
   deps = [ "//zircon/system/ulib/affine" ]
 }
 
-fuzzers_package("affine-fuzzers") {
+fuzzers_package("affine-fuzzers-pkg") {
   cpp_fuzzers = [ ":affine-fuzzer" ]
 }
