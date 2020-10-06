@@ -44,10 +44,4 @@ variant("fuzzer") {
 # input.
 config("engine") {
   ldflags = [ "-fsanitize=fuzzer" ]
-
-  # TODO(fxbug.dev/27011): This shouldn't be necessary, but libzircon isn't currently
-  # linked into libFuzzer on Fuchsia.
-  if (is_fuchsia) {
-    libs = [ "zircon" ]
-  }
 }

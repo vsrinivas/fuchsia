@@ -60,9 +60,8 @@ executable("bin") {
     "//garnet/lib/debugger_utils",
     "//garnet/lib/perfmon",
     "//src/lib/fxl",
+    "//src/zircon/lib/zircon",
   ]
-
-  libs = [ "zircon" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

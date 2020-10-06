@@ -10,7 +10,7 @@ source_set("tasks") {
     "fd_waiter.h",
   ]
 
-  libs = [ "zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
 
   public_deps = [
     "//sdk/lib/fdio",

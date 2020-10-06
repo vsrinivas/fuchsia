@@ -29,12 +29,12 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     ":benchmark_suite_llcpp",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/perftest",
   ]
-  libs = [ "zircon" ]
 }
 
 package("llcpp") {

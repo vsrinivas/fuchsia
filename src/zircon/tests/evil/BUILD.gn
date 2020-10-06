@@ -6,8 +6,10 @@ executable("evil") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "evil-tests"
   sources = [ "evil.c" ]
-  deps = [ "//sdk/lib/fdio" ]
-  libs = [ "zircon" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

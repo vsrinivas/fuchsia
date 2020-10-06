@@ -13,5 +13,5 @@ executable("nc") {
     "openbsd_compat.h",
   ]
 
-  libs = [ "zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
 }

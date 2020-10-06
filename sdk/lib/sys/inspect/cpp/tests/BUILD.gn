@@ -15,7 +15,7 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
   ]
-  libs = [ "zircon" ]
+  deps += [ "//src/zircon/lib/zircon" ]
 }
 
 executable("test") {
@@ -30,6 +30,7 @@ executable("test") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/zircon/lib/zircon",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
   ]
@@ -37,7 +38,6 @@ executable("test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
-  libs = [ "zircon" ]
 }
 
 test_package("sys_inspect_cpp_tests") {

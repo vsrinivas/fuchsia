@@ -34,7 +34,7 @@ executable("bin") {
     "//src/developer/shell/josh/lib",
   ]
 
-  libs = [ "zircon" ]
+  deps += [ "//src/zircon/lib/zircon" ]
 
   # Extra stack needed to avoid crashes when calling QuickJS functions
   # with asan enabled.

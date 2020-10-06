@@ -9,9 +9,10 @@ executable("selecttest") {
 
   sources = [ "selecttest.c" ]
 
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 }
 
 executable("sockopttest") {
@@ -19,9 +20,10 @@ executable("sockopttest") {
 
   sources = [ "sockopttest.c" ]
 
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 }
 
 executable("gethostbyname_test") {
@@ -29,9 +31,10 @@ executable("gethostbyname_test") {
 
   sources = [ "gethostbyname_test.c" ]
 
-  libs = [ "zircon" ]
-
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 }
 
 package("netstack-manual-tests") {

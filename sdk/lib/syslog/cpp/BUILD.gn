@@ -82,9 +82,10 @@ sdk_source_set("backend_legacy_fuchsia") {
 
   sources = [ "logging_backend_fuchsia_legacy.cc" ]
 
-  libs = [ "zircon" ]
-
-  deps = [ ":cpp" ]
+  deps = [
+    ":cpp",
+    "//src/zircon/lib/zircon",
+  ]
 
   public_deps = [
     "//zircon/public/lib/fit",
@@ -118,7 +119,7 @@ sdk_shared_library("backend_fuchsia_globals") {
     "logging_backend_fuchsia_globals.h",
   ]
 
-  libs = [ "zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
 }
 
 sdk_source_set("backend_fuchsia_lib") {

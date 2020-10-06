@@ -18,7 +18,6 @@ executable("magma_info") {
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/fxl",
+    "//src/zircon/lib/zircon",
   ]
-
-  libs = [ "zircon" ]
 }

@@ -104,8 +104,10 @@ executable("accept-child") {
 
   testonly = true
   sources = [ "fdio_atexit_test_accept_child.cc" ]
-  deps = [ "//sdk/lib/fdio" ]
-  libs = [ "zircon" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 }
 
 # Used by tests in fdio_startup.cc.
@@ -122,6 +124,8 @@ executable("null-namespace-child") {
 
   testonly = true
   sources = [ "fdio_null_namespace_child.c" ]
-  deps = [ "//sdk/lib/fdio" ]
-  libs = [ "zircon" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 }

@@ -40,11 +40,10 @@ executable("unittest-bin") {
   deps = [
     ":analysis",
     "//src/lib/fxl/test:gtest_main",
+    "//src/zircon/lib/zircon",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]
-
-  libs = [ "zircon" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

@@ -47,10 +47,9 @@ executable("unittest-bin") {
   deps = [
     ":format",
     "//src/lib/fxl/test:gtest_main",
+    "//src/zircon/lib/zircon",
     "//third_party/googletest:gmock",
   ]
-
-  libs = [ "zircon" ]
 }
 
 test_package("audio-libformat-unittests") {

@@ -17,8 +17,10 @@ executable("msd") {
   output_name = "msd-test"
   testonly = false
   sources = [ "msd.c" ]
-  deps = [ "//sdk/lib/fdio" ]
-  libs = [ "zircon" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

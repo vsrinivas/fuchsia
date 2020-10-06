@@ -28,7 +28,7 @@ source_set("scudo") {
     # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
     configs += [ "$zx_build_config:no_fuzzer" ]
   } else {
-    libs = [ "zircon" ]
+    deps += [ "//src/zircon/lib/zircon" ]
   }
 }
 

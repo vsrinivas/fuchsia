@@ -17,11 +17,11 @@ test("futex-ownership") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-  libs = [ "zircon" ]
 }
 
 bootfs_test("futex-ownership-bootfs-test") {

@@ -65,9 +65,8 @@ template("banjo_c_target") {
       ":${main_target_name}_c_compile($banjo_toolchain)",
       ":${main_target_name}_cpp_compile($banjo_toolchain)",
       ":${main_target_name}_cpp_i_compile($banjo_toolchain)",
+      "//src/zircon/lib/zircon",
     ]
-
-    libs = [ "zircon" ]
   }
 
   # Define a separate target for mocks to avoid requiring all Banjo users to
@@ -120,6 +119,6 @@ template("banjo_dummy_c_target") {
                            ])
 
     public_deps = [ "//zircon/public/sysroot" ]
-    libs = [ "zircon" ]
+    deps = [ "//src/zircon/lib/zircon" ]
   }
 }

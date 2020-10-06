@@ -54,14 +54,13 @@ executable("test_bin") {
 
   sources = [ "test/audio_effects_example_tests.cc" ]
 
-  libs = [ "zircon" ]
-
   deps = [
     ":headers",
     "//sdk/lib/media/audio/effects",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/effects_loader",
+    "//src/zircon/lib/zircon",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]

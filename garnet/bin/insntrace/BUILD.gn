@@ -33,12 +33,11 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.cpu.insntrace",
     "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel",
     "//src/lib/fxl",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  libs = [ "zircon" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

@@ -78,12 +78,11 @@ executable("log_listener_return_code_test") {
 
   sources = [ "log_listener_return_code_test.cc" ]
 
-  libs = [ "zircon" ]
-
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
+    "//src/zircon/lib/zircon",
   ]
 }
 

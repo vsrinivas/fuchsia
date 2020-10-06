@@ -9,7 +9,7 @@ executable("bin") {
 
   sources = [ "uname.c" ]
 
-  libs = [ "zircon" ]
+  deps = [ "//src/zircon/lib/zircon" ]
 }
 
 package("uname") {

@@ -11,9 +11,9 @@ test("handle-alias") {
   sources = [ "handle-alias.c" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zxtest",
   ]
-  libs = [ "zircon" ]
 }
 
 bootfs_test("handle-alias-bootfs-test") {

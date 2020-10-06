@@ -15,11 +15,11 @@ executable("bin") {
   ]
   deps = [
     "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/perftest",
   ]
-  libs = [ "zircon" ]
 }
 
 package("lib-fidl") {

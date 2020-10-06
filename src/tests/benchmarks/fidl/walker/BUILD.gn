@@ -30,12 +30,12 @@ executable("bin") {
   ]
   deps = [
     ":benchmark_suite_walker",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/perftest",
   ]
-  libs = [ "zircon" ]
 }
 
 package("walker") {

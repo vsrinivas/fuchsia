@@ -44,12 +44,11 @@ executable("run_return_value_test") {
 
   sources = [ "run_return_value_test.cc" ]
 
-  libs = [ "zircon" ]
-
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
+    "//src/zircon/lib/zircon",
   ]
 
   # TODO(fxbug.dev/46837): Fix the leaks and remove this.

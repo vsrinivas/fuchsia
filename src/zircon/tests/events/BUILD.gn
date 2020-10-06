@@ -14,9 +14,9 @@ test("events") {
   sources = [ "events.c" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zxtest",
   ]
-  libs = [ "zircon" ]
 }
 
 bootfs_test("events-bootfs-test") {

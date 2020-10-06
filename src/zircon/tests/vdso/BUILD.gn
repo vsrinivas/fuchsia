@@ -24,17 +24,19 @@ test("vdso-base") {
   sources = [ "vdso-base.c" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zxtest",
   ]
-  libs = [ "zircon" ]
 }
 
 test("vdso-variant") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-variant.c" ]
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
   data_deps = [ ":vdso-variant-helper" ]
-  libs = [ "zircon" ]
 }
 
 executable("vdso-variant-helper") {

@@ -29,12 +29,12 @@ executable("bin") {
   deps = [
     ":benchmark_suite_reference",
     "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/perftest",
   ]
-  libs = [ "zircon" ]
 }
 
 package("reference") {

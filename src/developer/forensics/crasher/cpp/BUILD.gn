@@ -23,6 +23,8 @@ executable("crasher_exe") {
     "crasher.c",
   ]
   cflags = [ "-fstack-protector-all" ]
-  deps = [ "//sdk/lib/fdio" ]
-  libs = [ "zircon" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
+  ]
 }

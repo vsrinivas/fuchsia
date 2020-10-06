@@ -72,6 +72,7 @@ template("fidl_c_target") {
     deps = [
       ":${main_target_name}_compile($fidl_toolchain)",
       ":${main_target_name}_tables",
+      "//src/zircon/lib/zircon",
     ]
     public_deps = [ "//zircon/public/lib/fidl" ]
 
@@ -84,8 +85,6 @@ template("fidl_c_target") {
                          type + "(" + get_label_info(dep, "toolchain") + ")" ]
       }
     }
-
-    libs = [ "zircon" ]
   }
 }
 

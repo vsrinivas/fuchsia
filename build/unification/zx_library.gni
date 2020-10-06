@@ -312,7 +312,7 @@ template("zx_library") {
         [ "//zircon/system/ulib/zircon" ] != lib_deps) {
       lib_deps -= [ "//zircon/system/ulib/zircon" ]
       if (is_fuchsia) {
-        lib_libs += [ "zircon" ]
+        lib_deps += [ "//src/zircon/lib/zircon" ]
       } else {
         lib_public_deps += [
           "//zircon/system/public",
@@ -324,7 +324,7 @@ template("zx_library") {
         [ "//zircon/system/ulib/zircon" ] != lib_public_deps) {
       lib_public_deps -= [ "//zircon/system/ulib/zircon" ]
       if (is_fuchsia) {
-        lib_libs += [ "zircon" ]
+        lib_deps += [ "//src/zircon/lib/zircon" ]
       } else {
         lib_public_deps += [
           "//zircon/system/public",

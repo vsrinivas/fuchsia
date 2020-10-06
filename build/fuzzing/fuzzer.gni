@@ -21,6 +21,9 @@ import("//build/test.gni")
 #
 fuzzer_configs = [ "//build/config/fuzzer" ]
 
+# Instructs the linker to link against libFuzzer, see config documentation for details.
+fuzzer_engine_configs = [ "//build/config/fuzzer:engine" ]
+
 # Defines a fuzzer binary.
 #
 # The fuzzer template is used to create components containing binaries which leverage LLVM's
@@ -71,6 +74,17 @@ template("fuzzer") {
     forward_variables_from(invoker, [ "visibility" ])
     testonly = true
     variant_selector_target_type = "fuzzed_executable"
+
+    # TODO(fxbug.dev/27011): This shouldn't be necessary, but libzircon isn't currently
+    # linked into libFuzzer on Fuchsia.
+    if (is_fuchsia) {
+      if (configs + fuzzer_engine_configs - fuzzer_engine_configs != configs) {
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += [ "//src/zircon/lib/zircon" ]
+      }
+    }
   }
 
   # Generate the fuzzer component manifest
@@ -202,7 +216,7 @@ template("fuzzer") {
 
     # Explicitly forward visibility for nested scopes.
     forward_variables_from(invoker, [ "visibility" ])
-    configs -= [ "//build/config/fuzzer:engine" ]
+    configs -= fuzzer_engine_configs
     deps += [
       ":$corpus_target",
       "//sdk/lib/syslog/cpp:backend_legacy",
@@ -248,7 +262,7 @@ template("fuzzer") {
 }
 
 set_defaults("fuzzer") {
-  configs = default_executable_configs + [ "//build/config/fuzzer:engine" ]
+  configs = default_executable_configs + fuzzer_engine_configs
 }
 
 # TODO(fxbug.dev/48118): Add LSan

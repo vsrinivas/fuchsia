@@ -50,9 +50,9 @@ source_set("msd_intel_entry") {
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:performance_counter_device",
     "//src/graphics/lib/magma/src/sys_driver",
     "//src/lib/ddk",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zx",
   ]
-  libs = [ "zircon" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -75,9 +75,9 @@ source_set("msd_intel_test_entry") {
     "//src/graphics/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
     "//src/graphics/lib/magma/src/sys_driver",
     "//src/lib/ddk",
+    "//src/zircon/lib/zircon",
     "//zircon/public/lib/zx",
   ]
-  libs = [ "zircon" ]
   deps += [
     "tests/unit_tests:hardware_tests",
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:pci_driver_gtest",

@@ -71,9 +71,8 @@ executable("unittest_bin") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock/testing",
+    "//src/zircon/lib/zircon",
   ]
-
-  libs = [ "zircon" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

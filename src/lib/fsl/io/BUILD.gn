@@ -14,10 +14,9 @@ source_set("io") {
     "redirection.h",
   ]
 
-  libs = [ "zircon" ]
-
   deps = [
     "//sdk/lib/fdio",
+    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fdio-caller",
   ]

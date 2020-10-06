@@ -96,7 +96,7 @@ executable("perfmon_tests_app") {
     "//zircon/public/lib/zx",
   ]
 
-  libs = [ "zircon" ]
+  deps += [ "//src/zircon/lib/zircon" ]
 }
 
 test_package("perfmon_tests") {

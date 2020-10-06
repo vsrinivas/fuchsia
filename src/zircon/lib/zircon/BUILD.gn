@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_noop_atom.gni")
+
+# Depending on this will ensure your binaries will be linked against
+# the Zircon VDSO, a.k.a. libzircon.so.
+# See (fxbug.dev/60613) for details.
+group("zircon") {
+  public_configs = [ ":zircon.config" ]
+}
+
+config("zircon.config") {
+  visibility = [ ":lib" ]
+  libs = [ "zircon" ]
+}
+
+# The zircon library is not a real SDK atom since it is provided
+# directly as part of the SDK sysroot.
+sdk_noop_atom("zircon_sdk") {
+}
