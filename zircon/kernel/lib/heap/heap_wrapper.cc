@@ -146,46 +146,6 @@ void* malloc(size_t size) {
   return ptr;
 }
 
-void* malloc_debug_caller_(size_t size, void* caller) {
-  DEBUG_ASSERT(!arch_blocking_disallowed());
-  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
-
-  LTRACEF("size %zu\n", size);
-
-  add_stat(caller, size);
-
-  void* ptr = cmpct_alloc(size);
-  if (unlikely(heap_trace)) {
-    printf("caller %p malloc %zu -> %p\n", caller, size, ptr);
-  }
-
-  if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr)) {
-    panic("malloc of size %zu failed\n", size);
-  }
-
-  return ptr;
-}
-
-void* memalign_debug_caller_(size_t align, size_t size, void* caller) {
-  DEBUG_ASSERT(!arch_blocking_disallowed());
-  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
-
-  LTRACEF("size %zu\n", size);
-
-  add_stat(caller, size);
-
-  void* ptr = cmpct_memalign(align, size);
-  if (unlikely(heap_trace)) {
-    printf("caller %p malloc %zu -> %p\n", caller, size, ptr);
-  }
-
-  if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr)) {
-    panic("malloc of size %zu failed\n", size);
-  }
-
-  return ptr;
-}
-
 void* memalign(size_t boundary, size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());

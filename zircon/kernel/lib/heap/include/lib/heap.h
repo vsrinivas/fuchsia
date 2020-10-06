@@ -27,25 +27,6 @@ void* calloc(size_t count, size_t size) __MALLOC;
 void* realloc(void* ptr, size_t size);
 void free(void* ptr);
 
-// inner function used when stats gathering is enabled
-void* malloc_debug_caller_(size_t size, void* caller);
-void* memalign_debug_caller_(size_t align, size_t size, void* caller);
-
-// alternate version of malloc where the caller is passed in
-__MALLOC static inline void* malloc_debug_caller(size_t size, void* caller) {
-  if (HEAP_COLLECT_STATS) {
-    return malloc_debug_caller_(size, caller);
-  } else {
-    return malloc(size);
-  }
-}
-__MALLOC static inline void* memalign_debug_caller(size_t align, size_t size, void* caller) {
-  if (HEAP_COLLECT_STATS) {
-    return memalign_debug_caller_(align, size, caller);
-  } else {
-    return memalign(align, size);
-  }
-}
 // tell the heap to return any free pages it can find
 void heap_trim(void);
 
