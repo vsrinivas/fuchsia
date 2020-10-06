@@ -277,15 +277,19 @@ void PageSource::RaiseReadRequestLocked(PageRequest* request) {
 }
 
 void PageSource::CompleteRequestLocked(PageRequest* req, zx_status_t status) {
+  VM_KTRACE_DURATION(1, "page_request_complete", req->offset_, req->len_);
+
   // Take the request back from the callback before waking
   // up the corresponding thread.
   ClearAsyncRequest(&req->read_request_);
 
   while (!req->overlap_.is_empty()) {
     auto waiter = req->overlap_.pop_front();
+    VM_KTRACE_FLOW_BEGIN(1, "page_request_signal", reinterpret_cast<uintptr_t>(waiter));
     waiter->offset_ = UINT64_MAX;
     waiter->event_.Signal(status);
   }
+  VM_KTRACE_FLOW_BEGIN(1, "page_request_signal", reinterpret_cast<uintptr_t>(req));
   req->offset_ = UINT64_MAX;
   req->event_.Signal(status);
 }
@@ -361,7 +365,9 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, VmoDebugInf
 }
 
 zx_status_t PageRequest::Wait() {
+  VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
   zx_status_t status = src_->WaitOnEvent(&event_);
+  VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));
   if (status != ZX_OK && !PageSource::IsValidFailureCode(status)) {
     src_->CancelRequest(this);
   }

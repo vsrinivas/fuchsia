@@ -139,6 +139,7 @@ if (current_toolchain == default_toolchain) {
       "ZIRCON_TOOLCHAIN",
       "LK_DEBUGLEVEL=$kernel_debug_level",
       "DEBUG_PRINT_LEVEL=$kernel_debug_print_level",
+      "VM_TRACING_LEVEL=$vm_tracing_level",
     ]
 
     if (!disable_kernel_pci) {

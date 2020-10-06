@@ -144,6 +144,10 @@ void PagerSource::QueueMessageLocked(page_request_t* request) {
     // The vm subsystem should guarantee this
     uint64_t unused;
     DEBUG_ASSERT(!add_overflow(offset, length, &unused));
+
+    // Trace flow events require an enclosing duration.
+    VM_KTRACE_DURATION(1, "page_request_queue", offset, length);
+    VM_KTRACE_FLOW_BEGIN(1, "page_request_queue", reinterpret_cast<uintptr_t>(&packet_));
   } else {
     offset = length = 0;
     cmd = ZX_PAGER_VMO_COMPLETE;
@@ -169,6 +173,11 @@ void PagerSource::ClearAsyncRequest(page_request_t* request) {
   ASSERT(!closed_);
 
   if (request == active_request_) {
+    if (request != &complete_request_) {
+      // Trace flow events require an enclosing duration.
+      VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
+      VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(&packet_));
+    }
     // Condition on whether or not we actually cancel the packet, to make sure
     // we don't race with a call to PagerSource::Free.
     if (port_->CancelQueued(&packet_)) {
@@ -242,6 +251,9 @@ void PagerSource::Free(PortPacket* packet) {
 
   Guard<Mutex> guard{&mtx_};
   if (active_request_ != &complete_request_) {
+    // Trace flow events require an enclosing duration.
+    VM_KTRACE_DURATION(1, "page_request_queue", active_request_->offset, active_request_->length);
+    VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(packet));
     OnPacketFreedLocked();
   } else {
     complete_pending_ = false;

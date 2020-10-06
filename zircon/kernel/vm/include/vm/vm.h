@@ -10,6 +10,7 @@
 
 #include <align.h>
 #include <arch.h>
+#include <lib/ktrace.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -19,6 +20,28 @@
 #include <arch/kernel_aspace.h>
 #include <ktl/span.h>
 #include <vm/arch_vm_aspace.h>
+
+#ifndef VM_TRACING_LEVEL
+#define VM_TRACING_LEVEL 0
+#endif
+
+// Evaluates to true if tracing is enabled for the given level.
+#define VM_KTRACE_LEVEL_ENABLED(level) ((VM_TRACING_LEVEL) >= (level))
+
+// TODO(rashaeqbal): Change the trace category to something more specific when
+// custom kernel categories are supported.
+#define VM_KTRACE_DURATION(level, string, args...)                             \
+  TraceDuration<TraceEnabled<VM_KTRACE_LEVEL_ENABLED(level)>, KTRACE_GRP_META, \
+                TraceContext::Thread>                                          \
+      duration{KTRACE_STRING_REF(string), ##args};
+
+#define VM_KTRACE_FLOW_BEGIN(level, string, flow_id, args...)                         \
+  ktrace_flow_begin(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
+                    KTRACE_GRP_META, KTRACE_STRING_REF(string), flow_id, ##args);
+
+#define VM_KTRACE_FLOW_END(level, string, flow_id, args...)                         \
+  ktrace_flow_end(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
+                  KTRACE_GRP_META, KTRACE_STRING_REF(string), flow_id, ##args);
 
 class VmAspace;
 

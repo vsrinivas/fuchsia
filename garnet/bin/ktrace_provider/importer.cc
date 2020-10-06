@@ -235,7 +235,9 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
       return true;
     }
     case KTRACE_EVENT(TAG_PAGE_FAULT):
-      return HandlePageFault(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+      return HandlePageFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+    case KTRACE_EVENT(TAG_PAGE_FAULT_EXIT):
+      return HandlePageFaultExit(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
     case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
       trace_cpu_number_t cpu = record->b & 0xff;
       trace_thread_state_t outgoing_thread_state = ToTraceThreadState((record->b >> 8) & 0xff);
@@ -614,16 +616,30 @@ bool Importer::HandleSyscallExit(trace_ticks_t event_time, trace_cpu_number_t cp
   return true;
 }
 
-bool Importer::HandlePageFault(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                               uint64_t virtual_address, uint32_t flags) {
+bool Importer::HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                    uint64_t virtual_address, uint32_t flags) {
   trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
   if (!trace_is_unknown_thread_ref(&thread_ref)) {
     trace_arg_t args[] = {
         trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
         trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
-    trace_context_write_instant_event_record(context_, event_time, &thread_ref, &irq_category_ref_,
-                                             &page_fault_name_ref_, TRACE_SCOPE_THREAD, args,
-                                             std::size(args));
+    trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
+                                                    &irq_category_ref_, &page_fault_name_ref_, args,
+                                                    std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                   uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
+                                                  &irq_category_ref_, &page_fault_name_ref_, args,
+                                                  std::size(args));
   }
   return true;
 }

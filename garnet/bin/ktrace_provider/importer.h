@@ -64,8 +64,10 @@ class Importer {
   bool HandleSyscallEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                           uint32_t syscall);
   bool HandleSyscallExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number, uint32_t syscall);
-  bool HandlePageFault(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                       uint64_t virtual_address, uint32_t flags);
+  bool HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                            uint64_t virtual_address, uint32_t flags);
+  bool HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                           uint64_t virtual_address, uint32_t flags);
   bool HandleContextSwitch(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                            trace_thread_state_t outgoing_thread_state,
                            trace_thread_priority_t outgoing_thread_priority,
@@ -132,7 +134,7 @@ class Importer {
   bool HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                      uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
   bool HandleFlowStep(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
-                     uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
+                      uint32_t group, bool cpu_trace, trace_flow_id_t flow_id);
   bool HandleCounter(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                      uint32_t group, bool cpu_trace, trace_counter_id_t counter_id, int64_t value);
   bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);

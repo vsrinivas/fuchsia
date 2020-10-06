@@ -46,6 +46,13 @@ declare_args() {
   # analysis.
   scheduler_queue_tracing_enabled = false
 
+  # The level of detail for traces emitted by the VM system. Values greater than
+  # zero add increasing details at the cost of increased trace buffer use.
+  #
+  # 0 = Default kernel:* tracing.
+  # 1 = Adds flow events for asynchronous page requests.
+  vm_tracing_level = 0
+
   # Disable kernel PCI driver support. A counterpart of the the build
   # flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
   disable_kernel_pci = false
