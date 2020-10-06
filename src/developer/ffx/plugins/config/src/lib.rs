@@ -5,12 +5,12 @@
 use {
     anyhow::{anyhow, Result},
     ffx_config::{
-        add, api::query::ConfigQuery, env_file, environment::Environment, get, print_config, raw,
-        remove, set, ConfigLevel,
+        add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, get,
+        print_config, raw, remove, set, ConfigLevel,
     },
     ffx_config_plugin_args::{
         AddCommand, ConfigCommand, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
-        MappingMode, RemoveCommand, SetCommand, SubCommand,
+        MappingMode, OutputType, RemoveCommand, SetCommand, SubCommand,
     },
     ffx_core::{ffx_bail, ffx_plugin},
     serde_json::Value,
@@ -30,7 +30,54 @@ pub async fn exec_config(config: ConfigCommand) -> Result<()> {
     }
 }
 
-async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, mut writer: W) -> Result<()> {
+fn json_output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<()> {
+    match value {
+        Some(v) => writeln!(writer, "{}", v).map_err(|e| anyhow!("{}", e)),
+        None => ffx_bail!("Value not found"),
+    }
+}
+
+fn human_readable<W: Write + Sync>(mut writer: W, name: &str, value: Option<Value>) -> Result<()> {
+    match value {
+        Some(v) => writeln!(writer, "{}: {}", name, v).map_err(|e| anyhow!("{}", e)),
+        None => writeln!(writer, "{}: none", name).map_err(|e| anyhow!("{}", e)),
+    }
+}
+
+fn json_output_array<W: Write + Sync>(
+    mut writer: W,
+    values: std::result::Result<Vec<Value>, ConfigError>,
+) -> Result<()> {
+    match values {
+        Ok(v) => {
+            if v.len() == 1 {
+                writeln!(writer, "{}", v[0]).map_err(|e| anyhow!("{}", e))
+            } else {
+                writeln!(writer, "{}", Value::Array(v)).map_err(|e| anyhow!("{}", e))
+            }
+        }
+        Err(_) => ffx_bail!("Value not found"),
+    }
+}
+
+fn human_readable_array<W: Write + Sync>(
+    mut writer: W,
+    name: &str,
+    values: std::result::Result<Vec<Value>, ConfigError>,
+) -> Result<()> {
+    match values {
+        Ok(v) => {
+            if v.len() == 1 {
+                writeln!(writer, "{}: {}", name, v[0]).map_err(|e| anyhow!("{}", e))
+            } else {
+                writeln!(writer, "{}: {}", name, Value::Array(v)).map_err(|e| anyhow!("{}", e))
+            }
+        }
+        Err(_) => writeln!(writer, "{}: none", name).map_err(|e| anyhow!("{}", e)),
+    }
+}
+
+async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()> {
     let query = ConfigQuery::new(
         get_cmd.name.as_ref().map(|s| s.as_str()),
         None,
@@ -41,37 +88,28 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, mut writer: W) -> Resul
         Some(name) => match get_cmd.process {
             MappingMode::Raw => {
                 let value: Option<Value> = raw(query).await?;
-                match value {
-                    Some(v) => writeln!(writer, "{}: {}", name, v)?,
-                    None => writeln!(writer, "{}: none", name)?,
+                match get_cmd.output {
+                    OutputType::HumanReadable => human_readable(writer, name, value),
+                    OutputType::Json => json_output(writer, value),
                 }
             }
             MappingMode::Substitute => {
                 let value: std::result::Result<Vec<Value>, _> = get(query).await;
-                match value {
-                    Ok(v) => {
-                        if v.len() == 1 {
-                            writeln!(writer, "{}: {}", name, v[0])?
-                        } else {
-                            writeln!(writer, "{}: {}", name, Value::Array(v))?
-                        }
-                    }
-                    Err(_) => writeln!(writer, "{}: none", name)?,
+                match get_cmd.output {
+                    OutputType::HumanReadable => human_readable_array(writer, name, value),
+                    OutputType::Json => json_output_array(writer, value),
                 }
             }
             MappingMode::SubstituteAndFlatten => {
                 let value: Option<Value> = get(query).await?;
-                match value {
-                    Some(v) => writeln!(writer, "{}: {}", name, v)?,
-                    None => writeln!(writer, "{}: none", name)?,
+                match get_cmd.output {
+                    OutputType::HumanReadable => human_readable(writer, name, value),
+                    OutputType::Json => json_output(writer, value),
                 }
             }
         },
-        None => {
-            print_config(writer, &get_cmd.build_dir).await?;
-        }
+        None => print_config(writer, &get_cmd.build_dir).await,
     }
-    Ok(())
 }
 
 async fn exec_set(set_cmd: &SetCommand) -> Result<()> {

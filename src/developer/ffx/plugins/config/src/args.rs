@@ -60,6 +60,12 @@ pub enum MappingMode {
     SubstituteAndFlatten,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum OutputType {
+    HumanReadable,
+    Json,
+}
+
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get", description = "display config values")]
 pub struct GetCommand {
@@ -85,6 +91,11 @@ pub struct GetCommand {
     /// an optional build directory to associate the build config provided - use used for "build"
     /// configs
     pub build_dir: Option<String>,
+
+    #[argh(option, from_str_fn(parse_output), default = "OutputType::HumanReadable", short = 'o')]
+    /// how to show results. Possible values are "h" or "human" or "human_readable" for human
+    /// readable output, "j" or "json" for valid JSON that contains only the value.
+    pub output: OutputType,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -219,6 +230,16 @@ fn parse_mode(value: &str) -> Result<SelectMode, String> {
     }
 }
 
+fn parse_output(value: &str) -> Result<OutputType, String> {
+    match value {
+        "h" | "human" | "human-readable" => Ok(OutputType::HumanReadable),
+        "j" | "JSON" | "json" | "Json" => Ok(OutputType::Json),
+        _ => Err(String::from(
+            "Unrecognized output type. Possible values are \"human\" or \"json\".",
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,6 +321,7 @@ mod tests {
                         select: SelectMode::First,
                         name: Some(expected_key.to_string()),
                         build_dir: expected_build_dir,
+                        output: OutputType::HumanReadable,
                     })
                 })
             )
