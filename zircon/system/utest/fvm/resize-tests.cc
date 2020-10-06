@@ -36,7 +36,7 @@ struct GrowParams {
   int64_t target_size;
 
   // The expected format info at each step.
-  FormatInfo format;
+  Header format;
 
   // Attempt to allocate, read and write to new slices.
   bool validate_new_slices;
@@ -70,7 +70,7 @@ void GrowFvm(const fbl::unique_fd& devfs_root, const GrowParams& params, Ramdisk
   VolumeInfo after_grow_info;
   ASSERT_OK(fvm_adapter->Query(&after_grow_info));
   ASSERT_TRUE(IsConsistentAfterGrowth(before_grow_info, after_grow_info));
-  ASSERT_EQ(params.format.slice_count(), after_grow_info.pslice_total_count);
+  ASSERT_EQ(params.format.pslice_count, after_grow_info.pslice_total_count);
   // Data should still be present.
   ASSERT_NO_FATAL_FAILURES(vpartition->CheckContentsAt(random_data, 0));
 
@@ -80,7 +80,7 @@ void GrowFvm(const fbl::unique_fd& devfs_root, const GrowParams& params, Ramdisk
                                  after_grow_info.pslice_total_count - kPartitionSliceCount));
 
     auto random_data_2 = MakeRandomBuffer(kDataSize, &initial_seed);
-    uint64_t offset = (params.format.slice_count() - 1) * kSliceSize;
+    uint64_t offset = (params.format.pslice_count - 1) * kSliceSize;
     ASSERT_NO_FATAL_FAILURES(vpartition->WriteAt(random_data_2, offset));
     ASSERT_NO_FATAL_FAILURES(vpartition->CheckContentsAt(random_data_2, offset));
   }
@@ -118,7 +118,8 @@ TEST_F(FvmResizeTest, PreallocatedMetadataGrowsCorrectly) {
   params.target_size = kMaxBlockCount * kTestBlockSize;
   // Data stays the same size, so there are no new slices.
   params.validate_new_slices = true;
-  params.format = FormatInfo::FromDiskSize(kMaxBlockCount * kTestBlockSize, kSliceSize);
+  params.format =
+      Header::FromDiskSize(fvm::kMaxUsablePartitions, kMaxBlockCount * kTestBlockSize, kSliceSize);
   params.seed = zxtest::Runner::GetInstance()->options().seed;
 
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
@@ -148,7 +149,7 @@ TEST_F(FvmResizeTest, PreallocatedMetadataGrowsAsMuchAsPossible) {
   params.target_size = 2 * expected.fvm_partition_size;
   // Data stays the same size, so there are no new slices.
   params.validate_new_slices = false;
-  params.format = FormatInfo(expected);
+  params.format = expected;
   params.seed = zxtest::Runner::GetInstance()->options().seed;
 
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
@@ -171,14 +172,16 @@ TEST_F(FvmResizeTest, PreallocatedMetadataRemainsValidInPartialGrowths) {
   params.target_size = kMidBlockCount * kTestBlockSize;
   // Data stays the same size, so there are no new slices.
   params.validate_new_slices = true;
-  params.format = FormatInfo::FromPreallocatedSize(kMidBlockCount * kTestBlockSize,
-                                                   kMaxBlockCount * kTestBlockSize, kSliceSize);
+  params.format =
+      Header::FromGrowableDiskSize(kMaxUsablePartitions, kMidBlockCount * kTestBlockSize,
+                                   kMaxBlockCount * kTestBlockSize, kSliceSize);
   params.seed = zxtest::Runner::GetInstance()->options().seed;
 
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
 
-  params.format = FormatInfo::FromPreallocatedSize(kMaxBlockCount * kTestBlockSize,
-                                                   kMaxBlockCount * kTestBlockSize, kSliceSize);
+  params.format =
+      Header::FromGrowableDiskSize(kMaxUsablePartitions, kMaxBlockCount * kTestBlockSize,
+                                   kMaxBlockCount * kTestBlockSize, kSliceSize);
   params.target_size = kMaxBlockCount * kTestBlockSize;
   ASSERT_NO_FATAL_FAILURES(GrowFvm(devmgr_.devfs_root(), params, ramdisk.get(), fvm.get()));
 }

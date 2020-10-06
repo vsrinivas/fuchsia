@@ -301,8 +301,9 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
             fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel());
         if (result.status() == ZX_OK) {
           auto get_maximum_slice_count = [](const fvm::SparseImage& header) {
-            return fvm::FormatInfo::FromDiskSize(header.maximum_disk_size, header.slice_size)
-                .GetMaxAllocatableSlices();
+            return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, header.maximum_disk_size,
+                                             header.slice_size)
+                .GetAllocationTableAllocatedEntryCount();
           };
           if (result->info->slice_size != header.slice_size) {
             ERROR("Mismatched slice size. Reinitializing FVM.\n");

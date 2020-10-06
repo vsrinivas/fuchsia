@@ -31,35 +31,6 @@ namespace fvm {
 
 namespace {
 
-constexpr size_t MetadataSizeOrZero(size_t disk_size, size_t slice_size) {
-  if (disk_size == 0 || slice_size == 0) {
-    return 0;
-  }
-  return MetadataSizeForDiskSize(disk_size, slice_size);
-}
-
-constexpr size_t UsableSlicesCountOrZero(size_t fvm_partition_size, size_t metadata_allocated_size,
-                                         size_t slice_size) {
-  if (slice_size == 0) {
-    return 0;
-  }
-
-  int64_t delta = (fvm_partition_size - 2 * metadata_allocated_size);
-  size_t slice_count = (delta > 0 ? static_cast<size_t>(delta) : 0) / slice_size;
-
-  // TODO(fxb/40192) account for variable partition table sizes.
-  uint64_t allocation_table_offset = AllocTableOffset();
-
-  // Because the allocation table is 1-indexed and pslices are 0 indexed on disk,
-  // if the number of slices fit perfectly in the metadata, the allocated buffer won't be big
-  // enough to address them all. This only happens when the rounded up block value happens to
-  // match the disk size.
-  // TODO(fxbug.dev/59980): Fix underlying cause and remove workaround.
-  if ((allocation_table_offset + slice_count * sizeof(SliceEntry)) == metadata_allocated_size)
-    slice_count--;
-  return slice_count;
-}
-
 // Return true if g1 is greater than or equal to g2.
 // Safe against integer overflow.
 bool GenerationGE(uint64_t g1, uint64_t g2) {
@@ -92,32 +63,6 @@ bool CheckHash(const void* metadata, size_t metadata_size) {
 }
 
 }  // namespace
-
-FormatInfo FormatInfo::FromPreallocatedSize(size_t initial_size, size_t max_size,
-                                            size_t slice_size) {
-  Header header = {};
-  header.magic = kMagic;
-  header.version = kVersion;
-  header.pslice_count =
-      UsableSlicesCountOrZero(initial_size, MetadataSizeOrZero(max_size, slice_size), slice_size);
-  header.slice_size = slice_size;
-  header.fvm_partition_size = initial_size;
-  header.vpartition_table_size = PartitionTableLength(kMaxVPartitions);
-  header.allocation_table_size = AllocTableLengthForDiskSize(max_size, slice_size);
-  header.generation = 1;
-
-  return FormatInfo(header);
-}
-
-FormatInfo FormatInfo::FromDiskSize(size_t disk_size, size_t slice_size) {
-  return FromPreallocatedSize(disk_size, disk_size, slice_size);
-}
-
-size_t FormatInfo::metadata_size() const { return header_.GetMetadataUsedBytes(); }
-
-size_t FormatInfo::metadata_allocated_size() const { return header_.GetMetadataAllocatedBytes(); }
-
-size_t FormatInfo::slice_count() const { return header_.pslice_count; }
 
 void UpdateHash(void* metadata, size_t metadata_size) {
   Header* header = static_cast<Header*>(metadata);

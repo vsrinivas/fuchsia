@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FVM_TEST_DEVICE_REF_H_
+#define FVM_TEST_DEVICE_REF_H_
 
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/channel.h>
@@ -253,11 +254,10 @@ class FvmAdapter : public DeviceRef {
 // Returns an array with random contents.
 fbl::Array<uint8_t> MakeRandomBuffer(size_t size, unsigned int* seed);
 
-// Returns true if |a| and |b| describe the same format.
-bool AreEqual(const fvm::FormatInfo& a, const fvm::FormatInfo& b);
-
 // Returns true if the invariants of the fvm volumes are the same (same slize_size, same allocated
 // count).
 bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after);
 
-}  // namespace fs_test_utils
+}  // namespace fvm
+
+#endif  // FVM_TEST_DEVICE_REF_H_

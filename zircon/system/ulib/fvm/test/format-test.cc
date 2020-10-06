@@ -76,17 +76,7 @@ TEST(FvmFormat, SizeConstructors) {
 
 TEST(FvmFormat, Getters) {
   constexpr size_t kUsedSlices = 5;
-  Header header{
-      .magic = kMagic,
-      .version = kVersion,
-      .pslice_count = kUsedSlices,
-      .slice_size = kBlockSize * 2,
-      .fvm_partition_size = kBlockSize,
-      // TODO(fxb/40192): Try different values here.
-      .vpartition_table_size = kMaxVPartitions * sizeof(VPartitionEntry),
-      .allocation_table_size = kBlockSize * 2,
-      .generation = 0,
-  };
+  Header header = Header::FromSliceCount(kMaxUsablePartitions, kUsedSlices, kBlockSize * 2);
 
   // The partition table starts at the block following the superblock.
   EXPECT_EQ(kBlockSize, header.GetPartitionTableOffset());
@@ -123,6 +113,13 @@ TEST(FvmFormat, Getters) {
             header.GetMetadataUsedBytes());
   EXPECT_EQ(header.GetAllocationTableOffset() + header.GetAllocationTableAllocatedByteSize(),
             header.GetMetadataAllocatedBytes());
+
+  // The max usable entries for a disk is capped at the allocated entry count.
+  EXPECT_EQ(0u, header.GetMaxAllocationTableEntriesForDiskSize(0));
+  EXPECT_EQ(header.GetAllocationTableUsedEntryCount(),
+            header.GetMaxAllocationTableEntriesForDiskSize(header.fvm_partition_size));
+  EXPECT_EQ(header.GetAllocationTableAllocatedEntryCount(),
+            header.GetMaxAllocationTableEntriesForDiskSize(header.slice_size * 1024 * 1024));
 }
 
 }  // namespace fvm

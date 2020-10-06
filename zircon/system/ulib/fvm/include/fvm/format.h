@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
 #include <array>
 #include <limits>
 #include <string>
@@ -179,6 +180,11 @@ struct Header {
   size_t GetAllocationTableUsedByteSize() const;
   size_t GetAllocationTableAllocatedEntryCount() const;
   size_t GetAllocationTableAllocatedByteSize() const;
+
+  // Computes the number of allocation table entries that are needed for the given disk size,
+  // capping it at the maximum number representable using the current allocation table size.
+  // This is used when growing the FVM partition.
+  size_t GetMaxAllocationTableEntriesForDiskSize(size_t disk_size) const;
 
   // Byte offset from the beginning of the Header to the allocation table entry (SliceEntry struct)
   // with the given ID. Physical slice IDs are 1-based so valid input is:
@@ -531,6 +537,18 @@ inline size_t Header::GetAllocationTableAllocatedEntryCount() const {
 }
 
 inline size_t Header::GetAllocationTableAllocatedByteSize() const { return allocation_table_size; }
+
+inline size_t Header::GetMaxAllocationTableEntriesForDiskSize(size_t disk_size) const {
+  size_t start_offset = GetDataStartOffset();
+  if (slice_size == 0 || disk_size <= start_offset)
+    return 0;  // Prevent underflow.
+
+  // See how many slices fit in in the non-metadata portion of the device.
+  size_t requested_slices = (disk_size - start_offset) / slice_size;
+
+  // That value may be limited by the maximum number of entries in the allocation table.
+  return std::min(requested_slices, GetAllocationTableAllocatedEntryCount());
+}
 
 inline size_t Header::GetSliceEntryOffset(size_t pslice) const {
   // TODO(fxbug.dev/59980) the allocation table is 0-indexed (with the 0th entry not used) while the

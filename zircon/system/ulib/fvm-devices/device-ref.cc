@@ -398,10 +398,6 @@ fbl::Array<uint8_t> MakeRandomBuffer(size_t size, unsigned int* seed) {
   return data;
 }
 
-bool AreEqual(const fvm::FormatInfo& a, const fvm::FormatInfo& b) {
-  return memcmp(&a, &b, sizeof(fvm::FormatInfo)) == 0;
-}
-
 bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after) {
   // Frowing a FVM should not allocate any slices nor should it change the slice size.
   return before.slice_size == after.slice_size &&

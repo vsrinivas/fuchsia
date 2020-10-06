@@ -195,17 +195,6 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
   return static_cast<zx_status_t>(cookie.status.load());
 }
 
-// TODO(brettw/jfsulliv) consider moving to FVM Header/Metadata.
-size_t VPartitionManager::GetMaxAddressableSlicesLocked() const {
-  const fvm::Header* header = GetFvmLocked();
-
-  // See how many slices fit in in the non-metadata portion of the current device.
-  size_t requested_slices = (DiskSize() - header->GetDataStartOffset()) / slice_size_;
-
-  // That value may be limited by the maximum number of entries in the allocation table.
-  return std::min(requested_slices, header->GetAllocationTableAllocatedEntryCount());
-}
-
 zx_status_t VPartitionManager::Load() {
   fbl::AutoLock lock(&lock_);
 
@@ -342,9 +331,10 @@ zx_status_t VPartitionManager::Load() {
   }
 
   // See if we need to grow the data.
-  size_t slices_for_disk = GetMaxAddressableSlicesLocked();
-  if (slices_for_disk > GetFvmLocked()->GetAllocationTableUsedEntryCount()) {
-    GetFvmLocked()->SetSliceCount(slices_for_disk);
+  fvm::Header* header = GetFvmLocked();
+  size_t slices_for_disk = header->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
+  if (slices_for_disk > header->GetAllocationTableUsedEntryCount()) {
+    header->SetSliceCount(slices_for_disk);
 
     // Persist the growth.
     if ((status = WriteFvmLocked()) != ZX_OK) {
@@ -768,7 +758,7 @@ zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) {
   {
     fbl::AutoLock lock(&lock_);
     info.slice_size = slice_size_;
-    info.current_slice_count = GetMaxAddressableSlicesLocked();
+    info.current_slice_count = GetFvmLocked()->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
     info.maximum_slice_count = GetFvmLocked()->GetAllocationTableAllocatedEntryCount();
   }
   return fuchsia_hardware_block_volume_VolumeManagerGetInfo_reply(txn, ZX_OK, &info);

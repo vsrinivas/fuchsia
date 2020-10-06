@@ -53,8 +53,8 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoNonPreallocatedMetadata) {
       FvmAdapter::Create(devmgr_->devfs_root(), kBlockSize, kBlockCount, kSliceSize, ramdisk.get());
   ASSERT_TRUE(fvm);
 
-  const fvm::FormatInfo kExpectedFormat =
-      fvm::FormatInfo::FromDiskSize(kBlockSize * kBlockCount, kSliceSize);
+  const fvm::Header kExpectedFormat =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
 
   llcpp::fuchsia::hardware::block::volume::VolumeManager::ResultOf::GetInfo result =
       llcpp::fuchsia::hardware::block::volume::VolumeManager::Call::GetInfo(
@@ -64,12 +64,13 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoNonPreallocatedMetadata) {
   ASSERT_OK(result->status, "Service returned error.");
 
   // Check API returns the correct information for a non preallocated FVM.
-  EXPECT_EQ(kExpectedFormat.slice_size(), result->info->slice_size);
+  EXPECT_EQ(kExpectedFormat.slice_size, result->info->slice_size);
   // Less or equal, because the metadata size is rounded to the nearest block boundary.
   EXPECT_LE(result->info->current_slice_count, result->info->maximum_slice_count);
-  EXPECT_EQ(kExpectedFormat.GetMaxAddressableSlices(kBlockSize * kBlockCount),
+  EXPECT_EQ(kExpectedFormat.GetMaxAllocationTableEntriesForDiskSize(kBlockSize * kBlockCount),
             result->info->current_slice_count);
-  EXPECT_EQ(kExpectedFormat.GetMaxAllocatableSlices(), result->info->maximum_slice_count);
+  EXPECT_EQ(kExpectedFormat.GetAllocationTableAllocatedEntryCount(),
+            result->info->maximum_slice_count);
 }
 
 TEST_F(FvmVolumeManagerApiTest, GetInfoWithPreallocatedMetadata) {
@@ -84,8 +85,8 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoWithPreallocatedMetadata) {
       devmgr_->devfs_root(), kBlockSize, kBlockCount, kMaxBlockCount, kSliceSize, ramdisk.get());
   ASSERT_TRUE(fvm);
 
-  const fvm::FormatInfo kExpectedFormat = fvm::FormatInfo::FromPreallocatedSize(
-      kBlockSize * kBlockCount, kBlockSize * kMaxBlockCount, kSliceSize);
+  const fvm::Header kExpectedFormat = fvm::Header::FromGrowableDiskSize(
+      fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kBlockSize * kMaxBlockCount, kSliceSize);
 
   llcpp::fuchsia::hardware::block::volume::VolumeManager::ResultOf::GetInfo result =
       llcpp::fuchsia::hardware::block::volume::VolumeManager::Call::GetInfo(
@@ -95,11 +96,12 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoWithPreallocatedMetadata) {
   ASSERT_OK(result->status, "Service returned error.");
 
   // Check API returns the correct information for a preallocated FVM.
-  EXPECT_EQ(kExpectedFormat.slice_size(), result->info->slice_size);
+  EXPECT_EQ(kExpectedFormat.slice_size, result->info->slice_size);
   // Less than because we picked sizes that enforce a difference.
   EXPECT_LT(result->info->current_slice_count, result->info->maximum_slice_count);
-  EXPECT_EQ(kExpectedFormat.slice_count(), result->info->current_slice_count);
-  EXPECT_EQ(kExpectedFormat.GetMaxAllocatableSlices(), result->info->maximum_slice_count);
+  EXPECT_EQ(kExpectedFormat.pslice_count, result->info->current_slice_count);
+  EXPECT_EQ(kExpectedFormat.GetAllocationTableAllocatedEntryCount(),
+            result->info->maximum_slice_count);
 }
 
 }  // namespace

@@ -11,7 +11,6 @@
 
 namespace {
 
-using fvm::FormatInfo;
 using fvm::Header;
 using fvm::VPartition;
 using fvm::VPartitionManager;

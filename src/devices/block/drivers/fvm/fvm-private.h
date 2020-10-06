@@ -176,11 +176,6 @@ class VPartitionManager : public ManagerDeviceType {
 
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
 
-  // Computes the number of slices that can be accessed using the current block device size. This
-  // may be more than the slices actually allocated by FVM, and may be less that the maximum slice
-  // count representable by the current FVM header (should the block device grow).
-  size_t GetMaxAddressableSlicesLocked() const TA_REQ(lock_);
-
   thrd_t initialization_thread_;
   std::atomic_bool initialization_thread_started_ = false;
   block_info_t info_;  // Cached info from parent device

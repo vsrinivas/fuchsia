@@ -26,7 +26,6 @@ group("tests") {
 test("fvm-unit") {
   output_name = "fvm-unit-test"
   sources = [
-    "format-info-test.cc",
     "format-test.cc",
     "integrity-validation-test.cc",
     "partition-entry-test.cc",
