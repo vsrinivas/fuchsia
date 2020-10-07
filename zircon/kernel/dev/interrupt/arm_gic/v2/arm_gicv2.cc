@@ -151,7 +151,7 @@ static zx_status_t arm_gic_init() {
   uint32_t typer = GICREG(0, GICD_TYPER);
   uint32_t it_lines_number = BITS_SHIFT(typer, 4, 0);
   max_irqs = (it_lines_number + 1) * 32;
-  LTRACEF("arm_gic_init max_irqs: %u\n", max_irqs);
+  printf("GICv2 detected, max interrupts %u, TYPER %#x\n", max_irqs, typer);
   DEBUG_ASSERT(max_irqs <= MAX_INT);
 
   for (i = 0; i < max_irqs; i += 32) {

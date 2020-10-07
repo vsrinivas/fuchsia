@@ -154,8 +154,9 @@ static zx_status_t gic_init() {
   }
 
   uint32_t typer = GICREG(0, GICD_TYPER);
-  uint32_t idbits = BITS_SHIFT(typer, 23, 19);
-  gic_max_int = (idbits + 1) * 32;
+  gic_max_int = (BITS(typer, 4, 0) + 1) * 32;
+
+  printf("GICv3 detected, rev %u, max interrupts %u, TYPER %#x\n", rev, gic_max_int, typer);
 
   // disable the distributor
   GICREG(0, GICD_CTLR) = 0;
