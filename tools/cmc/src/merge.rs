@@ -7,15 +7,30 @@ use {
     serde_json::{json, Value},
     serde_json5,
     std::fs,
-    std::io::{Read, Write},
+    std::io::{BufRead, BufReader, Read, Write},
     std::path::PathBuf,
 };
 
 /// read in the provided list of json files, merge them, and pretty-print the merged result to
-/// stdout if output is None or to the provided path if output is Some. JSON objects are merged
-/// recursively, and if two blobs set the same key an error is returned. JSON arrays are appended
-/// together, with duplicate items being removed.
-pub fn merge(files: Vec<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> {
+/// stdout if output is None or to the provided path if output is Some.
+/// Files can be specified in `files`, or in the contents of `fromfile` as line-delimited paths,
+/// or both.
+/// JSON objects are merged recursively, and if two blobs set the same key an error is returned.
+/// JSON arrays are appended together, with duplicate items being removed.
+pub fn merge(
+    mut files: Vec<PathBuf>,
+    output: Option<PathBuf>,
+    fromfile: Option<PathBuf>,
+) -> Result<(), Error> {
+    if let Some(path) = fromfile {
+        let reader = BufReader::new(fs::File::open(path)?);
+        for line in reader.lines() {
+            match line {
+                Ok(value) => files.push(PathBuf::from(value)),
+                Err(e) => return Err(Error::invalid_args(format!("Invalid --fromfile: {}", e))),
+            }
+        }
+    }
     if files.is_empty() {
         return Err(Error::invalid_args(format!("no files provided")));
     }
@@ -114,7 +129,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::fs::File;
-    use std::io::Write;
+    use std::io::{LineWriter, Write};
     use tempfile::TempDir;
 
     #[test]
@@ -174,7 +189,7 @@ mod tests {
 
             let output_file_path = tmp_dir.path().join("output.json");
 
-            let result = merge(filenames, Some(output_file_path.clone()));
+            let result = merge(filenames, Some(output_file_path.clone()), None);
 
             if result.is_ok() != expected_results.is_some() {
                 println!("example failed:");
@@ -208,7 +223,7 @@ mod tests {
         }
 
         let output_file_path = tmp_dir.path().join("output.json");
-        merge(filenames, Some(output_file_path.clone())).expect("failed to merge");
+        merge(filenames, Some(output_file_path.clone()), None).expect("failed to merge");
 
         let mut buffer = String::new();
         File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
@@ -230,7 +245,40 @@ mod tests {
             filenames.push(fname.clone());
         }
 
-        let result = merge(filenames, None);
+        let result = merge(filenames, None, None);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_merge_fromfile() {
+        let tmp_dir = TempDir::new().unwrap();
+
+        let input = vec![
+            // The first two files will be provided as regular inputs
+            (tmp_dir.path().join("1.json"), "{\"foo\": 1,} // comment"),
+            (tmp_dir.path().join("2.json"), "{\"bar\": 2,} // comment"),
+            // The third file will be referenced via --fromfile
+            (tmp_dir.path().join("3.json"), "{\"qux\": 3,} // comment"),
+        ];
+        for (fname, contents) in &input {
+            File::create(fname).unwrap().write_all(contents.as_bytes()).unwrap();
+        }
+        let mut filenames = vec![];
+        for (fname, _) in &input[..2] {
+            filenames.push(fname.clone());
+        }
+        let fromfile_path = tmp_dir.path().join("fromfile");
+        let mut fromfile = LineWriter::new(File::create(fromfile_path.clone()).unwrap());
+        writeln!(fromfile, "{}", input[2].0.clone().into_os_string().into_string().unwrap())
+            .unwrap();
+
+        let output_file_path = tmp_dir.path().join("output.json");
+        merge(filenames, Some(output_file_path.clone()), Some(fromfile_path))
+            .expect("failed to merge");
+
+        let mut buffer = String::new();
+        File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
+        let expected_json = json!({"foo": 1, "bar": 2, "qux": 3});
+        assert_eq!(buffer, format!("{:#}", expected_json));
     }
 }

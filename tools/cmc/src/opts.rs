@@ -44,6 +44,13 @@ pub enum Commands {
         #[structopt(short = "o", long = "output", parse(from_os_str))]
         /// file to write the merged results to, will print to stdout if not provided
         output: Option<PathBuf>,
+
+        #[structopt(short = "f", long = "fromfile", parse(from_os_str))]
+        /// response file for files to process
+        ///
+        /// If specified, additional files to merge will be read from the path provided.
+        /// The input format is delimited by newlines.
+        fromfile: Option<PathBuf>,
     },
 
     #[structopt(name = "format")]
