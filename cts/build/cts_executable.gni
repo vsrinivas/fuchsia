@@ -46,3 +46,7 @@ template("cts_executable") {
       "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
       "true")
 }
+
+set_defaults("cts_executable") {
+  configs = default_executable_configs
+}

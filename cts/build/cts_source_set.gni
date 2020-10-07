@@ -40,3 +40,7 @@ template("cts_source_set") {
       "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
       true)
 }
+
+set_defaults("cts_source_set") {
+  configs = default_common_binary_configs
+}
