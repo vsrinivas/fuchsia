@@ -73,6 +73,7 @@ executable("dash") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/third_party/ulib/linenoise",
   ]
 

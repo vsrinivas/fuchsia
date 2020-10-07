@@ -88,6 +88,7 @@ template("trace_provider_library") {
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fidl:fidl_base",
     ]
   }
 }

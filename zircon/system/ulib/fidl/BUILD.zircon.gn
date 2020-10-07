@@ -76,6 +76,7 @@ zx_library("fidl") {
     ":fidl_base",
     "$zx/system/ulib/zircon",
   ]
+  public_deps = [ ":fidl_base" ]
 }
 
 if (is_fuchsia) {
@@ -181,6 +182,7 @@ if (is_fuchsia) {
     sources = [ "llcpp_coding.c" ]
     public_deps = [ "$zx/system/ulib/zircon:headers" ]
     deps = [
+      ":fidl_base",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fit",
       "$zx/system/ulib/zircon",

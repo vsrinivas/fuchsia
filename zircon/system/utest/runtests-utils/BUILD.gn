@@ -32,6 +32,7 @@ test("runtests-utils") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/runtests-utils",
   ]
