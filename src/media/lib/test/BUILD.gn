@@ -81,6 +81,7 @@ source_set("codec_client") {
     "//src/lib/fxl",
     "//src/media/lib/test:codec_buffer",
     "//src/media/lib/test:one_shot_event",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -51,6 +51,7 @@ driver_module("xhci") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/xdc-server-utils",
   ]
@@ -155,6 +156,7 @@ test("xhci-event-ring-unittest") {
   ]
   deps = [
     ":test-libs",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 

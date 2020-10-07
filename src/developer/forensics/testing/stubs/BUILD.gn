@@ -195,7 +195,10 @@ source_set("logger") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

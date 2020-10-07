@@ -25,5 +25,8 @@ source_set("recognizers") {
     "//zircon/public/lib/fit",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
 }

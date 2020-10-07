@@ -343,7 +343,6 @@ template("zx_library") {
     # public dependency chain. See http://fxbug.dev/60129 for
     # more details.
     _no_header_labels = [
-      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/fidl:fidl",
       "//zircon/system/ulib/fidl:fidl-llcpp",
       "//zircon/system/ulib/fidl:fidl_base",

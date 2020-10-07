@@ -99,6 +99,7 @@ source_set("fake_netstack") {
     "//sdk/fidl/fuchsia.netstack",
     "//src/lib/inet",
     "//zircon/public/lib/fit",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -15,6 +15,7 @@ source_set("ethertap") {
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fzl",
   ]
