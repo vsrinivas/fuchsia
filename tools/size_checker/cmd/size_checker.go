@@ -18,6 +18,14 @@ import (
 	"strings"
 )
 
+type FileSystemSizes []FileSystemSize
+
+type FileSystemSize struct {
+	Name  string      `json:"name"`
+	Value json.Number `json:"value"`
+	Limit json.Number `json:"limit"`
+}
+
 type SizeLimits struct {
 	AssetLimit             json.Number `json:"asset_limit"`
 	CoreLimit              json.Number `json:"core_limit"`
@@ -66,12 +74,13 @@ type BlobFromJSON struct {
 }
 
 const (
-	MetaFar         = "meta.far"
-	PackageList     = "gen/build/images/blob.manifest.list"
-	BlobsJSON       = "blobs.json"
-	ConfigData      = "config-data"
-	DataPrefix      = "data/"
-	SizeCheckerJSON = "size_checker.json"
+	MetaFar             = "meta.far"
+	PackageList         = "gen/build/images/blob.manifest.list"
+	BlobsJSON           = "blobs.json"
+	ConfigData          = "config-data"
+	DataPrefix          = "data/"
+	SizeCheckerJSON     = "size_checker.json"
+	FileSystemSizesJSON = "filesystem_sizes.json"
 )
 
 func newDummyNode() *Node {
@@ -157,7 +166,7 @@ func formatSize(sizeInBytes int64) string {
 
 // Extract all the packages from a given blob.manifest.list and blobs.json.
 // It also returns a map containing all blobs, with the merkle root as the key.
-func extractPackages(buildDir, packageList, blobsJSON string) (blobMap map[string]*Blob, packages []string, err error) {
+func extractPackages(buildDir, packageListFileName, blobsJSON string) (blobMap map[string]*Blob, packages []string, err error) {
 	blobMap = make(map[string]*Blob)
 
 	var merkleRootToSizeMap map[string]int64
@@ -165,15 +174,15 @@ func extractPackages(buildDir, packageList, blobsJSON string) (blobMap map[strin
 		return
 	}
 
-	f, err := os.Open(filepath.Join(buildDir, packageList))
+	packageList, err := os.Open(filepath.Join(buildDir, packageListFileName))
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer packageList.Close()
 
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		pkg, err := openAndProcessBlobsManifest(blobMap, merkleRootToSizeMap, buildDir, scanner.Text())
+	packageListScanner := bufio.NewScanner(packageList)
+	for packageListScanner.Scan() {
+		pkg, err := openAndParseBlobsManifest(blobMap, merkleRootToSizeMap, buildDir, packageListScanner.Text())
 		if err != nil {
 			return blobMap, packages, err
 		}
@@ -187,7 +196,7 @@ func extractPackages(buildDir, packageList, blobsJSON string) (blobMap map[strin
 // Opens a blobs.manifest file to populate the blob map and extract all meta.far blobs.
 // We expect each entry of blobs.manifest to have the following format:
 // `$MERKLE_ROOT=$PATH_TO_BLOB`
-func openAndProcessBlobsManifest(
+func openAndParseBlobsManifest(
 	blobMap map[string]*Blob,
 	merkleRootToSizeMap map[string]int64,
 	buildDir, blobsManifestFileName string) ([]string, error) {
@@ -197,19 +206,19 @@ func openAndProcessBlobsManifest(
 	}
 	defer blobsManifestFile.Close()
 
-	return processBlobsManifest(blobMap, merkleRootToSizeMap, blobsManifestFileName, blobsManifestFile), nil
+	return parseBlobsManifest(blobMap, merkleRootToSizeMap, blobsManifestFileName, blobsManifestFile), nil
 }
 
-// Similar to openAndProcessBlobsManifest, except it doesn't throw an I/O error.
-func processBlobsManifest(
+// Similar to openAndParseBlobsManifest, except it doesn't throw an I/O error.
+func parseBlobsManifest(
 	merkleRootToBlobMap map[string]*Blob,
 	merkleRootToSizeMap map[string]int64,
 	blobsManifestFileName string, blobsManifestFile io.Reader) []string {
 	packages := []string{}
 
-	scanner := bufio.NewScanner(blobsManifestFile)
-	for scanner.Scan() {
-		temp := strings.Split(scanner.Text(), "=")
+	blobsManifestScanner := bufio.NewScanner(blobsManifestFile)
+	for blobsManifestScanner.Scan() {
+		temp := strings.Split(blobsManifestScanner.Text(), "=")
 		merkleRoot := temp[0]
 		fileName := temp[1]
 		if blob, ok := merkleRootToBlobMap[merkleRoot]; !ok {
@@ -222,8 +231,8 @@ func processBlobsManifest(
 
 			merkleRootToBlobMap[merkleRoot] = blob
 			// This blob is a Fuchsia package.
-			if strings.HasSuffix(temp[1], MetaFar) {
-				packages = append(packages, temp[1])
+			if strings.HasSuffix(fileName, MetaFar) {
+				packages = append(packages, fileName)
 			}
 		} else {
 			blob.dep = append(blob.dep, blobsManifestFileName)
@@ -269,7 +278,7 @@ type processingState struct {
 
 // Process the packages extracted from blob.manifest.list and process the blobs.json file to build a
 // tree of packages.
-func processPackages(
+func openAndParseBlobsJSON(
 	buildDir string,
 	packages []string,
 	state *processingState) error {
@@ -287,13 +296,13 @@ func processPackages(
 			return fmt.Errorf(unmarshalError(blobsJSON, err))
 		}
 		// Finally, we add the blob and the package to the tree.
-		processBlobs(state, blobs, dir)
+		parseBlobsJSON(state, blobs, dir)
 	}
 	return nil
 }
 
-// Similar to processPackages except it doesn't throw an I/O error.
-func processBlobs(
+// Similar to openAndParseBlobsJSON except it doesn't throw an I/O error.
+func parseBlobsJSON(
 	state *processingState,
 	blobs []BlobFromJSON,
 	pkgPath string) {
@@ -327,9 +336,31 @@ func processBlobs(
 	}
 }
 
+func parseBlobfsBudget(buildDir, fileSystemSizesJSONFilename string) int64 {
+	fileSystemSizesJSON := filepath.Join(buildDir, fileSystemSizesJSONFilename)
+	fileSystemSizesJSONData, err := ioutil.ReadFile(fileSystemSizesJSON)
+	if err != nil {
+		log.Fatal(readError(fileSystemSizesJSON, err))
+	}
+	var fileSystemSizes = new(FileSystemSizes)
+	if err := json.Unmarshal(fileSystemSizesJSONData, &fileSystemSizes); err != nil {
+		log.Fatal(unmarshalError(fileSystemSizesJSON, err))
+	}
+	for _, fileSystemSize := range *fileSystemSizes {
+		if fileSystemSize.Name == "blob/contents_size" {
+			budget, err := fileSystemSize.Limit.Int64()
+			if err != nil {
+				log.Fatalf("Failed to parse %s as an int64: %s\n", fileSystemSize.Limit, err)
+			}
+			return budget
+		}
+	}
+	return 0
+}
+
 // Processes the given sizeLimits and throws an error if any component in the sizeLimits is above its
 // allocated space limit.
-func processSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON string) map[string]*ComponentSize {
+func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON string) map[string]*ComponentSize {
 	outputSizes := map[string]*ComponentSize{}
 	blobMap, packages, err := extractPackages(buildDir, packageList, blobsJSON)
 	if err != nil {
@@ -356,7 +387,7 @@ func processSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON 
 		newDummyNode(),
 	}
 	// We process the meta.far files that were found in the blobs.manifest here.
-	if err := processPackages(buildDir, packages, &st); err != nil {
+	if err := openAndParseBlobsJSON(buildDir, packages, &st); err != nil {
 		return outputSizes
 	}
 
@@ -377,13 +408,19 @@ func processSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON 
 			}
 		}
 		total += size
-		sizeLimit, err := component.Limit.Int64()
+		budget, err := component.Limit.Int64()
 		if err != nil {
 			log.Fatalf("Failed to parse %s as an int64: %s\n", component.Limit, err)
 		}
+
+		// There is only ever one copy of Update ZBIs.
+		if component.Component == "Update ZBIs" {
+			budget /= 2
+			size /= 2
+		}
 		outputSizes[component.Component] = &ComponentSize{
 			Size:   size,
-			Budget: sizeLimit,
+			Budget: budget,
 			nodes:  nodes,
 		}
 	}
@@ -490,7 +527,7 @@ See //tools/size_checker for more details.`)
 		os.Exit(0)
 	}
 
-	outputSizes := processSizeLimits(&sizeLimits, buildDir, PackageList, BlobsJSON)
+	outputSizes := parseSizeLimits(&sizeLimits, buildDir, PackageList, BlobsJSON)
 	if len(fileSizeOutPath) > 0 {
 		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
 			log.Fatal(err)
@@ -532,7 +569,15 @@ See //tools/size_checker for more details.`)
 
 	}
 	report.WriteString(strings.Repeat("-", 79) + "\n")
+
 	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
+
+	blobFsBudget := parseBlobfsBudget(buildDir, FileSystemSizesJSON)
+	if totalBudget > blobFsBudget {
+		report.WriteString(
+			fmt.Sprintf("WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n", formatSize(totalBudget), formatSize(blobFsBudget)))
+	}
+
 	if overBudget {
 		log.Fatal(report.String())
 	} else {

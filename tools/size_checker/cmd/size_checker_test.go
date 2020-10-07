@@ -92,7 +92,7 @@ func Test_processBlobsManifest(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if p := processBlobsManifest(test.blobMap, test.sizeMap, test.fileName, test.file); !reflect.DeepEqual(p, test.expectedPackage) {
+			if p := parseBlobsManifest(test.blobMap, test.sizeMap, test.fileName, test.file); !reflect.DeepEqual(p, test.expectedPackage) {
 				t.Fatalf("processBlobsManifest(%+v, %+v, %s, %+v) = %+v; expect %+v", test.blobMap, test.sizeMap, test.fileName, test.file, p, test.expectedPackage)
 			}
 
@@ -148,7 +148,7 @@ func Test_processBlobs(t *testing.T) {
 				test.distributedShlibsSize,
 				newDummyNode(),
 			}
-			processBlobs(&st, test.blobs, "")
+			parseBlobsJSON(&st, test.blobs, "")
 
 			if !reflect.DeepEqual(st.blobMap, test.expectedBlobMap) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
@@ -206,7 +206,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 				dummySize,
 				root,
 			}
-			processBlobs(&st, []BlobFromJSON{test.blob}, test.pkgPath)
+			parseBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath)
 
 			expectedNode := root.find(test.expectedPathInTree)
 			if expectedNode == nil {
@@ -369,7 +369,7 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to write blob sizes: %v", err)
 	}
 	blobSizeF.Close()
-	sizes := processSizeLimits(&input, buildDir, blobListRelPath, blobSizeRelPath)
+	sizes := parseSizeLimits(&input, buildDir, blobListRelPath, blobSizeRelPath)
 	fooSize, ok := sizes["foo"]
 	if !ok {
 		t.Fatalf("Failed to find foo in sizes: %v", sizes)
