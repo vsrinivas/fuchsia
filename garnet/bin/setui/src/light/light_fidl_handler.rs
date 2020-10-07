@@ -66,13 +66,7 @@ impl From<SettingResponse> for Vec<LightGroup> {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Light(info) = response {
             // Internally we store the data in a HashMap, need to flatten it out into a vector.
-            return info
-                .light_groups
-                .values()
-                .into_iter()
-                .cloned()
-                .map(LightGroup::from)
-                .collect::<Vec<_>>();
+            return info.light_groups.values().cloned().map(LightGroup::from).collect::<Vec<_>>();
         }
 
         panic!("incorrect value sent to light");
