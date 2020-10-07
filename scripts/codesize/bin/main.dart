@@ -609,26 +609,39 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
       ' out of ${cs.artifactsByBuildId.length} (${formatSize(elfBlobSizes)})'
       ' ELF binaries have matching debug info');
 
-  print('Binaries without matching debug info:');
-  for (var buildId in cs.artifactsByBuildId.keys) {
-    if (!cs.matchedDebugBinaries.contains(buildId)) {
-      final buildPath = cs.artifactsByBuildId[buildId].first.buildPath;
-      print('  ${cs.build.rebasePath(buildPath)}');
-      print('  - BuildId: $buildId');
-      if (blobsByHash.containsKey(buildPath.split('/').last)) {
-        final sourcePath = blobsByHash[buildPath.split('/').last].sourcePaths;
-        print('  - Source Path: $sourcePath');
+  Iterable<String> buildIdsWithoutDebugInfo() => cs.artifactsByBuildId.keys
+      .where((buildId) => !cs.matchedDebugBinaries.contains(buildId));
+
+  {
+    final noDebugInfo = buildIdsWithoutDebugInfo();
+    if (noDebugInfo.isNotEmpty) {
+      io.out.write('Querying symbol servers ');
+      final gotAny = await downloadUnmatchedDebugBinaries(noDebugInfo, cs);
+      if (gotAny) {
+        io.out.write('Incorporate downloaded symbols ');
+        await cs.addBuildIdFromSymbolSources();
+        cs.matchDebugBinaries();
+      } else {
+        print('Did not find any extra symbols from symbol servers');
       }
     }
   }
 
-  print('Querying symbol servers');
-  final gotAny = await downloadUnmatchedDebugBinaries(cs);
-  if (gotAny) {
-    await cs.addBuildIdFromSymbolSources();
-    cs.matchDebugBinaries();
-  } else {
-    print('Did not find any extra symbols from symbol servers');
+  {
+    // Print binaries without debug info even after querying symbol servers.
+    final noDebugInfo = buildIdsWithoutDebugInfo();
+    if (noDebugInfo.isNotEmpty) {
+      print('Binaries without matching debug info:');
+      for (final buildId in noDebugInfo) {
+        final buildPath = cs.artifactsByBuildId[buildId].first.buildPath;
+        print('  ${cs.build.rebasePath(buildPath)}');
+        print('  - BuildId: $buildId');
+        if (blobsByHash.containsKey(buildPath.split('/').last)) {
+          final sourcePath = blobsByHash[buildPath.split('/').last].sourcePaths;
+          print('  - Source Path: $sourcePath');
+        }
+      }
+    }
   }
 
   var buildIds = <String>{};
@@ -749,7 +762,8 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
   return allBloatyReportFiles;
 }
 
-Future<bool> downloadUnmatchedDebugBinaries(CodeSize cs) async {
+Future<bool> downloadUnmatchedDebugBinaries(
+    Iterable<String> buildIds, CodeSize cs) async {
   final homeDir = Directory(Platform.environment['HOME']);
   final repos = await Future.wait([
     'gs://fuchsia-artifacts/debug',
@@ -758,8 +772,13 @@ Future<bool> downloadUnmatchedDebugBinaries(CodeSize cs) async {
   ].map(
       (e) => CloudRepo.create(e, Cache(homeDir / Directory(_fxSymbolCache)))));
   var downloadedAny = false;
-  for (var buildId in cs.artifactsByBuildId.keys) {
-    if (!cs.matchedDebugBinaries.contains(buildId)) {
+  cs.jobInitCallback?.call(buildIds.length);
+
+  // 2 concurrent symbol downloads
+  final pool = Pool(2);
+  final allFutures = <Future>[];
+  for (final buildId in buildIds) {
+    allFutures.add(pool.withResource(() async {
       var downloaded = false;
       for (var repo in repos) {
         try {
@@ -772,18 +791,14 @@ Future<bool> downloadUnmatchedDebugBinaries(CodeSize cs) async {
           }
           continue;
         }
-        print('Downloaded $buildId');
         downloaded = true;
         break;
       }
-      if (!downloaded) {
-        final buildPath =
-            cs.build.rebasePath(cs.artifactsByBuildId[buildId].first.buildPath);
-        print('Did not find $buildId ($buildPath) in symbol servers');
-      } else {
-        downloadedAny = true;
-      }
-    }
+      if (downloaded) downloadedAny = true;
+      cs.jobIterationCallback?.call();
+    }));
   }
+  await Future.wait(allFutures);
+  cs.jobCompleteCallback?.call();
   return downloadedAny;
 }

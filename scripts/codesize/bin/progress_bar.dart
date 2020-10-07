@@ -12,19 +12,15 @@ import 'dart:io';
 class ProgressBar {
   final int complete;
   int current = 0;
-  bool _active = false;
 
-  ProgressBar({this.complete});
+  ProgressBar({this.complete}) {
+    stdout.write('[0/$complete]');
+  }
 
   void update(int newValue) {
-    if (!_active) {
-      stdout.write('[$newValue/$complete]');
-      _active = true;
-    } else {
-      int prevLen = '[$current/$complete]'.length;
-      stdout.write('\b' * prevLen);
-      stdout.write('[$newValue/$complete]');
-    }
+    int prevLen = '[$current/$complete]'.length;
+    stdout.write('\b' * prevLen);
+    stdout.write('[$newValue/$complete]');
     current = newValue;
   }
 
