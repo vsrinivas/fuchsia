@@ -455,7 +455,10 @@
             subdir: "class/input",
         },
         {
-            protocol: [ "/svc/fuchsia.fshost.Registry" ],
+            protocol: [
+                "/svc/fuchsia.fshost.BlockWatcher",
+                "/svc/fuchsia.fshost.Registry",
+            ],
             from: "#fshost",
             to: [ "#miscsvc" ],
         },

@@ -33,6 +33,7 @@
                 "/svc/fuchsia.boot.WriteOnlyLog",
 
                 // Services from fshost
+                "/svc/fuchsia.fshost.BlockWatcher",
                 "/svc/fuchsia.fshost.Registry",
 
                 // Builtin service
