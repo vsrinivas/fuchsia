@@ -1,3 +1,9 @@
+Name: Kilo Editor
+Upstream Git: https://github.com/antirez/kilo
+Version: 62b099af00b542bdb08471058d527af258a349cf
+License: 2-clause BSD
+License File: LICENSE
+Description:
 
 Kilo Editor by antirez
 
