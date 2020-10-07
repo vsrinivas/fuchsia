@@ -119,22 +119,21 @@ class HandlerTest : public UnitTestFixture {
 
     zx::process process;
     exception.get_process(&process);
-    const std::string process_name = fsl::GetObjectName(process.get());
 
     zx::thread thread;
     exception.get_thread(&thread);
-    const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
 
-    handler_->Send(process_name, thread_koid, std::move(exception), std::move(callback));
+    handler_->Send(std::move(exception), std::move(process), std::move(thread),
+                   std::move(callback));
     RunLoopUntilIdle();
   }
 
   void HandleException(
-      const std::string& process_name, const zx_koid_t thread_koid,
-      zx::duration component_lookup_timeout, ::fit::closure callback = [] {}) {
+      zx::process process, zx::thread thread, zx::duration component_lookup_timeout,
+      ::fit::closure callback = [] {}) {
     handler_ = std::make_unique<CrashReporter>(dispatcher(), services(), component_lookup_timeout);
 
-    handler_->Send(process_name, thread_koid, zx::exception{}, std::move(callback));
+    handler_->Send(zx::exception{}, std::move(process), std::move(thread), std::move(callback));
     RunLoopUntilIdle();
   }
 
@@ -250,9 +249,11 @@ TEST_F(HandlerTest, NoException) {
   zx::process process;
   ASSERT_EQ(exception.exception.get_process(&process), ZX_OK);
   const std::string process_name = fsl::GetObjectName(process.get());
+  const zx_koid_t process_koid = fsl::GetKoid(process.get());
 
   zx::thread thread;
   ASSERT_EQ(exception.exception.get_thread(&thread), ZX_OK);
+  const std::string thread_name = fsl::GetObjectName(thread.get());
   const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
 
   const std::string kComponentUrl = "component_url";
@@ -263,7 +264,7 @@ TEST_F(HandlerTest, NoException) {
   exception.exception.reset();
 
   bool called = false;
-  HandleException(process_name, thread_koid, zx::duration::infinite(),
+  HandleException(std::move(process), std::move(thread), zx::duration::infinite(),
                   [&called] { called = true; });
 
   ASSERT_TRUE(called);
@@ -273,7 +274,10 @@ TEST_F(HandlerTest, NoException) {
 
   ValidateCrashReport(report, kComponentUrl,
                       {
-                          {"crash.process.name", "crasher"},
+                          {"crash.process.name", process_name},
+                          {"crash.process.koid", std::to_string(process_koid)},
+                          {"crash.thread.name", thread_name},
+                          {"crash.thread.koid", std::to_string(thread_koid)},
                       });
   ValidateGenericReport(report, "fuchsia-no-minidump-exception-expired");
 

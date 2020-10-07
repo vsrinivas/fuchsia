@@ -10,6 +10,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 namespace forensics {
 namespace exceptions {
@@ -24,8 +25,7 @@ class ProcessHandler {
   ProcessHandler(ProcessHandler&&) = default;
   ProcessHandler& operator=(ProcessHandler&&) = default;
 
-  void Handle(const std::string& crashed_process_name, zx_koid_t crashed_thread_koid,
-              zx::exception exception);
+  void Handle(zx::exception exception, zx::process process, zx::thread thread);
 
  private:
   async_dispatcher_t* dispatcher_;

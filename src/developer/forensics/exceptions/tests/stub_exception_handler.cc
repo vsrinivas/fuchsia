@@ -18,8 +18,8 @@ class StubCrashReporter : public fuchsia::exception::internal::CrashReporter {
  public:
   StubCrashReporter(fit::closure on_done) : on_done_(std::move(on_done)) {}
 
-  virtual void Send(std::string crashed_process_name, zx_koid_t crashed_process_koid,
-                    zx::exception exception, SendCallback callback) override {
+  virtual void Send(zx::exception exception, zx::process process, zx::thread thread,
+                    SendCallback callback) override {
     callback();
     on_done_();
   }

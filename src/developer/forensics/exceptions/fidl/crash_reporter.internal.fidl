@@ -9,9 +9,8 @@ using zx;
 /// Internal protocol that allows exceptions.cmx to build crash reports and send them to the system
 /// crash reporter in an isolated process.
 protocol CrashReporter {
-    /// A CrashReporter needs at minimum the name of the crashed process and the koid of the crashed
-    /// thread to build a valid crash report. If the exception from the crashed process is provided,
-    /// it will be used as well.
-    Send(string:128 crashed_process_name, zx.koid crashed_thread_koid,
-         zx.handle:EXCEPTION? exception) -> ();
+    /// A CrashReporter needs an optional exception, process, and thread so it can attempt to create
+    /// a crash report with a minidump and annotations on the thread that crashed.
+    Send(zx.handle:EXCEPTION? exception, zx.handle:PROCESS? crashed_process,
+         zx.handle:THREAD? crashed_thread) -> ();
 };

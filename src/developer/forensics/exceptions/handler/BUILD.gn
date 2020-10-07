@@ -24,6 +24,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/crashpad/minidump",
     "//third_party/crashpad/snapshot",

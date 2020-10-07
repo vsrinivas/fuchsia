@@ -67,7 +67,7 @@ TEST_F(ProcessHandlerTest, ManagesSubprocessLifetime) {
     ProcessHandler process_handler(dispatcher(), [] {});
     ASSERT_EQ(NumSubprocesses(), 0u);
 
-    process_handler.Handle("process-name", 0u, zx::exception{});
+    process_handler.Handle(zx::exception{}, zx::process{}, zx::thread{});
 
     ASSERT_EQ(NumSubprocesses(), 1u);
   }
@@ -83,7 +83,7 @@ TEST_F(ProcessHandlerTest, OnAvailableCalled) {
   bool available = false;
   ProcessHandler process_handler(dispatcher(), [&available] { available = true; });
 
-  process_handler.Handle("process-name", 0u, zx::exception{});
+  process_handler.Handle(zx::exception{}, zx::process{}, zx::thread{});
 
   while (!available) {
     RunLoopUntilIdle();

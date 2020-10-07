@@ -9,6 +9,7 @@
 
 #include <array>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -75,14 +76,18 @@ ProcessHandler::~ProcessHandler() {
   }
 }
 
-void ProcessHandler::Handle(const std::string& crashed_process_name,
-                            const zx_koid_t crashed_thread_koid, zx::exception exception) {
+void ProcessHandler::Handle(zx::exception exception, zx::process process, zx::thread thread) {
   if (!crash_reporter_.is_bound()) {
     zx::channel client;
 
     // If we are not able to spawn a sub-process, we will have to lose the exception.
     if (!SpawnSubprocess(&client, &subprocess_)) {
-      FX_LOGS(WARNING) << "Dropping the exception for process " << crashed_process_name;
+      const std::string thread_name =
+          (thread.is_valid()) ? fsl::GetObjectName(thread.get()) : "unknown";
+      const std::string process_name =
+          (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown";
+      FX_LOGS(WARNING) << "Dropping the exception for thread '" << thread_name << "' in process '"
+                       << process_name << "'";
       on_available_();
       return;
     }
@@ -90,7 +95,7 @@ void ProcessHandler::Handle(const std::string& crashed_process_name,
     crash_reporter_.Bind(std::move(client), dispatcher_);
   }
 
-  crash_reporter_->Send(crashed_process_name, crashed_thread_koid, std::move(exception),
+  crash_reporter_->Send(std::move(exception), std::move(process), std::move(thread),
                         [this] { on_available_(); });
 }
 

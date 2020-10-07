@@ -6,14 +6,28 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/strings/join_strings.h"
 
 namespace forensics {
 namespace exceptions {
 namespace handler {
 
-CrashReportBuilder& CrashReportBuilder::SetProcessName(const std::string& process_name) {
-  process_name_ = process_name;
+CrashReportBuilder& CrashReportBuilder::SetProcess(const zx::process& process) {
+  process_name_ = (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
+  if (process.is_valid()) {
+    process_koid_ = fsl::GetKoid(process.get());
+  }
+
+  return *this;
+}
+
+CrashReportBuilder& CrashReportBuilder::SetThread(const zx::thread& thread) {
+  thread_name_ = (thread.is_valid()) ? fsl::GetObjectName(thread.get()) : "unknown_thread";
+  if (thread.is_valid()) {
+    thread_koid_ = fsl::GetKoid(thread.get());
+  }
+
   return *this;
 }
 
@@ -52,6 +66,7 @@ CrashReportBuilder& CrashReportBuilder::SetProcessTerminated() {
 
 fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   FX_CHECK(process_name_.has_value()) << "Need a process name";
+  FX_CHECK(thread_name_.has_value()) << "Need a thread name";
   FX_CHECK(is_valid_) << "Consume can only be called once";
   is_valid_ = false;
 
@@ -67,6 +82,13 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   };
 
   AddAnnotation("crash.process.name", process_name_.value());
+  AddAnnotation("crash.thread.name", thread_name_.value());
+  if (process_koid_.has_value()) {
+    AddAnnotation("crash.process.koid", std::to_string(process_koid_.value()));
+  }
+  if (thread_koid_.has_value()) {
+    AddAnnotation("crash.thread.koid", std::to_string(thread_koid_.value()));
+  }
   if (!component_url_.has_value()) {
     AddAnnotation("debug.crash.component.url.set", "false");
   }

@@ -20,10 +20,10 @@ namespace {
 
 // Either resets the exception immediately if the process only has one thread or with a 5s delay
 // otherwise.
-void ResetException(async_dispatcher_t* dispatcher, zx::exception exception) {
-  zx::process process;
-  if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to get process handle from exception";
+void ResetException(async_dispatcher_t* dispatcher, zx::exception exception,
+                    const zx::process& process) {
+  if (!process.is_valid()) {
+    FX_LOGS(ERROR) << "Process for exception is invalid";
     exception.reset();
     return;
   }
@@ -62,15 +62,14 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       services_(services),
       component_lookup_timeout_(component_lookup_timeout) {}
 
-void CrashReporter::Send(const std::string crashed_process_name,
-                         const zx_koid_t crashed_thread_koid, zx::exception exception,
-                         SendCallback callback) {
+void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
+                         zx::thread crashed_thread, SendCallback callback) {
   CrashReportBuilder builder;
-  builder.SetProcessName(crashed_process_name);
+  builder.SetProcess(crashed_process).SetThread(crashed_thread);
 
   if (exception.is_valid()) {
     zx::vmo minidump = GenerateMinidump(exception);
-    ResetException(dispatcher_, std::move(exception));
+    ResetException(dispatcher_, std::move(exception), crashed_process);
 
     if (minidump.is_valid()) {
       builder.SetMinidump(std::move(minidump));
@@ -83,7 +82,7 @@ void CrashReporter::Send(const std::string crashed_process_name,
 
   auto file_crash_report =
       GetComponentSourceIdentity(dispatcher_, services_, fit::Timeout(component_lookup_timeout_),
-                                 crashed_thread_koid)
+                                 fsl::GetKoid(crashed_thread.get()))
           .then([services = services_, builder = std::move(builder),
                  callback = std::move(callback)](::fit::result<SourceIdentity>& result) mutable {
             SourceIdentity component_lookup;

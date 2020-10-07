@@ -7,6 +7,8 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/vmo.h>
 
 #include <optional>
@@ -18,7 +20,8 @@ namespace handler {
 
 class CrashReportBuilder {
  public:
-  CrashReportBuilder& SetProcessName(const std::string& process_name);
+  CrashReportBuilder& SetProcess(const zx::process& process);
+  CrashReportBuilder& SetThread(const zx::thread& thread);
   CrashReportBuilder& SetMinidump(zx::vmo minidump);
   CrashReportBuilder& SetComponentInfo(
       const fuchsia::sys::internal::SourceIdentity& component_info);
@@ -29,6 +32,9 @@ class CrashReportBuilder {
 
  private:
   std::optional<std::string> process_name_;
+  std::optional<zx_koid_t> process_koid_;
+  std::optional<std::string> thread_name_;
+  std::optional<zx_koid_t> thread_koid_;
   std::optional<zx::vmo> minidump_{std::nullopt};
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};

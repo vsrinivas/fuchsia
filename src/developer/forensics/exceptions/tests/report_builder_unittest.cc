@@ -12,11 +12,10 @@ namespace exceptions {
 namespace handler {
 namespace {
 
-const std::string kProcessName = "process_name";
-
 class CrashReportBuilderTest : public testing::Test {
  protected:
-  void SetUp() { builder_.SetProcessName(kProcessName); }
+  // Use an invalid process/thread becuase we don't care about the specific name and koid of each.
+  void SetUp() { builder_.SetProcess(zx::process{}).SetThread(zx::thread{}); }
 
   CrashReportBuilder builder_;
 };

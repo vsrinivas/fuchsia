@@ -7,32 +7,25 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
-#include "src/lib/fsl/handles/object_info.h"
-
 namespace forensics {
 namespace exceptions {
 
 PendingException::PendingException(async_dispatcher_t* dispatcher, zx::duration ttl,
                                    zx::exception exception)
-    : exception_(std::move(exception)) {
+    : exception_(std::move(exception)), process_(ZX_HANDLE_INVALID), thread_(ZX_HANDLE_INVALID) {
   if (!exception_.is_valid()) {
     return;
   }
 
-  zx::process process;
-  if (const zx_status_t status = exception_.get_process(&process); status != ZX_OK) {
+  if (const zx_status_t status = exception_.get_process(&process_); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get process; releasing the exception";
     exception_.reset();
   }
-  crashed_process_name_ =
-      (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
 
-  zx::thread thread;
-  if (const zx_status_t status = exception_.get_thread(&thread); status != ZX_OK) {
+  if (const zx_status_t status = exception_.get_thread(&thread_); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get thread; releasing the exception";
     exception_.reset();
   }
-  crashed_thread_koid_ = fsl::GetKoid(thread.get());
 
   if (const zx_status_t status = reset_.PostDelayed(dispatcher, ttl); status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to post reset task for exception; releasing the exception";
@@ -41,10 +34,8 @@ PendingException::PendingException(async_dispatcher_t* dispatcher, zx::duration 
 }
 
 zx::exception&& PendingException::TakeException() { return std::move(exception_); }
-
-std::string PendingException::CrashedProcessName() const { return crashed_process_name_; }
-
-zx_koid_t PendingException::CrashedThreadKoid() const { return crashed_thread_koid_; }
+zx::process&& PendingException::TakeProcess() { return std::move(process_); }
+zx::thread&& PendingException::TakeThread() { return std::move(thread_); }
 
 void PendingException::Reset() { exception_.reset(); }
 

@@ -37,12 +37,13 @@ void HandlerManager::HandleNextPendingException() {
   const size_t handler_idx = available_handlers_.front();
   available_handlers_.pop_front();
 
-  const std::string crashed_process_name = pending_exceptions_.front().CrashedProcessName();
-  const zx_koid_t crashed_thread_koid = pending_exceptions_.front().CrashedThreadKoid();
   zx::exception exception = pending_exceptions_.front().TakeException();
+  zx::process process = pending_exceptions_.front().TakeProcess();
+  zx::thread thread = pending_exceptions_.front().TakeThread();
+
   pending_exceptions_.pop_front();
 
-  handlers_[handler_idx].Handle(crashed_process_name, crashed_thread_koid, std::move(exception));
+  handlers_[handler_idx].Handle(std::move(exception), std::move(process), std::move(thread));
 }
 
 }  // namespace exceptions
