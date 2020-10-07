@@ -74,7 +74,9 @@ func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error)
 	t := time.NewTicker(mDNSTimeout)
 	defer t.Stop()
 	for {
-		m.Send(mdns.QuestionPacket(domain))
+		if err := m.Send(mdns.QuestionPacket(domain)); err != nil {
+			return nil, net.IPAddr{}, fmt.Errorf("could not send mDNS question: %w", err)
+		}
 
 		for {
 			select {
