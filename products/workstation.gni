@@ -14,14 +14,12 @@ base_package_labels += [
   "//src/chromium:web_engine",
   "//src/dart:dart_jit",
   "//src/dart:dart_jit_product",
-  "//src/experiences/bin/simple_browser:web_engine_config",
-  "//src/experiences/session_shells/ermine",
-  "//src/experiences/session_shells/ermine/session:session_config",
   "//src/flutter",
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
   "//src/identity/bin:tier_2",
-  "//src/session",
+  "//src/media/audio/bundles:services",
+  "//src/power:battery",
   "//src/ui/bin/activity",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
@@ -32,8 +30,10 @@ cache_package_labels -= [ "//src/ui/tools/tiles" ]
 
 cache_package_labels += [
   "//src/experiences/bin/simple_browser",
-  "//src/media/audio/bundles:services",
-  "//src/power:battery",
+  "//src/experiences/bin/simple_browser:web_engine_config",
+  "//src/experiences/session_shells/ermine",
+  "//src/experiences/session_shells/ermine/session:session_config",
+  "//src/session",
 ]
 
 universe_package_labels += [
