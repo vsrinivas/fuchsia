@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/log_stats"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

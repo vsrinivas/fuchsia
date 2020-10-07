@@ -22,7 +22,7 @@ use std::{
     task::{Context, Poll},
 };
 
-pub use diagnostics_data::{Inspect, Lifecycle, Logs};
+pub use diagnostics_data::{assert_data_tree, tree_assertion, Inspect, Lifecycle, Logs, Severity};
 pub use fidl_fuchsia_diagnostics::DataType;
 pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 

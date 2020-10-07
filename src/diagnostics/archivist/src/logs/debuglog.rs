@@ -17,7 +17,7 @@ use futures::stream::{unfold, Stream, TryStreamExt};
 use lazy_static::lazy_static;
 use log::error;
 
-const KERNEL_URL: &str = "fuchsia-boot://kernel";
+pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 lazy_static! {
     pub static ref KERNEL_IDENTITY: SourceIdentity = {
         let mut identity = SourceIdentity::empty();

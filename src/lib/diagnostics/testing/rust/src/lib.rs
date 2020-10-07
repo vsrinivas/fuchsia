@@ -77,17 +77,18 @@ impl EnvWithDiagnostics {
     /// Launch the app from the given URL with the given arguments, collecting its diagnostics.
     /// Returns a reader for the component's diagnostics.
     pub fn launch(&self, url: &str, args: Option<Vec<String>>) -> Launched {
-        self.launch_with_options(url, args, LaunchOptions::new())
-    }
+        let mut launch_options = LaunchOptions::new();
+        let (dir_client, dir_server) = zx::Channel::create().unwrap();
+        let mut fs = ServiceFs::new();
+        fs.add_proxy_service_to::<ArchiveAccessorMarker, _>(
+            self.archivist.directory_request().clone(),
+        )
+        .serve_connection(dir_server)
+        .unwrap();
+        Task::spawn(fs.collect()).detach();
+        launch_options
+            .set_additional_services(vec![ArchiveAccessorMarker::NAME.to_string()], dir_client);
 
-    /// Launch the app from the given URL with the given arguments and launch options, collecting
-    /// its diagnostics. Returns a reader for the component's diagnostics.
-    pub fn launch_with_options(
-        &self,
-        url: &str,
-        args: Option<Vec<String>>,
-        launch_options: LaunchOptions,
-    ) -> Launched {
         let url = PkgUrl::parse(url).unwrap();
         let manifest = url.resource().unwrap().rsplit('/').next().unwrap();
         let reader = self.reader_for(manifest, &[]);

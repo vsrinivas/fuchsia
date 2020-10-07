@@ -23,7 +23,7 @@ use log::{debug, error, trace, warn};
 use std::sync::Arc;
 
 mod buffer;
-mod debuglog;
+pub mod debuglog;
 mod error;
 mod interest;
 mod listener;

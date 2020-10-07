@@ -17,6 +17,8 @@ use std::{
     str::FromStr,
 };
 
+pub use fuchsia_inspect_node_hierarchy::{assert_data_tree, tree_assertion};
+
 const SCHEMA_VERSION: u64 = 1;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]

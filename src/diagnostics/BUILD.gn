@@ -9,6 +9,7 @@ group("diagnostics") {
     "archivist",
     "config",
     "examples",
+    "log-stats",
     "wasm",
   ]
 }
@@ -24,6 +25,7 @@ group("tests") {
     "inspect_validator/lib/rust:tests",
     "iquery:tests",
     "lib:tests",
+    "log-stats:tests",
     "log-validator:tests",
     "tool:host_tests",
     "triage:tests",
