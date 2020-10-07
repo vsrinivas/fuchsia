@@ -739,11 +739,11 @@ void main(List<String> arguments) {
     });
 
     test('Test --with=top and unknown message', () async {
-      final String bugReportProto =
-          Platform.script.resolve('runtime_deps/bugreport.proto').toFilePath();
+      final String snapshotProto =
+          Platform.script.resolve('runtime_deps/snapshot.proto').toFilePath();
       var instance = RunFidlcat();
       await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
-          ['--with=top', '--from=$bugReportProto']);
+          ['--with=top', '--from=$snapshotProto']);
 
       expect(
           instance.stdout,
