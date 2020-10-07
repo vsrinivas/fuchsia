@@ -19,9 +19,11 @@
 ##  HOST          the hostname to connect to
 ##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-flash.sh || exit $?
+set -o errexit
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-flash.sh
 fx-config-read
 
 build=true
@@ -92,10 +94,11 @@ fi
 
 save_remote_info "$host" "$dir"
 
-fetch_remote_build_archive "${host}" "${dir}"
+artifact_dir="${FUCHSIA_DIR}/out/fetched"
+fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" flash $build
 
 if "${flash}"; then
-  cd "${FUCHSIA_DIR}/out/fetched"
-
+  fetch_or_build_tool ${host} ${dir} "${artifact_dir}" fastboot
+  cd "${artifact_dir}"
   fx-flash "${serial}" "${device}"
 fi

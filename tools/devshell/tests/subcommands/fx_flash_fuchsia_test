@@ -16,54 +16,45 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/vars.sh"
 )
 
-declare fx
+declare fx fastboot_mock flash_script
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
+  flash_script="${BT_TEMP_DIR}/out/default/flash.sh"
 
-  btf::make_mock "${BT_TEMP_DIR}/out/default/flash.sh"
+  btf::make_mock "$flash_script"
   btf::make_mock "${BT_TEMP_DIR}/out/default/image_paths.sh"
   btf::make_mock "${BT_TEMP_DIR}/out/default/host-tools/device-finder"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
 
-  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+  fastboot_mock="$(btf::make_mock_binary "fastboot")"
 
-  # Fake the fastboot tool by inserting a fastboot() function to override it.
-  btf::make_mock "${PATH_DIR_FOR_TEST}/fake-fastboot"
-  {
-    echo "function fastboot() {
-      fake-fastboot \"\$@\"
-}
-    ";
-    cat "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh";
-  } >"${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh.tmp"
-  mv "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh.tmp" \
-     "${BT_TEMP_DIR}/tools/devshell/lib/fx-flash.sh"
+  echo '[[ "$4" == "fastboot" ]] && echo ' "${fastboot_mock}" \
+    > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects"
 }
 
 TEST_fx_flash_ssh() {
-  cat >"${PATH_DIR_FOR_TEST}/fake-fastboot.mock_side_effects" <<INPUT
+  cat >"${fastboot_mock}.mock_side_effects" <<INPUT
 if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
   BT_EXPECT ${fx} flash
-  source "${BT_TEMP_DIR}/out/default/flash.sh.mock_state"
+  source "${flash_script}.mock_state"
   BT_EXPECT [[ "${BT_MOCK_ARGS[1]}" == "--ssh-key="*".ssh/fuchsia_authorized_keys" ]]
 }
 
 TEST_fx_flash_ssh_falls_back_to_recovery_if_not_exist() {
   # Remove the ssh key file
   rm "${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys"
-  cat >"${PATH_DIR_FOR_TEST}/fake-fastboot.mock_side_effects" <<INPUT
+  cat >"${fastboot_mock}.mock_side_effects" <<INPUT
 if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash
-  flash_script="${BT_TEMP_DIR}/out/default/flash.sh"
+  BT_EXPECT ${fx} flash 2>/dev/null
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" --recovery
 }

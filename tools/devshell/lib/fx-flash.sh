@@ -5,6 +5,8 @@
 
 # WARNING: This is not supposed to be directly executed by users.
 
+set -o errexit
+
 function fx-flash {
   local serial="$1"
   local device="$2"
@@ -40,7 +42,8 @@ function fx-flash {
     "./flash.sh" "${flash_args[@]}" "-s" "udp:${gb_device_ip}"
   else
     # Process traditional fastboot over USB.
-    num_devices=$(fastboot devices | wc -l)
+    fastboot="$(fx-command-run list-build-artifacts --build --expect-one --name fastboot tools)"
+    num_devices=$("${fastboot}" devices | wc -l)
     if [[ "${num_devices}" -lt 1 ]]; then
       fx-error "Please place device into fastboot mode!"
       return 1

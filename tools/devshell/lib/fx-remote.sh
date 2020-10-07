@@ -33,30 +33,6 @@ function save_remote_info {
   echo "${remote_host}:${remote_dir}" > "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}"
 }
 
-function fetch_remote_build_archive {
-  local remote_host="$1"
-  local remote_dir="$2"
-
-  ssh "${remote_host}" "cd ${remote_dir} && ./.jiri_root/bin/fx build build-archive.tar" || return 1
-
-  local build_dir=$(ssh "${remote_host}" "cd ${remote_dir} && ./.jiri_root/bin/fx get-build-dir")
-  if [[ -z "${build_dir}" ]]; then
-    return 1
-  fi
-
-  rsync -z -P "${remote_host}":"${build_dir}/build-archive.tar" "${FUCHSIA_DIR}/out/build-archive.tar"
-  if [[ $? -ne 0 ]]; then
-    return 1
-  fi
-
-  mkdir -p "${FUCHSIA_DIR}/out/fetched"
-  tar xf "${FUCHSIA_DIR}/out/build-archive.tar" -C "${FUCHSIA_DIR}/out/fetched"
-  if [[ $? -ne 0 ]]; then
-    return 1
-  fi
-  echo >&2 "Build archive expanded into out/fetched"
-}
-
 function get_remote_build_dir {
   local host=$1
   local remote_checkout=$2
@@ -97,7 +73,7 @@ function fetch_or_build_tool {
     local remote_build_dir="$(get_remote_build_dir "${host}" "${remote_checkout}")" || exit $?
     rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./${tool}" "${local_dir}" >&2 || exit $?
   else
-    tool="$(fx-command-run list-build-artifacts tools --build --expect-one --name ${tool_name})" || exit $?
+    tool="$(fx-command-run list-build-artifacts --build --expect-one --name ${tool_name} tools)" || exit $?
     rm -f "${local_dir}/${tool}"
     mkdir -p "${local_dir}/$(dirname "$tool")"
     cp "${FUCHSIA_BUILD_DIR}/${tool}" "${local_dir}/${tool}"
