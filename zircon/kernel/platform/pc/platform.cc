@@ -26,9 +26,11 @@
 #endif
 #include <err.h>
 #include <lib/acpi_lite.h>
+#include <lib/acpi_lite/zircon.h>
 #include <lib/acpi_tables.h>
 #include <lib/cksum.h>
 #include <lib/cmdline.h>
+#include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/system-topology.h>
@@ -686,7 +688,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t 
 static void init_acpi(zx_paddr_t acpi_rsdp) {
   // Initialise acpi_lite Parser.
   static const AcpiParser parser = [acpi_rsdp]() {
-    zx::status<AcpiParser> result = AcpiParser::Init(acpi_rsdp);
+    zx::status<AcpiParser> result = acpi_lite::AcpiParserInit(acpi_rsdp);
     if (result.is_error()) {
       panic("Could not initialize ACPI. Error code %d.", result.error_value());
     }

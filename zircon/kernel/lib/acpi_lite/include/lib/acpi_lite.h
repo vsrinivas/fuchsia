@@ -24,9 +24,6 @@ class AcpiParser {
   AcpiParser(const AcpiParser&) = default;
   AcpiParser& operator=(const AcpiParser&) = default;
 
-  // Create a new AcpiParser, starting at the given Root System Description Pointer (RSDP).
-  static zx::status<AcpiParser> Init(zx_paddr_t rsdp_pa);
-
   // Create a new AcpiParser, using the given PhysMemReader object.
   //
   // PhysMemReader must outlive this object. Caller retains ownership of the PhysMemReader.

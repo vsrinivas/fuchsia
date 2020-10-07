@@ -154,6 +154,7 @@ if (is_kernel) {
     testonly = true
     deps = [
       "dev/coresight/tests($host_toolchain)",
+      "lib/acpi_lite:tests",
       "lib/devicetree/tests",
       "lib/heap/cmpctmalloc/tests($host_toolchain)",
     ]

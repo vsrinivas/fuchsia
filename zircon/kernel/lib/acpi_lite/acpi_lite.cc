@@ -7,47 +7,16 @@
 #include "lib/acpi_lite.h"
 
 #include <inttypes.h>
-#include <trace.h>
 #include <zircon/compiler.h>
 
-#include <ktl/algorithm.h>
 #include <pretty/hexdump.h>
-#include <vm/physmap.h>
+
+#include "debug.h"
 
 #define LOCAL_TRACE 0
 
 namespace acpi_lite {
 namespace {
-
-// Convert physical addresses to virtual addresses using Zircon's standard conversion
-// functions.
-class ZirconPhysmemReader final : public PhysMemReader {
- public:
-  constexpr ZirconPhysmemReader() = default;
-
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) final {
-    // We don't support the 0 physical address or 0-length ranges.
-    if (length == 0 || phys == 0) {
-      return zx::error(ZX_ERR_INVALID_ARGS);
-    }
-
-    // Get the last byte of the specified range, ensuring we don't wrap around the address
-    // space.
-    uintptr_t phys_end;
-    if (add_overflow(phys, length - 1, &phys_end)) {
-      return zx::error(ZX_ERR_OUT_OF_RANGE);
-    }
-
-    // Ensure that both "phys" and "phys + length - 1" have valid addresses.
-    //
-    // The Zircon physmap is contiguous, so we don't have to worry about intermediate addresses.
-    if (!is_physmap_phys_addr(phys) || !is_physmap_phys_addr(phys_end)) {
-      return zx::error(ZX_ERR_OUT_OF_RANGE);
-    }
-
-    return zx::success(paddr_to_physmap(phys));
-  }
-};
 
 // Map a variable-length structure into memory.
 //
@@ -149,6 +118,7 @@ zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t r
   });
 }
 
+#if defined(__x86_64__)
 // Search for a valid RSDP in the BIOS read-only memory space in [0xe0000..0xfffff],
 // on 16 byte boundaries.
 //
@@ -175,6 +145,7 @@ zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
 
   return zx::error(ZX_ERR_NOT_FOUND);
 }
+#endif
 
 zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
                                          size_t* num_tables) {
@@ -271,14 +242,6 @@ const AcpiSdtHeader* AcpiParser::GetTableBySignature(AcpiSignature sig) const {
   return nullptr;
 }
 
-zx::status<AcpiParser> AcpiParser::Init(zx_paddr_t rsdp_pa) {
-  // AcpiParser requires a ZirconPhysmemReader instance that outlives
-  // it. We share a single static instance for all AcpiParser instances.
-  static ZirconPhysmemReader reader;
-
-  return Init(reader, rsdp_pa);
-}
-
 zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
                                                   zx_paddr_t rsdp_pa) {
   // If the user gave us an explicit RSDP, just use that directly.
@@ -287,14 +250,14 @@ zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
   }
 
   // Otherwise, attempt to find it in a platform-specific way.
-#if __x86_64__
+#if defined(__x86_64__)
   {
     zx::status<zx_paddr_t> result = FindRsdpPc(physmem_reader);
     if (result.is_ok()) {
-      dprintf(SPEW, "ACPI LITE: Found RSDP at physical address %#lx.\n", result.value());
+      LOG_DEBUG("ACPI LITE: Found RSDP at physical address %#lx.\n", result.value());
       return ParseRsdp(physmem_reader, result.value());
     }
-    dprintf(INFO, "ACPI LITE: Couldn't find ACPI RSDP in BIOS area\n");
+    LOG_INFO("ACPI LITE: Couldn't find ACPI RSDP in BIOS area\n");
   }
 #endif
 
@@ -302,12 +265,10 @@ zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
 }
 
 zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa) {
-  LTRACEF("passed in rsdp %#" PRIxPTR "\n", rsdp_pa);
-
   // Find the root tables.
   zx::status<RootSystemTableDetails> root_tables = FindRootTables(physmem_reader, rsdp_pa);
   if (root_tables.is_error()) {
-    dprintf(INFO, "ACPI LITE: Could not validate RSDP structure: %d\n", root_tables.error_value());
+    LOG_INFO("ACPI LITE: Could not validate RSDP structure: %d\n", root_tables.error_value());
     return root_tables.take_error();
   }
 
@@ -319,12 +280,12 @@ zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_
       zx::status<const AcpiXsdt*> xsdt =
           ValidateXsdt(physmem_reader, root_tables.value().xsdt_address, &num_tables);
       if (xsdt.is_ok()) {
-        dprintf(SPEW, "ACPI LITE: Found valid XSDT table at physical address %#lx\n",
-                root_tables.value().xsdt_address);
+        LOG_DEBUG("ACPI LITE: Found valid XSDT table at physical address %#lx\n",
+                  root_tables.value().xsdt_address);
         return zx::success(AcpiParser(physmem_reader, /*rsdt=*/nullptr, xsdt.value(), num_tables));
       }
-      dprintf(SPEW, "ACPI LITE: Invalid XSDT table at physical address %#lx\n",
-              root_tables.value().xsdt_address);
+      LOG_DEBUG("ACPI LITE: Invalid XSDT table at physical address %#lx\n",
+                root_tables.value().xsdt_address);
     }
 
     // Otherwise, try using the RSDT.
@@ -333,12 +294,12 @@ zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_
       zx::status<const AcpiRsdt*> rsdt =
           ValidateRsdt(physmem_reader, root_tables.value().rsdt_address, &num_tables);
       if (rsdt.is_ok()) {
-        dprintf(SPEW, "ACPI LITE: Found valid RSDT table at physical address %#x\n",
-                root_tables.value().rsdt_address);
+        LOG_DEBUG("ACPI LITE: Found valid RSDT table at physical address %#x\n",
+                  root_tables.value().rsdt_address);
         return zx::success(AcpiParser(physmem_reader, rsdt.value(), /*xsdt=*/nullptr, num_tables));
       }
-      dprintf(SPEW, "ACPI LITE: Invalid RSDT table at physical address %#x\n",
-              root_tables.value().rsdt_address);
+      LOG_DEBUG("ACPI LITE: Invalid RSDT table at physical address %#x\n",
+                root_tables.value().rsdt_address);
     }
 
     // Nothing found.
@@ -357,7 +318,7 @@ void AcpiParser::DumpTables() const {
   if (xsdt_ != nullptr) {
     hexdump(xsdt_, xsdt_->header.length);
   } else {
-    DEBUG_ASSERT(rsdt_ != nullptr);
+    ZX_DEBUG_ASSERT(rsdt_ != nullptr);
     hexdump(rsdt_, rsdt_->header.length);
   }
 

@@ -4,24 +4,63 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("$zx_build/public/gn/migrated_targets.gni")
+
+# Generic parts of acpi_lite.
 zx_library("acpi_lite") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/acpi_lite/internal.h",
+    "lib/acpi_lite/structures.h",
+    "lib/acpi_lite.h",
+  ]
+  sdk_migrated = true
   kernel = true
+  static = true
+
   sources = [
     "acpi_lite.cc",
     "structures.cc",
   ]
+
   deps = [ "$zx/system/ulib/pretty" ]
 
-  # TODO: testonly = true
-  deps += [ ":test" ]
+  public_deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zxc",
+  ]
+
+  # Zircon-specific parts of acpi_lite.
+  if (is_kernel) {
+    sdk_headers += [ "lib/acpi_lite/zircon.h" ]
+    sources += [
+      "zircon.cc",
+      "zircon_test.cc",
+    ]
+    deps += [ "$zx/kernel/lib/unittest" ]
+  }
 }
 
-source_set("test") {
-  # TODO: testonly = true
-  sources = [ "acpi_lite_test.cc" ]
+if (!is_kernel) {
+  import("//src/sys/build/fuchsia_unittest_package.gni")
 
-  deps = [
-    "$zx/kernel/lib/acpi_lite:headers",
-    "$zx/kernel/lib/unittest",
-  ]
+  executable("acpi_lite_test") {
+    testonly = true
+    sources = [ "acpi_lite_test.cc" ]
+    deps = [
+      ":acpi_lite",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+  }
+
+  fuchsia_unittest_package("acpi-lite-test") {
+    executable_path = "bin/acpi_lite_test"
+    deps = [ ":acpi_lite_test" ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":acpi-lite-test" ]
+  }
 }
