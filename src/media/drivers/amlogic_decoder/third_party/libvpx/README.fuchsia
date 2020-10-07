@@ -1,5 +1,6 @@
 Name: libvpx
 URL: https://chromium.googlesource.com/webm/libvpx/+/master
-LICENSE: BSD-3-Clause
+License: BSD-3-Clause
+License File: LICENSE
 Description:
 Only the loop-filter code is used. It's modified to remove most functions, which are unnecessary.

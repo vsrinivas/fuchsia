@@ -1,7 +1,6 @@
 Name: chromium
 URL: https://www.chromium.org/
 License: 3-Clause BSD
-License File: LICENSE
 Description:
 
 This path contains the portions of the chromium code used to drive h.264 decoders. It was forked
