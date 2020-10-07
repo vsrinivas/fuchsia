@@ -391,8 +391,8 @@ static zx_status_t load_device_tree(const int dtb_fd,
     FX_LOGS(ERROR) << "Failed to find \"/cpus\" in device tree";
     return ZX_ERR_BAD_STATE;
   }
-  for (uint8_t cpu = 0; cpu != cfg.cpus(); ++cpu) {
-    std::string name = fxl::StringPrintf("cpu@%u", cpu);
+  for (int cpu = cfg.cpus() - 1; cpu >= 0; --cpu) {
+    std::string name = fxl::StringPrintf("cpu@%d", cpu);
     int cpu_off = fdt_add_subnode(dtb, cpus_off, name.c_str());
     if (cpu_off < 0) {
       device_tree_error_msg("cpu");
@@ -408,7 +408,7 @@ static zx_status_t load_device_tree(const int dtb_fd,
       device_tree_error_msg("compatible");
       return ZX_ERR_BAD_STATE;
     }
-    ret = fdt_setprop_u32(dtb, cpu_off, "reg", cpu);
+    ret = fdt_setprop_u32(dtb, cpu_off, "reg", static_cast<uint32_t>(cpu));
     if (ret != 0) {
       device_tree_error_msg("reg");
       return ZX_ERR_BAD_STATE;
