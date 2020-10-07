@@ -76,6 +76,15 @@ impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
 
     // Used to consume receptor.
     pub fn ack(self) {}
+
+    /// Propagates a response to the given message client. Useful for chaining
+    /// together responses.
+    pub async fn propagate(
+        &mut self,
+        client: MessageClient<P, A>,
+    ) -> Result<Receptor<P, A>, Error> {
+        self.next_payload().await.map(|payload| client.reply(payload.0).send())
+    }
 }
 
 /// Extracts the payload from a given `MessageEvent`. Such event is provided
