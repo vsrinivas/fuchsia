@@ -31,3 +31,8 @@ zx_library("backtrace-request-utils") {
   ]
   sources = [ "backtrace-request-utils.cc" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

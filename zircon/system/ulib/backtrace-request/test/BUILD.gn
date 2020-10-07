@@ -13,15 +13,17 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":backtrace-request" ]
+  deps = [
+    ":backtrace-request-integration-test-pkg",
+    ":backtrace-request-test-pkg",
+  ]
 }
 
-test("backtrace-request") {
-  output_name = "backtrace-request-test"
+test("backtrace-request-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-test.cc" ]
   deps = [
@@ -32,12 +34,17 @@ test("backtrace-request") {
   ]
 }
 
+fuchsia_unittest_package("backtrace-request-test-pkg") {
+  package_name = "backtrace-request-test"
+  executable_path = "test/backtrace-request-test"
+  deps = [ ":backtrace-request-test" ]
+}
+
 # Integration test for requesting a backtrace.
 #
 # Related unittests exist alongside the backtrace and crashsvc code, but
 # this verifies that the pieces are working together correctly.
-test("backtrace-request-integration") {
-  output_name = "backtrace-request-integration-test"
+test("backtrace-request-integration-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-integration-test.cc" ]
   deps = [
@@ -47,12 +54,8 @@ test("backtrace-request-integration") {
   ]
 }
 
-bootfs_test("backtrace-request-integration-bootfs-test") {
-  name = "backtrace-request-integration-test"
-  deps = [ ":backtrace-request-integration" ]
-}
-
-bootfs_test("backtrace-request-bootfs-test") {
-  name = "backtrace-request-test"
-  deps = [ ":backtrace-request" ]
+fuchsia_unittest_package("backtrace-request-integration-test-pkg") {
+  package_name = "backtrace-request-integration-test"
+  executable_path = "test/backtrace-request-integration-test"
+  deps = [ ":backtrace-request-integration-test" ]
 }

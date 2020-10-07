@@ -14,11 +14,14 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":bitmap-fuzzers" ]
+  deps = [
+    ":bitmap-fuzzers",
+    ":bitmap-test-pkg",
+  ]
 }
 
 test("bitmap") {
@@ -45,8 +48,9 @@ test("bitmap") {
   ]
 }
 
-bootfs_test("bitmap-bootfs-test") {
-  name = "bitmap-test"
+fuchsia_unittest_package("bitmap-test-pkg") {
+  package_name = "bitmap-test"
+  executable_path = "test/bitmap-test"
   deps = [ ":bitmap" ]
 }
 

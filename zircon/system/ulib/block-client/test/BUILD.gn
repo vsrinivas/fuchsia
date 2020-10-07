@@ -13,14 +13,14 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":block-client-unit" ]
+  deps = [ ":block-client-unit-test-pkg" ]
 }
 
-test("block-client-unit") {
+test("block-client-unit-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -51,7 +51,8 @@ test("block-client-unit") {
   ]
 }
 
-bootfs_test("block-client-unit-bootfs-test") {
-  name = "block-client-unit"
-  deps = [ ":block-client-unit" ]
+fuchsia_unittest_package("block-client-unit-test-pkg") {
+  package_name = "block-client-unit-test"
+  executable_path = "test/block-client-unit-test"
+  deps = [ ":block-client-unit-test" ]
 }

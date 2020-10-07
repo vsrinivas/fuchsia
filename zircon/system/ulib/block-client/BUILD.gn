@@ -92,3 +92,8 @@ zx_library("fake-device") {
     "//zircon/system/ulib/storage/buffer",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
