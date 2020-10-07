@@ -213,10 +213,11 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
   release_cvar_.Broadcast();
   ZX_ASSERT(closed_hash_.insert_or_find(vnode.get()));
 
+  CachePolicy policy = vnode->overriden_cache_policy().value_or(cache_policy_);
   // While in the closed cache, the blob may either be destroyed or in an
   // inactive state. The toggles here make tradeoffs between memory usage
   // and performance.
-  switch (cache_policy_) {
+  switch (policy) {
     case CachePolicy::EvictImmediately:
       vnode->ActivateLowMemory();
       break;

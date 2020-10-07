@@ -170,9 +170,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
-                                               options->writability, options->compression_settings,
-                                               std::move(vmex_resource)));
+  auto fs = std::unique_ptr<Blobfs>(new Blobfs(
+      dispatcher, std::move(device), superblock, options->writability,
+      options->compression_settings, std::move(vmex_resource), options->pager_backed_cache_policy));
   fs->block_info_ = block_info;
 
   if (options->pager) {
@@ -191,6 +191,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     }
     fs->pager_ = std::move(status_or_pager).value();
     FS_TRACE_INFO("blobfs: Initialized user pager\n");
+  } else if (options->pager_backed_cache_policy) {
+    FS_TRACE_WARN("blobfs: Pager is not enabled; pager-backed cache policy will not take effect\n");
   }
 
   if (options->metrics) {
@@ -264,6 +266,10 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   FS_TRACE_INFO("blobfs: Using eviction policy %s\n", CachePolicyToString(options->cache_policy));
+  if (options->pager_backed_cache_policy) {
+    FS_TRACE_INFO("blobfs: Using overridden pager eviction policy %s\n",
+                  CachePolicyToString(*options->pager_backed_cache_policy));
+  }
   fs->Cache().SetCachePolicy(options->cache_policy);
 
   RawBitmap block_map;
@@ -750,13 +756,15 @@ void Blobfs::Sync(SyncCallback cb) {
 
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                const Superblock* info, Writability writable,
-               CompressionSettings write_compression_settings, zx::resource vmex_resource)
+               CompressionSettings write_compression_settings, zx::resource vmex_resource,
+               std::optional<CachePolicy> pager_backed_cache_policy)
     : info_(*info),
       dispatcher_(dispatcher),
       block_device_(std::move(device)),
       writability_(writable),
       write_compression_settings_(write_compression_settings),
-      vmex_resource_(std::move(vmex_resource)) {}
+      vmex_resource_(std::move(vmex_resource)),
+      pager_backed_cache_policy_(pager_backed_cache_policy) {}
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // XXX This function relies on very subtle orderings and assumptions about the state of the
