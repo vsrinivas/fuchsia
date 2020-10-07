@@ -6,7 +6,12 @@
 #### CATEGORY=Run, inspect and debug
 ### symbolize backtraces and program locations provided as input on stdin
 
-## usage: fx symbolize [-i IDS_TXT_FILE] [-r | --remote-symbols]
+## usage: fx symbolize [--experimental] [--legacy] [-i IDS_TXT_FILE]
+##                     [-r | --remote-symbols]
+##
+##    --experimental          use the experimental C++ symbolizer
+##
+##    --legacy                use the legacy Go symbolizer
 ##
 ##    -i IDS_TXT_FILE         specify an ids.txt file to be used
 ##
@@ -14,25 +19,37 @@
 ##                            symbol servers for symbols that cannot be resolved
 ##                            locally.
 ##
-## Converts sybmolizer markup found in stdin to human readable using
-## local symbols (and remote if the --remote-symbols option is used).
-## This command is usually used on log output from either zx_log or syslog.
-## Anything that is not valid symbolizer markup is left alone. This is similar
-## to how c++filt works for demangling C++ symbols.
+##   Converts sybmolizer markup found in stdin to human readable using
+##   local symbols (and remote if the --remote-symbols option is used).
+##   This command is usually used on log output from either zx_log or syslog.
+##   Anything that is not valid symbolizer markup is left alone. This is similar
+##   to how c++filt works for demangling C++ symbols.
 ##
-## By default, `fx log` and `fx klog` automatically pipe their results into
-## this command.
+##   By default, `fx log` and `fx klog` automatically pipe their results into
+##   this command.
 ##
-## Authentication:
-## If the `--remote-symbols` option is specified, `fx symbolize` will fail if the
-## current user is not authenticated with `gcloud` or if they don't have enough
-## privileges on the symbol servers. To ensure that the current user is
-## properly authenticated, run:
+##   --experimental / --legacy controls which implementation to use. The default
+##   is to use the legacy Go symbolizer.
+##
+## Authentication
+##
+##   If the `--remote-symbols` option is specified, authentication for the symbol
+##   server is needed.
+##
+##   When using the Go symbolizer, `fx symbolize` will fail if the current user
+##   is not authenticated or doesn't have enough privileges on the symbol
+##   servers. To ensure that the current user is properly authenticated, run:
 ##      `gcloud auth application-default login`
+##
+##   When using the C++ implementation, failed or missing authentication will be
+##   silent. To authenticate, run:
+##      `fx zxdb --no-agent` and then `auth`
+
+# TODO(fxb/61413): update the authentication command above to `fx symbolizer --auth`.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-function symbolize {
+function go_symbolizer {
   fx-config-read
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/contrib/lib/symbol-index.sh || exit $?
   ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
@@ -42,10 +59,43 @@ function symbolize {
     exit 1
   fi
   local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
+  local extra_args=()
+  for i in "${ids_txt[@]}"; do
+    extra_args+=(-ids-txt "${i}")
+  done
   if [[ "${is_remote}" -eq 1 ]]; then
+    extra_args+=(
+      "-symbol-cache" "$HOME/.fuchsia-symbol-cache"
+      "-symbol-server" "gs://fuchsia-artifacts/debug"
+      "-symbol-server" "gs://fuchsia-artifacts-internal/debug"
+      "-symbol-server" "gs://fuchsia-artifacts-release/debug"
+    )
     trap '_code=$?; set +x; exit-with-warning ${_code}' ERR
   fi
-  "$symbolize" -llvm-symbolizer "$llvm_symbolizer" -ids-rel "${extra_args[@]}"
+  "${symbolize}" -llvm-symbolizer "${llvm_symbolizer}" -ids-rel "${extra_args[@]}"
+}
+
+function cpp_symbolizer {
+  fx-config-read
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/contrib/lib/symbol-index.sh || exit $?
+  ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
+  local symbolizer="${HOST_OUT_DIR}/symbolizer"
+  if [[ ! -x "${symbolizer}" ]]; then
+    fx-error "Cannot execute '${symbolizer}'. Try \`fx build\` first."
+    exit 1
+  fi
+  local extra_args=()
+  for i in "${ids_txt[@]}"; do
+    extra_args+=(--ids-txt "${i}")
+  done
+  if [[ "${is_remote}" -eq 1 ]]; then
+    extra_args+=(
+      "--symbol-server" "gs://fuchsia-artifacts/debug"
+      "--symbol-server" "gs://fuchsia-artifacts-internal/debug"
+      "--symbol-server" "gs://fuchsia-artifacts-release/debug"
+    )
+  fi
+  "${symbolizer}" "${extra_args[@]}"
 }
 
 function exit-with-warning {
@@ -58,8 +108,10 @@ function exit-with-warning {
   exit ${error_code}
 }
 
-declare extra_args=()
+declare ids_txt=()
 declare is_remote=0
+# TODO(fxb/58309): change the default to experimental.
+declare use_experimental=0
 
 while [[ $# -ne 0 ]]; do
   case "$1" in
@@ -67,13 +119,19 @@ while [[ $# -ne 0 ]]; do
     fx-command-help
     exit 0
     ;;
+  --experimental)
+    use_experimental=1
+    ;;
+  --legacy)
+    use_experimental=0
+    ;;
   -i)
     if [[ $# -lt 2 ]]; then
       fx-error Invalid syntax
       fx-command-help
       return 1
     fi
-    extra_args+=( "-ids-txt" "$2")
+    ids_txt+=("$2")
     shift
     ;;
   --remote-symbols|-r)
@@ -96,4 +154,8 @@ if [[ "${is_remote}" -eq 1 ]]; then
   )
 fi
 
-symbolize
+if [[ "${use_experimental}" -eq 1 ]]; then
+  cpp_symbolizer
+else
+  go_symbolizer
+fi

@@ -8,6 +8,10 @@
 
 ## usage: fx log [-h | --help] [--raw] [-r | --remote-symbols] LOG_LISTENER_FLAGS
 ##
+##    --experimental          use the experimental C++ symbolizer
+##
+##    --legacy                use the legacy Go symbolizer
+##
 ##    --raw                   do not attempt to symbolize the log
 ##
 ##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
@@ -47,6 +51,7 @@ function listen {
 
 declare is_raw=0
 declare is_remote=0
+declare symbolizer=( "fx-command-run" "symbolize" )
 
 while [[ $# -ne 0 ]]; do
   case "$1" in
@@ -62,6 +67,10 @@ while [[ $# -ne 0 ]]; do
     ;;
   --remote-symbols|-r)
     is_remote=1
+    symbolizer+=("-r")
+    ;;
+  --experimental|--legacy)
+    symbolizer+=("$1")
     ;;
   *)
     break
@@ -78,9 +87,5 @@ fi
 if (( is_raw )); then
   listen "$@"
 else
-  declare symbolizer=( "fx-command-run" "symbolize" )
-  if (( is_remote )); then
-    symbolizer+=("-r")
-  fi
   listen "$@" | "${symbolizer[@]}"
 fi

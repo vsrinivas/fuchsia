@@ -8,6 +8,10 @@
 
 ## usage: fx klog [--raw] [-r | --remote-symbols]
 ##
+##    --experimental          use the experimental C++ symbolizer
+##
+##    --legacy                use the legacy Go symbolizer
+##
 ##    --raw                   do not attempt to symbolize the log
 ##
 ##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
@@ -27,6 +31,7 @@ fx-config-read
 
 declare is_raw=0
 declare is_remote=0
+declare symbolizer=( "fx-command-run" "symbolize" )
 
 while [[ $# -ne 0 ]]; do
   case "$1" in
@@ -39,6 +44,10 @@ while [[ $# -ne 0 ]]; do
     ;;
   --remote-symbols|-r)
     is_remote=1
+    symbolizer+=("-r")
+    ;;
+  --experimental|--legacy)
+    symbolizer+=("$1")
     ;;
   *)
     fx-error Invalid syntax
@@ -58,9 +67,5 @@ device="$(get-device-name)" || exit $?
 if (( is_raw )); then
   exec "${FUCHSIA_BUILD_DIR}/host-tools/loglistener" "${device}"
 else
-  declare symbolizer=( "fx-command-run" "symbolize" )
-  if (( is_remote )); then
-    symbolizer+=("-r")
-  fi
   "${FUCHSIA_BUILD_DIR}/host-tools/loglistener" "${device}" | "${symbolizer[@]}"
 fi
