@@ -9,7 +9,7 @@ standards, values, and objectives throughout the community and then reviewing
 and ratifying concrete engineering proposals from project contributors.
 Concretely, the Eng Council is charged with maintaining the platform roadmap,
 approving or rejecting Fuchsia RFCs using the
-[Fuchsia RFC Process](rfcs/README.md), and resolving technical disputes that
+[Fuchsia RFC Process][rfc-process], and resolving technical disputes that
 cannot be resolved within subteams.
 
 ## Goals
@@ -57,7 +57,7 @@ description of the technical problems the project is planning to solve to
 support long-term product requirements. The roadmap describes the general
 approach for each problem rather than a detailed design document or engineering
 plan. Those documents should instead be published using the
-[Fuchsia RFC Process](rfcs/README.md). The roadmap can also identify technical
+[Fuchsia RFC Process][rfc-process]. The roadmap can also identify technical
 problems the project plans to solve where the project does not yet have an
 agreed approach.
 
@@ -73,7 +73,7 @@ The council maintains a set of documents that describe the system architecture.
 These documents are descriptive of the current state of the system rather than
 prescriptive about how the system architecture should evolve. Prescriptive
 proposals for changing the system architecture should instead be published
-using the [Fuchsia RFC Process](rfcs/README.md).
+using the [Fuchsia RFC Process][rfc-process].
 
 The system architecture documents drive technical coherence throughout the
 system because they help contributors understand how the system works overall
@@ -97,7 +97,7 @@ appropriate stakeholders to review the designs in detail.
 #### Request for comments (RFCs)
 
 The most common way to review engineering designs will be through the
-[Fuchsia RFC Process](rfcs/README.md). In this process, the council makes the
+[Fuchsia RFC Process][rfc-process]. In this process, the council makes the
 formal decision about whether the project accepts or rejects an RFC. The
 council’s role in this process is largely to ensure that an RFC has received a
 Code-Review +2 from an appropriate set of stakeholders, who are responsible for
@@ -132,7 +132,7 @@ arbitrate disputes that cannot be resolved through mediation.
 ## Decision process
 
 The council makes formal decisions by
-[rough consensus](https://en.wikipedia.org/wiki/Rough_consensus) among council
+[rough consensus][rough-consensus]{:.external} among council
 members, as assessed by the chair. If the council cannot come to rough
 consensus, the chair will make the final decision.
 
@@ -173,4 +173,10 @@ or organization.
 ### Current members
 
 The current members of the Fuchsia Eng Council are listed in
-[this OWNERS file](rfcs/OWNERS).
+[this OWNERS file][rfc-owners].
+
+<!-- Reference links -->
+
+[rfc-process]: /docs/contribute/governance/rfcs/README.md
+[rough-consensus]: https://en.wikipedia.org/wiki/Rough_consensus
+[rfc-owners]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/contribute/governance/rfcs/OWNERS
