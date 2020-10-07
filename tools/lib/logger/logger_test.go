@@ -57,6 +57,18 @@ func TestNewLoggerSetFlags(t *testing.T) {
 	}
 }
 
+func TestLogLevel(t *testing.T) {
+	level := InfoLevel
+	if level.String() != "info" {
+		t.Errorf("InfoLevel.String() should return %q, got %q", "info", level.String())
+	}
+
+	level.Set("debug")
+	if level != DebugLevel {
+		t.Errorf("LogLevel.Set() should change the level's value, but value is still %q", level.String())
+	}
+}
+
 func TestCallDepth(t *testing.T) {
 	prefix := "cdprefix "
 	infoLog, errLog := "Info log", "Error log"
@@ -79,7 +91,7 @@ func TestCallDepth(t *testing.T) {
 		fmt.Sprintf(`\d{4}\/\d{2}\/\d{2} logger_test.go:\d+: %s%s%s`, prefix, regexp.QuoteMeta(logger.color.Red("ERROR: ")), errLog),
 		errBytes)
 	if err != nil || !matched {
-		t.Fatalf("Stderr output was not as expeced. Got: %s", errBytes)
+		t.Fatalf("Stderr output was not as expected. Got: %s", errBytes)
 	}
 }
 
@@ -88,7 +100,7 @@ type counterPrefixer struct {
 }
 
 func (p *counterPrefixer) String() string {
-	p.counter += 1
+	p.counter++
 	return fmt.Sprintf("%d ", p.counter)
 }
 
@@ -114,6 +126,6 @@ func TestCustomPrefix(t *testing.T) {
 		fmt.Sprintf(`\d{4}\/\d{2}\/\d{2} logger_test.go:\d+: 2 %s%s`, regexp.QuoteMeta(logger.color.Red("ERROR: ")), errLog),
 		errBytes)
 	if err != nil || !matched {
-		t.Fatalf("Stderr output was not as expeced. Got: %s", errBytes)
+		t.Fatalf("Stderr output was not as expected. Got: %s", errBytes)
 	}
 }

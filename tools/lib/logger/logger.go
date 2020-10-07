@@ -52,6 +52,25 @@ const (
 	TraceLevel
 )
 
+var levelToName = map[LogLevel]string{
+	NoLogLevel:   "no",
+	FatalLevel:   "fatal",
+	ErrorLevel:   "error",
+	WarningLevel: "warning",
+	InfoLevel:    "info",
+	DebugLevel:   "debug",
+	TraceLevel:   "trace",
+}
+
+// Populated at runtime by init() by inverting levelToName.
+var nameToLevel = map[string]LogLevel{}
+
+func init() {
+	for level, name := range levelToName {
+		nameToLevel[name] = level
+	}
+}
+
 // Copied from Go log so callers don't need to also import log.
 const (
 	Ldate         = 1 << iota             // the date in the local time zone: 2009/01/23
@@ -67,45 +86,19 @@ const (
 // StartDepth defines the starting point for the call depth when entering the logger.
 const startDepth = 2
 
-// String returns the string representation of the LogLevel.
+// String returns the string representation of the LogLevel, or an empty string
+// if the LogLevel has no string representation specified.
 func (l *LogLevel) String() string {
-	switch *l {
-	case NoLogLevel:
-		return "no"
-	case FatalLevel:
-		return "fatal"
-	case ErrorLevel:
-		return "error"
-	case WarningLevel:
-		return "warning"
-	case InfoLevel:
-		return "info"
-	case DebugLevel:
-		return "debug"
-	case TraceLevel:
-		return "trace"
-	}
-	return ""
+	return levelToName[*l]
 }
 
 // Set sets the LogLevel based on its string value.
 func (l *LogLevel) Set(s string) error {
-	switch s {
-	case "fatal":
-		*l = FatalLevel
-	case "error":
-		*l = ErrorLevel
-	case "warning":
-		*l = WarningLevel
-	case "info":
-		*l = InfoLevel
-	case "debug":
-		*l = DebugLevel
-	case "trace":
-		*l = TraceLevel
-	default:
+	level, ok := nameToLevel[s]
+	if !ok {
 		return fmt.Errorf("%s is not a valid level", s)
 	}
+	*l = level
 	return nil
 }
 
