@@ -39,6 +39,7 @@ fdio_get_vmo_clone
 fdio_get_vmo_copy
 fdio_get_vmo_exact
 fdio_get_vmo_exec
+fdio_get_zxio
 fdio_handle_fd
 fdio_ns_bind
 fdio_ns_bind_fd

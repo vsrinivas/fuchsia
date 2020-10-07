@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SYS_EPOLL_H_
-#define SYS_EPOLL_H_
+#ifndef SRC_LIB_NIX_INCLUDE_SYS_EPOLL_H_
+#define SRC_LIB_NIX_INCLUDE_SYS_EPOLL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,11 +51,7 @@ typedef union epoll_data {
 struct epoll_event {
   uint32_t events;
   epoll_data_t data;
-}
-#ifdef __x86_64__
-__attribute__((__packed__))
-#endif
-;
+};
 
 int epoll_create(int);
 int epoll_create1(int);
@@ -67,4 +63,4 @@ int epoll_pwait(int, struct epoll_event*, int, int, const sigset_t*);
 }
 #endif
 
-#endif  // SYS_EPOLL_H_
+#endif  // SRC_LIB_NIX_INCLUDE_SYS_EPOLL_H_

@@ -96,6 +96,7 @@ test("fdio") {
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zxio",
   ]
 }
 

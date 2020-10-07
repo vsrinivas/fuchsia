@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/fdio.h>
 #include <lib/zxio/null.h>
 
 #include <atomic>
@@ -59,6 +60,7 @@ static fdio_t fdio_reserved_io = {
 
 fdio_t* fdio_get_reserved_io() { return &fdio_reserved_io; }
 
+__EXPORT
 zxio_t* fdio_get_zxio(fdio_t* io) { return &io->storage.io; }
 
 const fdio_ops_t* fdio_get_ops(const fdio_t* io) { return io->ops; }

@@ -33,6 +33,10 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io);
 // Creates an |fdio_t| that does nothing.
 fdio_t* fdio_null_create(void);
 
+// Access the |zxio_t| field within an |fdio_t|.
+typedef struct zxio_tag zxio_t;
+zxio_t* fdio_get_zxio(fdio_t* io);
+
 // Creates a file descriptor that does nothing.
 //
 // Returns -1 and sets errno if the function is unable to create the file

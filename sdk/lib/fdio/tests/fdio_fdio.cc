@@ -9,6 +9,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
+#include <lib/zxio/zxio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/limits.h>
@@ -157,4 +158,13 @@ TEST(FDIOTest, GetServiceHandle) {
   int raw_fd = fd2.get();
   fd2.reset();
   EXPECT_EQ(-1, fcntl(raw_fd, F_GETFD));
+}
+
+TEST(FDIOTest, GetZxio) {
+  zxio_storage_t* storage = nullptr;
+  fdio_t* fdio = fdio_zxio_create(&storage);
+  ASSERT_NE(nullptr, fdio);
+  zxio_t* zxio = fdio_get_zxio(fdio);
+  EXPECT_EQ(storage, reinterpret_cast<zxio_storage_t*>(zxio));
+  fdio_unsafe_release(fdio);
 }

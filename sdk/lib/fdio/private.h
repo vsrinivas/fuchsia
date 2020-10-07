@@ -124,9 +124,6 @@ typedef struct fdio fdio_t;
 // It is unsafe to change the reference count of this object.
 fdio_t* fdio_get_reserved_io();
 
-// Access the |zxio_t| field within an |fdio_t|.
-zxio_t* fdio_get_zxio(fdio_t* io);
-
 zx_status_t fdio_zxio_close(fdio_t* io);
 zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle);

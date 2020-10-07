@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include "private.h"
 #include "unistd.h"
 
 __EXPORT
