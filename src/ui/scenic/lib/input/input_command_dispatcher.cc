@@ -100,7 +100,11 @@ void InputCommandDispatcher::DispatchCommand(
     }
 
     // This code assumes one event reporter per session id.
-    FX_DCHECK(input_system_->hard_keyboard_requested().count(session_id_) == 0);
+    if (input_system_->hard_keyboard_requested().count(session_id_) != 0) {
+      FX_LOGS(ERROR) << "Hard keyboard requested twice by session " << session_id_
+                     << ". Second request ignored.";
+      return;
+    }
     if (event_reporter_)
       input_system_->hard_keyboard_requested().insert({session_id_, event_reporter_->GetWeakPtr()});
   } else {
