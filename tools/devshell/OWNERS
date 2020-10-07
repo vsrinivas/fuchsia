@@ -4,3 +4,4 @@ mangini@google.com
 craiglabenz@google.com
 per-file add-update-source,run,build-push,push-package,serve,serve-updates,lib/updates.sh = computerdruid@google.com,etryzelaar@google.com,galbanum@google.com,kevinwells@google.com
 per-file fdt,tests/subcommands/fx_fdt_test = shrike@google.com,abbogart@google.com,dragonbear@google.com
+per-file klog,log,symbolize = dangyi@google.com,frousseau@google.com
