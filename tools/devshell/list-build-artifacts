@@ -34,6 +34,8 @@
 ##                `flash`-- returns the list of images needed to flash
 ##                `tools` -- returns the list of host tools
 ##                `zbi-tests`-- returns the list of ZBI tests
+##                `generated-sources`-- returns the list of generated sources
+###                (e.g., FIDL and Banjo bindings).
 ##
 
 set -o errexit
@@ -44,6 +46,7 @@ fx-config-read
 readonly IMAGES_JSON="images.json"
 readonly TOOL_PATHS_JSON="tool_paths.json"
 readonly ZBI_TESTS_JSON="zbi_tests.json"
+readonly GENERATED_SOURCES_JSON="generated_sources.json"
 
 build=false
 allow_empty=false
@@ -113,6 +116,9 @@ if $allow_empty && $expect_one ; then
   exit 1
 fi
 
+# Some build API modules are just plain JSON lists; in that case, we should
+# not apply any filters.
+is_list_like=false
 manifest=""
 jq_filter=".[]"
 paths=()
@@ -140,6 +146,9 @@ elif [[ "${mode}" == tools ]]; then
   cpu="${cpu:-${HOST_CPU}}"
 elif [[ "${mode}" == zbi-tests ]]; then
   manifest="${ZBI_TESTS_JSON}"
+elif [[ "${mode}" == generated-sources ]]; then
+  manifest="${GENERATED_SOURCES_JSON}"
+  is_list_like=true
 else
   fx-error "unknown MODE: ${mode}"
   fx-command-help
@@ -155,16 +164,19 @@ if [[ ! -z "${name}" ]]; then
     paths=()
   fi
 fi
-if [[ ! -z "${os}" ]]; then
-  jq_filter+=" | select(.os == \"${os}\")"
+
+if ! $is_list_like ; then
+  if [[ ! -z "${os}" ]]; then
+    jq_filter+=" | select(.os == \"${os}\")"
+  fi
+  if [[ ! -z "${cpu}" ]]; then
+    jq_filter+=" | select(.cpu == \"${cpu}\")"
+  fi
+  if [[ ! -z "${type}" ]]; then
+    jq_filter+=" | select(.type == \"${type}\")"
+  fi
+  jq_filter+=" | .path"
 fi
-if [[ ! -z "${cpu}" ]]; then
-  jq_filter+=" | select(.cpu == \"${cpu}\")"
-fi
-if [[ ! -z "${type}" ]]; then
-  jq_filter+=" | select(.type == \"${type}\")"
-fi
-jq_filter+=" | .path"
 
 paths+=($(fx-command-run jq --raw-output "${jq_filter}" "${FUCHSIA_BUILD_DIR}/${manifest}"))
 if $build && [[ ${#paths[@]} -ne 0 ]] ; then

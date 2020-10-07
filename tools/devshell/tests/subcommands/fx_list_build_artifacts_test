@@ -161,6 +161,14 @@ cat > "${BT_TEMP_DIR}/out/default/tool_paths.json" <<EOF
   }
 ]
 EOF
+
+cat > "${BT_TEMP_DIR}/out/default/generated_sources.json" <<EOF
+[
+  "fidling/gen/sdk/fidl/fuchsia.time/fuchsia/time/cpp/fidl.cc",
+  "fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia.net.http.fidl.json",
+  "fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia/net/http/cpp/fidl.h"
+]
+EOF
 }
 
 TEST_fx-list-build-artifacts-no-mode() {
@@ -237,6 +245,10 @@ TEST_fx-list-build-artifacts-tools-by-os() {
 
   # CPU-filtering should default to HOST_CPU.
   BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --allow-empty --os ${HOST_OS})" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
+}
+
+TEST_fx-list-build-artifacts-generated-sources() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts generated-sources)" "fidling/gen/sdk/fidl/fuchsia.time/fuchsia/time/cpp/fidl.cc fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia.net.http.fidl.json fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia/net/http/cpp/fidl.h"
 }
 
 BT_RUN_TESTS "$@"
