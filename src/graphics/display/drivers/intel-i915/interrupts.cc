@@ -36,19 +36,19 @@ int Interrupts::IrqLoop() {
   zx_status_t status =
       device_get_profile(controller_->zxdev(), ZX_PRIORITY_HIGH, "i915-interrupt", &handle);
   if (status != ZX_OK) {
-    LOG_ERROR("i915: device_get_profile failed: %d\n", status);
+    zxlogf(ERROR, "i915: device_get_profile failed: %d", status);
     return -1;
   }
   status = zx_object_set_profile(zx_thread_self(), handle, 0u);
   if (status != ZX_OK) {
-    LOG_ERROR("i915: zx_object_set_profile failed: %d\n", status);
+    zxlogf(ERROR, "i915: zx_object_set_profile failed: %d", status);
     return -1;
   }
 
   for (;;) {
     zx_time_t timestamp;
     if (zx_interrupt_wait(irq_.get(), &timestamp) != ZX_OK) {
-      LOG_INFO("interrupt wait failed\n");
+      zxlogf(INFO, "interrupt wait failed");
       break;
     }
     auto interrupt_ctrl =
@@ -169,23 +169,23 @@ zx_status_t Interrupts::Init() {
   uint32_t irq_cnt = 0;
   zx_status_t status = pci_query_irq_mode(controller_->pci(), ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
   if (status != ZX_OK || !irq_cnt) {
-    LOG_ERROR("Failed to find interrupts (%d %d)\n", status, irq_cnt);
+    zxlogf(ERROR, "Failed to find interrupts (%d %d)", status, irq_cnt);
     return ZX_ERR_INTERNAL;
   }
 
   if ((status = pci_set_irq_mode(controller_->pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
-    LOG_ERROR("Failed to set irq mode (%d)\n", status);
+    zxlogf(ERROR, "Failed to set irq mode (%d)", status);
     return status;
   }
 
   if ((status = pci_map_interrupt(controller_->pci(), 0, irq_.reset_and_get_address()) != ZX_OK)) {
-    LOG_ERROR("Failed to map interrupt (%d)\n", status);
+    zxlogf(ERROR, "Failed to map interrupt (%d)", status);
     return status;
   }
 
   status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to create irq thread\n");
+    zxlogf(ERROR, "Failed to create irq thread");
     irq_.reset();
     return status;
   }

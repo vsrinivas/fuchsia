@@ -77,20 +77,20 @@ void Power::SetPowerWell1Enable(bool enable) {
                         .ReadFrom(controller_->mmio_space())
                         .power_well_1_state(),
                     10)) {
-      LOG_ERROR("Power Well 1 failed to enable\n");
+      zxlogf(ERROR, "Power Well 1 failed to enable");
       return;
     }
     if (!WAIT_ON_US(registers::PowerWellControl2 ::Get()
                         .ReadFrom(controller_->mmio_space())
                         .misc_io_power_state(),
                     10)) {
-      LOG_ERROR("Misc IO power failed to enable\n");
+      zxlogf(ERROR, "Misc IO power failed to enable");
       return;
     }
     if (!WAIT_ON_US(
             registers::FuseStatus ::Get().ReadFrom(controller_->mmio_space()).pg1_dist_status(),
             5)) {
-      LOG_ERROR("Power Well 1 distribution failed\n");
+      zxlogf(ERROR, "Power Well 1 distribution failed");
       return;
     }
   } else {
@@ -110,13 +110,13 @@ void Power::SetPowerWell2Enable(bool enable) {
                         .ReadFrom(controller_->mmio_space())
                         .power_well_2_state(),
                     20)) {
-      LOG_ERROR("Failed to enable Power Well 2\n");
+      zxlogf(ERROR, "Failed to enable Power Well 2");
       return;
     }
     if (!WAIT_ON_US(
             registers::FuseStatus ::Get().ReadFrom(controller_->mmio_space()).pg2_dist_status(),
             1)) {
-      LOG_ERROR("Power Well 2 distribution failed\n");
+      zxlogf(ERROR, "Power Well 2 distribution failed");
       return;
     }
   }

@@ -104,7 +104,7 @@ static uint8_t iboost_idx_to_level(uint8_t iboost_idx) {
     case 2:
       return 7;
     default:
-      LOG_INFO("Invalid iboost override\n");
+      zxlogf(INFO, "Invalid iboost override");
       return 0;
   }
 }
@@ -151,11 +151,11 @@ bool IgdOpRegion::ProcessDdiConfigs() {
   uint16_t size;
   general_definitions_t* defs = GetSection<general_definitions_t>(&size);
   if (defs == nullptr) {
-    LOG_ERROR("Couldn't find vbt general definitions\n");
+    zxlogf(ERROR, "Couldn't find vbt general definitions");
     return false;
   }
   if (size < sizeof(general_definitions_t)) {
-    LOG_ERROR("Bad size in vbt general definitions\n");
+    zxlogf(ERROR, "Bad size in vbt general definitions");
     return false;
   }
   uint16_t num_configs =
@@ -171,7 +171,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
     if (cfg->port_type < 4 || cfg->port_type == 12) {
       // Types 0, 1, 2, 3, and 12 are HDMI ports A, B, C, D, and E
       if (!ddi_flags.tmds()) {
-        LOG_WARN("Malformed hdmi config\n");
+        zxlogf(WARNING, "Malformed hdmi config");
         continue;
       }
 
@@ -179,7 +179,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
     } else if (7 <= cfg->port_type && cfg->port_type <= 11) {
       // Types 7, 8, 9, 10, 11 are DP ports B, C, D, A, E
       if (!ddi_flags.dp()) {
-        LOG_WARN("Malformed dp config\n");
+        zxlogf(WARNING, "Malformed dp config");
         continue;
       }
 
@@ -196,7 +196,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
     }
 
     if (ddi_supports_dvi_[idx] || ddi_supports_dp_[idx]) {
-      LOG_WARN("Duplicate ddi config\n");
+      zxlogf(WARNING, "Duplicate ddi config");
       continue;
     }
     ddi_supports_dvi_[idx] = ddi_flags.tmds();
@@ -221,12 +221,12 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunc
                         uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res) {
   uint16_t val;
   if (pci_config_read16(pci, kIgdSwSciReg, &val) != ZX_OK) {
-    LOG_WARN("Failed to read SWSCI register\n");
+    zxlogf(WARNING, "Failed to read SWSCI register");
     return false;
   }
   auto gmch_swsci_reg = GmchSwsciRegister::Get().FromValue(val);
   if (!gmch_swsci_reg.sci_event_select() || gmch_swsci_reg.gmch_sw_sci_trigger()) {
-    LOG_WARN("Bad GMCH SWSCI register value (%04x)\n", val);
+    zxlogf(WARNING, "Bad GMCH SWSCI register value (%04x)", val);
     return false;
   }
 
@@ -242,7 +242,7 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunc
 
   if (pci_config_write16(pci, kIgdSwSciReg,
                          gmch_swsci_reg.set_gmch_sw_sci_trigger(1).reg_value()) != ZX_OK) {
-    LOG_WARN("Failed to write SWSCI register\n");
+    zxlogf(WARNING, "Failed to write SWSCI register");
     return false;
   }
 
@@ -257,13 +257,13 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunc
         *additional_res = sci_interface->additional_params;
         return true;
       } else {
-        LOG_WARN("SWSCI failed (%x)\n", sci_exit_param.exit_result());
+        zxlogf(WARNING, "SWSCI failed (%x)", sci_exit_param.exit_result());
         return false;
       }
     }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
   }
-  LOG_WARN("SWSCI timeout\n");
+  zxlogf(WARNING, "SWSCI timeout");
   return false;
 }
 
@@ -282,7 +282,7 @@ bool IgdOpRegion::GetPanelType(pci_protocol_t* pci, uint8_t* type) {
         auto details = GbdaPanelDetails::Get().FromValue(additional_res);
         if (details.panel_type_plus1() && details.panel_type_plus1() < (kNumPanelTypes + 1)) {
           *type = static_cast<uint8_t>(details.panel_type_plus1() - 1);
-          LOG_SPEW("SWSCI panel type %d\n", *type);
+          zxlogf(DEBUG, "SWSCI panel type %d", *type);
           return true;
         }
       }
@@ -305,25 +305,25 @@ bool IgdOpRegion::CheckForLowVoltageEdp(pci_protocol_t* pci) {
     has_edp |= ddi_is_edp_[i];
   }
   if (!has_edp) {
-    LOG_SPEW("No edp found\n");
+    zxlogf(DEBUG, "No edp found");
     return true;
   }
 
   uint16_t size;
   edp_config_t* edp = GetSection<edp_config_t>(&size);
   if (edp == nullptr) {
-    LOG_WARN("Couldn't find edp general definitions\n");
+    zxlogf(WARNING, "Couldn't find edp general definitions");
     return false;
   }
 
   if (!GetPanelType(pci, &panel_type_)) {
-    LOG_TRACE("No panel type\n");
+    zxlogf(TRACE, "No panel type");
     return false;
   }
   edp_is_low_voltage_ =
       !((edp->vswing_preemphasis[panel_type_ / 2] >> (4 * panel_type_ % 2)) & 0xf);
 
-  LOG_TRACE("Is low voltage edp? %d\n", edp_is_low_voltage_);
+  zxlogf(TRACE, "Is low voltage edp? %d", edp_is_low_voltage_);
 
   return true;
 }
@@ -342,7 +342,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
   uint32_t igd_addr;
   zx_status_t status = pci_config_read32(pci, kIgdOpRegionAddrReg, &igd_addr);
   if (status != ZX_OK || !igd_addr) {
-    LOG_ERROR("Failed to locate IGD OpRegion (%d)\n", status);
+    zxlogf(ERROR, "Failed to locate IGD OpRegion (%d)", status);
     return status;
   }
 
@@ -355,7 +355,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
   status = zx_vmo_create_physical(get_root_resource(), igd_addr & ~(PAGE_SIZE - 1),
                                   igd_opregion_pages_len_, &vmo);
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to access IGD OpRegion (%d)\n", status);
+    zxlogf(ERROR, "Failed to access IGD OpRegion (%d)", status);
     return status;
   }
   igd_opregion_pages_ = zx::vmo(vmo);
@@ -364,20 +364,20 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
       zx::vmar::root_self()->map(0, igd_opregion_pages_, 0, igd_opregion_pages_len_,
                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &igd_opregion_pages_base_);
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to map IGD OpRegion (%d)\n", status);
+    zxlogf(ERROR, "Failed to map IGD OpRegion (%d)", status);
     return status;
   }
 
   igd_opregion_ =
       reinterpret_cast<igd_opregion_t*>(igd_opregion_pages_base_ + (igd_addr % PAGE_SIZE));
   if (!igd_opregion_->validate()) {
-    LOG_ERROR("Failed to validate IGD OpRegion\n");
+    zxlogf(ERROR, "Failed to validate IGD OpRegion");
     return ZX_ERR_INTERNAL;
   }
 
   vbt_header_t* vbt_header = reinterpret_cast<vbt_header_t*>(&igd_opregion_->mailbox4);
   if (!vbt_header->validate()) {
-    LOG_ERROR("Failed to validate vbt header\n");
+    zxlogf(ERROR, "Failed to validate vbt header");
     return ZX_ERR_INTERNAL;
   }
 
@@ -386,14 +386,14 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
   uint16_t vbt_size = vbt_header->vbt_size;
   if (!bdb_->validate() || bdb_->bios_data_blocks_size > vbt_size ||
       vbt_header->bios_data_blocks_offset + bdb_->bios_data_blocks_size > vbt_size) {
-    LOG_ERROR("Failed to validate bdb header\n");
+    zxlogf(ERROR, "Failed to validate bdb header");
     return ZX_ERR_INTERNAL;
   }
 
   // TODO(stevensd): 196 seems old enough that all gen9 processors will have it. If we want to
   // support older hardware, we'll need to handle missing data.
   if (bdb_->version < 196) {
-    LOG_ERROR("Out of date vbt (%d)\n", bdb_->version);
+    zxlogf(ERROR, "Out of date vbt (%d)", bdb_->version);
     return ZX_ERR_INTERNAL;
   }
 

@@ -215,7 +215,7 @@ zx_status_t GMBusI2c::I2cTransact(const i2c_impl_op_t* ops, size_t size) {
       if (op->is_read ? GMBusRead(kDdcDataAddress, buf, len)
                       : GMBusWrite(kDdcDataAddress, buf, len)) {
         if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
-          LOG_TRACE("Transition to wait phase timed out\n");
+          zxlogf(TRACE, "Transition to wait phase timed out");
           goto fail;
         }
       } else {
@@ -237,7 +237,7 @@ zx_status_t GMBusI2c::I2cTransact(const i2c_impl_op_t* ops, size_t size) {
   return ZX_OK;
 fail:
   if (!I2cClearNack()) {
-    LOG_TRACE("Failed to clear nack\n");
+    zxlogf(TRACE, "Failed to clear nack");
   }
   return fail_res;
 }
@@ -301,7 +301,7 @@ bool GMBusI2c::I2cFinish() {
   gmbus0.WriteTo(mmio_space_);
 
   if (!idle) {
-    LOG_TRACE("hdmi: GMBus i2c failed to go idle\n");
+    zxlogf(TRACE, "hdmi: GMBus i2c failed to go idle");
   }
   return idle;
 }
@@ -310,11 +310,11 @@ bool GMBusI2c::I2cWaitForHwReady() {
   auto gmbus2 = registers::GMBus2::Get().FromValue(0);
   if (!WAIT_ON_MS((gmbus2.ReadFrom(mmio_space_),
                    gmbus2.nack() || gmbus2.hw_ready()), 50)) {
-    LOG_TRACE("hdmi: GMBus i2c wait for hwready timeout\n");
+    zxlogf(TRACE, "hdmi: GMBus i2c wait for hwready timeout");
     return false;
   }
   if (gmbus2.nack()) {
-    LOG_TRACE("hdmi: GMBus i2c got nack\n");
+    zxlogf(TRACE, "hdmi: GMBus i2c got nack");
     return false;
   }
   return true;
@@ -324,7 +324,7 @@ bool GMBusI2c::I2cClearNack() {
   I2cFinish();
 
   if (!WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space_).active(), 10)) {
-    LOG_TRACE("hdmi: GMBus i2c failed to clear active nack\n");
+    zxlogf(TRACE, "hdmi: GMBus i2c failed to clear active nack");
     return false;
   }
 
@@ -513,12 +513,12 @@ bool HdmiDisplay::Query() {
     };
     registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
     if (controller()->Transact(i2c_bus_id(), &op, 1) == ZX_OK) {
-      LOG_TRACE("Found a hdmi/dvi monitor\n");
+      zxlogf(TRACE, "Found a hdmi/dvi monitor");
       return true;
     }
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
   }
-  LOG_TRACE("Failed to query hdmi i2c bus\n");
+  zxlogf(TRACE, "Failed to query hdmi i2c bus");
   return false;
 }
 
@@ -546,7 +546,7 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
   if (!calculate_params(mode.pixel_clock_10khz * 10, &state.hdmi.dco_int, &state.hdmi.dco_frac,
                         &state.hdmi.q, &state.hdmi.q_mode, &state.hdmi.k, &state.hdmi.p,
                         &state.hdmi.cf)) {
-    LOG_ERROR("hdmi: failed to calculate clock params\n");
+    zxlogf(ERROR, "hdmi: failed to calculate clock params");
     return false;
   }
 
@@ -588,7 +588,7 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
     dpll_enable.WriteTo(mmio_space());
     if (!WAIT_ON_MS(registers::DpllStatus ::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(),
                     5)) {
-      LOG_ERROR("hdmi: DPLL failed to lock\n");
+      zxlogf(ERROR, "hdmi: DPLL failed to lock");
       return false;
     }
   }
@@ -609,7 +609,7 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
                       .ddi_io_power_state(ddi())
                       .get(),
                   20)) {
-    LOG_ERROR("hdmi: failed to enable IO power for ddi\n");
+    zxlogf(ERROR, "hdmi: failed to enable IO power for ddi");
     return false;
   }
 

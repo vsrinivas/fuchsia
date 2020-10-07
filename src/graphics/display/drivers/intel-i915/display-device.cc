@@ -100,7 +100,7 @@ void DisplayDevice::InitBacklight() {
       }
     }
     if (display_ref_ == nullptr) {
-      LOG_WARN("Failed to add backlight (%d)\n", status);
+      zxlogf(WARNING, "Failed to add backlight (%d)", status);
     }
 
     SetBacklightState(true, 1.0);
@@ -150,7 +150,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   size_t cmp_end = offsetof(display_mode_t, flags);
   if (memcmp(&mode->h_addressable, &info_.h_addressable, cmp_end - cmp_start)) {
     // Modeset is necessary if display params other than the clock frequency differ
-    LOG_SPEW("Modeset necessary for display params");
+    zxlogf(DEBUG, "Modeset necessary for display params");
     return true;
   }
 
@@ -159,7 +159,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   // don't include that in the check for already initialized displays. Once we're better at
   // initializing displays, merge the flags check back into the above memcmp.
   if ((mode->flags & MODE_FLAG_INTERLACED) != (info_.flags & MODE_FLAG_INTERLACED)) {
-    LOG_SPEW("Modeset necessary for display flags");
+    zxlogf(DEBUG, "Modeset necessary for display flags");
     return true;
   }
 
@@ -179,7 +179,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   }
 
   if (current_state == nullptr) {
-    LOG_SPEW("Modeset necessary for clock");
+    zxlogf(DEBUG, "Modeset necessary for clock");
     return true;
   }
 
@@ -192,7 +192,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   // Modesetting is necessary if the states are not equal
   bool res = !Controller::CompareDpllStates(*current_state, new_state);
   if (res) {
-    LOG_SPEW("Modeset necessary for clock state");
+    zxlogf(DEBUG, "Modeset necessary for clock state");
   }
   return res;
 }

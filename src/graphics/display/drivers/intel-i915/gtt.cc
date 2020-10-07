@@ -55,14 +55,14 @@ zx_status_t Gtt::Init(Controller* controller) {
 
   zx_status_t status = pci_get_bti(controller->pci(), 0, bti_.reset_and_get_address());
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to get bti (%d)\n", status);
+    zxlogf(ERROR, "Failed to get bti (%d)", status);
     return status;
   }
 
   zx_info_bti_t info;
   status = bti_.get_info(ZX_INFO_BTI, &info, sizeof(zx_info_bti_t), nullptr, nullptr);
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to fetch bti info (%d)\n", status);
+    zxlogf(ERROR, "Failed to fetch bti info (%d)", status);
     return status;
   }
   min_contiguity_ = info.minimum_contiguity;
@@ -72,22 +72,22 @@ zx_status_t Gtt::Init(Controller* controller) {
   status =
       pci_config_read16(controller_->pci(), gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to read GfxControl\n");
+    zxlogf(ERROR, "Failed to read GfxControl");
     return status;
   }
   uint32_t gtt_size = gmch_gfx_ctrl.gtt_mappable_mem_size();
-  LOG_TRACE("Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
+  zxlogf(TRACE, "Gtt::Init gtt_size (for page tables) 0x%x", gtt_size);
 
   status = zx::vmo::create(PAGE_SIZE, 0, &scratch_buffer_);
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to alloc scratch buffer (%d)\n", status);
+    zxlogf(ERROR, "Failed to alloc scratch buffer (%d)", status);
     return status;
   }
 
   status = bti_.pin(ZX_BTI_PERM_READ, scratch_buffer_, 0, PAGE_SIZE, &scratch_buffer_paddr_, 1,
                     &scratch_buffer_pmt_);
   if (status != ZX_OK) {
-    LOG_ERROR("Failed to look up scratch buffer (%d)\n", status);
+    zxlogf(ERROR, "Failed to look up scratch buffer (%d)", status);
     return status;
   }
 
@@ -170,7 +170,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uin
     status = gtt_->bti_.pin(flags, *zx::unowned_vmo(vmo_), vmo_offset, cur_len, paddrs,
                             actual_entries, &pmt);
     if (status != ZX_OK) {
-      LOG_ERROR("Failed to get paddrs (%d)\n", status);
+      zxlogf(ERROR, "Failed to get paddrs (%d)", status);
       return status;
     }
     vmo_offset += cur_len;
@@ -208,7 +208,7 @@ void GttRegion::ClearRegion() {
 
   for (zx::pmt& pmt : pmts_) {
     if (pmt.unpin() != ZX_OK) {
-      LOG_INFO("Error unpinning gtt region\n");
+      zxlogf(INFO, "Error unpinning gtt region");
     }
   }
   pmts_.reset();
