@@ -15,8 +15,8 @@ import("//src/lib/vulkan/layers.gni")
 group("vulkan") {
   public_configs = [ ":vulkan_hpp" ]
 
-  # Fuchsia target always uses in-tree Vulkan implementation.
-  if (is_fuchsia) {
+  # Targets always use in-tree Vulkan implementation.
+  if (!is_host) {
     public_deps = [
       ":headers",
       "//third_party/Vulkan-Loader:libvulkan",

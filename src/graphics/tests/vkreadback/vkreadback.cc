@@ -12,6 +12,10 @@ constexpr size_t kNumCommandBuffers = 1;
 
 }  // namespace
 
+#ifdef __Fuchsia__
+#include <zircon/syscalls.h>
+#endif
+
 // Note, alignment must be a power of 2
 template <class T>
 static inline T round_up(T val, uint32_t alignment) {
@@ -200,9 +204,11 @@ bool VkReadbackTest::InitVulkan() {
 
   std::vector<const char*> enabled_extension_names;
   switch (ext_) {
+#ifdef __Fuchsia__
     case VK_FUCHSIA_EXTERNAL_MEMORY:
       enabled_extension_names.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
       break;
+#endif
     default:
       break;
   }
@@ -226,6 +232,7 @@ bool VkReadbackTest::InitVulkan() {
   }
 
   switch (ext_) {
+#ifdef __Fuchsia__
     case VK_FUCHSIA_EXTERNAL_MEMORY:
       vkGetMemoryZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetMemoryZirconHandleFUCHSIA>(
           vkGetInstanceProcAddr(vk_instance_, "vkGetMemoryZirconHandleFUCHSIA"));
@@ -240,6 +247,7 @@ bool VkReadbackTest::InitVulkan() {
         RTN_MSG(false, "Couldn't find vkGetMemoryZirconHandlePropertiesFUCHSIA\n");
       }
       break;
+#endif
 
     default:
       break;
@@ -284,7 +292,7 @@ bool VkReadbackTest::InitImage() {
   // page in size, to ensure rounding the VMO down to a page offset will
   // cause it to point to a separate page.
   constexpr uint32_t kOffset = 128;
-  bind_offset_ = PAGE_SIZE + kOffset;
+  bind_offset_ = getpagesize() + kOffset;
   if (memory_reqs.alignment) {
     bind_offset_ = round_up(bind_offset_, memory_reqs.alignment);
   }
@@ -323,6 +331,7 @@ bool VkReadbackTest::InitImage() {
     RTN_MSG(false, "vkAllocateMemory failed\n");
   }
 
+#ifdef __Fuchsia__
   if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && device_memory_handle_) {
     size_t vmo_size;
     zx_vmo_get_size(device_memory_handle_, &vmo_size);
@@ -381,6 +390,7 @@ bool VkReadbackTest::InitImage() {
 
     device_memory_handle_ = handle;
   }
+#endif
 
   void* addr;
   if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=

@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/syscalls.h>
 
 #include <vector>
 
@@ -55,8 +54,11 @@ class VkReadbackTest {
   // Import/export
   VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
   uint32_t device_memory_handle_ = 0;
+
+#ifdef __Fuchsia__
   PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA_{};
   PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA vkGetMemoryZirconHandlePropertiesFUCHSIA_{};
+#endif
 
   VkCommandPool vk_command_pool_;
   VkCommandBuffer vk_command_buffer_;

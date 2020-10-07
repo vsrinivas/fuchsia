@@ -23,3 +23,8 @@ executable("vkreadback") {
 
   deps = [ ":vkreadback_src" ]
 }
+
+group("linux_arm64") {
+  testonly = true
+  deps = [ ":vkreadback(//build/toolchain:linux_arm64)" ]
+}
