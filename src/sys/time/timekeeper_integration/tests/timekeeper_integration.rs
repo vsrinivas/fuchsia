@@ -350,6 +350,7 @@ fn test_no_rtc_start_clock_from_time_source() {
             .set_sample(TimeSample {
                 utc: Some(VALID_TIME.into_nanos()),
                 monotonic: Some(sample_monotonic.into_nanos()),
+                standard_deviation: None,
             })
             .await;
 
@@ -380,6 +381,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
                 .set_sample(TimeSample {
                     utc: Some(VALID_TIME.into_nanos()),
                     monotonic: Some(sample_monotonic.into_nanos()),
+                    standard_deviation: None,
                 })
                 .await;
 
@@ -430,6 +432,7 @@ fn test_start_clock_from_rtc() {
                 .set_sample(TimeSample {
                     utc: Some(VALID_TIME.into_nanos()),
                     monotonic: Some(sample_monotonic.into_nanos()),
+                    standard_deviation: None,
                 })
                 .await;
             wait_until(

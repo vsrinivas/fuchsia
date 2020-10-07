@@ -138,7 +138,11 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
         let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
         let monotonic_center = (monotonic_before + monotonic_after) / 2;
 
-        Ok(TimeSample { utc: Some(utc), monotonic: Some(monotonic_center) })
+        Ok(TimeSample {
+            utc: Some(utc),
+            monotonic: Some(monotonic_center),
+            standard_deviation: None,
+        })
     }
 }
 

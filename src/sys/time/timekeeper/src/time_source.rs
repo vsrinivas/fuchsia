@@ -279,6 +279,7 @@ mod test {
                         let sample = ftexternal::TimeSample {
                             utc: Some(SAMPLE_1_UTC_NANOS),
                             monotonic: Some(SAMPLE_1_MONO_NANOS),
+                            standard_deviation: None,
                         };
                         responder.send(sample).unwrap();
                     }

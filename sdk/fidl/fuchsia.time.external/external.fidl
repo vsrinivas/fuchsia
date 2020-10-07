@@ -84,7 +84,9 @@ table TimeSample {
     1: zx.time utc;
     /// The monotonic time at which the sample was most valid. Must always be provided.
     2: zx.time monotonic;
-    // TODO: add definitions of uncertainty
+    /// The standard deviation representing the error distribution of the UTC measurement.
+    /// Must always be provided.
+    3: zx.duration standard_deviation;
 };
 
 /// Enum of states a PullSource may be in.
