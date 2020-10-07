@@ -2370,7 +2370,8 @@ group("archive-extras") {
 }
 
 # Build the UEFI disk image.
-uefi_disk_path = "$target_out_dir/uefi_disk.img"
+# GCE, a consumer of this image, requires it to be named disk.raw
+uefi_disk_path = "$target_out_dir/disk.raw"
 compiled_action("uefi-disk") {
   deps = uefi_disk_deps
   testonly = true
