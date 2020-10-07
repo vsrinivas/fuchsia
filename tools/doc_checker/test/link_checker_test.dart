@@ -220,6 +220,28 @@ void main() {
       expect(error.type, equals(ErrorType.invalidRelativePath));
     });
 
+    test('uri to docs', () async {
+      List<String> links = [
+        // This should be an error, use /docs/...
+        'https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/README.md',
+        // This should be OK, since it goes to owners
+        'https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/some/path/OWNERS'
+      ];
+
+      String pageLabel = '//docs/somewhere/index.md';
+      List<DocContext> docList = [
+        DocContext(path.join(docsDir, 'somewhere'), pageLabel, null, links)
+      ];
+
+      bool sawError = await checker.check(docList, [], null);
+      expect(sawError, isTrue);
+
+      expect(checker.errors, hasLength(1));
+      for (Error error in checker.errors) {
+        expect(error.type, equals(ErrorType.convertHttpToPath));
+      }
+    });
+
     test('link to directory', () async {
       String pageLabel = '//docs/somewhere/index.md';
       List<String> links = [

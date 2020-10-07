@@ -33,6 +33,10 @@ class LinkChecker {
   /// Files that are allowed to link to the documentation host site.
   static const List<String> _filesAllowedToLinkToPublishedDocs = ['navbar.md'];
 
+  /// Files that are allowed to be linked in docs. These are non-markdown files
+  /// that are referenced by markdown documents.
+  static const List<String> _filesAllowedUsingURI = ['OWNERS'];
+
   /// The fuchsia Gerrit host. Used to check if link should be http or file based.
   static const String _fuchsiaGerritHost = 'fuchsia.googlesource.com';
 
@@ -152,14 +156,23 @@ class LinkChecker {
       // Check links back to the gerrit host server.
       if (linkToFuchsiaGerritHost) {
         if (onGerritMaster(uri) && project == docsProject) {
-          errors.add(
-              Error(ErrorType.convertHttpToPath, doc.docLabel, uri.toString()));
-          return true;
+          // Check for doc exception Files
+          final int index = uri.pathSegments.indexOf('docs');
+          String subPath = uri.path;
+          if (index >= 0) {
+            subPath = uri.pathSegments[uri.pathSegments.length - 1];
+          }
+          if (!_filesAllowedUsingURI.contains(subPath)) {
+            errors.add(Error(
+                ErrorType.convertHttpToPath, doc.docLabel, uri.toString()));
+            return true;
+          }
         } else if (!validProjects.contains(project)) {
           errors.add(
               Error(ErrorType.obsoleteProject, doc.docLabel, uri.toString()));
           return true;
         }
+        return false;
       }
 
       // Check links to the published docs server.
