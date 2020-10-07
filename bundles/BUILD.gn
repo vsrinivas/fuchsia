@@ -51,6 +51,7 @@ group("tools") {
     "//src/ui/tools:scenic",
     "//src/ui/tools/tiles_ctl",
     "//third_party/boringssl:boringssl_tool",
+    "//third_party/cobalt:host",
     "//third_party/curl",
     "//third_party/iperf",
     "//third_party/openssh-portable:openssh-tools",
