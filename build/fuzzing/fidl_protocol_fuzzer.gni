@@ -2,6 +2,111 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/fidl_cpp.gni")
 import("//build/fuzzing/fuzzer.gni")
-# Currently this is just a redirect to fuzzer.gni. Once all consumers are using this file, the
-# template can be moved.
+
+# Defines service provider for a generated FIDL fuzzer
+#
+# The fidl() template supports a list of `fuzzers` that contain a `protocol`
+# string and optional list of `methods`. Each of the fidl()'s `fuzzers`
+# generates a library target of the form:
+#
+# [fidl() target name]_libfuzzer_[protocol]_[method1 name]_[method2 name]...
+#
+# The target contains the core fuzzer logic, but relies on symbols that must be
+# defined by the FIDL service implementer for providing an instance of the
+# service to fuzz.
+#
+# This template is a helper for tying together the above-mentioned target and
+# the sources and/or deps necessary to provide the above-mentioned symbols.
+#
+# NOTE: The `protocol` and `methods` passed to this template must _exactly_
+# match one of the `fuzzers` defined on the corresponding fidl() rule.
+#
+# Parameters
+#
+#   fidl (required)
+#     [label] The `fidl()` label that includes the protocol to be fuzzed.
+#
+#   protocol (required)
+#     [fully-qualified FIDL protocol name] The fully-qualified name of the FIDL
+#     protocol to be fuzzed.
+#
+#   methods (optional)
+#     [list of strings] The names of the methods to be fuzzed, as they appear in
+#     the FIDL file. These are translated into defines that enable fuzzing code
+#     for the appropriate methods. Defaults to special define value for fuzzing
+#     all methods of the specified protocol.
+#
+# Other parameters are precisely those of an `executable`, with their usual GN
+# meanings; these parameters are forwarded to the generated fuzzer() template.
+template("fidl_protocol_fuzzer") {
+  assert(
+      defined(invoker.protocol),
+      "FIDL fuzzer service provider must set protocol: the fully-qualified name of the protocol to be fuzzed.")
+  assert(
+      defined(invoker.fidl),
+      "FIDL fuzzer service provider must set fidl: the fidl() target defining the corresponding fuzzer.")
+
+  protocol_suffix = string_replace(invoker.protocol, ".", "_")
+  if (defined(invoker.methods)) {
+    foreach(method, invoker.methods) {
+      protocol_suffix = "${protocol_suffix}_${method}"
+    }
+  }
+
+  if (defined(invoker.deps)) {
+    fuzzer_deps = invoker.deps
+  } else {
+    fuzzer_deps = []
+  }
+  fuzzer_deps += [
+    "${invoker.fidl}_libfuzzer_${protocol_suffix}",
+    "//sdk/lib/fidl/cpp/fuzzing",
+  ]
+
+  fuzzer(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "aliased_deps",
+                             "all_dependent_configs",
+                             "asmflags",
+                             "cflags_c",
+                             "cflags_cc",
+                             "cflags_objc",
+                             "cflags_objcc",
+                             "cflags",
+                             "check_includes",
+                             "cmx",
+                             "configs",
+                             "crate_name",
+                             "crate_root",
+                             "data_deps",
+                             "data",
+                             "dictionary",
+                             "edition",
+                             "friend",
+                             "include_dirs",
+                             "inputs",
+                             "inputs",
+                             "ldflags",
+                             "lib_dirs",
+                             "libs",
+                             "metadata",
+                             "options",
+                             "output_extension",
+                             "output_name",
+                             "precompiled_header",
+                             "precompiled_source",
+                             "public_configs",
+                             "public_deps",
+                             "public",
+                             "rustenv",
+                             "rustflags",
+                             "sources",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = fuzzer_deps
+  }
+}
