@@ -6,12 +6,12 @@
 #### CATEGORY=Internal API
 ### Builds and returns a list of a desired set of build artifacts
 
-## usage: fx list-build-artifacts [--no-build] [--allow-empty | --expect-one] [FILTERS...] MODE
+## usage: fx list-build-artifacts [--build] [--allow-empty | --expect-one] [FILTERS...] MODE
 ##
 ## Builds and returns a list of paths to special sets of build artifacts within
 ## the GN graph relative to the build directory.
 ##
-##  --no-build    do not build the artifacts and just return the list of them
+##  --build       build the artifacts as well as returning a list of them
 ##  --allow-empty do not fail if no such artifacts are found
 ##  --expect-one  fail if zero or more than one artifacts are found. This
 ##                option is mutually exclusive from `--allow-empty`.
@@ -45,7 +45,7 @@ readonly IMAGES_JSON="images.json"
 readonly TOOL_PATHS_JSON="tool_paths.json"
 readonly ZBI_TESTS_JSON="zbi_tests.json"
 
-build=true
+build=false
 allow_empty=false
 expect_one=false
 mode=""
@@ -59,8 +59,8 @@ while [[ $# -ne 0 ]]; do
       fx-command-help
       exit 0
       ;;
-  --no-build)
-    build=false
+  --build)
+    build=true
     ;;
   --allow-empty)
     allow_empty=true

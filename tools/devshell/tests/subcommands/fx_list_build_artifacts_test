@@ -183,60 +183,60 @@ TEST_fx-list-build-artifacts-unknown-name() {
 }
 
 TEST_fx-list-build-artifacts-images() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build )" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images)" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi"
 }
 
 TEST_fx-list-build-artifacts-images-by-name() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build --name zircon-a)" "fuchsia.zbi fuchsia.vbmeta"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --name zircon-a)" "fuchsia.zbi fuchsia.vbmeta"
 }
 
 TEST_fx-list-build-artifacts-images-by-type() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build --type zbi)" "zedboot.zbi fuchsia.zbi netboot.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --type zbi)" "zedboot.zbi fuchsia.zbi netboot.zbi"
 }
 
 TEST_fx-list-build-artifacts-images-by-name-and-type() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build --name zircon-a --type zbi)"  "fuchsia.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --name zircon-a --type zbi)"  "fuchsia.zbi"
 }
 
 TEST_fx-list-build-artifacts-netboot() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts netboot --no-build)" "netboot.sh netboot.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts netboot)" "netboot.sh netboot.zbi"
 }
 
 TEST_fx-list-build-artifacts-pave() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts pave --no-build)" "pave.sh zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.sparse.blk"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts pave)" "pave.sh zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.sparse.blk"
 }
 
 TEST_fx-list-build-artifacts-pave-zedboot() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts pave-zedboot --no-build)" "pave-zedboot.sh zedboot.zbi zedboot.vbmeta"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts pave-zedboot)" "pave-zedboot.sh zedboot.zbi zedboot.vbmeta"
 }
 
 TEST_fx-list-build-artifacts-zbi-tests() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests --no-build)" "obj/zircon/system/utest/core/core-tests.zbi bootsvc-integration-tests-x64.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests)" "obj/zircon/system/utest/core/core-tests.zbi bootsvc-integration-tests-x64.zbi"
 }
 
 TEST_fx-list-build-artifacts-zbi-tests-by-name() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests --no-build --name core-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests --name core-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
 }
 
 TEST_fx-list-build-artifacts-tools() {
   # CPU-filtering should default to HOST_CPU.
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build)" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools)" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
 }
 
 TEST_fx-list-build-artifacts-tools-by-name() {
   # CPU-filtering should default to HOST_CPU.
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --name bootserver)" "host_${HOST_CPU}/bootserver"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --name bootserver)" "host_${HOST_CPU}/bootserver"
 }
 
 TEST_fx-list-build-artifacts-tools-by-cpu() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --cpu ${CROSS_COMPILED_CPU})" "host_${CROSS_COMPILED_CPU}/bootserver host_${CROSS_COMPILED_CPU}/botanist"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --cpu ${CROSS_COMPILED_CPU})" "host_${CROSS_COMPILED_CPU}/bootserver host_${CROSS_COMPILED_CPU}/botanist"
 }
 
 TEST_fx-list-build-artifacts-tools-by-os() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --allow-empty --os unknown)" ""
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --allow-empty --os unknown)" ""
 
   # CPU-filtering should default to HOST_CPU.
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --allow-empty --os ${HOST_OS})" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --allow-empty --os ${HOST_OS})" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
 }
 
 BT_RUN_TESTS "$@"
