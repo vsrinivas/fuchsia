@@ -42,7 +42,7 @@ template("host_script_test_data_impl_data_set_copy") {
     sub_dir = get_path_info(file, "dir")
     if (sub_dir != ".") {
       sub_dir = string_replace(sub_dir, set.source_base_dir, "")
-      assert(sub_dir == "." || sub_dir != get_path_info(file, "dir"),
+      assert(sub_dir != get_path_info(file, "dir"),
              "Error file $file not under ${set.source_base_dir}")
     }
     if (last_dir == "/") {

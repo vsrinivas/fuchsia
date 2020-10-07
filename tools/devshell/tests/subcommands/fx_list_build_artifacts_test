@@ -1,0 +1,242 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test "list-build-artifacts" script.
+
+# Source platform.sh so that we can point to jq and include it as a runtime dependency.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../lib/platform.sh" || exit $?
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "prebuilt/third_party/jq/${HOST_PLATFORM}/bin/jq"
+  "tools/devshell/list-build-artifacts"
+  "tools/devshell/jq.fx"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+)
+
+BT_MKDIR_DEPS=(
+  "out/default"
+)
+
+# A contrived "cpu" identifier that won't match $HOST_CPU.
+export readonly CROSS_COMPILED_CPU="CROSS_COMPILED_CPU"
+
+BT_SET_UP() {
+  # Set up the testing framework.
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+
+  # Set up dummy build API modules.
+  cat > "${BT_TEMP_DIR}/out/default/images.json" <<EOF
+[
+      {
+        "bootserver_pave": [
+          "--zirconr"
+        ],
+        "bootserver_pave_zedboot": [
+          "--zircona"
+        ],
+        "name": "zircon-r",
+        "path": "zedboot.zbi",
+        "type": "zbi"
+      },
+      {
+        "bootserver_pave": [
+          "--vbmetar"
+        ],
+        "bootserver_pave_zedboot": [
+          "--vbmetaa"
+        ],
+        "name": "zircon-r",
+        "path": "zedboot.vbmeta",
+        "type": "vbmeta"
+      },
+      {
+        "bootserver_pave": [
+          "--boot",
+          "--zircona"
+        ],
+        "name": "zircon-a",
+        "path": "fuchsia.zbi",
+        "type": "zbi"
+      },
+      {
+        "bootserver_pave": [
+          "--vbmetaa"
+        ],
+        "name": "zircon-a",
+        "path": "fuchsia.vbmeta",
+        "type": "vbmeta"
+      },
+      {
+        "name": "storage-full",
+        "path": "obj/build/images/fvm.blk",
+        "type": "blk"
+      },
+      {
+        "bootserver_pave": [
+          "--fvm"
+        ],
+        "name": "storage-sparse",
+        "path": "obj/build/images/fvm.sparse.blk",
+        "type": "blk"
+      },
+      {
+        "bootserver_netboot": [
+          "--boot"
+        ],
+        "name": "netboot",
+        "path": "netboot.zbi",
+        "type": "zbi"
+      }
+]
+EOF
+
+cat > "${BT_TEMP_DIR}/out/default/zbi_tests.json" <<EOF
+[
+  {
+    "bootserver_netboot": [
+      "--boot"
+    ],
+    "cpu": "x64",
+    "device_types": [ "QEMU" ],
+    "disabled": false,
+    "label": "//zircon/system/utest/core:core-tests(//build/toolchain/fuchsia:x64)",
+    "name": "core-tests",
+    "path": "obj/zircon/system/utest/core/core-tests.zbi",
+    "success_string": "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
+  },
+  {
+    "bootserver_netboot": [
+      "--boot"
+    ],
+    "cpu": "x64",
+    "device_types": [
+      "AEMU",
+      "QEMU"
+    ],
+    "disabled": false,
+    "label": "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests(//build/toolchain/fuchsia:x64)",
+    "name": "bootsvc-integration-tests",
+    "path": "bootsvc-integration-tests-x64.zbi",
+    "success_string": "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
+  }
+]
+EOF
+
+cat > "${BT_TEMP_DIR}/out/default/tool_paths.json" <<EOF
+[
+  {
+    "cpu": "${HOST_CPU}",
+    "label": "//tools/bootserver:bootserver(//build/toolchain:host_${HOST_CPU})",
+    "name": "bootserver",
+    "os": "${HOST_OS}",
+    "path": "host_${HOST_CPU}/bootserver"
+  },
+  {
+    "cpu": "${HOST_CPU}",
+    "label": "//tools/botanist:botanist(//build/toolchain:host_${HOST_CPU})",
+    "name": "botanist",
+    "os": "${HOST_OS}",
+    "path": "host_${HOST_CPU}/botanist"
+  },
+  {
+    "cpu": "${CROSS_COMPILED_CPU}",
+    "label": "//tools/bootserver:bootserver(//build/toolchain:host_${CROSS_COMPILED_CPU})",
+    "name": "bootserver",
+    "os": "${HOST_OS}",
+    "path": "host_${CROSS_COMPILED_CPU}/bootserver"
+  },
+  {
+    "cpu": "${CROSS_COMPILED_CPU}",
+    "label": "//tools/botanist:botanist(//build/toolchain:host_${CROSS_COMPILED_CPU})",
+    "name": "botanist",
+    "os": "${HOST_OS}",
+    "path": "host_${CROSS_COMPILED_CPU}/botanist"
+  }
+]
+EOF
+}
+
+TEST_fx-list-build-artifacts-no-mode() {
+  BT_EXPECT_FAIL ${fx} list-build-artifacts 1> /dev/null 2> stderr
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "MODE must be specified"
+}
+
+TEST_fx-list-build-artifacts-allow-empty-and-expect-one() {
+  BT_EXPECT_FAIL ${fx} list-build-artifacts images --allow-empty --expect-one 1> /dev/null 2> stderr
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "cannot set both --allow-empty and --expect-one"
+}
+
+TEST_fx-list-build-artifacts-unknown-name() {
+  BT_EXPECT_FAIL ${fx} list-build-artifacts images --name unknown 1> /dev/null 2> stderr
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "found no artifacts in the GN graph of type \"images\" with (name, os, cpu, type) == (\"unknown\", \"\*\", \"\*\", \"\*\")"
+
+  BT_EXPECT_FAIL ${fx} list-build-artifacts tools --name unknown 1> /dev/null 2> stderr
+  # Filtering for tools should default to HOST_OS and HOST_CPU.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "found no artifacts in the GN graph of type \"tools\" with (name, os, cpu, type) == (\"unknown\", \"${HOST_OS}\", \"${HOST_CPU}\", \"\*\")"
+}
+
+TEST_fx-list-build-artifacts-images() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build )" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi"
+}
+
+TEST_fx-list-build-artifacts-images-by-name() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build --name zircon-a)" "fuchsia.zbi fuchsia.vbmeta"
+}
+
+TEST_fx-list-build-artifacts-images-by-type() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build --type zbi)" "zedboot.zbi fuchsia.zbi netboot.zbi"
+}
+
+TEST_fx-list-build-artifacts-images-by-name-and-type() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images --no-build --name zircon-a --type zbi)"  "fuchsia.zbi"
+}
+
+TEST_fx-list-build-artifacts-netboot() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts netboot --no-build)" "netboot.sh netboot.zbi"
+}
+
+TEST_fx-list-build-artifacts-pave() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts pave --no-build)" "pave.sh zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.sparse.blk"
+}
+
+TEST_fx-list-build-artifacts-pave-zedboot() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts pave-zedboot --no-build)" "pave-zedboot.sh zedboot.zbi zedboot.vbmeta"
+}
+
+TEST_fx-list-build-artifacts-zbi-tests() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests --no-build)" "obj/zircon/system/utest/core/core-tests.zbi bootsvc-integration-tests-x64.zbi"
+}
+
+TEST_fx-list-build-artifacts-zbi-tests-by-name() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests --no-build --name core-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
+}
+
+TEST_fx-list-build-artifacts-tools() {
+  # CPU-filtering should default to HOST_CPU.
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build)" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
+}
+
+TEST_fx-list-build-artifacts-tools-by-name() {
+  # CPU-filtering should default to HOST_CPU.
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --name bootserver)" "host_${HOST_CPU}/bootserver"
+}
+
+TEST_fx-list-build-artifacts-tools-by-cpu() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --cpu ${CROSS_COMPILED_CPU})" "host_${CROSS_COMPILED_CPU}/bootserver host_${CROSS_COMPILED_CPU}/botanist"
+}
+
+TEST_fx-list-build-artifacts-tools-by-os() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --allow-empty --os unknown)" ""
+
+  # CPU-filtering should default to HOST_CPU.
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --no-build --allow-empty --os ${HOST_OS})" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
+}
+
+BT_RUN_TESTS "$@"

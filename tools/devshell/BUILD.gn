@@ -30,6 +30,7 @@ test_scripts = [
   "tests/subcommands/fx_flash_fuchsia_test",
   "tests/subcommands/fx_helpdoc_test",
   "tests/subcommands/fx_klog_test",
+  "tests/subcommands/fx_list_build_artifacts_test",
   "tests/subcommands/fx_log_test",
   "tests/subcommands/fx_mkzedboot_test",
   "tests/subcommands/fx_remote_test",
@@ -111,6 +112,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/flash",
         "//tools/devshell/get-device-addr",
         "//tools/devshell/helpdoc",
+        "//tools/devshell/jq.fx",
         "//tools/devshell/klog",
         "//tools/devshell/lib/fvm.sh",
         "//tools/devshell/lib/fx-cmd-locator.sh",
@@ -123,6 +125,7 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/lib/style.sh",
         "//tools/devshell/lib/vars.sh",
         "//tools/devshell/lib/verify-default-keys.sh",
+        "//tools/devshell/list-build-artifacts",
         "//tools/devshell/log",
         "//tools/devshell/metrics",
         "//tools/devshell/mkzedboot",
@@ -160,6 +163,11 @@ host_script_test_data("fx_bash_tests") {
       source_base_dir = target_out_dir
       target_base_dir = "tools/devshell"
       files = [ "${target_out_dir}/run_fx_bash_tests_driver.sh" ]
+    },
+    {
+      source_base_dir = "//prebuilt"
+      target_base_dir = "prebuilt"
+      files = [ "//prebuilt/third_party/jq/${host_platform}/bin/jq" ]
     },
   ]
   data_deps = [ ":run_fx_bash_tests_driver" ]

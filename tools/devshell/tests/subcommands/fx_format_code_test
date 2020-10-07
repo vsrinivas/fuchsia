@@ -26,6 +26,7 @@ MOCK_GN="prebuilt/third_party/gn/test/gn"
 MOCK_PYTHON3_DIR="prebuilt/third_party/python3/test"
 MOCK_RUST_TOOLS_DIR="prebuilt/third_party/rust_tools/test"
 BT_MOCKED_TOOLS=(
+  "tools/devshell/list-build-artifacts"
   "tools/devshell/lib/platform.sh"
   "prebuilt/third_party/vpython/vpython3"
   "${MOCK_CLANG_DIR}/bin/clang-format"

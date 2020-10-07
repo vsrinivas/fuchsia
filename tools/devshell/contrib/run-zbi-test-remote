@@ -93,7 +93,7 @@ fi
 
 save_remote_info "$host" "$dir"
 
-zbi_test="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx get-build-artifacts --expect-one --name ${name} zbi-tests")"
+zbi_test="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --expect-one --name ${name} zbi-tests")"
 
 remote_build_dir="$(get_remote_build_dir "${host}" "${dir}")"
 artifact_dir="${FUCHSIA_DIR}/out/fetched"

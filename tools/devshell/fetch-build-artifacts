@@ -1,0 +1,10 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#### CATEGORY=Build
+### TODO(fxbug.dev/60881): under construction.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh
+fx-config-read
+
+fx-warn "TODO(fxbug.dev/60881): this script is being replaced; for the old functionality please run \`fx vendor google fetch-build-artifacts\`"

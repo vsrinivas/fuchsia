@@ -6,7 +6,7 @@ if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     exit 1
 fi
 
-FIDLC_TARGET=$( fx get-build-artifacts --expect-one --no-build --name fidlc tools )
+FIDLC_TARGET=$( fx list-build-artifacts --expect-one --no-build --name fidlc tools )
 
 FIDLC="${FUCHSIA_BUILD_DIR}/${FIDLC_TARGET}"
 if [ ! -x "${FIDLC}" ]; then
