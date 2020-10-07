@@ -180,6 +180,7 @@ class ErmineStory {
       assert(eventPair.isValid);
 
       await viewRefService.watch(ViewRef(reference: eventPair));
+      // ignore: unawaited_futures
       childViewConnection.requestFocus();
     } on Exception catch (_) {}
   }

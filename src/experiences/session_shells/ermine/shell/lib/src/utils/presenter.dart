@@ -62,6 +62,7 @@ class PresenterService extends fidl.GraphicalPresenter {
       final connection = ChildViewConnection(
         viewHolderToken,
         viewRef: viewSpec.viewRef,
+        usePlatformView: true,
       );
       onPresent(
         connection,
