@@ -300,7 +300,7 @@ func main() {
 	end := g.Primary.FirstUsableLBA
 
 	var efiStart uint64
-	efiStart, end = optimialBlockAlign(end, uint64(*efiSize), logical, physical, optimal)
+	efiStart, end = optimalBlockAlign(end, uint64(*efiSize), logical, physical, optimal)
 	// compute the size of the fat geometry that fits within the well-aligned GPT
 	// partition that was computed above.
 	*efiSize = fitFAT(int64((end-1)-efiStart) * int64(logical))
@@ -345,7 +345,7 @@ func main() {
 
 	var aStart, bStart, rStart uint64
 	if *abr {
-		aStart, end = optimialBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		aStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconA,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -354,7 +354,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		bStart, end = optimialBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		bStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconB,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -363,7 +363,7 @@ func main() {
 			EndingLBA:           end,
 		})
 
-		rStart, end = optimialBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		rStart, end = optimalBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
 		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
 			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconR,
 			UniquePartitionGUID: gpt.NewRandomGUID(),
@@ -375,7 +375,7 @@ func main() {
 
 	var fvmStart uint64
 
-	fvmStart, end = optimialBlockAlign(end+1, uint64(*fvmSize), logical, physical, optimal)
+	fvmStart, end = optimalBlockAlign(end+1, uint64(*fvmSize), logical, physical, optimal)
 	if !*ramdiskOnly {
 		if *fvmSize == 0 {
 			end = g.Primary.LastUsableLBA
@@ -611,7 +611,7 @@ func msCopyIn(root fs.Directory, src, dst string) {
 // partition that starts at or after first (block address), of size byteSize,
 // for a disk with logical, physical and optimal byte sizes. It returns the
 // start and end block addresses.
-func optimialBlockAlign(first, byteSize, logical, physical, optimal uint64) (start, end uint64) {
+func optimalBlockAlign(first, byteSize, logical, physical, optimal uint64) (start, end uint64) {
 	var alignTo = logical
 	if physical > alignTo {
 		alignTo = physical
