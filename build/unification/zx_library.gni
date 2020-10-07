@@ -337,19 +337,8 @@ template("zx_library") {
       lib_public_deps += [ "//zircon/system/public" ]
     }
 
-    # A list of targets that will not have its sdk_headers listed
-    # in a `public` parameter. This is a workaround for many many
-    # broken targets that include these headers without a proper
-    # public dependency chain. See http://fxbug.dev/60129 for
-    # more details.
-    _no_header_labels = [
-      "//zircon/system/ulib/zircon:zircon-headers",
-    ]
-    _target_label = get_label_info(":$main_target_name", "label_no_toolchain")
     _has_public_headers =
-        _no_header_labels + [ _target_label ] - [ _target_label ] ==
-        _no_header_labels && defined(invoker.sdk_headers) &&
-        invoker.sdk_headers != []
+        defined(invoker.sdk_headers) && invoker.sdk_headers != []
 
     target(target_type, main_target_name) {
       forward_variables_from(invoker,
