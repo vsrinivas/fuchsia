@@ -9,12 +9,10 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 sdk_source_set("cpp") {
-  # TODO(fxbug.dev/59937): Remove when Go fuzzer and Mac links OK against this.
+  # TODO(fxbug.dev/59937): Remove when Mac links OK against this.
   if ((current_toolchain == "//build/toolchain:host_x64" && host_os == "mac") ||
       (current_toolchain == "//build/toolchain:host_arm64" &&
-       host_os == "mac") ||
-      toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
-      toolchain_variant.configs) {
+       host_os == "mac")) {
     build_as_static = true
   }
 
@@ -40,12 +38,10 @@ sdk_source_set("cpp") {
 }
 
 sdk_source_set("backend_host") {
-  # TODO(fxbug.dev/59937): Remove when Go fuzzer and Mac links OK against this.
+  # TODO(fxbug.dev/59937): Remove when Mac links OK against this.
   if ((current_toolchain == "//build/toolchain:host_x64" && host_os == "mac") ||
       (current_toolchain == "//build/toolchain:host_arm64" &&
-       host_os == "mac") ||
-      toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
-      toolchain_variant.configs) {
+       host_os == "mac")) {
     build_as_static = true
   }
 
@@ -67,12 +63,6 @@ sdk_source_set("backend_host") {
 }
 
 sdk_source_set("backend_legacy_fuchsia") {
-  # TODO(59937): Remove when Go fuzzer links OK against this.
-  if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
-      toolchain_variant.configs) {
-    build_as_static = true
-  }
-
   # Keep internal for now until the API stabilizes.
   category = "internal"
 

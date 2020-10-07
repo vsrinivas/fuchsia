@@ -111,7 +111,10 @@ template("fuzzer") {
         services = []
         features = []
         forward_variables_from(cmx.sandbox, "*")
-        services += [ "fuchsia.process.Launcher" ]
+        services += [
+          "fuchsia.logger.LogSink",
+          "fuchsia.process.Launcher",
+        ]
         features += [
           "isolated-persistent-storage",
           "isolated-temp",

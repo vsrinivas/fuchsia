@@ -88,6 +88,9 @@ template("go_fuzzer") {
     if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs ==
         toolchain_variant.configs) {
       wrapper_name = test_wrapper_name
+    } else {
+      # TODO(fxbug.dev/59937): Remove when Go fuzzer links OK against syslog.
+      disable_syslog_backend = true
     }
 
     # As noted in go_build.gni, Go libraries do not generate distinct outputs for each variants,
