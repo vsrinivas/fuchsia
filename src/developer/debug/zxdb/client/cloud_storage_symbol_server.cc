@@ -8,7 +8,9 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <memory>
 
+#include "lib/fit/function.h"
 #include "rapidjson/document.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
@@ -62,7 +64,7 @@ FILE* GetGoogleApiAuthCache(const char* mode) {
 class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
  public:
   CloudStorageSymbolServerImpl(Session* session, const std::string& url)
-      : CloudStorageSymbolServer(session, url) {
+      : CloudStorageSymbolServer(session, url), weak_factory_(this) {
     DoInit();
   }
 
@@ -74,9 +76,13 @@ class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
  private:
   void DoAuthenticate(const std::map<std::string, std::string>& data,
                       fit::callback<void(const Err&)> cb) override;
+  void OnAuthenticationResponse(Curl::Error result, fit::callback<void(const Err&)> cb,
+                                std::shared_ptr<rapidjson::Document> document);
   std::shared_ptr<Curl> PrepareCurl(const std::string& build_id, DebugSymbolFileType file_type);
   void FetchWithCurl(const std::string& build_id, DebugSymbolFileType file_type,
                      std::shared_ptr<Curl> curl, SymbolServer::FetchCallback cb);
+
+  fxl::WeakPtrFactory<CloudStorageSymbolServerImpl> weak_factory_;
 };
 
 }  // namespace
@@ -165,57 +171,68 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
     return data.size();
   });
 
-  curl->Perform([this, cb = std::move(cb), document](Curl*, Curl::Error result) mutable {
-    // TODO(dangyi): `this` might be deleted here! Consider to use a weak pointer.
-    if (result) {
-      std::string error = "Could not contact authentication server: ";
-      error += result.ToString();
-
-      error_log_.push_back(error);
-      ChangeState(SymbolServer::State::kAuth);
-      cb(Err(error));
-      return;
-    }
-
-    if (!DocIsAuthInfo(*document)) {
-      error_log_.push_back("Authentication failed");
-      ChangeState(SymbolServer::State::kAuth);
-      cb(Err("Authentication failed"));
-      return;
-    }
-
-    access_token_ = (*document)["access_token"].GetString();
-
-    bool new_refresh = false;
-    if (document->HasMember("refresh_token")) {
-      new_refresh = true;
-      refresh_token_ = (*document)["refresh_token"].GetString();
-    }
-
-    if (document->HasMember("expires_in")) {
-      constexpr int kMilli = 1000;
-      int time = (*document)["expires_in"].GetInt();
-
-      if (time > 1000) {
-        time -= 100;
-      }
-
-      time *= kMilli;
-      debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, time, [this]() { AuthRefresh(); });
-    }
-
-    ChangeState(SymbolServer::State::kReady);
-    cb(Err());
-
-    if (!new_refresh) {
-      return;
-    }
-
-    if (FILE* fp = GetGoogleApiAuthCache("wb")) {
-      fwrite(refresh_token_.data(), 1, refresh_token_.size(), fp);
-      fclose(fp);
-    }
+  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), cb = std::move(cb), document](
+                    Curl*, Curl::Error result) mutable {
+    if (weak_this)
+      weak_this->OnAuthenticationResponse(std::move(result), std::move(cb), std::move(document));
   });
+}
+
+void CloudStorageSymbolServerImpl::OnAuthenticationResponse(
+    Curl::Error result, fit::callback<void(const Err&)> cb,
+    std::shared_ptr<rapidjson::Document> document) {
+  if (result) {
+    std::string error = "Could not contact authentication server: ";
+    error += result.ToString();
+
+    error_log_.push_back(error);
+    ChangeState(SymbolServer::State::kAuth);
+    cb(Err(error));
+    return;
+  }
+
+  if (!DocIsAuthInfo(*document)) {
+    error_log_.push_back("Authentication failed");
+    ChangeState(SymbolServer::State::kAuth);
+    cb(Err("Authentication failed"));
+    return;
+  }
+
+  access_token_ = (*document)["access_token"].GetString();
+
+  bool new_refresh = false;
+  if (document->HasMember("refresh_token")) {
+    new_refresh = true;
+    refresh_token_ = (*document)["refresh_token"].GetString();
+  }
+
+  if (document->HasMember("expires_in")) {
+    constexpr int kMilli = 1000;
+    int time = (*document)["expires_in"].GetInt();
+
+    if (time > 1000) {
+      time -= 100;
+    }
+
+    time *= kMilli;
+    debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, time,
+                                                 [weak_this = weak_factory_.GetWeakPtr()]() {
+                                                   if (weak_this)
+                                                     weak_this->AuthRefresh();
+                                                 });
+  }
+
+  ChangeState(SymbolServer::State::kReady);
+  cb(Err());
+
+  if (!new_refresh) {
+    return;
+  }
+
+  if (FILE* fp = GetGoogleApiAuthCache("wb")) {
+    fwrite(refresh_token_.data(), 1, refresh_token_.size(), fp);
+    fclose(fp);
+  }
 }
 
 void CloudStorageSymbolServer::Authenticate(const std::string& data,
@@ -308,15 +325,19 @@ void CloudStorageSymbolServerImpl::CheckFetch(const std::string& build_id,
 
   size_t previous_ready_count = ready_count_;
 
-  curl->Perform([this, build_id, file_type, curl, cb = std::move(cb), previous_ready_count](
-                    Curl*, Curl::Error result) mutable {
+  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), build_id, file_type, curl,
+                 cb = std::move(cb), previous_ready_count](Curl*, Curl::Error result) mutable {
+    if (!weak_this)
+      return;
+
     Err err;
     auto code = curl->ResponseCode();
 
-    if (HandleRequestResult(result, code, previous_ready_count, &err)) {
+    if (weak_this->HandleRequestResult(result, code, previous_ready_count, &err)) {
       curl->get_body() = true;
-      cb(Err(), [this, build_id, file_type, curl](SymbolServer::FetchCallback fcb) {
-        FetchWithCurl(build_id, file_type, curl, std::move(fcb));
+      cb(Err(), [weak_this, build_id, file_type, curl](SymbolServer::FetchCallback fcb) {
+        if (weak_this)
+          weak_this->FetchWithCurl(build_id, file_type, curl, std::move(fcb));
       });
       return;
     }
@@ -414,10 +435,13 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
 
   size_t previous_ready_count = ready_count_;
 
-  curl->Perform([this, cleanup, build_id, cb = std::move(cb), previous_ready_count](
-                    Curl* curl, Curl::Error result) mutable {
+  curl->Perform([weak_this = weak_factory_.GetWeakPtr(), cleanup, build_id, cb = std::move(cb),
+                 previous_ready_count](Curl* curl, Curl::Error result) mutable {
+    if (!weak_this)
+      return;
     Err err;
-    bool valid = HandleRequestResult(result, curl->ResponseCode(), previous_ready_count, &err);
+    bool valid =
+        weak_this->HandleRequestResult(result, curl->ResponseCode(), previous_ready_count, &err);
 
     std::string final_path = cleanup(valid, &err);
     cb(err, final_path);
