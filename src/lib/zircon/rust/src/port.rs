@@ -155,6 +155,11 @@ impl SignalPacket {
     pub fn count(&self) -> u64 {
         self.0.count
     }
+
+    /// Get a reference to the raw underlying packet.
+    pub fn raw_packet(&self) -> &sys::zx_packet_signal_t {
+        &self.0
+    }
 }
 
 impl GuestBellPacket {

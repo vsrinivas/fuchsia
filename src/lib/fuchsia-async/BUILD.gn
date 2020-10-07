@@ -74,10 +74,14 @@ rustc_staticlib("fuchsia-async-staticlib") {
   edition = "2018"
   deps = [
     ":fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/lib/zircon/rust:fuchsia-zircon-sys",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
   ]
+  if (is_fuchsia) {
+    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
+  }
   source_root = "src/ffi.rs"
 
   sources = [ "src/ffi.rs" ]
