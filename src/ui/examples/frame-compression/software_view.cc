@@ -14,13 +14,26 @@ namespace {
 constexpr uint32_t kColor0 = 0xff6448fe;
 constexpr uint32_t kColor1 = 0xffb3d5eb;
 
+// Inspect values.
+constexpr char kView[] = "view";
+constexpr char kModifier[] = "modifier";
+constexpr char kImage[] = "image";
+constexpr char kImageBytes[] = "image_bytes";
+constexpr char kImageBytesUsed[] = "image_bytes_used";
+constexpr char kImageBytesDeduped[] = "image_bytes_deduped";
+constexpr char kWidthInTiles[] = "width_in_tiles";
+constexpr char kHeightInTiles[] = "height_in_tiles";
+
 }  // namespace
 
 SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint32_t width,
-                           uint32_t height, bool paint_once)
-    : BaseView(std::move(context), "Software View Example", width, height),
+                           uint32_t height, uint32_t paint_count, FILE* png_fp,
+                           inspect::Node inspect_node)
+    : BaseView(std::move(context), "Software View Example", width, height, std::move(inspect_node)),
       modifier_(modifier),
-      paint_once_(paint_once) {
+      paint_count_(paint_count),
+      png_fp_(png_fp),
+      inspect_node_(top_inspect_node_.CreateLazyValues(kView, [this] { return PopulateStats(); })) {
   zx_status_t status = component_context()->svc()->Connect(sysmem_allocator_.NewRequest());
   FX_CHECK(status == ZX_OK);
 
@@ -105,7 +118,7 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
     fuchsia::sysmem::ImageFormat_2 image_format = {};
     image_format.coded_width = width_;
     image_format.coded_height = height_;
-    session()->Enqueue(scenic::NewCreateImage2Cmd(image.image_id, width_, height_, kBufferId, 0));
+    session()->Enqueue(scenic::NewCreateImage2Cmd(image.image_id, width_, height_, kBufferId, i));
 
     uint8_t* vmo_base;
     FX_CHECK(buffer_collection_info.buffers[i].vmo != ZX_HANDLE_INVALID);
@@ -119,8 +132,24 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
 
     image.vmo_ptr = vmo_base;
     image.image_bytes = image_vmo_bytes;
-    image.stride = stride;
+    switch (modifier) {
+      case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+        uint32_t width_in_tiles = (width_ + kAfbcTilePixelWidth - 1) / kAfbcTilePixelWidth;
+        uint32_t height_in_tiles = (height_ + kAfbcTilePixelHeight - 1) / kAfbcTilePixelHeight;
+        image.width_in_tiles = width_in_tiles;
+        image.height_in_tiles = height_in_tiles;
+      } break;
+      case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
+        image.stride = stride;
+        break;
+      default:
+        FX_NOTREACHED() << "Modifier not supported.";
+    }
     image.needs_flush = needs_flush;
+    image.inspect_node = top_inspect_node_.CreateLazyNode(kImage + std::to_string(i), [this, i] {
+      auto& image = images_[i];
+      return PopulateImageStats(image);
+    });
   }
 
   buffer_collection->Close();
@@ -132,9 +161,16 @@ void SoftwareView::OnSceneInvalidated(fuchsia::images::PresentationInfo presenta
   }
 
   uint32_t frame_number = GetNextFrameNumber();
-  if (!paint_once_ || frame_number == 1) {
+  if (frame_number < paint_count_) {
     auto& image = images_[GetNextImageIndex()];
-    SetPixels(image, GetNextColorOffset());
+    if (png_fp_) {
+      png_infop info_ptr;
+      auto png = CreatePngReadStruct(png_fp_, &info_ptr);
+      SetPixelsFromPng(image, png);
+      DestroyPngReadStruct(png, info_ptr);
+    } else {
+      SetPixelsFromColorOffset(image, GetNextColorOffset());
+    }
     material_.SetTexture(image.image_id);
   }
 
@@ -145,35 +181,36 @@ void SoftwareView::OnSceneInvalidated(fuchsia::images::PresentationInfo presenta
   InvalidateScene();
 }
 
-void SoftwareView::SetPixels(const Image& image, uint32_t color_offset) {
+void SoftwareView::SetPixelsFromColorOffset(Image& image, uint32_t color_offset) {
   switch (modifier_) {
     case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
-      SetAfbcPixels(image, color_offset);
+      SetAfbcPixelsFromColorOffset(image, color_offset);
       break;
     case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
-      SetLinearPixels(image, color_offset);
+      SetLinearPixelsFromColorOffset(image, color_offset);
       break;
     default:
       FX_NOTREACHED() << "Modifier not supported.";
   }
+  image.image_bytes_used = image.image_bytes;
 }
 
-void SoftwareView::SetAfbcPixels(const Image& image, uint32_t color_offset) {
-  TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixels");
+void SoftwareView::SetAfbcPixelsFromColorOffset(Image& image, uint32_t color_offset) {
+  TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromColorOffset");
 
-  uint32_t width_in_tiles = (width_ + kAfbcTilePixelWidth - 1) / kAfbcTilePixelWidth;
-  uint32_t height_in_tiles = (height_ + kAfbcTilePixelHeight - 1) / kAfbcTilePixelHeight;
+  uint32_t width_in_tiles = image.width_in_tiles;
+  uint32_t height_in_tiles = image.height_in_tiles;
   uint32_t tile_count = width_in_tiles * height_in_tiles;
   uint32_t body_offset =
       ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) / kAfbcBodyAlignment) *
       kAfbcBodyAlignment;
-  uint32_t tile_num_bytes = kAfbcTilePixelWidth * kAfbcTilePixelHeight * kTileBytesPerPixel;
-  uint32_t subtile_num_bytes = tile_num_bytes / (kAfbcSubtileSize * kAfbcSubtileSize);
+  uint32_t subtile_num_bytes = kTileNumBytes / (kAfbcSubtileSize * kAfbcSubtileSize);
   uint32_t subtile_stride = subtile_num_bytes / kAfbcSubtileSize;
 
   uint8_t* header_base = image.vmo_ptr;
   uint8_t* body_base = header_base + body_offset;
 
+  uint32_t next_tile_index = 0;
   for (unsigned j = 0; j < height_in_tiles; j++) {
     unsigned tile_y = j * kAfbcTilePixelHeight;
     unsigned tile_y_end = tile_y + kAfbcTilePixelHeight;
@@ -197,7 +234,8 @@ void SoftwareView::SetAfbcPixels(const Image& image, uint32_t color_offset) {
       // We only update the first tile in the row and then update all headers
       // for this row to point to the same tile memory. This demonstrates the
       // ability to dedupe tiles that are the same.
-      unsigned tile_offset = tile_num_bytes * (j * width_in_tiles);
+      uint32_t tile_index = next_tile_index++;
+      uint32_t tile_offset = kTileNumBytes * tile_index;
 
       // 16 sub-tiles.
       constexpr struct {
@@ -223,7 +261,7 @@ void SoftwareView::SetAfbcPixels(const Image& image, uint32_t color_offset) {
       }
 
       if (image.needs_flush) {
-        zx_cache_flush(body_base + tile_offset, tile_num_bytes, ZX_CACHE_FLUSH_DATA);
+        zx_cache_flush(body_base + tile_offset, kTileNumBytes, ZX_CACHE_FLUSH_DATA);
       }
 
       // Update all headers in this row.
@@ -244,13 +282,15 @@ void SoftwareView::SetAfbcPixels(const Image& image, uint32_t color_offset) {
   }
 
   if (image.needs_flush) {
-    zx_cache_flush(header_base, kAfbcBytesPerBlockHeader * width_in_tiles * height_in_tiles,
-                   ZX_CACHE_FLUSH_DATA);
+    zx_cache_flush(header_base, tile_count * kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
   }
+
+  image.image_bytes_used = tile_count * kAfbcBytesPerBlockHeader + next_tile_index * kTileNumBytes;
+  image.image_bytes_deduped = (next_tile_index * kTileNumBytes) * (width_in_tiles - 1);
 }
 
-void SoftwareView::SetLinearPixels(const Image& image, uint32_t color_offset) {
-  TRACE_DURATION("gfx", "SoftwareView::SetLinearPixels");
+void SoftwareView::SetLinearPixelsFromColorOffset(Image& image, uint32_t color_offset) {
+  TRACE_DURATION("gfx", "SoftwareView::SetLinearPixelsFromColorOffset");
 
   uint8_t* vmo_base = image.vmo_ptr;
   for (uint32_t y = 0; y < height_; ++y) {
@@ -260,9 +300,197 @@ void SoftwareView::SetLinearPixels(const Image& image, uint32_t color_offset) {
       target[x] = color;
     }
   }
+
   if (image.needs_flush) {
     zx_cache_flush(image.vmo_ptr, image.image_bytes, ZX_CACHE_FLUSH_DATA);
   }
+}
+
+void SoftwareView::SetPixelsFromPng(Image& image, png_structp png) {
+  switch (modifier_) {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16:
+      SetAfbcPixelsFromPng(image, png);
+      break;
+    case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
+      SetLinearPixelsFromPng(image, png);
+      break;
+    default:
+      FX_NOTREACHED() << "Modifier not supported.";
+  }
+}
+
+void SoftwareView::SetAfbcPixelsFromPng(Image& image, png_structp png) {
+  TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng");
+
+  uint32_t width_in_tiles = image.width_in_tiles;
+  uint32_t height_in_tiles = image.height_in_tiles;
+  uint32_t tile_count = width_in_tiles * height_in_tiles;
+  uint32_t body_offset =
+      ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) / kAfbcBodyAlignment) *
+      kAfbcBodyAlignment;
+  uint32_t subtile_num_bytes = kTileNumBytes / (kAfbcSubtileSize * kAfbcSubtileSize);
+  uint32_t subtile_stride = subtile_num_bytes / kAfbcSubtileSize;
+
+  uint8_t* header_base = image.vmo_ptr;
+  uint8_t* body_base = header_base + body_offset;
+
+  uint32_t next_tile_index = 0;
+  uint32_t solid_tile_count = 0;
+
+  // Resize scratch buffer to fit one row of tiles.
+  scratch_.resize(width_ * kAfbcTilePixelHeight);
+  // Reset tile map.
+  image.tiles.clear();
+
+  for (unsigned j = 0; j < height_in_tiles; ++j) {
+    row_pointers_.clear();
+    for (uint32_t y = 0; y < kAfbcTilePixelHeight; ++y) {
+      row_pointers_.push_back(reinterpret_cast<png_bytep>(scratch_.data()) + y * width_ * 4);
+    }
+
+    {
+      TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::ReadRows");
+      png_read_rows(png, row_pointers_.data(), nullptr, row_pointers_.size());
+    }
+
+    for (unsigned i = 0; i < width_in_tiles; i++) {
+      unsigned tile_x = i * kAfbcTilePixelWidth;
+
+      constexpr uint32_t kAfbcSubtileNumPixels = kAfbcSubtileSize * kAfbcSubtileSize;
+
+#define S(offset) ((offset)*kAfbcSubtileNumPixels)
+      constexpr uint32_t kAfbcSubtileOffset[4][4] = {
+          {S(2), S(1), S(14), S(13)},
+          {S(3), S(0), S(15), S(12)},
+          {S(4), S(7), S(8), S(11)},
+          {S(5), S(6), S(9), S(10)},
+      };
+#undef S
+
+      uint32_t tile_pixels[kTileNumPixels];
+      uint32_t last_pixel = scratch_[tile_x];
+      bool is_solid_color = true;
+
+      {
+        TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::LinearToTile");
+
+        // Convert to uncompressed tile memory and detect solid colors in the process.
+        for (unsigned y = 0; y < kAfbcTilePixelHeight; ++y) {
+          uint32_t* row = scratch_.data() + y * width_ + tile_x;
+          uint32_t subtile_j = y / kAfbcSubtileSize;
+          uint32_t subtile_y = y % kAfbcSubtileSize;
+          uint32_t subtile_row_offset = subtile_y * kAfbcSubtileSize;
+          for (unsigned x = 0; x < kAfbcTilePixelWidth; ++x) {
+            uint32_t pixel = row[x];
+            uint32_t subtile_i = x / kAfbcSubtileSize;
+            uint32_t subtile_x = x % kAfbcSubtileSize;
+            uint32_t tile_offset =
+                kAfbcSubtileOffset[subtile_i][subtile_j] + subtile_row_offset + subtile_x;
+            tile_pixels[tile_offset] = pixel;
+            is_solid_color = is_solid_color && (pixel == last_pixel);
+            last_pixel = pixel;
+          }
+        }
+      }
+
+      unsigned header_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
+      uint8_t* header_ptr = header_base + header_offset;
+      if (is_solid_color) {
+        TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::SetSolid");
+
+        // Reset header.
+        header_ptr[0] = header_ptr[1] = header_ptr[2] = header_ptr[3] = header_ptr[4] =
+            header_ptr[5] = header_ptr[6] = header_ptr[7] = header_ptr[12] = header_ptr[13] =
+                header_ptr[14] = header_ptr[15] = 0;
+
+        // Solid colors are stored at offset 8 in block header.
+        *(reinterpret_cast<uint32_t*>(header_ptr + 8)) = last_pixel;
+        ++solid_tile_count;
+      } else {
+        TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::Uncompressed");
+
+        uint32_t tile_offset;
+
+        auto it = image.tiles.find((Tile){tile_pixels});
+        if (it == image.tiles.end()) {
+          uint32_t tile_index = next_tile_index++;
+          tile_offset = tile_index * kTileNumBytes;
+
+          // Copy uncompressed tile memory and add new unique tile.
+          memcpy(body_base + tile_offset, tile_pixels, kTileNumBytes);
+          if (image.needs_flush) {
+            zx_cache_flush(body_base + tile_offset, kTileNumBytes, ZX_CACHE_FLUSH_DATA);
+          }
+          image.tiles.insert(
+              {(Tile){reinterpret_cast<uint32_t*>(body_base + tile_offset)}, tile_offset});
+        } else {
+          tile_offset = it->second;
+        }
+
+        // Store offset of uncompressed tile memory in byte 0-3.
+        uint32_t body_offset = body_base - header_base;
+        *(reinterpret_cast<uint32_t*>(header_ptr)) = body_offset + tile_offset;
+
+        // Set byte 4-15 to disable compression for tile memory.
+        header_ptr[4] = header_ptr[7] = header_ptr[10] = header_ptr[13] = 0x41;
+        header_ptr[5] = header_ptr[8] = header_ptr[11] = header_ptr[14] = 0x10;
+        header_ptr[6] = header_ptr[9] = header_ptr[12] = header_ptr[15] = 0x04;
+      }
+    }
+  }
+
+  if (image.needs_flush) {
+    TRACE_DURATION("gfx", "SoftwareView::SetAfbcPixelsFromPng::Flush");
+    zx_cache_flush(header_base, tile_count * kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
+  }
+
+  image.image_bytes_used = tile_count * kAfbcBytesPerBlockHeader + next_tile_index * kTileNumBytes;
+  image.image_bytes_deduped = ((tile_count - solid_tile_count) - next_tile_index) * kTileNumBytes;
+}
+
+void SoftwareView::SetLinearPixelsFromPng(Image& image, png_structp png) {
+  TRACE_DURATION("gfx", "SoftwareView::SetLinearPixelsFromPng");
+
+  row_pointers_.clear();
+  uint8_t* vmo_base = image.vmo_ptr;
+  for (uint32_t y = 0; y < height_; ++y) {
+    row_pointers_.push_back(reinterpret_cast<png_bytep>(&vmo_base[y * image.stride]));
+  }
+
+  {
+    TRACE_DURATION("gfx", "SoftwareView::SetLinearPixelsFromPng::ReadImage");
+    png_read_image(png, row_pointers_.data());
+  }
+
+  if (image.needs_flush) {
+    TRACE_DURATION("gfx", "SoftwareView::SetLinearPixelsFromPng::Flush");
+    zx_cache_flush(image.vmo_ptr, image.image_bytes, ZX_CACHE_FLUSH_DATA);
+  }
+
+  image.image_bytes_used = height_ * image.stride;
+  image.image_bytes_deduped = 0;
+}
+
+fit::promise<inspect::Inspector> SoftwareView::PopulateStats() const {
+  inspect::Inspector inspector;
+
+  inspector.GetRoot().CreateUint(kModifier, modifier_, &inspector);
+
+  return fit::make_ok_promise(std::move(inspector));
+}
+
+fit::promise<inspect::Inspector> SoftwareView::PopulateImageStats(const Image& image) const {
+  inspect::Inspector inspector;
+
+  inspector.GetRoot().CreateUint(kImageBytes, image.image_bytes, &inspector);
+  inspector.GetRoot().CreateUint(kImageBytesUsed, image.image_bytes_used, &inspector);
+  inspector.GetRoot().CreateUint(kImageBytesDeduped, image.image_bytes_deduped, &inspector);
+  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+    inspector.GetRoot().CreateUint(kWidthInTiles, image.width_in_tiles, &inspector);
+    inspector.GetRoot().CreateUint(kHeightInTiles, image.height_in_tiles, &inspector);
+  }
+
+  return fit::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace frame_compression

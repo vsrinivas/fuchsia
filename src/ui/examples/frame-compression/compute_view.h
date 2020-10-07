@@ -6,6 +6,9 @@
 #define SRC_UI_EXAMPLES_FRAME_COMPRESSION_COMPUTE_VIEW_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/value_list.h>
+#include <lib/inspect/cpp/vmo/types.h>
 
 #include "base_view.h"
 #include "src/lib/fxl/macros.h"
@@ -19,36 +22,62 @@ namespace frame_compression {
 class ComputeView : public BaseView {
  public:
   ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak_escher, uint64_t modifier,
-              uint32_t width, uint32_t height, bool paint_once);
+              uint32_t width, uint32_t height, uint32_t paint_count, FILE* png_fp,
+              inspect::Node inspect_node);
   ~ComputeView() override;
 
  private:
+  static constexpr uint32_t kNumScratchImages = 2u;
+
   struct Image {
     escher::SemaphorePtr acquire_semaphore;
     escher::SemaphorePtr release_semaphore;
     zx::event acquire_fence;
     zx::event release_fence;
-    uint32_t image_id = 0;
+    uint32_t image_id;
     escher::TexturePtr texture;
     escher::BufferPtr buffer;
+    escher::BufferPtr aux_buffer;
+    escher::BufferPtr host_buffer;
+    uint32_t body_offset = 0;
     uint32_t base_y = 0;
     uint32_t width_in_tiles = 0;
     uint32_t height_in_tiles = 0;
+    inspect::LazyNode inspect_node;
   };
 
   // |scenic::BaseView|
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
-  void RenderFrame(const Image& image, uint32_t color_offset, uint32_t frame_number);
+  void RenderFrameFromColorOffset(const Image& image, uint32_t color_offset, uint32_t frame_number);
+
+  void RenderFrameFromPng(Image& image, png_structp png, uint32_t frame_number);
+
+  uint32_t GetNextScratchImageIndex();
+
+  fit::promise<inspect::Inspector> PopulateStats() const;
+  fit::promise<inspect::Inspector> PopulateImageStats(const Image& image);
 
   const escher::EscherWeakPtr escher_;
   const uint64_t modifier_;
-  const bool paint_once_;
+  const uint32_t paint_count_;
+  FILE* const png_fp_;
   escher::impl::DescriptorSetPool descriptor_set_pool_;
+  escher::impl::DescriptorSetPool checksum_dedup_descriptor_set_pool_;
+  escher::impl::DescriptorSetPool pack_descriptor_set_pool_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   Image images_[kNumImages];
-  vk::Pipeline pipeline_;
+  std::vector<png_bytep> row_pointers_;
+  Image scratch_images_[kNumScratchImages];
+  uint32_t next_scratch_image_index_ = 0;
   vk::PipelineLayout pipeline_layout_;
+  vk::PipelineLayout checksum_dedup_pipeline_layout_;
+  vk::PipelineLayout pack_pipeline_layout_;
+  vk::Pipeline pipeline_;
+  vk::Pipeline checksum_pipeline_;
+  vk::Pipeline dedup_pipeline_;
+  vk::Pipeline pack_pipeline_;
+  inspect::LazyNode inspect_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComputeView);
 };

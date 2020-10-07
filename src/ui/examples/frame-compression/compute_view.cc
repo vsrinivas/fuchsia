@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/naive_buffer.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/renderer/buffer_cache.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
@@ -21,6 +22,16 @@
 
 namespace frame_compression {
 namespace {
+
+// Inspect values.
+constexpr char kView[] = "view";
+constexpr char kModifier[] = "modifier";
+constexpr char kImage[] = "image";
+constexpr char kImageBytes[] = "image_bytes";
+constexpr char kImageBytesUsed[] = "image_bytes_used";
+constexpr char kImageBytesDeduped[] = "image_bytes_deduped";
+constexpr char kWidthInTiles[] = "width_in_tiles";
+constexpr char kHeightInTiles[] = "height_in_tiles";
 
 constexpr char kLinearShaderSrc[] = R"GLSL(
 #version 450
@@ -196,6 +207,354 @@ size_t GetPushConstantBlockSize(uint64_t modifier) {
   return 0;
 }
 
+const vk::DescriptorSetLayoutCreateInfo& GetDescriptorSetLayoutCreateInfo(uint64_t modifier) {
+  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
+  switch (modifier) {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+      constexpr uint32_t kNumBindings = 2;
+      static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
+      static vk::DescriptorSetLayoutCreateInfo info;
+      if (!ptr) {
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = vk::DescriptorType::eStorageImage;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
+        bindings[1].binding = 1;
+        bindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+        bindings[1].descriptorCount = 1;
+        bindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+        info.bindingCount = kNumBindings;
+        info.pBindings = bindings;
+        ptr = &info;
+      }
+    } break;
+    case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR: {
+      constexpr uint32_t kNumBindings = 1;
+      static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
+      static vk::DescriptorSetLayoutCreateInfo info;
+      if (!ptr) {
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = vk::DescriptorType::eStorageImage;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+        info.bindingCount = kNumBindings;
+        info.pBindings = bindings;
+        ptr = &info;
+      }
+    } break;
+    default:
+      FX_NOTREACHED() << "Modifier not supported.";
+      break;
+  }
+  return *ptr;
+}
+
+constexpr char kChecksumShaderSrc[] = R"GLSL(
+#version 450
+
+layout(std430, binding = 0) buffer Scratch {
+    readonly uvec4 data[];
+} scratch;
+
+layout(std430, binding = 1) coherent buffer Aux {
+    uvec4 padding;
+    // Same layout as block header. 16 bytes for each tile:
+    //
+    // 0-3:   Checksum.
+    // 4-7:   Body size.
+    // 8-11:  Previous duplicate tile.
+    // 12-15: Next duplicate tile.
+    //
+    // Tile numbers start at 1.
+    writeonly uvec4 data[];
+} aux;
+
+void main()
+{
+    // AFBC constants.
+    const uint kAfbcTilePixelWidth = 16;
+    const uint kAfbcTilePixelHeight = 16;
+    const uint kAfbcTilePixels = kAfbcTilePixelWidth * kAfbcTilePixelHeight;
+
+    uint tile_idx = gl_GlobalInvocationID.x;
+
+    // Per-tile headers are packed contiguously, separate from the tile data.
+    uvec4 scratch_header = scratch.data[tile_idx];
+
+    uint checksum = 0;
+    uint body_size = 0;
+
+    // Calculate checksum and determine size of body for non-solid tiles.
+    if (scratch_header.x != 0)
+    {
+        // Get scratch tile offset from header.
+        uint scratch_tile_start = scratch_header.x / 16;
+        uint scratch_tile_end = scratch_tile_start + kAfbcTilePixels / 4;
+        uint scratch_tile_offset = scratch_tile_start;
+
+        while (scratch_tile_offset < scratch_tile_end)
+        {
+            uvec4 data = scratch.data[scratch_tile_offset];
+
+            checksum = (checksum * 31) ^ data.x;
+            checksum = (checksum * 31) ^ data.y;
+            checksum = (checksum * 31) ^ data.z;
+            checksum = (checksum * 31) ^ data.w;
+
+            ++scratch_tile_offset;
+
+            // 16 bytes of zeros will likely finish past the end for
+            // any reasonable RLE. Uncompressed tiles are avoided by not
+            // allowing PNGs with an alpha channel.
+            if (data == uvec4(0))
+            {
+                break;
+            }
+        }
+
+        body_size = scratch_tile_offset - scratch_tile_start;
+    }
+
+    aux.data[tile_idx] = uvec4(checksum, body_size, 0, 0);
+}
+)GLSL";
+
+constexpr char kDedupShaderSrc[] = R"GLSL(
+#version 450
+
+layout(std430, binding = 0) buffer Scratch {
+    readonly uvec4 data[];
+} scratch;
+
+layout(std430, binding = 1) coherent buffer Aux {
+    uvec4 padding;
+    // Same layout as block header. 16 bytes for each tile:
+    //
+    // 0-3:   Checksum.
+    // 4-7:   Body size.
+    // 8-11:  Previous duplicate tile.
+    // 12-15: Next duplicate tile.
+    //
+    // Tile numbers start at 1.
+    uvec4 data[];
+} aux;
+
+void main()
+{
+    // Distance to search for duplicate tiles. Increasing this improves
+    // deduplication but has a performance cost.
+    const uint kDedupDistance = 64;
+
+    uint tile_idx = gl_GlobalInvocationID.x;
+
+    // Per-tile auxilary data is packed contiguously.
+    uvec4 aux_header = aux.data[tile_idx];
+
+    // Get body size determined by checksum shader.
+    uint body_size = aux_header.y;
+
+    // Try to deduplicate non-solid tiles.
+    if (body_size != 0)
+    {
+        // Get scratch tile index from header.
+        uint scratch_tile_offset = scratch.data[tile_idx].x / 16;
+
+        // Get checksum computed by the checksum shader.
+        uint checksum = aux_header.x;
+
+        // Search through tiles with lower indices for match. Stop when we
+        // reach the maximum deduplicate distance.
+        uint other_tile_idx = tile_idx;
+        uint end_tile_idx = tile_idx > kDedupDistance ? tile_idx - kDedupDistance : 0;
+
+        while (other_tile_idx > end_tile_idx)
+        {
+            --other_tile_idx;
+
+            uvec4 other_aux_header = aux.data[other_tile_idx];
+            uint other_checksum = other_aux_header.x;
+            uint other_body_size = other_aux_header.y;
+
+            if (other_checksum == checksum && other_body_size == body_size)
+            {
+                // Get scratch tile offset from header.
+                uint other_scratch_tile_offset = scratch.data[other_tile_idx].x / 16;
+
+                // Compare tile bodies to determine if this is a match.
+                uint k = 0;
+                while (k < body_size)
+                {
+                    if (scratch.data[other_scratch_tile_offset + k] !=
+                        scratch.data[scratch_tile_offset + k])
+                    {
+                        break;
+                    }
+                    k++;
+                }
+
+                // Set duplicate fields if bodies matched.
+                if (k == body_size)
+                {
+                    aux.data[other_tile_idx].w = tile_idx + 1;
+                    aux.data[tile_idx].z = other_tile_idx + 1;
+                    break;
+                }
+            }
+        }
+    }
+}
+)GLSL";
+
+const vk::DescriptorSetLayoutCreateInfo& GetChecksumDedupDescriptorSetLayoutCreateInfo() {
+  constexpr uint32_t kNumBindings = 2;
+  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
+  static vk::DescriptorSetLayoutCreateInfo info;
+  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
+  if (!ptr) {
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = vk::DescriptorType::eStorageBuffer;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
+    bindings[1].binding = 1;
+    bindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+    info.bindingCount = kNumBindings;
+    info.pBindings = bindings;
+    ptr = &info;
+  }
+  return *ptr;
+}
+
+constexpr char kPackShaderSrc[] = R"GLSL(
+#version 450
+
+layout(std430, binding = 0) buffer Image {
+    writeonly uvec4 data[];
+} image;
+
+layout(std430, binding = 1) buffer Scratch {
+    readonly uvec4 data[];
+} scratch;
+
+layout(std430, binding = 2) coherent buffer Aux {
+    uint next_tile_offset;
+    uint padding0;
+    uint padding1;
+    uint padding2;
+    // Same layout as block header. 16 bytes for each tile:
+    //
+    // 0-3:   Checksum.
+    // 4-7:   Body size.
+    // 8-11:  Previous duplicate tile.
+    // 12-15: Next duplicate tile.
+    //
+    // Tile numbers start at 1.
+    uvec4 data[];
+} aux;
+
+layout (push_constant) uniform PushConstantBlock {
+    uint base_offset;
+} params;
+
+void main()
+{
+    uint tile_idx = gl_GlobalInvocationID.x;
+
+    // Per-tile headers are packed contiguously, separate from the tile data.
+    uvec4 scratch_header = scratch.data[tile_idx];
+
+    // Per-tile auxilary data is packed contiguously.
+    uvec4 aux_header = aux.data[tile_idx];
+
+    // Get body size and previous duplicate tile.
+    uint body_size = aux_header.y;
+    uint prev_dup = aux_header.z;
+
+    // Process tile body if not a duplicate.
+    if (prev_dup == 0)
+    {
+        uint tile_byte_offset = 0;
+        if (body_size > 0)
+        {
+            // Get scratch tile offset from header.
+            uint scratch_tile_offset = scratch_header.x / 16;
+
+            // Acquire next tile offset and copy body.
+            uint tile_offset = params.base_offset + atomicAdd(aux.next_tile_offset, body_size);
+            for (uint k = 0; k < body_size; k++)
+            {
+                image.data[tile_offset + k] = scratch.data[scratch_tile_offset + k];
+            }
+
+            tile_byte_offset = tile_offset * 16;
+
+            // Get duplicate tile.
+            uint next_dup = aux_header.w;
+
+            // Update header for duplicate tiles.
+            while (next_dup > 0)
+            {
+                uint dup_tile_idx = next_dup - 1;
+
+                // Store offset of duplicated tile memory.
+                image.data[dup_tile_idx].x = tile_byte_offset;
+
+                // Get next duplicate tile.
+                next_dup = aux.data[dup_tile_idx].w;
+            }
+        }
+
+        //  Write byte offset and rest of header.
+        image.data[tile_idx] = uvec4(tile_byte_offset,
+                                     scratch_header.y,
+                                     scratch_header.z,
+                                     scratch_header.w);
+    }
+    else
+    {
+       // Copy bytes 4-15 of header. Bytes 0-3 will be set by invocation
+       // that process body of tile that this has been deduplicated against.
+       image.data[tile_idx].y = scratch_header.y;
+       image.data[tile_idx].z = scratch_header.z;
+       image.data[tile_idx].w = scratch_header.w;
+    }
+}
+)GLSL";
+
+struct PackPushConstantBlock {
+  uint32_t base_offset;
+};
+
+const vk::DescriptorSetLayoutCreateInfo& GetPackDescriptorSetLayoutCreateInfo() {
+  constexpr uint32_t kNumBindings = 3;
+  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
+  static vk::DescriptorSetLayoutCreateInfo info;
+  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
+  if (!ptr) {
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = vk::DescriptorType::eStorageBuffer;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
+    bindings[1].binding = 1;
+    bindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
+    bindings[2].binding = 2;
+    bindings[2].descriptorType = vk::DescriptorType::eStorageBuffer;
+    bindings[2].descriptorCount = 1;
+    bindings[2].stageFlags = vk::ShaderStageFlagBits::eCompute;
+
+    info.bindingCount = kNumBindings;
+    info.pBindings = bindings;
+    ptr = &info;
+  }
+  return *ptr;
+}
+
 std::vector<uint32_t> CompileToSpirv(shaderc::Compiler* compiler, std::string code,
                                      shaderc_shader_kind kind, std::string name) {
   shaderc::CompileOptions options;
@@ -217,8 +576,17 @@ zx::event DuplicateEvent(const zx::event& evt) {
   return dup;
 }
 
-escher::GpuMemPtr ImportMemory(vk::Device vk_device, const zx::vmo& vmo,
-                               const vk::MemoryRequirements& memory_requirements) {
+escher::GpuMemPtr ImportMemory(vk::Device vk_device,
+                               const vk::MemoryAllocateInfo& allocation_info) {
+  auto result = vk_device.allocateMemory(allocation_info);
+  FX_CHECK(result.result == vk::Result::eSuccess);
+
+  return escher::GpuMem::AdoptVkMemory(vk_device, result.value, allocation_info.allocationSize,
+                                       false);
+}
+
+escher::GpuMemPtr ImportMemoryFromVmo(vk::Device vk_device, const zx::vmo& vmo,
+                                      const vk::MemoryRequirements& memory_requirements) {
   zx::vmo duplicated_vmo;
   auto status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_vmo);
   FX_CHECK(status == ZX_OK);
@@ -231,43 +599,143 @@ escher::GpuMemPtr ImportMemory(vk::Device vk_device, const zx::vmo& vmo,
   allocation_info.allocationSize = memory_requirements.size;
   allocation_info.memoryTypeIndex = escher::CountTrailingZeros(memory_requirements.memoryTypeBits);
 
-  auto result = vk_device.allocateMemory(allocation_info);
-  FX_CHECK(result.result == vk::Result::eSuccess);
-
-  return escher::GpuMem::AdoptVkMemory(vk_device, result.value, memory_requirements.size, false);
+  return ImportMemory(vk_device, allocation_info);
 }
 
-const vk::DescriptorSetLayoutCreateInfo& GetDescriptorSetLayoutCreateInfo() {
-  constexpr uint32_t kNumBindings = 2;
-  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
-  static vk::DescriptorSetLayoutCreateInfo info;
-  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
-  if (!ptr) {
-    bindings[0].binding = 0;
-    bindings[0].descriptorType = vk::DescriptorType::eStorageImage;
-    bindings[0].descriptorCount = 1;
-    bindings[0].stageFlags = vk::ShaderStageFlagBits::eCompute;
-    bindings[1].binding = 1;
-    bindings[1].descriptorType = vk::DescriptorType::eStorageBuffer;
-    bindings[1].descriptorCount = 1;
-    bindings[1].stageFlags = vk::ShaderStageFlagBits::eCompute;
+escher::GpuMemPtr ImportMemoryFromCollection(vk::Device vk_device,
+                                             vk::DispatchLoaderDynamic& vk_loader,
+                                             vk::BufferCollectionFUCHSIA collection, int index,
+                                             const vk::MemoryRequirements& memory_requirements) {
+  vk::BufferCollectionPropertiesFUCHSIA properties;
+  auto result = vk_device.getBufferCollectionPropertiesFUCHSIA(collection, &properties, vk_loader);
+  FX_CHECK(result == vk::Result::eSuccess);
 
-    info.bindingCount = kNumBindings;
-    info.pBindings = bindings;
-    ptr = &info;
+  auto memory_import_info = vk::ImportMemoryBufferCollectionFUCHSIA(collection, index);
+
+  vk::MemoryAllocateInfo allocation_info;
+  allocation_info.setPNext(&memory_import_info);
+  allocation_info.allocationSize = memory_requirements.size;
+  allocation_info.memoryTypeIndex =
+      escher::CountTrailingZeros(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
+
+  return ImportMemory(vk_device, allocation_info);
+}
+
+escher::BufferPtr CreateBufferFromMemory(escher::Escher* escher, vk::DeviceSize size,
+                                         zx::vmo& image_vmo) {
+  vk::ExternalMemoryBufferCreateInfo external_buffer_create_info;
+  external_buffer_create_info.handleTypes =
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+
+  vk::BufferCreateInfo buffer_create_info;
+  buffer_create_info.pNext = &external_buffer_create_info;
+  buffer_create_info.size = size;
+  buffer_create_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
+
+  auto vk_device = escher->vulkan_context().device;
+
+  vk::Buffer vk_buffer;
+  {
+    auto result = vk_device.createBuffer(buffer_create_info);
+    FX_CHECK(result.result == vk::Result::eSuccess);
+    vk_buffer = result.value;
   }
-  return *ptr;
+
+  vk::MemoryRequirements buffer_memory_requirements;
+  vk_device.getBufferMemoryRequirements(vk_buffer, &buffer_memory_requirements);
+
+  auto buffer_gpu_mem = ImportMemoryFromVmo(vk_device, image_vmo, buffer_memory_requirements);
+  return escher::impl::NaiveBuffer::AdoptVkBuffer(
+      escher->resource_recycler(), std::move(buffer_gpu_mem), buffer_create_info.size, vk_buffer);
+}
+
+vk::PipelineLayout CreatePipelineLayout(escher::Escher* escher, vk::DescriptorSetLayout layout,
+                                        size_t push_constant_block_size) {
+  auto vk_device = escher->vulkan_context().device;
+
+  vk::PushConstantRange push_constant_range;
+  push_constant_range.offset = 0;
+  push_constant_range.size = push_constant_block_size;
+  vk::PipelineLayoutCreateInfo pipeline_layout_info;
+  pipeline_layout_info.setLayoutCount = 1;
+  pipeline_layout_info.pSetLayouts = &layout;
+  pipeline_layout_info.pushConstantRangeCount = push_constant_block_size ? 1 : 0;
+  pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+  auto result = vk_device.createPipelineLayout(pipeline_layout_info);
+  FX_CHECK(result.result == vk::Result::eSuccess);
+  return result.value;
+}
+
+vk::Pipeline CreatePipeline(escher::Escher* escher, const char* shader_src,
+                            vk::PipelineLayout pipeline_layout) {
+  auto compiler = escher->shaderc_compiler();
+  FX_CHECK(compiler);
+
+  auto vk_device = escher->vulkan_context().device;
+
+  vk::ShaderModule module;
+  {
+    auto spirv = CompileToSpirv(compiler, shader_src, shaderc_glsl_compute_shader, "ComputeShader");
+    vk::ShaderModuleCreateInfo module_info;
+    module_info.codeSize = spirv.size() * sizeof(uint32_t);
+    module_info.pCode = spirv.data();
+    auto result = vk_device.createShaderModule(module_info);
+    FX_CHECK(result.result == vk::Result::eSuccess);
+    module = result.value;
+  }
+
+  vk::Pipeline pipeline;
+  {
+    vk::PipelineShaderStageCreateInfo stage_info;
+    stage_info.stage = vk::ShaderStageFlagBits::eCompute;
+    stage_info.module = module;
+    stage_info.pName = "main";
+    vk::ComputePipelineCreateInfo pipeline_info;
+    pipeline_info.stage = stage_info;
+    pipeline_info.layout = pipeline_layout;
+    auto result = vk_device.createComputePipelines(vk::PipelineCache(), {pipeline_info});
+    FX_CHECK(result.result == vk::Result::eSuccess);
+    pipeline = result.value[0];
+  }
+
+  vk_device.destroyShaderModule(module);
+
+  return pipeline;
+}
+
+void InsertBufferPipelineBarrier(vk::CommandBuffer vk_command_buffer, vk::AccessFlags srcAccessMask,
+                                 vk::AccessFlags dstAccessMask, vk::Buffer buffer,
+                                 vk::DeviceSize offset, vk::DeviceSize size,
+                                 vk::PipelineStageFlags srcStageMask,
+                                 vk::PipelineStageFlags dstStageMask) {
+  vk::BufferMemoryBarrier barrier;
+  barrier.srcAccessMask = srcAccessMask;
+  barrier.dstAccessMask = dstAccessMask;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer = buffer;
+  barrier.offset = offset;
+  barrier.size = size;
+  vk_command_buffer.pipelineBarrier(srcStageMask, dstStageMask, vk::DependencyFlagBits::eByRegion,
+                                    0, nullptr, 1, &barrier, 0, nullptr);
 }
 
 }  // namespace
 
 ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak_escher,
-                         uint64_t modifier, uint32_t width, uint32_t height, bool paint_once)
-    : BaseView(std::move(context), "Compute View Example", width, height),
+                         uint64_t modifier, uint32_t width, uint32_t height, uint32_t paint_count,
+                         FILE* png_fp, inspect::Node inspect_node)
+    : BaseView(std::move(context), "Compute View Example", width, height, std::move(inspect_node)),
       escher_(std::move(weak_escher)),
       modifier_(modifier),
-      paint_once_(paint_once),
-      descriptor_set_pool_(escher_->GetWeakPtr(), GetDescriptorSetLayoutCreateInfo()) {
+      paint_count_(paint_count),
+      png_fp_(png_fp),
+      descriptor_set_pool_(escher_->GetWeakPtr(), GetDescriptorSetLayoutCreateInfo(modifier)),
+      checksum_dedup_descriptor_set_pool_(escher_->GetWeakPtr(),
+                                          GetChecksumDedupDescriptorSetLayoutCreateInfo()),
+      pack_descriptor_set_pool_(escher_->GetWeakPtr(), GetPackDescriptorSetLayoutCreateInfo()),
+      inspect_node_(top_inspect_node_.CreateLazyValues(kView, [this] { return PopulateStats(); })) {
   zx_status_t status = component_context()->svc()->Connect(sysmem_allocator_.NewRequest());
   FX_CHECK(status == ZX_OK);
 
@@ -296,14 +764,9 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
   constraints.min_buffer_count = kNumImages;
   constraints.usage.vulkan = fuchsia::sysmem::VULKAN_IMAGE_USAGE_STORAGE;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = 0;
-  constraints.buffer_memory_constraints.max_size_bytes = 0xffffffff;
-  constraints.buffer_memory_constraints.physically_contiguous_required = false;
-  constraints.buffer_memory_constraints.secure_required = false;
   constraints.buffer_memory_constraints.ram_domain_supported = true;
   constraints.buffer_memory_constraints.cpu_domain_supported = true;
   constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
-  constraints.buffer_memory_constraints.heap_permitted_count = 0;
   constraints.image_format_constraints_count = 1;
   fuchsia::sysmem::ImageFormatConstraints& image_constraints =
       constraints.image_format_constraints[0];
@@ -313,8 +776,6 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
   image_constraints.max_coded_width = width_;
   image_constraints.max_coded_height = height_;
   image_constraints.min_bytes_per_row = 0;
-  image_constraints.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
-  image_constraints.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
   image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
@@ -339,6 +800,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
            image_constraints.pixel_format.type);
 
   auto vk_device = escher_->vulkan_context().device;
+  auto vk_loader = escher_->device()->dispatch_loader();
 
   //
   // Initialize images from allocated buffer collection.
@@ -363,7 +825,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     fuchsia::sysmem::ImageFormat_2 image_format = {};
     image_format.coded_width = width_;
     image_format.coded_height = height_;
-    session()->Enqueue(scenic::NewCreateImage2Cmd(image.image_id, width_, height_, kBufferId, 0));
+    session()->Enqueue(scenic::NewCreateImage2Cmd(image.image_id, width_, height_, kBufferId, i));
 
     FX_CHECK(buffer_collection_info.buffers[i].vmo != ZX_HANDLE_INVALID);
     zx::vmo& image_vmo = buffer_collection_info.buffers[i].vmo;
@@ -407,6 +869,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
         FX_CHECK((body_offset % tile_num_bytes) == 0);
         image_create_info.extent =
             vk::Extent3D{tile_num_pixels, body_offset / tile_num_bytes + tile_count, 1};
+        image.body_offset = body_offset;
         image.base_y = body_offset / tile_num_bytes;
         image.width_in_tiles = width_in_tiles;
         image.height_in_tiles = height_in_tiles;
@@ -438,7 +901,7 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     vk::MemoryRequirements image_memory_requirements;
     vk_device.getImageMemoryRequirements(vk_image, &image_memory_requirements);
 
-    auto image_gpu_mem = ImportMemory(vk_device, image_vmo, image_memory_requirements);
+    auto image_gpu_mem = ImportMemoryFromVmo(vk_device, image_vmo, image_memory_requirements);
 
     escher::ImageInfo image_info;
     image_info.format = image_create_info.format;
@@ -458,88 +921,180 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     // Import the same memory for buffer usage.
     //
 
-    vk::ExternalMemoryBufferCreateInfo external_buffer_create_info;
-    external_buffer_create_info.handleTypes =
-        vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+    image.buffer = CreateBufferFromMemory(
+        escher_.get(), buffer_collection_info.settings.buffer_settings.size_bytes, image_vmo);
 
-    vk::BufferCreateInfo buffer_create_info;
-    buffer_create_info.pNext = &external_buffer_create_info;
-    buffer_create_info.size = buffer_collection_info.settings.buffer_settings.size_bytes;
-    buffer_create_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
-    buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-
-    vk::Buffer vk_buffer;
-    {
-      auto result = vk_device.createBuffer(buffer_create_info);
-      FX_CHECK(result.result == vk::Result::eSuccess);
-      vk_buffer = result.value;
-    }
-
-    vk::MemoryRequirements buffer_memory_requirements;
-    vk_device.getBufferMemoryRequirements(vk_buffer, &buffer_memory_requirements);
-
-    auto buffer_gpu_mem = ImportMemory(vk_device, image_vmo, buffer_memory_requirements);
-    image.buffer = escher::impl::NaiveBuffer::AdoptVkBuffer(escher_->resource_recycler(),
-                                                            std::move(buffer_gpu_mem),
-                                                            buffer_create_info.size, vk_buffer);
+    image.inspect_node = top_inspect_node_.CreateLazyNode(kImage + std::to_string(i), [this, i] {
+      auto& image = images_[i];
+      return PopulateImageStats(image);
+    });
   }
 
   buffer_collection->Close();
 
+  // Initialize scratch images for conversion of PNG to packed AFBC.
+  if (png_fp_ && modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+    status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
+    FX_CHECK(status == ZX_OK);
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
+    status =
+        local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
+    FX_CHECK(status == ZX_OK);
+    status = local_token->Sync();
+    FX_CHECK(status == ZX_OK);
+
+    //
+    // Set buffer collection constraints for vulkan AFBC image usage.
+    //
+
+    vk::BufferCollectionCreateInfoFUCHSIA import_info;
+    import_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
+    vk::BufferCollectionFUCHSIA collection;
+    auto result =
+        vk_device.createBufferCollectionFUCHSIA(&import_info, nullptr, &collection, vk_loader);
+    FX_CHECK(result == vk::Result::eSuccess);
+
+    vk::ImageCreateInfo image_create_info;
+    image_create_info.imageType = vk::ImageType::e2D;
+    image_create_info.format = vk::Format::eR8G8B8A8Srgb;
+    image_create_info.extent = vk::Extent3D{width_, height_, 1};
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.samples = vk::SampleCountFlagBits::e1;
+    image_create_info.tiling = vk::ImageTiling::eOptimal;
+    image_create_info.usage =
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+    image_create_info.sharingMode = vk::SharingMode::eExclusive;
+    image_create_info.initialLayout = vk::ImageLayout::eUndefined;
+    image_create_info.flags = vk::ImageCreateFlags();
+    result =
+        vk_device.setBufferCollectionConstraintsFUCHSIA(collection, &image_create_info, vk_loader);
+    FX_CHECK(result == vk::Result::eSuccess);
+
+    //
+    // Set buffer collection constraints for compute usage.
+    //
+
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+    status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
+                                                     buffer_collection.NewRequest());
+    FX_CHECK(status == ZX_OK);
+
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    constraints.min_buffer_count = kNumScratchImages;
+    constraints.usage.vulkan = fuchsia::sysmem::VULKAN_IMAGE_USAGE_STORAGE;
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
+    constraints.buffer_memory_constraints.cpu_domain_supported = true;
+    constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+    constraints.image_format_constraints_count = 1;
+    fuchsia::sysmem::ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[0];
+    image_constraints = fuchsia::sysmem::ImageFormatConstraints();
+    image_constraints.min_coded_width = width_;
+    image_constraints.min_coded_height = height_;
+    image_constraints.max_coded_width = width_;
+    image_constraints.max_coded_height = height_;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value = modifier_;
+
+    status = buffer_collection->SetConstraints(true, constraints);
+    FX_CHECK(status == ZX_OK);
+
+    fuchsia::sysmem::BufferCollectionInfo_2 scratch_buffer_collection_info = {};
+    status = buffer_collection->WaitForBuffersAllocated(&allocation_status,
+                                                        &scratch_buffer_collection_info);
+    FX_CHECK(status == ZX_OK);
+    FX_CHECK(allocation_status == ZX_OK);
+    FX_CHECK(scratch_buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
+             image_constraints.pixel_format.type);
+
+    for (size_t i = 0; i < kNumScratchImages; ++i) {
+      auto& image = scratch_images_[i];
+
+      FX_CHECK(scratch_buffer_collection_info.buffers[i].vmo != ZX_HANDLE_INVALID);
+      zx::vmo& image_vmo = scratch_buffer_collection_info.buffers[i].vmo;
+
+      //
+      // Import memory for image usage.
+      //
+
+      vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_create_info;
+      collection_image_create_info.collection = collection;
+      collection_image_create_info.index = i;
+      image_create_info.setPNext(&collection_image_create_info);
+
+      vk::Image vk_image;
+      {
+        auto result = vk_device.createImage(image_create_info);
+        FX_CHECK(result.result == vk::Result::eSuccess);
+        vk_image = result.value;
+      }
+
+      vk::MemoryRequirements image_memory_requirements;
+      vk_device.getImageMemoryRequirements(vk_image, &image_memory_requirements);
+
+      auto image_gpu_mem = ImportMemoryFromCollection(vk_device, vk_loader, collection, i,
+                                                      image_memory_requirements);
+
+      escher::ImageInfo image_info;
+      image_info.format = image_create_info.format;
+      image_info.width = image_create_info.extent.width;
+      image_info.height = image_create_info.extent.height;
+      image_info.usage = image_create_info.usage;
+      image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+      image_info.is_external = true;
+
+      auto escher_image = escher::impl::NaiveImage::AdoptVkImage(
+          escher_->resource_recycler(), image_info, vk_image, std::move(image_gpu_mem),
+          image_create_info.initialLayout);
+
+      image.texture = escher_->NewTexture(std::move(escher_image), vk::Filter::eNearest);
+
+      //
+      // Import the same memory for buffer usage.
+      //
+
+      image.buffer = CreateBufferFromMemory(
+          escher_.get(), scratch_buffer_collection_info.settings.buffer_settings.size_bytes,
+          image_vmo);
+    }
+
+    buffer_collection->Close();
+  }
+
   //
-  // Compile compute shader and create pipeline.
+  // Compile compute shaders and create pipelines.
   //
 
-  auto compiler = escher_->shaderc_compiler();
-  FX_CHECK(compiler);
+  pipeline_layout_ = CreatePipelineLayout(escher_.get(), descriptor_set_pool_.layout(),
+                                          GetPushConstantBlockSize(modifier_));
+  checksum_dedup_pipeline_layout_ =
+      CreatePipelineLayout(escher_.get(), checksum_dedup_descriptor_set_pool_.layout(), 0);
+  pack_pipeline_layout_ = CreatePipelineLayout(escher_.get(), pack_descriptor_set_pool_.layout(),
+                                               sizeof(PackPushConstantBlock));
 
-  vk::ShaderModule module;
-  {
-    auto shader_src = GetShaderSrc(modifier_);
-    auto spirv = CompileToSpirv(compiler, shader_src, shaderc_glsl_compute_shader, "ComputeShader");
-    vk::ShaderModuleCreateInfo module_info;
-    module_info.codeSize = spirv.size() * sizeof(uint32_t);
-    module_info.pCode = spirv.data();
-    auto result = vk_device.createShaderModule(module_info);
-    FX_CHECK(result.result == vk::Result::eSuccess);
-    module = result.value;
-  }
-
-  {
-    vk::PushConstantRange push_constant_range;
-    push_constant_range.offset = 0;
-    push_constant_range.size = GetPushConstantBlockSize(modifier_);
-    auto layout = descriptor_set_pool_.layout();
-    vk::PipelineLayoutCreateInfo pipeline_layout_info;
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &layout;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-    auto result = vk_device.createPipelineLayout(pipeline_layout_info);
-    FX_CHECK(result.result == vk::Result::eSuccess);
-    pipeline_layout_ = result.value;
-  }
-
-  {
-    vk::PipelineShaderStageCreateInfo stage_info;
-    stage_info.stage = vk::ShaderStageFlagBits::eCompute;
-    stage_info.module = module;
-    stage_info.pName = "main";
-    vk::ComputePipelineCreateInfo pipeline_info;
-    pipeline_info.stage = stage_info;
-    pipeline_info.layout = pipeline_layout_;
-    auto result = vk_device.createComputePipelines(vk::PipelineCache(), {pipeline_info});
-    FX_CHECK(result.result == vk::Result::eSuccess);
-    pipeline_ = result.value[0];
-  }
-
-  vk_device.destroyShaderModule(module);
+  pipeline_ = CreatePipeline(escher_.get(), GetShaderSrc(modifier_), pipeline_layout_);
+  checksum_pipeline_ =
+      CreatePipeline(escher_.get(), kChecksumShaderSrc, checksum_dedup_pipeline_layout_);
+  dedup_pipeline_ = CreatePipeline(escher_.get(), kDedupShaderSrc, checksum_dedup_pipeline_layout_);
+  pack_pipeline_ = CreatePipeline(escher_.get(), kPackShaderSrc, pack_pipeline_layout_);
 }
 
 ComputeView::~ComputeView() {
   auto vk_device = escher_->vulkan_context().device;
   vk_device.destroyPipeline(pipeline_);
+  vk_device.destroyPipeline(checksum_pipeline_);
+  vk_device.destroyPipeline(dedup_pipeline_);
+  vk_device.destroyPipeline(pack_pipeline_);
   vk_device.destroyPipelineLayout(pipeline_layout_);
+  vk_device.destroyPipelineLayout(checksum_dedup_pipeline_layout_);
+  vk_device.destroyPipelineLayout(pack_pipeline_layout_);
 }
 
 void ComputeView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
@@ -548,14 +1103,21 @@ void ComputeView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentat
   }
 
   uint32_t frame_number = GetNextFrameNumber();
-  if (!paint_once_ || frame_number == 1) {
+  if (frame_number < paint_count_) {
     auto& image = images_[GetNextImageIndex()];
     zx::event acquire_fence(DuplicateEvent(image.acquire_fence));
     zx::event release_fence(DuplicateEvent(image.release_fence));
     FX_CHECK(acquire_fence && release_fence);
     session()->EnqueueAcquireFence(std::move(acquire_fence));
     session()->EnqueueReleaseFence(std::move(release_fence));
-    RenderFrame(image, GetNextColorOffset(), frame_number);
+    if (png_fp_) {
+      png_infop info_ptr;
+      auto png = CreatePngReadStruct(png_fp_, &info_ptr);
+      RenderFrameFromPng(image, png, frame_number);
+      DestroyPngReadStruct(png, info_ptr);
+    } else {
+      RenderFrameFromColorOffset(image, GetNextColorOffset(), frame_number);
+    }
     material_.SetTexture(image.image_id);
   }
 
@@ -566,7 +1128,8 @@ void ComputeView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentat
   InvalidateScene();
 }
 
-void ComputeView::RenderFrame(const Image& image, uint32_t color_offset, uint32_t frame_number) {
+void ComputeView::RenderFrameFromColorOffset(const Image& image, uint32_t color_offset,
+                                             uint32_t frame_number) {
   auto frame =
       escher_->NewFrame("Compute Renderer", frame_number,
                         /* enable_gpu_logging */ false, escher::CommandBuffer::Type::kCompute,
@@ -576,8 +1139,8 @@ void ComputeView::RenderFrame(const Image& image, uint32_t color_offset, uint32_
   auto vk_device = escher_->vulkan_context().device;
 
   command_buffer->AddWaitSemaphore(image.release_semaphore, vk::PipelineStageFlagBits::eTopOfPipe);
-  if (frame_number == 1) {
-    command_buffer->TransitionImageLayout(image.texture->image(), vk::ImageLayout::eUndefined,
+  if (image.texture->image()->layout() != vk::ImageLayout::eGeneral) {
+    command_buffer->TransitionImageLayout(image.texture->image(), image.texture->image()->layout(),
                                           vk::ImageLayout::eGeneral);
   }
 
@@ -587,24 +1150,43 @@ void ComputeView::RenderFrame(const Image& image, uint32_t color_offset, uint32_
   image_info.sampler = image.texture->sampler()->vk();
   image_info.imageView = image.texture->vk_image_view();
   image_info.imageLayout = vk::ImageLayout::eGeneral;
-  vk::DescriptorBufferInfo buffer_info;
-  buffer_info.buffer = image.buffer->vk();
-  buffer_info.offset = 0;
-  buffer_info.range = image.buffer->size();
-  vk::WriteDescriptorSet write_descriptor_sets[2];
-  write_descriptor_sets[0].dstSet = descriptor_set;
-  write_descriptor_sets[0].dstBinding = 0;
-  write_descriptor_sets[0].dstArrayElement = 0;
-  write_descriptor_sets[0].descriptorCount = 1;
-  write_descriptor_sets[0].descriptorType = vk::DescriptorType::eStorageImage;
-  write_descriptor_sets[0].pImageInfo = &image_info;
-  write_descriptor_sets[1].dstSet = descriptor_set;
-  write_descriptor_sets[1].dstBinding = 1;
-  write_descriptor_sets[1].dstArrayElement = 0;
-  write_descriptor_sets[1].descriptorCount = 1;
-  write_descriptor_sets[1].descriptorType = vk::DescriptorType::eStorageBuffer;
-  write_descriptor_sets[1].pBufferInfo = &buffer_info;
-  vk_device.updateDescriptorSets(countof(write_descriptor_sets), write_descriptor_sets, 0, nullptr);
+
+  switch (modifier_) {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+      vk::DescriptorBufferInfo buffer_info;
+      buffer_info.buffer = image.buffer->vk();
+      buffer_info.offset = 0;
+      buffer_info.range = image.buffer->size();
+      vk::WriteDescriptorSet write_descriptor_sets[2];
+      write_descriptor_sets[0].dstSet = descriptor_set;
+      write_descriptor_sets[0].dstBinding = 0;
+      write_descriptor_sets[0].dstArrayElement = 0;
+      write_descriptor_sets[0].descriptorCount = 1;
+      write_descriptor_sets[0].descriptorType = vk::DescriptorType::eStorageImage;
+      write_descriptor_sets[0].pImageInfo = &image_info;
+      write_descriptor_sets[1].dstSet = descriptor_set;
+      write_descriptor_sets[1].dstBinding = 1;
+      write_descriptor_sets[1].dstArrayElement = 0;
+      write_descriptor_sets[1].descriptorCount = 1;
+      write_descriptor_sets[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+      write_descriptor_sets[1].pBufferInfo = &buffer_info;
+      vk_device.updateDescriptorSets(countof(write_descriptor_sets), write_descriptor_sets, 0,
+                                     nullptr);
+    } break;
+    case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR: {
+      vk::WriteDescriptorSet write_descriptor_sets[1];
+      write_descriptor_sets[0].dstSet = descriptor_set;
+      write_descriptor_sets[0].dstBinding = 0;
+      write_descriptor_sets[0].dstArrayElement = 0;
+      write_descriptor_sets[0].descriptorCount = 1;
+      write_descriptor_sets[0].descriptorType = vk::DescriptorType::eStorageImage;
+      write_descriptor_sets[0].pImageInfo = &image_info;
+      vk_device.updateDescriptorSets(countof(write_descriptor_sets), write_descriptor_sets, 0,
+                                     nullptr);
+    } break;
+    default:
+      FX_NOTREACHED() << "Modifier not supported.";
+  }
 
   vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline_);
   vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline_layout_, 0, 1,
@@ -632,6 +1214,296 @@ void ComputeView::RenderFrame(const Image& image, uint32_t color_offset, uint32_
   }
 
   frame->EndFrame(image.acquire_semaphore, nullptr);
+}
+
+void ComputeView::RenderFrameFromPng(Image& image, png_structp png, uint32_t frame_number) {
+  auto frame =
+      escher_->NewFrame("Compute Renderer", frame_number,
+                        /* enable_gpu_logging */ false, escher::CommandBuffer::Type::kCompute,
+                        /* use_protected_memory */ false);
+  auto command_buffer = frame->cmds()->impl();
+  auto vk_command_buffer = frame->vk_command_buffer();
+  auto vk_device = escher_->vulkan_context().device;
+  uint32_t stride = width_ * 4;
+
+  // Create host buffer for transfer if it doesn't exist.
+  if (!image.host_buffer) {
+    image.host_buffer = escher_->buffer_cache()->NewHostBuffer(height_ * stride);
+    FX_CHECK(image.host_buffer);
+  }
+
+  row_pointers_.clear();
+  for (uint32_t y = 0; y < height_; ++y) {
+    row_pointers_.push_back(reinterpret_cast<png_bytep>(image.host_buffer->host_ptr()) +
+                            y * stride);
+  }
+
+  {
+    TRACE_DURATION("gfx", "ComputeView::RenderFrameFromPng::ReadImage");
+    png_read_image(png, row_pointers_.data());
+  }
+
+  command_buffer->AddWaitSemaphore(image.release_semaphore, vk::PipelineStageFlagBits::eTopOfPipe);
+
+  switch (modifier_) {
+    case fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+      uint32_t tile_count = image.width_in_tiles * image.height_in_tiles;
+      auto& scratch_image = scratch_images_[GetNextScratchImageIndex()];
+
+      // Create auxiliary buffer if it doesn't exist, or insert pipeline barrier.
+      if (!image.aux_buffer) {
+        // 16 bytes for next tile offset and padding. 16 bytes for each tile.
+        uint32_t aux_buffer_size = 16 + (tile_count * 16);
+        image.aux_buffer = escher_->gpu_allocator()->AllocateBuffer(
+            escher_->resource_recycler(), aux_buffer_size,
+            vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+                vk::BufferUsageFlagBits::eStorageBuffer,
+            vk::MemoryPropertyFlags());
+      } else {
+        InsertBufferPipelineBarrier(
+            vk_command_buffer, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite,
+            vk::AccessFlagBits::eTransferWrite, image.aux_buffer->vk(), 0, 16,
+            vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer);
+      }
+
+      vk_command_buffer.fillBuffer(image.aux_buffer->vk(), 0, 16, 0);
+
+      InsertBufferPipelineBarrier(
+          vk_command_buffer, vk::AccessFlagBits::eTransferWrite,
+          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite,
+          image.aux_buffer->vk(), 0, 16, vk::PipelineStageFlagBits::eTransfer,
+          vk::PipelineStageFlagBits::eComputeShader);
+
+      if (scratch_image.texture->image()->layout() != vk::ImageLayout::eTransferDstOptimal) {
+        command_buffer->TransitionImageLayout(scratch_image.texture->image(),
+                                              scratch_image.texture->image()->layout(),
+                                              vk::ImageLayout::eTransferDstOptimal);
+      }
+
+      vk::BufferImageCopy region;
+      region.bufferOffset = 0;
+      region.bufferRowLength = 0;
+      region.bufferImageHeight = 0;
+      region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+      region.imageSubresource.mipLevel = 0;
+      region.imageSubresource.baseArrayLayer = 0;
+      region.imageSubresource.layerCount = 1;
+      region.imageOffset.x = 0;
+      region.imageOffset.y = 0;
+      region.imageOffset.z = 0;
+      region.imageExtent.width = width_;
+      region.imageExtent.height = height_;
+      region.imageExtent.depth = 1;
+      vk_command_buffer.copyBufferToImage(image.host_buffer->vk(),
+                                          scratch_image.texture->image()->vk(),
+                                          vk::ImageLayout::eTransferDstOptimal, 1, &region);
+
+      auto checksum_dedup_descriptor_set =
+          checksum_dedup_descriptor_set_pool_.Allocate(1, frame->cmds()->impl())->get(0);
+      auto pack_descriptor_set =
+          pack_descriptor_set_pool_.Allocate(1, frame->cmds()->impl())->get(0);
+
+      vk::DescriptorBufferInfo buffer_info;
+      buffer_info.buffer = image.buffer->vk();
+      buffer_info.offset = 0;
+      buffer_info.range = image.buffer->size();
+
+      vk::DescriptorBufferInfo scratch_buffer_info;
+      scratch_buffer_info.buffer = scratch_image.buffer->vk();
+      scratch_buffer_info.offset = 0;
+      scratch_buffer_info.range = scratch_image.buffer->size();
+
+      vk::DescriptorBufferInfo aux_buffer_info;
+      aux_buffer_info.buffer = image.aux_buffer->vk();
+      aux_buffer_info.offset = 0;
+      aux_buffer_info.range = image.aux_buffer->size();
+
+      vk::WriteDescriptorSet write_descriptor_sets[5];
+      // Update checksum/dedup descriptor set.
+      write_descriptor_sets[0].dstSet = checksum_dedup_descriptor_set;
+      write_descriptor_sets[0].dstBinding = 0;
+      write_descriptor_sets[0].dstArrayElement = 0;
+      write_descriptor_sets[0].descriptorCount = 1;
+      write_descriptor_sets[0].descriptorType = vk::DescriptorType::eStorageBuffer;
+      write_descriptor_sets[0].pBufferInfo = &scratch_buffer_info;
+      write_descriptor_sets[1].dstSet = checksum_dedup_descriptor_set;
+      write_descriptor_sets[1].dstBinding = 1;
+      write_descriptor_sets[1].dstArrayElement = 0;
+      write_descriptor_sets[1].descriptorCount = 1;
+      write_descriptor_sets[1].descriptorType = vk::DescriptorType::eStorageBuffer;
+      write_descriptor_sets[1].pBufferInfo = &aux_buffer_info;
+      // Update pack descriptor set.
+      write_descriptor_sets[2].dstSet = pack_descriptor_set;
+      write_descriptor_sets[2].dstBinding = 0;
+      write_descriptor_sets[2].dstArrayElement = 0;
+      write_descriptor_sets[2].descriptorCount = 1;
+      write_descriptor_sets[2].descriptorType = vk::DescriptorType::eStorageBuffer;
+      write_descriptor_sets[2].pBufferInfo = &buffer_info;
+      write_descriptor_sets[3].dstSet = pack_descriptor_set;
+      write_descriptor_sets[3].dstBinding = 1;
+      write_descriptor_sets[3].dstArrayElement = 0;
+      write_descriptor_sets[3].descriptorCount = 1;
+      write_descriptor_sets[3].descriptorType = vk::DescriptorType::eStorageBuffer;
+      write_descriptor_sets[3].pBufferInfo = &scratch_buffer_info;
+      write_descriptor_sets[4].dstSet = pack_descriptor_set;
+      write_descriptor_sets[4].dstBinding = 2;
+      write_descriptor_sets[4].dstArrayElement = 0;
+      write_descriptor_sets[4].descriptorCount = 1;
+      write_descriptor_sets[4].descriptorType = vk::DescriptorType::eStorageBuffer;
+      write_descriptor_sets[4].pBufferInfo = &aux_buffer_info;
+      vk_device.updateDescriptorSets(countof(write_descriptor_sets), write_descriptor_sets, 0,
+                                     nullptr);
+
+      command_buffer->TransitionImageLayout(scratch_image.texture->image(),
+                                            vk::ImageLayout::eTransferDstOptimal,
+                                            vk::ImageLayout::eGeneral);
+
+      vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,
+                                           checksum_dedup_pipeline_layout_, 0, 1,
+                                           &checksum_dedup_descriptor_set, 0, nullptr);
+
+      //
+      // Bind and dispatch checksum shader.
+      //
+
+      vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, checksum_pipeline_);
+      vk_command_buffer.dispatch(tile_count, 1, 1);
+
+      InsertBufferPipelineBarrier(
+          vk_command_buffer, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite,
+          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite,
+          image.aux_buffer->vk(), 0, VK_WHOLE_SIZE, vk::PipelineStageFlagBits::eComputeShader,
+          vk::PipelineStageFlagBits::eComputeShader);
+
+      //
+      // Bind and dispatch deduplication shader.
+      //
+
+      vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, dedup_pipeline_);
+      vk_command_buffer.dispatch(tile_count, 1, 1);
+
+      InsertBufferPipelineBarrier(
+          vk_command_buffer, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite,
+          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite,
+          image.aux_buffer->vk(), 0, VK_WHOLE_SIZE, vk::PipelineStageFlagBits::eComputeShader,
+          vk::PipelineStageFlagBits::eComputeShader);
+
+      if (image.texture->image()->layout() != vk::ImageLayout::eGeneral) {
+        command_buffer->TransitionImageLayout(
+            image.texture->image(), image.texture->image()->layout(), vk::ImageLayout::eGeneral);
+      }
+
+      vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pack_pipeline_layout_,
+                                           0, 1, &pack_descriptor_set, 0, nullptr);
+
+      //
+      // Bind and dispatch pack shader.
+      //
+
+      vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, pack_pipeline_);
+      PackPushConstantBlock push_constants;
+      push_constants.base_offset = image.body_offset / 16;
+      vk_command_buffer.pushConstants(pack_pipeline_layout_, vk::ShaderStageFlagBits::eCompute, 0,
+                                      sizeof(push_constants), &push_constants);
+      vk_command_buffer.dispatch(tile_count, 1, 1);
+    } break;
+    case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR: {
+      if (image.texture->image()->layout() != vk::ImageLayout::eTransferDstOptimal) {
+        command_buffer->TransitionImageLayout(image.texture->image(),
+                                              image.texture->image()->layout(),
+                                              vk::ImageLayout::eTransferDstOptimal);
+      }
+
+      vk::BufferImageCopy region;
+      region.bufferOffset = 0;
+      region.bufferRowLength = 0;
+      region.bufferImageHeight = 0;
+      region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+      region.imageSubresource.mipLevel = 0;
+      region.imageSubresource.baseArrayLayer = 0;
+      region.imageSubresource.layerCount = 1;
+      region.imageOffset.x = 0;
+      region.imageOffset.y = 0;
+      region.imageOffset.z = 0;
+      region.imageExtent.width = width_;
+      region.imageExtent.height = height_;
+      region.imageExtent.depth = 1;
+      vk_command_buffer.copyBufferToImage(image.host_buffer->vk(), image.texture->image()->vk(),
+                                          vk::ImageLayout::eTransferDstOptimal, 1, &region);
+    } break;
+    default:
+      FX_NOTREACHED() << "Modifier not supported.";
+  }
+
+  frame->EndFrame(image.acquire_semaphore, nullptr);
+}
+
+uint32_t ComputeView::GetNextScratchImageIndex() {
+  const auto rv = next_scratch_image_index_;
+  next_scratch_image_index_ = (next_scratch_image_index_ + 1) % kNumScratchImages;
+  return rv;
+}
+
+fit::promise<inspect::Inspector> ComputeView::PopulateStats() const {
+  inspect::Inspector inspector;
+
+  inspector.GetRoot().CreateUint(kModifier, modifier_, &inspector);
+
+  return fit::make_ok_promise(std::move(inspector));
+}
+
+fit::promise<inspect::Inspector> ComputeView::PopulateImageStats(const Image& image) {
+  inspect::Inspector inspector;
+
+  inspector.GetRoot().CreateUint(kImageBytes, image.buffer->size(), &inspector);
+
+  if (image.aux_buffer) {
+    auto frame =
+        escher_->NewFrame("Aux Readback", 0,
+                          /* enable_gpu_logging */ false, escher::CommandBuffer::Type::kCompute,
+                          /* use_protected_memory */ false);
+    auto vk_command_buffer = frame->vk_command_buffer();
+
+    auto buffer = escher_->buffer_cache()->NewHostBuffer(image.aux_buffer->size());
+    FX_CHECK(buffer);
+
+    vk::BufferCopy region;
+    region.srcOffset = 0;
+    region.dstOffset = 0;
+    region.size = buffer->size();
+    vk_command_buffer.copyBuffer(image.aux_buffer->vk(), buffer->vk(), 1, &region);
+    frame->EndFrame(escher::SemaphorePtr(), nullptr);
+    escher_->vk_device().waitIdle();
+
+    uint32_t next_tile_offset = reinterpret_cast<uint32_t*>(buffer->host_ptr())[0];
+    inspector.GetRoot().CreateUint(kImageBytesUsed, image.body_offset + next_tile_offset * 16,
+                                   &inspector);
+
+    uint32_t bytes_deduped = 0;
+    uint32_t tile_count = image.width_in_tiles * image.height_in_tiles;
+    for (uint32_t i = 0; i < tile_count; ++i) {
+      uint32_t offset = 4 + i * 4;
+      uint32_t prev_dup = reinterpret_cast<uint32_t*>(buffer->host_ptr())[offset + 2];
+      if (prev_dup) {
+        uint32_t body_size = reinterpret_cast<uint32_t*>(buffer->host_ptr())[offset + 1];
+        bytes_deduped += body_size * 16;
+      }
+    }
+    inspector.GetRoot().CreateUint(kImageBytesDeduped, bytes_deduped, &inspector);
+  } else if (image.host_buffer) {
+    inspector.GetRoot().CreateUint(kImageBytesUsed, image.buffer->size(), &inspector);
+    inspector.GetRoot().CreateUint(kImageBytesDeduped, 0, &inspector);
+  } else {
+    inspector.GetRoot().CreateUint(kImageBytesUsed, 0, &inspector);
+    inspector.GetRoot().CreateUint(kImageBytesDeduped, 0, &inspector);
+  }
+
+  if (modifier_ == fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+    inspector.GetRoot().CreateUint(kWidthInTiles, image.width_in_tiles, &inspector);
+    inspector.GetRoot().CreateUint(kHeightInTiles, image.height_in_tiles, &inspector);
+  }
+
+  return fit::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace frame_compression

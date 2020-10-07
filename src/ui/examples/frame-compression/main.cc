@@ -4,7 +4,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/trace-provider/provider.h>
+#include <png.h>
 
 #include "compute_view.h"
 #include "software_view.h"
@@ -18,23 +20,33 @@
 
 namespace {
 
+constexpr std::string_view kCompute = "compute";
+constexpr std::string_view kEnableValidationLayers = "enable-validation-layers";
+constexpr std::string_view kPaintCount = "paint-count";
+constexpr std::string_view kPng = "png";
+
 constexpr uint32_t kShapeWidth = 640;
 constexpr uint32_t kShapeHeight = 480;
+
+// Inspect values.
+constexpr char kSoftwareView[] = "software_view";
+constexpr char kComputeView[] = "compute_view";
 
 }  // namespace
 
 // fx shell "killall scenic.cmx; killall root_presenter.cmx"
 //
-// fx shell "present_view fuchsia-pkg://fuchsia.com/afbc#meta/afbc.cmx --AFBC"
+// fx shell "present_view fuchsia-pkg://fuchsia.com/frame-compression#meta/frame-compression.cmx
+// --AFBC"
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  sys::ComponentInspector inspector(context.get());
 
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
-    printf("fxl::SetLogSettingsFromCommandLine() failed\n");
-    exit(-1);
-  }
+  FX_CHECK(fxl::SetLogSettingsFromCommandLine(command_line))
+      << "fxl::SetLogSettingsFromCommandLine() failed";
 
   static struct OptionEntry {
     std::string option;
@@ -48,17 +60,37 @@ int main(int argc, const char** argv) {
   uint32_t option_count = 0;
   for (const OptionEntry& option_entry : table) {
     if (command_line.HasOption(option_entry.option)) {
-      if (option_count != 0) {
-        printf("Too many modifier options.\n");
-        exit(-1);
-      }
+      FX_CHECK(!option_count) << "Too many modifier options";
       modifier = option_entry.modifier;
       option_count++;
     }
   }
-  if (option_count == 0) {
-    printf("Missing modifier flag such as --AFBC\n");
-    exit(-1);
+  FX_CHECK(option_count) << "Missing modifier flag such as --AFBC";
+
+  uint32_t width = kShapeWidth;
+  uint32_t height = kShapeHeight;
+  uint32_t paint_count = 0xffffffff;
+  FILE* png_fp = nullptr;
+
+  if (command_line.HasOption(kPng)) {
+    std::string png_path;
+    FX_CHECK(command_line.GetOptionValue(kPng, &png_path)) << "Missing --" << kPng << " argument";
+    png_fp = fopen(png_path.c_str(), "r");
+    FX_CHECK(png_fp) << "failed to open: " << png_path;
+
+    png_infop info_ptr;
+    auto png_ptr = frame_compression::BaseView::CreatePngReadStruct(png_fp, &info_ptr);
+    width = png_get_image_width(png_ptr, info_ptr);
+    height = png_get_image_height(png_ptr, info_ptr);
+    frame_compression::BaseView::DestroyPngReadStruct(png_ptr, info_ptr);
+    paint_count = 1;
+  }
+
+  if (command_line.HasOption(kPaintCount)) {
+    std::string count;
+    FX_CHECK(command_line.GetOptionValue(kPaintCount, &count))
+        << "Missing --" << kPaintCount << " argument";
+    paint_count = strtoul(count.c_str(), nullptr, 10);
   }
 
   escher::GlslangInitializeProcess();
@@ -69,7 +101,7 @@ int main(int argc, const char** argv) {
         VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
         VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
        false});
-  if (command_line.HasOption("enable-validation-layers")) {
+  if (command_line.HasOption(kEnableValidationLayers)) {
     auto validation_layer_name = escher::VulkanInstance::GetValidationLayerName();
     if (validation_layer_name) {
       instance_params.layer_names.insert(*validation_layer_name);
@@ -89,26 +121,31 @@ int main(int argc, const char** argv) {
                         vk::SurfaceKHR()});
   escher::Escher escher(vulkan_device);
 
-  bool paint_once = command_line.HasOption("paint-once");
-
   scenic::ViewFactory factory;
-  if (command_line.HasOption("compute")) {
-    factory = [modifier, paint_once,
+  if (command_line.HasOption(kCompute)) {
+    factory = [modifier, width, height, paint_count, png_fp, inspector = &inspector,
                weak_escher = escher.GetWeakPtr()](scenic::ViewContext view_context) {
       return std::make_unique<frame_compression::ComputeView>(
-          std::move(view_context), std::move(weak_escher), modifier, kShapeWidth, kShapeHeight,
-          paint_once);
+          std::move(view_context), std::move(weak_escher), modifier, width, height, paint_count,
+          png_fp, inspector->root().CreateChild(kComputeView));
     };
   } else {
-    factory = [modifier, paint_once](scenic::ViewContext view_context) {
+    factory = [modifier, width, height, paint_count, png_fp,
+               inspector = &inspector](scenic::ViewContext view_context) {
       return std::make_unique<frame_compression::SoftwareView>(
-          std::move(view_context), modifier, kShapeWidth, kShapeHeight, paint_once);
+          std::move(view_context), modifier, width, height, paint_count, png_fp,
+          inspector->root().CreateChild(kSoftwareView));
     };
   }
 
-  scenic::ViewProviderComponent component(std::move(factory), &loop);
-  loop.Run();
+  {
+    scenic::ViewProviderComponent component(std::move(factory), &loop, context.get());
+    loop.Run();
+  }
 
+  if (png_fp) {
+    fclose(png_fp);
+  }
   escher::GlslangFinalizeProcess();
   return 0;
 }
