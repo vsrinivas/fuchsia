@@ -176,4 +176,16 @@ static inline int mp_is_cpu_active(cpu_num_t cpu) {
   return mp_get_active_mask() & cpu_num_to_mask(cpu);
 }
 
+// Wait until all of the CPUs in the system have started up.
+//
+// Note: Do not call this until at least LK_INIT_LEVEL_PLATFORM + 1, or later.
+// PLATFORM is the point at which CPUs check in.  If a call it made to wait
+// before this, there is a chance that we are on the primary CPU and before the
+// point that CPUs have been told to start, or that we are on a secondary CPU
+// during early startup, and we have not reached our check-in point yet.
+//
+// Calling this function at a point in a situation like that is a guaranteed
+// timeout.
+zx_status_t mp_wait_for_all_cpus_started(Deadline deadline);
+
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_MP_H_

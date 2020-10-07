@@ -25,6 +25,7 @@
 #include <fbl/auto_call.h>
 #include <kernel/align.h>
 #include <kernel/cpu.h>
+#include <kernel/deadline.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
@@ -446,6 +447,41 @@ interrupt_eoi mp_mbx_interrupt_irq(void*) {
 }
 
 zx_status_t platform_mp_cpu_hotplug(cpu_num_t cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
+
+namespace {
+ktl::atomic<uint32_t> mp_all_cpu_startup_count{0};
+Event mp_all_cpu_startup_event;
+}  // namespace
+
+static void mp_all_cpu_startup_checkin_hook(unsigned int rl) {
+  uint32_t count = mp_all_cpu_startup_count.fetch_add(1) + 1;
+  if (count >= arch_max_num_cpus()) {
+    mp_all_cpu_startup_event.Signal();
+  }
+}
+
+zx_status_t mp_wait_for_all_cpus_started(Deadline deadline) {
+  return mp_all_cpu_startup_event.Wait(deadline);
+}
+
+// Notes about the startup check-in.
+//
+// In order to know when all of the all CPUs have started, we must first
+// know the number of CPUs that we plan to start.  This happens at different
+// points in the startup process for ARM64 vs. x64.
+//
+// On ARM64, this happens indirectly during arch_init just before
+// LK_INIT_LEVEL_ARCH is executed.  This is where ZBI topology info from the
+// bootloader is processed just before before the CPUs are started.
+//
+// On x64, this happens during platform_init just before LK_INIT_LEVEL_PLATFORM.
+// ACPI topology info is parsed just before the all CPUs are started.
+//
+// The PLATFORM hook comes right after the ARCH hook, so to keep this mechanism
+// generic, we have all of our CPUs check in once we reach the PLATFORM
+// initialization level.
+LK_INIT_HOOK_FLAGS(mp_all_cpu_startup_checkin, mp_all_cpu_startup_checkin_hook,
+                   LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_ALL_CPUS)
 
 static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
