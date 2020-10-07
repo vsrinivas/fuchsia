@@ -29,15 +29,6 @@ func init() {
 }
 
 func main() {
-	const logFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
-
-	// Our mDNS library doesn't use the logger library.
-	log.SetFlags(logFlags)
-
-	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
-	log.SetFlags(logFlags)
-	ctx := logger.WithLogger(context.Background(), log)
-
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
@@ -46,6 +37,16 @@ func main() {
 	subcommands.Register(&RunCommand{}, "")
 
 	flag.Parse()
+
+	l := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
+
+	const logFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
+	l.SetFlags(logFlags)
+	ctx := logger.WithLogger(context.Background(), l)
+
+	// Our mDNS library doesn't use the logger library, so set stdlib log flags
+	// in addition to logger flags.
+	log.SetFlags(logFlags)
 
 	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
 	os.Exit(int(subcommands.Execute(ctx)))
