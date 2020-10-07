@@ -18,11 +18,17 @@ ROOT_PUBSPECS = [
     'third_party/dart/pkg/build_integration',
     'third_party/dart/pkg/expect',
     'third_party/dart/pkg/testing',
-    'third_party/dart-pkg/git/flutter/packages/flutter',
-    'third_party/dart-pkg/git/flutter/packages/flutter_driver',
-    'third_party/dart-pkg/git/flutter/packages/flutter_test',
-    'third_party/dart-pkg/git/flutter/packages/flutter_tools',
     'prebuilt/third_party/sky_engine',
+]
+
+FLUTTER_GIT = 'https://github.com/flutter/flutter.git'
+FLUTTER_ROOT = 'third_party/dart-pkg/git/flutter'
+FLUTTER_PUBSPECS = [
+    'packages/flutter',
+    'packages/flutter_driver',
+    'packages/flutter_test',
+    'packages/flutter_tools',
+    'packages/fuchsia_remote_debug_protocol',
 ]
 
 # These are the locations of yaml files listing the Dart dependencies of a git
@@ -44,6 +50,9 @@ def main():
     parser.add_argument('--debug',
                         help='Turns on debugging mode',
                         action='store_true')
+    # Accept an optional flutter commit/revision id.
+    parser.add_argument('--flutter-revision',
+                        help='A git hash within the flutter repo')
     script_args = parser.parse_args()
 
     if sys.platform.startswith('linux'):
@@ -59,25 +68,29 @@ def main():
                                  'package_importer.py')
     output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                'pub')
-    flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
-                                'git', 'flutter')
+    flutter_absolute_root = os.path.join(paths.FUCHSIA_ROOT, FLUTTER_ROOT)
 
     # flutter --version has the side effect of creating a version file that pub
     # uses to find which package versions are compatible with the current version
     # of flutter
-    flutter_tool = os.path.join(flutter_root, 'bin', 'flutter')
-    subprocess.check_call([flutter_tool, "--version"])
+    flutter_tool = os.path.join(flutter_absolute_root, 'bin', 'flutter')
+    subprocess.check_call([flutter_tool, '--version'])
 
     args = [importer_path]
     if script_args.debug:
         args.append('--debug')
-    args.append('--pub')
-    args.append(pub_path)
-    args.append('--output')
-    args.append(output_path)
+    args.extend(['--pub', pub_path])
+    args.extend(['--output', output_path])
     args.append('--pubspecs')
     for root in ROOT_PUBSPECS:
         args.append(os.path.join(paths.FUCHSIA_ROOT, root))
+    if script_args.flutter_revision:
+        args.append('--git-pubspecs')
+        for flutter_pubspec in FLUTTER_PUBSPECS:
+            args.append(','.join([flutter_pubspec.split('/').pop(), FLUTTER_GIT, script_args.flutter_revision, flutter_pubspec]))
+    else:
+        for flutter_pubspec in FLUTTER_PUBSPECS:
+            args.append(os.path.join(flutter_absolute_root, flutter_pubspec))
     args.append('--projects')
     for project in PROJECT_DEPENDENCIES:
         args.append(os.path.join(paths.FUCHSIA_ROOT, project))
@@ -87,7 +100,7 @@ def main():
             script_args.changelog,
         ])
 
-    subprocess.check_call(args, env={"FLUTTER_ROOT": flutter_root})
+    subprocess.check_call(args, env={'FLUTTER_ROOT': flutter_absolute_root})
 
 
 if __name__ == '__main__':

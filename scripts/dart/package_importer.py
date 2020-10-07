@@ -194,6 +194,8 @@ def main():
                         help='Path to the pub executable')
     parser.add_argument('--pubspecs', nargs='+',
                         help='Paths to packages containing pubspec.yaml files')
+    parser.add_argument('--git-pubspecs', nargs='+',
+                        help='A list of git pubspec locations formatted as DEP_NAME,GIT_URI,COMMIT_HASH,SUBDIR')
     parser.add_argument('--projects', nargs='+',
                         help='Paths to projects containing dependency files')
     parser.add_argument('--output', required=True,
@@ -232,12 +234,9 @@ def main():
                 debug_print(' - %s: %s' % pair)
 
         # Generate a manifest containing all the dependencies we care about.
-        manifest = {
-            'name': 'importer',
+        dependencies = {
+            package_name: 'any' for package_name in packages.keys()
         }
-        dependencies = {}
-        for package_name in packages.keys():
-            dependencies[package_name] = 'any'
         for dep, version in additional_deps.iteritems():
             if dep in packages:
                 continue
@@ -252,15 +251,35 @@ def main():
             for dep, version in sorted(project_deps.iteritems()):
                 dependencies[dep] = version
                 debug_print(' - %s: %s' % (dep, version))
-        manifest['dependencies'] = dependencies
-        overrides = {}
-        for package_name, path in packages.iteritems():
-            overrides[package_name] = {
+
+        overrides = {
+            package_name: {
                 'path': path,
-            }
-        manifest['dependency_overrides'] = overrides
+            } for package_name, path in packages.iteritems()
+        }
+        # Start populating git-based dependencies.
+        if args.git_pubspecs:
+            debug_print('-----------------------------')
+            debug_print('Mannualy-set git dependencies')
+            debug_print('-----------------------------')
+            for git_pubspec in args.git_pubspecs:
+                dep_name, git_url, git_ref, git_path = git_pubspec.split(',')
+                dependencies[dep_name] = 'any'
+                overrides[dep_name] = {
+                    'git': {
+                        'url': git_url,
+                        'ref': git_ref,
+                        'path': git_path,
+                    }
+                }
+            debug_print(yaml.safe_dump(dependencies, default_flow_style=False))
+
         with open(os.path.join(importer_dir, 'pubspec.yaml'), 'w') as pubspec:
-            yaml.safe_dump(manifest, pubspec)
+            yaml.safe_dump({
+                'name': 'importer',
+                'dependencies': dependencies,
+                'dependency_overrides': overrides,
+            }, pubspec, default_flow_style=not args.debug)
 
         old_packages = read_package_versions(args.output)
 
