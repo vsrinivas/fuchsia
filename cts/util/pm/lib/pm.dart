@@ -155,6 +155,46 @@ class PackageManagerRepo {
     return completer.future;
   }
 
+  /// Attempts to start the `serve` process.
+  ///
+  /// `port` is optional, but if it is given then `curl` will be used as an
+  /// additional check for whether `serve` has successfully started.
+  ///
+  /// Returns `true` if serve startup was successful.
+  Future<bool> tryServe(List<String> args, {int port}) async {
+    resetServe();
+    _serveProcess = Optional.of(await Process.start(_pmPath, args));
+
+    // Watch `serve`'s prints if we can.
+    // However, the `-q` flag makes its output silent.
+    // If `serve` is silent, skip and only check based on `curl`.
+    if (!args.contains('-q')) {
+      if (!await waitForServeStartup(_serveProcess.value)) {
+        return false;
+      }
+    }
+
+    // Check if `serve` is up using `curl`.
+    // However, if no port number is given then we do not know the URL and
+    // cannot do this check.
+    //
+    // NOTE: It is possible for `-q` to exist as an argument and for there
+    // to be no port number given. In such a case, this method will simply
+    // start the process and return `true`. In practice, none of the tests
+    // do this. If they do in the future, there is not much we can do anyway.
+    if (port != null) {
+      _log.info('Wait until serve responds to curl.');
+      final curlStatus = await retryWaitForCurlHTTPCode(
+          ['http://localhost:$port/targets.json'], 200,
+          logger: _log);
+      _log.info('curl return code: $curlStatus');
+      if (curlStatus != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Start a package server using `pm serve` with serve-selected port.
   ///
   /// Passes in `-l :0` to tell `serve` to choose its own port.
@@ -175,19 +215,16 @@ class PackageManagerRepo {
       portFilePath
     ];
     _log.info('Serve is starting.');
-    _serveProcess =
-        Optional.of(await Process.start(_pmPath, arguments + extraServeArgs));
-    expect(_serveProcess.isPresent, isTrue);
-
-    var startupSuccess = await waitForServeStartup(_serveProcess.value);
-    // Want to see if flakes occur here at the same frequency.
-    // TODO(fxb/59463): If flakes begin to occur here, we should have it retry
-    // instead of fail.
-    expect(startupSuccess, isTrue);
+    final retryOptions = RetryOptions(maxAttempts: 5);
+    // final args = arguments + extraServeArgs
+    await retryOptions.retry(() async {
+      if (!await tryServe(arguments + extraServeArgs)) {
+        throw Exception('Attempt to bringup `pm serve` has failed.');
+      }
+    });
 
     _log.info('Waiting until the port file is created at: $portFilePath');
     final portFile = File(portFilePath);
-    final retryOptions = RetryOptions(maxAttempts: 5);
     String portString = await retryOptions.retry(portFile.readAsStringSync);
     expect(portString, isNotNull);
     _servePort = Optional.of(int.parse(portString));
@@ -202,7 +239,7 @@ class PackageManagerRepo {
   /// Uses this command:
   /// `pm serve -repo=<repo path> -l :<port number> [extraArgs]`
   Future<void> pmServeRepoLExtra(List<String> extraServeArgs) async {
-    _serveProcess = Optional.of(await getUnusedPort<Process>((unusedPort) {
+    await getUnusedPort<Process>((unusedPort) async {
       _servePort = Optional.of(unusedPort);
       List<String> arguments = [
         'serve',
@@ -211,28 +248,14 @@ class PackageManagerRepo {
         ':$unusedPort'
       ];
       _log.info('Serve is starting on port: $unusedPort');
-      return Process.start(_pmPath, arguments + extraServeArgs);
-    }));
+      if (await tryServe(arguments + extraServeArgs, port: unusedPort)) {
+        return _serveProcess.value;
+      }
+      return null;
+    });
+
     expect(_serveProcess.isPresent, isTrue);
     expect(_servePort.isPresent, isTrue);
-
-    // Watch `serve`'s prints if we can.
-    // However, the `-q` flag makes its output silent.
-    // If `serve` is silent, skip and only check based on `curl`.
-    if (!extraServeArgs.contains('-q')) {
-      var startupSuccess = await waitForServeStartup(_serveProcess.value);
-      // Want to see if flakes occur here at the same frequency.
-      // TODO(fxb/59463): If flakes begin to occur here, we should have it retry
-      // instead of fail.
-      expect(startupSuccess, isTrue);
-    }
-
-    // Check if `serve` is up using `curl`.
-    _log.info('Wait until serve responds to curl.');
-    final curlStatus = await retryWaitForCurlHTTPCode(
-        ['http://localhost:${_servePort.value}/targets.json'], 200,
-        logger: _log);
-    expect(curlStatus, 0);
   }
 
   /// Add repo source using `amberctl add_src`.
@@ -353,6 +376,21 @@ class PackageManagerRepo {
     return true;
   }
 
+  void resetServe() {
+    if (_serveStdout.isPresent) {
+      _serveStdout.value.close();
+      _serveStdout = Optional.absent();
+    }
+    if (_serveStderr.isPresent) {
+      _serveStderr.value.close();
+      _serveStderr = Optional.absent();
+    }
+    if (_serveProcess.isPresent) {
+      _serveProcess.value.kill();
+      _serveProcess = Optional.absent();
+    }
+  }
+
   bool kill() {
     bool success = true; // Allows scaling to more things later.
     if (_serveProcess.isPresent) {
@@ -363,8 +401,6 @@ class PackageManagerRepo {
 
   void cleanup() {
     Directory(_repoPath).deleteSync(recursive: true);
-    if (_serveStdout.isPresent) {
-      _serveStdout.value.close();
-    }
+    resetServe();
   }
 }
