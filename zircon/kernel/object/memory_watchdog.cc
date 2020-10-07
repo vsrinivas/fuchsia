@@ -114,8 +114,8 @@ void MemoryWatchdog::OnOom() {
       // specific order in the log, the test will fail.
       printf("memory-pressure: stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
 
-      // TODO(maniscalco): What prevents another thread from concurrently initiating a halt/reboot
-      // of some kind (via RootJobObserver, syscall, etc.)?
+      // TODO(fxbug.dev/57008): What prevents another thread from concurrently initiating a
+      // halt/reboot of some kind (via RootJobObserver, syscall, etc.)?
 
       // The debuglog could contain diagnostic messages that would assist in debugging the cause of
       // the OOM.  Shutdown debuglog before rebooting in order to flush any queued messages.
@@ -123,15 +123,19 @@ void MemoryWatchdog::OnOom() {
       // It is important that we don't hang during this process so set a deadline for the debuglog
       // to shutdown.
       //
-      // TODO(fxbug.dev/55673): How long should we wait?  Shutting down the debuglog includes
-      // flushing any buffered messages to the serial port (if present).  Writing to a serial port
-      // can be slow. Assuming we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1,
-      // it will take roughly 11.4 seconds to drain the buffer.  The timeout should be long enough
-      // to allow a full DLOG buffer to be drained.
+      // How long should we wait?  Shutting down the debuglog includes flushing any buffered
+      // messages to the serial port (if present).  Writing to a serial port can be slow.  Assuming
+      // we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take roughly
+      // 11.4 seconds to drain the buffer.  The timeout should be long enough to allow a full DLOG
+      // buffer to be drained.
       zx_time_t deadline = current_time() + ZX_SEC(20);
       status = dlog_shutdown(deadline);
-      ASSERT_MSG(status == ZX_OK, "dlog_shutdown failed: %d\n", status);
-
+      if (status != ZX_OK) {
+        // If `dlog_shutdown` failed, there's not much we can do besides print an error (which
+        // probably won't make it out anyway since we've already called `dlog_shutdown`) and
+        // continue on to `platform_halt`.
+        printf("ERROR: dlog_shutdown failed: %d\n", status);
+      }
       platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
     }
   }
