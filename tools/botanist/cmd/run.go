@@ -339,7 +339,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 
 		if sshAddr.IP == nil {
 			// Reachable when ResolveIP times out because no error is returned.
-			return fmt.Errorf("could not resolve any IP address of %s", t.Nodename())
+			return fmt.Errorf("%s for %s", constants.FailedToResolveIPErrorMsg, t.Nodename())
 		}
 
 		client, err := sshutil.NewClient(ctx, &sshAddr, config, sshutil.DefaultConnectBackoff())

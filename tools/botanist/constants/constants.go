@@ -5,10 +5,11 @@
 package constants
 
 const (
-	FailedToReceiveFileMsg = "failed to receive file"
-	FailedToStartTargetMsg = "start target error"
-	QEMUInvocationErrorMsg = "QEMU invocation error"
-	ReadConfigFileErrorMsg = "could not open config file"
+	FailedToReceiveFileMsg    = "failed to receive file"
+	FailedToStartTargetMsg    = "start target error"
+	QEMUInvocationErrorMsg    = "QEMU invocation error"
+	ReadConfigFileErrorMsg    = "could not open config file"
+	FailedToResolveIPErrorMsg = "could not resolve target IP address"
 
 	NodenameEnvKey     = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey       = "FUCHSIA_SSH_KEY"
