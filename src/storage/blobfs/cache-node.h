@@ -9,6 +9,7 @@
 #error Fuchsia-only Header
 #endif
 
+#include <blobfs/cache-policy.h>
 #include <digest/digest.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -29,7 +30,8 @@ class CacheNode : public fs::Vnode,
                   private fbl::Recyclable<CacheNode>,
                   public fbl::WAVLTreeContainable<CacheNode*> {
  public:
-  explicit CacheNode(const Digest& digest);
+  explicit CacheNode(const Digest& digest,
+                     std::optional<CachePolicy> override_cache_policy = std::nullopt);
   virtual ~CacheNode();
 
   // Invoked by fbl::RefPtr when all strong references to RefPtr<CacheNode> go out of scope.
@@ -68,12 +70,18 @@ class CacheNode : public fs::Vnode,
   // The implementation of this method must not attempt to acquire a reference to |this|.
   virtual void ActivateLowMemory() = 0;
 
+  // If the node should have a specific cache discipline, this method returns it.
+  // Otherwise, the system-wide policy is applied.
+  std::optional<CachePolicy> overriden_cache_policy() const { return overriden_cache_policy_; };
+  void set_overridden_cache_policy(CachePolicy policy) { overriden_cache_policy_ = policy; };
+
   // Returns the node's digest.
   const uint8_t* GetKey() const { return &digest_[0]; }
   digest::Digest GetKeyAsDigest() const { return digest::Digest(digest_); }
 
  private:
   uint8_t digest_[digest::kSha256Length] = {};
+  std::optional<CachePolicy> overriden_cache_policy_;
 };
 
 }  // namespace blobfs

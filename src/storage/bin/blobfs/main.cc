@@ -173,8 +173,9 @@ int usage() {
       "         -l|--compression_level n   Aggressiveness of compression to apply to newly stored\n"
       "                                    blobs. Only used if -c is one of ZSTD*, in which case\n"
       "                                    the level is the zstd compression level.\n"
-      "         -e|--eviction_policy |pol| Policy for when to evict blobs with no handles. |pol|\n"
-      "                                    can be one of NEVER_EVICT or EVICT_IMMEDIATELY.\n"
+      "         -e|--eviction_policy |pol| Policy for when to evict pager-backed blobs with no\n"
+      "                                    handles. |pol| can be one of NEVER_EVICT or\n"
+      "                                    EVICT_IMMEDIATELY.\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -248,7 +249,7 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
           fprintf(stderr, "Invalid eviction policy: %s\n", optarg);
           return usage();
         }
-        options->cache_policy = *policy;
+        options->pager_backed_cache_policy = policy;
         break;
       }
       case 'v':

@@ -704,11 +704,20 @@ zx_status_t Blob::LoadVmosFromDisk() {
   }
   BlobLoader& loader = blobfs_->loader();
 
-  zx_status_t status = IsPagerBacked()
-                           ? loader.LoadBlobPaged(map_index_, blobfs_->GetCorruptBlobNotifier(),
-                                                  &page_watcher_, &data_mapping_, &merkle_mapping_)
-                           : loader.LoadBlob(map_index_, blobfs_->GetCorruptBlobNotifier(),
-                                             &data_mapping_, &merkle_mapping_);
+  zx_status_t status;
+  if (IsPagerBacked()) {
+    // If there is an overriden cache policy for pager-backed blobs, apply it now.
+    // Otherwise the system-wide default will be used.
+    std::optional<CachePolicy> cache_policy = blobfs_->pager_backed_cache_policy();
+    if (cache_policy) {
+      set_overridden_cache_policy(*cache_policy);
+    }
+    status = loader.LoadBlobPaged(map_index_, blobfs_->GetCorruptBlobNotifier(), &page_watcher_,
+                                  &data_mapping_, &merkle_mapping_);
+  } else {
+    status = loader.LoadBlob(map_index_, blobfs_->GetCorruptBlobNotifier(), &data_mapping_,
+                             &merkle_mapping_);
+  }
 
   std::scoped_lock guard(mutex_);
   syncing_state_ = SyncingState::kDone;  // Nothing to sync when blob was loaded from the device.
