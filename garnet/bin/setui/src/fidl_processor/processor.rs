@@ -7,9 +7,14 @@ use fidl::endpoints::{Request, ServiceMarker};
 use futures::future::LocalBoxFuture;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
+use crate::fidl_processor::policy::{
+    PolicyProcessingUnit, RequestCallback as PolicyRequestCallback,
+};
 use crate::fidl_processor::settings::{
     RequestCallback as SettingsRequestCallback, SettingProcessingUnit,
 };
+use crate::internal::policy;
+use crate::internal::switchboard;
 use crate::message::base::{Address, Payload};
 use crate::message::messenger::MessengerClient;
 use crate::switchboard::base::{SettingResponse, SettingType};
@@ -119,21 +124,14 @@ pub struct SettingsFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    base_processor: BaseFidlProcessor<
-        S,
-        crate::internal::switchboard::Payload,
-        crate::internal::switchboard::Address,
-    >,
+    base_processor: BaseFidlProcessor<S, switchboard::Payload, switchboard::Address>,
 }
 
 impl<S> SettingsFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    pub async fn new(
-        stream: RequestStream<S>,
-        messenger: crate::internal::switchboard::message::Messenger,
-    ) -> Self {
+    pub async fn new(stream: RequestStream<S>, messenger: switchboard::message::Messenger) -> Self {
         Self { base_processor: BaseFidlProcessor::new(stream, messenger) }
     }
 
@@ -141,14 +139,7 @@ where
     pub async fn register<V, SV, K>(
         &mut self,
         setting_type: SettingType,
-        callback: SettingsRequestCallback<
-            S,
-            V,
-            SV,
-            K,
-            crate::internal::switchboard::Payload,
-            crate::internal::switchboard::Address,
-        >,
+        callback: SettingsRequestCallback<S, V, SV, K, switchboard::Payload, switchboard::Address>,
     ) where
         V: From<SettingResponse> + Send + Sync + 'static,
         SV: Sender<V> + Send + Sync + 'static,
@@ -165,6 +156,45 @@ where
         self.base_processor.processing_units.push(processing_unit);
     }
 
+    pub async fn process(self) {
+        self.base_processor.process().await
+    }
+}
+
+/// Wraps [`BaseFidlProcessor`] for use with FIDL APIs in the fuchsia.settings.policy namespace that
+/// send and receive messages through the policy message hub.
+///
+/// [`BaseFidlProcessor`]: struct.BaseFidlProcessor.html
+pub struct PolicyFidlProcessor<S>
+where
+    S: ServiceMarker,
+{
+    base_processor: BaseFidlProcessor<S, policy::Payload, policy::Address>,
+}
+
+impl<S> PolicyFidlProcessor<S>
+where
+    S: ServiceMarker,
+{
+    // TODO(fxb/59705): remove annotation once used.
+    #[allow(dead_code)]
+    pub async fn new(stream: RequestStream<S>, messenger: policy::message::Messenger) -> Self {
+        Self { base_processor: BaseFidlProcessor::new(stream, messenger) }
+    }
+
+    /// Registers a fidl processing unit for policy requests.
+    // TODO(fxb/59705): remove annotation once used.
+    #[allow(dead_code)]
+    pub async fn register(
+        &mut self,
+        callback: PolicyRequestCallback<S, policy::Payload, policy::Address>,
+    ) {
+        let processing_unit = Box::new(PolicyProcessingUnit::<S>::new(callback));
+        self.base_processor.processing_units.push(processing_unit);
+    }
+
+    // TODO(fxb/59705): remove annotation once used.
+    #[allow(dead_code)]
     pub async fn process(self) {
         self.base_processor.process().await
     }

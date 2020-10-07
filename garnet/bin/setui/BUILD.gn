@@ -119,6 +119,7 @@ rustc_library("lib") {
     "src/fidl_clone.rs",
     "src/fidl_common.rs",
     "src/fidl_processor.rs",
+    "src/fidl_processor/policy.rs",
     "src/fidl_processor/processor.rs",
     "src/fidl_processor/settings.rs",
     "src/handler.rs",
