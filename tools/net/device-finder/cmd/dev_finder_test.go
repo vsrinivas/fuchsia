@@ -63,7 +63,7 @@ func (m *fakeNetbootClient) StartDiscover(t chan<- *netboot.Target, nodename str
 // fakeMDNS is a fake implementation of MDNS for testing.
 type fakeMDNS struct {
 	answer           *fakeAnswer
-	handlers         []func(net.Interface, net.Addr, mdns.Packet)
+	handlers         []func(net.Addr, mdns.Packet)
 	sendEmptyData    bool
 	sendTooShortData bool
 }
@@ -77,7 +77,7 @@ type fakeAnswer struct {
 	domains        []string
 }
 
-func (m *fakeMDNS) AddHandler(f func(net.Interface, net.Addr, mdns.Packet)) {
+func (m *fakeMDNS) AddHandler(f func(net.Addr, mdns.Packet)) {
 	m.handlers = append(m.handlers, f)
 }
 func (m *fakeMDNS) AddWarningHandler(func(net.Addr, error)) {}
@@ -86,9 +86,8 @@ func (m *fakeMDNS) SendTo(mdns.Packet, *net.UDPAddr) error  { return nil }
 func (m *fakeMDNS) Send(packet mdns.Packet) error {
 	if m.answer != nil {
 		go func() {
-			ifc := net.Interface{Name: defaultIPv6MDNSZone}
-			ip := net.IPAddr{IP: net.ParseIP(m.answer.ip).To4()}
-			ipv6 := net.IPAddr{IP: net.ParseIP(m.answer.ipv6).To16(), Zone: m.answer.zone}
+			ip := net.UDPAddr{IP: net.ParseIP(m.answer.ip).To4()}
+			ipv6 := net.UDPAddr{IP: net.ParseIP(m.answer.ipv6).To16(), Zone: m.answer.zone}
 			for _, q := range packet.Questions {
 				switch {
 				case q.Type == mdns.PTR && q.Class == mdns.IN:
@@ -143,8 +142,8 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 							// Important: changing the order of these function calls will likely
 							// cause failures for tests that are looking for both IPv4 and IPv6
 							// addresses simultaneously.
-							h(ifc, &ip, pkt)
-							h(ifc, &ipv6, pkt)
+							h(&ip, pkt)
+							h(&ipv6, pkt)
 						}
 					}
 				case q.Type == mdns.A && q.Class == mdns.IN:
@@ -170,8 +169,8 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 						// Important: changing the order of these function calls will likely
 						// cause failures for tests that are looking for both IPv4 and IPv6
 						// addresses simultaneously.
-						h(ifc, &ip, pkt)
-						h(ifc, &ipv6, pkt)
+						h(&ip, pkt)
+						h(&ipv6, pkt)
 					}
 				}
 			}
@@ -206,7 +205,6 @@ func newDevFinderCmd(
 		mdns:        true,
 		ipv6:        st.ipv6,
 		ipv4:        st.ipv4,
-		ignoreNAT:   st.ignoreNAT,
 		newMDNSFunc: func(addr string) mdnsInterface {
 			return &fakeMDNS{
 				// Every device is behind a NAT, so the target
@@ -256,33 +254,22 @@ func makeDNSSDFinderForTest(nodename string) *dnsSDFinder {
 }
 
 type subtest struct {
-	ipv4      bool
-	ipv6      bool
-	ignoreNAT bool
-	node      string
+	ipv4 bool
+	ipv6 bool
+	node string
 }
 
 func (s *subtest) defaultMDNSIP() net.IP {
-	if s.ignoreNAT {
-		// When parsing the additional records (for getting the target
-		// address), the last record is IPv6. If the order of outputs
-		// changes for the fake MDNS implementation it may break this
-		// code, as having IPv4 and IPv6 enabled could return a v4
-		// address in some cases. This also applies to the lower
-		// `if s.ipv6` statement.
-		if s.ipv6 {
-			return net.ParseIP(defaultIPv6Target).To16()
-		}
-		if s.ipv4 {
-			return net.ParseIP(defaultIPTarget).To4()
-		}
-	}
-
+	// When parsing the additional records (for getting the target
+	// address), the last record is IPv6. If the order of outputs
+	// changes for the fake MDNS implementation it may break this
+	// code, as having IPv4 and IPv6 enabled could return a v4
+	// address in some cases.
 	if s.ipv6 {
-		return net.ParseIP(defaultIPv6ResponseNAT).To16()
+		return net.ParseIP(defaultIPv6Target).To16()
 	}
 	if s.ipv4 {
-		return net.ParseIP(defaultIPResponseNAT).To4()
+		return net.ParseIP(defaultIPTarget).To4()
 	}
 	return nil
 }
@@ -317,8 +304,6 @@ func (s *subtest) String() string {
 	b.WriteString(strconv.FormatBool(s.ipv4))
 	b.WriteString("_ipv6=")
 	b.WriteString(strconv.FormatBool(s.ipv6))
-	b.WriteString("_ignore-nat=")
-	b.WriteString(strconv.FormatBool(s.ignoreNAT))
 	return b.String()
 }
 
@@ -328,17 +313,14 @@ func runSubTests(t *testing.T, node string, f func(*testing.T, subtest)) {
 			if !ipv4 && !ipv6 {
 				continue
 			}
-			for _, nat := range []bool{true, false} {
-				s := subtest{
-					ipv4:      ipv4,
-					ipv6:      ipv6,
-					ignoreNAT: nat,
-					node:      node,
-				}
-				t.Run(s.String(), func(t *testing.T) {
-					f(t, s)
-				})
+			s := subtest{
+				ipv4: ipv4,
+				ipv6: ipv6,
+				node: node,
 			}
+			t.Run(s.String(), func(t *testing.T) {
+				f(t, s)
+			})
 		}
 	}
 }
@@ -792,72 +774,6 @@ func TestOutputJSON(t *testing.T) {
 		if d := cmp.Diff(want, got); d != "" {
 			t.Errorf("outputNormal(includeDomain) mismatch: (-want +got):\n%s", d)
 		}
-	}
-}
-
-type linkLocalTest struct {
-	bytes []byte
-	want  bool
-}
-
-func TestIsIPv6LinkLocal(t *testing.T) {
-	tests := []linkLocalTest{
-		{
-			bytes: []byte{0xfe, 0x80, 0x90, 0x90, 0x9, 0x9, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x2, 0x1, 0x4, 0x6},
-			want:  true,
-		},
-		{
-			bytes: []byte{0xfe, 0x80},
-			want:  false,
-		},
-		{
-			bytes: nil,
-			want:  false,
-		},
-		{
-			bytes: []byte{0xfe, 0x80, 0xfe, 0x80},
-			want:  false,
-		},
-	}
-	for _, test := range tests {
-		if got := isIPv6LinkLocal(test.bytes); got != test.want {
-			t.Errorf("Address %v returns %t for link local, expect %t", test.bytes, got, test.want)
-		}
-	}
-}
-
-func TestAddrToIP(t *testing.T) {
-	want := "::1"
-	ipNet := &net.IPNet{IP: net.ParseIP(want)}
-	ip, zone, err := addrToIP(ipNet)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := ip.String()
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("addrToIP(ipNet) mismatch: (-want +got):\n%s", d)
-	}
-
-	ipAddr := &net.IPAddr{IP: net.ParseIP("::2"), Zone: "eno1"}
-	want = ipAddr.String()
-	ip, zone, err = addrToIP(ipAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got = fmt.Sprintf("%s%%%s", ip.String(), zone)
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("addrToIP(ipAddr) mismatch: (-want +got):\n%s", d)
-	}
-
-	udpAddr := &net.IPAddr{IP: net.ParseIP("::3"), Zone: "eno1"}
-	want = fmt.Sprintf("%s%%%s", udpAddr.IP.String(), udpAddr.Zone)
-	ip, zone, err = addrToIP(udpAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got = fmt.Sprintf("%s%%%s", ip.String(), zone)
-	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("addrToIP(ipAddr) mismatch: (-want +got):\n%s", d)
 	}
 }
 

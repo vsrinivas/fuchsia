@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -41,10 +40,7 @@ func (n noConnectableAddressError) Is(other error) bool {
 	return errors.Is(n.lastConnectionError, otherConv.lastConnectionError)
 }
 
-var ipv6LinkLocalPrefix = []byte{0xfe, 0x80}
-
 type mDNSResponse struct {
-	rxIface  net.Interface
 	devAddr  net.Addr
 	rxPacket mdns.Packet
 }
@@ -52,7 +48,7 @@ type mDNSResponse struct {
 type mDNSHandler func(*devFinderCmd, mDNSResponse, chan<- *fuchsiaDevice)
 
 type mdnsInterface interface {
-	AddHandler(f func(net.Interface, net.Addr, mdns.Packet))
+	AddHandler(f func(net.Addr, mdns.Packet))
 	AddWarningHandler(f func(net.Addr, error))
 	AddErrorHandler(f func(error))
 	SendTo(packet mdns.Packet, dst *net.UDPAddr) error
@@ -83,10 +79,6 @@ type devFinderCmd struct {
 	// established a connection to the Fuchsia device (rather than the address of the
 	// Fuchsia device on its own).
 	localResolve bool
-	// Determines whether to accept incoming unicast mDNS responses. This can happen if the
-	// receiving device is on a different subnet, or the receiving device's listener port
-	// has been forwarded to from a non-standard port.
-	acceptUnicast bool
 	// The limit of devices to discover. If this number of devices has been discovered before
 	// the timeout has been reached the program will exit successfully.
 	deviceLimit int
@@ -99,11 +91,8 @@ type devFinderCmd struct {
 	netboot bool
 	// If set to true, uses mdns protocol.
 	mdns bool
-	// If set to true, ignores NAT and instead uses the additional records
-	// section of the mDNS response to determine the device address.
-	ignoreNAT bool
-	ipv4      bool
-	ipv6      bool
+	ipv4 bool
+	ipv6 bool
 
 	// Used to visit flags after parsing, necessary for complex if-set logic.
 	flagSet *flag.FlagSet
@@ -166,12 +155,10 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.mdnsPorts, "port", "5353", "[linux only] Comma separated list of ports to issue mDNS queries to.")
 	f.DurationVar(&cmd.timeout, "timeout", time.Second, "The duration before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
-	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", true, "[linux only] Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 	f.IntVar(&cmd.ttl, "ttl", -1, "[linux only] Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
 	f.BoolVar(&cmd.mdns, mdnsFlag, true, "Determines whether to use mDNS protocol")
 	f.BoolVar(&cmd.netboot, netbootFlag, false, "Determines whether to use netboot protocol")
-	f.BoolVar(&cmd.ignoreNAT, "ignore-nat", false, "[linux only] Determines whether to ignore possible NAT. Returns the target's address as it sees itself behind a NAT.")
 	f.BoolVar(&cmd.ipv6, "ipv6", true, "Set whether to query using IPv6. Disabling IPv6 will also disable netboot.")
 	f.BoolVar(&cmd.ipv4, "ipv4", true, "Set whether to query using IPv4")
 }
@@ -181,23 +168,6 @@ func (cmd *devFinderCmd) Output() io.Writer {
 		return os.Stdout
 	}
 	return cmd.output
-}
-
-func isIPv6LinkLocal(b []byte) bool {
-	return len(b) == net.IPv6len && bytes.Equal(b[:len(ipv6LinkLocalPrefix)], ipv6LinkLocalPrefix)
-}
-
-// Extracts the IP from its argument, returning an error if the type is unsupported.
-func addrToIP(addr net.Addr) (net.IP, string, error) {
-	switch v := addr.(type) {
-	case *net.IPNet:
-		return v.IP, "", nil
-	case *net.IPAddr:
-		return v.IP, v.Zone, nil
-	case *net.UDPAddr:
-		return v.IP, v.Zone, nil
-	}
-	return nil, "", errors.New("unsupported address type")
 }
 
 func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
@@ -225,7 +195,6 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 		}
 	}
 	m.SetAddress(address)
-	m.SetAcceptUnicastResponses(cmd.acceptUnicast)
 	if err := m.SetMCastTTL(cmd.ttl); err != nil {
 		log.Fatalf("unable to set mcast TTL: %s", err)
 	}
@@ -258,8 +227,8 @@ func startMDNSHandlers(ctx context.Context, cmd *devFinderCmd, packet mdns.Packe
 	for _, addr := range addrs {
 		for _, p := range ports {
 			m := cmd.newMDNS(addr)
-			m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
-				response := mDNSResponse{recv, addr, rxPacket}
+			m.AddHandler(func(addr net.Addr, rxPacket mdns.Packet) {
+				response := mDNSResponse{devAddr: addr, rxPacket: rxPacket}
 				cmd.mdnsHandler(cmd, response, f)
 			})
 			m.AddErrorHandler(func(err error) {
@@ -272,7 +241,10 @@ func startMDNSHandlers(ctx context.Context, cmd *devFinderCmd, packet mdns.Packe
 				lastErr = fmt.Errorf("starting mdns: %w", err)
 				continue
 			}
-			m.Send(packet)
+			if err := m.Send(packet); err != nil {
+				lastErr = fmt.Errorf("sending mdns: %w", err)
+				continue
+			}
 			startedMDNS = true
 		}
 	}

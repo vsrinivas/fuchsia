@@ -6,10 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("mdns") {
-  deps = [
-    "//third_party/golibs:golang.org/x/net",
-    "//third_party/golibs:golang.org/x/sys",
-  ]
+  deps = [ "//third_party/golibs:golang.org/x/net" ]
 }
 
 go_test("mdns_tests") {
