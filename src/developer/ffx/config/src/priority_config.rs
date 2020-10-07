@@ -118,7 +118,7 @@ impl Priority {
         })
     }
 
-    fn nested_set(
+    pub(crate) fn nested_set(
         cur: &mut Map<String, Value>,
         key: &str,
         remaining_keys: Vec<&str>,
