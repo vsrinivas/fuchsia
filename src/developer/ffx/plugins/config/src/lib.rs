@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     ffx_config::{
         add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, get,
         print_config, raw, remove, set, ConfigLevel,
@@ -15,7 +15,9 @@ use {
     ffx_core::{ffx_bail, ffx_plugin},
     serde_json::Value,
     std::collections::HashMap,
+    std::fs::File,
     std::io::Write,
+    std::path::Path,
 };
 
 #[ffx_plugin()]
@@ -132,8 +134,19 @@ async fn exec_add(add_cmd: &AddCommand) -> Result<()> {
     .await
 }
 
-fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Result<()> {
+fn exec_env_set<W: Write + Sync>(
+    mut writer: W,
+    env: &mut Environment,
+    s: &EnvSetCommand,
+    file: String,
+) -> Result<()> {
     let file_str = format!("{}", s.file);
+    if !Path::new(&file_str).exists() {
+        writeln!(writer, "\"{}\" does not exist, creating empty json file", &file_str)?;
+        let mut file = File::create(&file_str).context("opening write buffer")?;
+        file.write_all(b"{}").context("writing configuration file")?;
+        file.sync_all().context("syncing configuration file to filesystem")?;
+    }
     match &s.level {
         ConfigLevel::User => match env.user.as_mut() {
             Some(v) => *v = file_str,
@@ -169,7 +182,7 @@ fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<
     let mut env = Environment::load(&file)?;
     match &env_command.access {
         Some(a) => match a {
-            EnvAccessCommand::Set(s) => exec_env_set(&mut env, s, file),
+            EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s, file),
             EnvAccessCommand::Get(g) => {
                 writeln!(writer, "{}", env.display(&g.level))?;
                 Ok(())
