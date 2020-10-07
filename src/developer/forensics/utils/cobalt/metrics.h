@@ -43,9 +43,10 @@ enum class TimedOutData {
 };
 
 enum class SnapshotGenerationFlow {
-  kUnknown = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Unknown,
-  kSuccess = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Success,
-  kFailure = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Failure,
+  // TODO(fxb/50926): switch back to constants once the name has been switched to "snapshot".
+  kUnknown = 0,
+  kSuccess = 1,
+  kFailure = 2,
 };
 
 enum class LastRebootReason {
@@ -108,7 +109,8 @@ inline constexpr uint32_t MetricIDForEventCode(const LastRebootReason reason) {
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const SnapshotGenerationFlow snapshot) {
-  return cobalt_registry::kBugreportGenerationDurationUsecsMetricId;
+  // TODO(fxb/50926): switch back to constants once the name has been switched to "snapshot".
+  return 6;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const TimedOutData data) {
