@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/dist/resource.gni")
+import("//cts/build/cts_element.gni")
+import("//cts/build/cts_vars.gni")
+
+# A resource that can be used in CTS.
+#
+# An equivalent to the in-tree `resource`, but ensures dependencies are allowed
+# in CTS.
+#
+# Example:
+# ```
+# cts_resource("my-bin") {
+#  sources = [ "test_bins/my_bin" ]
+#  outputs = [ "bin/my_bin" ]
+# }
+# ```
+#
+# Parameters
+#   outputs
+#     Required: List of one runtime path.  This must be a relative path (no
+#     leading `/`).  It can use placeholders based on $sources; see copy()
+#     and `gn help source_expansion`.
+#     Type: list(path)
+#
+#   sources
+#     Required: List of files in the source tree or build that become $outputs.
+#     See copy() for details.
+#     Type: list(file)
+#
+# See resource() for other parameters.
+#
+template("cts_resource") {
+  assert(defined(invoker.sources), "Sources must be defined.")
+
+  if (defined(invoker.deps) && invoker.deps != []) {
+    cts_element("${target_name}_verify_deps") {
+      deps = invoker.deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
+    }
+  }
+
+  resource(target_name) {
+    forward_variables_from(invoker, "*")
+    if (defined(deps) && deps != []) {
+      deps += [ ":${target_name}_verify_deps" ]
+    }
+  }
+
+  # Creates a file to enable other CTS targets to depend on this test package.
+  target_build_dir = get_label_info(":$target_name", "dir")
+  target_build_dir = string_replace(target_build_dir, "//", "/")
+  write_file(
+      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
+      "true")
+}

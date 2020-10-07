@@ -3,5 +3,6 @@
 # found in the LICENSE file.
 import("//cts/build/cts_component.gni")
 import("//cts/build/cts_executable.gni")
+import("//cts/build/cts_resource.gni")
 import("//cts/build/cts_source_set.gni")
 import("//cts/build/cts_test_package.gni")
