@@ -4,17 +4,34 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
   public_deps = [ ":host_fuzzers_test($host_toolchain)" ]
 }
 
-go_library("host_fuzzers_test_lib") {
-  name = "fuzzing"
-}
+if (is_host) {
+  host_test_data("fx_fuzz_python_source") {
+    sources = [
+      "//scripts/fuzzing/lib",
+      "//scripts/fuzzing/test",
+    ]
+    outputs = [ "$target_out_dir/test_data/{{source_file_part}}" ]
+  }
 
-go_test("host_fuzzers_test") {
-  gopackages = [ "fuzzing" ]
-  deps = [ ":host_fuzzers_test_lib" ]
+  go_library("host_fuzzers_test_lib") {
+    name = "fuzzing"
+  }
+
+  go_test("host_fuzzers_test") {
+    gopackages = [ "fuzzing" ]
+    deps = [ ":host_fuzzers_test_lib" ]
+    args = [
+      "-test-data-dir",
+      rebase_path("$target_out_dir/test_data", root_build_dir),
+    ]
+    non_go_deps = [ ":fx_fuzz_python_source" ]
+  }
 }
