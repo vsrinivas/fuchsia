@@ -14,9 +14,8 @@ use fidl::endpoints::{self, ServerEnd};
 
 use fidl_fuchsia_ui_input::{
     self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
-    InputDeviceRegistryMarker, InputReport, KeyboardDescriptor, KeyboardReport,
-    MediaButtonsDescriptor, MediaButtonsReport, Range, Touch, TouchscreenDescriptor,
-    TouchscreenReport,
+    InputDeviceRegistryMarker, KeyboardDescriptor, MediaButtonsDescriptor, Range, Touch,
+    TouchscreenDescriptor,
 };
 
 use fuchsia_component as app;
@@ -25,7 +24,9 @@ pub mod inverse_keymap;
 pub mod keymaps;
 pub mod usages;
 
-use crate::{inverse_keymap::InverseKeymap, usages::Usages};
+mod legacy_backend;
+
+use crate::{inverse_keymap::InverseKeymap, legacy_backend::*, usages::Usages};
 
 trait ServerConsumer {
     fn consume(
@@ -136,32 +137,6 @@ fn repeat_with_delay(
     Ok(())
 }
 
-fn media_buttons(
-    volume_up: bool,
-    volume_down: bool,
-    mic_mute: bool,
-    reset: bool,
-    pause: bool,
-    time: u64,
-) -> InputReport {
-    InputReport {
-        event_time: time,
-        keyboard: None,
-        media_buttons: Some(Box::new(MediaButtonsReport {
-            volume_up,
-            volume_down,
-            mic_mute,
-            reset,
-            pause,
-        })),
-        mouse: None,
-        stylus: None,
-        touchscreen: None,
-        sensor: None,
-        trace_id: 0,
-    }
-}
-
 fn media_button_event(
     volume_up: bool,
     volume_down: bool,
@@ -193,31 +168,6 @@ pub async fn media_button_event_command(
     pause: bool,
 ) -> Result<(), Error> {
     media_button_event(volume_up, volume_down, mic_mute, reset, pause, &mut RegistryServerConsumer)
-}
-
-fn key_press(keyboard: KeyboardReport, time: u64) -> InputReport {
-    InputReport {
-        event_time: time,
-        keyboard: Some(Box::new(keyboard)),
-        media_buttons: None,
-        mouse: None,
-        stylus: None,
-        touchscreen: None,
-        sensor: None,
-        trace_id: 0,
-    }
-}
-
-fn key_press_usage(usage: Option<u32>, time: u64) -> InputReport {
-    key_press(
-        KeyboardReport {
-            pressed_keys: match usage {
-                Some(usage) => vec![usage],
-                None => vec![],
-            },
-        },
-        time,
-    )
 }
 
 fn keyboard_event(
@@ -284,16 +234,6 @@ pub async fn text_command(input: String, duration: Duration) -> Result<(), Error
     text(input, duration, &mut RegistryServerConsumer)
 }
 
-fn tap(pos: Option<(u32, u32)>, time: u64) -> InputReport {
-    match pos {
-        Some((x, y)) => multi_finger_tap(
-            Some(vec![Touch { finger_id: 1, x: x as i32, y: y as i32, width: 0, height: 0 }]),
-            time,
-        ),
-        None => multi_finger_tap(None, time),
-    }
-}
-
 fn tap_event(
     x: u32,
     y: u32,
@@ -338,24 +278,6 @@ pub async fn tap_event_command(
     duration: Duration,
 ) -> Result<(), Error> {
     tap_event(x, y, width, height, tap_event_count, duration, &mut RegistryServerConsumer)
-}
-
-fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
-    InputReport {
-        event_time: time,
-        keyboard: None,
-        media_buttons: None,
-        mouse: None,
-        stylus: None,
-        touchscreen: Some(Box::new(TouchscreenReport {
-            touches: match fingers {
-                Some(fingers) => fingers,
-                None => vec![],
-            },
-        })),
-        sensor: None,
-        trace_id: 0,
-    }
 }
 
 fn multi_finger_tap_event(
@@ -609,7 +531,10 @@ mod tests {
     use {
         super::*,
         anyhow::Context,
-        fidl_fuchsia_ui_input::{InputDeviceRequest, InputDeviceRequestStream},
+        fidl_fuchsia_ui_input::{
+            InputDeviceRequest, InputDeviceRequestStream, InputReport, KeyboardReport,
+            MediaButtonsReport, TouchscreenReport,
+        },
         fuchsia_async as fasync,
         futures::stream::StreamExt,
     };

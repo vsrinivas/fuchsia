@@ -25,6 +25,7 @@ rustc_library("input-synthesis") {
   sources = [
     "src/inverse_keymap.rs",
     "src/keymaps.rs",
+    "src/legacy_backend.rs",
     "src/lib.rs",
     "src/usages.rs",
   ]
