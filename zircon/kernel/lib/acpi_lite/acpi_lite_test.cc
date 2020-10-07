@@ -69,6 +69,61 @@ TEST(AcpiParser, ReadMissingTable) {
   EXPECT_EQ(result.GetTableAtIndex(~0), nullptr);
 }
 
+TEST(AcpiParser, AcpiChecksum) {
+  // Empty checksum.
+  EXPECT_TRUE(AcpiChecksumValid(nullptr, 0));
+
+  // Valid checksum.
+  {
+    uint8_t buffer[1] = {0};
+    EXPECT_TRUE(AcpiChecksumValid(&buffer, 1));
+  }
+
+  // Invalid checksum.
+  {
+    uint8_t buffer[1] = {52};
+    EXPECT_FALSE(AcpiChecksumValid(&buffer, 1));
+  }
+
+  // Calculate a checksum.
+  {
+    uint8_t buffer[2] = {32, 0};
+    EXPECT_FALSE(AcpiChecksumValid(&buffer, 2));
+    buffer[1] = AcpiChecksum(&buffer, 2);
+    EXPECT_TRUE(AcpiChecksumValid(&buffer, 2));
+  }
+}
+
+TEST(AcpiParser, RsdtInvalidLengths) {
+  // Create a RSDT with an invalid (too short) length.
+  AcpiRsdt bad_rsdt = {
+      .header =
+          {
+              .sig = AcpiRsdt::kSignature,
+              .length = 10,  // covers checksum, but nothing else.
+              .revision = 1,
+              .checksum = 0,
+          },
+  };
+  bad_rsdt.header.checksum = AcpiChecksum(&bad_rsdt, bad_rsdt.header.length);
+
+  // Add the bad RSDT to a table set.
+  AcpiTableSet::Table table = {
+      .phys_addr = 0x1000,
+      .data =
+          fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&bad_rsdt), sizeof(AcpiRsdt)),
+  };
+  AcpiTableSet table_set = {
+      .tables = fbl::Span(&table, 1),
+      .rsdp = 0,
+  };
+
+  // Attempt to parse the bad RSDT. Ensure we get an error.
+  FakePhysMemReader reader(&table_set);
+  size_t num_tables;
+  EXPECT_TRUE(ValidateRsdt(reader, 0x1000, &num_tables).is_error());
+}
+
 TEST(AcpiParser, DumpTables) {
   // Parse the QEMU tables.
   FakePhysMemReader reader(&kQemuTables);

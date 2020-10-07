@@ -38,6 +38,11 @@ zx::status<const T*> MapStructure(PhysMemReader& reader, zx_paddr_t phys) {
   }
   const T* header = static_cast<const T*>(result.value());
 
+  // Ensure that the length looks reasonable.
+  if (header->size() < sizeof(T)) {
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+
   // Get the number of bytes the full structure needs, as determined by its header.
   result = reader.PhysToPtr(phys, header->size());
   if (result.is_error()) {
@@ -45,20 +50,6 @@ zx::status<const T*> MapStructure(PhysMemReader& reader, zx_paddr_t phys) {
   }
 
   return zx::success(static_cast<const T*>(result.value()));
-}
-
-// Calculate a checksum of the given range of memory.
-//
-// The checksum is valid if the sum of bytes mod 256 == 0.
-bool AcpiChecksumValid(const void* _buf, size_t len) {
-  uint8_t c = 0;
-
-  const uint8_t* buf = static_cast<const uint8_t*>(_buf);
-  for (size_t i = 0; i < len; i++) {
-    c = static_cast<uint8_t>(c + buf[i]);
-  }
-
-  return c == 0;
 }
 
 bool ValidateRsdp(const AcpiRsdp* rsdp) {
@@ -147,6 +138,28 @@ zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
 }
 #endif
 
+}  // namespace
+
+bool AcpiChecksumValid(const void* buf, size_t len) { return AcpiChecksum(buf, len) == 0; }
+
+uint8_t AcpiChecksum(const void* _buf, size_t len) {
+  uint8_t c = 0;
+
+  const uint8_t* buf = static_cast<const uint8_t*>(_buf);
+  for (size_t i = 0; i < len; i++) {
+    c = static_cast<uint8_t>(c + buf[i]);
+  }
+
+  // The checksum is valid if the sum of bytes mod 256 == 0.
+  //
+  // We return "-c" here. This doesn't change a valid checksum, and allows
+  // code calculating checksums to use to code:
+  //
+  //   foo.checksum = AcpiChecksum(&foo, sizeof(foo));
+  //
+  return -c;
+}
+
 zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
                                          size_t* num_tables) {
   // Map in the RSDT.
@@ -204,8 +217,6 @@ zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa
 
   return xsdt;
 }
-
-}  // namespace
 
 const AcpiSdtHeader* AcpiParser::GetTableAtIndex(size_t index) const {
   if (index >= num_tables_) {

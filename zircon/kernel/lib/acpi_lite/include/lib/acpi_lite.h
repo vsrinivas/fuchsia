@@ -67,6 +67,22 @@ class PhysMemReader {
   virtual zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) = 0;
 };
 
+//
+// Functions below exposed for testing.
+//
+
+// Ensure the checksum of the given block of code is valid.
+bool AcpiChecksumValid(const void* buf, size_t len);
+
+// Calculate a checksum of the given range of memory.
+uint8_t AcpiChecksum(const void* _buf, size_t len);
+
+// Validate the RSDT / XSDT tables.
+zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
+                                         size_t* num_tables);
+zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint32_t rsdt_pa,
+                                         size_t* num_tables);
+
 }  // namespace acpi_lite
 
 #endif  // ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_H_
