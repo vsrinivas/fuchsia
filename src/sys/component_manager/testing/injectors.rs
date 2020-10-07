@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        events::{CapabilityRouted, Event, EventSource, EventStreamError, RoutingProtocol},
+        events::{
+            CapabilityRouted, Event, EventSource, EventStream, EventStreamError, RoutingProtocol,
+        },
         matcher::EventMatcher,
     },
     anyhow::Error,
@@ -31,16 +33,19 @@ pub trait CapabilityInjector: 'static + Send + Sync {
     }
 
     async fn subscribe(self: &Arc<Self>, event_source: &EventSource, matcher: EventMatcher) {
-        let mut event_stream = event_source
-            .subscribe(vec![CapabilityRouted::NAME])
+        let server_end = event_source
+            .subscribe_endpoint(vec![CapabilityRouted::NAME])
             .await
-            .expect("Could not create event stream");
+            .expect("Could not subscribe to CapabilityRouted event for injection");
 
         // Spawn a new thread to listen to CapabilityRoutedEvents.
         // We use a new thread here because running this on the main thread may
         // not work if a test writer needs to do blocking operations.
         let injector = self.clone();
         fasync::Task::blocking(async move {
+            let mut event_stream = EventStream::new(
+                server_end.into_stream().expect("Could not create EventStream from ServerEnd"),
+            );
             loop {
                 // Wait for a capability routed event that matches
                 let event = match matcher.clone().wait::<CapabilityRouted>(&mut event_stream).await

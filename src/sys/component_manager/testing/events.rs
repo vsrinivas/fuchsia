@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
-    fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd, ServiceMarker},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::{connect_channel_to_service, connect_to_service},
     fuchsia_zircon as zx,
@@ -60,13 +60,26 @@ impl EventSource {
         Self { proxy }
     }
 
-    pub async fn subscribe(&self, event_names: Vec<impl AsRef<str>>) -> Result<EventStream, Error> {
-        let (client_end, stream) = create_request_stream::<fsys::EventStreamMarker>()?;
+    /// Subscribe to the events given by |event_names|.
+    /// Returns a ServerEnd object that can be safely moved to another
+    /// thread before creating an EventStream object.
+    pub async fn subscribe_endpoint(
+        &self,
+        event_names: Vec<impl AsRef<str>>,
+    ) -> Result<ServerEnd<fsys::EventStreamMarker>, Error> {
+        let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>()?;
         let subscription =
             self.proxy.subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end);
 
         subscription.await?.map_err(|error| format_err!("Error: {:?}", error))?;
-        Ok(EventStream::new(stream))
+        Ok(server_end)
+    }
+
+    /// Subscribe to the events given by |event_names|.
+    /// Returns an EventStream object that is *NOT* thread-safe.
+    pub async fn subscribe(&self, event_names: Vec<impl AsRef<str>>) -> Result<EventStream, Error> {
+        let server_end = self.subscribe_endpoint(event_names).await?;
+        Ok(EventStream::new(server_end.into_stream()?))
     }
 
     pub async fn start_component_tree(self) {

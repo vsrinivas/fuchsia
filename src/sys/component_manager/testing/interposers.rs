@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        events::{CapabilityRouted, Event, EventSource, EventStreamError, RoutingProtocol},
+        events::{
+            CapabilityRouted, Event, EventSource, EventStream, EventStreamError, RoutingProtocol,
+        },
         matcher::EventMatcher,
     },
     anyhow::Error,
@@ -33,10 +35,10 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
         matcher: EventMatcher,
     ) -> AbortHandle {
         let matcher = matcher.capability_id(Self::Marker::NAME);
-        let mut event_stream = event_source
-            .subscribe(vec![CapabilityRouted::NAME])
+        let server_end = event_source
+            .subscribe_endpoint(vec![CapabilityRouted::NAME])
             .await
-            .expect("Could not create event stream");
+            .expect("Could not subscribe to CapabilityRouted event for interposition");
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
 
         // Spawn a new thread to listen to CapabilityRoutedEvents.
@@ -45,6 +47,11 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
         fasync::Task::blocking(
             Abortable::new(
                 async move {
+                    let mut event_stream = EventStream::new(
+                        server_end
+                            .into_stream()
+                            .expect("Could not create EventStream from ServerEnd"),
+                    );
                     loop {
                         // Wait for a capability routed event that matches
                         let event =
