@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "nelson-emmc",
             "sherlock-emmc"
         ],
         "features": [
