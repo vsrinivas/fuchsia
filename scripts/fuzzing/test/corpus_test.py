@@ -354,7 +354,8 @@ class CorpusTest(TestCaseWithFuzzer):
         self.set_input(srcdir)
         self.assertError(
             lambda: fuzzer.corpus.generate_buildfile(),
-            'Failed to automatically add \'corpus = "{}"\'.'.format(srcdir),
+            'Failed to automatically add \'corpus = "{}"\'.'.format(
+                self.buildenv.srcpath(srcdir)),
             'Please add the corpus parameter to {} manually.'.format(
                 str(fuzzer)))
 
@@ -371,6 +372,7 @@ class CorpusTest(TestCaseWithFuzzer):
         ]
         with self.host.open(fuzzer_gn, 'w') as f:
             f.write('\n'.join(lines_out))
+        self.host.cwd = self.buildenv.abspath('//current_dir')
         srcdir = 'shared-corpus'
         self.host.mkdir(self.buildenv.abspath(srcdir))
         self.set_input(srcdir)

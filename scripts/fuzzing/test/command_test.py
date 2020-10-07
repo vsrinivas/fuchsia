@@ -258,10 +258,11 @@ class CommandTest(TestCaseWithFuzzer):
         # Fuzzer without corpus directory specified in its metadata.
         args = self.parse_args('update', '1/1')
         fuzzer = self.create_fuzzer('1/1')
+        self.host.cwd = self.buildenv.abspath('//current_dir')
         self.set_input('foo')
         self.assertError(
             lambda: command.update_corpus(args, self.factory),
-            'No such directory: /fuchsia_dir/foo')
+            'No such directory: /fuchsia_dir/current_dir/foo')
         # This was logged before the error
         self.assertLogged('No corpus set for {}.'.format(str(fuzzer)))
 
@@ -288,23 +289,24 @@ class CommandTest(TestCaseWithFuzzer):
         self.host.mkdir(corpus_dir)
         self.host.touch(self.buildenv.abspath(corpus_dir, 'foo'))
 
-    #     self.assertFalse(self.host.isfile(build_gn))
-    #     command.update_corpus(args, self.factory)
-    #     self.assertLogged(
-    #         'Added:', '  package1/target3-corpus/foo', '',
-    #         '{} updated.'.format(os.path.relpath(build_gn, self.buildenv.fuchsia_dir)))
-    #     self.assertTrue(self.host.isfile(build_gn))
+        self.assertFalse(self.host.isfile(build_gn))
+        command.update_corpus(args, self.factory)
+        self.assertLogged(
+            'Added:', '  package1/target3-corpus/foo', '',
+            '//{} updated.'.format(
+                os.path.relpath(build_gn, self.buildenv.fuchsia_dir)))
+        self.assertTrue(self.host.isfile(build_gn))
 
-    #     # Fuzzer not currently built as fuzzer
-    #     args = self.parse_args('update', '1/5')
-    #     fuzzer = self.create_fuzzer('1/5', include_tests=True)
-    #     corpus_dir = self.buildenv.abspath(fuzzer.corpus.srcdir)
-    #     self.host.mkdir(corpus_dir)
-    #     self.host.touch(self.buildenv.abspath(corpus_dir, 'bar'))
-    #     command.update_corpus(args, self.factory)
-    #     self.assertLogged(
-    #         'Added:', '  bar', '',
-    #         '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
+        # Fuzzer not currently built as fuzzer
+        args = self.parse_args('update', '1/5')
+        fuzzer = self.create_fuzzer('1/5', include_tests=True)
+        corpus_dir = self.buildenv.abspath(fuzzer.corpus.srcdir)
+        self.host.mkdir(corpus_dir)
+        self.host.touch(self.buildenv.abspath(corpus_dir, 'bar'))
+        command.update_corpus(args, self.factory)
+        self.assertLogged(
+            'Added:', '  bar', '',
+            '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
 
 
 if __name__ == '__main__':

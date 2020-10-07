@@ -171,7 +171,7 @@ class Corpus(object):
         nested_scopes = 0
         current_target_lines = []
         lines_out = []
-        srcdir = self.buildenv.srcpath(srcdir)[2:]
+        srcdir = self.buildenv.srcpath(srcdir)
         if self.host.isfile(build_gn):
             with self.host.open(build_gn) as gn:
                 include_target = True
@@ -226,7 +226,8 @@ class Corpus(object):
             lines_out += ['    "{}",'.format(elem) for elem in elems]
             lines_out.append('  ]')
         lines_out += [
-            '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(srcdir),
+            '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(
+                srcdir[2:]),
             '}',
             '',
         ]

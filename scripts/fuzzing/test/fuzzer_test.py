@@ -503,7 +503,8 @@ class FuzzerTest(TestCaseWithFuzzer):
         with self.host.open(build_gn, 'w') as f:
             f.write('\n'.join(lines_out))
 
-        self.assertTrue(self.fuzzer.add_corpus_to_buildfile('corpus/label'))
+        # Path is interpreted as relative to cwd as defined in FakeFactory
+        self.assertTrue(self.fuzzer.add_corpus_to_buildfile('../corpus/label'))
 
         with self.host.open(build_gn) as f:
             self.assertEqual(

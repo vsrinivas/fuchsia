@@ -82,6 +82,10 @@
         "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
     },
     {
+        "label": "//src/fake/package1:target5",
+        "corpus": "//src/fake/package1/target5-corpus:target5"
+    },
+    {
         "_COMMENT": "Simulate fuzzers_package('package2') in //src/fake/package2/BUILD.gn",
         "label": "//src/fake/package2:target1",
         "package": "fake-package2",

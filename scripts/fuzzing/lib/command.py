@@ -144,7 +144,7 @@ def update_corpus(args, factory):
     # want here.
     build_gn = None
     if args.output:
-        build_gn = os.path.abspath(args.output)
+        build_gn = factory.buildenv.abspath(args.output)
     args.output = None
     fuzzer = factory.create_fuzzer(args, include_tests=True)
     elems = fuzzer.corpus.generate_buildfile(build_gn=build_gn)
@@ -157,7 +157,6 @@ def update_corpus(args, factory):
     if not build_gn:
         build_gn = '{}/BUILD.gn'.format(fuzzer.corpus.srcdir)
     else:
-        build_gn = factory.buildenv.path(build_gn)
         build_gn = '//' + os.path.relpath(
             build_gn, factory.buildenv.fuchsia_dir)
     factory.host.echo('', build_gn + ' updated.')
