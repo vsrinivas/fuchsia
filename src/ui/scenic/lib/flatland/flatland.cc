@@ -194,12 +194,16 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // This portion of the method is feed-forward. The parent-child relationship between
   // |link_origin| and |local_root_| establishes the Transform hierarchy between the two instances,
   // but the operation will not be visible until the next Present() call includes that topology.
-  if (parent_link_) {
+  if (parent_link_.has_value()) {
     bool child_removed = transform_graph_.RemoveChild(parent_link_->link_origin, local_root_);
     FX_DCHECK(child_removed);
 
     bool transform_released = transform_graph_.ReleaseTransform(parent_link_->link_origin);
     FX_DCHECK(transform_released);
+
+    // Delay the destruction of the previous parent link until the next Present().
+    pending_link_operations_.push_back(
+        [local_link = std::move(parent_link_)]() mutable { local_link.reset(); });
   }
 
   bool child_added = transform_graph_.AddChild(link.link_origin, local_root_);

@@ -1034,6 +1034,8 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
   fidl::InterfacePtr<GraphLink> graph_link2;
   flatland.LinkToParent(std::move(child_token2), graph_link2.NewRequest());
 
+  RunLoopUntilIdle();
+
   // Until Present() is called, the previous GraphLink is not unbound.
   EXPECT_TRUE(graph_link.is_bound());
   EXPECT_TRUE(graph_link2.is_bound());
@@ -1064,6 +1066,8 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
   // Creating the new GraphLink doesn't invalidate either of the old links until Present() is
   // called on the child.
   child.LinkToParent(std::move(child_token), graph_link2.NewRequest());
+
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
@@ -1164,6 +1168,8 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
   GraphLinkToken graph_token;
   flatland.UnlinkFromParent(
       [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+
+  RunLoopUntilIdle();
 
   // Until Present() is called and the acquire fence is signaled, the previous GraphLink is not
   // unbound.
@@ -2168,6 +2174,8 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
   ContentLinkToken content_token;
   flatland.ReleaseLink(
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+
+  RunLoopUntilIdle();
 
   // Until Present() is called and the acquire fence is signaled, the previous ContentLink is not
   // unbound.
