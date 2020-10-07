@@ -7,6 +7,7 @@ package artifactory
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -36,15 +37,14 @@ func HostTestUploads(testSpecs []build.TestSpec, buildDir, namespace string) ([]
 			continue
 		}
 		depsPath := filepath.Join(buildDir, test.RuntimeDepsFile)
-		depsF, err := os.Open(depsPath)
+		depsBytes, err := ioutil.ReadFile(depsPath)
 		if err != nil {
 			return nil, err
 		}
 		var deps []string
-		err = json.NewDecoder(depsF).Decode(&deps)
-		depsF.Close()
+		err = json.Unmarshal(depsBytes, &deps)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read runtime deps for test %s: %v", test.Name, err)
+			return nil, fmt.Errorf("failed to read runtime deps for test %s: %w", test.Name, err)
 		}
 		// regular = not a directory.
 		var regularDeps []string
@@ -52,7 +52,7 @@ func HostTestUploads(testSpecs []build.TestSpec, buildDir, namespace string) ([]
 			depPath := filepath.Join(buildDir, dep)
 			depInfo, err := os.Stat(depPath)
 			if err != nil {
-				return nil, fmt.Errorf("failed to stat runtime dep file: %v", err)
+				return nil, fmt.Errorf("failed to stat runtime dep file: %w", err)
 			}
 			if depInfo.IsDir() {
 				err = filepath.Walk(
@@ -71,7 +71,7 @@ func HostTestUploads(testSpecs []build.TestSpec, buildDir, namespace string) ([]
 						return nil
 					})
 				if err != nil {
-					return nil, fmt.Errorf("error during Walk(%s): %v", depPath, err)
+					return nil, fmt.Errorf("error during Walk(%s): %w", depPath, err)
 				}
 			} else {
 				regularDeps = append(regularDeps, dep)

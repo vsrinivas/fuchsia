@@ -21,6 +21,11 @@ func TestHostTestUploads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ioutil.TempDir() failed: %v", err)
 	}
+	defer func() {
+		if err := os.RemoveAll(buildDir); err != nil {
+			t.Error(err)
+		}
+	}()
 	runtimeDepsRelPath := "runtime_deps.json"
 	testSpecs := []build.TestSpec{
 		{Test: build.Test{OS: "linux", Path: "foo"}},
