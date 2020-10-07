@@ -501,17 +501,10 @@ class SmallDiskTestWithFvm : public BlobfsFixedDiskSizeTestWithFvm {
         fbl::round_up(blobfs::kDefaultJournalBlocks, blocks_per_slice) / blocks_per_slice;
 
     // Require an additional 1 slice each for super, inode, and block bitmaps.
-    uint64_t blobfs_size = (required_journal_slices + required_data_slices + 3) * kTestFvmSliceSize;
-    uint64_t minimum_size = blobfs_size;
-    uint64_t metadata_size = fvm::MetadataSizeForDiskSize(blobfs_size, kTestFvmSliceSize);
-
-    // Re-calculate minimum size until the metadata size stops growing.
-    while (minimum_size - blobfs_size != metadata_size * 2) {
-      minimum_size = blobfs_size + metadata_size * 2;
-      metadata_size = fvm::MetadataSizeForDiskSize(minimum_size, kTestFvmSliceSize);
-    }
-
-    return minimum_size;
+    uint64_t blobfs_slices = required_journal_slices + required_data_slices + 3;
+    fvm::Header header =
+        fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, blobfs_slices, kTestFvmSliceSize);
+    return header.fvm_partition_size;
   }
 };
 
@@ -1576,8 +1569,8 @@ void CloneThread(CloneThreadArgs* args) {
     // Explicitly close |fd| before unmapping.
     fd.reset();
     // Yielding before unmapping significantly improves the ability of this test to detect bugs
-    // (e.g. fxbug.dev/53882) by increasing the length of time that the file is closed but still has a
-    // VMO clone.
+    // (e.g. fxbug.dev/53882) by increasing the length of time that the file is closed but still has
+    // a VMO clone.
     zx_nanosleep(0);
     ASSERT_EQ(0, munmap(addr, args->info->size_data));
   }

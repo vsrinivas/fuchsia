@@ -385,12 +385,13 @@ zx_status_t FvmContainer::Commit() {
       return ZX_ERR_INVALID_ARGS;
     }
 
-    uint64_t total_size = CalculateDiskSize();
-    zx_status_t status = info_.Grow(fvm::MetadataSizeForDiskSize(total_size, slice_size_));
-    if (status != ZX_OK) {
+    fvm::Header header =
+        fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, CountAddedSlices(), slice_size_);
+    if (zx_status_t status = info_.Grow(header.GetMetadataAllocatedBytes()); status != ZX_OK) {
       return status;
     }
 
+    uint64_t total_size = header.fvm_partition_size;
     if (ftruncate(fd_.get(), total_size) != 0) {
       fprintf(stderr, "Failed to truncate fvm container");
       return ZX_ERR_IO;

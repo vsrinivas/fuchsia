@@ -35,7 +35,8 @@ void BlobfsTestWithFvm::CheckPartitionSize() {
   // Minimum size required by ResizePartition test:
   const size_t kMinDataSize = 507 * kTestFvmSliceSize;
   const size_t kMinFvmSize =
-      fvm::MetadataSizeForDiskSize(kMinDataSize, kTestFvmSliceSize) * 2 + kMinDataSize;  // ~8.5mb
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kMinDataSize, kTestFvmSliceSize)
+          .fvm_partition_size;
   ASSERT_GE(environment_->disk_size(), kMinFvmSize, "Insufficient disk space for FVM tests");
 }
 

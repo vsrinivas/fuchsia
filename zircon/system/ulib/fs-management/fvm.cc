@@ -218,25 +218,18 @@ zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
   }
 
   size_t disk_size = block_info.block_count * block_info.block_size;
-  size_t metadata_size = fvm::MetadataSizeForDiskSize(disk_size, slice_size);
+  fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
 
+  // Overwrite all the metadata from the beginning of the device to the start of the data.
+  size_t metadata_size = header.GetDataStartOffset();
   std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
-
   memset(buf.get(), 0, metadata_size);
 
   if (lseek(fd.get(), 0, SEEK_SET) < 0) {
     return ZX_ERR_IO;
   }
-
-  // Write to primary copy.
   if (write(fd.get(), buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
     fprintf(stderr, "fvm_overwrite_impl: Failed to write metadata\n");
-    return ZX_ERR_IO;
-  }
-
-  // Write to backup copy
-  if (write(fd.get(), buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
-    fprintf(stderr, "fvm_overwrite_impl: Failed to write metadata (secondary)\n");
     return ZX_ERR_IO;
   }
 

@@ -45,14 +45,10 @@ class FsRecoveryTest : public zxtest::Test {
   // Create a ram disk that is back by a VMO, which is formatted to look like an FVM volume.
   void CreateFvmRamdisk(size_t device_size, size_t block_size) {
     // Calculate total size of data + metadata.
-    device_size = fbl::round_up(device_size, fvm::kBlockSize);
-    size_t old_meta = fvm::MetadataSizeForDiskSize(device_size, fvm::kBlockSize);
-    size_t new_meta = fvm::MetadataSizeForDiskSize(old_meta + device_size, fvm::kBlockSize);
-    while (old_meta != new_meta) {
-      old_meta = new_meta;
-      new_meta = fvm::MetadataSizeForDiskSize(old_meta + device_size, fvm::kBlockSize);
-    }
-    device_size = device_size + (new_meta * 2);
+    size_t slice_count = (device_size + fvm::kBlockSize - 1) / fvm::kBlockSize;
+    device_size = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions,
+                                              slice_count, fvm::kBlockSize)
+                      .fvm_partition_size;
 
     zx::vmo disk;
     ASSERT_EQ(zx::vmo::create(device_size, 0, &disk), ZX_OK);

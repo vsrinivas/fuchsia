@@ -520,7 +520,8 @@ TEST_F(FvmTest, TestLarge) {
   ASSERT_TRUE(fd);
 
   size_t slice_size = 16 * (1 << 10);
-  size_t metadata_size = fvm::MetadataSizeForDiskSize(block_size * block_count, slice_size);
+  fvm::Header fvm_header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, block_size * block_count, slice_size);
 
   fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
   zx::unowned_channel channel(disk_connection.borrow_channel());
@@ -528,7 +529,7 @@ TEST_F(FvmTest, TestLarge) {
   fuchsia_hardware_block_BlockInfo block_info;
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_LT(block_info.max_transfer_size, metadata_size);
+  ASSERT_LT(block_info.max_transfer_size, fvm_header.GetMetadataAllocatedBytes());
 
   ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 

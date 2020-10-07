@@ -432,18 +432,6 @@ constexpr size_t AllocTableLengthForDiskSize(size_t disk_size, size_t slice_size
   return AllocTableLengthForUsableSliceCount(disk_size / slice_size);
 }
 
-// Returns how large one copy of the metadata is for the given table settings.
-constexpr size_t MetadataSizeForUsableEntries(size_t usable_partitions, size_t usable_slices) {
-  return kBlockSize +                                                    // Superblock
-         PartitionTableByteSizeForUsablePartitions(usable_partitions) +  // Partition table.
-         AllocTableLengthForUsableSliceCount(usable_slices);
-}
-
-constexpr size_t DataStartForUsableEntries(size_t usable_partitions, size_t usable_slices) {
-  // The data starts after the two copies of the metadata.
-  return MetadataSizeForUsableEntries(usable_partitions, usable_slices) * 2;
-}
-
 // TODO(fxb/40192): Remove in preference of MetadataSizeForUsableEntries() which takes a partition
 // table size.
 constexpr size_t MetadataSizeForDiskSize(size_t total_size, size_t slice_size) {

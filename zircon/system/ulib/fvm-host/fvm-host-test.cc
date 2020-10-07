@@ -107,8 +107,9 @@ size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
   // Make use of the CalculateDiskSize() method to compute the required data size.
   // The required data size is one that does not include the header size and extended part.
   size_t minimal_disk_size = container->CalculateDiskSize();
-  size_t minimal_metadata_size = fvm::MetadataSizeForDiskSize(minimal_disk_size, kDefaultSliceSize);
-  return minimal_disk_size - 2 * minimal_metadata_size;
+  fvm::Header header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, minimal_disk_size, kDefaultSliceSize);
+  return minimal_disk_size - header->GetDataStartOffset();
 }
 
 class FvmHostTest : public zxtest::Test {

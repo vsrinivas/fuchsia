@@ -48,6 +48,18 @@ constexpr uint64_t kSliceEntryReservedBits = 16;
 static_assert(kSliceEntryVPartitionBits + kSliceEntryVSliceBits + kSliceEntryReservedBits == 64,
               "Exceeding SliceEntry payload size.");
 
+// Returns how large one copy of the metadata is for the given table settings.
+constexpr size_t MetadataSizeForUsableEntries(size_t usable_partitions, size_t usable_slices) {
+  return kBlockSize +                                                    // Superblock
+         PartitionTableByteSizeForUsablePartitions(usable_partitions) +  // Partition table.
+         AllocTableLengthForUsableSliceCount(usable_slices);
+}
+
+constexpr size_t DataStartForUsableEntries(size_t usable_partitions, size_t usable_slices) {
+  // The data starts after the two copies of the metadata.
+  return MetadataSizeForUsableEntries(usable_partitions, usable_slices) * 2;
+}
+
 }  // namespace
 
 Header Header::FromDiskSize(size_t usable_partitions, size_t disk_size, size_t slice_size) {

@@ -77,24 +77,6 @@ Container::Container(const char* path, size_t slice_size, uint32_t flags)
 Container::~Container() {}
 
 uint64_t Container::CalculateDiskSizeForSlices(size_t slice_count) const {
-  uint64_t data_size = slice_count * slice_size_;
-  uint64_t total_size = 0;
-  size_t metadata_size = 0;
-
-  // This loop will necessarily break at some point. The re-calculation of total_size and
-  // metadata_size will cause both of these values to increase, except on the last iteration
-  // where metadata_size will not change, causing the loop condition to become false.
-  // metadata_size *must* stop increasing at some point, since the data_size is always a fixed
-  // value, and the metadata by itself will not grow fast enough to necessitate its continued
-  // growth at the same or higher rate.
-  // As an example, with the current metadata size calculation and a slice size of 8192 bytes,
-  // around ~8mb of disk space will require metadata growth of only ~8kb. Even if the
-  // metadata_size grows very quickly at first, this amount will diminish very quickly until it
-  // reaches 0.
-  do {
-    total_size = data_size + (metadata_size * 2);
-    metadata_size = fvm::MetadataSizeForDiskSize(total_size, slice_size_);
-  } while (total_size - (metadata_size * 2) < data_size);
-
-  return total_size;
+  return fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slice_count, slice_size_)
+      .fvm_partition_size;
 }
