@@ -16,6 +16,8 @@ import sys
 import time
 import typing
 
+from typing import List
+
 import paths
 
 if sys.hexversion < 0x030700F0:
@@ -27,26 +29,46 @@ if sys.hexversion < 0x030700F0:
 
 WORKSTATION_INSTALLER_GPT_GUID = '4dce98ce-e77e-45c1-a863-caf92f1330c1'
 
+def make_unique_name(name, type):
+  return f'{name}_{type}'
+
+class ManifestImage:
+  """ Represents an entry in the 'images.json' manifest that will be installed to disk. """
+  def __init__(self, name: str, guids: List[str], type: str):
+    """
+    Args:
+      name: 'name' of the partition in the image manifest.
+      guids: List of GPT GUIDs that this partition should be written to the disk with.
+      type: 'type' of the partition in the image manifest.
+    """
+    self.name = name
+    self.guids = guids
+    self.type = type
+
+  def unique_name(self):
+    return make_unique_name(self.name, self.type)
+
+
 # This is the list of Fuchsia build images we write to the final image,
 # and the partition types they will have (passed to cgpt)
-IMAGES = {
+IMAGES = [
     # Standard x64 partitions
     # This is the zedboot image, which is actually booted.
-    'zedboot-efi': 'efi',
+    ManifestImage('zedboot-efi', ['efi'], 'blk'),
     # This is the EFI system partition that will be installed to the target.
-    'efi': WORKSTATION_INSTALLER_GPT_GUID,
-    'zircon-a': WORKSTATION_INSTALLER_GPT_GUID,
-    'zircon-r': WORKSTATION_INSTALLER_GPT_GUID,
+    ManifestImage('efi', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
+    ManifestImage('zircon-a', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi'),
+    ManifestImage('zircon-r', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi'),
 
     # ChromeOS partitions
     # The zircon-r.signed partition is used as both zedboot on the installation
     # disk and also the installed zircon-r partition.
-    'zircon-r.signed': ('kernel', WORKSTATION_INSTALLER_GPT_GUID),
-    'zircon-a.signed': WORKSTATION_INSTALLER_GPT_GUID,
+    ManifestImage('zircon-r.signed', ['kernel', WORKSTATION_INSTALLER_GPT_GUID], 'zbi.signed'),
+    ManifestImage('zircon-a.signed', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi.signed'),
 
     # Common partitions - installed everywhere.
-    'storage-sparse': WORKSTATION_INSTALLER_GPT_GUID,
-}
+    ManifestImage('storage-sparse', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
+]
 
 
 def ParseSize(size):
@@ -291,7 +313,7 @@ def GetPartitions():
     with open(paths.FUCHSIA_BUILD_DIR + '/images.json') as f:
       images_list = json.load(f)
       for image in images_list:
-        images[image['name']] = image
+        images[make_unique_name(image['name'], image['type'])] = image
   except IOError as err:
     print(
         'Failed to find image manifest. Have you run `fx build`?',
@@ -301,16 +323,14 @@ def GetPartitions():
 
   ret = []
   is_bootable = False
-  for (name, part_types) in IMAGES.items():
-    if name not in images:
-      print("Skipping image that wasn't built: {}".format(name))
+  for image in IMAGES:
+    if image.unique_name() not in images:
+      print("Skipping image that wasn't built: {}".format(image.unique_name()))
       continue
-    if not isinstance(part_types, tuple):
-      part_types = (part_types,)
 
-    for part_type in part_types:
-      full_path = os.path.join(paths.FUCHSIA_BUILD_DIR, images[name]['path'])
-      ret.append(Partition(full_path, part_type, name))
+    for part_type in image.guids:
+      full_path = os.path.join(paths.FUCHSIA_BUILD_DIR, images[image.unique_name()]['path'])
+      ret.append(Partition(full_path, part_type, image.name))
       # Assume that any non-installer partition is a bootable partition.
       if part_type != WORKSTATION_INSTALLER_GPT_GUID:
         is_bootable = True
