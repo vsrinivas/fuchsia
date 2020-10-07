@@ -26,6 +26,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
@@ -683,6 +684,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 
 func TestStaticIPConfiguration(t *testing.T) {
 	ns := newNetstack(t)
+	ns.filter = filter.New(ns.stack.PortManager)
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := fidlnet.Subnet{Addr: addr, PrefixLen: 32}
@@ -696,6 +698,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			d, _ := testutil.MakeEthernetDevice(t, ethernet.Info{
 				Features: test.features,
+				Mtu:      1400,
 			}, 1)
 			ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: t.Name()}, &d)
 			if err != nil {
