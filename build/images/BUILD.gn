@@ -2391,6 +2391,17 @@ compiled_action("uefi-disk") {
 
   args += [ rebase_path(uefi_disk_path) ]
   outputs = [ uefi_disk_path ]
+
+  metadata = {
+    images = [
+      {
+        archive = false
+        name = "uefi-disk"
+        path = rebase_path(uefi_disk_path, root_build_dir)
+        type = "blk"
+      },
+    ]
+  }
 }
 
 group("images") {
