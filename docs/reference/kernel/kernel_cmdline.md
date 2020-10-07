@@ -34,15 +34,16 @@ more memory for page tables. Valid values range from 0-36, with default being 30
 
 ## blobfs.cache-eviction-policy=\<policy\>
 
-Controls blobfs' eviction strategy for blobs with no open handles or VMO clones.
-If unset, an internally defined system default is used.
+Controls blobfs' eviction strategy for pager-backed blobs with no open handles or
+VMO clones. If unset, an internally defined system default is used.
+
+Blobs which are not pager-backed are not affected by this knob.
 
 The following values are supported:
 
 * `NEVER_EVICT`: Nodes are never evicted. It is recommended to enable kernel page
-  eviction (`kernel.page-scanner.enable-user-pager-eviction`) and user paging
-  (`blobfs.userpager`) in this case, as otherwise blobfs will indefinitely retain
-  all data pages in memory.
+  eviction (`kernel.page-scanner.enable-user-pager-eviction`) in this case, as
+  otherwise blobfs will indefinitely retain all data pages in memory.
 * `EVICT_IMMEDIATELY`: Nodes are evicted as soon as they have no open handles or
   VMO clones. They will need to be loaded from disk again on next access.
 
