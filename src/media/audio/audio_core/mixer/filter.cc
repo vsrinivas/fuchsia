@@ -215,6 +215,16 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
       .num_frac_bits = kPtsFractionalBits,
       .rate_conversion_ratio = 1.0,
   }));
+  SincFilter::persistent_cache_->push_back(cache->Get(SincFilter::Inputs{
+      .side_width = SincFilter::GetFilterWidth(96000, 48000),
+      .num_frac_bits = kPtsFractionalBits,
+      .rate_conversion_ratio = 0.5,
+  }));
+  SincFilter::persistent_cache_->push_back(cache->Get(SincFilter::Inputs{
+      .side_width = SincFilter::GetFilterWidth(48000, 96000),
+      .num_frac_bits = kPtsFractionalBits,
+      .rate_conversion_ratio = 2.0,
+  }));
 
   return cache;
 }

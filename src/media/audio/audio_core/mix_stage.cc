@@ -118,6 +118,14 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
 
 std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, size_t frame_count) {
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
+
+  // If we have a partially consumed block, return that here.
+  // Otherwise, the cached block, if any, is no longer needed.
+  if (cached_buffer_.Contains(dest_frame)) {
+    return cached_buffer_.Get();
+  }
+  cached_buffer_.Reset();
+
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
   auto snapshot = ref_time_to_frac_presentation_frame();
@@ -133,12 +141,11 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, size_
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, dest_frame);
 
-  // Transfer output_buffer ownership to the read lock via this destructor.
-  // TODO(fxbug.dev/50669): If this buffer is not fully consumed, we should save this buffer and
-  // reuse it for the next call to ReadLock, rather than mixing new data.
-  return std::make_optional<ReadableStream::Buffer>(
-      dest_frame, Fixed(cur_mix_job_.buf_frames), cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
-      cur_mix_job_.applied_gain_db);
+  // Cache the buffer in case it is not fully read by the caller.
+  cached_buffer_.Set(ReadableStream::Buffer(dest_frame, Fixed(cur_mix_job_.buf_frames),
+                                            cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
+                                            cur_mix_job_.applied_gain_db));
+  return cached_buffer_.Get();
 }
 
 BaseStream::TimelineFunctionSnapshot MixStage::ref_time_to_frac_presentation_frame() const {

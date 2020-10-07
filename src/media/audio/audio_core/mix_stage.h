@@ -11,6 +11,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
@@ -77,6 +78,11 @@ class MixStage : public ReadableStream {
   std::vector<float> output_buffer_;
   AudioClock& output_ref_clock_;
   fbl::RefPtr<VersionedTimelineFunction> output_ref_clock_to_fractional_frame_;
+
+  // The last buffer returned from ReadLock, saved to prevent recomputing frames on
+  // consecutive calls to ReadLock. This is reset once the caller has unlocked the buffer,
+  // signifying that the buffer is no longer needed.
+  CachedReadableStreamBuffer cached_buffer_;
 };
 
 }  // namespace media::audio

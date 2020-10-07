@@ -52,9 +52,11 @@ size_t AddSlackToOutputFrames(size_t expected_output_frames) {
   do {                                                                                     \
     auto label =                                                                           \
         fxl::StringPrintf("\n  %s = %f\n  %s = %f", #actual, actual, #expected, expected); \
-    FX_CHECK(expected != 0) << label;                                                      \
-    auto err = abs(actual - expected) / expected;                                          \
-    EXPECT_LE(err, threshold) << label;                                                    \
+    EXPECT_NE(expected, 0) << label;                                                       \
+    if (expected != 0) {                                                                   \
+      auto err = abs(actual - expected) / expected;                                        \
+      EXPECT_LE(err, threshold) << label;                                                  \
+    }                                                                                      \
   } while (0)
 
 template <ASF SampleFormat>

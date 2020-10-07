@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/audio_clock.h"
+#include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/volume_curve.h"
@@ -59,7 +60,6 @@ class EffectsStage : public ReadableStream {
   }
 
  private:
-  std::optional<ReadableStream::Buffer> DupCurrentBlock();
   zx::duration ComputeIntrinsicMinLeadTime() const;
 
   std::shared_ptr<ReadableStream> source_;
@@ -67,9 +67,9 @@ class EffectsStage : public ReadableStream {
   VolumeCurve volume_curve_;
 
   // The last buffer returned from ReadLock, saved to prevent recomputing frames on
-  // consecutive calls to ReadLock. This is reset to std::nullopt once the caller has
-  // unlocked the buffer, signifying that the buffer is no longer needed.
-  std::optional<ReadableStream::Buffer> current_block_;
+  // consecutive calls to ReadLock. This is reset once the caller has unlocked the buffer,
+  // signifying that the buffer is no longer needed.
+  CachedReadableStreamBuffer cached_buffer_;
 
   uint32_t ringout_frames_sent_ = 0;
   int64_t next_ringout_frame_ = 0;

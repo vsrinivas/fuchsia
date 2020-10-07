@@ -182,31 +182,16 @@ EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
   SetPresentationDelay(zx::duration(0));
 }
 
-std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
-  // To minimize duplicate work, ReadLock saves the last buffer it got from source_->ReadBlock().
-  // We can discard this buffer once the caller tells us that the buffer has been fully consumed.
-  return std::make_optional<ReadableStream::Buffer>(
-      current_block_->start(), current_block_->length(), current_block_->payload(),
-      current_block_->is_continuous(), current_block_->usage_mask(), current_block_->gain_db(),
-      [this](bool fully_consumed) {
-        if (fully_consumed) {
-          current_block_ = std::nullopt;
-        }
-      });
-}
-
 std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame, size_t frame_count) {
   TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", dest_frame.Floor(), "length",
                  frame_count);
 
   // If we have a partially consumed block, return that here.
-  if (current_block_) {
-    if (dest_frame >= current_block_->start() && dest_frame < current_block_->end()) {
-      return DupCurrentBlock();
-    }
-    // We have a current block that is non-overlapping with this request, so we can release it.
-    current_block_ = std::nullopt;
+  // Otherwise, the cached block, if any, is no longer needed.
+  if (cached_buffer_.Contains(dest_frame)) {
+    return cached_buffer_.Get();
   }
+  cached_buffer_.Reset();
 
   // New frames are requested. Block-align the start frame and length.
   auto [aligned_first_frame, aligned_frame_count] =
@@ -244,13 +229,13 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame, s
     //
     // This buffer will be valid until the next call to |effects_processor_->Process|.
     if (buf_out == payload) {
-      current_block_ = std::move(source_buffer);
+      cached_buffer_.Set(std::move(*source_buffer));
     } else {
-      current_block_ = ReadableStream::Buffer(
+      cached_buffer_.Set(ReadableStream::Buffer(
           source_buffer->start(), source_buffer->length(), buf_out, source_buffer->is_continuous(),
-          source_buffer->usage_mask(), source_buffer->gain_db());
+          source_buffer->usage_mask(), source_buffer->gain_db()));
     }
-    return DupCurrentBlock();
+    return cached_buffer_.Get();
   } else if (ringout_frames_sent_ < ringout_.total_frames) {
     if (aligned_first_frame != next_ringout_frame_) {
       FX_LOGS(DEBUG) << "Skipping ringout due to discontinuous buffer";
@@ -265,12 +250,12 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame, s
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
     // TODO(fxbug.dev/50669): Should we clamp length to |frame_count|?
-    current_block_ =
-        ReadableStream::Buffer(Fixed(aligned_first_frame), Fixed(ringout_.buffer_frames), buf_out,
-                               is_continuous, StreamUsageMask(), 0.0);
+    cached_buffer_.Set(ReadableStream::Buffer(Fixed(aligned_first_frame),
+                                              Fixed(ringout_.buffer_frames), buf_out, is_continuous,
+                                              StreamUsageMask(), 0.0));
     ringout_frames_sent_ += ringout_.buffer_frames;
-    next_ringout_frame_ = current_block_->end().Floor();
-    return DupCurrentBlock();
+    next_ringout_frame_ = aligned_first_frame + ringout_.buffer_frames;
+    return cached_buffer_.Get();
   }
 
   // No buffer and we have no ringout frames remaining, so return silence.

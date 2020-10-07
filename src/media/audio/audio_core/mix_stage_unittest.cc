@@ -586,6 +586,71 @@ TEST_F(MixStageTest, MixWithSourceGain) {
   }
 }
 
+TEST_F(MixStageTest, CachedUntilFullyConsumed) {
+  // Create a packet queue to use as our source stream.
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function_,
+      AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic()));
+
+  // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  bool packet_released = false;
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
+                                                 [&packet_released] { packet_released = true; }));
+  auto mix_stage =
+      std::make_shared<MixStage>(kDefaultFormat, 480, timeline_function_, device_clock_);
+  mix_stage->AddInput(stream);
+
+  // After mixing half the packet, the packet should not be released.
+  {
+    auto buf = mix_stage->ReadLock(Fixed(0), 240);
+    RunLoopUntilIdle();
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(240u, buf->length().Floor());
+    EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
+    EXPECT_FALSE(packet_released);
+  }
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(packet_released);
+
+  // After mixing all of the packet, the packet should be released.
+  // However, we set fully consumed = false so the mix buffer will be cached.
+  {
+    auto buf = mix_stage->ReadLock(Fixed(0), 480);
+    RunLoopUntilIdle();
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(480u, buf->length().Floor());
+    EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
+    EXPECT_TRUE(packet_released);
+    buf->set_is_fully_consumed(false);
+  }
+
+  // Mixing again should return the same buffer.
+  // This time we set fully consumed = true to discard the cached mix result.
+  {
+    auto buf = mix_stage->ReadLock(Fixed(0), 480);
+    RunLoopUntilIdle();
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(480u, buf->length().Floor());
+    EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
+    buf->set_is_fully_consumed(true);
+  }
+
+  // The mix buffer is not cached and the packet is gone, so we must mix silence.
+  {
+    auto buf = mix_stage->ReadLock(Fixed(0), 480);
+    RunLoopUntilIdle();
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(480u, buf->length().Floor());
+    EXPECT_EQ(0.0, static_cast<float*>(buf->payload())[0]);
+  }
+}
+
 // When micro-SRC makes a rate change, we take particular care to preserve our source stream's
 // position. Specifically, a component of position beyond what we capture by our Fixed data type is
 // kept in [src_pos_modulo, rate_modulo, denominator, next_src_pos_modulo] (in Bookkeeping x3 and

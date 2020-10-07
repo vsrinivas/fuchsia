@@ -77,6 +77,7 @@ source_set("audio_core_lib") {
     "base_capturer.h",
     "base_renderer.cc",
     "base_renderer.h",
+    "cached_readable_stream_buffer.h",
     "capture_packet_queue.cc",
     "capture_packet_queue.h",
     "context.cc",
