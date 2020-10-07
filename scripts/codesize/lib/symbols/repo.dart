@@ -16,6 +16,7 @@ import 'package:gcloud/storage.dart';
 
 import '../build.dart';
 import '../common_util.dart';
+import '../crash_handling.dart' show KnownFailure;
 import 'cache.dart';
 
 // ignore: avoid_classes_with_only_static_members
@@ -47,6 +48,21 @@ class GoogleApiClient {
     final homeDir = Directory(Platform.environment['HOME']);
     final File credentialFile =
         homeDir / File('.config/gcloud/application_default_credentials.json');
+    if (!credentialFile.existsSync()) {
+      throw KnownFailure('''
+Cannot find Google Cloud Application Default Credentials.
+
+Please install the Google Cloud SDK via:
+
+    sudo apt install -y google-cloud-sdk
+
+and run the following command to obtain the credentials:
+
+    gcloud auth application-default login
+
+See https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
+''');
+    }
     final jsonCredentials = jsonDecode(await credentialFile.readAsString());
     final scopes = <String>[]..addAll(Storage.SCOPES);
     final baseClient = http.Client();
