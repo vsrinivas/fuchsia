@@ -14,7 +14,6 @@ pub const KEY_FRAME_EXCHANGE_MAX_ATTEMPTS: u32 = 3;
 pub const CONNECTION_PING_TIMEOUT_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
 pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 200;
-pub const SAE_PMKSA_EXPIRATION_TIMEOUT_HOURS: i64 = 24 * 7;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -75,15 +74,9 @@ impl TimeoutDuration for InspectPulseCheck {
 }
 
 #[derive(Debug, Clone)]
-pub struct SaeTimeout {
-    pub timer: wlan_sae::Timeout,
-    pub id: u64,
-}
+pub struct SaeTimeout(pub u64);
 impl TimeoutDuration for SaeTimeout {
     fn timeout_duration(&self) -> zx::Duration {
-        match self.timer {
-            wlan_sae::Timeout::Retransmission => SAE_RETRANSMISSION_TIMEOUT_MILLIS.millis(),
-            wlan_sae::Timeout::KeyExpiration => SAE_PMKSA_EXPIRATION_TIMEOUT_HOURS.hours(),
-        }
+        SAE_RETRANSMISSION_TIMEOUT_MILLIS.millis()
     }
 }

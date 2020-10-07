@@ -17,7 +17,6 @@ use eapol;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use log::{error, info};
 use std::collections::HashSet;
-use wlan_sae::Timeout as SaeTimeout;
 use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
@@ -364,13 +363,12 @@ impl EssSa {
     pub fn on_sae_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
-        timer: SaeTimeout,
         event_id: u64,
     ) -> Result<(), auth::AuthError> {
         let auth_method = match &mut *self.pmksa {
             Pmksa::Initialized { method } | Pmksa::Established { method, .. } => method,
         };
-        auth_method.on_sae_timeout(update_sink, timer, event_id)
+        auth_method.on_sae_timeout(update_sink, event_id)
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(

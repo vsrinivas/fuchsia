@@ -328,7 +328,7 @@ impl Authenticating {
                 };
 
                 let mut updates = UpdateSink::default();
-                if let Err(e) = supplicant.on_sae_timeout(&mut updates, timer.timer, timer.id) {
+                if let Err(e) = supplicant.on_sae_timeout(&mut updates, timer.0) {
                     // An error in handling a timeout means that we may have no way to abort a
                     // failed handshake. Drop to idle.
                     state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
@@ -997,8 +997,8 @@ fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: 
                     },
                 }),
             ),
-            SecAssocUpdate::ScheduleSaeTimeout { timer, id } => {
-                context.timer.schedule(event::SaeTimeout { timer, id });
+            SecAssocUpdate::ScheduleSaeTimeout(id) => {
+                context.timer.schedule(event::SaeTimeout(id));
             }
             _ => (),
         }

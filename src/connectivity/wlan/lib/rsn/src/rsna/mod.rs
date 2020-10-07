@@ -17,7 +17,6 @@ use wlan_common::ie::rsn::{
     rsne::{RsnCapabilities, Rsne},
 };
 use wlan_common::ie::wpa::WpaIe;
-use wlan_sae::Timeout as SaeTimeout;
 use zerocopy::ByteSlice;
 
 pub mod esssa;
@@ -506,7 +505,7 @@ pub enum SecAssocUpdate {
     // These values are used to handle SAE exchanges.
     TxSaeFrame(SaeFrame),
     SaeAuthStatus(AuthStatus),
-    ScheduleSaeTimeout { timer: SaeTimeout, id: u64 },
+    ScheduleSaeTimeout(u64),
 }
 
 pub type UpdateSink = Vec<SecAssocUpdate>;

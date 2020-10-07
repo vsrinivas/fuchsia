@@ -35,7 +35,6 @@ pub struct SaeData {
     // Our timer interface does not support cancellation, so we instead use a counter to skip
     // outdated timouts.
     retransmit_timeout_id: u64,
-    key_expiration_timeout_id: u64,
 }
 
 pub enum Method {
@@ -78,7 +77,6 @@ impl Method {
                     pmk: None,
                     handshake,
                     retransmit_timeout_id: 0,
-                    key_expiration_timeout_id: 0,
                 }))
             }
         }
@@ -132,20 +130,16 @@ impl Method {
     pub fn on_sae_timeout(
         &mut self,
         assoc_update_sink: &mut UpdateSink,
-        timer: sae::Timeout,
         event_id: u64,
     ) -> Result<(), AuthError> {
         match self {
             Method::Sae(sae_data) => {
-                // Verify that this is not a timer we've already cancelled.
-                let expected_event_id = match timer {
-                    sae::Timeout::Retransmission => &mut sae_data.retransmit_timeout_id,
-                    sae::Timeout::KeyExpiration => &mut sae_data.key_expiration_timeout_id,
-                };
-                if *expected_event_id == event_id {
-                    *expected_event_id += 1; // Only handle a timeout once.
+                if sae_data.retransmit_timeout_id == event_id {
+                    sae_data.retransmit_timeout_id += 1;
                     let mut sae_update_sink = sae::SaeUpdateSink::default();
-                    sae_data.handshake.handle_timeout(&mut sae_update_sink, timer);
+                    sae_data
+                        .handshake
+                        .handle_timeout(&mut sae_update_sink, sae::Timeout::Retransmission);
                     process_sae_updates(sae_data, assoc_update_sink, sae_update_sink);
                 }
                 Ok(())
@@ -181,23 +175,19 @@ fn process_sae_updates(
                 assoc_update_sink.push(SecAssocUpdate::SaeAuthStatus(AuthStatus::Rejected));
             }
             sae::SaeUpdate::ResetTimeout(timer) => {
-                let id = match timer {
-                    sae::Timeout::KeyExpiration => {
-                        sae_data.key_expiration_timeout_id += 1;
-                        sae_data.key_expiration_timeout_id
-                    }
+                match timer {
+                    sae::Timeout::KeyExpiration => (), // We don't use this event.
                     sae::Timeout::Retransmission => {
                         sae_data.retransmit_timeout_id += 1;
-                        sae_data.retransmit_timeout_id
+                        assoc_update_sink.push(SecAssocUpdate::ScheduleSaeTimeout(
+                            sae_data.retransmit_timeout_id,
+                        ));
                     }
                 };
-                assoc_update_sink.push(SecAssocUpdate::ScheduleSaeTimeout { timer, id });
             }
             sae::SaeUpdate::CancelTimeout(timer) => {
                 match timer {
-                    sae::Timeout::KeyExpiration => {
-                        sae_data.key_expiration_timeout_id += 1;
-                    }
+                    sae::Timeout::KeyExpiration => (),
                     sae::Timeout::Retransmission => {
                         sae_data.retransmit_timeout_id += 1;
                     }
@@ -304,7 +294,6 @@ mod test {
             pmk: None,
             handshake: Box::new(DummySae(sae_counter.clone())),
             retransmit_timeout_id: 0,
-            key_expiration_timeout_id: 0,
         });
         let mut sink = UpdateSink::default();
 
@@ -349,7 +338,6 @@ mod test {
             pmk: None,
             handshake: Box::new(DummySae(sae_counter.clone())),
             retransmit_timeout_id: 0,
-            key_expiration_timeout_id: 0,
         });
         let mut sink = UpdateSink::default();
 
@@ -357,20 +345,16 @@ mod test {
             process_sae_updates(
                 data,
                 &mut sink,
-                vec![sae::SaeUpdate::ResetTimeout(sae::Timeout::KeyExpiration)],
+                vec![sae::SaeUpdate::ResetTimeout(sae::Timeout::Retransmission)],
             );
         };
-        let (timer, event_id) = assert_variant!(sink.pop(),
-        Some(SecAssocUpdate::ScheduleSaeTimeout{ timer, id }) => {
-            assert_eq!(timer, sae::Timeout::KeyExpiration);
-            (timer, id)
-        });
-        sae.on_sae_timeout(&mut sink, timer.clone(), event_id)
-            .expect("SAE handshake should accept timeout");
+        let event_id = assert_variant!(sink.pop(),
+            Some(SecAssocUpdate::ScheduleSaeTimeout(id)) => id,
+        );
+        sae.on_sae_timeout(&mut sink, event_id).expect("SAE handshake should accept timeout");
         assert_eq!(sae_counter.lock().unwrap().handled_timeouts, 1);
         // Don't handle the same timeout twice.
-        sae.on_sae_timeout(&mut sink, timer, event_id)
-            .expect("SAE handshake should accept timeout");
+        sae.on_sae_timeout(&mut sink, event_id).expect("SAE handshake should accept timeout");
         assert_eq!(sae_counter.lock().unwrap().handled_timeouts, 1); // No timeout handled.
 
         // Don't handle a cancelled timeout.
@@ -379,18 +363,36 @@ mod test {
                 data,
                 &mut sink,
                 vec![
-                    sae::SaeUpdate::ResetTimeout(sae::Timeout::KeyExpiration),
-                    sae::SaeUpdate::CancelTimeout(sae::Timeout::KeyExpiration),
+                    sae::SaeUpdate::ResetTimeout(sae::Timeout::Retransmission),
+                    sae::SaeUpdate::CancelTimeout(sae::Timeout::Retransmission),
                 ],
             );
         };
-        let (timer, event_id) = assert_variant!(sink.pop(),
-        Some(SecAssocUpdate::ScheduleSaeTimeout{ timer, id }) => {
-            assert_eq!(timer, sae::Timeout::KeyExpiration);
-            (timer, id)
-        });
-        sae.on_sae_timeout(&mut sink, timer, event_id)
-            .expect("SAE handshake should accept timeout");
+        let event_id = assert_variant!(sink.pop(),
+                Some(SecAssocUpdate::ScheduleSaeTimeout(id)) => id,
+        );
+        sae.on_sae_timeout(&mut sink, event_id).expect("SAE handshake should accept timeout");
         assert_eq!(sae_counter.lock().unwrap().handled_timeouts, 1); // No timeout handled.
+    }
+
+    #[test]
+    fn sae_key_expiration_no_op() {
+        let sae_counter = Arc::new(Mutex::new(SaeCounter::default()));
+        let mut data = SaeData {
+            peer: [0xaa; 6],
+            pmk: None,
+            handshake: Box::new(DummySae(sae_counter.clone())),
+            retransmit_timeout_id: 0,
+        };
+        let mut sink = UpdateSink::new();
+        process_sae_updates(
+            &mut data,
+            &mut sink,
+            vec![
+                sae::SaeUpdate::ResetTimeout(sae::Timeout::KeyExpiration),
+                sae::SaeUpdate::CancelTimeout(sae::Timeout::KeyExpiration),
+            ],
+        );
+        assert!(sink.is_empty(), "KeyExpiration should not produce updates.");
     }
 }

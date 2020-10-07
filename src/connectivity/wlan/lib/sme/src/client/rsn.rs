@@ -18,7 +18,6 @@ use {
         self, auth, nonce::NonceReader, psk, rsna::UpdateSink, Error, NegotiatedProtection,
         ProtectionInfo,
     },
-    wlan_sae::Timeout as SaeTimeout,
 };
 
 #[derive(Debug)]
@@ -50,7 +49,6 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
     fn on_sae_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
-        timer: SaeTimeout,
         event_id: u64,
     ) -> Result<(), anyhow::Error>;
 }
@@ -87,10 +85,9 @@ impl Supplicant for wlan_rsn::Supplicant {
     fn on_sae_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
-        timer: SaeTimeout,
         event_id: u64,
     ) -> Result<(), anyhow::Error> {
-        wlan_rsn::Supplicant::on_sae_timeout(self, update_sink, timer, event_id)
+        wlan_rsn::Supplicant::on_sae_timeout(self, update_sink, event_id)
     }
 }
 
