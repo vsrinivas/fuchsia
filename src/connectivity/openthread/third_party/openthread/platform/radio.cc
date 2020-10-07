@@ -189,3 +189,17 @@ otError otPlatRadioSetTransmitPower(otInstance *a_instance, int8_t a_power) {
   OT_UNUSED_VARIABLE(a_instance);
   return sRadioSpinel.SetTransmitPower(a_power);
 }
+
+void otPlatDiagTxPowerSet(int8_t a_tx_power) { OT_UNUSED_VARIABLE(a_tx_power); }
+
+void otPlatDiagChannelSet(uint8_t a_channel) { OT_UNUSED_VARIABLE(a_channel); }
+
+bool otPlatDiagModeGet(void) { return false; }
+
+void otPlatDiagModeSet(bool a_mode) { OT_UNUSED_VARIABLE(a_mode); }
+
+void otPlatDiagRadioReceived(otInstance *a_instance, otRadioFrame *a_frame, otError a_error) {
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_frame);
+  OT_UNUSED_VARIABLE(a_error);
+}
