@@ -324,6 +324,7 @@ mod tests {
                 test_id_1.clone().into(),
                 &credential_1.clone(),
                 fidl_sme::ConnectResultCode::Success,
+                true,
             )
             .await;
 
@@ -334,6 +335,7 @@ mod tests {
                 test_id_2.clone().into(),
                 &credential_2.clone(),
                 fidl_sme::ConnectResultCode::CredentialRejected,
+                true,
             )
             .await;
 
@@ -886,6 +888,7 @@ mod tests {
                 test_id_1.clone().into(),
                 &credential_1.clone(),
                 fidl_sme::ConnectResultCode::Success,
+                true,
             )
             .await;
         test_values
@@ -894,6 +897,7 @@ mod tests {
                 test_id_2.clone().into(),
                 &credential_2.clone(),
                 fidl_sme::ConnectResultCode::Success,
+                true,
             )
             .await;
 

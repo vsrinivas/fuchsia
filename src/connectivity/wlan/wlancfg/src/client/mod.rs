@@ -1286,7 +1286,7 @@ mod tests {
 
         // Check that the value was actually saved in the saved networks manager.
         let target_id = NetworkIdentifier::from(network_id);
-        let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false, false)
+        let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false)
             .expect("Failed to create network config");
         assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
     }
@@ -1367,7 +1367,7 @@ mod tests {
 
         // Check that the value was actually saved in the saved networks manager.
         let target_id = NetworkIdentifier::from(network_id);
-        let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false, false)
+        let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false)
             .expect("Failed to create network config");
         assert_eq!(exec.run_singlethreaded(saved_networks.lookup(target_id)), vec![target_config]);
     }
@@ -2075,7 +2075,6 @@ mod tests {
             network_id.clone(),
             Credential::Password(b"password".to_vec()),
             false,
-            false,
         )
         .expect("Failed to create network config");
 
@@ -2133,6 +2132,7 @@ mod tests {
             network_id,
             &credential,
             fidl_sme::ConnectResultCode::Success,
+            true,
         ));
 
         let selector = Arc::new(network_selection::NetworkSelector::new(

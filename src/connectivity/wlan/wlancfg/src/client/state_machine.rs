@@ -298,7 +298,8 @@ async fn connecting_state(
                 common_options.saved_networks_manager.record_connect_result(
                     options.connect_request.network.clone().into(),
                     &options.connect_request.credential,
-                    code
+                    code,
+                    false
                 ).await;
                 match code {
                     fidl_sme::ConnectResultCode::Success => {

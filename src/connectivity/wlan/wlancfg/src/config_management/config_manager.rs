@@ -92,7 +92,6 @@ impl SavedNetworksManager {
                                 NetworkIdentifier::from(network_id.clone()),
                                 data.credential.clone().into(),
                                 data.has_ever_connected,
-                                false,
                             )
                             .ok()
                         })
@@ -239,9 +238,7 @@ impl SavedNetworksManager {
             let credential = Credential::from_bytes(config.password);
             let network_id =
                 NetworkIdentifier::new(config.ssid, credential.derived_security_type());
-            if let Ok(network_config) =
-                NetworkConfig::new(network_id.clone(), credential, false, false)
-            {
+            if let Ok(network_config) = NetworkConfig::new(network_id.clone(), credential, false) {
                 saved_networks.entry(network_id).or_default().push(network_config);
             } else {
                 error!(
@@ -324,8 +321,7 @@ impl SavedNetworksManager {
                 return Ok(None);
             }
         }
-        let network_config =
-            NetworkConfig::new(network_id.clone(), credential.clone(), false, false)?;
+        let network_config = NetworkConfig::new(network_id.clone(), credential.clone(), false)?;
         let network_configs = network_entry.or_default();
         let evicted_config = evict_if_needed(network_configs);
         network_configs.push(network_config);
@@ -366,11 +362,12 @@ impl SavedNetworksManager {
         id: NetworkIdentifier,
         credential: &Credential,
         connect_result: fidl_sme::ConnectResultCode,
+        connected_passive: bool,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
         let mut ids = vec![id.clone()];
         // This alternate possible network identifier will be checked only if the specified id is
-        // not found, as it is pushed to the ned of the list.
+        // not found, as it is pushed to the end of the list.
         if let Some(security_type) = lower_valid_security(&id.security_type) {
             ids.push(NetworkIdentifier::new(id.ssid.clone(), security_type));
         }
@@ -385,8 +382,19 @@ impl SavedNetworksManager {
                 if &network.credential == credential {
                     match connect_result {
                         fidl_sme::ConnectResultCode::Success => {
+                            let mut has_change = false;
                             if !network.has_ever_connected {
                                 network.has_ever_connected = true;
+                                has_change = true;
+                            }
+                            // Don't update hidden probability if this isn't the first
+                            // passive connect.
+                            if connected_passive && !network.hidden_stats.connected_passive {
+                                network.hidden_stats.connected_passive = true;
+                                has_change = true;
+                                // TODO(35918) Figure out the hidden probability
+                            }
+                            if has_change {
                                 // Update persistent storage since a config has changed.
                                 let data = network_config_vec_to_persistent_data(&networks);
                                 if let Err(e) =
@@ -423,6 +431,27 @@ impl SavedNetworksManager {
         let saved_networks = self.saved_networks.lock().await;
         let mut cobalt_api = self.cobalt_api.lock().await;
         log_cobalt_metrics(&*saved_networks, &mut cobalt_api);
+    }
+
+    /// Record that we saw this network identifier in a passive scan. We will update the
+    /// probability that it is a hidden network (less likely) if we haven't seen it in a
+    /// passive scan before.
+    #[cfg(test)]
+    pub async fn record_passive_scan(&self, net_ids: Vec<NetworkIdentifier>) {
+        let mut saved_networks = self.saved_networks.lock().await;
+        for net_id in net_ids.iter() {
+            if let Some(networks) = saved_networks.get_mut(net_id) {
+                for network in networks.iter_mut() {
+                    // Don't update probability if this was already true
+                    if !network.hidden_stats.seen_in_passive_scan_results {
+                        network.hidden_stats.seen_in_passive_scan_results = true;
+                        // TODO(35918) Figure out the probability calculations. This will be zero
+                        // until we figure out a calculation, so we will never actively scan.
+                    }
+                }
+                // TODO(60619): Update the stash with new probability if it has changed
+            }
+        }
     }
 
     // Return a list of every network config that has been saved.
@@ -508,7 +537,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            config_management::PerformanceStats,
+            config_management::{HiddenStats, PerformanceStats},
             util::cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
         },
         cobalt_client::traits::AsEventCode,
@@ -567,7 +596,7 @@ mod tests {
         // Store another network and verify.
         let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
         let psk = Credential::Psk(vec![1; 32]);
-        let config_baz = NetworkConfig::new(network_id_baz.clone(), psk.clone(), false, false)
+        let config_baz = NetworkConfig::new(network_id_baz.clone(), psk.clone(), false)
             .expect("failed to create network config");
         saved_networks
             .store(network_id_baz.clone(), psk)
@@ -729,6 +758,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
+                false,
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
@@ -748,14 +778,45 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
+                false,
             )
             .await;
 
-        // The network should be saved with the connection recorded.
-        let mut config = network_config("bar", "password");
-        config.has_ever_connected = true;
-        assert_eq!(vec![config], saved_networks.lookup(network_id).await);
-        assert_eq!(1, saved_networks.known_network_count().await);
+        // The network should be saved with the connection recorded. We should not have recorded
+        // that the network was connected to passively.
+        assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
+            assert_eq!(config.has_ever_connected, true);
+            assert_eq!(config.hidden_stats.connected_passive, false);
+            assert_eq!(config.hidden_probability, 0.0);
+        });
+
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+                true,
+            )
+            .await;
+        // We should now see that we have passively connected to the network.
+        assert_variant!(saved_networks.lookup(network_id.clone()).await.as_slice(), [config] => {
+            assert_eq!(config.has_ever_connected, true);
+            assert_eq!(config.hidden_stats.connected_passive, true);
+            assert_eq!(config.hidden_probability, 0.0);
+        });
+
+        // Success connects should be saved as persistent data.
+        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
+            stash_id,
+            &path,
+            &tmp_path,
+            create_mock_cobalt_sender(),
+        )
+        .await
+        .expect("Failed to create SavedNetworksManager");
+        assert_variant!(saved_networks.lookup(network_id).await.as_slice(), [config] => {
+            assert_eq!(config.has_ever_connected, true);
+        });
     }
 
     #[test_case(SecurityType::Wpa3, Some(SecurityType::Wpa2))]
@@ -793,7 +854,12 @@ mod tests {
             .expect("Failed save network");
 
         saved_networks
-            .record_connect_result(connected_id, &credential, fidl_sme::ConnectResultCode::Success)
+            .record_connect_result(
+                connected_id,
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+                true,
+            )
             .await;
 
         assert_variant!(saved_networks.lookup(saved_network_id).await.as_slice(), [config] => {
@@ -829,6 +895,7 @@ mod tests {
                 net_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Success,
+                true,
             )
             .await;
 
@@ -859,6 +926,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Failed,
+                true,
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
@@ -874,6 +942,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::CredentialRejected,
+                true,
             )
             .await;
 
@@ -908,6 +977,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Canceled,
+                true,
             )
             .await;
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
@@ -923,6 +993,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 fidl_sme::ConnectResultCode::Canceled,
+                true,
             )
             .await;
 
@@ -935,6 +1006,43 @@ mod tests {
             .expect("Failed to get saved network config");
         let connect_failures = saved_config.perf_stats.failure_list.get_recent(before_recording);
         assert_eq!(0, connect_failures.len());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_passive_scan() {
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_seen_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let unsaved_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let saved_unseen_id = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+        let seen_credential = Credential::None;
+        let unseen_credential = Credential::Password(b"password".to_vec());
+
+        // Save the networks
+        saved_networks
+            .store(saved_seen_id.clone(), seen_credential.clone())
+            .await
+            .expect("Failed to save network");
+        saved_networks
+            .store(saved_unseen_id.clone(), unseen_credential.clone())
+            .await
+            .expect("Failed to save network");
+
+        // Record passive scan results, including the saved network and another network.
+        let seen_networks = vec![saved_seen_id.clone(), unsaved_id.clone()];
+        saved_networks.record_passive_scan(seen_networks).await;
+
+        assert_variant!(saved_networks.lookup(saved_seen_id).await.as_slice(), [config] => {
+            assert_eq!(config.hidden_stats.seen_in_passive_scan_results, true);
+            assert_eq!(config.hidden_probability, 0.0);
+        });
+        assert_variant!(saved_networks.lookup(saved_unseen_id).await.as_slice(), [config] => {
+            assert_eq!(config.hidden_stats.seen_in_passive_scan_results, false);
+            assert_eq!(config.hidden_probability, 0.0);
+        });
     }
 
     #[test]
@@ -1077,13 +1185,9 @@ mod tests {
         // Network bar should have been read into the saved networks manager because it is valid
         assert_eq!(1, saved_networks.known_network_count().await);
         let bar_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
-        let bar_config = NetworkConfig::new(
-            bar_id.clone(),
-            Credential::Password(b"password".to_vec()),
-            false,
-            false,
-        )
-        .expect("failed to create network config");
+        let bar_config =
+            NetworkConfig::new(bar_id.clone(), Credential::Password(b"password".to_vec()), false)
+                .expect("failed to create network config");
         assert_eq!(vec![bar_config], saved_networks.lookup(bar_id).await);
 
         // Network foo should not have been read into saved networks manager because it is invalid.
@@ -1120,13 +1224,9 @@ mod tests {
 
         // Verify the network config loaded from legacy storage
         let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
-        let net_config = NetworkConfig::new(
-            net_id.clone(),
-            Credential::Password(b"password".to_vec()),
-            false,
-            false,
-        )
-        .expect("failed to create network config");
+        let net_config =
+            NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
+                .expect("failed to create network config");
         assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()).await);
 
         // Replace the network 'bar' that was read from legacy version storage
@@ -1134,13 +1234,9 @@ mod tests {
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
             .expect("failed to store network");
-        let new_net_config = NetworkConfig::new(
-            net_id.clone(),
-            Credential::Password(b"foobarbaz".to_vec()),
-            false,
-            false,
-        )
-        .expect("failed to create network config");
+        let new_net_config =
+            NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
+                .expect("failed to create network config");
         assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Recreate the SavedNetworksManager again, as would happen when the device restasts
@@ -1187,13 +1283,9 @@ mod tests {
 
         // Verify the network config loaded from legacy storage
         let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
-        let net_config = NetworkConfig::new(
-            net_id.clone(),
-            Credential::Password(b"password".to_vec()),
-            false,
-            false,
-        )
-        .expect("failed to create network config");
+        let net_config =
+            NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
+                .expect("failed to create network config");
         assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()).await);
 
         // Replace the network 'bar' that was read from legacy version storage
@@ -1201,13 +1293,9 @@ mod tests {
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
             .expect("failed to store network");
-        let new_net_config = NetworkConfig::new(
-            net_id.clone(),
-            Credential::Password(b"foobarbaz".to_vec()),
-            false,
-            false,
-        )
-        .expect("failed to create network config");
+        let new_net_config =
+            NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
+                .expect("failed to create network config");
         assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Add legacy store file again as if we had failed to delete it
@@ -1259,13 +1347,9 @@ mod tests {
         .expect("failed to create saved networks store");
 
         // Verify that the network was read in from legacy store.
-        let net_config = NetworkConfig::new(
-            net_id.clone(),
-            Credential::Password(b"foobarbaz".to_vec()),
-            false,
-            false,
-        )
-        .expect("failed to create network config");
+        let net_config =
+            NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
+                .expect("failed to create network config");
         assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
     }
 
@@ -1325,7 +1409,8 @@ mod tests {
             security_type: credential.derived_security_type(),
             credential,
             has_ever_connected: false,
-            seen_in_passive_scan_results: false,
+            hidden_stats: HiddenStats::new(),
+            hidden_probability: 0.0,
             perf_stats: PerformanceStats::new(),
         }
     }
@@ -1425,13 +1510,11 @@ mod tests {
                         network_id_baz.clone(),
                         Credential::Password(b"qwertyuio".to_vec()),
                         false,
-                        false,
                     )
                     .unwrap(),
                     NetworkConfig::new(
                         network_id_baz,
                         Credential::Password(b"asdfasdfasdf".to_vec()),
-                        false,
                         false,
                     )
                     .unwrap(),

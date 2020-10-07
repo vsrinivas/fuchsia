@@ -89,6 +89,23 @@ impl ConnectFailureList {
     }
 }
 
+/// This struct holds the stats that are used to determine how likely we think the network is
+/// that the network is hidden, to determine with what probability to actively probe for it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HiddenStats {
+    /// If we see the network in passive scans, it probably isn't a hidden network.
+    pub seen_in_passive_scan_results: bool,
+    /// If we have connected to a network after a passive scan using this config, we can be
+    /// pretty sure that it isn't hidden.
+    pub connected_passive: bool,
+}
+
+impl HiddenStats {
+    pub fn new() -> Self {
+        HiddenStats { seen_in_passive_scan_results: false, connected_passive: false }
+    }
+}
+
 /// Saved data for networks, to remember how to connect to a network and determine if we should.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NetworkConfig {
@@ -99,18 +116,23 @@ pub struct NetworkConfig {
     pub credential: Credential,
     /// (persist) Remember whether our network indentifier and credential work.
     pub has_ever_connected: bool,
-    /// Used to differentiate hidden networks when doing active scans.
-    pub seen_in_passive_scan_results: bool,
+    /// Data used to determine probability that this is a hidden network to actively scan for.
+    pub hidden_stats: HiddenStats,
+    /// How confident we are that this network is hidden, between 0 and 1. We will use
+    /// this number to probabilistically perform an active scan for the network. This is persisted
+    /// to maintain consistent behavior between reboots. 0 means not hidden.
+    pub hidden_probability: f32,
     /// Used to estimate quality to determine whether we want to choose this network.
     pub perf_stats: PerformanceStats,
 }
 
 impl NetworkConfig {
+    /// A new network config is created by loading from persistent storage on boot or when a new
+    /// network is saved.
     pub fn new(
         id: NetworkIdentifier,
         credential: Credential,
         has_ever_connected: bool,
-        seen_in_passive_scan_results: bool,
     ) -> Result<Self, NetworkConfigError> {
         check_config_errors(&id.ssid, &id.security_type, &credential)?;
 
@@ -119,7 +141,8 @@ impl NetworkConfig {
             security_type: id.security_type,
             credential,
             has_ever_connected,
-            seen_in_passive_scan_results,
+            hidden_stats: HiddenStats::new(),
+            hidden_probability: 0.0,
             perf_stats: PerformanceStats::new(),
         })
     }
@@ -381,17 +404,23 @@ mod tests {
         let credential = Credential::None;
         let network_config = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::None),
-            credential,
-            false,
+            credential.clone(),
             false,
         )
         .expect("Error creating network config for foo");
 
-        assert_eq!(network_config.ssid, b"foo".to_vec());
-        assert_eq!(network_config.security_type, SecurityType::None);
-        assert_eq!(network_config.credential, Credential::None);
-        assert_eq!(network_config.has_ever_connected, false);
-        assert!(network_config.perf_stats.failure_list.0.is_empty());
+        assert_eq!(
+            network_config,
+            NetworkConfig {
+                ssid: b"foo".to_vec(),
+                security_type: SecurityType::None,
+                credential: credential,
+                has_ever_connected: false,
+                hidden_probability: 0.0,
+                hidden_stats: HiddenStats::new(),
+                perf_stats: PerformanceStats::new()
+            }
+        );
     }
 
     #[test]
@@ -400,16 +429,23 @@ mod tests {
 
         let network_config = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa2),
-            credential,
-            false,
+            credential.clone(),
             false,
         )
         .expect("Error creating network config for foo");
 
-        assert_eq!(network_config.ssid, b"foo".to_vec());
-        assert_eq!(network_config.security_type, SecurityType::Wpa2);
-        assert_eq!(network_config.credential, Credential::Password(b"foo-password".to_vec()));
-        assert_eq!(network_config.has_ever_connected, false);
+        assert_eq!(
+            network_config,
+            NetworkConfig {
+                ssid: b"foo".to_vec(),
+                security_type: SecurityType::Wpa2,
+                credential: credential,
+                has_ever_connected: false,
+                hidden_probability: 0.0,
+                hidden_stats: HiddenStats::new(),
+                perf_stats: PerformanceStats::new()
+            }
+        );
         assert!(network_config.perf_stats.failure_list.0.is_empty());
     }
 
@@ -419,17 +455,23 @@ mod tests {
 
         let network_config = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa2),
-            credential,
-            false,
+            credential.clone(),
             false,
         )
         .expect("Error creating network config for foo");
 
-        assert_eq!(network_config.ssid, b"foo".to_vec());
-        assert_eq!(network_config.security_type, SecurityType::Wpa2);
-        assert_eq!(network_config.credential, Credential::Psk([1; PSK_BYTE_LEN].to_vec()));
-        assert_eq!(network_config.has_ever_connected, false);
-        assert!(network_config.perf_stats.failure_list.0.is_empty());
+        assert_eq!(
+            network_config,
+            NetworkConfig {
+                ssid: b"foo".to_vec(),
+                security_type: SecurityType::Wpa2,
+                credential: credential,
+                has_ever_connected: false,
+                hidden_probability: 0.0,
+                hidden_stats: HiddenStats::new(),
+                perf_stats: PerformanceStats::new()
+            }
+        );
     }
 
     #[test]
@@ -440,7 +482,6 @@ mod tests {
             NetworkIdentifier::new([1; 33].to_vec(), SecurityType::Wpa2),
             credential,
             false,
-            false,
         );
 
         assert_variant!(config_result, Err(NetworkConfigError::SsidLen));
@@ -450,12 +491,8 @@ mod tests {
     fn new_network_config_invalid_password() {
         let credential = Credential::Password([1; 64].to_vec());
 
-        let config_result = NetworkConfig::new(
-            NetworkIdentifier::new("foo", SecurityType::Wpa),
-            credential,
-            false,
-            false,
-        );
+        let config_result =
+            NetworkConfig::new(NetworkIdentifier::new("foo", SecurityType::Wpa), credential, false);
 
         assert_variant!(config_result, Err(NetworkConfigError::PasswordLen));
     }
@@ -467,7 +504,6 @@ mod tests {
         let config_result = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa2),
             credential,
-            false,
             false,
         );
 
@@ -634,5 +670,14 @@ mod tests {
         assert_eq!(SecurityType::Wpa2, password.derived_security_type());
         assert_eq!(SecurityType::Wpa2, psk.derived_security_type());
         assert_eq!(SecurityType::None, none.derived_security_type());
+    }
+
+    #[test]
+    fn test_new_hidden_stats() {
+        let hidden_stats = HiddenStats::new();
+        assert_eq!(
+            hidden_stats,
+            HiddenStats { seen_in_passive_scan_results: false, connected_passive: false },
+        );
     }
 }

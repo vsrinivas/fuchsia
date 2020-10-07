@@ -78,7 +78,10 @@ pub fn network_config_vec_to_persistent_data(
 #[cfg(test)]
 mod tests {
     use {
-        super::{super::network_config::PerformanceStats, *},
+        super::{
+            super::network_config::{HiddenStats, PerformanceStats},
+            *,
+        },
         wlan_stash::policy as pstash,
     };
 
@@ -160,7 +163,8 @@ mod tests {
                 security_type: SecurityType::Wpa3,
                 credential: Credential::Password(b"foo_pass".to_vec()),
                 has_ever_connected: false,
-                seen_in_passive_scan_results: true,
+                hidden_stats: HiddenStats::new(),
+                hidden_probability: 0.0,
                 perf_stats: PerformanceStats::new(),
             }),
             pstash::PersistentData {
@@ -176,7 +180,8 @@ mod tests {
                 security_type: SecurityType::None,
                 credential: Credential::None,
                 has_ever_connected: true,
-                seen_in_passive_scan_results: false,
+                hidden_stats: HiddenStats::new(),
+                hidden_probability: 0.0,
                 perf_stats: PerformanceStats::new(),
             }),
             pstash::PersistentData {
