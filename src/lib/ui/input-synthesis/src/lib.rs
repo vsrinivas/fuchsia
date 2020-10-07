@@ -285,22 +285,12 @@ pub async fn text_command(input: String, duration: Duration) -> Result<(), Error
 }
 
 fn tap(pos: Option<(u32, u32)>, time: u64) -> InputReport {
-    InputReport {
-        event_time: time,
-        keyboard: None,
-        media_buttons: None,
-        mouse: None,
-        stylus: None,
-        touchscreen: Some(Box::new(TouchscreenReport {
-            touches: match pos {
-                Some((x, y)) => {
-                    vec![Touch { finger_id: 1, x: x as i32, y: y as i32, width: 0, height: 0 }]
-                }
-                None => vec![],
-            },
-        })),
-        sensor: None,
-        trace_id: 0,
+    match pos {
+        Some((x, y)) => multi_finger_tap(
+            Some(vec![Touch { finger_id: 1, x: x as i32, y: y as i32, width: 0, height: 0 }]),
+            time,
+        ),
+        None => multi_finger_tap(None, time),
     }
 }
 
