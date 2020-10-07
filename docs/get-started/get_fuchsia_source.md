@@ -16,7 +16,7 @@ up-to-date:
     sudo apt-get install build-essential curl git python unzip
     ```
 
-    Note: Fuchsia recommends the version of Git to be 2.24 or higher.
+    Note: Fuchsia recommends the version of Git to be 2.28 or higher.
 
 *   For macOS, install the Xcode command line tools:
 
