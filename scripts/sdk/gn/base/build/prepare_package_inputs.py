@@ -164,7 +164,7 @@ def _write_gn_deps_file(
     with open(depfile_path, 'w') as depfile:
         deps_list = [os.path.relpath(f, out_dir) for f in expanded_files]
         deps_list.extend(component_manifests)
-        deps_string = ' '.join(deps_list)
+        deps_string = ' '.join(sorted(deps_list))
         depfile.write('%s: %s' % (package_manifest, deps_string))
 
 
@@ -255,7 +255,8 @@ def _write_package_manifest(
 
 
 def _build_manifest(args):
-    expanded_files = _get_expanded_files(args.runtime_deps_file)
+    # Use a sorted list to make sure the manifest order is deterministic.
+    expanded_files = sorted(_get_expanded_files(args.runtime_deps_file))
     component_info = _parse_component(args.json_file)
     component_manifests = []
 
@@ -275,11 +276,11 @@ def _build_manifest(args):
                 args.out_dir))
 
     with open(args.manifest_path, 'w') as manifest:
-        for (k, v) in manifest_entries.items():
-            manifest.write('%s=%s\n' % (k, v))
+        for key in sorted(manifest_entries.keys()):
+            manifest.write('%s=%s\n' % (key, manifest_entries[key]))
 
     binaries = [f for f in expanded_files if _is_binary(f)]
-    _write_build_ids_txt(binaries, args.build_ids_file)
+    _write_build_ids_txt(sorted(binaries), args.build_ids_file)
 
     _write_gn_deps_file(
         args.depfile_path, args.manifest_path, component_manifests,
