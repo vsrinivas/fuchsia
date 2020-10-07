@@ -5,11 +5,17 @@
 group("tools") {
   testonly = true
 
-  public_deps = [ "//tools/integration/testsharder" ]
+  public_deps = [
+    "//tools/integration/cmd/fint",
+    "//tools/integration/testsharder",
+  ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [ "//tools/integration/testsharder:testsharder_tests" ]
+  deps = [
+    "//tools/integration/cmd/fint:fint_tests",
+    "//tools/integration/testsharder:testsharder_tests",
+  ]
 }

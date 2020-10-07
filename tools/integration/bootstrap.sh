@@ -11,7 +11,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pw
 readonly FUCHSIA_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # Path to the fint main package, relative to fuchsia root.
-readonly DOCI_PKG_PATH="tools/integration/fint/cmd"
+readonly FINT_PKG_PATH="tools/integration/cmd/fint"
 # The go repos that fint depends on, given an an array of pairs of the form
 # (<repo name>, <path in the tree to that vendored repo>).
 readonly GO_DEPS=(
@@ -19,6 +19,12 @@ readonly GO_DEPS=(
   # that mirror their paths within fuchsia.git.
   "go.fuchsia.dev/fuchsia"
   "${FUCHSIA_ROOT}"
+
+  "github.com/golang/protobuf"
+  "${FUCHSIA_ROOT}/third_party/golibs/github.com/golang/protobuf"
+
+  "google.golang.org/protobuf"
+  "${FUCHSIA_ROOT}/third_party/golibs/github.com/protocolbuffers/protobuf-go"
 )
 
 print_usage_and_exit() {
@@ -78,9 +84,9 @@ host_platform() {
 symlink_go_deps() {
   readonly gopath="$1"
   for (( i=0 ; i < ${#GO_DEPS[@]} ; i += 2 )) ; do
-    readonly host="${GO_DEPS[i]}"
-    readonly src="${GO_DEPS[i+1]}"
-    readonly dest="${gopath}/src/${host}"
+    host="${GO_DEPS[i]}"
+    src="${GO_DEPS[i+1]}"
+    dest="${gopath}/src/${host}"
     mkdir -p "$(dirname "${dest}")"
     ln --symbolic --no-target-directory "${src}" "${dest}"
   done
@@ -107,7 +113,7 @@ main() {
   # Execute `go build` from the fuchsia root, as the package to build must be
   # supplied as a relative path.
   readonly go_bin="${FUCHSIA_ROOT}/prebuilt/third_party/go/$(host_platform)/bin/go"
-  cd "${FUCHSIA_ROOT}" && ${go_bin} build -o "${output}" "./${DOCI_PKG_PATH}"
+  cd "${FUCHSIA_ROOT}" && ${go_bin} build -o "${output}" "./${FINT_PKG_PATH}"
 }
 
 main "$@"

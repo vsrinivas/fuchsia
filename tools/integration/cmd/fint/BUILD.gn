@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("proto") {
+  source_dir = "proto"
+  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+}
+
+go_library("fint_lib") {
+  deps = [
+    ":proto",
+    "//third_party/golibs:github.com/golang/protobuf",
+  ]
+}
+
+go_binary("fint") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint"
+  deps = [
+    ":fint_lib",
+    "//third_party/golibs:github.com/golang/protobuf",
+  ]
+}
+
+go_test("fint_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint" ]
+  deps = [
+    ":fint_lib",
+    "//third_party/golibs:github.com/golang/protobuf",
+  ]
+}
