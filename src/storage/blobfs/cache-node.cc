@@ -28,7 +28,10 @@ void CacheNode::fbl_recycle() {
   }
 }
 
-CacheNode::CacheNode(const Digest& digest) { digest.CopyTo(digest_, sizeof(digest_)); }
+CacheNode::CacheNode(const Digest& digest, std::optional<CachePolicy> override_cache_policy)
+    : overriden_cache_policy_(override_cache_policy) {
+  digest.CopyTo(digest_, sizeof(digest_));
+}
 CacheNode::~CacheNode() = default;
 
 }  // namespace blobfs

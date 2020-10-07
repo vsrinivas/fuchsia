@@ -322,5 +322,25 @@ TEST(BlobCacheTest, CachePolicyNeverEvict) {
   ASSERT_TRUE(node->UsingMemory());
 }
 
+TEST(BlobCacheTest, CachePolicyOverrideSettingsRespected) {
+  BlobCache cache;
+  Digest digest = GenerateDigest(0);
+
+  cache.SetCachePolicy(CachePolicy::NeverEvict);
+  {
+    fbl::RefPtr<TestNode> node = fbl::AdoptRef(new TestNode(digest, &cache));
+    node->SetHighMemory();
+    node->set_overridden_cache_policy(CachePolicy::EvictImmediately);
+    ASSERT_EQ(cache.Add(node), ZX_OK);
+    ASSERT_TRUE(node->UsingMemory());
+  }
+
+  fbl::RefPtr<CacheNode> cache_node;
+  ASSERT_EQ(cache.Lookup(digest, &cache_node), ZX_OK);
+  auto node = fbl::RefPtr<TestNode>::Downcast(std::move(cache_node));
+  // Was evicted
+  ASSERT_FALSE(node->UsingMemory());
+}
+
 }  // namespace
 }  // namespace blobfs

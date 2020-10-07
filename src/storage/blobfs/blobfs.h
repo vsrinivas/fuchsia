@@ -210,6 +210,12 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
     blob_corruption_notifier_->SetCorruptBlobHandler(std::move(blobfs_handler));
   }
 
+  // Returns an optional overriden cache policy to apply for pager-backed blobs. If unset, the
+  // default cache policy should be used.
+  std::optional<CachePolicy> pager_backed_cache_policy() const {
+    return pager_backed_cache_policy_;
+  };
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -221,7 +227,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,
-         CompressionSettings write_compression_settings, zx::resource vmex_resource);
+         CompressionSettings write_compression_settings, zx::resource vmex_resource,
+         std::optional<CachePolicy> pager_backed_cache_policy);
 
   // Terminates all internal connections, updates the "clean bit" (if writable),
   // flushes writeback buffers, empties caches, and returns the underlying
@@ -310,6 +317,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   BlobfsMetrics metrics_ = CreateMetrics();
 
   std::unique_ptr<pager::UserPager> pager_ = nullptr;
+  std::optional<CachePolicy> pager_backed_cache_policy_ = std::nullopt;
 
   BlobLoader loader_;
   std::shared_mutex fsck_at_end_of_transaction_mutex_;

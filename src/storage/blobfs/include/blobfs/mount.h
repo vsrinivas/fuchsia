@@ -9,6 +9,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 
+#include <optional>
+
 #include <blobfs/cache-policy.h>
 #include <blobfs/compression-settings.h>
 #include <block-client/cpp/block-device.h>
@@ -51,7 +53,10 @@ struct MountOptions {
   bool metrics = false;
   bool journal = false;
   bool pager = false;
+  // Default cache policy.
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
+  // Optional overriden cache policy for pager-backed blobs.
+  std::optional<CachePolicy> pager_backed_cache_policy = std::nullopt;
   CompressionSettings compression_settings{};
 };
 
