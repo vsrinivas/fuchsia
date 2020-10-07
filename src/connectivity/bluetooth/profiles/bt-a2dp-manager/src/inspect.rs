@@ -120,7 +120,7 @@ mod tests {
             operating_mode: {
                 role: "Sink",
                 role_set_count: 1u64,
-                role_set_at_time: "1.234",
+                role_set_at_time: 1_234500000i64,
                 time_since_role_set: "0.000",
             }
         });
@@ -133,7 +133,7 @@ mod tests {
             operating_mode: {
                 role: "Sink",
                 role_set_count: 1u64,
-                role_set_at_time: "1.234",
+                role_set_at_time: 1_234500000i64,
                 time_since_role_set: "5.000",
             }
         });
@@ -155,7 +155,7 @@ mod tests {
             operating_mode: {
                 role: "Source",
                 role_set_count: 2u64,
-                role_set_at_time: "7.234",
+                role_set_at_time: 7_234500000i64,
                 time_since_role_set: "2.123",
             }
         });

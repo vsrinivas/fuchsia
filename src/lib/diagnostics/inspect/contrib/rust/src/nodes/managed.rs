@@ -54,7 +54,7 @@ impl<'c> NodeWriter<'c> {
 
     pub fn create_time(&mut self, key: impl AsRef<str>) -> &mut Self {
         let val = self.node.create_time(key.as_ref());
-        self.items.push(NodeValue::String(val.inner));
+        self.items.push(NodeValue::Int(val.inner));
         self
     }
 

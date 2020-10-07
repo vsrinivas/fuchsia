@@ -9,7 +9,7 @@ pub use list::BoundedListNode;
 pub use managed::{ManagedNode, NodeWriter};
 
 use fuchsia_inspect::Node;
-use fuchsia_inspect::{Property, StringProperty};
+use fuchsia_inspect::{IntProperty, Property};
 use fuchsia_zircon as zx;
 
 pub trait NodeExt {
@@ -24,14 +24,12 @@ impl NodeExt for Node {
     }
 
     fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty {
-        TimeProperty { inner: self.create_string(name, &format_time(timestamp)) }
+        TimeProperty { inner: self.create_int(name, timestamp.into_nanos()) }
     }
 }
 
 pub struct TimeProperty {
-    // TODO(fxbug.dev/29628) - if we have something to post-process Inspect JSON dump, it would be
-    //                   better to log timestamp as Uint.
-    pub(crate) inner: StringProperty,
+    pub(crate) inner: IntProperty,
 }
 
 impl TimeProperty {
@@ -41,14 +39,8 @@ impl TimeProperty {
     }
 
     pub fn set_at(&self, timestamp: zx::Time) {
-        Property::set(&self.inner, &format_time(timestamp));
+        Property::set(&self.inner, timestamp.into_nanos());
     }
-}
-
-fn format_time(timestamp: zx::Time) -> String {
-    let seconds = timestamp.into_nanos() / 1000_000_000;
-    let millis = (timestamp.into_nanos() % 1000_000_000) / 1000_000;
-    format!("{}.{:03}", seconds, millis)
 }
 
 #[cfg(test)]
@@ -62,10 +54,10 @@ mod tests {
         let inspector = Inspector::new();
         let time_property =
             inspector.root().create_time_at("time", zx::Time::from_nanos(123_456700000));
-        assert_inspect_tree!(inspector, root: { time: "123.456" });
+        assert_inspect_tree!(inspector, root: { time: 123_456700000i64 });
         time_property.set_at(zx::Time::from_nanos(333_005000000));
-        assert_inspect_tree!(inspector, root: { time: "333.005" });
+        assert_inspect_tree!(inspector, root: { time: 333_005000000i64 });
         time_property.set_at(zx::Time::from_nanos(333_444000000));
-        assert_inspect_tree!(inspector, root: { time: "333.444" });
+        assert_inspect_tree!(inspector, root: { time: 333_444000000i64 });
     }
 }

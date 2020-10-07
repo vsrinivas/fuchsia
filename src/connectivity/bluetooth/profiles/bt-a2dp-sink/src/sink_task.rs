@@ -418,7 +418,7 @@ mod tests {
 
         fuchsia_inspect::assert_inspect_tree!(inspector, root: {
         stream: {
-            start_time: "5.678",
+            start_time: 5_678900000i64,
             total_bytes: 0 as u64,
             bytes_per_second_current: 0 as u64,
         }});
@@ -444,7 +444,7 @@ mod tests {
         // We should have updated the rx stats.
         fuchsia_inspect::assert_inspect_tree!(inspector, root: {
         stream: {
-            start_time: "5.678",
+            start_time: 5_678900000i64,
             total_bytes: sbc_packet_size * PRELOAD_PACKETS as u64,
             bytes_per_second_current: sbc_packet_size,
         }});

@@ -80,7 +80,7 @@ mod tests {
 
         assert_inspect_tree!(inspector, root: {
             data_stream: {
-                start_time: "5.678",
+                start_time: 5_678900000i64,
                 total_bytes: 0 as u64,
                 bytes_per_second_current: 0 as u64,
             }
@@ -94,7 +94,7 @@ mod tests {
 
         assert_inspect_tree!(inspector, root: {
             data_stream: {
-                start_time: "5.678",
+                start_time: 5_678900000i64,
                 total_bytes: 500 as u64,
                 bytes_per_second_current: 1000 as u64,
             }
@@ -105,7 +105,7 @@ mod tests {
 
         assert_inspect_tree!(inspector, root: {
             data_stream: {
-                start_time: "5.678",
+                start_time: 5_678900000i64,
                 total_bytes: 1000 as u64,
                 bytes_per_second_current: 100 as u64,
             }
