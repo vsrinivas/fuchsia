@@ -51,7 +51,6 @@ ExecutionDomain::~ExecutionDomain() {
   // before destructing.
   ZX_DEBUG_ASSERT(deactivated());
   ZX_DEBUG_ASSERT(sources_.is_empty());
-  ZX_DEBUG_ASSERT(InContainer());
 }
 
 void ExecutionDomain::Deactivate(bool sync_dispatch) {
