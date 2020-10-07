@@ -179,10 +179,15 @@ func (b *cppValueBuilder) visitArray(value []interface{}, decl *gidlmixer.ArrayD
 }
 
 func (b *cppValueBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl) string {
-	var elements []string
 	elemDecl := decl.Elem()
+	var elements []string
 	for _, item := range value {
 		elements = append(elements, b.visit(item, elemDecl))
+	}
+	if _, ok := elemDecl.(gidlmixer.PrimitiveDeclaration); ok {
+		// Populate the vector using aggregate initialization.
+		return fmt.Sprintf("%s{%s}",
+			typeName(decl), strings.Join(elements, ", "))
 	}
 	vectorVar := b.newVar()
 	// Populate the vector using push_back. We can't use an initializer list
