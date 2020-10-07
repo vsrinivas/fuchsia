@@ -33,15 +33,8 @@ func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error)
 	m.EnableIPv6()
 	out := make(chan net.IPAddr, 1)
 	domain := getLocalDomain(nodename)
-	m.AddHandler(func(addr net.Addr, packet mdns.Packet) {
-		logger.Debugf(ctx, "mdns packet from %s: %# v", addr, pretty.Formatter(packet))
-		var zone string
-		switch addr := addr.(type) {
-		case *net.IPAddr:
-			zone = addr.Zone
-		case *net.UDPAddr:
-			zone = addr.Zone
-		}
+	m.AddHandler(func(iface net.Interface, addr net.Addr, packet mdns.Packet) {
+		logger.Debugf(ctx, "mdns packet on %s from %s: %# v", iface.Name, addr, pretty.Formatter(packet))
 		for _, records := range [][]mdns.Record{
 			packet.Answers,
 			packet.Additional,
@@ -52,7 +45,7 @@ func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error)
 					case mdns.A, mdns.AAAA:
 						out <- net.IPAddr{
 							IP:   net.IP(record.Data),
-							Zone: zone,
+							Zone: iface.Name,
 						}
 						return
 					}

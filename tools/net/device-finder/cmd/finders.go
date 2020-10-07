@@ -40,12 +40,23 @@ func parseAnswer(cmd *devFinderCmd, a mdns.Record, resp mDNSResponse) *fuchsiaDe
 		if len(fuchsiaDomain) == 0 {
 			return &fuchsiaDevice{err: fmt.Errorf("fuchsia domain empty: %q", a.Domain)}
 		}
+		var zone string
+		if isIPv6LinkLocal(a.Data) {
+			zone = resp.rxIface.Name
+		}
 		fdev := &fuchsiaDevice{
 			addr:   net.IP(a.Data),
 			domain: fuchsiaDomain,
+			zone:   zone,
 		}
-		if fdev.addr.IsLinkLocalMulticast() || fdev.addr.IsLinkLocalUnicast() {
-			fdev.zone = resp.devAddr.(*net.UDPAddr).Zone
+		// If not ignoring a NAT, update the address to use the source addr.
+		if !cmd.ignoreNAT {
+			ip, zone, err := addrToIP(resp.devAddr)
+			if err != nil {
+				return &fuchsiaDevice{err: err}
+			}
+			fdev.addr = ip
+			fdev.zone = zone
 		}
 		if cmd.localResolve {
 			var err error

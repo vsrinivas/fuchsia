@@ -286,12 +286,14 @@ func resolveCallback(err dnsSDError, hostname, ipString string, iface *net.Inter
 		return
 	}
 	go func() {
+		var zone string
+		if iface != nil {
+			zone = iface.Name
+		}
 		fdev := &fuchsiaDevice{
 			domain: strings.ReplaceAll(hostname, ".local.", ""),
 			addr:   net.ParseIP(ipString),
-		}
-		if iface != nil && (fdev.addr.IsLinkLocalMulticast() || fdev.addr.IsLinkLocalUnicast()) {
-			fdev.zone = iface.Name
+			zone:   zone,
 		}
 		if dctx.finder.cmd.localResolve {
 			var err error
