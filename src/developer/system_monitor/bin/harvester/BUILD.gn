@@ -49,6 +49,7 @@ source_set("lib") {
     "sample_bundle.h",
     "task_tree.cc",
     "task_tree.h",
+    "union_find.h",
   ]
 
   public_deps = [
