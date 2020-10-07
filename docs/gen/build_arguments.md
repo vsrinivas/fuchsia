@@ -722,7 +722,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:51
+From //zircon/kernel/params.gni:58
 
 ### enable_api_diff
 Detect dart API changes
@@ -779,7 +779,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:78
+From //zircon/kernel/params.gni:85
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1374,7 +1374,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:63
+From //zircon/kernel/params.gni:70
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -1385,7 +1385,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:70
+From //zircon/kernel/params.gni:77
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -1393,7 +1393,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //zircon/kernel/params.gni:55
+From //zircon/kernel/params.gni:62
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1930,7 +1930,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:35
+From //products/core.gni:88
 
 **Overridden from the default:** `[]`
 
@@ -1938,7 +1938,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/bringup.gni:35
+From //products/core.gni:88
 
 **Overridden from the default:** `[]`
 
@@ -2729,12 +2729,36 @@ Whether libraries under //vendor should be linted.
 
 From //build/fidl/fidl_library.gni:13
 
+### verify_system_package_entries
+Whether to check and enforce that contributions to the system image package
+are coming from the proper board and product file GN arguments
+(respectively board_system_image_deps and product_system_image_deps).
+
+If this argument is set to false, the verification step can still be
+manually performed with:
+ ninja out/default obj/build/images/system/verify_system_package_entries.success.stamp
+
+**Current value (from the default):** `false`
+
+From //build/images/system/BUILD.gn:13
+
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
 
 **Current value (from the default):** `false`
 
 From //src/graphics/lib/magma/include/virtio/virtmagma_debug.gni:7
+
+### vm_tracing_level
+The level of detail for traces emitted by the VM system. Values greater than
+zero add increasing details at the cost of increased trace buffer use.
+
+0 = Default kernel:* tracing.
+1 = Adds flow events for asynchronous page requests.
+
+**Current value (from the default):** `0`
+
+From //zircon/kernel/params.gni:54
 
 ### vulkan_host_runtime_dir
 

@@ -111,7 +111,7 @@ From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:13
 
 **Overridden from the default:** `false`
 
-From //kernel/params.gni:51
+From //kernel/params.gni:58
 
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
@@ -128,7 +128,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:78
+From //kernel/params.gni:85
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -294,7 +294,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:63
+From //kernel/params.gni:70
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -305,7 +305,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:70
+From //kernel/params.gni:77
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -313,7 +313,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:55
+From //kernel/params.gni:62
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -780,6 +780,17 @@ From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
 **Overridden from the default:** `[]`
 
 From //public/gn/toolchain/variants.gni:222
+
+### vm_tracing_level
+The level of detail for traces emitted by the VM system. Values greater than
+zero add increasing details at the cost of increased trace buffer use.
+
+0 = Default kernel:* tracing.
+1 = Adds flow events for asynchronous page requests.
+
+**Current value (from the default):** `0`
+
+From //kernel/params.gni:54
 
 ### zbi_compression
 This can be "zstd", optionally followed by ".LEVEL" where `LEVEL` can be an
