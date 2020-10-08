@@ -5,9 +5,9 @@
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
-    ActionSender, Address, Audience, Fingerprint, Message, MessageAction, MessageClientId,
-    MessageError, MessageType, MessengerAction, MessengerId, MessengerType, Payload, Signature,
-    Status,
+    filter::Filter, ActionSender, Address, Audience, Fingerprint, Message, MessageAction,
+    MessageClientId, MessageError, MessageType, MessengerAction, MessengerId, MessengerType,
+    Payload, Signature, Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -24,6 +24,17 @@ pub type MessageHubHandle<P, A> = Arc<Mutex<MessageHub<P, A>>>;
 /// Type definition for exit message sender.
 type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
 
+/// `Broker` captures the information necessary to process messages to a broker:
+/// messenger_id: The `MessengerId` associated with the broker so that it can be
+///               distinguished from other messengers.
+/// filter:       A condition that is applied to a message to determine whether
+///               it should be directed to the broker.
+#[derive(Clone)]
+struct Broker<P: Payload + 'static, A: Address + 'static> {
+    messenger_id: MessengerId,
+    filter: Option<Filter<P, A>>,
+}
+
 /// The MessageHub controls the message flow for a set of messengers. It
 /// processes actions upon messages, incorporates brokers, and signals receipt
 /// of messages.
@@ -37,7 +48,7 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
     /// delivering messages from a resolved address or a list of participants.
     beacons: HashMap<MessengerId, Beacon<P, A>>,
     /// An ordered set of messengers who will be forwarded messages.
-    brokers: Vec<MessengerId>,
+    brokers: Vec<Broker<P, A>>,
     /// The next id to be given to a messenger.
     next_id: MessengerId,
     /// The next id to be given to a `MessageClient`.
@@ -115,8 +126,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     }
 
     // Determines whether the beacon belongs to a broker.
-    async fn is_broker(&self, beacon: Beacon<P, A>) -> bool {
-        self.brokers.contains(&beacon.get_messenger_id())
+    fn is_broker(&self, messenger_id: MessengerId) -> bool {
+        self.brokers.iter().any(|broker| broker.messenger_id == messenger_id)
     }
 
     // Derives the underlying MessengerId from a Signature.
@@ -184,11 +195,21 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             // broker.
             let mut target_messengers: Vec<_> = {
                 // The author cannot participate as a broker.
-                let iter = self.brokers.iter().copied().filter(|&id| id != author_id);
+                let iter = self
+                    .brokers
+                    .iter()
+                    .filter(|&broker| {
+                        broker.messenger_id != author_id
+                            && broker
+                                .filter
+                                .as_ref()
+                                .map_or(true, |filter| filter.matches(&message))
+                    })
+                    .map(|broker| broker.messenger_id);
 
                 let should_find_sender = {
                     let beacon_messenger_id = beacon.get_messenger_id();
-                    beacon_messenger_id != author_id && self.brokers.contains(&beacon_messenger_id)
+                    beacon_messenger_id != author_id && self.is_broker(beacon_messenger_id)
                 };
 
                 if should_find_sender {
@@ -236,7 +257,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
                             // Gather all messengers
                             for &id in self.beacons.keys() {
-                                if id != sender_id && !self.brokers.contains(&id) {
+                                if id != sender_id && !self.is_broker(id) {
                                     target_messengers.push(id);
                                 }
                             }
@@ -318,8 +339,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 self.beacons.insert(id, beacon);
 
                 match messenger_type {
-                    MessengerType::Broker => {
-                        self.brokers.push(id);
+                    MessengerType::Broker(filter) => {
+                        self.brokers.push(Broker { messenger_id: id, filter });
                     }
                     MessengerType::Addressable(address) => {
                         self.addresses.insert(address, id);
@@ -342,7 +363,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
         // These are all safe if the containers don't contain any items matching `id`.
         self.beacons.remove(&id);
-        self.brokers.retain(|broker_id| id != *broker_id);
+        self.brokers.retain(|broker| id != broker.messenger_id);
         if let Signature::Address(address) = signature {
             self.addresses.remove(&address);
         }
@@ -373,7 +394,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                                 return;
                             }
                             // Ignore forward requests from leafs in broadcast
-                            if !self.is_broker(beacon.clone()).await {
+                            if !self.is_broker(beacon.get_messenger_id()) {
                                 return;
                             }
                         }

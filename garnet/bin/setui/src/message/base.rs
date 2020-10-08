@@ -89,16 +89,121 @@ pub struct Fingerprint<A> {
 
 /// The messengers that can participate in messaging
 #[derive(Clone, Debug)]
-pub enum MessengerType<A: Address + 'static> {
+pub enum MessengerType<P: Payload + 'static, A: Address + 'static> {
     /// An endpoint in the messenger graph. Can have messages specifically
     /// addressed to it and can author new messages.
     Addressable(A),
     /// A intermediary messenger. Will receive every forwarded message. Brokers
     /// are able to send and reply to messages, but the main purpose is to observe
-    /// messages.
-    Broker,
+    /// messages. An optional filter may be specified, which limits the messages
+    /// directed to this broker.
+    Broker(Option<filter::Filter<P, A>>),
     /// A messenger that cannot be reached by an address.
     Unbound,
+}
+
+pub mod filter {
+    use super::{Address, Audience, Message, MessageType, Payload};
+    use core::fmt::{Debug, Formatter};
+
+    /// `Condition` allows specifying a filter condition that must be true
+    /// for a filter to match.
+    #[derive(Clone)]
+    pub enum Condition<P: Payload + 'static, A: Address + 'static> {
+        /// Matches on the message's intended audience as specified by the
+        /// sender.
+        Audience(Audience<A>),
+        /// Matches on a custom closure that may evaluate the sent message.
+        Custom(fn(&Message<P, A>) -> bool),
+        /// Matches on another filter and its conditions.
+        Filter(Filter<P, A>),
+    }
+
+    /// We must implement Debug since the `Condition::Custom` does not provide
+    /// a `Debug` implementation.
+    impl<P: Payload + 'static, A: Address + 'static> Debug for Condition<P, A> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+            let condition = match self {
+                Condition::Audience(audience) => format!("audience:{:?}", audience),
+                Condition::Custom(_) => "custom".to_string(),
+                Condition::Filter(filter) => format!("filter:{:?}", filter),
+            };
+
+            write!(f, "Condition: {:?}", condition)
+        }
+    }
+
+    /// `Conjugation` dictates how multiple conditions are combined to determine
+    /// a match.
+    #[derive(Clone, Debug, PartialEq)]
+    pub enum Conjugation {
+        /// All conditions must match.
+        All,
+        /// Any condition may declare a match.
+        Any,
+    }
+
+    /// `Builder` provides a convenient way to construct a [`Filter`] based on
+    /// a number of conditions.
+    ///
+    /// [`Filter`]: struct.Filter.html
+    pub struct Builder<P: Payload + 'static, A: Address + 'static> {
+        conjugation: Conjugation,
+        conditions: Vec<Condition<P, A>>,
+    }
+
+    impl<P: Payload + 'static, A: Address + 'static> Builder<P, A> {
+        pub fn new(condition: Condition<P, A>, conjugation: Conjugation) -> Self {
+            Self { conjugation, conditions: vec![condition] }
+        }
+
+        /// Shorthand method to create a filter based on a single condition.
+        pub fn single(condition: Condition<P, A>) -> Filter<P, A> {
+            Builder::new(condition, Conjugation::All).build()
+        }
+
+        /// Adds an additional condition to the filter under construction.
+        pub fn append(mut self, condition: Condition<P, A>) -> Self {
+            self.conditions.push(condition);
+
+            self
+        }
+
+        pub fn build(self) -> Filter<P, A> {
+            Filter { conjugation: self.conjugation, conditions: self.conditions }
+        }
+    }
+
+    /// `Filter` is used by the `MessageHub` to determine whether an incoming
+    /// message should be directed to associated broker.
+    #[derive(Clone, Debug)]
+    pub struct Filter<P: Payload + 'static, A: Address + 'static> {
+        conjugation: Conjugation,
+        conditions: Vec<Condition<P, A>>,
+    }
+
+    impl<P: Payload + 'static, A: Address + 'static> Filter<P, A> {
+        pub fn matches(&self, message: &Message<P, A>) -> bool {
+            for condition in &self.conditions {
+                let match_found = match condition {
+                    Condition::Audience(audience) => matches!(
+                        message.get_message_type(),
+                        MessageType::Origin(target) if target == *audience),
+                    Condition::Custom(check_fn) => (check_fn)(message),
+                    Condition::Filter(filter) => filter.matches(&message),
+                };
+                if match_found {
+                    if self.conjugation == Conjugation::Any {
+                        return true;
+                    }
+                } else if self.conjugation == Conjugation::All {
+                    return false;
+                }
+            }
+
+            return self.conjugation == Conjugation::All;
+        }
+    }
 }
 
 /// MessageType captures details about the Message's source.
@@ -213,7 +318,7 @@ pub(super) type MessengerActionSender<P, A> = UnboundedSender<MessengerAction<P,
 /// Internal representation of possible actions around a messenger.
 pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
     /// Creates a top level messenger
-    Create(MessengerType<A>, MessengerSender<P, A>, MessengerActionSender<P, A>),
+    Create(MessengerType<P, A>, MessengerSender<P, A>, MessengerActionSender<P, A>),
     /// Deletes a given messenger
     Delete(Messenger<P, A>),
     /// Deletes a messenger by its `Signature`

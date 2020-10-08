@@ -4,7 +4,9 @@
 
 use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
-use crate::message::base::{Address, Audience, MessageEvent, MessengerType, Payload, Status};
+use crate::message::base::{
+    filter, Address, Audience, MessageEvent, MessengerType, Payload, Status,
+};
 use crate::message::message_client::MessageClient;
 use crate::message::receptor::Receptor;
 use fuchsia_async as fasync;
@@ -22,6 +24,7 @@ pub enum TestMessage {
     Foo,
     Bar,
     Error,
+    Baz,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
@@ -70,6 +73,7 @@ async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq 
 }
 
 static ORIGINAL: TestMessage = TestMessage::Foo;
+static BROADCAST: TestMessage = TestMessage::Baz;
 static REPLY: TestMessage = TestMessage::Bar;
 
 mod test {
@@ -192,7 +196,7 @@ async fn test_implicit_forward() {
 
     let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
-    let (_, mut receiver_2) = messenger_factory.create(MessengerType::Broker).await.unwrap();
+    let (_, mut receiver_2) = messenger_factory.create(MessengerType::Broker(None)).await.unwrap();
     let (_, mut receiver_3) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(3))).await.unwrap();
 
@@ -226,7 +230,7 @@ async fn test_observe_addressable() {
 
     let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
-    let (_, mut receptor_2) = messenger_factory.create(MessengerType::Broker).await.unwrap();
+    let (_, mut receptor_2) = messenger_factory.create(MessengerType::Broker(None)).await.unwrap();
     let (_, mut receptor_3) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(3))).await.unwrap();
 
@@ -444,13 +448,13 @@ async fn test_acknowledge() {
 async fn test_messenger_behavior() {
     // Run tests twice to ensure no one instance leads to a deadlock.
     for _ in 0..2 {
-        verify_messenger_behavior(MessengerType::Broker).await;
+        verify_messenger_behavior(MessengerType::Broker(None)).await;
         verify_messenger_behavior(MessengerType::Unbound).await;
         verify_messenger_behavior(MessengerType::Addressable(TestAddress::Foo(2))).await;
     }
 }
 
-async fn verify_messenger_behavior(messenger_type: MessengerType<TestAddress>) {
+async fn verify_messenger_behavior(messenger_type: MessengerType<TestMessage, TestAddress>) {
     let messenger_factory = test::message::create_hub();
 
     // Messenger to receive message.
@@ -766,4 +770,242 @@ async fn test_propagation_error() {
     .await;
     // Verify error is propagated back.
     verify_payload(error_message, &mut message_receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_audience_broadcast() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("broadcast messenger should be created");
+    // Receptor to receive both broadcast and targeted messages.
+    let (target_messenger, mut receptor) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("target receptor should be created");
+    // Filter to target only broadcasts.
+    let filter = filter::Builder::single(filter::Condition::Audience(Audience::Broadcast));
+    // Broker to receive broadcast. It should not receive targeted messages.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send targeted message.
+    messenger.message(ORIGINAL, Audience::Messenger(target_messenger.get_signature())).send().ack();
+    // Verify receptor gets message.
+    verify_payload(ORIGINAL, &mut receptor, None).await;
+
+    // Broadcast message.
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+    // Ensure broker gets broadcast. If the targeted message was received, this
+    // will fail.
+    verify_payload(BROADCAST, &mut broker_receptor, None).await;
+    // Ensure receptor gets broadcast.
+    verify_payload(BROADCAST, &mut receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_audience_messenger() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("broadcast messenger should be created");
+    // Receptor to receive both broadcast and targeted messages.
+    let (target_messenger, mut receptor) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("target messenger should be created");
+    // Filter to target only messenger.
+    let filter = filter::Builder::single(filter::Condition::Audience(Audience::Messenger(
+        target_messenger.get_signature(),
+    )));
+    // Broker that should only target messages for a given messenger.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send broadcast message.
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+    // Verify receptor gets message.
+    verify_payload(BROADCAST, &mut receptor, None).await;
+
+    // Send targeted message.
+    messenger.message(ORIGINAL, Audience::Messenger(target_messenger.get_signature())).send().ack();
+    // Ensure broker gets message. If the broadcast message was received, this
+    // will fail.
+    verify_payload(ORIGINAL, &mut broker_receptor, None).await;
+    // Ensure receptor gets broadcast.
+    verify_payload(ORIGINAL, &mut receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_audience_address() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("broadcast messenger should be created");
+    // Receptor to receive both broadcast and targeted messages.
+    let target_address = TestAddress::Foo(2);
+    let (_, mut receptor) = messenger_factory
+        .create(MessengerType::Addressable(target_address))
+        .await
+        .expect("target receptor should be created");
+    // Filter to target only messenger.
+    let filter =
+        filter::Builder::single(filter::Condition::Audience(Audience::Address(target_address)));
+    // Broker that should only target messages for a given messenger.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send broadcast message.
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+    // Verify receptor gets message.
+    verify_payload(BROADCAST, &mut receptor, None).await;
+
+    // Send targeted message.
+    messenger.message(ORIGINAL, Audience::Address(target_address)).send().ack();
+    // Ensure broker gets message. If the broadcast message was received, this
+    // will fail.
+    verify_payload(ORIGINAL, &mut broker_receptor, None).await;
+    // Ensure receptor gets broadcast.
+    verify_payload(ORIGINAL, &mut receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_custom() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("broadcast messenger should be created");
+    // Filter to target only the ORIGINAL message.
+    let filter =
+        filter::Builder::single(filter::Condition::Custom(|message| message.payload() == ORIGINAL));
+    // Broker that should only target ORIGINAL messages.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send broadcast message.
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+
+    // Send original message.
+    messenger.message(ORIGINAL, Audience::Broadcast).send().ack();
+    // Ensure broker gets message. If the broadcast message was received, this
+    // will fail.
+    verify_payload(ORIGINAL, &mut broker_receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_combined_any() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("broadcast messenger should be created");
+    // Receptor for messages.
+    let target_address = TestAddress::Foo(2);
+    let (_, mut receptor) = messenger_factory
+        .create(MessengerType::Addressable(target_address))
+        .await
+        .expect("addressable messenger should be created");
+
+    // Filter to target only the ORIGINAL message.
+    let filter = filter::Builder::new(
+        filter::Condition::Custom(|message| message.payload() == ORIGINAL),
+        filter::Conjugation::Any,
+    )
+    .append(filter::Condition::Filter(filter::Builder::single(filter::Condition::Audience(
+        Audience::Broadcast,
+    ))))
+    .build();
+
+    // Broker that should only target ORIGINAL messages and broadcast audiences.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send broadcast message.
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+    // Receptor should receive match based on broadcast audience
+    verify_payload(BROADCAST, &mut broker_receptor, None).await;
+    // Other receptors should receive the broadcast as well.
+    verify_payload(BROADCAST, &mut receptor, None).await;
+
+    // Send original message to target.
+    messenger.message(ORIGINAL, Audience::Address(target_address)).send().ack();
+    // Ensure broker gets message.
+    verify_payload(ORIGINAL, &mut broker_receptor, None).await;
+    // Ensure target gets message as well.
+    verify_payload(ORIGINAL, &mut receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_combined_all() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("sending messenger should be created");
+    // Receptor for messages.
+    let target_address = TestAddress::Foo(2);
+    let (_, mut receptor) = messenger_factory
+        .create(MessengerType::Addressable(target_address))
+        .await
+        .expect("receiving messenger should be created");
+
+    // Filter to target only the ORIGINAL message.
+    let filter = filter::Builder::new(
+        filter::Condition::Custom(|message| message.payload() == ORIGINAL),
+        filter::Conjugation::All,
+    )
+    .append(filter::Condition::Filter(filter::Builder::single(filter::Condition::Audience(
+        Audience::Address(target_address),
+    ))))
+    .build();
+
+    // Broker that should only target ORIGINAL messages and broadcast audiences.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send REPLY message. Should not match broker since content does not match
+    messenger.message(REPLY, Audience::Address(target_address)).send().ack();
+    // Other receptors should receive the broadcast as well.
+    verify_payload(REPLY, &mut receptor, None).await;
+
+    // Send ORIGINAL message to target.
+    messenger.message(ORIGINAL, Audience::Address(target_address)).send().ack();
+    // Ensure broker gets message.
+    verify_payload(ORIGINAL, &mut broker_receptor, None).await;
+    // Ensure target gets message as well.
+    verify_payload(ORIGINAL, &mut receptor, None).await;
 }

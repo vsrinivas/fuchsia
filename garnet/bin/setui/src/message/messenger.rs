@@ -25,7 +25,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerFactory<P, A> {
         MessengerFactory { messenger_action_tx: action_tx }
     }
 
-    pub async fn create(&self, messenger_type: MessengerType<A>) -> CreateMessengerResult<P, A> {
+    pub async fn create(&self, messenger_type: MessengerType<P, A>) -> CreateMessengerResult<P, A> {
         let (tx, rx) = futures::channel::oneshot::channel::<CreateMessengerResult<P, A>>();
 
         self.messenger_action_tx

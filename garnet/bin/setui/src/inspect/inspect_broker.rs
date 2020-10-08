@@ -51,7 +51,7 @@ impl InspectBroker {
     ) -> Result<(), Error> {
         // Create broker to listen in on all messages between Proxy and setting handlers.
         let (messenger_client, mut receptor) =
-            messenger_factory.create(MessengerType::Broker).await.unwrap();
+            messenger_factory.create(MessengerType::Broker(None)).await.unwrap();
 
         let broker = Arc::new(Mutex::new(Self {
             messenger_client,

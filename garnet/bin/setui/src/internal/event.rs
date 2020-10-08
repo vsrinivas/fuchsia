@@ -85,7 +85,7 @@ pub struct Publisher {
 impl Publisher {
     pub async fn create(
         factory: &message::Factory,
-        messenger_type: MessengerType<Address>,
+        messenger_type: MessengerType<Payload, Address>,
     ) -> Publisher {
         let (messenger, _) = factory
             .create(messenger_type)
