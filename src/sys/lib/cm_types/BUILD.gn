@@ -10,6 +10,7 @@ rustc_library("cm_types") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",

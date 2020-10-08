@@ -4,6 +4,7 @@
 
 use {
     argh::FromArgs,
+    cm_types::symmetrical_enums,
     cml::error::{Error, Location},
     fidl::encoding::encode_persistent,
     fidl_fuchsia_component_internal as component_internal,
@@ -40,6 +41,14 @@ enum BuiltinPkgResolver {
     PkgfsBase,
 }
 
+symmetrical_enums!(
+    BuiltinPkgResolver,
+    component_internal::BuiltinPkgResolver,
+    None,
+    AppmgrBridge,
+    PkgfsBase
+);
+
 impl std::default::Default for BuiltinPkgResolver {
     fn default() -> Self {
         BuiltinPkgResolver::None
@@ -68,6 +77,8 @@ pub enum OutDirContents {
     Svc,
 }
 
+symmetrical_enums!(OutDirContents, component_internal::OutDirContents, None, Hub, Svc);
+
 impl std::default::Default for OutDirContents {
     fn default() -> Self {
         OutDirContents::None
@@ -93,15 +104,7 @@ impl TryFrom<Config> for component_internal::Config {
             list_children_batch_size: config.list_children_batch_size,
             security_policy: Some(translate_security_policy(config.security_policy)),
             builtin_pkg_resolver: match config.builtin_pkg_resolver {
-                Some(BuiltinPkgResolver::None) => {
-                    Some(component_internal::BuiltinPkgResolver::None)
-                }
-                Some(BuiltinPkgResolver::AppmgrBridge) => {
-                    Some(component_internal::BuiltinPkgResolver::AppmgrBridge)
-                }
-                Some(BuiltinPkgResolver::PkgfsBase) => {
-                    Some(component_internal::BuiltinPkgResolver::PkgfsBase)
-                }
+                Some(builtin_pkg_resolver) => Some(builtin_pkg_resolver.into()),
                 None => None,
             },
             namespace_capabilities: config
@@ -110,7 +113,10 @@ impl TryFrom<Config> for component_internal::Config {
                 .map(|c| cml::translate::translate_capabilities(c))
                 .transpose()?,
             num_threads: config.num_threads,
-            out_dir_contents: Some(translate_out_dir_contents(config.out_dir_contents)),
+            out_dir_contents: match config.out_dir_contents {
+                Some(out_dir_contents) => Some(out_dir_contents.into()),
+                None => None,
+            },
         })
     }
 }
@@ -138,19 +144,6 @@ fn translate_job_policy(
             main_process_critical: p.main_process_critical,
         },
     )
-}
-
-fn translate_out_dir_contents(
-    out_dir_contents: Option<OutDirContents>,
-) -> component_internal::OutDirContents {
-    match out_dir_contents {
-        Some(target) => match target {
-            OutDirContents::None => component_internal::OutDirContents::None,
-            OutDirContents::Hub => component_internal::OutDirContents::Hub,
-            OutDirContents::Svc => component_internal::OutDirContents::Svc,
-        },
-        None => component_internal::OutDirContents::None,
-    }
 }
 
 macro_rules! extend_if_unset {

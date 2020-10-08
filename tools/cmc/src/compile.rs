@@ -141,32 +141,6 @@ fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::Dictionar
     }
 }
 
-// Translates a optional cm::DependencyType to a fsys::DependencyType, defaulting to Strong if the input is None.
-fn translate_dependency_type_to_fidl(
-    dependency_type: Option<cm::DependencyType>,
-) -> fsys::DependencyType {
-    match dependency_type {
-        None | Some(cm::DependencyType::Strong) => fsys::DependencyType::Strong,
-        Some(cm::DependencyType::WeakForMigration) => fsys::DependencyType::WeakForMigration,
-    }
-}
-
-// Translates a cm::StartupMode to a fsys::StartupMode.
-fn translate_startup_mode_to_fidl(startup_mode: &cm::StartupMode) -> fsys::StartupMode {
-    match startup_mode {
-        cm::StartupMode::Lazy => fsys::StartupMode::Lazy,
-        cm::StartupMode::Eager => fsys::StartupMode::Eager,
-    }
-}
-
-// Translates a cm::Durability to a fsys::Durability.
-fn translate_durability_to_fidl(durability: &cm::Durability) -> fsys::Durability {
-    match durability {
-        cm::Durability::Persistent => fsys::Durability::Persistent,
-        cm::Durability::Transient => fsys::Durability::Transient,
-    }
-}
-
 // 'program' rules denote a set of dictionary entries that may specify lifestyle events with a "lifecycle" prefix key.
 // All other entries are copied as is.
 pub fn translate_program(program: &Map<String, Value>) -> Result<fdata::Dictionary, Error> {
@@ -410,9 +384,9 @@ fn translate_offer(
                     source_path: Some(source_id.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
                     target_path: Some(target_id.clone().into()),
-                    dependency_type: Some(translate_dependency_type_to_fidl(
-                        offer.dependency.clone(),
-                    )),
+                    dependency_type: Some(
+                        offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
+                    ),
                 }));
             }
         } else if let Some(p) = offer.directory() {
@@ -426,9 +400,9 @@ fn translate_offer(
                     target_path: Some(target_id.into()),
                     rights: extract_offer_rights(offer)?,
                     subdir: extract_offer_subdir(offer).map(|s| s.into()),
-                    dependency_type: Some(translate_dependency_type_to_fidl(
-                        offer.dependency.clone(),
-                    )),
+                    dependency_type: Some(
+                        offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
+                    ),
                 }));
             }
         } else if let Some(s) = offer.storage() {
@@ -504,7 +478,7 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<fsys::ChildDe
         out_children.push(fsys::ChildDecl {
             name: Some(child.name.clone().into()),
             url: Some(child.url.clone().into()),
-            startup: Some(translate_startup_mode_to_fidl(&child.startup)),
+            startup: Some(child.startup.clone().into()),
             environment: extract_environment_ref(child.environment.as_ref()).map(|e| e.into()),
         });
     }
@@ -518,7 +492,7 @@ fn translate_collections(
     for collection in collections_in.iter() {
         out_collections.push(fsys::CollectionDecl {
             name: Some(collection.name.clone().into()),
-            durability: Some(translate_durability_to_fidl(&collection.durability)),
+            durability: Some(collection.durability.clone().into()),
             environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
         });
     }

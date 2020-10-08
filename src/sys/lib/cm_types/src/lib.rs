@@ -7,12 +7,69 @@
 //! and deserialization implementations that perform the required validation.
 
 use {
+    fidl_fuchsia_sys2::{self as fsys},
     serde::{de, ser},
     serde::{Deserialize, Serialize},
     std::{borrow::Cow, default::Default, fmt, str::FromStr},
     thiserror::Error,
     url,
 };
+
+/// Generate `impl From` for two trivial enums with identical values, allowing
+/// converting to/from each other.
+/// This is useful if you have a FIDL-generated enum and a hand-rolled
+/// one that contain the same values.
+/// # Arguments
+///
+/// * `$a`, `$b` - The enums to generate `impl From` for. Order doesn't matter because
+///     implementation will be generated for both. Enums should be trivial.
+/// * `id` - Exhaustive list of all enum values.
+/// # Examples
+///
+/// ```
+/// mod a {
+///     #[derive(Debug, PartialEq, Eq)]
+///     pub enum Streetlight {
+///         Green,
+///         Yellow,
+///         Red,
+///     }
+/// }
+///
+/// mod b {
+///     #[derive(Debug, PartialEq, Eq)]
+///     pub enum Streetlight {
+///         Green,
+///         Yellow,
+///         Red,
+///     }
+/// }
+///
+/// symmetrical_enums!(a::Streetlight, b::Streetlight, Green, Yellow, Red);
+///
+/// assert_eq!(a::Streetlight::Green, b::Streetlight::Green.into());
+/// assert_eq!(b::Streetlight::Green, a::Streetlight::Green.into());
+/// ```
+#[macro_export]
+macro_rules! symmetrical_enums {
+    ($a:ty , $b:ty, $($id: ident),*) => {
+        impl From<$a> for $b {
+            fn from(input: $a) -> Self {
+                match input {
+                    $( <$a>::$id => <$b>::$id, )*
+                }
+            }
+        }
+
+        impl From<$b> for $a {
+            fn from(input: $b) -> Self {
+                match input {
+                    $( <$b>::$id => <$a>::$id, )*
+                }
+            }
+        }
+    };
+}
 
 /// A name that can refer to a component, collection, or other entity in the
 /// Component Manifest.
@@ -630,6 +687,8 @@ pub enum Durability {
     Transient,
 }
 
+symmetrical_enums!(Durability, fsys::Durability, Persistent, Transient);
+
 /// A component instance's startup mode. See [`StartupMode`].
 ///
 /// [`StartupMode`]: ../../fidl_fuchsia_sys2/enum.StartupMode.html
@@ -642,6 +701,8 @@ pub enum StartupMode {
     /// Start the component instance as soon as its parent starts.
     Eager,
 }
+
+symmetrical_enums!(StartupMode, fsys::StartupMode, Lazy, Eager);
 
 impl Default for StartupMode {
     fn default() -> Self {
@@ -658,6 +719,8 @@ pub enum DependencyType {
     Strong,
     WeakForMigration,
 }
+
+symmetrical_enums!(DependencyType, fsys::DependencyType, Strong, WeakForMigration);
 
 impl Default for DependencyType {
     fn default() -> Self {
@@ -821,5 +884,35 @@ mod tests {
         );
         assert_eq!(err.line(), 2);
         assert_eq!(err.column(), 26);
+    }
+
+    #[test]
+    fn test_symmetrical_enums() {
+        mod a {
+            #[derive(Debug, PartialEq, Eq)]
+            pub enum Streetlight {
+                Green,
+                Yellow,
+                Red,
+            }
+        }
+
+        mod b {
+            #[derive(Debug, PartialEq, Eq)]
+            pub enum Streetlight {
+                Green,
+                Yellow,
+                Red,
+            }
+        }
+
+        symmetrical_enums!(a::Streetlight, b::Streetlight, Green, Yellow, Red);
+
+        assert_eq!(a::Streetlight::Green, b::Streetlight::Green.into());
+        assert_eq!(a::Streetlight::Yellow, b::Streetlight::Yellow.into());
+        assert_eq!(a::Streetlight::Red, b::Streetlight::Red.into());
+        assert_eq!(b::Streetlight::Green, a::Streetlight::Green.into());
+        assert_eq!(b::Streetlight::Yellow, a::Streetlight::Yellow.into());
+        assert_eq!(b::Streetlight::Red, a::Streetlight::Red.into());
     }
 }

@@ -33,6 +33,7 @@ if (host_toolchain == current_toolchain) {
     deps = [
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
       "//src/lib/fidl/rust/fidl",
+      "//src/sys/lib/cm_types",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:serde",
