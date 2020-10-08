@@ -338,7 +338,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
             1,
         );
 
-        if let ConnectFailure::SelectNetwork(select_network_failure) = failure {
+        if let ConnectFailure::SelectNetworkFailure(select_network_failure) = failure {
             let error_reason_dim = convert_select_network_failure(&select_network_failure);
             sender.with_component().log_event_count::<_, String, _>(
                 metrics::NETWORK_SELECTION_FAILURE_METRIC_ID,

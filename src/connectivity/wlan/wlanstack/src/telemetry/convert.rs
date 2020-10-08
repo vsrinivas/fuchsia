@@ -92,7 +92,7 @@ pub(super) fn convert_to_fail_at_dim(
     use metrics::ConnectionFailureMetricDimensionFailAt::*;
     match failure {
         ConnectFailure::ScanFailure(..) => Scan,
-        ConnectFailure::SelectNetwork(..) => NetworkSelection,
+        ConnectFailure::SelectNetworkFailure(..) => NetworkSelection,
         ConnectFailure::JoinFailure(..) => Join,
         ConnectFailure::AuthenticationFailure(..) => Authentication,
         ConnectFailure::AssociationFailure(..) => Association,

@@ -119,7 +119,7 @@ impl<T: Into<ConnectFailure>> From<T> for ConnectResult {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConnectFailure {
-    SelectNetwork(SelectNetworkFailure),
+    SelectNetworkFailure(SelectNetworkFailure),
     ScanFailure(fidl_mlme::ScanResultCodes),
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
@@ -173,7 +173,7 @@ pub enum SelectNetworkFailure {
 
 impl From<SelectNetworkFailure> for ConnectFailure {
     fn from(failure: SelectNetworkFailure) -> Self {
-        ConnectFailure::SelectNetwork(failure)
+        ConnectFailure::SelectNetworkFailure(failure)
     }
 }
 
@@ -912,7 +912,9 @@ mod tests {
             Ok(
                 Some(
                     ConnectResult::Failed(
-                        ConnectFailure::SelectNetwork(SelectNetworkFailure::CredentialError(_)),
+                        ConnectFailure::SelectNetworkFailure(
+                            SelectNetworkFailure::CredentialError(_),
+                        ),
                     ),
                 ),
             )
@@ -962,7 +964,9 @@ mod tests {
             Ok(
                 Some(
                     ConnectResult::Failed(
-                        ConnectFailure::SelectNetwork(SelectNetworkFailure::CredentialError(_)),
+                        ConnectFailure::SelectNetworkFailure(
+                            SelectNetworkFailure::CredentialError(_),
+                        ),
                     ),
                 ),
             )
@@ -1010,7 +1014,9 @@ mod tests {
             Ok(
                 Some(
                     ConnectResult::Failed(
-                        ConnectFailure::SelectNetwork(SelectNetworkFailure::CredentialError(_)),
+                        ConnectFailure::SelectNetworkFailure(
+                            SelectNetworkFailure::CredentialError(_),
+                        ),
                     ),
                 ),
             )

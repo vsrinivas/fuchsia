@@ -247,7 +247,7 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
         // This case is for errors associated with the credential type specified.
         // Example problems are specifying an unsupported protection type or
         // specifying a password for an open network.
-        ConnectResult::Failed(ConnectFailure::SelectNetwork(
+        ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
             SelectNetworkFailure::CredentialError(_),
         )) => fidl_sme::ConnectResultCode::WrongCredentialType,
 
