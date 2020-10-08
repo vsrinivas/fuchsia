@@ -25,12 +25,8 @@
 #include <dev/pcie_bus_driver.h>
 #endif
 #include <err.h>
-#include <lib/acpi_lite.h>
-#include <lib/acpi_lite/zircon.h>
-#include <lib/acpi_tables.h>
 #include <lib/cksum.h>
 #include <lib/cmdline.h>
-#include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/system-topology.h>
@@ -63,14 +59,14 @@
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 
+#include "acpi.h"
+
 extern "C" {
 #include <efi/runtime-services.h>
 #include <efi/system-table.h>
 }
 
 #define LOCAL_TRACE 0
-
-using acpi_lite::AcpiParser;
 
 extern zbi_header_t* _zbi_base;
 
@@ -685,20 +681,6 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t 
                  0);
 }
 
-static void init_acpi(zx_paddr_t acpi_rsdp) {
-  // Initialise acpi_lite Parser.
-  static const AcpiParser parser = [acpi_rsdp]() {
-    zx::status<AcpiParser> result = acpi_lite::AcpiParserInit(acpi_rsdp);
-    if (result.is_error()) {
-      panic("Could not initialize ACPI. Error code %d.", result.error_value());
-    }
-    return result.value();
-  }();
-  static const AcpiLiteTableProvider table_provider{&parser};
-  static const AcpiTables acpi_tables{&table_provider};
-  AcpiTables::SetDefault(&acpi_tables);
-}
-
 void platform_early_init(void) {
   /* extract bootloader data while still accessible */
   /* this includes debug uart config, etc. */
@@ -719,7 +701,7 @@ void platform_early_init(void) {
   platform_early_display_init();
 
   /* initialize the ACPI parser */
-  init_acpi(bootloader.acpi_rsdp);
+  PlatformInitAcpi(bootloader.acpi_rsdp);
 
   /* initialize the boot memory reservation system */
   boot_reserve_init();
