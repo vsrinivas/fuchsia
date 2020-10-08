@@ -20,7 +20,6 @@ rustc_library("input-synthesis") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:proptest",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
