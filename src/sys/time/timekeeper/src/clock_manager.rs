@@ -100,7 +100,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             // Feed it to the estimator (or initialize the estimator).
             match &mut self.estimator {
                 Some(estimator) => estimator.update(sample),
-                None => self.estimator = Some(Estimator::new(sample)),
+                None => self.estimator = Some(Estimator::new(self.track, sample)),
             }
             // Note: Both branches of the match led to a populated estimator so safe to unwrap.
             let estimator: &mut Estimator = &mut self.estimator.as_mut().unwrap();
@@ -116,8 +116,10 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             );
             if clock_error < CLOCK_UPDATE_THRESHOLD {
                 info!(
-                    "updated offset of {:?} close to current clock offset of {:?}, skipping update",
-                    estimate_offset, clock_offset
+                    "updated {:?} offset of {:?} close to previous offset of {:?}, skipping update",
+                    self.track,
+                    estimate_offset.into_nanos(),
+                    clock_offset.into_nanos()
                 );
                 continue;
             }
@@ -125,7 +127,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             // For now we implement all time corrections as a simple step to the intended time.
             let utc_chrono = Utc.timestamp_nanos(estimate_utc.into_nanos());
             if let Err(status) = self.clock.update(zx::ClockUpdate::new().value(estimate_utc)) {
-                error!("failed to update UTC clock to {}: {}", utc_chrono, status);
+                error!("failed to update {:?} clock to {}: {}", self.track, utc_chrono, status);
                 continue;
             }
             clock_offset = estimate_offset;
@@ -134,14 +136,15 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
                     track: self.track,
                     source: StartClockSource::External(self.time_source_manager.role()),
                 });
-                info!("started UTC time from external source at time {}", utc_chrono);
+                info!("started {:?} clock from external source at {}", self.track, utc_chrono);
                 clock_started = true;
             } else {
                 self.diagnostics.record(Event::UpdateClock { track: self.track });
-                info!("adjusted UTC time to {}", utc_chrono);
+                info!("adjusted {:?} clock to {}", self.track, utc_chrono);
             }
 
             // Update the RTC clock if we have one.
+            // Note this only applies to primary so we don't include the track in our log messages.
             if let Some(ref rtc) = self.rtc {
                 let outcome = match rtc.set(estimate_utc).await {
                     Err(err) => {

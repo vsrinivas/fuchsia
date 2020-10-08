@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::time_source::Sample, chrono::prelude::*, fuchsia_zircon as zx, log::info};
+use {
+    crate::{enums::Track, time_source::Sample},
+    chrono::prelude::*,
+    fuchsia_zircon as zx,
+    log::info,
+};
 
 /// Maintains an estimate of the relationship between true UTC time and monotonic time on this
 /// device, based on time samples received from one or more time sources.
@@ -11,12 +16,14 @@ pub struct Estimator {
     utc: zx::Time,
     /// The monotonic time at which the UTC estimate applies.
     monotonic: zx::Time,
+    /// The track of the estimate being managed.
+    track: Track,
 }
 
 impl Estimator {
     /// Construct a new estimator inititalized to the supplied sample.
-    pub fn new(Sample { utc, monotonic }: Sample) -> Self {
-        Estimator { utc, monotonic }
+    pub fn new(track: Track, Sample { utc, monotonic }: Sample) -> Self {
+        Estimator { utc, monotonic, track }
     }
 
     /// Update the estimate to include the supplied sample.
@@ -24,7 +31,7 @@ impl Estimator {
         // For consistency with the previous implementation, we currently use only the first
         // sample we receive. All others are discarded.
         let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
-        info!("received time update to {}", utc_chrono);
+        info!("received {:?} time update to {}", self.track, utc_chrono);
     }
 
     /// Returns the estimated utc at the supplied monotonic time.
@@ -48,14 +55,15 @@ mod test {
 
     #[test]
     fn initialize_and_estimate() {
-        let estimator = Estimator::new(Sample::new(*TIME_1 + OFFSET_1, *TIME_1));
+        let estimator = Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1));
         assert_eq!(estimator.estimate(*TIME_1), *TIME_1 + OFFSET_1);
         assert_eq!(estimator.estimate(*TIME_2), *TIME_2 + OFFSET_1);
     }
 
     #[test]
     fn update_ignored() {
-        let mut estimator = Estimator::new(Sample::new(*TIME_1 + OFFSET_1, *TIME_1));
+        let mut estimator =
+            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1));
         estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2));
         assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + OFFSET_1);
     }

@@ -71,10 +71,9 @@ impl Into<CobaltRtcEventType> for WriteRtcOutcome {
 }
 
 /// The role a time source is playing within time synchronization.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Role {
     Primary,
-    #[allow(unused)]
     Monitor,
     // TODO(jsankey): Add Gating and Fallback when some product requires them.
 }
@@ -82,10 +81,9 @@ pub enum Role {
 /// Which of the independent estimates of time is applicable. Timekeeper maintains a Primary track
 /// that is externally visable and optionally a internal Monitor track that is used to validate
 /// proposed changes to the time synchronization source or algorithms.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Track {
     Primary,
-    #[allow(unused)]
     Monitor,
 }
 
@@ -106,7 +104,7 @@ pub enum StartClockSource {
 }
 
 /// The reasons a received time sample may not be valid.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SampleValidationError {
     StatusNotOk,
     MonotonicInFuture,
@@ -116,7 +114,7 @@ pub enum SampleValidationError {
 }
 
 /// The reasons a time source may have failed.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TimeSourceError {
     LaunchFailed,
     StreamFailed,

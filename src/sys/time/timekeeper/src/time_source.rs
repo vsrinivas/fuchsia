@@ -10,7 +10,8 @@ use {
     fuchsia_component::client::{launch, launcher, App},
     fuchsia_zircon as zx,
     futures::{stream::Select, FutureExt, StreamExt, TryFutureExt},
-    std::{pin::Pin, sync::Arc},
+    log::info,
+    std::{fmt::Debug, pin::Pin, sync::Arc},
 };
 
 /// A time sample received from a source of time.
@@ -50,7 +51,7 @@ impl From<Sample> for Event {
 
 /// A definition of a time source that may subsequently be launched to create a stream of update
 /// events.
-pub trait TimeSource: Send + Sync {
+pub trait TimeSource: Send + Sync + Debug {
     /// The type of `Stream` produced when launching the `TimeSource`.
     type EventStream: Stream<Item = Result<Event, Error>> + Unpin + Send;
 
@@ -60,6 +61,7 @@ pub trait TimeSource: Send + Sync {
 }
 
 /// A time source that communicates using the `fuchsia.time.external.PushSource` protocol.
+#[derive(Debug)]
 pub struct PushTimeSource {
     /// The fully qualified name of the component to launch.
     component: String,
@@ -116,6 +118,7 @@ impl TimeSource for PushTimeSource {
 
     fn launch(&self) -> Result<Self::EventStream, Error> {
         let launcher = launcher().context("starting launcher")?;
+        info!("Launching PushTimeSource at {}", self.component);
         let app = launch(&launcher, self.component.clone(), None)
             .context(format!("launching push source {}", self.component))?;
         let proxy = app.connect_to_service::<ftexternal::PushSourceMarker>()?;
@@ -169,6 +172,13 @@ impl FakeTimeSource {
     /// Creates a new `FakeTimeSource` that always fails to launch.
     pub fn failing() -> Self {
         FakeTimeSource { collections: Mutex::new(vec![]) }
+    }
+}
+
+#[cfg(test)]
+impl Debug for FakeTimeSource {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("FakeTimeSource")
     }
 }
 

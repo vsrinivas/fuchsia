@@ -35,17 +35,48 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, HandleBased as _},
-    futures::StreamExt as _,
+    futures::{
+        future::{self, OptionFuture},
+        StreamExt as _,
+    },
     log::{info, warn},
     std::sync::Arc,
 };
 
-/// URL of the primary time source. In the future, this value belongs in a config file.
-const PRIMARY_SOURCE: &str =
-    "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx";
-/// URL of the dev time source used as the primary source for integ tests.
-const INTEG_DEV_TIME_SOURCE: &str =
-    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cmx";
+/// A definition which time sources to install, along with the URL for each.
+struct TimeSourceUrls {
+    primary: &'static str,
+    monitor: Option<&'static str>,
+}
+
+/// The time sources to install in the default (i.e. non-test) case. In the future, these values
+/// belong in a config file.
+const DEFAULT_SOURCES: TimeSourceUrls = TimeSourceUrls {
+    primary: "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx",
+    // TODO(jsankey): Replace with Some("fuchsia-pkg://fuchsia.com/httpsdate-time-source#
+    //                meta/httpsdate_time_source.cmx") once HTTPSdate is stable.
+    monitor: None,
+};
+
+/// The time sources to install when the dev_time_sources flag is set. In the future, these values
+/// belong in a config file.
+const DEV_TEST_SOURCES: TimeSourceUrls = TimeSourceUrls {
+    primary: "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cmx",
+    monitor: None,
+};
+
+/// The information required to maintain UTC for the primary track.
+struct PrimaryTrack<T: TimeSource> {
+    time_source: T,
+    clock: zx::Clock,
+    notifier: Notifier,
+}
+
+/// The information required to maintain UTC for the monitor track.
+struct MonitorTrack<T: TimeSource> {
+    time_source: T,
+    clock: zx::Clock,
+}
 
 /// Command line arguments supplied to Timekeeper.
 #[derive(argh::FromArgs)]
@@ -74,6 +105,25 @@ async fn main() -> Result<(), Error> {
         .duplicate_handle(zx::Rights::SAME_RIGHTS)
         .context("failed to duplicate UTC clock")?;
 
+    info!("constructing time sources");
+    let notifier = Notifier::new(match initial_clock_state(&utc_clock) {
+        InitialClockState::NotSet => ftime::UtcSource::Backstop,
+        InitialClockState::PreviouslySet => ftime::UtcSource::Unverified,
+    });
+    let time_source_urls = match options.dev_time_sources {
+        true => DEV_TEST_SOURCES,
+        false => DEFAULT_SOURCES,
+    };
+    let primary_track = PrimaryTrack {
+        time_source: PushTimeSource::new(time_source_urls.primary.to_string()),
+        clock: utc_clock,
+        notifier: notifier.clone(),
+    };
+    let monitor_track = time_source_urls.monitor.map(|url| MonitorTrack {
+        time_source: PushTimeSource::new(url.to_string()),
+        clock: create_monitor_clock(&primary_track.clock),
+    });
+
     info!("initializing diagnostics and serving inspect on servicefs");
     let diagnostics = Arc::new(CompositeDiagnostics::new(
         InspectDiagnostics::new(diagnostics::INSPECTOR.root(), duplicate_utc_clock),
@@ -81,11 +131,6 @@ async fn main() -> Result<(), Error> {
     ));
     let mut fs = ServiceFs::new();
     diagnostics::INSPECTOR.serve(&mut fs)?;
-
-    let notifier = Notifier::new(match initial_clock_state(&utc_clock) {
-        InitialClockState::NotSet => ftime::UtcSource::Backstop,
-        InitialClockState::PreviouslySet => ftime::UtcSource::Unverified,
-    });
 
     info!("connecting to real time clock");
     let optional_rtc = match RtcImpl::only_device() {
@@ -97,23 +142,16 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let primary_source_url = match options.dev_time_sources {
-        true => INTEG_DEV_TIME_SOURCE,
-        false => PRIMARY_SOURCE,
-    };
-    let primary_source = PushTimeSource::new(primary_source_url.to_string());
     let interface_state_service =
         fuchsia_component::client::connect_to_service::<finterfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;
     let interface_event_stream = event_stream(&interface_state_service)?;
-    let notifier_clone = notifier.clone();
 
     fasync::Task::spawn(async move {
         maintain_utc(
-            utc_clock,
+            primary_track,
+            monitor_track,
             optional_rtc,
-            notifier_clone,
-            primary_source,
             interface_event_stream,
             diagnostics,
         )
@@ -130,8 +168,22 @@ async fn main() -> Result<(), Error> {
     Ok(fs.collect().await)
 }
 
+/// Creates and starts a new userspace clock for use in the monitor track, set to the same
+/// backstop time as the supplied primary clock.
+fn create_monitor_clock(primary_clock: &zx::Clock) -> zx::Clock {
+    // Note: Failure should not be possible from a valid zx::Clock.
+    let backstop = primary_clock.get_details().expect("failed to get UTC clock details").backstop;
+    // Note: Only failure mode is an OOM which we handle via panic.
+    let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(backstop))
+        .expect("failed to create new monitor clock");
+    // Note: Failure should not be possible from a freshly created zx::Clock.
+    clock.update(zx::ClockUpdate::new().value(backstop)).expect("failed to start monitor clock");
+    clock
+}
+
 /// Determines whether the supplied clock has previously been set.
 fn initial_clock_state(utc_clock: &zx::Clock) -> InitialClockState {
+    // Note: Failure should not be possible from a valid zx::Clock.
     let clock_details = utc_clock.get_details().expect("failed to get UTC clock details");
     // When the clock is first initialized to the backstop time, its synthetic offset should
     // be identical. Once the clock is updated, this is no longer true.
@@ -194,10 +246,9 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
 ///
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
 async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
-    mut utc_clock: zx::Clock,
+    mut primary: PrimaryTrack<T>,
+    optional_monitor: Option<MonitorTrack<T>>,
     optional_rtc: Option<R>,
-    mut notifier: Notifier,
-    primary_source: T,
     interface_event_stream: S,
     diagnostics: Arc<D>,
 ) where
@@ -207,14 +258,19 @@ async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
     D: Diagnostics,
 {
     info!("record the state at initialization.");
-    let initial_clock_state = initial_clock_state(&utc_clock);
+    let initial_clock_state = initial_clock_state(&primary.clock);
     diagnostics.record(Event::Initialized { clock_state: initial_clock_state });
 
     match initial_clock_state {
         InitialClockState::NotSet => {
             if let Some(rtc) = optional_rtc.as_ref() {
-                set_clock_from_rtc(rtc, &mut utc_clock, &mut notifier, Arc::clone(&diagnostics))
-                    .await;
+                set_clock_from_rtc(
+                    rtc,
+                    &mut primary.clock,
+                    &mut primary.notifier,
+                    Arc::clone(&diagnostics),
+                )
+                .await;
             }
         }
         InitialClockState::PreviouslySet => {
@@ -225,15 +281,29 @@ async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
                 });
             }
             info!("clock was already running at intialization, reporting source as unverified");
-            notifier.set_source(ftime::UtcSource::Unverified).await;
+            primary.notifier.set_source(ftime::UtcSource::Unverified).await;
         }
     }
 
-    info!("launching time source manager...");
-    let backstop = utc_clock.get_details().expect("failed to get UTC clock details").backstop;
-    let mut primary_source_manager =
-        TimeSourceManager::new(backstop, Role::Primary, primary_source, Arc::clone(&diagnostics));
+    info!("launching time source managers...");
+    let backstop = primary.clock.get_details().expect("failed to get UTC clock details").backstop;
+    let mut primary_source_manager = TimeSourceManager::new(
+        backstop,
+        Role::Primary,
+        primary.time_source,
+        Arc::clone(&diagnostics),
+    );
     primary_source_manager.warm_up();
+    let monitor_source_manager_and_clock = optional_monitor.map(|monitor| {
+        let mut source_manager = TimeSourceManager::new(
+            backstop,
+            Role::Monitor,
+            monitor.time_source,
+            Arc::clone(&diagnostics),
+        );
+        source_manager.warm_up();
+        (source_manager, monitor.clock)
+    });
 
     info!("waiting for network connectivity before attempting network time sync...");
     match wait_for_network_available(interface_event_stream).await {
@@ -241,16 +311,28 @@ async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
         Err(why) => warn!("failed to wait for network, attempted to sync time anyway: {:?}", why),
     }
 
-    info!("launching clock manager...");
-    ClockManager::execute(
-        utc_clock,
+    info!("launching clock managers...");
+    let fut1 = ClockManager::execute(
+        primary.clock,
         primary_source_manager,
         optional_rtc,
-        Some(notifier),
-        diagnostics,
+        Some(primary.notifier),
+        Arc::clone(&diagnostics),
         Track::Primary,
-    )
-    .await;
+    );
+    let fut2: OptionFuture<_> = monitor_source_manager_and_clock
+        .map(|(source_manager, clock)| {
+            ClockManager::<T, R, D>::execute(
+                clock,
+                source_manager,
+                None,
+                None,
+                diagnostics,
+                Track::Monitor,
+            )
+        })
+        .into();
+    future::join(fut1, fut2).await;
 }
 
 #[cfg(test)]
@@ -271,6 +353,7 @@ mod tests {
 
     const NANOS_PER_SECOND: i64 = 1_000_000_000;
     const OFFSET: zx::Duration = zx::Duration::from_seconds(1111_000);
+    const OFFSET_2: zx::Duration = zx::Duration::from_seconds(1111_333);
 
     lazy_static! {
         static ref INVALID_RTC_TIME: zx::Time = zx::Time::from_nanos(111111 * NANOS_PER_SECOND);
@@ -293,19 +376,15 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn successful_update_single_notify_client() {
-        let (clock, initial_update_ticks) = create_clock();
+    async fn successful_update_single_notify_client_with_monitor() {
+        let (primary_clock, primary_ticks) = create_clock();
+        let (monitor_clock, monitor_ticks) = create_clock();
         let rtc = FakeRtc::valid(*INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let monotonic_ref = zx::Time::get(zx::ClockId::Monotonic);
-        let time_source = FakeTimeSource::events(vec![
-            TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
-            TimeSourceEvent::from(Sample { utc: monotonic_ref + OFFSET, monotonic: monotonic_ref }),
-        ]);
-
         let interface_event_stream = network::create_stream_with_valid_interface();
 
         // Spawning test notifier and verifying initial state
@@ -314,17 +393,37 @@ mod tests {
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::Backstop);
 
         let _task = fasync::Task::spawn(maintain_utc(
-            duplicate_clock(&clock),
+            PrimaryTrack {
+                clock: duplicate_clock(&primary_clock),
+                time_source: FakeTimeSource::events(vec![
+                    TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
+                    TimeSourceEvent::from(Sample {
+                        utc: monotonic_ref + OFFSET,
+                        monotonic: monotonic_ref,
+                    }),
+                ]),
+                notifier: notifier.clone(),
+            },
+            Some(MonitorTrack {
+                clock: duplicate_clock(&monitor_clock),
+                time_source: FakeTimeSource::events(vec![
+                    TimeSourceEvent::StatusChange { status: ftexternal::Status::Network },
+                    TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
+                    TimeSourceEvent::from(Sample {
+                        utc: monotonic_ref + OFFSET_2,
+                        monotonic: monotonic_ref,
+                    }),
+                ]),
+            }),
             Some(rtc.clone()),
-            notifier.clone(),
-            time_source,
             interface_event_stream,
             Arc::clone(&diagnostics),
         ));
 
         // Checking that the reported time source has been updated and the clocks are set.
         assert_eq!(utc.watch_state().await.unwrap().source.unwrap(), ftime::UtcSource::External);
-        assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
+        assert!(primary_clock.get_details().unwrap().last_value_update_ticks > primary_ticks);
+        assert!(monitor_clock.get_details().unwrap().last_value_update_ticks > monitor_ticks);
         assert!(rtc.last_set().is_some());
 
         // Checking that the correct diagnostic events were logged.
@@ -341,6 +440,12 @@ mod tests {
                 source: StartClockSource::External(Role::Primary),
             },
             Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded },
+            Event::TimeSourceStatus { role: Role::Monitor, status: ftexternal::Status::Network },
+            Event::TimeSourceStatus { role: Role::Monitor, status: ftexternal::Status::Ok },
+            Event::StartClock {
+                track: Track::Monitor,
+                source: StartClockSource::External(Role::Monitor),
+            },
         ]);
     }
 
@@ -367,10 +472,13 @@ mod tests {
 
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
-            duplicate_clock(&clock),
+            PrimaryTrack {
+                clock: duplicate_clock(&clock),
+                time_source,
+                notifier: notifier.clone(),
+            },
+            None,
             Some(rtc.clone()),
-            notifier.clone(),
-            time_source,
             interface_event_stream,
             Arc::clone(&diagnostics),
         )
@@ -420,10 +528,13 @@ mod tests {
 
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
-            duplicate_clock(&clock),
+            PrimaryTrack {
+                clock: duplicate_clock(&clock),
+                time_source,
+                notifier: notifier.clone(),
+            },
+            None,
             Some(rtc.clone()),
-            notifier.clone(),
-            time_source,
             interface_event_stream,
             Arc::clone(&diagnostics),
         )
@@ -484,10 +595,13 @@ mod tests {
 
         // Maintain UTC until no more work remains
         let mut fut2 = maintain_utc(
-            duplicate_clock(&clock),
+            PrimaryTrack {
+                clock: duplicate_clock(&clock),
+                time_source,
+                notifier: notifier.clone(),
+            },
+            None,
             Some(rtc.clone()),
-            notifier.clone(),
-            time_source,
             interface_event_stream,
             Arc::clone(&diagnostics),
         )
