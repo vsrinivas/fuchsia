@@ -1,6 +1,6 @@
 {
     "services": {
-        "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl-services-small#meta/intl_services.cmx"
+        "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl_services_small#meta/intl_services_small.cmx"
     }
 }
 
