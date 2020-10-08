@@ -96,6 +96,7 @@ type GIDLFlags struct {
 	MultipleFilePattern       *string
 	Out                       *string
 	RustBenchmarksFidlLibrary *string
+	CppBenchmarksFidlLibrary  *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -119,6 +120,8 @@ This is used for generating output filenames when there are multiple files`),
 	Out: flag.String("out", "", "optional path to write output to"),
 	RustBenchmarksFidlLibrary: flag.String("rust-benchmarks-fidl-library", "",
 		"name for the fidl library used in the rust benchmarks"),
+	CppBenchmarksFidlLibrary: flag.String("cpp-benchmarks-fidl-library", "",
+		"name for the fidl library used in the cpp benchmarks"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -160,6 +163,9 @@ func main() {
 	var config gidlconfig.GeneratorConfig
 	if *flags.RustBenchmarksFidlLibrary != "" {
 		config.RustBenchmarksFidlLibrary = *flags.RustBenchmarksFidlLibrary
+	}
+	if *flags.CppBenchmarksFidlLibrary != "" {
+		config.CppBenchmarksFidlLibrary = *flags.CppBenchmarksFidlLibrary
 	}
 
 	fidl := parseFidlJSONIr(*flags.JSONPath)

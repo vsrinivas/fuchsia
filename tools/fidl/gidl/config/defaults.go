@@ -12,4 +12,6 @@ var DefaultBindingsDenylist = []string{"reference"}
 type GeneratorConfig struct {
 	// Name for the fidl library used in rust benchmarks.
 	RustBenchmarksFidlLibrary string
+	// Name for the fidl library used in cpp benchmarks.
+	CppBenchmarksFidlLibrary string
 }

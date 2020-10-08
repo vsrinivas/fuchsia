@@ -123,7 +123,11 @@ template("gidl_single_file_source_set") {
     output = output_filename
     fidl = invoker.fidl
     inputs = invoker.inputs
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "extra_args",
+                           ])
   }
 
   source_set(target_name) {
@@ -339,7 +343,7 @@ template("gidl_llcpp_conformance") {
 }
 
 template("gidl_cpp_benchmarks") {
-  gidl_multiple_file_source_set(target_name) {
+  gidl_single_file_source_set(target_name) {
     type = "benchmark"
     language = "cpp"
     forward_variables_from(invoker, "*")
