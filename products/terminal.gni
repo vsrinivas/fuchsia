@@ -16,7 +16,6 @@ base_package_labels += [
   "//src/ui/a11y",
   "//src/ui/bin/ime:ime_service",
 ]
-base_package_labels -= [ "//src/intl/intl_services:small" ]
 
 cache_package_labels += [
   "//garnet/bin/terminal",
