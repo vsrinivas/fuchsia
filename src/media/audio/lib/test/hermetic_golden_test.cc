@@ -257,10 +257,10 @@ void HermeticGoldenTest::RunImpulseTest(
   // Write all of the impulses to an input buffer so we can easily write the full
   // input to a WAV file for debugging. Include silence at the beginning to account
   // for ring in; this allows us to align the input and output WAV files.
-  auto impulse_start = tc.pipeline.neg_filter_width;
+  auto input_impulse_start = tc.pipeline.neg_filter_width;
   AudioBuffer<InputF> input(tc.input_format, num_input_frames);
   for (auto start_frame : tc.impulse_locations_in_frames) {
-    start_frame += impulse_start;
+    start_frame += input_impulse_start;
     for (size_t f = start_frame; f < start_frame + tc.impulse_width_in_frames; f++) {
       for (size_t c = 0; c < tc.input_format.channels(); c++) {
         input.samples()[input.SampleIndex(f, c)] = tc.impulse_magnitude;
@@ -274,16 +274,23 @@ void HermeticGoldenTest::RunImpulseTest(
   renderer->PlaySynchronized(this, device, 0);
   renderer->WaitForPackets(this, packets);
 
-  // The ring buffer should contain the expected sequence of impulses.
   auto ring_buffer = device->SnapshotRingBuffer();
+
+  // The ring buffer should contain the expected sequence of impulses.
+  // Due to smoothing effects, the detected leading edge of each impulse might be offset
+  // slightly from the expected location, however each impulse should be offset by the
+  // same amount. Empirically, we see offsets as high as 0.5ms. Allow up to 1ms.
+  ssize_t max_impulse_offset_frames = tc.output_format.frames_per_ns().Scale(zx::msec(1).get());
+  std::unordered_map<size_t, ssize_t> first_impulse_offset_per_channel;
   size_t search_start_frame = 0;
   size_t search_end_frame = 0;
+
   for (size_t k = 0; k < tc.impulse_locations_in_frames.size(); k++) {
     // End this search halfway between impulses k and k+1.
     size_t input_next_midpoint_frame;
     if (k + 1 < tc.impulse_locations_in_frames.size()) {
-      auto curr = impulse_start + tc.impulse_locations_in_frames[k];
-      auto next = impulse_start + tc.impulse_locations_in_frames[k + 1];
+      auto curr = input_impulse_start + tc.impulse_locations_in_frames[k];
+      auto next = input_impulse_start + tc.impulse_locations_in_frames[k + 1];
       input_next_midpoint_frame = curr + (next - curr) / 2;
     } else {
       input_next_midpoint_frame = num_input_frames;
@@ -294,25 +301,40 @@ void HermeticGoldenTest::RunImpulseTest(
     // We expect zero noise in the output.
     constexpr auto kNoiseFloor = 0;
 
-    // We expect to find this impulse at a precise frame.
+    // Impulse should be at this frame +/- max_impulse_offset_frames.
     auto expected_output_frame =
-        input_frame_to_output_frame(impulse_start + tc.impulse_locations_in_frames[k]);
+        input_frame_to_output_frame(input_impulse_start + tc.impulse_locations_in_frames[k]);
 
     // Test each channel.
     for (size_t chan = 0; chan < tc.output_format.channels(); chan++) {
       SCOPED_TRACE(testing::Message() << "Channel " << chan);
       auto output_chan = AudioBufferSlice<OutputF>(&ring_buffer).GetChannel(chan);
       auto slice = AudioBufferSlice(&output_chan, search_start_frame, search_end_frame);
-      auto output_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
-      if (!output_frame) {
+      auto relative_output_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
+      if (!relative_output_frame) {
         ADD_FAILURE() << "Could not find impulse " << k << " in ring buffer\n"
                       << "Expected at ring buffer frame " << expected_output_frame << "\n"
                       << "Ring buffer is:";
         output_chan.Display(search_start_frame, search_end_frame);
         continue;
       }
-      EXPECT_EQ(expected_output_frame, *output_frame + search_start_frame)
-          << "Found impulse " << k << " at an unexpected location";
+      auto output_frame = *relative_output_frame + search_start_frame;
+      if (k == 0) {
+        // First impulse decides the offset.
+        auto offset =
+            static_cast<ssize_t>(output_frame) - static_cast<ssize_t>(expected_output_frame);
+        EXPECT_LE(std::abs(offset), max_impulse_offset_frames)
+            << "Found impulse " << k << " at an unexpected location: at frame " << output_frame
+            << ", expected within " << max_impulse_offset_frames << " frames of "
+            << expected_output_frame;
+        first_impulse_offset_per_channel[chan] = offset;
+      } else {
+        // Other impulses should have the same offset.
+        auto expected_offset = first_impulse_offset_per_channel[chan];
+        EXPECT_EQ(expected_output_frame + expected_offset, output_frame)
+            << "Found impulse " << k << " at an unexpected location; expected_offset is "
+            << expected_offset;
+      }
     }
   }
 
