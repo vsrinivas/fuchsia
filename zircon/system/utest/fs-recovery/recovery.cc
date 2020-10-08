@@ -45,7 +45,7 @@ class FsRecoveryTest : public zxtest::Test {
   // Create a ram disk that is back by a VMO, which is formatted to look like an FVM volume.
   void CreateFvmRamdisk(size_t device_size, size_t block_size) {
     // Calculate total size of data + metadata.
-    size_t slice_count = (device_size + fvm::kBlockSize - 1) / fvm::kBlockSize;
+    size_t slice_count = fbl::round_up(device_size, fvm::kBlockSize) / fvm::kBlockSize;
     device_size = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions,
                                               slice_count, fvm::kBlockSize)
                       .fvm_partition_size;

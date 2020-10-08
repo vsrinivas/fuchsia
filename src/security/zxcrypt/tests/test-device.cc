@@ -325,8 +325,7 @@ void TestDevice::DestroyRamdisk() {
 // Creates a ramdisk, formats it, and binds to it.
 void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   // Calculate total size of data + metadata.
-  device_size = fbl::round_up(device_size, fvm::kBlockSize);
-  size_t slice_count = device_size / fvm::kBlockSize;
+  size_t slice_count = fbl::round_up(device_size, fvm::kBlockSize) / fvm::kBlockSize;
   fvm::Header fvm_header =
       fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slice_count, fvm::kBlockSize);
 

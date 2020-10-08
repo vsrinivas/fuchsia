@@ -130,6 +130,7 @@ TEST_P(MaxDataTest, UseAllData) {
 
   uint64_t disk_size = fs().options().device_block_count * fs().options().device_block_size;
   // Counts both copies of the metadata.
+  // TODO(jfsulliv) change to use MetadataBuffer::BytesNeeded() when that's landed.
   size_t metadata_size =
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, fs().options().fvm_slice_size)
           .GetDataStartOffset();

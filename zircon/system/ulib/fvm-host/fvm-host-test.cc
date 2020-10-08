@@ -109,6 +109,7 @@ size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
   size_t minimal_disk_size = container->CalculateDiskSize();
   fvm::Header header =
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, minimal_disk_size, kDefaultSliceSize);
+  // TODO(jfsulliv) Use MetadataBuffer::BytesNeeded() when available.
   return minimal_disk_size - header->GetDataStartOffset();
 }
 

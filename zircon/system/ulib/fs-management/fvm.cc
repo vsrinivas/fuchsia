@@ -221,6 +221,7 @@ zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
   fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
 
   // Overwrite all the metadata from the beginning of the device to the start of the data.
+  // TODO(jfsulliv) Use MetadataBuffer::BytesNeeded() when that's ready.
   size_t metadata_size = header.GetDataStartOffset();
   std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
   memset(buf.get(), 0, metadata_size);
