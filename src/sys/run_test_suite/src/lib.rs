@@ -57,19 +57,47 @@ pub struct RunResult {
     pub successful_completion: bool,
 }
 
+// Parameters for test.
+pub struct TestParams {
+    /// Test URL.
+    pub test_url: String,
+
+    /// |timeout|: Test timeout.should be more than zero.
+    pub timeout: Option<std::num::NonZeroU32>,
+
+    /// Filter tests based on this glob pattern.
+    pub test_filter: Option<String>,
+
+    // Run disabled tests.
+    pub also_run_disabled_tests: bool,
+
+    /// Test concurrency count.
+    pub parallel: Option<u16>,
+
+    /// Arguments to pass to test using command line.
+    pub test_args: Option<Vec<String>>,
+
+    /// |harness|: HarnessProxy that manages running the tests.
+    pub harness: HarnessProxy,
+}
+
+impl TestParams {
+    fn disabled_tests(&self) -> DisabledTestHandling {
+        return match self.also_run_disabled_tests {
+            true => DisabledTestHandling::Include,
+            false => DisabledTestHandling::Exclude,
+        };
+    }
+}
+
 /// Runs test defined by `url`, and writes logs to writer.
 /// |timeout|: Test timeout.should be more than zero.
 /// |harness|: HarnessProxy that manages running the tests.
 pub async fn run_test<W: Write>(
-    url: String,
+    test_params: TestParams,
     writer: &mut W,
-    timeout: Option<std::num::NonZeroU32>,
-    test_filter: Option<&str>,
-    disabled_tests: DisabledTestHandling,
-    parallel: Option<u16>,
-    harness: HarnessProxy,
 ) -> Result<RunResult, anyhow::Error> {
-    let mut timeout = match timeout {
+    let mut timeout = match test_params.timeout {
         Some(timeout) => futures::future::Either::Left(
             fasync::Timer::new(std::time::Duration::from_secs(timeout.get().into()))
                 .map(|()| Err(())),
@@ -88,10 +116,20 @@ pub async fn run_test<W: Write>(
 
     let mut successful_completion = false;
 
-    let run_options = TestRunOptions { disabled_tests, parallel };
+    let run_options = TestRunOptions {
+        disabled_tests: test_params.disabled_tests(),
+        parallel: test_params.parallel,
+        arguments: test_params.test_args,
+    };
 
-    let test_fut =
-        test_executor::run_v2_test_component(harness, url, sender, test_filter, run_options).fuse();
+    let test_fut = test_executor::run_v2_test_component(
+        test_params.harness,
+        test_params.test_url,
+        sender,
+        test_params.test_filter.as_ref().map(String::as_str),
+        run_options,
+    )
+    .fuse();
     futures::pin_mut!(test_fut);
 
     loop {
@@ -208,41 +246,20 @@ pub async fn run_test<W: Write>(
 /// |timeout|: Test timeout.should be more than zero.
 /// |test_filter|: Glob filter for matching tests to run.
 /// |harness|: HarnessProxy that manages running the tests.
-pub async fn run_tests_and_get_outcome(
-    test_url: String,
-    timeout: Option<std::num::NonZeroU32>,
-    test_filter: Option<String>,
-    also_run_disabled_tests: bool,
-    parallel: Option<u16>,
-    harness: HarnessProxy,
-) -> Outcome {
+pub async fn run_tests_and_get_outcome(test_params: TestParams) -> Outcome {
+    let test_url = test_params.test_url.clone();
     println!("\nRunning test '{}'", &test_url);
 
     let mut stdout = io::stdout();
 
-    let disabled_tests = if also_run_disabled_tests {
-        DisabledTestHandling::Include
-    } else {
-        DisabledTestHandling::Exclude
-    };
-
-    let RunResult { outcome, executed, passed, successful_completion } = match run_test(
-        test_url.clone(),
-        &mut stdout,
-        timeout,
-        test_filter.as_ref().map(String::as_str),
-        disabled_tests,
-        parallel,
-        harness,
-    )
-    .await
-    {
-        Ok(run_result) => run_result,
-        Err(err) => {
-            println!("Test suite encountered error trying to run tests: {:?}", err);
-            return Outcome::Error;
-        }
-    };
+    let RunResult { outcome, executed, passed, successful_completion } =
+        match run_test(test_params, &mut stdout).await {
+            Ok(run_result) => run_result,
+            Err(err) => {
+                println!("Test suite encountered error trying to run tests: {:?}", err);
+                return Outcome::Error;
+            }
+        };
 
     println!("{} out of {} tests passed...", passed.len(), executed.len());
     println!("{} completed with result: {}", &test_url, outcome);

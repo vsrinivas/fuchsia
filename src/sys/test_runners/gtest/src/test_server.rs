@@ -823,7 +823,7 @@ mod tests {
                 "SampleTest2.SimplePass",
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None },
+            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
         )
         .await
         .unwrap();
@@ -868,7 +868,7 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/1",
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(4) },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(4), arguments: None },
         )
         .await
         .unwrap();
@@ -922,7 +922,7 @@ mod tests {
                 "SampleDisabled.DISABLED_TestPass",
                 "SampleDisabled.DISABLED_TestFail",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None },
+            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
         )
         .await
         .unwrap();
@@ -947,10 +947,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() -> Result<(), Error> {
-        let events =
-            run_tests(vec![], RunOptions { include_disabled_tests: Some(false), parallel: None })
-                .await
-                .unwrap();
+        let events = run_tests(
+            vec![],
+            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+        )
+        .await
+        .unwrap();
 
         let expected_events = vec![ListenerEvent::finish_all_test()];
 
@@ -962,7 +964,7 @@ mod tests {
     async fn run_one_test() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None },
+            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
         )
         .await
         .unwrap();

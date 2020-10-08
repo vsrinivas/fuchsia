@@ -93,7 +93,11 @@ async fn launch_and_run_sample_test() {
 
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(10) },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: Some(10),
+            arguments: None,
+        },
     )
     .await
     .unwrap()
@@ -111,7 +115,11 @@ async fn launch_and_run_sample_test_no_concurrent() {
 
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: None,
+            arguments: None,
+        },
     )
     .await
     .unwrap()
@@ -129,7 +137,11 @@ async fn launch_and_run_sample_test_include_disabled() {
         "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let events = run_test(
         TEST_URL,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Include, parallel: Some(10) },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Include,
+            parallel: Some(10),
+            arguments: None,
+        },
     )
     .await
     .unwrap()
@@ -173,7 +185,11 @@ async fn launch_and_run_empty_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/empty_test.cm";
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(10) },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: Some(10),
+            arguments: None,
+        },
     )
     .await
     .unwrap();
@@ -188,7 +204,11 @@ async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_test_realm.cm";
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(10) },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: Some(10),
+            arguments: None,
+        },
     )
     .await
     .unwrap();
@@ -207,7 +227,11 @@ async fn launch_and_run_hugetest() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/huge_gtest.cm";
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(100) },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: Some(100),
+            arguments: None,
+        },
     )
     .await
     .unwrap()
@@ -233,7 +257,11 @@ async fn test_parallel_execution() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/concurrency-test.cm";
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: Some(5) },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: Some(5),
+            arguments: None,
+        },
     )
     .await
     .unwrap()

@@ -83,7 +83,13 @@ impl SuiteServer for TestServer {
         invocations
             .map(Ok)
             .try_for_each_concurrent(num_parallel, |invocation| {
-                self.run_test(invocation, test_component.clone(), run_listener, num_parallel)
+                self.run_test(
+                    invocation,
+                    test_component.clone(),
+                    run_listener,
+                    num_parallel,
+                    run_options.arguments.clone(),
+                )
             })
             .await
     }
@@ -193,25 +199,15 @@ impl TestServer {
         component: Arc<Component>,
         run_listener: &'a RunListenerProxy,
         parallel: usize,
+        test_args: Option<Vec<String>>,
     ) -> Result<(), RunTestError> {
         let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
         debug!("Running test {}", test);
+        let user_passed_args = test_args.unwrap_or(vec![]);
 
-        let mut args = vec![
-            "-test.run".to_owned(),
-            format!("^{}$", test),
-            "-test.parallel".to_owned(),
-            parallel.to_string(),
-            "-test.v".to_owned(),
-        ];
-        args.extend(component.args.clone());
-
-        // run test.
-        // Load bearing to hold job guard.
-        let (process, _job, mut stdlogger, _stdin_socket) =
-            launch_component_process::<RunTestError>(&component, args).await?;
         let (test_logger, log_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
+
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                 .map_err(FidlError::CreateProxy)
@@ -220,9 +216,32 @@ impl TestServer {
         run_listener
             .on_test_case_started(invocation, log_client, listener)
             .map_err(RunTestError::SendStart)?;
+
         let test_logger =
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
         let mut test_logger = LogWriter::new(test_logger);
+
+        if let Err(e) = TestServer::validate_args(&user_passed_args) {
+            test_logger.write_str(&format!("{}", e)).await?;
+            case_listener_proxy
+                .finished(TestResult { status: Some(Status::Failed) })
+                .map_err(RunTestError::SendFinish)?;
+            return Ok(());
+        }
+        let mut args = vec![
+            "-test.run".to_owned(),
+            format!("^{}$", test),
+            "-test.parallel".to_owned(),
+            parallel.to_string(),
+            "-test.v".to_owned(),
+        ];
+        args.extend(component.args.clone());
+        args.extend(user_passed_args);
+
+        // run test.
+        // Load bearing to hold job guard.
+        let (process, _job, mut stdlogger, _stdin_socket) =
+            launch_component_process::<RunTestError>(&component, args).await?;
 
         let mut buffer = vec![];
         const NEWLINE: u8 = b'\n';
@@ -498,6 +517,7 @@ mod tests {
             TestCaseInfo { name: "TestSkipped".to_string(), enabled: true },
             TestCaseInfo { name: "TestSubtests".to_string(), enabled: true },
             TestCaseInfo { name: "TestCustomArg".to_string(), enabled: true },
+            TestCaseInfo { name: "TestCustomArg2".to_string(), enabled: true },
         ]
         .into_iter()
         .sorted()
@@ -610,8 +630,13 @@ mod tests {
                 "TestSkipped",
                 "TestPrefixExtra",
                 "TestCustomArg",
+                "TestCustomArg2",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: Some(1),
+                arguments: Some(vec!["-my_custom_flag_2".to_owned()]),
+            },
         )
         .await
         .unwrap();
@@ -637,6 +662,11 @@ mod tests {
                 "TestCustomArg",
                 TestResult { status: Some(Status::Passed) },
             ),
+            ListenerEvent::start_test("TestCustomArg2"),
+            ListenerEvent::finish_test(
+                "TestCustomArg2",
+                TestResult { status: Some(Status::Passed) },
+            ),
             ListenerEvent::finish_all_test(),
         ];
 
@@ -656,7 +686,7 @@ mod tests {
                 "TestSkipped",
                 "TestPrefixExtra",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(4) },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(4), arguments: None },
         )
         .await
         .unwrap();
@@ -691,7 +721,7 @@ mod tests {
     async fn run_no_test() -> Result<(), Error> {
         let events = run_tests(
             vec![],
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1), arguments: None },
         )
         .await
         .unwrap();
@@ -706,7 +736,7 @@ mod tests {
     async fn run_one_test() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec!["TestPassing"]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1), arguments: None },
         )
         .await
         .unwrap();

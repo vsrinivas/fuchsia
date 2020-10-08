@@ -55,13 +55,15 @@ async fn run_test(
     test_url: &str,
     disabled_tests: DisabledTestHandling,
     parallel: Option<u16>,
+    test_args: Option<Vec<String>>,
 ) -> Result<Vec<TestEvent>, Error> {
     let time_taken = Regex::new(r" \(.*?\)$").unwrap();
     let (suite_proxy, _keep_alive) = launch_test(test_url).await?;
 
     let (sender, recv) = mpsc::channel(1);
 
-    let run_options = test_executor::TestRunOptions { disabled_tests, parallel };
+    let run_options =
+        test_executor::TestRunOptions { disabled_tests, parallel, arguments: test_args };
 
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),
@@ -88,7 +90,7 @@ async fn run_test(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/echo-test-realm.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10)).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10), None).await.unwrap();
 
     let expected_events = vec![
         TestEvent::test_case_started("TestEcho"),
@@ -101,7 +103,7 @@ async fn launch_and_test_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_file_with_no_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/empty_go_test.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10)).await.unwrap();
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(10), None).await.unwrap();
 
     let expected_events = vec![TestEvent::test_finished()];
     assert_eq!(expected_events, events);
@@ -109,11 +111,18 @@ async fn launch_and_test_file_with_no_test() {
 
 async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/sample_go_test.cm";
-    let mut events = run_test(test_url, DisabledTestHandling::Exclude, parallel).await.unwrap();
+    let mut events = run_test(
+        test_url,
+        DisabledTestHandling::Exclude,
+        parallel,
+        Some(vec!["-my_custom_flag_2".to_owned()]),
+    )
+    .await
+    .unwrap();
 
     let mut expected_events = vec![
         TestEvent::test_case_started("TestFailing"),
-        TestEvent::log_message("TestFailing", "    sample_go_test.go:23: This will fail"),
+        TestEvent::log_message("TestFailing", "    sample_go_test.go:25: This will fail"),
         TestEvent::test_case_finished("TestFailing", TestResult::Failed),
         TestEvent::test_case_started("TestPassing"),
         TestEvent::test_case_started("TestPrefix"),
@@ -127,7 +136,7 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         TestEvent::log_message("TestCrashing", "Test exited abnormally"),
         TestEvent::test_case_finished("TestCrashing", TestResult::Failed),
         TestEvent::test_case_started("TestSkipped"),
-        TestEvent::log_message("TestSkipped", "    sample_go_test.go:31: Skipping this test"),
+        TestEvent::log_message("TestSkipped", "    sample_go_test.go:33: Skipping this test"),
         TestEvent::test_case_finished("TestSkipped", TestResult::Skipped),
         TestEvent::test_case_started("TestSubtests"),
         TestEvent::log_message("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
@@ -145,6 +154,8 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         TestEvent::test_case_finished("TestPrintMultiline", TestResult::Passed),
         TestEvent::test_case_started("TestCustomArg"),
         TestEvent::test_case_finished("TestCustomArg", TestResult::Passed),
+        TestEvent::test_case_started("TestCustomArg2"),
+        TestEvent::test_case_finished("TestCustomArg2", TestResult::Passed),
         TestEvent::test_finished(),
     ];
     assert_eq!(events.last(), Some(&TestEvent::test_finished()));
@@ -185,7 +196,7 @@ async fn launch_and_run_sample_test_no_concurrent() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_parallel_execution() {
     let test_url = "fuchsia-pkg://fuchsia.com/go-test-runner-example#meta/concurrency-test.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(5))
+    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(5), None)
         .await
         .unwrap()
         .into_iter()

@@ -47,7 +47,8 @@ table Invocation {
     1: Name name;
 
     /// Optional tag, arbitrarily specified by clients of `Suite`.
-    /// This field is not used by Suite protocol.
+    /// This field is not used by Suite protocol, but passed
+    /// back as is by `OnTestCaseStarted`.
     2: Tag tag;
 };
 
@@ -61,6 +62,9 @@ table RunOptions {
     /// If unspecified, the default behavior is chosen by the `Suite`
     /// implementation.
     2: uint16 parallel;
+
+    /// Optional arguments to pass to the test.
+    3: vector<string:MAX>:MAX arguments;
 };
 
 /// Result of invoking a single test case.

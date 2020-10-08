@@ -30,9 +30,6 @@ use {
     std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin},
 };
 
-#[cfg(target_os = "fuchsia")]
-use fidl_fuchsia_sys::LauncherProxy;
-
 /// Options that apply when executing a test suite.
 ///
 /// For the FIDL equivalent, see [`fidl_fuchsia_test::RunOptions`].
@@ -43,6 +40,9 @@ pub struct TestRunOptions {
 
     /// Number of test cases to run in parallel.
     pub parallel: Option<u16>,
+
+    /// Arguments passed to tests.
+    pub arguments: Option<Vec<String>>,
 }
 
 /// How to handle tests that were marked disabled/ignored by the developer.
@@ -66,6 +66,7 @@ impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
         // Note: This will *not* break if new members are added to the FIDL table.
         let mut run_options = fidl_fuchsia_test::RunOptions::empty();
         run_options.parallel = test_run_options.parallel;
+        run_options.arguments = test_run_options.arguments;
         match test_run_options.disabled_tests {
             DisabledTestHandling::Exclude => {
                 run_options.include_disabled_tests = Some(false);
@@ -344,7 +345,6 @@ pub async fn run_and_collect_results(
     debug!("enumerating tests");
     let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
     let () = suite.get_tests(server_end).map_err(suite_error).context("getting test cases")?;
-
     let mut invocations = Vec::<Invocation>::new();
     let pattern = test_filter
         .map(|filter| {
@@ -441,36 +441,6 @@ async fn run_invocations(
         .into_iter()
         .fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
     Ok(successful_completion)
-}
-
-/// Runs v1 test component defined by `test_url` and reports `TestEvent` to sender for each test case.
-#[cfg(target_os = "fuchsia")]
-pub async fn run_v1_test_component(
-    launcher: LauncherProxy,
-    test_url: String,
-    sender: mpsc::Sender<TestEvent>,
-) -> Result<(), anyhow::Error> {
-    if !test_url.ends_with(".cmx") {
-        return Err(anyhow::anyhow!(
-            "Tried to run a component as a v1 test that doesn't have a .cmx extension"
-        ));
-    }
-
-    debug!("launching test component {}", test_url);
-    let app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
-        .with_context(|| format!("Not able to launch v1 test:{}", test_url))?;
-
-    debug!("connecting to test service");
-    let suite = app
-        .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
-        .context("connecting to service")?;
-
-    // No custom run options for v1 tests.
-    let run_options = TestRunOptions::default();
-
-    run_and_collect_results(suite, sender, None, run_options).await?;
-
-    Ok(())
 }
 
 /// Runs v2 test component defined by `test_url` and reports `TestEvent` to sender for each test case.

@@ -133,7 +133,11 @@ async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: None,
+            arguments: None,
+        },
     )
     .await
     .unwrap()
@@ -160,7 +164,11 @@ async fn launch_and_test_no_on_finished() {
 
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: None,
+            arguments: None,
+        },
     )
     .await
     .unwrap()
@@ -187,7 +195,11 @@ async fn launch_and_test_gtest_runner_sample_test() {
 
     let events = run_test(
         test_url,
-        TestRunOptions { disabled_tests: DisabledTestHandling::Exclude, parallel: None },
+        TestRunOptions {
+            disabled_tests: DisabledTestHandling::Exclude,
+            parallel: None,
+            arguments: None,
+        },
     )
     .await
     .unwrap()

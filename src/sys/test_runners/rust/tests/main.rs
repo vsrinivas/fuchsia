@@ -59,7 +59,7 @@ async fn run_test(
 
     let (sender, recv) = mpsc::channel(1);
 
-    let run_options = test_executor::TestRunOptions { disabled_tests, parallel };
+    let run_options = test_executor::TestRunOptions { disabled_tests, parallel, arguments: None };
 
     let (events, ()) = futures::future::try_join(
         recv.collect::<Vec<_>>().map(Ok),

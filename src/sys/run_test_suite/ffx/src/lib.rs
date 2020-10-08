@@ -21,14 +21,15 @@ pub async fn test(
     if cmd.list {
         get_tests(harness_proxy, writer, &cmd.test_url).await
     } else {
-        match run_test_suite_lib::run_tests_and_get_outcome(
-            cmd.test_url,
-            cmd.timeout.and_then(std::num::NonZeroU32::new),
-            cmd.test_filter,
-            cmd.also_run_disabled_tests,
-            cmd.parallel,
-            harness_proxy,
-        )
+        match run_test_suite_lib::run_tests_and_get_outcome(run_test_suite_lib::TestParams {
+            test_url: cmd.test_url,
+            timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
+            test_filter: cmd.test_filter,
+            also_run_disabled_tests: cmd.also_run_disabled_tests,
+            parallel: cmd.parallel,
+            test_args: None,
+            harness: harness_proxy,
+        })
         .await
         {
             run_test_suite_lib::Outcome::Passed => Ok(()),

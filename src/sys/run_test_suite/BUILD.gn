@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("lib") {
   name = "run_test_suite_lib"
@@ -67,6 +68,11 @@ package("run_test_suite_pkg") {
   ]
 }
 
+fuchsia_unittest_package("run-test-suite-unit-tests") {
+  deps = [ ":bin_test" ]
+  executable_path = "bin/run_test_suite_bin_bin_test"
+}
+
 # fxbug.dev/44251: Packages cannot include other packages, so making a group here for dependency.
 group("run_test_suite") {
   testonly = true
@@ -78,5 +84,8 @@ group("run_test_suite") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":run-test-suite-unit-tests",
+    "tests",
+  ]
 }

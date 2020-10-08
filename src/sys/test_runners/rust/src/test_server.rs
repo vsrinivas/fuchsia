@@ -689,7 +689,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(1) },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(1), arguments: None },
         )
         .await
         .unwrap();
@@ -743,7 +743,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(4) },
+            RunOptions { include_disabled_tests: Some(false), parallel: Some(4), arguments: None },
         )
         .await
         .unwrap();
@@ -798,7 +798,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(true), parallel: Some(1) },
+            RunOptions { include_disabled_tests: Some(true), parallel: Some(1), arguments: None },
         )
         .await
         .unwrap();

@@ -16,6 +16,7 @@ impl CloneExt for ftest::RunOptions {
         ftest::RunOptions {
             include_disabled_tests: self.include_disabled_tests,
             parallel: self.parallel,
+            arguments: self.arguments.clone(),
         }
     }
 }
