@@ -3,6 +3,9 @@
         "binary": "bin/httpsdate_time_source"
     },
     "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
