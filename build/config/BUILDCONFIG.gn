@@ -1900,7 +1900,7 @@ template("executable") {
         },
       ]
 
-      if (is_host) {
+      if (!is_fuchsia) {
         tool_paths = [
           {
             cpu = current_cpu
