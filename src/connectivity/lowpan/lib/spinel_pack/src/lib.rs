@@ -462,6 +462,26 @@ pub trait TryPack {
     /// Calculates how many bytes this type will use when serialized.
     fn pack_len(&self) -> io::Result<usize>;
 
+    /// Uses Spinel array encoding to serialize to a given `std::io::Write` reference.
+    ///
+    /// Array encoding is occasionally different than single-value encoding,
+    /// hence the need for a separate method.
+    ///
+    /// Default behavior is the same as `try_pack()`.
+    fn try_array_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
+        self.try_pack(buffer)
+    }
+
+    /// Calculates how many bytes this type will use when serialized into an array.
+    ///
+    /// Array encoding is occasionally different than single-value encoding,
+    /// hence the need for a separate method.
+    ///
+    /// Default behavior is the same as `pack_len()`.
+    fn array_pack_len(&self) -> io::Result<usize> {
+        self.pack_len()
+    }
+
     /// Convenience method which serializes to a new `Vec<u8>`.
     fn try_packed(&self) -> io::Result<Vec<u8>> {
         let mut packed = Vec::with_capacity(self.pack_len()?);
@@ -505,6 +525,17 @@ pub trait TryUnpack<'a> {
     /// of `Self`.
     fn try_unpack(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self::Unpacked>;
 
+    /// Attempts to decode an item from an array at the given iterator into
+    /// an instance of `Self`.
+    ///
+    /// Array encoding is occasionally different than single-value encoding,
+    /// hence the need for a separate method.
+    ///
+    /// Default behavior is the same as `try_unpack()`.
+    fn try_array_unpack(iter: &mut std::slice::Iter<'a, u8>) -> anyhow::Result<Self::Unpacked> {
+        Self::try_unpack(iter)
+    }
+
     /// Convenience method for unpacking directly from a borrowed slice.
     fn try_unpack_from_slice(slice: &'a [u8]) -> anyhow::Result<Self::Unpacked> {
         Self::try_unpack(&mut slice.iter())
@@ -529,6 +560,19 @@ pub trait TryOwnedUnpack: Send {
     /// Attempts to decode the data at the given iterator into an instance
     /// of `Self`, where `Self` must be an "owned" type.
     fn try_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked>;
+
+    /// Attempts to decode an item from an array at the given iterator into
+    /// an instance of `Self`, where `Self` must be an "owned" type.
+    ///
+    /// Array encoding is occasionally different than single-value encoding,
+    /// hence the need for a separate method.
+    ///
+    /// Default behavior is the same as `try_owned_unpack()`.
+    fn try_array_owned_unpack(
+        iter: &mut std::slice::Iter<'_, u8>,
+    ) -> anyhow::Result<Self::Unpacked> {
+        Self::try_owned_unpack(iter)
+    }
 
     /// Convenience method for unpacking directly from a borrowed slice.
     fn try_owned_unpack_from_slice(slice: &'_ [u8]) -> anyhow::Result<Self::Unpacked> {

@@ -374,6 +374,14 @@ pub fn spinel_packed(
             fn try_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> std::io::Result<usize> {
                 crate::spinel_pack::TryPackAs::<[u8]>::try_pack_as(self, buffer)
             }
+
+            fn array_pack_len(&self) -> std::io::Result<usize> {
+                crate::spinel_pack::TryPackAs::<crate::spinel_pack::SpinelDataWlen>::pack_as_len(self)
+            }
+
+            fn try_array_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> std::io::Result<usize> {
+                crate::spinel_pack::TryPackAs::<crate::spinel_pack::SpinelDataWlen>::try_pack_as(self, buffer)
+            }
         }
 
         // This implementation entirely defers to `TryUnpackAs::<[u8]>`.
@@ -381,6 +389,11 @@ pub fn spinel_packed(
             type Unpacked = Self;
             fn try_unpack(iter: &mut std::slice::Iter<#buffer_lifetime, u8>) -> anyhow::Result<Self::Unpacked> {
                 crate::spinel_pack::TryUnpackAs::<[u8]>::try_unpack_as(iter)
+            }
+            fn try_array_unpack(iter: &mut std::slice::Iter<#buffer_lifetime, u8>) -> anyhow::Result<Self::Unpacked> {
+                use crate::spinel_pack::{TryUnpackAs, SpinelDataWlen};
+                let data: &[u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
+                Self::try_unpack_from_slice(data)
             }
         }
     };
@@ -394,6 +407,11 @@ pub fn spinel_packed(
                     Ok(Self {
                         #unpack_body
                     })
+                }
+                fn try_array_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<Self::Unpacked> {
+                    use crate::spinel_pack::{TryUnpackAs, SpinelDataWlen};
+                    let data: &[u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
+                    Self::try_owned_unpack_from_slice(data)
                 }
             }
         });

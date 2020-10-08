@@ -4,10 +4,28 @@
 
 use super::*;
 use anyhow::Context;
-use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use byteorder::{BigEndian, ByteOrder, LittleEndian, WriteBytesExt};
 use core::hash::Hash;
 use std::collections::HashSet;
 use std::convert::TryInto;
+
+macro_rules! impl_try_array_unpack_sized(
+    ($self:ty, $lifetime:lifetime) => {
+        fn try_array_unpack(iter: &mut std::slice::Iter<$lifetime, u8>) -> anyhow::Result<<$self>::Unpacked> {
+            let data: &[u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
+            Self::try_unpack_from_slice(data)
+        }
+    }
+);
+
+macro_rules! impl_try_array_owned_unpack_sized(
+    ($self:ty) => {
+        fn try_array_owned_unpack(iter: &mut std::slice::Iter<'_, u8>) -> anyhow::Result<<$self>::Unpacked> {
+            let data: &[u8] = TryUnpackAs::<SpinelDataWlen>::try_unpack_as(iter)?;
+            Self::try_owned_unpack_from_slice(data)
+        }
+    }
+);
 
 /// Private convenience macro for defining the appropriate
 /// traits for primitive types with fixed encoding lengths.
@@ -104,8 +122,8 @@ def_fixed_len!(bool, 1, |b, v| b.write_u8(v as u8), |buffer| match buffer[0] {
 
 def_fixed_len!((), 0, |_b, _v| { Ok(()) }, |_b| Ok(()));
 
-def_fixed_len!(std::net::Ipv6Addr, 16, |b, v| b.write_u128::<LittleEndian>(v.into()), |b| Ok(
-    LittleEndian::read_u128(b).into()
+def_fixed_len!(std::net::Ipv6Addr, 16, |b, v| b.write_u128::<BigEndian>(v.into()), |b| Ok(
+    BigEndian::read_u128(b).into()
 ));
 
 def_fixed_len!(EUI64, 8, |b, v| b.write_all((&v).into()), |b| Ok(EUI64([
@@ -225,15 +243,83 @@ impl TryPack for [u8] {
     fn try_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
         TryPackAs::<[u8]>::try_pack_as(self, buffer)
     }
+
+    fn try_array_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        TryPackAs::<SpinelDataWlen>::try_pack_as(self, buffer)
+    }
 }
 
-impl TryPack for Vec<u8> {
+impl<T: TryPack> TryPack for Vec<T> {
     fn pack_len(&self) -> io::Result<usize> {
-        TryPackAs::<[u8]>::pack_as_len(self)
+        let mut len: usize = 0;
+        for iter in self.iter() {
+            len += iter.array_pack_len()?;
+        }
+        Ok(len)
     }
 
-    fn try_pack<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> io::Result<usize> {
-        TryPackAs::<[u8]>::try_pack_as(self, buffer)
+    fn try_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        let mut len: usize = 0;
+
+        // Write out the elements of the data
+        for iter in self.iter() {
+            len += iter.try_array_pack(buffer)?;
+        }
+
+        Ok(len)
+    }
+
+    fn array_pack_len(&self) -> io::Result<usize> {
+        self.pack_len().map(|len| len + 2)
+    }
+
+    fn try_array_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        let pack_len = self.pack_len()?;
+
+        // Write out the length of the data
+        let pack_len: u16 =
+            pack_len.try_into().map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?;
+
+        TryPackAs::<u16>::try_pack_as(&pack_len, buffer)?;
+
+        self.try_pack(buffer).map(|len| len + 2)
+    }
+}
+
+impl<T: TryPack> TryPack for HashSet<T> {
+    fn pack_len(&self) -> io::Result<usize> {
+        let mut len: usize = 0;
+        for iter in self.iter() {
+            len += iter.array_pack_len()?;
+        }
+        Ok(len)
+    }
+
+    fn try_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        let mut len: usize = 0;
+
+        // Write out the elements of the data
+        for iter in self.iter() {
+            len += iter.try_array_pack(buffer)?;
+        }
+
+        Ok(len)
+    }
+
+    fn array_pack_len(&self) -> io::Result<usize> {
+        self.pack_len().map(|len| len + 2)
+    }
+
+    fn try_array_pack<B: std::io::Write + ?Sized>(&self, buffer: &mut B) -> io::Result<usize> {
+        let pack_len = self.pack_len()?;
+
+        // Write out the length of the data
+        let pack_len: u16 =
+            pack_len.try_into().map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?;
+
+        TryPackAs::<u16>::try_pack_as(&pack_len, buffer)?;
+
+        self.try_pack(buffer).map(|len| len + 2)
     }
 }
 
@@ -359,6 +445,7 @@ impl<'a> TryUnpack<'a> for &'a [u8] {
 
         Ok(ret)
     }
+    impl_try_array_unpack_sized!(Self, 'a);
 }
 
 impl<'a> TryUnpackAs<'a, [u8]> for &'a [u8] {
@@ -523,11 +610,12 @@ where
         let mut ret: Self::Unpacked = Vec::with_capacity(iter.size_hint().0);
 
         while iter.len() != 0 {
-            ret.push(T::try_owned_unpack(iter)?);
+            ret.push(T::try_array_owned_unpack(iter)?);
         }
 
         Ok(ret)
     }
+    impl_try_array_owned_unpack_sized!(Self);
 }
 
 impl<T> TryOwnedUnpack for Vec<T>
@@ -539,11 +627,12 @@ where
         let mut ret: Self::Unpacked = Vec::with_capacity(iter.size_hint().0);
 
         while iter.len() != 0 {
-            ret.push(T::try_owned_unpack(iter)?);
+            ret.push(T::try_array_owned_unpack(iter)?);
         }
 
         Ok(ret)
     }
+    impl_try_array_owned_unpack_sized!(Self);
 }
 
 impl<'a, T> TryUnpack<'a> for Vec<T>
@@ -555,11 +644,12 @@ where
         let mut ret: Self::Unpacked = Vec::with_capacity(iter.size_hint().0);
 
         while iter.len() != 0 {
-            ret.push(T::try_unpack(iter)?);
+            ret.push(T::try_array_unpack(iter)?);
         }
 
         Ok(ret)
     }
+    impl_try_array_unpack_sized!(Self, 'a);
 }
 
 impl<T> TryOwnedUnpack for HashSet<T>
@@ -572,11 +662,12 @@ where
         let mut ret: Self::Unpacked = Default::default();
 
         while iter.len() != 0 {
-            ret.insert(T::try_owned_unpack(iter)?);
+            ret.insert(T::try_array_owned_unpack(iter)?);
         }
 
         Ok(ret)
     }
+    impl_try_array_owned_unpack_sized!(Self);
 }
 
 impl<'a, T> TryUnpack<'a> for HashSet<T>
@@ -589,11 +680,12 @@ where
         let mut ret: Self::Unpacked = Default::default();
 
         while iter.len() != 0 {
-            ret.insert(T::try_unpack(iter)?);
+            ret.insert(T::try_array_unpack(iter)?);
         }
 
         Ok(ret)
     }
+    impl_try_array_unpack_sized!(Self, 'a);
 }
 
 #[cfg(test)]
@@ -741,5 +833,59 @@ mod tests {
 
         assert!(out.contains("123"));
         assert!(out.contains("456"));
+    }
+
+    #[test]
+    fn test_container_pack_unpack() {
+        #[spinel_packed("6CLL")]
+        #[derive(Debug, Hash, Clone, Eq, PartialEq)]
+        pub struct AddressTableEntry {
+            pub addr: std::net::Ipv6Addr,
+            pub prefix_len: u8,
+            pub lifetime_a: u32,
+            pub lifetime_b: u32,
+        }
+
+        let buffer: &[u8] = &[
+            0x19, 0x0, 0xfd, 0xde, 0xad, 0x0, 0xbe, 0xef, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xfe, 0x0,
+            0xfc, 0x0, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x19, 0x0, 0xfd, 0xde,
+            0xad, 0x0, 0xbe, 0xef, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xfe, 0x0, 0x44, 0x0, 0x40, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x19, 0x0, 0xfd, 0xde, 0xad, 0x0, 0xbe, 0xef,
+            0x0, 0x0, 0xec, 0x2c, 0xb9, 0xec, 0xa5, 0x14, 0x96, 0xc, 0x40, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0x19, 0x0, 0xfe, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x28,
+            0x3f, 0xf, 0x66, 0x3e, 0xa7, 0x4d, 0x33, 0x40, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff,
+        ];
+
+        let out = Vec::<AddressTableEntry>::try_unpack_from_slice(buffer).unwrap();
+
+        assert!(out.contains(&AddressTableEntry {
+            addr: "fdde:ad00:beef::ff:fe00:4400".parse().unwrap(),
+            prefix_len: 64,
+            lifetime_a: 0xFFFFFFFF,
+            lifetime_b: 0xFFFFFFFF,
+        }));
+        assert!(out.contains(&AddressTableEntry {
+            addr: "fdde:ad00:beef::ff:fe00:fc00".parse().unwrap(),
+            prefix_len: 64,
+            lifetime_a: 0xFFFFFFFF,
+            lifetime_b: 0xFFFFFFFF,
+        }));
+        assert!(out.contains(&AddressTableEntry {
+            addr: "fdde:ad00:beef::ec2c:b9ec:a514:960c".parse().unwrap(),
+            prefix_len: 64,
+            lifetime_a: 0xFFFFFFFF,
+            lifetime_b: 0xFFFFFFFF,
+        }));
+        assert!(out.contains(&AddressTableEntry {
+            addr: "fe80::283f:f66:3ea7:4d33".parse().unwrap(),
+            prefix_len: 64,
+            lifetime_a: 0xFFFFFFFF,
+            lifetime_b: 0xFFFFFFFF,
+        }));
+
+        let buffer_pack = out.try_packed().expect("packing failed");
+
+        assert_eq!(buffer_pack.as_slice(), buffer);
     }
 }
