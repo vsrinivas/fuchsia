@@ -6,6 +6,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
+#include <lib/trace-provider/provider.h>
 #include <zircon/status.h>
 
 #include <string>
@@ -44,6 +46,11 @@ int main(int argc, char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line, {"harvester"});
 
   FX_LOGS(INFO) << VERSION_OUTPUT;
+
+  // If NTRACE is defined, TRACE_CATEGORY_ENABLED is always false.
+  if (!TRACE_CATEGORY_ENABLED("harvester")) {
+    FX_LOGS(INFO) << "Tracing disabled";
+  }
 
   if (command_line.HasOption(COMMAND_VERSION)) {
     std::cout << VERSION_OUTPUT << std::endl;
@@ -107,15 +114,27 @@ int main(int argc, char** argv) {
     FX_LOGS(ERROR) << "fast_calls_loop.StartThread failed " << status;
     exit(EXIT_CODE_GENERAL_ERROR);
   }
+  async::Loop trace_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  status = trace_loop.StartThread("trace-thread");
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "trace-thread.StartThread failed " << status;
+    exit(EXIT_CODE_GENERAL_ERROR);
+  }
   FX_LOGS(INFO) << "main thread " << pthread_self();
   harvester::Harvester harvester(root_resource, std::move(dockyard_proxy));
   harvester.GatherDeviceProperties();
   harvester.GatherFastData(fast_calls_loop.dispatcher());
   harvester.GatherSlowData(slow_calls_loop.dispatcher());
+  // Best practice across Fuchsia codebase is to always start the trace provider
+  // even if NTRACE is defined.
+  trace::TraceProviderWithFdio trace_provider(
+      trace_loop.dispatcher(), "system_monitor_harvester");
   // The slow_calls_thread that runs heavier calls takes over this thread.
   slow_calls_loop.Run(zx::time::infinite(), run_loop_once);
   fast_calls_loop.Quit();
   fast_calls_loop.JoinThreads();
+  trace_loop.Quit();
+  trace_loop.JoinThreads();
 
   FX_LOGS(INFO) << "System Monitor Harvester - exiting";
   return 0;
