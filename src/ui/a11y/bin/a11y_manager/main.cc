@@ -9,12 +9,17 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
+#include <cstring>
+
+#include "src/intl/intl_services/run.h"
 #include "src/ui/a11y/bin/a11y_manager/app.h"
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 
-int main(int argc, const char** argv) {
+namespace {
+
+int run_a11y_manager(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
@@ -39,4 +44,14 @@ int main(int argc, const char** argv) {
 
   loop.Run();
   return 0;
+}
+
+}  // namespace
+
+int main(int argc, const char** argv) {
+  if (strcmp(argv[0], "/pkg/bin/intl_services") == 0) {
+    // If the binary was started as intl_services, run only that part of it.
+    exit(intl::serve_intl_profile_provider(argc, argv));
+  }
+  return run_a11y_manager(argc, argv);
 }

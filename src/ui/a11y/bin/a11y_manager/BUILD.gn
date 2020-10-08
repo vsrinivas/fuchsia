@@ -145,6 +145,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/intl/intl_services:lib",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/view",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
