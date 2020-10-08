@@ -564,7 +564,7 @@ static zx_status_t bcm_hci_bind(void* ctx, zx_device_t* device) {
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bcm-hci",
+      .name = "bt_hci_broadcom",
       .ctx = hci,
       .ops = &bcm_hci_device_proto,
       .proto_id = ZX_PROTOCOL_BT_HCI,
