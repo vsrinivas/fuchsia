@@ -2322,13 +2322,11 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = cfg_to_ndev(cfg);
-  int32_t status;
+  brcmf_fweh_event_status_t status = e->status;
   struct brcmf_escan_result_le* escan_result_le;
   uint32_t escan_buflen;
   struct brcmf_bss_info_le* bss_info_le;
   bool aborted;
-
-  status = e->status;
 
   if (status == BRCMF_E_STATUS_ABORT) {
     goto chk_scan_end;
@@ -4581,8 +4579,9 @@ static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
-  BRCMF_DBG(CONN, "Connect Event %d, status %d reason %d auth %d flags 0x%x\n", e->event_code,
-            e->status, e->reason, e->auth_type, e->flags);
+  BRCMF_DBG(CONN, "Connect Event %d, status %s reason %d auth %s flags 0x%x\n", e->event_code,
+            brcmf_fweh_get_event_status_str(e->status), e->reason,
+            brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   BRCMF_DBG(CONN, "Linkup\n");
   brcmf_bss_connect_done(cfg, ndev, true);
   brcmf_net_setcarrier(ifp, true);
@@ -4594,9 +4593,10 @@ static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
 // Handler for ASSOC event (client only)
 static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                             void* data) {
-  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %s reason %d auth %s flags 0x%x\n", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
-            e->status, e->reason, e->auth_type, e->flags);
+            brcmf_fweh_get_event_status_str(e->status), e->reason,
+            brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
   return brcmf_indicate_client_connect(ifp, e, data);
 }
@@ -4611,9 +4611,10 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
     return ZX_OK;
   }
 
-  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %s reason %d auth %s flags 0x%x", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
-            e->status, e->reason, e->auth_type, e->flags);
+            brcmf_fweh_get_event_status_str(e->status), e->reason,
+            brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
 
   if (e->reason != BRCMF_E_STATUS_SUCCESS) {
@@ -4676,9 +4677,10 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
 // AUTH_IND handler. AUTH_IND is meant only for SoftAP IF
 static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
-  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x", ifp->ifidx,
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %s reason %d auth %s flags 0x%x\n", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
-            e->status, e->reason, e->auth_type, e->flags);
+            brcmf_fweh_get_event_status_str(e->status), e->reason,
+            brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
 
   if (e->reason == BRCMF_E_STATUS_SUCCESS) {
@@ -4882,7 +4884,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   uint32_t event = e->event_code;
-  uint32_t status = e->status;
+  brcmf_fweh_event_status_t status = e->status;
 
   if (event == BRCMF_E_ROAM && status == BRCMF_E_STATUS_SUCCESS) {
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {

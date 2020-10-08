@@ -138,11 +138,6 @@
 
 // clang-format on
 
-/* Authentication mode */
-#define BRCMF_AUTH_MODE_OPEN 0
-#define BRCMF_AUTH_MODE_SHARED_KEY 1
-#define BRCMF_AUTH_MODE_AUTO 2
-
 #define DOT11_DEFAULT_RTS_LEN 2347
 #define DOT11_DEFAULT_FRAG_LEN 2346
 

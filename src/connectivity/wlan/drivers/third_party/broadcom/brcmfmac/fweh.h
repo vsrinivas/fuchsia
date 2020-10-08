@@ -128,22 +128,30 @@ enum brcmf_fweh_event_code {
 #define BRCMF_EVENT_MSG_GROUP    0x04
 
 /* status field values in struct brcmf_event_msg */
-#define BRCMF_E_STATUS_SUCCESS     0
-#define BRCMF_E_STATUS_FAIL        1
-#define BRCMF_E_STATUS_TIMEOUT     2
-#define BRCMF_E_STATUS_NO_NETWORKS 3
-#define BRCMF_E_STATUS_ABORT       4
-#define BRCMF_E_STATUS_NO_ACK      5
-#define BRCMF_E_STATUS_UNSOLICITED 6
-#define BRCMF_E_STATUS_ATTEMPT     7
-#define BRCMF_E_STATUS_PARTIAL     8
-#define BRCMF_E_STATUS_NEWSCAN     9
-#define BRCMF_E_STATUS_NEWASSOC   10
-#define BRCMF_E_STATUS_11HQUIET   11
-#define BRCMF_E_STATUS_SUPPRESS   12
-#define BRCMF_E_STATUS_NOCHANS    13
-#define BRCMF_E_STATUS_CS_ABORT   15
-#define BRCMF_E_STATUS_ERROR      16
+/* list of firmware events */
+#define BRCMF_FWEH_EVENT_STATUS_LIST            \
+  X(BRCMF_E_STATUS_SUCCESS)                     \
+  X(BRCMF_E_STATUS_FAIL)                        \
+  X(BRCMF_E_STATUS_TIMEOUT)                     \
+  X(BRCMF_E_STATUS_NO_NETWORKS)                 \
+  X(BRCMF_E_STATUS_ABORT)                       \
+  X(BRCMF_E_STATUS_NO_ACK)                      \
+  X(BRCMF_E_STATUS_UNSOLICITED)                 \
+  X(BRCMF_E_STATUS_ATTEMPT)                     \
+  X(BRCMF_E_STATUS_PARTIAL)                     \
+  X(BRCMF_E_STATUS_NEWSCAN)                     \
+  X(BRCMF_E_STATUS_NEWASSOC)                    \
+  X(BRCMF_E_STATUS_11HQUIET)                    \
+  X(BRCMF_E_STATUS_SUPPRESS)                    \
+  X(BRCMF_E_STATUS_NOCHANS)                     \
+  X(BRCMF_E_STATUS_CS_ABORT)                    \
+  X(BRCMF_E_STATUS_ERROR)                                    
+
+#define X(EVENT_STATUS) EVENT_STATUS,
+enum brcmf_fweh_event_status_t : uint32_t { BRCMF_FWEH_EVENT_STATUS_LIST };
+#undef X
+
+const char* brcmf_fweh_get_event_status_str(brcmf_fweh_event_status_t status);
 
 /* status field values for PSK_SUP event */
 #define BRCMF_E_STATUS_FWSUP_WAIT_M1   4
@@ -195,6 +203,18 @@ enum brcmf_fweh_event_code {
 #define BRCMF_E_REASON_FWSUP_WPA_PSK_TMO      15
 #define BRCMF_E_REASON_FWSUP_WPA_PSK_M1_TMO   16
 #define BRCMF_E_REASON_FWSUP_WPA_PSK_M3_TMO   17
+
+/* Authentication mode */
+#define BRCMF_FWEH_AUTH_TYPE_LIST                \
+  X(BRCMF_AUTH_MODE_OPEN)                      \
+      X(BRCMF_AUTH_MODE_SHARED_KEY)               \
+      X(BRCMF_AUTH_MODE_AUTO)
+
+#define X(AUTH_TYPE) AUTH_TYPE,
+enum brcmf_fweh_auth_type_t : int32_t { BRCMF_FWEH_AUTH_TYPE_LIST };
+#undef X
+
+const char* brcmf_fweh_get_auth_type_str(brcmf_fweh_auth_type_t auth_type);
 
 /* action field values for brcmf_ifevent */
 #define BRCMF_E_IF_ADD      1
@@ -282,9 +302,9 @@ struct brcmf_event_msg {
   uint16_t version;
   uint16_t flags;
   uint32_t event_code;
-  uint32_t status;
+  brcmf_fweh_event_status_t status;
   uint32_t reason;
-  int32_t auth_type;
+  brcmf_fweh_auth_type_t auth_type;
   uint32_t datalen;
   uint8_t addr[ETH_ALEN];
   char ifname[IFNAMSIZ];

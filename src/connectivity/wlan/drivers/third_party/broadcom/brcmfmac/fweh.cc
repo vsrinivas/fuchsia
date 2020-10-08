@@ -97,6 +97,34 @@ const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) {
 }
 
 /**
+ * brcmf_fweh_get_event_status_str() - returns name for given event status.
+ *
+ * @status: status to lookup.
+ */
+#define X(EVENT_STATUS) \
+  case EVENT_STATUS:    \
+    return #EVENT_STATUS;
+const char* brcmf_fweh_get_event_status_str(brcmf_fweh_event_status_t status) {
+  switch (status) { BRCMF_FWEH_EVENT_STATUS_LIST };
+  return "(unknown)";
+}
+#undef X
+
+/**
+ * brcmf_fweh_get_auth_mode_str() - returns name for given authentication mode
+ *
+ * @auth_mode: authentication mode to lookup.
+ */
+#define X(AUTH_TYPE) \
+  case AUTH_TYPE:    \
+    return #AUTH_TYPE;
+const char* brcmf_fweh_get_auth_type_str(brcmf_fweh_auth_type_t auth_type) {
+  switch (auth_type) { BRCMF_FWEH_AUTH_TYPE_LIST };
+  return "(unknown)";
+}
+#undef X
+
+/**
  * brcmf_fweh_queue_event() - create and queue event.
  * @drvr: driver context
  * @fweh: firmware event handling info.
@@ -239,9 +267,9 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
   emsg.version = be16toh(emsg_be->version);
   emsg.flags = be16toh(emsg_be->flags);
   emsg.event_code = event_info->code;
-  emsg.status = be32toh(emsg_be->status);
+  emsg.status = static_cast<brcmf_fweh_event_status_t>(be32toh(emsg_be->status));
   emsg.reason = be32toh(emsg_be->reason);
-  emsg.auth_type = be32toh(emsg_be->auth_type);
+  emsg.auth_type = static_cast<brcmf_fweh_auth_type_t>(be32toh(emsg_be->auth_type));
   emsg.datalen = be32toh(emsg_be->datalen);
   memcpy(emsg.addr, emsg_be->addr, ETH_ALEN);
   memcpy(emsg.ifname, emsg_be->ifname, sizeof(emsg.ifname));
