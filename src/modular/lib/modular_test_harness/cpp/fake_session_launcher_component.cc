@@ -4,7 +4,6 @@
 
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_launcher_component.h"
 
-#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 
 namespace modular_testing {

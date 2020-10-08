@@ -175,9 +175,10 @@ class FakeComponentWithOnTerminate : public modular_testing::FakeComponent {
   fit::function<void()> on_terminate_ = []() {};
 };
 
-// Create a service in the test harness that is also not provided by the session environment. Verify
-// story mods get the test service from the harness.
-TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromGlobalEnvironment) {
+// Create a service in the test harness that is also provided by the session environment. Verify
+// story mods get the session's version of the service, even though the test harness's version of
+// the service is still accessible outside of the story/session.
+TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromSessionEnvironment) {
   modular_testing::TestHarnessBuilder builder;
   auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
   builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
@@ -208,8 +209,9 @@ TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromGlobalEnvironment) {
   RunLoopUntil([&] { return fake_module.is_running(); });
 
   // Request a fuchsia::intl::PropertyProvider from the story mod's component_context().
-  // It should get the service from the test harness, confirming that the service
-  // is accessible.
+  // It should get the service from the session environment, not the fake
+  // version registered in the test_harness, outside the session.
+  // fake_intl_property_provider.call_count() should still be zero (0).
   fuchsia::intl::PropertyProviderPtr module_intl_property_provider;
   auto got_module_intl_property_provider =
       fake_module.component_context()->svc()->Connect<fuchsia::intl::PropertyProvider>(
@@ -224,10 +226,10 @@ TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromGlobalEnvironment) {
   RunLoopUntil(
       [&] { return got_profile_from_module_callback || get_profile_from_module_status != ZX_OK; });
   ASSERT_EQ(get_profile_from_module_status, ZX_OK);
-  ASSERT_EQ(fake_intl_property_provider.call_count(), 1);
+  ASSERT_EQ(fake_intl_property_provider.call_count(), 0);
 
-  // The test_harness version of the service is available also if requested outside of
-  // the session scope.
+  // And yet, the test_harness version of the service is still available, if requested outside of
+  // the session scope. This time fake_intl_property_provider.call_count() should be one (1).
   fuchsia::intl::PropertyProviderPtr intl_property_provider;
   test_harness()->ConnectToEnvironmentService(fuchsia::intl::PropertyProvider::Name_,
                                               intl_property_provider.NewRequest().TakeChannel());
@@ -239,7 +241,7 @@ TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromGlobalEnvironment) {
       [&](fuchsia::intl::Profile new_profile) { got_profile_callback = true; });
   RunLoopUntil([&] { return got_profile_callback || got_profile_error != ZX_OK; });
   ASSERT_EQ(got_profile_error, ZX_OK);
-  ASSERT_EQ(fake_intl_property_provider.call_count(), 2);
+  ASSERT_EQ(fake_intl_property_provider.call_count(), 1);
 }
 
 TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {

@@ -9,12 +9,14 @@
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
+#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
+using intl::IntlPropertyProviderImpl;
 using ShutDownReason = SessionContextImpl::ShutDownReason;
 
 static constexpr auto kMaxCrashRecoveryLimit = 3;
@@ -24,15 +26,21 @@ static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::Admin* const administrator,
                                  const modular::ModularConfigAccessor* const config_accessor,
+                                 IntlPropertyProviderImpl* const intl_property_provider,
                                  fuchsia::sys::ServiceList services_from_session_launcher,
                                  fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
       administrator_(administrator),
       config_accessor_(config_accessor),
+      intl_property_provider_(intl_property_provider),
       services_from_session_launcher_(std::move(services_from_session_launcher)),
       on_zero_sessions_(std::move(on_zero_sessions)) {
   last_crash_time_ = zx::clock::get_monotonic();
+  // Bind `fuchsia.intl.PropertyProvider` to the implementation instance owned by this class.
+  sessionmgr_service_dir_.AddEntry(
+      fuchsia::intl::PropertyProvider::Name_,
+      std::make_unique<vfs::Service>(intl_property_provider_->GetHandler()));
 }
 
 SessionProvider::StartSessionResult SessionProvider::StartSession(
@@ -55,7 +63,8 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(services), std::move(services_from_session_launcher_),
+      std::move(services),
+      std::move(services_from_session_launcher_),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
@@ -125,6 +134,7 @@ fuchsia::sys::ServiceListPtr SessionProvider::CreateAndServeSessionmgrServices()
                                 dir_handle.NewRequest().TakeChannel());
 
   auto services = fuchsia::sys::ServiceList::New();
+  services->names.push_back(fuchsia::intl::PropertyProvider::Name_);
   services->host_directory = dir_handle.TakeChannel();
 
   return services;
