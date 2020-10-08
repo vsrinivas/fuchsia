@@ -145,6 +145,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     ));
 
     let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
+        inspector.root().create_child("blob_fetcher"),
         cache.clone(),
         MAX_CONCURRENT_BLOB_FETCHES,
         repo_manager.read().stats(),
@@ -162,7 +163,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         Arc::clone(&system_cache_list),
         Arc::clone(&repo_manager),
         Arc::clone(&rewrite_manager),
-        blob_fetcher.clone(),
+        blob_fetcher,
         MAX_CONCURRENT_PACKAGE_FETCHES,
         Arc::clone(&resolver_service_inspect_state),
     );

@@ -11,14 +11,14 @@ use {
         reader::Property,
         testing::{AnyProperty, PropertyAssertion},
     },
-    fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{serve::handler as UriHandler, PackageBuilder, RepositoryBuilder},
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::sync::Arc,
 };
 
 #[fasync::run_singlethreaded(test)]
-async fn test_initial_inspect_state() {
+async fn initial_inspect_state() {
     let env = TestEnvBuilder::new().build().await;
     // Wait for inspect to be created
     env.wait_for_pkg_resolver_to_start().await;
@@ -51,14 +51,15 @@ async fn test_initial_inspect_state() {
             },
             resolver_service: {
                 cache_fallbacks_due_to_not_found: 0u64,
-            }
+            },
+            blob_fetcher: {}
         }
     );
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_adding_repo_updates_inspect_state() {
+async fn adding_repo_updates_inspect_state() {
     let env = TestEnvBuilder::new().build().await;
     let config = RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build();
     let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
@@ -97,14 +98,15 @@ async fn test_adding_repo_updates_inspect_state() {
             },
             resolver_service: {
                 cache_fallbacks_due_to_not_found: 0u64,
-            }
+            },
+            blob_fetcher: {}
         }
     );
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_resolving_package_updates_inspect_state() {
+async fn resolving_package_updates_inspect_state() {
     let env = TestEnvBuilder::new().build().await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
@@ -187,14 +189,74 @@ async fn test_resolving_package_updates_inspect_state() {
             },
             resolver_service: {
                 cache_fallbacks_due_to_not_found: 0u64,
-            }
+            },
+            blob_fetcher: {}
         }
     );
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_channel_in_vbmeta_appears_in_inspect_state() {
+async fn blob_fetcher() {
+    let env = TestEnvBuilder::new().build().await;
+
+    let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let (blocking_uri_path_handler, unblocking_closure_receiver) =
+        UriHandler::BlockResponseBodyOnce::new();
+    let meta_far_blob_path = format!("/blobs/{}", pkg.meta_far_merkle_root());
+    let blocking_uri_path_handler =
+        UriHandler::ForPath::new(meta_far_blob_path.clone(), blocking_uri_path_handler);
+
+    let served_repository =
+        repo.server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
+    let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
+    let config = served_repository.make_repo_config(repo_url);
+    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
+
+    let resolve_fut = env.resolve_package("fuchsia-pkg://example.com/just_meta_far");
+    let unblocker = unblocking_closure_receiver.await.unwrap();
+
+    assert_inspect_tree!(
+        env.pkg_resolver_inspect_hierarchy().await,
+        root: contains {
+            blob_fetcher: {
+                pkg.meta_far_merkle_root().to_string() => {
+                    fetch_ts: AnyProperty,
+                    source: "http",
+                    mirror: format!("{}{}", served_repository.local_url(), meta_far_blob_path),
+                    attempts: 1u64,
+                    state: "read http body",
+                    state_ts: AnyProperty,
+                    bytes_written: 0u64,
+                }
+            }
+        }
+    );
+
+    // After completing the resolve there should be no active blob fetches.
+    unblocker();
+    let _pkg = resolve_fut.await.unwrap();
+
+    assert_inspect_tree!(
+        env.pkg_resolver_inspect_hierarchy().await,
+        root: contains {
+            blob_fetcher: {}
+        }
+    );
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn channel_in_vbmeta_appears_in_inspect_state() {
     let repo =
         Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
     let served_repository = repo.server().start().unwrap();
@@ -281,7 +343,7 @@ where
 }
 
 #[test]
-fn test_option_debug_string_property() {
+fn option_debug_string_property() {
     fn make_string_property(value: &str) -> Property {
         Property::String("name".to_owned(), value.to_owned())
     }

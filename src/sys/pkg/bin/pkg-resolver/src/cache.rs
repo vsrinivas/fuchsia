@@ -33,6 +33,7 @@ use {
 };
 
 mod base_package_index;
+mod inspect;
 mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
@@ -428,6 +429,7 @@ impl queue::TryMerge for FetchBlobContext {
 }
 
 pub fn make_blob_fetch_queue(
+    node: fuchsia_inspect::Node,
     cache: PackageCache,
     max_concurrency: usize,
     stats: Arc<Mutex<Stats>>,
@@ -435,9 +437,11 @@ pub fn make_blob_fetch_queue(
     local_mirror_proxy: Option<LocalMirrorProxy>,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
+    let inspect = inspect::BlobFetcher::from_node(node);
 
     let (blob_fetch_queue, blob_fetcher) =
         queue::work_queue(max_concurrency, move |merkle: BlobId, context: FetchBlobContext| {
+            let inspect = inspect.fetch(&merkle);
             let http_client = Arc::clone(&http_client);
             let cache = cache.clone();
             let stats = Arc::clone(&stats);
@@ -446,6 +450,7 @@ pub fn make_blob_fetch_queue(
 
             async move {
                 let res = fetch_blob(
+                    inspect,
                     &http_client,
                     cache,
                     stats,
@@ -464,6 +469,7 @@ pub fn make_blob_fetch_queue(
 }
 
 async fn fetch_blob(
+    inspect: inspect::Fetch,
     http_client: &fuchsia_hyper::HttpsClient,
     cache: PackageCache,
     stats: Arc<Mutex<Stats>>,
@@ -480,6 +486,7 @@ async fn fetch_blob(
         (false, true, Some(local_mirror)) => {
             trace::duration_begin!("app", "fetch_blob_local", "merkle" => merkle.to_string().as_str());
             let res = fetch_blob_local(
+                inspect.local_mirror(),
                 local_mirror,
                 merkle,
                 context.blob_kind,
@@ -493,6 +500,7 @@ async fn fetch_blob(
         (true, false, _) => {
             trace::duration_begin!("app", "fetch_blob_http", "merkle" => merkle.to_string().as_str());
             let res = fetch_blob_http(
+                inspect.http(),
                 http_client,
                 &context.mirrors,
                 merkle,
@@ -515,6 +523,7 @@ async fn fetch_blob(
 }
 
 async fn fetch_blob_http(
+    inspect: inspect::FetchHttp,
     client: &fuchsia_hyper::HttpsClient,
     mirrors: &[MirrorConfig],
     merkle: BlobId,
@@ -532,19 +541,23 @@ async fn fetch_blob_http(
     };
     let mirror_stats = stats.lock().for_mirror(blob_mirror_url.to_string());
     let blob_url = make_blob_url(blob_mirror_url, &merkle).map_err(|e| FetchError::BlobUrl(e))?;
-
+    let inspect = inspect.mirror(&blob_url.to_string());
     let flaked = Arc::new(AtomicBool::new(false));
 
     fuchsia_backoff::retry_or_first_error(retry::blob_fetch(), || {
+        inspect.attempt();
         let flaked = Arc::clone(&flaked);
         let mirror_stats = &mirror_stats;
         let mut cobalt_sender = cobalt_sender.clone();
 
         async {
+            inspect.state(inspect::Http::CreateBlob);
             if let Some((blob, blob_closer)) =
                 cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
             {
-                let res = download_blob(client, &blob_url, expected_len, blob).await;
+                inspect.state(inspect::Http::DownloadBlob);
+                let res = download_blob(&inspect, client, &blob_url, expected_len, blob).await;
+                inspect.state(inspect::Http::CloseBlob);
                 blob_closer.close().await;
                 res?;
             }
@@ -578,16 +591,20 @@ async fn fetch_blob_http(
 }
 
 async fn fetch_blob_local(
+    inspect: inspect::FetchStateLocal,
     local_mirror: &LocalMirrorProxy,
     merkle: BlobId,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
     cache: &PackageCache,
 ) -> Result<(), FetchError> {
+    inspect.attempt();
+    inspect.state(inspect::LocalMirror::CreateBlob);
     if let Some((blob, blob_closer)) =
         cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
     {
-        let res = read_local_blob(local_mirror, merkle, expected_len, blob).await;
+        let res = read_local_blob(&inspect, local_mirror, merkle, expected_len, blob).await;
+        inspect.state(inspect::LocalMirror::CloseBlob);
         blob_closer.close().await;
         res?;
     }
@@ -595,6 +612,7 @@ async fn fetch_blob_local(
 }
 
 async fn read_local_blob(
+    inspect: &inspect::FetchStateLocal,
     proxy: &LocalMirrorProxy,
     merkle: BlobId,
     expected_len: Option<u64>,
@@ -603,6 +621,7 @@ async fn read_local_blob(
     let (local_file, remote) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::FileMarker>()
         .map_err(FetchError::FidlError)?;
 
+    inspect.state(inspect::LocalMirror::GetBlob);
     proxy
         .get_blob(&mut merkle.into(), remote)
         .await
@@ -620,19 +639,23 @@ async fn read_local_blob(
         }
     }
 
+    inspect.state(inspect::LocalMirror::TruncateBlob);
     let mut dest = dest.truncate(info.content_size).await.map_err(FetchError::Truncate)?;
 
     loop {
+        inspect.state(inspect::LocalMirror::ReadBlob);
         let (status, data) =
             local_file.read(fidl_fuchsia_io::MAX_BUF).await.map_err(FetchError::FidlError)?;
         Status::ok(status).map_err(FetchError::IoError)?;
         if data.len() == 0 {
             return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
         }
+        inspect.state(inspect::LocalMirror::WriteBlob);
         dest = match dest.write(&data).await.map_err(FetchError::Write)? {
             pkgfs::install::BlobWriteSuccess::MoreToWrite(blob) => blob,
             pkgfs::install::BlobWriteSuccess::Done => break,
-        }
+        };
+        inspect.write_bytes(data.len());
     }
     Ok(())
 }
@@ -645,11 +668,13 @@ fn make_blob_url(
 }
 
 async fn download_blob(
+    inspect: &inspect::FetchStateHttp,
     client: &fuchsia_hyper::HttpsClient,
     uri: &http::Uri,
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
 ) -> Result<(), FetchError> {
+    inspect.state(inspect::Http::HttpGet);
     let request = Request::get(uri)
         .body(Body::empty())
         .map_err(|e| FetchError::Http { e, uri: uri.to_string() })?;
@@ -676,8 +701,10 @@ async fn download_blob(
         (None, None) => return Err(FetchError::UnknownLength { uri: uri.to_string() }),
     };
 
+    inspect.state(inspect::Http::TruncateBlob);
     let mut dest = dest.truncate(expected_len).await.map_err(FetchError::Truncate)?;
 
+    inspect.state(inspect::Http::ReadHttpBody);
     let mut chunks = response.into_body();
     let mut written = 0u64;
     while let Some(chunk) =
@@ -687,6 +714,7 @@ async fn download_blob(
             return Err(FetchError::BlobTooLarge { uri: uri.to_string() });
         }
 
+        inspect.state(inspect::Http::WriteBlob);
         dest = match dest.write(&chunk).await.map_err(FetchError::Write)? {
             pkgfs::install::BlobWriteSuccess::MoreToWrite(blob) => {
                 written += chunk.len() as u64;
@@ -697,7 +725,10 @@ async fn download_blob(
                 break;
             }
         };
+        inspect.state(inspect::Http::ReadHttpBody);
+        inspect.write_bytes(chunk.len());
     }
+    inspect.state(inspect::Http::WriteComplete);
 
     if expected_len != written {
         return Err(FetchError::BlobTooSmall { uri: uri.to_string() });

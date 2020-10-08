@@ -77,6 +77,7 @@ rustc_binary("bin") {
     "src/args.rs",
     "src/cache.rs",
     "src/cache/base_package_index.rs",
+    "src/cache/inspect.rs",
     "src/cache/retry.rs",
     "src/clock.rs",
     "src/config.rs",
