@@ -39,6 +39,41 @@
     }                                                      \
   } while (0)
 
+#define BRCMF_DBG_EVENT(ifp, event_msg, REASON_FMT, reason_formatter) \
+  BRCMF_DBG_LOG_EVENT(EVENT, ifp, event_msg, REASON_FMT, reason_formatter)
+
+#define BRCMF_DBG_LOG_EVENT(LEVEL, ifp, event_msg, REASON_FMT, reason_formatter)                  \
+  {                                                                                               \
+    if (ifp == nullptr || event_msg == nullptr) {                                                 \
+      BRCMF_DBG(LEVEL, "Unable to log event %p for ifp %p", event_msg, ifp);                      \
+    } else {                                                                                      \
+      BRCMF_DBG(LEVEL, "IF: %d event %s (%u)", ifp == nullptr ? -1 : ifp->ifidx,                  \
+                brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event_msg->event_code)), \
+                event_msg->event_code);                                                           \
+      BRCMF_DBG(LEVEL, "  status %s", brcmf_fweh_get_event_status_str(event_msg->status));        \
+      BRCMF_DBG(LEVEL, "  reason " REASON_FMT, reason_formatter(event_msg->reason));              \
+      BRCMF_DBG(LEVEL, "    auth %s", brcmf_fweh_get_auth_type_str(event_msg->auth_type));        \
+      BRCMF_DBG(LEVEL, "   flags 0x%x", event_msg->flags);                                        \
+    }                                                                                             \
+  }
+
+// TODO(fxb/61311): Remove once this verbose logging is no longer needed in
+// brcmf_indicate_client_disconnect().
+#define BRCMF_INFO_EVENT(ifp, event_msg, REASON_FMT, reason_formatter)                             \
+  {                                                                                                \
+    if (ifp == nullptr || event_msg == nullptr) {                                                  \
+      BRCMF_INFO("Unable to log event %p for ifp %p", event_msg, ifp);                             \
+    } else {                                                                                       \
+      BRCMF_INFO("IF: %d event %s (%u)", ifp == nullptr ? -1 : ifp->ifidx,                         \
+                 brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event_msg->event_code)), \
+                 event_msg->event_code);                                                           \
+      BRCMF_INFO("  status %s", brcmf_fweh_get_event_status_str(event_msg->status));               \
+      BRCMF_INFO("  reason " REASON_FMT, reason_formatter(event_msg->reason));                     \
+      BRCMF_INFO("    auth %s", brcmf_fweh_get_auth_type_str(event_msg->auth_type));               \
+      BRCMF_INFO("   flags 0x%x", event_msg->flags);                                               \
+    }                                                                                              \
+  }
+
 constexpr size_t kMaxHexDumpBytes = 4096;  // point at which output will be truncated
 #define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...)            \
   do {                                                                   \
