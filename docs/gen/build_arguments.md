@@ -651,17 +651,28 @@ starts with //).
 
 From //build/images/custom_signing.gni:12
 
-### dart_compilation_mode
-
-**Current value (from the default):** `"jit"`
-
-From //build/dart/config.gni:16
-
 ### dart_default_app
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/10e15d5dd2ba80ef82d9d491dbed850b998fab9e/runtime/dart/dart_component.gni#24)
+
+### dart_default_build_cfg
+Non-product JIT
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = true
+  is_aot = false
+  is_product = false
+  platform_name = "dart_runner"
+  runner_dep = "//topaz/runtime/dart_runner:dart_jit_runner"
+  runtime_meta = "//build/dart/meta/jit_runtime"
+}
+```
+
+From //build/dart/config.gni:20
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -669,14 +680,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/10e15d5dd2ba80ef82d9d491dbed850b998fab9e/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/10e15d5dd2ba80ef82d9d491dbed850b998fab9e/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -910,7 +921,24 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/10e15d5dd2ba80ef82d9d491dbed850b998fab9e/runtime/dart/dart_component.gni#13)
+
+### flutter_default_build_cfg
+Non-product JIT
+
+**Current value (from the default):**
+```
+{
+  enable_asserts = true
+  is_aot = false
+  is_product = false
+  platform_name = "flutter_runner"
+  runner_dep = "//topaz/runtime/flutter_runner:flutter_jit_runner"
+  runtime_meta = "//build/flutter/meta/jit_runtime"
+}
+```
+
+From //build/flutter/config.gni:19
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -921,18 +949,26 @@ This is effective only on debug builds.
 
 From //build/testing/flutter_driver.gni:9
 
+### flutter_force_product
+If set to true, will force the runenrs to be built in
+product mode which means they will not have an exposed vm service
+
+**Current value (from the default):** `false`
+
+From //build/flutter/config.gni:10
+
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/10e15d5dd2ba80ef82d9d491dbed850b998fab9e/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/fb8190d1675f58b3d9b2532454ff71c57f3e1f9b/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/10e15d5dd2ba80ef82d9d491dbed850b998fab9e/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
