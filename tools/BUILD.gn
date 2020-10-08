@@ -45,6 +45,7 @@ group("infratools") {
   # Tools that are only needed on Linux x64, regardless of the current host.
   linux_x64_only_tools = [
     "//src/diagnostics/triage:install",
+    "//tools/testing/resultdb",
     "//tools/testing/tefmocheck",
   ]
 

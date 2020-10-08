@@ -22,6 +22,10 @@ go_library("main") {
 go_binary("resultdb") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/testing/resultdb"
   deps = [ ":main" ]
+
+  # Needed to support cross-compilation. The infra recipes always needs this
+  # built for Linux, even if build happens on Mac.
+  cgo = false
 }
 
 group("tests") {
