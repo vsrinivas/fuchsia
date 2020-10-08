@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/bringup/bin/netsvc/args.h"
+#include "src/bringup/bin/device-name-provider/args.h"
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -22,22 +22,8 @@
 
 namespace {
 constexpr char kInterface[] = "/dev/whatever/whatever";
-
-TEST(ArgsTest, NetsvcNodenamePrintsAndExits) {
-  const std::string path = "/pkg/bin/netsvc";
-  const char* argv[] = {path.c_str(), "--nodename", nullptr};
-  zx::process process;
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-
-  ASSERT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr, 0,
-                           nullptr, process.reset_and_get_address(), err_msg),
-            "%s", err_msg);
-
-  ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_EQ(proc_info.return_code, 0);
-}
+constexpr char kNodename[] = "some-four-word-name";
+constexpr char kEthDir[] = "/dev";
 
 class FakeSvc {
  public:
@@ -85,48 +71,55 @@ class ArgsTest : public zxtest::Test {
   FakeSvc fake_svc_;
 };
 
-TEST_F(ArgsTest, NetsvcNoneProvided) {
+TEST_F(ArgsTest, DeviceNameProviderNoneProvided) {
   int argc = 1;
-  const char* argv[] = {"netsvc"};
+  const char* argv[] = {"device-name-provider"};
   const char* error = nullptr;
-  NetsvcArgs args;
+  DeviceNameProviderArgs args;
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
-  ASSERT_FALSE(args.netboot);
-  ASSERT_FALSE(args.nodename);
-  ASSERT_TRUE(args.advertise);
-  ASSERT_FALSE(args.all_features);
   ASSERT_TRUE(args.interface.empty());
+  ASSERT_TRUE(args.nodename.empty());
+  ASSERT_EQ(args.ethdir, std::string("/dev/class/ethernet"));
   ASSERT_EQ(error, nullptr);
 }
 
-TEST_F(ArgsTest, NetsvcAllProvided) {
+TEST_F(ArgsTest, DeviceNameProviderAllProvided) {
   int argc = 7;
-  const char* argv[] = {
-      "netsvc",         "--netboot",   "--nodename", "--advertise",
-      "--all-features", "--interface", kInterface,
-  };
+  const char* argv[] = {"device-name-provider",
+                        "--nodename",
+                        kNodename,
+                        "--interface",
+                        kInterface,
+                        "--ethdir",
+                        kEthDir};
   const char* error = nullptr;
-  NetsvcArgs args;
+  DeviceNameProviderArgs args;
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
-  ASSERT_TRUE(args.netboot);
-  ASSERT_TRUE(args.nodename);
-  ASSERT_TRUE(args.advertise);
-  ASSERT_TRUE(args.all_features);
   ASSERT_EQ(args.interface, std::string(kInterface));
+  ASSERT_EQ(args.nodename, std::string(kNodename));
+  ASSERT_EQ(args.ethdir, std::string(kEthDir));
   ASSERT_EQ(error, nullptr);
 }
 
-TEST_F(ArgsTest, NetsvcValidation) {
+TEST_F(ArgsTest, DeviceNameProviderValidation) {
   int argc = 2;
   const char* argv[] = {
-      "netsvc",
+      "device-name-provider",
       "--interface",
   };
+  DeviceNameProviderArgs args;
   const char* error = nullptr;
-  NetsvcArgs args;
   ASSERT_LT(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0);
   ASSERT_TRUE(args.interface.empty());
   ASSERT_TRUE(strstr(error, "interface"));
-}
 
+  argc = 2;
+  argv[1] = "--nodename";
+  args.interface = "";
+  args.nodename = "";
+  error = nullptr;
+  ASSERT_LT(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0);
+  ASSERT_TRUE(args.nodename.empty());
+  ASSERT_TRUE(strstr(error, "nodename"));
+}
 }  // namespace

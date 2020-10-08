@@ -65,9 +65,9 @@ zbi_input("integration-test-deps") {
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
     # This could possibly be smaller, but seems pretty reasonable.
+    "//src/bringup/bin/device-name-provider",
     "//src/bringup/bin/miscsvc",
     "//src/bringup/bin/netsvc",
-    "//src/bringup/bin/netsvc:device-name-provider",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/svchost",
     "//src/devices/internal/drivers/fragment",

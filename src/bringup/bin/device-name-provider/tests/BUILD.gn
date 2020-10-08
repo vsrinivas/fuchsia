@@ -1,0 +1,72 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/bootfs_test.gni")
+import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+test("device-name-provider-test") {
+  sources = [ "args-test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/lib/fdio",
+    "//src/bringup/bin/device-name-provider:args",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/mock-boot-arguments",
+  ]
+}
+
+isolated_devmgr_unittest_component("device-name-provider-test-component") {
+  component_name = "device-name-provider-test"
+  executable_path = "test/device-name-provider-test"
+  deps = [
+    ":device-name-provider-test",
+    "//src/bringup/bin/device-name-provider",
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/gpt",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/platform",
+  ]
+}
+
+test("integration-test") {
+  sources = [ "integration-test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("integration-test-component") {
+  testonly = true
+  manifest = "../meta/integration-test.cml"
+  deps = [ ":integration-test" ]
+}
+
+fuchsia_component("integration-test-realm") {
+  manifest = "../meta/integration-test-realm.cml"
+}
+
+fuchsia_test_package("tests") {
+  package_name = "device-name-provider-tests"
+  deps = [
+    ":integration-test-component",
+    "//src/bringup/bin/device-name-provider:device-name-provider-component",
+  ]
+  test_components = [
+    ":device-name-provider-test-component",
+    ":integration-test-realm",
+  ]
+}

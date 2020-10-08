@@ -110,7 +110,7 @@ template("isolated_devmgr_unittest_component") {
     }
     deps += [
       ":${generated_target}",
-      "//src/bringup/bin/netsvc:device-name-provider",
+      "//src/bringup/bin/device-name-provider",
       "//src/devices/bin/driver_host",
       "//src/devices/bin/driver_manager",
       "//src/lib/isolated_devmgr:isolated_devmgr",

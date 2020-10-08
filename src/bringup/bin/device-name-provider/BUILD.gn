@@ -1,0 +1,63 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/component_manifest_resources.gni")
+import("//src/sys/build/components.gni")
+
+group("bootfs") {
+  deps = [
+    ":device-name-provider",
+    ":meta",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
+
+component_manifest_resources("meta") {
+  sources = [ "meta/device-name-provider.cml" ]
+}
+
+source_set("args") {
+  sources = [ "args.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+executable("device-name-provider") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "device-name-provider.cc" ]
+  deps = [
+    ":args",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/inet6:netifc-discover",
+    "//zircon/system/ulib/svc",
+  ]
+}
+
+# This component only exists to be included in the integration tests.
+fuchsia_component("device-name-provider-component") {
+  testonly = true
+  manifest = "meta/device-name-provider.cml"
+  deps = [ ":device-name-provider" ]
+}

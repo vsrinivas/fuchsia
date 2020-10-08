@@ -1,0 +1,17 @@
+{
+    program: {
+        binary: "test/integration-test",
+    },
+    use: [
+        { runner: "gtest_runner" },
+        {
+            protocol: [ "/svc/fuchsia.device.NameProvider" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

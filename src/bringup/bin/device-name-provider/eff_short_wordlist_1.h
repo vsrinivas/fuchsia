@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_BRINGUP_BIN_NETSVC_EFF_SHORT_WORDLIST_1_H_
-#define SRC_BRINGUP_BIN_NETSVC_EFF_SHORT_WORDLIST_1_H_
+#ifndef SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_EFF_SHORT_WORDLIST_1_H_
+#define SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_EFF_SHORT_WORDLIST_1_H_
 
 #define DICEWARE_DICTIONARY_SIZE 1296
 
@@ -140,4 +140,4 @@ const char dictionary[DICEWARE_DICTIONARY_SIZE][6] = {
     "zebra", "zero",  "zesty", "zippy", "zone",  "zoom",
 };
 
-#endif  // SRC_BRINGUP_BIN_NETSVC_EFF_SHORT_WORDLIST_1_H_
+#endif  // SRC_BRINGUP_BIN_DEVICE_NAME_PROVIDER_EFF_SHORT_WORDLIST_1_H_

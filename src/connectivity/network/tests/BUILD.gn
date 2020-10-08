@@ -153,7 +153,7 @@ fuchsia_component("netstack_cobalt_integration_test") {
 }
 
 package("device_name_provider") {
-  deps = [ "//src/bringup/bin/netsvc:device-name-provider" ]
+  deps = [ "//src/bringup/bin/device-name-provider" ]
   binaries = [
     {
       name = "device-name-provider"
@@ -292,17 +292,6 @@ test("netstack_no_network_test") {
   deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
-test("name_provider_no_network_test") {
-  sources = [ "name_provider_no_network_test.cc" ]
-
-  deps = [
-    ":device_name_provider",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
 test("name_provider_service_not_present_test") {
   sources = [ "name_provider_service_not_present_test.cc" ]
 
@@ -360,12 +349,6 @@ fuchsia_component("netstack-external-network-test") {
   deps = [ ":netstack-external-network-test-client" ]
 }
 
-fuchsia_component("name-provider-no-network-test") {
-  testonly = true
-  manifest = "meta/name_provider_no_network_test.cmx"
-  deps = [ ":name_provider_no_network_test" ]
-}
-
 fuchsia_component("name-provider-service-not-present-test") {
   testonly = true
   manifest = "meta/name_provider_service_not_present_test.cmx"
@@ -401,7 +384,6 @@ fuchsia_test_package("netstack_c_api_tests_inner") {
 
   test_components = [
     ":connect-test",
-    ":name-provider-no-network-test",
     ":name-provider-service-not-present-test",
     ":netstack-external-network-test",
     ":netstack-bsdsocket-c-api-test",
