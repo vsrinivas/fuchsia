@@ -14,11 +14,12 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
+use wlan_common::bss::Protection as BssProtection;
 use wlan_inspect;
 use wlan_rsn::auth;
 use wlan_sme::client::{
-    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, EstablishRsnaFailure,
-    EstablishRsnaFailureReason, InfoEvent, SelectNetworkFailure,
+    AssociationFailure, BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult,
+    EstablishRsnaFailure, EstablishRsnaFailureReason, InfoEvent, SelectNetworkFailure,
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
@@ -270,6 +271,16 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
             reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
         })) => fidl_sme::ConnectResultCode::CredentialRejected,
 
+        // For WEP, the entire association is always handled by fullmac, so the best we can
+        // do is use fidl_mlme::AssociateResultCodes. The code that arises when WEP fails with
+        // rejected credentials is RefusedReasonUnspecified. This is a catch-all error
+        // for authentication failures, but it is being considered good enough for cathcing
+        // rejected credentials for a deprecated WEP association.
+        ConnectResult::Failed(ConnectFailure::AssociationFailure(AssociationFailure {
+            bss_protection: BssProtection::Wep,
+            code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
+        })) => fidl_sme::ConnectResultCode::CredentialRejected,
+
         ConnectResult::Failed(..) => fidl_sme::ConnectResultCode::Failed,
     }
 }
@@ -294,4 +305,37 @@ fn send_connect_result(
         handle.send_on_finished(code)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detection_of_rejected_wpa1_or_wpa2_credentials() {
+        let result =
+            ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+            }));
+
+        assert_eq!(
+            fidl_sme::ConnectResultCode::CredentialRejected,
+            convert_connect_result(&result)
+        );
+    }
+
+    #[test]
+    fn test_detection_of_rejected_wep_credentials() {
+        let result =
+            ConnectResult::Failed(ConnectFailure::AssociationFailure(AssociationFailure {
+                bss_protection: BssProtection::Wep,
+                code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
+            }));
+
+        assert_eq!(
+            fidl_sme::ConnectResultCode::CredentialRejected,
+            convert_connect_result(&result)
+        );
+    }
 }

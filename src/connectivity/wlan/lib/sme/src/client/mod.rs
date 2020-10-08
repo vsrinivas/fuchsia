@@ -44,7 +44,13 @@ use {
     log::{error, info},
     std::sync::Arc,
     wep_deprecated,
-    wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, mac::MacAddr, RadioConfig},
+    wlan_common::{
+        self,
+        bss::{BssDescriptionExt, Protection as BssProtection},
+        format::MacFmt,
+        mac::MacAddr,
+        RadioConfig,
+    },
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_rsn::auth,
 };
@@ -123,7 +129,7 @@ pub enum ConnectFailure {
     ScanFailure(fidl_mlme::ScanResultCodes),
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
-    AssociationFailure(fidl_mlme::AssociateResultCodes),
+    AssociationFailure(AssociationFailure),
     EstablishRsnaFailure(EstablishRsnaFailure),
 }
 
@@ -174,6 +180,18 @@ pub enum SelectNetworkFailure {
 impl From<SelectNetworkFailure> for ConnectFailure {
     fn from(failure: SelectNetworkFailure) -> Self {
         ConnectFailure::SelectNetworkFailure(failure)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AssociationFailure {
+    pub bss_protection: BssProtection,
+    pub code: fidl_mlme::AssociateResultCodes,
+}
+
+impl From<AssociationFailure> for ConnectFailure {
+    fn from(failure: AssociationFailure) -> Self {
+        ConnectFailure::AssociationFailure(failure)
     }
 }
 

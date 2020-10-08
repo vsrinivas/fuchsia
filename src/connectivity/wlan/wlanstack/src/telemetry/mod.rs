@@ -31,7 +31,7 @@ use {
             ConnectStats, ConnectionMilestone, ConnectionPingInfo, DisconnectInfo,
             DisconnectSource, ScanStats,
         },
-        ConnectFailure, ConnectResult,
+        AssociationFailure, ConnectFailure, ConnectResult,
     },
 };
 
@@ -409,7 +409,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
                     1,
                 );
             }
-            ConnectFailure::AssociationFailure(code) => {
+            ConnectFailure::AssociationFailure(AssociationFailure { code, .. }) => {
                 let error_code_dim = convert_assoc_error_code(*code);
                 sender.with_component().log_event_count(
                     metrics::ASSOCIATION_FAILURE_METRIC_ID,
@@ -647,7 +647,7 @@ mod tests {
         maplit::hashset,
         pin_utils::pin_mut,
         std::collections::HashSet,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, bss::Protection as BssProtection},
         wlan_sme::client::{
             info::{
                 ConnectStats, DisconnectInfo, DisconnectSource, PreviousDisconnectInfo,
@@ -821,9 +821,10 @@ mod tests {
     #[test]
     fn test_log_connect_stats_assoc_failure() {
         let connect_stats = ConnectStats {
-            result: ConnectFailure::AssociationFailure(
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-            )
+            result: ConnectFailure::AssociationFailure(AssociationFailure {
+                bss_protection: BssProtection::Open,
+                code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            })
             .into(),
             ..fake_connect_stats()
         };

@@ -14,8 +14,8 @@ use {
             info::{DisconnectInfo, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
-            report_connect_finished, ConnectFailure, ConnectResult, EstablishRsnaFailure,
-            EstablishRsnaFailureReason, Status,
+            report_connect_finished, AssociationFailure, ConnectFailure, ConnectResult,
+            EstablishRsnaFailure, EstablishRsnaFailureReason, Status,
         },
         clone_utils::clone_bss_desc,
         phy_selection::derive_phy_cbw,
@@ -384,9 +384,10 @@ impl Associating {
                         report_connect_finished(
                             self.cmd.responder,
                             context,
-                            ConnectResult::Failed(ConnectFailure::AssociationFailure(
-                                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
-                            )),
+                            ConnectResult::Failed(AssociationFailure{
+                                bss_protection: self.cmd.bss.get_protection(),
+                                code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
+                            }.into()),
                         );
                         state_change_ctx.set_msg(format!(
                             "failed associating; AP's capabilites changed between beacon and\
@@ -418,7 +419,13 @@ impl Associating {
                 report_connect_finished(
                     self.cmd.responder,
                     context,
-                    ConnectResult::Failed(ConnectFailure::AssociationFailure(other)),
+                    ConnectResult::Failed(
+                        AssociationFailure {
+                            bss_protection: self.cmd.bss.get_protection(),
+                            code: other,
+                        }
+                        .into(),
+                    ),
                 );
                 state_change_ctx.set_msg(format!("failed associating; result code: {:?}", other));
                 return Err(Idle { cfg: self.cfg });
@@ -460,9 +467,13 @@ impl Associating {
         report_connect_finished(
             self.cmd.responder,
             context,
-            ConnectResult::Failed(ConnectFailure::AssociationFailure(
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-            )),
+            ConnectResult::Failed(
+                AssociationFailure {
+                    bss_protection: self.cmd.bss.get_protection(),
+                    code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                }
+                .into(),
+            ),
         );
         state_change_ctx.replace(StateChangeContext::Disconnect {
             msg: format!(
@@ -485,9 +496,13 @@ impl Associating {
         report_connect_finished(
             self.cmd.responder,
             context,
-            ConnectResult::Failed(ConnectFailure::AssociationFailure(
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-            )),
+            ConnectResult::Failed(
+                AssociationFailure {
+                    bss_protection: self.cmd.bss.get_protection(),
+                    code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                }
+                .into(),
+            ),
         );
         state_change_ctx.replace(StateChangeContext::Disconnect {
             msg: format!(
@@ -1472,6 +1487,7 @@ mod tests {
         let mut h = TestHelper::new();
 
         let (cmd, receiver) = connect_command_one();
+        let bss_protection = cmd.bss.get_protection();
 
         // Start in an "Associating" state
         let state = ClientState::from(testing::new_state(Associating {
@@ -1488,9 +1504,13 @@ mod tests {
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
         assert_idle(state);
 
-        let result = ConnectResult::Failed(ConnectFailure::AssociationFailure(
-            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-        ));
+        let result = ConnectResult::Failed(
+            AssociationFailure {
+                bss_protection,
+                code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            }
+            .into(),
+        );
         // User should be notified that connection attempt failed
         expect_result(receiver, result.clone());
     }
@@ -1558,6 +1578,7 @@ mod tests {
     fn deauth_while_associating() {
         let mut h = TestHelper::new();
         let (cmd_one, receiver_one) = connect_command_one();
+        let bss_protection = cmd_one.bss.get_protection();
         let state = associating_state(cmd_one);
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
@@ -1569,9 +1590,13 @@ mod tests {
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
         expect_result(
             receiver_one,
-            ConnectResult::Failed(ConnectFailure::AssociationFailure(
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-            )),
+            ConnectResult::Failed(
+                AssociationFailure {
+                    bss_protection,
+                    code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                }
+                .into(),
+            ),
         );
         assert_idle(state);
     }
@@ -1580,6 +1605,7 @@ mod tests {
     fn disassoc_while_associating() {
         let mut h = TestHelper::new();
         let (cmd_one, receiver_one) = connect_command_one();
+        let bss_protection = cmd_one.bss.get_protection();
         let state = associating_state(cmd_one);
         let disassoc_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {
@@ -1591,9 +1617,13 @@ mod tests {
         let state = state.on_mlme_event(disassoc_ind, &mut h.context);
         expect_result(
             receiver_one,
-            ConnectResult::Failed(ConnectFailure::AssociationFailure(
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-            )),
+            ConnectResult::Failed(
+                AssociationFailure {
+                    bss_protection,
+                    code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                }
+                .into(),
+            ),
         );
         assert_idle(state);
     }
