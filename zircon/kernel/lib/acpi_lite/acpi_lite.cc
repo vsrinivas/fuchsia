@@ -245,9 +245,10 @@ const AcpiSdtHeader* AcpiParser::GetTableAtIndex(size_t index) const {
   return MapStructure<AcpiSdtHeader>(*reader_, paddr).value_or(nullptr);
 }
 
-const AcpiSdtHeader* AcpiParser::GetTableBySignature(AcpiSignature sig) const {
-  for (size_t i = 0; i < num_tables_; i++) {
-    const AcpiSdtHeader* header = GetTableAtIndex(i);
+const AcpiSdtHeader* GetTableBySignature(const AcpiParserInterface& parser, AcpiSignature sig) {
+  size_t num_tables = parser.num_tables();
+  for (size_t i = 0; i < num_tables; i++) {
+    const AcpiSdtHeader* header = parser.GetTableAtIndex(i);
     if (!header) {
       continue;
     }

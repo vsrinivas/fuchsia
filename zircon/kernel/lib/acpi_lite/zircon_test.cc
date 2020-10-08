@@ -26,11 +26,11 @@ bool TestBasicParse() {
   BEGIN_TEST;
 
   FakePhysMemReader reader(&kQemuTables);
-  AcpiParser result = AcpiParser::Init(reader, kQemuTables.rsdp).value();
-  ASSERT_EQ(4u, result.num_tables());
+  AcpiParser parser = AcpiParser::Init(reader, kQemuTables.rsdp).value();
+  ASSERT_EQ(4u, parser.num_tables());
 
   // Ensure we can read the HPET table.
-  const AcpiSdtHeader* hpet_table = result.GetTableBySignature(AcpiSignature("HPET"));
+  const AcpiSdtHeader* hpet_table = GetTableBySignature(parser, AcpiSignature("HPET"));
   ASSERT_TRUE(hpet_table != nullptr);
   EXPECT_TRUE(memcmp(hpet_table, "HPET", 4) == 0);
 

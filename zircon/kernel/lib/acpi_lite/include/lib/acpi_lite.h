@@ -18,8 +18,20 @@ namespace acpi_lite {
 
 class PhysMemReader;
 
+// Abstract interface for reading ACPI tables.
+class AcpiParserInterface {
+ public:
+  virtual ~AcpiParserInterface() = default;
+
+  // Get the number of tables.
+  virtual size_t num_tables() const = 0;
+
+  // Return the i'th table. Return nullptr if the index is out of range.
+  virtual const AcpiSdtHeader* GetTableAtIndex(size_t index) const = 0;
+};
+
 // Functionality for reading ACPI tables.
-class AcpiParser {
+class AcpiParser final : public AcpiParserInterface {
  public:
   AcpiParser(const AcpiParser&) = default;
   AcpiParser& operator=(const AcpiParser&) = default;
@@ -29,17 +41,12 @@ class AcpiParser {
   // PhysMemReader must outlive this object. Caller retains ownership of the PhysMemReader.
   static zx::status<AcpiParser> Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa);
 
-  // Get the number of tables.
-  inline size_t num_tables() const { return num_tables_; }
-
-  // Get the first table matching the given signature. Return nullptr if no table found.
-  const AcpiSdtHeader* GetTableBySignature(AcpiSignature sig) const;
-
-  // Return the i'th table. Return nullptr if the index is out of range.
-  const AcpiSdtHeader* GetTableAtIndex(size_t index) const;
-
   // Print tables to debug output.
   void DumpTables() const;
+
+  // |AcpiParserInterface| implementation.
+  inline size_t num_tables() const final { return num_tables_; }
+  const AcpiSdtHeader* GetTableAtIndex(size_t index) const final;
 
  private:
   // Create a new AcpiParser.
@@ -62,6 +69,9 @@ class AcpiParser {
   size_t num_tables_;           // Number of top level tables
   zx_paddr_t root_table_addr_;  // Physical address of the root table.
 };
+
+// Get the first table matching the given signature. Return nullptr if no table found.
+const AcpiSdtHeader* GetTableBySignature(const AcpiParserInterface& parser, AcpiSignature sig);
 
 // A PhysMemReader translates physical addresses (such as those in the ACPI tables and the RSDT
 // itself) into pointers directly readable by the acpi_lite library.

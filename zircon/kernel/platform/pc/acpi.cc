@@ -42,8 +42,7 @@ void PlatformInitAcpi(zx_paddr_t acpi_rsdp) {
   global_acpi_parser = &parser;
 
   // Create AcpiTables data structure.
-  static const AcpiLiteTableProvider table_provider{&parser};
-  static const AcpiTables acpi_tables{&table_provider};
+  static const AcpiTables acpi_tables{&parser};
   AcpiTables::SetDefault(&acpi_tables);
 }
 

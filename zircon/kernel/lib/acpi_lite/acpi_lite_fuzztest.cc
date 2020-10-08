@@ -55,7 +55,7 @@ void TestOneInput(FuzzedDataProvider& provider) {
 
   zx::status<AcpiParser> parser = acpi_lite::AcpiParser::Init(reader, paddr);
   if (parser.is_ok()) {
-    parser.value().GetTableBySignature(AcpiSignature("APIC"));
+    GetTableBySignature(parser.value(), AcpiSignature("APIC"));
   }
 }
 

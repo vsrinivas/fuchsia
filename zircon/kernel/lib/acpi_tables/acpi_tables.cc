@@ -293,9 +293,8 @@ zx_status_t AcpiTables::ForEachInMadt(uint8_t type, V visitor) const {
 }
 
 zx_status_t AcpiTables::GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) const {
-  AcpiSdtHeader* table = nullptr;
-  zx_status_t status = tables_->GetTable(AcpiMadtTable::kSignature, (char**)&table);
-  if (status != ZX_OK) {
+  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiMadtTable::kSignature);
+  if (table == nullptr) {
     TRACEF("could not find MADT\n");
     return ZX_ERR_NOT_FOUND;
   }
@@ -317,9 +316,8 @@ zx_status_t AcpiTables::GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) co
 }
 
 zx_status_t AcpiTables::hpet(acpi_hpet_descriptor* hpet) const {
-  AcpiSdtHeader* table = NULL;
-  zx_status_t status = tables_->GetTable(AcpiHpetTable::kSignature, (char**)&table);
-  if (status != ZX_OK) {
+  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiHpetTable::kSignature);
+  if (table == nullptr) {
     TRACEF("could not find HPET\n");
     return ZX_ERR_NOT_FOUND;
   }
@@ -349,9 +347,8 @@ zx_status_t AcpiTables::hpet(acpi_hpet_descriptor* hpet) const {
 
 zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
   // Find the DBG2 table entry.
-  AcpiSdtHeader* table;
-  zx_status_t status = tables_->GetTable(AcpiDbg2Table::kSignature, (char**)&table);
-  if (status != ZX_OK) {
+  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiDbg2Table::kSignature);
+  if (table == nullptr) {
     TRACEF("acpi: could not find debug port (v2) ACPI entry\n");
     return ZX_ERR_NOT_FOUND;
   }
@@ -359,7 +356,7 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
   // Read the DBG2 header.
   AcpiDbg2Table debug_table;
   ktl::span<const uint8_t> payload;
-  status = ReadAcpiEntry(table, &debug_table, &payload);
+  zx_status_t status = ReadAcpiEntry(table, &debug_table, &payload);
   if (status != ZX_OK) {
     TRACEF("acpi: Failed to read DBG2 ACPI header.\n");
     return status;
@@ -426,10 +423,9 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
 
 zx_status_t AcpiTables::VisitCpuNumaPairs(
     fbl::Function<void(const AcpiNumaDomain&, uint32_t)> visitor) const {
-  AcpiSdtHeader* table = NULL;
-  zx_status_t status = tables_->GetTable(AcpiSratTable::kSignature, (char**)&table);
-  if (status != ZX_OK) {
-    printf("Could not find SRAT table. Get table returned: %d\n", status);
+  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiSratTable::kSignature);
+  if (table == nullptr) {
+    printf("Could not find SRAT table.\n");
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -505,17 +501,4 @@ void AcpiTables::SetDefault(const AcpiTables* table) { default_ = table; }
 const AcpiTables& AcpiTables::Default() {
   ASSERT_MSG(default_ != nullptr, "AcpiTables::SetDefault() must be called.");
   return *default_;
-}
-
-// Look up the given ACPI table. On success, sets header to point to table.
-// Maintains ownership of the table's memory.
-//
-// Wraps acpi_lite to allow testing.
-zx_status_t AcpiLiteTableProvider::GetTable(AcpiSignature signature, char** header_out) const {
-  auto header = parser_->GetTableBySignature(signature);
-  if (header) {
-    *header_out = (char*)header;
-    return ZX_OK;
-  }
-  return ZX_ERR_NOT_FOUND;
 }

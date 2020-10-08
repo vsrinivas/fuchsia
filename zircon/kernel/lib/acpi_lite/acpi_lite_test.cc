@@ -35,7 +35,7 @@ TEST(AcpiParser, EmptyTables) {
 // Ensure that the named table exists, and passed some basic checks.
 void VerifyTableExists(const AcpiParser& parser, const char* signature) {
   // Fetch the table.
-  const AcpiSdtHeader* table = parser.GetTableBySignature(AcpiSignature(signature));
+  const AcpiSdtHeader* table = GetTableBySignature(parser, AcpiSignature(signature));
   ASSERT_TRUE(table != nullptr) << "Table does not exist.";
 
   // Ensure signature matches.
@@ -75,7 +75,7 @@ TEST(AcpiParser, ReadMissingTable) {
   AcpiParser result = AcpiParser::Init(reader, kQemuTables.rsdp).value();
 
   // Read a missing table.
-  EXPECT_EQ(result.GetTableBySignature(AcpiSignature("AAAA")), nullptr);
+  EXPECT_EQ(GetTableBySignature(result, AcpiSignature("AAAA")), nullptr);
 
   // Read a bad index.
   EXPECT_EQ(result.GetTableAtIndex(result.num_tables()), nullptr);

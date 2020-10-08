@@ -7,15 +7,12 @@
 #ifndef KERNEL_LIB_ACPI_TABLES_H
 #define KERNEL_LIB_ACPI_TABLES_H
 
+#include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
 #include <zircon/types.h>
 
 #include <arch/x86/apic.h>
 #include <fbl/function.h>
-
-namespace acpi_lite {
-class AcpiParser;
-}
 
 // TODO(edcoyne): rename this to C++ naming.
 struct acpi_hpet_descriptor {
@@ -52,36 +49,12 @@ struct AcpiDebugPortDescriptor {
   paddr_t address;
 };
 
-// Provide access to ACPI tables.
-//
-// Wraps acpi_lite functions to allow testing.
-class AcpiTableProvider {
- public:
-  virtual ~AcpiTableProvider() = default;
-
-  // Looks up table, on success sets header to point to table. Maintains
-  // ownership of the table's memory.
-  virtual zx_status_t GetTable(AcpiSignature signature, char** header) const = 0;
-};
-
-// Implementation of AcpiTableProvider that is backed by the acpi_lite library.
-class AcpiLiteTableProvider final : public AcpiTableProvider {
- public:
-  explicit AcpiLiteTableProvider(const acpi_lite::AcpiParser* parser) : parser_(parser) {}
-
-  // |AcpiTableProvider| implementation.
-  zx_status_t GetTable(AcpiSignature signature, char** header) const final;
-
- private:
-  const acpi_lite::AcpiParser* parser_;  // Owned elsewhere.
-};
-
 // Designed to read and parse APIC tables, other functions of the APIC
 // subsystem are out of scope of this class. This class can work before dynamic memory
 // allocation is available.
 class AcpiTables {
  public:
-  explicit AcpiTables(const AcpiTableProvider* tables) : tables_(tables) {}
+  explicit AcpiTables(const acpi_lite::AcpiParserInterface* tables) : tables_(tables) {}
 
   // Sets count equal to the number of cpus in the system.
   zx_status_t cpu_count(uint32_t* count) const;
@@ -147,7 +120,7 @@ class AcpiTables {
   // MADT table.
   zx_status_t GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) const;
 
-  const AcpiTableProvider* const tables_;
+  const acpi_lite::AcpiParserInterface* const tables_;
 
   inline static const AcpiTables* default_ = nullptr;
 };
