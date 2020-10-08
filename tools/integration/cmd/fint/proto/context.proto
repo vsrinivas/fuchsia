@@ -23,17 +23,14 @@ message Context {
   // exposed to the caller should be written.
   string artifact_dir = 3;
 
-  // Passed through to the goma_dir GN arg.
-  string goma_dir = 4;
-
   message ChangedFile {
     // Relative path to the file within the checkout.
     string path = 1;
   }
 
   // Files changed in the commit being tested.
-  repeated ChangedFile changed_files = 5;
+  repeated ChangedFile changed_files = 4;
 
   // Passed through to the sdk_id gn arg.
-  string sdk_id = 6;
+  string sdk_id = 5;
 }
