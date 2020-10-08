@@ -1,4 +1,6 @@
+Name: VulkanTools - layers
 Source: https://github.com/LunarG/VulkanTools
 License: Apache-2.0
+License File: LICENSE.txt
 
 Only the screenshot tools are used.
