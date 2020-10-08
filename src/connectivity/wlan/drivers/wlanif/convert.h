@@ -63,6 +63,7 @@ void ConvertRssiHistogram(::fuchsia::wlan::stats::RssiHistogram* fidl_stats,
 // Convert a Banjo signal to noise ratio (SNR) histogram into FIDL.
 void ConvertSnrHistogram(::fuchsia::wlan::stats::SnrHistogram* fidl_stats,
                          const wlanif_snr_histogram_t& stats);
+void ConvertPmkInfo(::fuchsia::wlan::mlme::PmkInfo* fidl_ind, const wlanif_pmk_info_t& ind);
 
 void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats);
 uint32_t ConvertMgmtCaptureFlags(::fuchsia::wlan::mlme::MgmtFrameCaptureFlags fidl_flags);

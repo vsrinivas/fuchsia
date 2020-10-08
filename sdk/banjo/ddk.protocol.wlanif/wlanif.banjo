@@ -672,6 +672,11 @@ struct WlanifChannelSwitchInfo {
     uint8 new_channel;
 };
 
+struct WlanifPmkInfo {
+    vector<uint8> pmk;
+    vector<uint8> pmkid;
+};
+
 [Layout = "ddk-interface"]
 protocol WlanifImplIfc {
     // MLME operations
@@ -696,6 +701,7 @@ protocol WlanifImplIfc {
     EapolInd(WlanifEapolIndication ind) -> ();
     StatsQueryResp(WlanifStatsQueryResponse resp) -> ();
     RelayCapturedFrame(WlanifCapturedFrameResult result) -> ();
+    OnPmkAvailable(WlanifPmkInfo info) -> ();
 
     // Data operations
     DataRecv(vector<voidptr> data, uint32 flags) -> ();

@@ -96,6 +96,8 @@ static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
         [](void* cookie, const wlanif_captured_frame_result_t* result) {
           DEV(cookie)->RelayCapturedFrame(result);
         },
+    .on_pmk_available = [](void* cookie,
+                           const wlanif_pmk_info_t* ind) { DEV(cookie)->OnPmkAvailable(ind); },
 
     // Ethernet operations
     .data_recv = [](void* cookie, const void* data, size_t length,
@@ -989,6 +991,17 @@ void Device::RelayCapturedFrame(const wlanif_captured_frame_result* result) {
   fidl_result.frame.assign(result->data_list, result->data_list + result->data_count);
 
   binding_.events().RelayCapturedFrame(std::move(fidl_result));
+}
+
+void Device::OnPmkAvailable(const wlanif_pmk_info_t* info) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!binding_.is_bound()) {
+    return;
+  }
+
+  wlan_mlme::PmkInfo fidl_info;
+  ConvertPmkInfo(&fidl_info, *info);
+  binding_.events().OnPmkAvailable(fidl_info);
 }
 
 zx_status_t Device::EthStart(const ethernet_ifc_protocol_t* ifc) {

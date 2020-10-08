@@ -466,5 +466,20 @@ INSTANTIATE_TEST_SUITE_P(SnrHistogram, ConvertSnrHistogramTest,
                                              {.bucket_index = 0, .num_samples = 13245},
                                          }));
 
+TEST(ConvertTest, ToFidlPmkInfo) {
+  std::vector<uint8_t> pmk = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::vector<uint8_t> pmkid = {1, 1, 2, 2, 3, 3, 4, 4};
+  wlanif_pmk_info_t info{
+      .pmk_list = &pmk[0],
+      .pmk_count = pmk.size(),
+      .pmkid_list = &pmkid[0],
+      .pmkid_count = pmkid.size(),
+  };
+  wlan_mlme::PmkInfo fidl_info;
+  ConvertPmkInfo(&fidl_info, info);
+  EXPECT_EQ(fidl_info.pmk, pmk);
+  EXPECT_EQ(fidl_info.pmkid, pmkid);
+}
+
 }  // namespace
 }  // namespace wlanif

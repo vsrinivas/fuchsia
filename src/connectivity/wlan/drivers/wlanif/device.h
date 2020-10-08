@@ -83,6 +83,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void StatsQueryResp(const wlanif_stats_query_response_t* resp);
   void RelayCapturedFrame(const wlanif_captured_frame_result* result);
   void OnChannelSwitched(const wlanif_channel_switch_info_t* ind);
+  void OnPmkAvailable(const wlanif_pmk_info_t* info);
 
   // wlanif_protocol_t (ethernet_impl_protocol -> wlanif_impl_protocol)
   zx_status_t EthStart(const ethernet_ifc_protocol_t* ifc);

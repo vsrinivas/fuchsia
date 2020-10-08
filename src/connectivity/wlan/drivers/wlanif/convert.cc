@@ -977,6 +977,13 @@ void ConvertSnrHistogram(wlan_stats::SnrHistogram* fidl_stats,
   fidl_stats->invalid_samples = stats.invalid_samples;
 }
 
+void ConvertPmkInfo(wlan_mlme::PmkInfo* fidl_info, const wlanif_pmk_info_t& info) {
+  fidl_info->pmk.resize(info.pmk_count);
+  fidl_info->pmk.assign(info.pmk_list, info.pmk_list + info.pmk_count);
+  fidl_info->pmkid.resize(info.pmkid_count);
+  fidl_info->pmkid.assign(info.pmkid_list, info.pmkid_list + info.pmkid_count);
+}
+
 wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_t& client_stats) {
   wlan_stats::ClientMlmeStats fidl_client_stats;
 
