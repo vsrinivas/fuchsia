@@ -198,7 +198,7 @@ void Bandwidth::WriteResults(std::string mode, std::vector<RamChannelMeasurement
     sink() << "\n";
     sink() << "    {\n";
     sink() << "        \"label\":\"" << mode << "/" << result.name << "\",\n";
-    sink() << "        \"test_suite\":\"camera-benchmark\",\n";
+    sink() << "        \"test_suite\":\"fuchsia.camera-benchmark\",\n";
     sink() << "        \"unit\":\"bytes/second\",\n";
     sink() << "        \"values\":[" << result.bandwidth_bytes_per_second << "],\n";
     sink() << "        \"split_first\":false\n";
