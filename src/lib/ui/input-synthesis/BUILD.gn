@@ -28,6 +28,7 @@ rustc_library("input-synthesis") {
     "src/keymaps.rs",
     "src/legacy_backend.rs",
     "src/lib.rs",
+    "src/synthesizer.rs",
     "src/usages.rs",
   ]
 }
