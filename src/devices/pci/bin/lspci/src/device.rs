@@ -13,10 +13,10 @@ use {
 };
 
 pub struct Device<'a> {
-    device: &'a FidlDevice,
+    pub device: &'a FidlDevice,
+    pub class: Option<String>,
+    pub name: Option<String>,
     cfg: LayoutVerified<&'a [u8], Config>,
-    class: Option<String>,
-    name: Option<String>,
     args: &'a Args,
 }
 

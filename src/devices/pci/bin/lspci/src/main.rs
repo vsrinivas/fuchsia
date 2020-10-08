@@ -5,6 +5,7 @@ mod capability;
 mod config;
 mod db;
 mod device;
+mod filter;
 mod util;
 
 // All PCI layouts and information are documented in the PCI Local Bus Specification
@@ -39,6 +40,9 @@ pub struct Args {
     #[argh(switch, short = 'N')]
     /// only print numeric IDs.
     only_print_numeric: bool,
+    #[argh(option, short = 's')]
+    /// [[<bus>]:][slot][.[<func>]]    Show only devices in selected slots
+    filter: Option<filter::Filter>,
 }
 
 fn read_database<'a>(buf: &'a mut String) -> Result<db::PciDb<'a>, Error> {
@@ -63,7 +67,13 @@ async fn main() -> Result<(), Error> {
         .ok();
 
     for fidl_device in &proxy.get_devices().await? {
-        print!("{}", Device::new(fidl_device, &db, &args));
+        let device = Device::new(fidl_device, &db, &args);
+        if let Some(filter) = &args.filter {
+            if !filter.matches(&device) {
+                continue;
+            }
+        }
+        print!("{}", device);
     }
     Ok(())
 }

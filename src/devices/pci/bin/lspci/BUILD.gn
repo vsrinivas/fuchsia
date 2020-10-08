@@ -24,6 +24,7 @@ rustc_binary("lspci") {
     "src/config.rs",
     "src/db.rs",
     "src/device.rs",
+    "src/filter.rs",
     "src/main.rs",
     "src/util.rs",
   ]
