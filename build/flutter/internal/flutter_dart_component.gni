@@ -107,27 +107,34 @@ template("_flutter_asset_manifest") {
 #     Type: string
 #     Default: target_name
 #
-#   runtime_meta (required)
-#     The path to the runtime meta which will be merged with the manifest
-#     Type: path
-#
-#   platform_name (required)
-#     One of flutter_runner or dart_runner
-#     Type: string
+#   build_cfg (required)
+#    A description of how to build this component. This object needs
+#    to contain the following variables:
+#      runtime_meta: a path to the partial cmx file containing the runner
+#      platform_name: either 'dart_runner' or 'flutter_runner'
+#      is_aot: a boolean indicating if this is an AOT build
+#      is_product: a boolean indicating if this is a product build
+#      enable_asserts: whether we should enable asserts when compiling
 #
 #   main_dart (required)
 #     File containing the main function of the component.
 #     Type: string
+#
+#   generate_asset_manifest (optional)
+#     If true, will generate an asset manifest for this component
+#     Type: boolean
+#     Default: false
 #
 #  deps
 #  testonly
 #  visibility
 template("flutter_dart_component") {
   assert(defined(invoker.manifest), "must specify a manifest file")
-  assert(defined(invoker.runtime_meta), "must specify runtime_meta")
-  assert(defined(invoker.platform_name), "must specify platform_name")
+  assert(defined(invoker.build_cfg), "must specify build_cfg")
   assert(defined(invoker.main_dart), "Must specify main_dart")
   assert(defined(invoker.main_package), "Must specify main_package")
+
+  build_cfg = invoker.build_cfg
 
   _component_deps = []
   if (defined(invoker.deps)) {
@@ -152,7 +159,7 @@ template("flutter_dart_component") {
                            ])
     sources = [
       invoker.manifest,
-      rebase_path(invoker.runtime_meta, "."),
+      rebase_path(build_cfg.runtime_meta, "."),
     ]
   }
 
@@ -196,7 +203,6 @@ template("flutter_dart_component") {
                              "visibility",
                              "main_dart",
                              "main_package",
-                             "platform_name",
                            ])
 
     deps = [ ":$_dart_package_config_target_name" ]
@@ -210,6 +216,10 @@ template("flutter_dart_component") {
     # always generate a manifest for fuchsia builds. If this is an aot build
     # the kernel will ignore this variable.
     generate_manifest = true
+
+    platform_name = build_cfg.platform_name
+    product = build_cfg.is_product
+    is_aot = build_cfg.is_aot
   }
 
   _component_deps += [ ":$_kernel_target_name" ]
@@ -232,7 +242,7 @@ template("flutter_dart_component") {
     _component_deps += [ ":$_asset_manifest_target_name" ]
   }
 
-  if (dart_compilation_mode == "aot") {
+  if (build_cfg.is_aot) {
     _snapshot_path = "$target_gen_dir/${_component_name}_snapshot.so"
     _snapshot_target_name = target_name + "_snapshot"
 
@@ -253,7 +263,7 @@ template("flutter_dart_component") {
         _stats_json_path,
       ]
 
-      if (dart_force_product) {
+      if (build_cfg.is_product) {
         script = gen_snapshot_product
       } else {
         script = gen_snapshot
@@ -271,7 +281,8 @@ template("flutter_dart_component") {
       # No asserts in debug or release product.
       # No asserts in non-product release
       # Yes asserts in non-product debug.
-      if (is_debug && !dart_force_product) {
+      # if (is_debug && !dart_force_product) {
+      if (build_cfg.enable_asserts) {
         args += [ "--enable_asserts" ]
       }
       args += [ rebase_path(_kernel_path, root_build_dir) ]

@@ -74,6 +74,10 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     Type: path
 #     Default: "."
 #
+#   build_cfg (optional)
+#     Specifies the parameters for building the component.
+#     See //build/dart/dart_build_config.gni for predefined configs.
+#
 #  deps
 #  testonly
 #  visibility
@@ -86,14 +90,13 @@ template("dart_component") {
     _component_deps += invoker.deps
   }
 
-  _product_suffix = ""
-  if (dart_force_product) {
-    _product_suffix = "_product"
+  if (defined(invoker.build_cfg)) {
+    _build_cfg = invoker.build_cfg
+  } else {
+    _build_cfg = dart_default_build_cfg
   }
 
-  _runtime_meta =
-      "//build/dart/meta/${dart_compilation_mode}${_product_suffix}_runtime"
-  _component_deps += [ "//topaz/runtime/dart_runner:dart_${dart_compilation_mode}${_product_suffix}_runner" ]
+  _component_deps += [ _build_cfg.runner_dep ]
 
   if (defined(invoker.main_dart)) {
     _main_dart = invoker.main_dart
@@ -109,11 +112,8 @@ template("dart_component") {
                              "main_dart",
                            ])
     deps = _component_deps
-
     main_dart = _main_dart
-
-    runtime_meta = _runtime_meta
-    platform_name = dart_platform_name
+    build_cfg = _build_cfg
 
     generate_asset_manifest = false
   }

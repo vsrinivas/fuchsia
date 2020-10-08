@@ -27,8 +27,8 @@ compilation mode based on the following:
 - non-product AOT if release
 - product AOT if dart_force_product == true
 
-The compilation mode can be set explicity as a gn arge by setting the
-`dart_compilation_mode` variable.
+The compilation mode can be set explicity as a gn arg by setting the
+`dart_default_build_cfg` variable.
 
 Product mode can be set by setting the `dart_force_product` variable to true.
 

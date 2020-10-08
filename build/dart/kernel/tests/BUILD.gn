@@ -24,6 +24,8 @@ dart_package_config("package_config") {
 
 dart_kernel2("verify_dart_kernel_flutter") {
   platform_name = flutter_platform_name
+  is_aot = false
+  is_product = true
 
   _packages_path_output = get_target_outputs(":package_config")
   packages_path = _packages_path_output[0]

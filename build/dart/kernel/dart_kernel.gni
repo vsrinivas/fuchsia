@@ -78,6 +78,12 @@ template("_convert_kernel_manifest") {
 #  main_package (required)
 #    The name of the package which contains main.
 #
+#  product (required)
+#    Whether this should be built with the product runner.
+#
+#  is_aot required)
+#    Whether this kernel is an aot build.
+#
 #  generate_manifest (optional)
 #    Whether the compiler should generate a kernel manifest containing the list
 #    of partial dill files in JIT builds. This flag is ignored in aot builds
@@ -105,6 +111,8 @@ template("dart_kernel2") {
          "dart_kernel() requires the path to the package config")
   assert(defined(invoker.main_dart), "dart_kernel() requires main_dart")
   assert(defined(invoker.main_package), "dart_kernel() requires main_package")
+  assert(defined(invoker.product), "dart_kernel() requires product")
+  assert(defined(invoker.is_aot), "dart_kernel() requires is_aot")
 
   if (defined(invoker.kernel_target_name)) {
     _kernel_target_name = invoker.kernel_target_name
@@ -119,7 +127,7 @@ template("dart_kernel2") {
   }
 
   _generate_manifest = false
-  if (dart_compilation_mode == "aot") {
+  if (invoker.is_aot) {
     not_needed(invoker, [ "generate_manifest" ])
   } else {
     if (defined(invoker.generate_manifest) && invoker.generate_manifest) {
@@ -231,7 +239,7 @@ template("dart_kernel2") {
       args += [ "--no-embed-sources" ]
     }
 
-    if (dart_compilation_mode == "aot") {
+    if (invoker.is_aot) {
       args += [
         "--aot",
         "--tfa",
@@ -240,14 +248,12 @@ template("dart_kernel2") {
       args += [ "--no-link-platform" ]
     }
 
-    if (dart_force_product) {
+    if (invoker.product) {
       # Setting this flag in a non-product release build for AOT (a "profile"
       # build) causes the vm service isolate code to be tree-shaken from an app.
       # See the pragma on the entrypoint here:
       #
-      # https://github.com/dart-lang/sdk/blob/master/runtime/bin/vmservice/vmservice_io.dart#L240
-      #
-      # Also, this define excludes debugging and profiling code from Flutter.
+      # This define excludes debugging and profiling code from Flutter.
       args += [ "-Ddart.vm.product=true" ]
     } else {
       if (!is_debug) {

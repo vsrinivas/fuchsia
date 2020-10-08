@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/config.gni")  # For dart_force_product
 import("//build/dart/dart.gni")
 import("//build/dart/dart_library.gni")
+import("//build/flutter/config.gni")
 import("//build/flutter/internal/flutter_dart_component.gni")
 
 # Defines a Flutter component which can be used in a fuchsia package
@@ -87,6 +87,10 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     Type: boolean
 #     Default: false
 #
+#   build_cfg (optional)
+#     Specifies the parameters for building the component.
+#     See //build/flutter/flutter_build_config.gni for predefined configs.
+#
 #  deps
 #  testonly
 #  visibility
@@ -98,14 +102,13 @@ template("flutter_component") {
     _component_deps += invoker.deps
   }
 
-  _product_suffix = ""
-  if (dart_force_product) {
-    _product_suffix = "_product"
+  if (defined(invoker.build_cfg)) {
+    _build_cfg = invoker.build_cfg
+  } else {
+    _build_cfg = flutter_default_build_cfg
   }
 
-  _runtime_meta =
-      "//build/flutter/meta/${dart_compilation_mode}${_product_suffix}_runtime"
-  _component_deps += [ "//topaz/runtime/flutter_runner:flutter_${dart_compilation_mode}${_product_suffix}_runner" ]
+  _component_deps += [ _build_cfg.runner_dep ]
 
   if (defined(invoker.main_package)) {
     _main_package = invoker.main_package
@@ -122,7 +125,7 @@ template("flutter_component") {
   }
 
   _flutter_driver_extendable = false
-  if (dart_compilation_mode == "aot") {
+  if (_build_cfg.is_aot) {
     not_needed(invoker, [ "flutter_driver_extendable" ])
   } else if (defined(invoker.flutter_driver_extendable)) {
     # flutter driver is only available to JIT builds
@@ -205,9 +208,8 @@ template("flutter_component") {
     main_dart = _main_dart
     main_package = _main_package
 
-    runtime_meta = _runtime_meta
-    platform_name = flutter_platform_name
-
     generate_asset_manifest = true
+
+    build_cfg = _build_cfg
   }
 }
