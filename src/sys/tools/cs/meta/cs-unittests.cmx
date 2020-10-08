@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/cs_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

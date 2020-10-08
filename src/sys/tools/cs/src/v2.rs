@@ -13,23 +13,45 @@ use {
 static SPACER: &str = "  ";
 static IO_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
 
-async fn get_file_names(path: String) -> Result<Vec<String>, files_async::Error> {
-    let dir = directory::open_in_namespace(&path, io_util::OPEN_RIGHT_READABLE).unwrap();
+async fn get_file_names(path: &str) -> Result<Vec<String>, files_async::Error> {
+    let dir = directory::open_in_namespace(path, io_util::OPEN_RIGHT_READABLE).unwrap();
     let result = readdir_with_timeout(&dir, IO_TIMEOUT).await;
     result.map(|entries| entries.iter().map(|entry| entry.name.clone()).collect())
 }
 
-async fn get_file(path: String) -> Result<String, file::ReadNamedError> {
-    file::read_in_namespace_to_string_with_timeout(&path, IO_TIMEOUT).await
+async fn get_file(path: &str) -> Result<String, file::ReadNamedError> {
+    file::read_in_namespace_to_string_with_timeout(path, IO_TIMEOUT).await
 }
 
-async fn get_services(path: String) -> Vec<String> {
+async fn get_services(path: &str) -> Vec<String> {
     let full_path = format!("{}/svc", path);
-    let result = get_file_names(full_path).await;
+    let result = get_file_names(&full_path).await;
     match result {
         Ok(entries) => entries,
         Err(_) => vec![],
     }
+}
+
+async fn get_exposed_capabilities(path: &str) -> Vec<String> {
+    // TODO(56604): The svc/ search is for backwards compatibility with path-based capabilities.
+    // Remove once they are no longer in use.
+    let mut results = vec![];
+    for path in &[path, &format!("{}/svc", path)] {
+        let mut next = match get_file_names(path).await {
+            Ok(entries) => entries,
+            Err(_) => vec![],
+        };
+        results.append(&mut next);
+    }
+    let mut i = 0;
+    while i < results.len() {
+        if results[i] == "svc" {
+            results.remove(i);
+        } else {
+            i += 1;
+        }
+    }
+    results
 }
 
 fn generate_services(services_type: &str, services: &Vec<String>, lines: &mut Vec<String>) {
@@ -47,7 +69,7 @@ pub struct V2Component {
     children: Vec<Self>,
     in_services: Vec<String>,
     out_services: Vec<String>,
-    exposed_services: Vec<String>,
+    exposed_capabilities: Vec<String>,
     appmgr_root_v1_realm: Option<V1Realm>,
 }
 
@@ -62,21 +84,22 @@ impl V2Component {
             let id_path = format!("{}/id", hub_path);
             let component_type_path = format!("{}/component_type", hub_path);
 
-            let url = get_file(url_path).await.expect("Could not read url from hub");
-            let id = get_file(id_path).await.expect("Could not read id from hub");
-            let component_type: String = get_file(component_type_path)
+            let url = get_file(&url_path).await.expect("Could not read url from hub");
+            let id = get_file(&id_path).await.expect("Could not read id from hub");
+            let component_type: String = get_file(&component_type_path)
                 .await
                 .expect("Could not read component_type from hub");
 
             let exec_path = format!("{}/exec", hub_path);
-            let in_services = get_services(format!("{}/in", exec_path)).await;
-            let out_services = get_services(format!("{}/out", exec_path)).await;
-            let exposed_services = get_services(format!("{}/expose", exec_path)).await;
+            let in_services = get_services(&format!("{}/in", exec_path)).await;
+            let out_services = get_services(&format!("{}/out", exec_path)).await;
+            let exposed_capabilities =
+                get_exposed_capabilities(&format!("{}/expose", exec_path)).await;
 
             // Recurse on the children
             let child_path = format!("{}/children", hub_path);
             let child_names =
-                get_file_names(child_path).await.expect("Could not get children from hub");
+                get_file_names(&child_path).await.expect("Could not get children from hub");
             let mut children: Vec<Self> = vec![];
             for child_name in child_names {
                 let path = format!("{}/children/{}", hub_path, child_name);
@@ -102,7 +125,7 @@ impl V2Component {
                 children,
                 in_services,
                 out_services,
-                exposed_services,
+                exposed_capabilities,
                 appmgr_root_v1_realm,
             }
         }
@@ -143,7 +166,7 @@ impl V2Component {
             lines.push(moniker.clone());
             lines.push(format!("- URL: {}", self.url));
             lines.push(format!("- Type: v2 {} component", self.component_type));
-            generate_services("Exposed Services", &self.exposed_services, lines);
+            generate_services("Exposed Capabilities", &self.exposed_capabilities, lines);
             generate_services("Incoming Services", &self.in_services, lines);
             generate_services("Outgoing Services", &self.out_services, lines);
             lines.push("".to_string());
@@ -159,5 +182,29 @@ impl V2Component {
         if let Some(v1_realm) = &self.appmgr_root_v1_realm {
             v1_realm.generate_details_recursive(&prefix, lines, url_filter);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use {
+        std::fs::{self, File},
+        tempfile::TempDir,
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_exposed_capabilities() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+        File::create(root.join("fuchsia.foo")).unwrap();
+        File::create(root.join("hub")).unwrap();
+        fs::create_dir(root.join("svc")).unwrap();
+        File::create(root.join("svc").join("fuchsia.bar")).unwrap();
+        let contents = get_exposed_capabilities(root.to_str().unwrap()).await;
+        assert_eq!(
+            contents,
+            vec!["fuchsia.foo".to_string(), "hub".to_string(), "fuchsia.bar".to_string()]
+        );
     }
 }

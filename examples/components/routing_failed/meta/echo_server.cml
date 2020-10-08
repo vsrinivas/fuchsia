@@ -8,12 +8,15 @@
     program: {
         binary: "bin/routing_failed_echo_server",
     },
+    capabilities: [
+        { protocol: "fidl.examples.routing.echo.Echo" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "self",
         },
     ],

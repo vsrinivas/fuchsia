@@ -1,5 +1,3 @@
-// Component manifest for the `indef_echo_client` example program, which repeatedly
-// sends a message to the Echo service.
 {
     program: {
         binary: "bin/indef_echo_client",
@@ -10,7 +8,7 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fidl.examples.routing.echo.Echo" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

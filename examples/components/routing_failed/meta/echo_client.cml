@@ -16,9 +16,9 @@
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fidl.examples.routing.echo.Echo",
-                "/svc/fidl.examples.routing.echo.Echo2",
-                "/svc/fuchsia.logger.LogSink",
+                "fidl.examples.routing.echo.Echo",
+                "fidl.examples.routing.echo.Echo2",
+                "fuchsia.logger.LogSink",
             ],
         },
     ],

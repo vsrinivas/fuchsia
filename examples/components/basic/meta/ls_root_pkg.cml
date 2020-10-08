@@ -5,10 +5,10 @@
     use: [
         { runner: "elf" },
         {
-            directory: "/pkg",
-            as: "/root_pkg",
+            directory: "pkg",
             rights: [ "rw*" ],
+            path: "/root_pkg",
         },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

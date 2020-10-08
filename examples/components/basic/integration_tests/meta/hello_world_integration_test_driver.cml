@@ -8,24 +8,27 @@
             url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello_world.cm",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
-        { protocol: "/svc/fuchsia.logger.Log" },
+        { protocol: "fuchsia.logger.Log" },
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#hello_world" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

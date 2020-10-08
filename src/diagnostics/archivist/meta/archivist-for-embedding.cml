@@ -8,24 +8,38 @@
             "/pkg/data/embedding-config.json",
         ],
     },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.sys2.EventSource",
+            protocol: "fuchsia.sys2.EventSource",
             from: "framework",
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.logger.Log",
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
             from: "self",
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: [
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
+            ],
             from: "self",
         },
     ],

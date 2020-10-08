@@ -12,8 +12,8 @@
     offer: [
         {
             protocol: [
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
             ],
             from: "#archivist",
             to: [ "#driver" ],
@@ -21,7 +21,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#driver",
         },
     ],

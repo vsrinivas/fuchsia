@@ -10,7 +10,7 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fidl.examples.routing.echo.Echo" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

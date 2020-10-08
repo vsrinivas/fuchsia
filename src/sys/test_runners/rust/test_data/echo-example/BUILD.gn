@@ -36,6 +36,6 @@ group("echo-example") {
   public_deps = [
     ":echo-test-realm",
     ":echo_rust_client_component",
-    "//src/sys/test_runners:echo_server",
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }

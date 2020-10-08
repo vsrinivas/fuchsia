@@ -4,16 +4,19 @@
     program: {
         binary: "bin/echo_server",
     },
+    capabilities: [
+        { protocol: "fidl.examples.routing.echo.Echo" },
+    ],
     use: [
         { runner: "elf" },
     ],
     expose: [
         {
-            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "self",
         },
         {
-            directory: "/hub",
+            directory: "hub",
             from: "framework",
         },
     ],

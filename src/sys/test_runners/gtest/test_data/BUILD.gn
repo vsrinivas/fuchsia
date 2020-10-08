@@ -129,7 +129,7 @@ fuchsia_package("gtest-runner-example-tests") {
     ":empty_test_component",
     ":gtest_runner_sample_tests_component",
     ":huge_gtest_component",
-    "//src/sys/test_runners:echo_server",
+    "//examples/components/routing/echo_server:echo_server_component",
     "//src/sys/test_runners:echo_server_for_concurrency_test",
   ]
 }
