@@ -575,11 +575,11 @@ class RegionAllocator {
   // are possible by acquiring the allocation lock before calling the user provided
   // callback.
   template <typename WalkCallback>
-  void WalkAvailableRegions(const WalkCallback&& cb) const __TA_EXCLUDES(alloc_lock_) {
+  void WalkAvailableRegions(WalkCallback&& cb) const __TA_EXCLUDES(alloc_lock_) {
     fbl::AutoLock alloc_lock(&alloc_lock_);
     for (const auto& region : avail_regions_by_base_) {
       // The forward permits use of cb's operator() const && if cb has that.
-      if (!std::forward<const WalkCallback>(cb)(&region)) {
+      if (!std::forward<WalkCallback>(cb)(&region)) {
         break;
       }
     }
