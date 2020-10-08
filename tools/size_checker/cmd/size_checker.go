@@ -550,16 +550,25 @@ See //tools/size_checker for more details.`)
 	for _, componentName := range componentNames {
 		var componentSize = outputSizes[componentName]
 		var remainingBudget = componentSize.Budget - componentSize.Size
-		var colorCharacter = "\033[32m"
-		if componentSize.Size > componentSize.Budget {
-			overBudget = true
-			colorCharacter = "\033[31m"
+		var startColorCharacter string
+		var endColorCharacter string
+
+		if showBudgetOnly {
+			if componentSize.Size > componentSize.Budget {
+				overBudget = true
+				// Red
+				startColorCharacter = "\033[31m"
+			} else {
+				// Green
+				startColorCharacter = "\033[32m"
+			}
+			endColorCharacter = "\033[0m"
 		}
 		totalSize += componentSize.Size
 		totalBudget += componentSize.Budget
 		totalRemaining += remainingBudget
 		report.WriteString(
-			fmt.Sprintf("%-40s | %10s | %10s | %s%10s\033[0m\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), colorCharacter, formatSize(remainingBudget)))
+			fmt.Sprintf("%-40s | %10s | %10s | %s%10s%s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter))
 		if !showBudgetOnly {
 			for _, n := range componentSize.nodes {
 				report.WriteString(n.storageBreakdown(1))
