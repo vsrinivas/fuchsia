@@ -193,13 +193,15 @@ namespace i915 {
 bool Controller::CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b) {
   if (a.is_hdmi != b.is_hdmi) {
     return false;
-  } else if (a.is_hdmi) {
+  }
+
+  if (a.is_hdmi) {
     return a.hdmi.dco_int == b.hdmi.dco_int && a.hdmi.dco_frac == b.hdmi.dco_frac &&
            a.hdmi.q == b.hdmi.q && a.hdmi.q_mode == b.hdmi.q_mode && a.hdmi.k == b.hdmi.k &&
            a.hdmi.p == b.hdmi.p && a.hdmi.cf == b.hdmi.cf;
-  } else {
-    return a.dp_rate == b.dp_rate;
   }
+
+  return a.dp_rate == b.dp_rate;
 }
 
 void Controller::EnableBacklight(bool enable) {
