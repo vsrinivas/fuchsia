@@ -96,7 +96,7 @@ struct LogMessage {
     zx.time time;
     int32 severity;
 
-    /// See //zircon/system/ulib/syslog/include/syslog/wire_format.h. As messages
+    /// See //zircon/system/ulib/syslog/include/lib/syslog/wire_format.h. As messages
     /// can be served out of order, this should only be logged if more than last
     /// count.
     uint32 dropped_logs;
@@ -135,7 +135,7 @@ protocol Log {
 protocol LogSink {
     /// Send this socket to be drained.
     ///
-    /// See //zircon/system/ulib/syslog/include/syslog/wire_format.h for what is expected to be
+    /// See //zircon/system/ulib/syslog/include/lib/syslog/wire_format.h for what is expected to be
     /// received over the socket.
     Connect(zx.handle:SOCKET socket);
 
