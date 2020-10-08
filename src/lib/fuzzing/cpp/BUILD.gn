@@ -4,7 +4,6 @@
 
 source_set("fuzzer_test") {
   testonly = true
-  public = [ "fuzzer_test.h" ]
   sources = [ "fuzzer_test.cc" ]
   deps = [
     "//src/lib/files",
