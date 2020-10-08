@@ -130,6 +130,7 @@ void SimInterface::OnAuthInd(const wlanif_auth_ind_t* resp) {
 }
 
 void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+  ZX_ASSERT(if_impl_ops_);
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kAuthenticating);
   ZX_ASSERT(!memcmp(assoc_ctx_.bssid.byte, resp->peer_sta_address, ETH_ALEN));
 
@@ -168,6 +169,7 @@ void SimInterface::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
 }
 
 void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
+  ZX_ASSERT(if_impl_ops_);
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kJoining);
 
   stats_.join_results.push_back(resp->result_code);
@@ -222,6 +224,7 @@ void SimInterface::OnStopConf(const wlanif_stop_confirm_t* resp) {
 void SimInterface::StopInterface() { if_impl_ops_->stop(if_impl_ctx_); }
 
 void SimInterface::Query(wlanif_query_info_t* out_info) {
+  ZX_ASSERT(if_impl_ops_);
   if_impl_ops_->query(if_impl_ctx_, out_info);
 }
 
@@ -233,6 +236,7 @@ void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
 
 void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
                               const wlan_channel_t& channel) {
+  ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
 
@@ -270,6 +274,7 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
 }
 
 void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, wlan_deauth_reason_t reason) {
+  ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
 
@@ -280,6 +285,7 @@ void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, wlan_deauth_
 }
 
 void SimInterface::StartScan(uint64_t txn_id, bool active) {
+  ZX_ASSERT(if_impl_ops_);
   wlan_scan_type_t scan_type = active ? WLAN_SCAN_TYPE_ACTIVE : WLAN_SCAN_TYPE_PASSIVE;
   uint32_t dwell_time = active ? kDefaultActiveScanDwellTimeMs : kDefaultPassiveScanDwellTimeMs;
   size_t num_channels = kDefaultScanChannels.size();
@@ -326,6 +332,7 @@ const std::list<wlanif_bss_description_t>* SimInterface::ScanResultBssList(uint6
 
 void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& channel,
                                uint32_t beacon_period, uint32_t dtim_period) {
+  ZX_ASSERT(if_impl_ops_);
   // This should only be performed on an AP interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
 
@@ -353,6 +360,7 @@ void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& ch
 }
 
 void SimInterface::StopSoftAp() {
+  ZX_ASSERT(if_impl_ops_);
   // This should only be performed on an AP interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
 
@@ -368,6 +376,7 @@ void SimInterface::StopSoftAp() {
 }
 
 zx_status_t SimInterface::SetMulticastPromisc(bool enable) {
+  ZX_ASSERT(if_impl_ops_);
   return if_impl_ops_->set_multicast_promisc(if_impl_ctx_, enable);
 }
 
@@ -383,9 +392,9 @@ SimTest::SimTest() {
 
 SimTest::~SimTest() {
   // Clean the ifaces created in test but not deleted.
-  for (auto id : iface_id_set_) {
-    if (device_->WlanphyImplDestroyIface(id) != ZX_OK) {
-      BRCMF_ERR("Clean iface fail.\n");
+  for (auto iface : iface_id_set_) {
+    if (device_->WlanphyImplDestroyIface(iface) != ZX_OK) {
+      BRCMF_ERR("Delete iface: %d failed", iface);
     }
   }
   // Don't have to erase the iface ids here.
@@ -464,13 +473,20 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
   return ZX_OK;
 }
 
-void SimTest::DeleteInterface(uint16_t iface_id) {
-  auto iter = iface_id_set_.find(iface_id);
+void SimTest::DeleteInterface(SimInterface* ifc) {
+  auto iter = iface_id_set_.find(ifc->iface_id_);
   if (iter == iface_id_set_.end()) {
-    BRCMF_ERR("Iface id does not exist.\n");
+    BRCMF_ERR("Iface id: %d does not exist", ifc->iface_id_);
     return;
   }
+
+  BRCMF_DBG(SIM, "Del IF: %d", ifc->iface_id_);
   ASSERT_EQ(device_->WlanphyImplDestroyIface(*iter), ZX_OK);
+
+  // Once the interface data structures have been deleted, our pointers are no longer valid.
+  ifc->if_impl_ctx_ = nullptr;
+  ifc->if_impl_ops_ = nullptr;
+
   iface_id_set_.erase(iter);
 }
 

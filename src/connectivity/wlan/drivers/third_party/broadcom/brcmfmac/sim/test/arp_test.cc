@@ -157,7 +157,7 @@ void ArpTest::VerifyAssoc() {
 
 void ArpTest::CleanupApInterface() {
   sim_ifc_.StopSoftAp();
-  DeleteInterface(sim_ifc_.iface_id_);
+  DeleteInterface(&sim_ifc_);
 }
 
 void ArpTest::Tx(const std::vector<uint8_t>& ethFrame) {

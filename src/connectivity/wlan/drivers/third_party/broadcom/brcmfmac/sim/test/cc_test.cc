@@ -36,7 +36,7 @@ void CountryCodeTest::CreateInterface() {
   ASSERT_EQ(status, ZX_OK);
 }
 
-void CountryCodeTest::DeleteInterface() { SimTest::DeleteInterface(client_ifc_.iface_id_); }
+void CountryCodeTest::DeleteInterface() { SimTest::DeleteInterface(&client_ifc_); }
 
 uint32_t CountryCodeTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 

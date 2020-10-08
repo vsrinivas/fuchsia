@@ -134,7 +134,7 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
 
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
-  DeleteInterface(client_ifc_);
+  DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), 1U);
 
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid),
@@ -145,7 +145,7 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   softap_ifc_.GetMacAddr(&soft_ap_mac);
   EXPECT_EQ(soft_ap_mac, kDefaultBssid);
 
-  DeleteInterface(softap_ifc_);
+  DeleteInterface(&softap_ifc_);
   EXPECT_EQ(DeviceCount(), 1U);
 }
 
@@ -161,7 +161,7 @@ TEST_F(DynamicIfTest, CreateApWithSameMacAsClient) {
   EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, client_mac),
             ZX_ERR_ALREADY_EXISTS);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
-  DeleteInterface(client_ifc_);
+  DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
@@ -179,7 +179,7 @@ TEST_F(DynamicIfTest, CreateClientWithPreAllocMac) {
   EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, pre_set_mac),
             ZX_OK);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
-  DeleteInterface(client_ifc_);
+  DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
@@ -365,7 +365,7 @@ TEST_F(DynamicIfTest, CreateClientWithCustomMac) {
   EXPECT_EQ(retrieved_mac, kFakeMac);
 
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
-  DeleteInterface(client_ifc_);
+  DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
@@ -388,7 +388,7 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
   EXPECT_EQ(retrieved_mac, kFakeMac);
 
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
-  DeleteInterface(client_ifc_);
+  DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 
   // Create a client without a custom MAC address
@@ -398,7 +398,7 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
   EXPECT_EQ(retrieved_mac, pre_set_mac);
 
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
-  DeleteInterface(client_ifc_);
+  DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
@@ -408,8 +408,8 @@ TEST_F(DynamicIfTest, DualInterfaces) {
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(3));
 
-  DeleteInterface(client_ifc_);
-  DeleteInterface(softap_ifc_);
+  DeleteInterface(&client_ifc_);
+  DeleteInterface(&softap_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 

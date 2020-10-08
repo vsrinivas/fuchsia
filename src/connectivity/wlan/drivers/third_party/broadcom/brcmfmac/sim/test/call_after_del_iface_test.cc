@@ -22,8 +22,11 @@ TEST_F(SimTest, SetMulticastPromiscClient) {
   ASSERT_EQ(dev_mgr_->DeviceAdd(device->as_device(), nullptr, &fake_child), ZX_OK);
 
   EXPECT_EQ(client_ifc.SetMulticastPromisc(true), ZX_OK);
-  DeleteInterface(client_ifc);
-  EXPECT_NE(client_ifc.SetMulticastPromisc(true), ZX_OK);
+  // Save off if_impl_ctx and if_impl_ops as DeleteInterface() will reset client_ifc_.
+  void* if_impl_ctx = client_ifc.if_impl_ctx_;
+  wlanif_impl_protocol_ops_t if_impl_ops = *client_ifc.if_impl_ops_;
+  DeleteInterface(&client_ifc);
+  EXPECT_NE(if_impl_ops.set_multicast_promisc(if_impl_ctx, true), ZX_OK);
 
   dev_mgr_->DeviceAsyncRemove(fake_child);
 }
@@ -43,8 +46,12 @@ TEST_F(SimTest, SetMulticastPromiscAP) {
   ASSERT_EQ(dev_mgr_->DeviceAdd(device->as_device(), nullptr, &fake_child), ZX_OK);
 
   EXPECT_EQ(ap_ifc.SetMulticastPromisc(true), ZX_OK);
-  DeleteInterface(ap_ifc);
-  EXPECT_NE(ap_ifc.SetMulticastPromisc(true), ZX_OK);
+  // Save off if_impl_ctx and if_impl_ops as DeleteInterface() will reset client_ifc_.
+  void* if_impl_ctx = ap_ifc.if_impl_ctx_;
+  wlanif_impl_protocol_ops_t if_impl_ops = *ap_ifc.if_impl_ops_;
+  DeleteInterface(&ap_ifc);
+  // Ensure any call into the IF fails after it has been deleted.
+  EXPECT_NE(if_impl_ops.set_multicast_promisc(if_impl_ctx, true), ZX_OK);
 
   dev_mgr_->DeviceAsyncRemove(fake_child);
 }
@@ -64,9 +71,14 @@ TEST_F(SimTest, StopAP) {
   zx_device_t* fake_child = nullptr;
   ASSERT_EQ(dev_mgr_->DeviceAdd(device->as_device(), nullptr, &fake_child), ZX_OK);
 
-  DeleteInterface(ap_ifc);
-  // This should safely handle the deleted iface.
-  ap_ifc.StopSoftAp();
+  // Save off if_impl_ctx and if_impl_ops as DeleteInterface() will reset ap_ifc.
+  void* if_impl_ctx = ap_ifc.if_impl_ctx_;
+  wlanif_impl_protocol_ops_t if_impl_ops = *ap_ifc.if_impl_ops_;
+  DeleteInterface(&ap_ifc);
+  // Delete should have reset the IF's if_impl_ctx
+  ASSERT_EQ(ap_ifc.if_impl_ctx_, nullptr);
+  // Ensure any call into the IF fails after it has been deleted.
+  EXPECT_NE(if_impl_ops.set_multicast_promisc(if_impl_ctx, true), ZX_OK);
 
   dev_mgr_->DeviceAsyncRemove(fake_child);
 }
@@ -85,7 +97,7 @@ TEST_F(SimTest, ScanResultAfterIfaceStop) {
   // The scan result will arrive after the iface is torn down.
   env_->Run(zx::sec(1));  // This should be a no-op, not a crash.
 
-  DeleteInterface(client_ifc);
+  DeleteInterface(&client_ifc);
 }
 
 }  // namespace wlan::brcmfmac

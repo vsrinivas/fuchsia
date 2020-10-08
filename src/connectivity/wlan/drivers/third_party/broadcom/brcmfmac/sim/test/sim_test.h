@@ -75,7 +75,9 @@ class SimInterface {
 
   zx_status_t Init(std::shared_ptr<simulation::Environment> env, wlan_info_mac_role_t role);
 
-  virtual ~SimInterface() {
+  ~SimInterface() {
+    if (if_impl_ops_)
+      if_impl_ops_->stop(if_impl_ctx_);
     if (ch_sme_ != ZX_HANDLE_INVALID) {
       zx_handle_close(ch_sme_);
     }
@@ -146,8 +148,8 @@ class SimInterface {
   wlanif_impl_ifc_protocol default_ifc_ = {.ops = &default_sme_dispatch_tbl_, .ctx = this};
 
   // This provides our DDK (wlanif-impl) API into the interface
-  void* if_impl_ctx_;
-  wlanif_impl_protocol_ops_t* if_impl_ops_;
+  void* if_impl_ctx_ = nullptr;
+  wlanif_impl_protocol_ops_t* if_impl_ops_ = nullptr;
 
   // Unique identifier provided by the driver
   uint16_t iface_id_;
@@ -158,13 +160,13 @@ class SimInterface {
   zx_handle_t ch_mlme_ = ZX_HANDLE_INVALID;  // MLME-owned side
 
   // Current state of association
-  AssocContext assoc_ctx_;
+  AssocContext assoc_ctx_ = {};
 
   // Current state of soft AP
-  SoftApContext soft_ap_ctx_;
+  SoftApContext soft_ap_ctx_ = {};
 
   // Allows us to track individual operations
-  Stats stats_;
+  Stats stats_ = {};
 
  private:
   wlan_info_mac_role_t role_ = 0;
@@ -208,8 +210,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
       std::optional<common::MacAddr> mac_addr = std::nullopt);
 
   // Stop and delete a SimInterface
-  void DeleteInterface(uint16_t iface_id);
-  void DeleteInterface(const SimInterface& ifc) { DeleteInterface(ifc.iface_id_); }
+  void DeleteInterface(SimInterface* ifc);
 
   // Fake device manager
   std::unique_ptr<simulation::FakeDevMgr> dev_mgr_;

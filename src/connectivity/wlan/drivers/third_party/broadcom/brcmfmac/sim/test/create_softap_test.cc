@@ -135,7 +135,7 @@ void CreateSoftAPTest::CreateInterface() {
   ASSERT_EQ(status, ZX_OK);
 }
 
-void CreateSoftAPTest::DeleteInterface() { SimTest::DeleteInterface(softap_ifc_.iface_id_); }
+void CreateSoftAPTest::DeleteInterface() { SimTest::DeleteInterface(&softap_ifc_); }
 
 uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 

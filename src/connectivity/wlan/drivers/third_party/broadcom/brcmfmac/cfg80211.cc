@@ -531,7 +531,6 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
     return err;
   }
 
-  bcme_status_t fw_err = BCME_OK;
   struct brcmf_if* ifp;
   const char* iface_role_name;
 
@@ -582,36 +581,16 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       }
       ifp = brcmf_get_ifp(drvr, 0);
 
-      // Since a single IF is shared when operating with manufacturing FW, ensure
-      // AP mode is turned off when setting it up as Client (just in case it was
-      // previously operating as an AP.
       if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+        // Since a single IF is shared when operating with manufacturing FW, change
+        // IF type.
         err = brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT,
                                           nullptr);
         if (err != ZX_OK) {
           BRCMF_ERR("Unable to change iface to client");
           return err;
         }
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
-        if (err != ZX_OK) {
-          BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(err),
-                    brcmf_fil_get_errstr(fw_err));
-          return err;
-        }
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
-        if (err != ZX_OK) {
-          BRCMF_INFO("Cannot shut down AP: %s, fw err %s. AP may not have been started. Moving on",
-                     zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
-        }
-
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-        if (err != ZX_OK) {
-          BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(err),
-                    brcmf_fil_get_errstr(fw_err));
-          return err;
-        }
       }
-
       wdev = &drvr->iflist[bsscfgidx]->vif->wdev;
       wdev->iftype = req->role;
       ndev->sme_channel = zx::channel(req->sme_channel);
@@ -814,40 +793,6 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct brcmf_cfg80211_info* cfg,
 err_unarm:
   brcmf_cfg80211_disarm_vif_event(cfg);
   return err;
-}
-
-zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev) {
-  struct net_device* ndev = wdev->netdev;
-  struct brcmf_if* ifp = cfg_to_if(cfg);
-
-  /* vif event pending in firmware */
-  if (brcmf_cfg80211_vif_event_armed(cfg)) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-
-  if (ndev) {
-    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
-        cfg->escan_info.ifp == ndev_to_if(ndev)) {
-      brcmf_notify_escan_complete(cfg, ndev_to_if(ndev), true, true);
-    }
-
-    brcmf_enable_mpc(ifp, 1);
-  }
-
-  switch (wdev->iftype) {
-    case WLAN_INFO_MAC_ROLE_AP:
-      ndev->sme_channel.reset();
-      return brcmf_cfg80211_del_ap_iface(cfg, wdev);
-    case WLAN_INFO_MAC_ROLE_CLIENT:
-      // The default client iface 0 is always assumed to exist by the driver, and is never
-      // explicitly deleted.
-      ndev->sme_channel.reset();
-      ndev->needs_free_net_device = true;
-      brcmf_write_net_device_name(ndev, kPrimaryNetworkInterfaceName);
-      return ZX_OK;
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
 }
 
 static zx_status_t brcmf_dev_escan_set_randmac(struct brcmf_if* ifp) {
@@ -1584,6 +1529,12 @@ void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confi
 }
 
 void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping association callback");
+    return;
+  }
+
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   wlanif_assoc_confirm_t conf;
@@ -1593,13 +1544,7 @@ void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
   conf.association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
   set_assoc_conf_wmm_param(cfg, &conf);
 
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping association callback");
-    return;
-  }
-
-  BRCMF_DBG(WLANIF, "Sending assoc result to SME. result: %" PRIu8 ", aid: %" PRIu16 "",
+  BRCMF_DBG(WLANIF, "Sending assoc result to SME. result: %" PRIu8 ", aid: %" PRIu16,
             conf.result_code, conf.association_id);
 
   wlanif_impl_ifc_assoc_conf(&ndev->if_proto, &conf);
@@ -1717,14 +1662,14 @@ done:
 }
 
 static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_address[ETH_ALEN]) {
-  wlanif_deauth_confirm_t resp;
-  memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
-
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth confirm callback");
     return;
   }
+
+  wlanif_deauth_confirm_t resp;
+  memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
 
   BRCMF_DBG(WLANIF, "Sending deauth confirm to SME. address: " MAC_FMT_STR "",
             MAC_FMT_ARGS(peer_sta_address));
@@ -1733,19 +1678,18 @@ static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_
 }
 
 static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
-  wlanif_disassoc_confirm_t resp;
-  resp.status = status;
-
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc confirm callback");
     return;
   }
 
+  wlanif_disassoc_confirm_t resp;
+  resp.status = status;
   BRCMF_DBG(WLANIF, "Sending disassoc confirm to SME. status: %" PRIu32 "", status);
-
   wlanif_impl_ifc_disassoc_conf(&ndev->if_proto, &resp);
 }
+
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   struct net_device* ndev = cfg_to_ndev(cfg);
   struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -1761,8 +1705,10 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
       brcmf_notify_disassoc(ndev, ZX_OK);
     }
   }
-  cfg->signal_report_timer->Stop();
-  ndev->stats = {};
+  if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    cfg->signal_report_timer->Stop();
+    ndev->stats = {};
+  }
 
   BRCMF_DBG(TRACE, "Exit");
 }
@@ -1792,6 +1738,14 @@ static zx_status_t brcmf_get_rssi_snr(net_device* ndev, int8_t* rssi_dbm, int8_t
 
 static void cfg80211_signal_ind(net_device* ndev) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
+  brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping signal report indication callback");
+    // Stop the timer
+    cfg->signal_report_timer->Stop();
+    return;
+  }
 
   // Send signal report indication only if client is in connected state
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
@@ -1803,16 +1757,10 @@ static void cfg80211_signal_ind(net_device* ndev) {
       // Store the value in ndev (dumped out when link goes down)
       ndev->last_known_rssi_dbm = rssi;
       ndev->last_known_snr_db = snr;
-      std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-      if (ndev->if_proto.ops == nullptr) {
-        BRCMF_DBG(WLANIF, "interface stopped -- skipping signal report indication callback");
-        return;
-      }
       wlanif_impl_ifc_signal_report(&ndev->if_proto, &signal_ind);
     }
-  } else {
+  } else if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
     // If client is not connected, stop the timer
-    brcmf_cfg80211_info* cfg = ifp->drvr->config;
     cfg->signal_report_timer->Stop();
   }
 }
@@ -2096,14 +2044,15 @@ void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, s
 #define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
-  THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), data,
-                                  std::min<size_t>(size, 64u),
-                                  "Data received (%zu bytes, max 64 shown):", size));
+
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping data recv");
     return;
   }
+  THROTTLE(10, BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(DATA), data,
+                                  std::min<size_t>(size, 64u),
+                                  "Data received (%zu bytes, max 64 shown):", size));
   // IEEE Std. 802.3-2015, 3.1.1
   const uint16_t eth_type = ((uint16_t*)(data))[6];
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
@@ -2264,7 +2213,6 @@ static void brcmf_iedump(uint8_t* ies, size_t total_len) {
 static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
                                      const uint8_t* bssid, uint16_t capability, uint16_t interval,
                                      uint8_t* ie, size_t ie_len, int16_t rssi_dbm) {
-  wlanif_scan_result_t result = {};
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping scan result callback");
@@ -2273,6 +2221,8 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   if (!ndev->scan_busy) {
     return;
   }
+  wlanif_scan_result_t result = {};
+
   result.txn_id = ndev->scan_txn_id;
   memcpy(result.bss.bssid, bssid, ETH_ALEN);
   brcmf_extract_ies(ie, ie_len, &result.bss);
@@ -2968,7 +2918,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
 
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 1, &fw_err);
   if (status != ZX_OK) {
-    BRCMF_ERR("setting AP mode failed %s, fw err %s", zx_status_get_string(status),
+    BRCMF_ERR("Set AP mode failed %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
     goto fail;
   }
@@ -3018,7 +2968,7 @@ fail:
 }
 
 // Returns an MLME result code (WLAN_STOP_RESULT_*)
-static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop_req_t* req) {
+static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   zx_status_t status;
   bcme_status_t fw_err = BCME_OK;
@@ -3064,6 +3014,14 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
     }
   }
 
+  // Disable AP mode in MFG build since the IF is shared.
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_ERR("Unset AP mode failed %s, fw err %s", zx_status_get_string(status),
+                brcmf_fil_get_errstr(fw_err));
+    }
+  }
   brcmf_vif_clear_mgmt_ies(ifp->vif);
   brcmf_configure_arp_nd_offload(ifp, true);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
@@ -3175,6 +3133,12 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
 // bss information, but otherwise wait until an ASSOCIATE.request is received to join so that we
 // have the negotiated RSNE.
 void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping join callback");
+    return;
+  }
+
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
   const wlanif_bss_description_t& sme_bss = req->selected_bss;
@@ -3192,11 +3156,6 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
     result.result_code = WLAN_JOIN_RESULT_INTERNAL_ERROR;
   }
 
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping join callback");
-    return;
-  }
   BRCMF_DBG(WLANIF, "Sending join confirm to SME. result: %s",
             result.result_code == WLAN_JOIN_RESULT_SUCCESS           ? "success"
             : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout"
@@ -3207,6 +3166,12 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
 }
 
 void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping auth callback");
+    return;
+  }
+
   struct brcmf_if* ifp = ndev_to_if(ndev);
   wlanif_auth_confirm_t response;
 
@@ -3239,11 +3204,6 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
     response.result_code = WLAN_AUTH_RESULT_SUCCESS;
   } else {
     response.result_code = WLAN_AUTH_RESULT_REJECTED;
-  }
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping auth callback");
-    return;
   }
   response.auth_type = req->auth_type;
   memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
@@ -3423,16 +3383,18 @@ void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req) {
 }
 
 void brcmf_if_start_conf(net_device* ndev, uint8_t result) {
-  wlanif_start_confirm_t start_conf = {.result_code = result};
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
+  // Stop the timer
   cfg->ap_start_timer->Stop();
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping AP start callback");
     return;
   }
+
+  wlanif_start_confirm_t start_conf = {.result_code = result};
   BRCMF_DBG(WLANIF, "Sending AP start confirm to SME. result_code: %s",
             result == WLAN_START_RESULT_SUCCESS                         ? "success"
             : result == WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED ? "already started"
@@ -3481,14 +3443,15 @@ void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req) {
 
 /* Stop AP mode */
 void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req) {
-  BRCMF_DBG(WLANIF, "Stop AP request from SME. ssid: %.*s", req->ssid.len, req->ssid.data);
-
-  uint8_t result_code = brcmf_cfg80211_stop_ap(ndev, req);
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping AP stop callback");
     return;
   }
+
+  BRCMF_DBG(WLANIF, "Stop AP request from SME. ssid: %.*s", req->ssid.len, req->ssid.data);
+
+  uint8_t result_code = brcmf_cfg80211_stop_ap(ndev);
   wlanif_stop_confirm_t result = {.result_code = result_code};
 
   BRCMF_DBG(WLANIF, "Sending AP stop confirm to SME. result_code: %s",
@@ -3519,6 +3482,12 @@ void brcmf_if_del_keys_req(net_device* ndev, const wlanif_del_keys_req_t* req) {
 }
 
 void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping EAPOL xmit callback");
+    return;
+  }
+
   BRCMF_DBG(WLANIF, "EAPOL xmit request from SME. data_len: %zu", req->data_count);
 
   wlanif_eapol_confirm_t confirm;
@@ -3538,11 +3507,6 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
   brcmf_netdev_start_xmit(ndev, std::move(packet));
   confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping EAPOL xmit callback");
-    return;
-  }
   BRCMF_DBG(WLANIF, "Sending EAPOL xmit confirm to SME. result: %s",
             confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
             : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure"
@@ -4204,6 +4168,12 @@ zx_status_t brcmf_get_histograms_report(brcmf_if* ifp, histograms_report_t* out_
 }  // namespace
 
 void brcmf_if_stats_query_req(net_device* ndev) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping stats query response");
+    return;
+  }
+
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
   wlanif_stats_query_response_t response = {};
   struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -4211,19 +4181,12 @@ void brcmf_if_stats_query_req(net_device* ndev) {
 
   BRCMF_DBG(TRACE, "Enter");
 
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping stats query response");
-    return;
+  response.stats.mlme_stats_list = nullptr;
+  response.stats.mlme_stats_count = 0;
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    // MFG builds do not support many of the stats iovars.
+    goto send_resp;
   }
-
-  // Will hold per-antenna samples for each histogram type.
-  std::vector<wlanif_hist_bucket_t> noise_floor_samples, rssi_samples, rx_rate_index_samples,
-      snr_samples;
-  std::vector<wlanif_noise_floor_histogram_t> noise_floor_histograms;
-  std::vector<wlanif_rssi_histogram_t> rssi_histograms;
-  std::vector<wlanif_rx_rate_index_histogram_t> rx_rate_index_histograms;
-  std::vector<wlanif_snr_histogram_t> snr_histograms;
 
   // TODO(cphoenix): Fill in all the stats fields.
   switch (wdev->iftype) {
@@ -4231,6 +4194,13 @@ void brcmf_if_stats_query_req(net_device* ndev) {
       zx_status_t status;
       brcmf_pktcnt_le pktcnt;
       wlanif_mlme_stats_t* mlme_stats;
+      // Will hold per-antenna samples for each histogram type.
+      std::vector<wlanif_hist_bucket_t> noise_floor_samples, rssi_samples, rx_rate_index_samples,
+          snr_samples;
+      std::vector<wlanif_noise_floor_histogram_t> noise_floor_histograms;
+      std::vector<wlanif_rssi_histogram_t> rssi_histograms;
+      std::vector<wlanif_rx_rate_index_histogram_t> rx_rate_index_histograms;
+      std::vector<wlanif_snr_histogram_t> snr_histograms;
 
       mlme_stats = &ndev->stats.mlme_stats;
       *mlme_stats = {};
@@ -4272,9 +4242,6 @@ void brcmf_if_stats_query_req(net_device* ndev) {
           mlme_stats->stats.client_mlme_stats.tx_frame.drop.count = pktcnt.tx_bad_pkt;
           mlme_stats->stats.client_mlme_stats.tx_frame.drop.name = "Bad";
         }
-        // Pass on the data rssi histogram (populated in fwsignal.cc)
-        // mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_list =
-        //     ndev->stats.rssi_buckets.data();
         mlme_stats->stats.client_mlme_stats.assoc_data_rssi.hist_count = 0;
 
         // Skip wlanif detailed histogram collection if feature is not enabled.
@@ -4319,23 +4286,22 @@ void brcmf_if_stats_query_req(net_device* ndev) {
             rx_rate_index_histograms.data();
         mlme_stats->stats.client_mlme_stats.snr_histograms_count = snr_histograms.size();
         mlme_stats->stats.client_mlme_stats.snr_histograms_list = snr_histograms.data();
-      } else {
-        response.stats.mlme_stats_list = nullptr;
-        response.stats.mlme_stats_count = 0;
       }
+      // else if client not connected, send back an empty response.
+      // Return here as the histograms will go out of scope.
+      wlanif_impl_ifc_stats_query_resp(&ndev->if_proto, &response);
+      return;
       break;
     }
-    case WLAN_INFO_MAC_ROLE_AP: {
-      response.stats.mlme_stats_list = nullptr;
-      response.stats.mlme_stats_count = 0;
+    case WLAN_INFO_MAC_ROLE_AP:
+      // Not supported for AP, send back an empty response.
       break;
-    }
     default:
-      response.stats.mlme_stats_list = nullptr;
-      response.stats.mlme_stats_count = 0;
       break;
   }
 
+  // Send out the response
+send_resp:
   wlanif_impl_ifc_stats_query_resp(&ndev->if_proto, &response);
 }
 
@@ -4506,20 +4472,24 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
 // Notify SME of channel switch
 zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                         void* data) {
+  if (!ifp) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  struct net_device* ndev = ifp->ndev;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping channel switch callback");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   uint16_t chanspec = 0;
   wlanif_channel_switch_info_t info;
   zx_status_t err = ZX_OK;
   bcme_status_t fw_err;
   struct brcmf_cfg80211_info* cfg = nullptr;
-  struct net_device* ndev = nullptr;
   struct wireless_dev* wdev = nullptr;
 
-  if (!ifp) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   cfg = ifp->drvr->config;
-  ndev = ifp->ndev;
   wdev = ndev_to_wdev(ndev);
 
   // For client IF, ensure it is connected.
@@ -4553,13 +4523,7 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   info.new_channel = ctl_chan;
 
   // Inform wlanif of the channel switch.
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops != nullptr) {
-    wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
-  } else {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping channel switch callback");
-  }
-
+  wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
   return ZX_OK;
 }
 
@@ -4575,16 +4539,18 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
   BRCMF_DBG(TRACE, "Enter");
 
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
-    // Stop connect timer no matter connect success or not, this timer only timeout when nothing is
-    // heard from firmware.
+    // Stop connect timer no matter connect success or not, this timer only timeout when nothing
+    // is heard from firmware.
     cfg->connect_timer->Stop();
     if (completed) {
       brcmf_get_assoc_ies(cfg, ifp);
       brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
-      // Start the signal report timer
-      cfg->signal_report_timer->Start(BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
-      // Indicate the rssi soon after connection
-      cfg80211_signal_ind(ndev);
+      if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+        // Start the signal report timer
+        cfg->signal_report_timer->Start(BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
+        // Indicate the rssi soon after connection
+        cfg80211_signal_ind(ndev);
+      }
       // Workaround to update SoftAP channel once client has associated.
       // TODO(karthikrish): This check can be removed once the issue is fixed in FW.
       if (cfg->ap_started) {
@@ -4700,7 +4666,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
     memcpy(assoc_ind_params.rsne, rsn_ie, assoc_ind_params.rsne_len);
   }
 
-  BRCMF_DBG(WLANIF, "Sending assoc indication to SME. address: " MAC_FMT_STR "\n",
+  BRCMF_DBG(WLANIF, "Sending assoc indication to SME. address: " MAC_FMT_STR "",
             MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
 
   wlanif_impl_ifc_assoc_ind(&ndev->if_proto, &assoc_ind_params);
@@ -4710,7 +4676,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
 // AUTH_IND handler. AUTH_IND is meant only for SoftAP IF
 static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
-  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
             e->status, e->reason, e->auth_type, e->flags);
   ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
@@ -4745,7 +4711,7 @@ static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
       default:
         auth_type = "unknown";
     }
-    BRCMF_DBG(WLANIF, "Sending auth indication to SME. address: " MAC_FMT_STR ", type: %s\n",
+    BRCMF_DBG(WLANIF, "Sending auth indication to SME. address: " MAC_FMT_STR ", type: %s",
               MAC_FMT_ARGS(auth_ind_params.peer_sta_address), auth_type);
 
     wlanif_impl_ifc_auth_ind(&ndev->if_proto, &auth_ind_params);
@@ -4890,7 +4856,7 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
     disassoc_ind_params.reason_code = e->reason;
 
     BRCMF_DBG(WLANIF,
-              "Sending disassoc indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
+              "Sending disassoc indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16,
               MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
 
     wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
@@ -5375,6 +5341,44 @@ zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_du
   struct brcmf_cfg80211_vif_event* event = &cfg->vif_event;
 
   return sync_completion_wait(&event->vif_event_wait, timeout);
+}
+
+zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev) {
+  struct net_device* ndev = wdev->netdev;
+  struct brcmf_if* ifp = cfg_to_if(cfg);
+
+  /* vif event pending in firmware */
+  if (brcmf_cfg80211_vif_event_armed(cfg)) {
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  if (ndev) {
+    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
+        cfg->escan_info.ifp == ndev_to_if(ndev)) {
+      brcmf_notify_escan_complete(cfg, ndev_to_if(ndev), true, true);
+    }
+
+    brcmf_enable_mpc(ifp, 1);
+  }
+
+  switch (wdev->iftype) {
+    case WLAN_INFO_MAC_ROLE_AP:
+      // Stop the AP in an attempt to exit gracefully.
+      brcmf_cfg80211_stop_ap(ndev);
+      ndev->sme_channel.reset();
+      return brcmf_cfg80211_del_ap_iface(cfg, wdev);
+    case WLAN_INFO_MAC_ROLE_CLIENT:
+      // Dissconnect the client in an attempt to exit gracefully.
+      brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, false);
+      // The default client iface 0 is always assumed to exist by the driver, and is never
+      // explicitly deleted.
+      ndev->sme_channel.reset();
+      ndev->needs_free_net_device = true;
+      brcmf_write_net_device_name(ndev, kPrimaryNetworkInterfaceName);
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {

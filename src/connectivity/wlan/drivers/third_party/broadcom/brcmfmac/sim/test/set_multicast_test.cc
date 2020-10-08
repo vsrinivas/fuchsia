@@ -38,8 +38,8 @@ TEST_F(SimTest, SetMulticastPromisc) {
   VerifySetAllmulti(device_, ap_ifc, true);
   VerifySetAllmulti(device_, ap_ifc, false);
 
-  DeleteInterface(client_ifc);
-  DeleteInterface(ap_ifc);
+  DeleteInterface(&client_ifc);
+  DeleteInterface(&ap_ifc);
 }
 
 }  // namespace wlan::brcmfmac
