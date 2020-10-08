@@ -140,7 +140,15 @@ zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
 
 }  // namespace
 
-bool AcpiChecksumValid(const void* buf, size_t len) { return AcpiChecksum(buf, len) == 0; }
+bool AcpiChecksumValid(const void* buf, size_t len) {
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+  // If we are fuzzing, calculate by don't verify checksums.
+  AcpiChecksum(buf, len);
+  return true;
+#else
+  return AcpiChecksum(buf, len) == 0;
+#endif
+}
 
 uint8_t AcpiChecksum(const void* _buf, size_t len) {
   uint8_t c = 0;

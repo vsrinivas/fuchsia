@@ -42,6 +42,7 @@ zx_library("acpi_lite") {
 }
 
 if (!is_kernel) {
+  import("//build/fuzzing/fuzzer.gni")
   import("//src/sys/build/fuchsia_unittest_package.gni")
 
   executable("acpi_lite_test") {
@@ -59,8 +60,20 @@ if (!is_kernel) {
     deps = [ ":acpi_lite_test" ]
   }
 
+  fuzzer("acpi_lite_fuzztest") {
+    sources = [ "acpi_lite_fuzztest.cc" ]
+    deps = [ ":acpi_lite" ]
+  }
+
+  fuzzers_package("acpi-lite-fuzzer") {
+    cpp_fuzzers = [ ":acpi_lite_fuzztest" ]
+  }
+
   group("tests") {
     testonly = true
-    deps = [ ":acpi-lite-test" ]
+    deps = [
+      ":acpi-lite-fuzzer",
+      ":acpi-lite-test",
+    ]
   }
 }
