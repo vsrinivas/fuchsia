@@ -127,6 +127,18 @@ impl RsnCapabilities {
     }
 }
 
+/// Used to identify the last field we will write into our RSNE buffer.
+#[derive(PartialEq)]
+enum FinalField {
+    Version,
+    GroupData,
+    Pairwise,
+    Akm,
+    Caps,
+    Pmkid,
+    GroupMgmt,
+}
+
 impl Rsne {
     pub fn wpa2_psk_ccmp_rsne() -> Self {
         Rsne {
@@ -288,38 +300,69 @@ impl Rsne {
             && a_rsne.akm_suites.iter().any(|c| *c == s_rsne.akm_suites[0]))
     }
 
+    /// IEEE Std. 802.11-2016 9.4.2.25.1
+    ///    "All fields after the Version field are optional. If any
+    ///     nonzero-length field is absent, then none of the subsequent
+    ///     fields is included."
+    /// Determine the last field we will write to produce the smallest RSNE
+    /// that matches this specification.
+    fn final_field(&self) -> FinalField {
+        if self.group_data_cipher_suite.is_none() {
+            FinalField::Version
+        } else if self.rsn_capabilities.is_none() {
+            if self.akm_suites.is_empty() {
+                if self.pairwise_cipher_suites.is_empty() {
+                    FinalField::GroupData
+                } else {
+                    FinalField::Pairwise
+                }
+            } else {
+                FinalField::Akm
+            }
+        } else {
+            if self.group_mgmt_cipher_suite.is_none() {
+                if self.pmkids.is_empty() {
+                    FinalField::Caps
+                } else {
+                    FinalField::Pmkid
+                }
+            } else {
+                FinalField::GroupMgmt
+            }
+        }
+    }
+
+    /// IEEE Std. 802.11-2016 9.4.2.25.1 specifies lengths for all fields.
     pub fn len(&self) -> usize {
-        let mut length: usize = 4;
-        match self.group_data_cipher_suite.as_ref() {
-            None => return length,
-            Some(_) => length += 4,
-        };
-
-        if self.pairwise_cipher_suites.is_empty() {
+        let final_field = self.final_field();
+        let mut length: usize = 4; // Element Id (1) + Length (1) + Version (2)
+        if final_field == FinalField::Version {
             return length;
         }
+        length += 4; // Group data cipher (4)
+        if final_field == FinalField::GroupData {
+            return length;
+        }
+        // Pairwise cipher count (2) + pairwise ciphers (4 * count)
         length += 2 + 4 * self.pairwise_cipher_suites.len();
-
-        if self.akm_suites.is_empty() {
+        if final_field == FinalField::Pairwise {
             return length;
         }
+        // AKM count (2) + AKMs (4 * count)
         length += 2 + 4 * self.akm_suites.len();
-
-        match self.rsn_capabilities.as_ref() {
-            None => return length,
-            Some(_) => length += 2,
-        };
-
-        if self.pmkids.is_empty() && self.group_mgmt_cipher_suite.is_none() {
+        if final_field == FinalField::Akm {
             return length;
         }
+        length += 2; // RSN capabilities (2)
+        if final_field == FinalField::Caps {
+            return length;
+        }
+        // PMKID count (2) + PMKIDs (16 * count)
         length += 2 + 16 * self.pmkids.len();
-
-        length += match self.group_mgmt_cipher_suite.as_ref() {
-            None => 0,
-            Some(_) => 4,
-        };
-        length
+        if final_field == FinalField::Pmkid {
+            return length;
+        }
+        length + 4 // Group management cipher (4)
     }
 
     pub fn into_bytes(self) -> Vec<u8> {
@@ -332,10 +375,14 @@ impl Rsne {
         if !buf.can_append(self.len()) {
             return Err(BufferTooSmall);
         }
+        let final_field = self.final_field();
 
         buf.append_byte(ID)?;
         buf.append_byte((self.len() - 2) as u8)?;
         buf.append_value(&self.version)?;
+        if final_field == FinalField::Version {
+            return Ok(());
+        }
 
         match self.group_data_cipher_suite.as_ref() {
             None => return Ok(()),
@@ -344,43 +391,48 @@ impl Rsne {
                 buf.append_byte(cipher.suite_type)?;
             }
         };
-
-        if self.pairwise_cipher_suites.is_empty() {
+        if final_field == FinalField::GroupData {
             return Ok(());
         }
+
         buf.append_value(&(self.pairwise_cipher_suites.len() as u16))?;
         for cipher in &self.pairwise_cipher_suites {
             buf.append_bytes(&cipher.oui[..])?;
             buf.append_byte(cipher.suite_type)?;
         }
-
-        if self.akm_suites.is_empty() {
+        if final_field == FinalField::Pairwise {
             return Ok(());
         }
+
         buf.append_value(&(self.akm_suites.len() as u16))?;
         for akm in &self.akm_suites {
             buf.append_bytes(&akm.oui[..])?;
             buf.append_byte(akm.suite_type)?;
+        }
+        if final_field == FinalField::Akm {
+            return Ok(());
         }
 
         match self.rsn_capabilities.as_ref() {
             None => return Ok(()),
             Some(caps) => buf.append_value(&caps.0)?,
         };
-
-        if self.pmkids.is_empty() && self.group_mgmt_cipher_suite.is_none() {
+        if final_field == FinalField::Caps {
             return Ok(());
         }
+
         buf.append_value(&(self.pmkids.len() as u16))?;
         for pmkid in &self.pmkids {
             buf.append_bytes(&pmkid[..])?;
+        }
+        if final_field == FinalField::Pmkid {
+            return Ok(());
         }
 
         if let Some(cipher) = self.group_mgmt_cipher_suite.as_ref() {
             buf.append_bytes(&cipher.oui[..])?;
             buf.append_byte(cipher.suite_type)?;
         }
-
         Ok(())
     }
 
@@ -1040,5 +1092,175 @@ mod tests {
         let result = s_rsne.is_valid_subset_of(&a_rsne);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), Error::InvalidAuthenticatorMgmtFrameProtection);
+    }
+
+    #[test]
+    fn test_write_until_version() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            0x02, // length
+            0x01, 0x00, // version
+        ];
+        let rsne = Rsne { version: VERSION, ..Default::default() };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    #[test]
+    fn test_write_until_group_data() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            0x06, // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac, 0x04, // group data cipher suite
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    #[test]
+    fn test_write_until_pairwise() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            12,   // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac, 0x04, // group data cipher suite
+            0x01, 0x00, // pairwise suite count
+            0x00, 0x0f, 0xac, 0x04, // pairwise cipher suite
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            pairwise_cipher_suites: vec![cipher::Cipher::new_dot11(cipher::CCMP_128)],
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    #[test]
+    fn test_write_until_akm() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            14,   // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac, 0x04, // group data cipher suite
+            0x00, 0x00, // pairwise suite count
+            0x01, 0x00, // pairwise suite count
+            0x00, 0x0f, 0xac, 0x02, // pairwise cipher suite
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            akm_suites: vec![akm::Akm::new_dot11(akm::PSK)],
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    #[test]
+    fn test_write_until_rsn_capabilities() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            12,   // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac, 0x04, // group data cipher suite
+            0x00, 0x00, // pairwise suite count
+            0x00, 0x00, // akm suite count
+            0xcd, 0xab, // rsn capabilities
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            rsn_capabilities: Some(RsnCapabilities(0xabcd)),
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    static PMKID_VAL: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+    #[test]
+    fn test_write_until_pmkids() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            30,   // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac, 0x04, // group data cipher suite
+            0x00, 0x00, // pairwise suite count
+            0x00, 0x00, // akm suite count
+            0xcd, 0xab, // rsn capabilities
+            0x01, 0x00, // pmkid count
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, // pmkid
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            rsn_capabilities: Some(RsnCapabilities(0xabcd)),
+            pmkids: vec![Bytes::from_static(&PMKID_VAL[..])],
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    #[test]
+    fn test_write_until_group_mgmt() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            18,   // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac, 0x04, // group data cipher suite
+            0x00, 0x00, // pairwise suite count
+            0x00, 0x00, // akm suite count
+            0xcd, 0xab, // rsn capabilities
+            0x00, 0x00, // pmkids count
+            0x00, 0x0f, 0xac, 0x06, // group management cipher suite
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            rsn_capabilities: Some(RsnCapabilities(0xabcd)),
+            group_mgmt_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::BIP_CMAC_128)),
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
+    }
+
+    #[test]
+    fn test_end_write_on_missing_caps() {
+        let expected_frame: Vec<u8> = vec![
+            0x30, // element id
+            0x06, // length
+            0x01, 0x00, // version
+            0x00, 0x0f, 0xac,
+            0x04, // group data cipher suite
+                  // We don't write group management suite because caps are missing.
+        ];
+        let rsne = Rsne {
+            version: VERSION,
+            group_data_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::CCMP_128)),
+            rsn_capabilities: None,
+            group_mgmt_cipher_suite: Some(cipher::Cipher::new_dot11(cipher::BIP_CMAC_128)),
+            ..Default::default()
+        };
+        let mut buf = vec![];
+        rsne.write_into(&mut buf).expect("Failed to write rsne");
+        assert_eq!(&buf[..], &expected_frame[..]);
     }
 }
