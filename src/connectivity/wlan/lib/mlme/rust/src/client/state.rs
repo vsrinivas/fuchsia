@@ -1004,7 +1004,11 @@ impl States {
         match self {
             States::Associated(state) if sta.is_on_channel() => state.on_eth_frame(sta, frame),
             States::Associated(_state) => Err(Error::Status(
-                format!("Associated but not on main channel. Ethernet dropped"),
+                format!(
+                    "Associated but current channel {:?} != main channel {:?}. Ethernet dropped",
+                    sta.ctx.device.channel(),
+                    sta.channel_state.main_channel
+                ),
                 zx::Status::BAD_STATE,
             )),
             _ => Err(Error::Status(
