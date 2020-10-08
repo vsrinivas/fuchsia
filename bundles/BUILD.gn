@@ -17,7 +17,6 @@ group("tools") {
     "//garnet/packages/testing:all",
     "//src/camera:tools",
     "//src/connectivity:tools",
-    "//src/connectivity/bluetooth/hci/emulator",
     "//src/connectivity/bluetooth/tools",
     "//src/connectivity/bluetooth/tools/bt-snoop",
     "//src/developer/debug/zxdb:zxdb_host",
@@ -60,6 +59,12 @@ group("tools") {
     "//tools/whereiscl:host($host_toolchain)",
   ]
   deps = [ "//build/validate:non_production_tag" ]
+}
+
+# Same as "tools" above, but for tools that are hosted by the system package.
+group("tools-system") {
+  testonly = true
+  deps = [ "//src/connectivity/bluetooth/hci/emulator" ]
 }
 
 group("infratools") {

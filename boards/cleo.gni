@@ -9,7 +9,7 @@ board_name = "cleo"
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/cleo/package-image.sh"
 
-board_package_labels += [ "//garnet/packages/prod:magma-img-rgx-mt8167" ]
+board_system_image_deps += [ "//garnet/packages/prod:magma-img-rgx-mt8167" ]
 
 _common_bootfs_deps = [
   "//src/connectivity/bluetooth/hci/vendor/mediatek:bt-hci-mediatek",

@@ -13,14 +13,16 @@ board_zedboot_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
 
 board_recovery_bootfs_labels = [ "//src/security/policy/zxcrypt:null" ]
 
+board_system_image_deps = [
+  "//garnet/packages/prod:drivers-system",
+  "//src/media/audio/bundles:virtual_audio_driver",
+]
+
 board_package_labels = [
+  "//boards:verify_zedboot_cmdline_params_for_toulouse",
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
-
-  # Include all drivers for now.
-  "//garnet/packages/prod:drivers",
-  "//boards:verify_zedboot_cmdline_params_for_toulouse",
-  "//src/media/audio/bundles:virtual_audio_driver",
+  "//garnet/packages/prod:drivers-support",
 ]
 
 # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the

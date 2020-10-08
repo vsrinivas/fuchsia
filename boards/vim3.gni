@@ -27,7 +27,7 @@ board_zedboot_bootfs_labels += _common_bootfs_deps
 
 board_recovery_bootfs_labels += _common_bootfs_deps
 
-board_package_labels += [ "//garnet/packages/prod:magma-vsi-vip" ]
+board_system_image_deps += [ "//garnet/packages/prod:magma-vsi-vip" ]
 
 # partitions for fx flash to flash
 zircon_a_partition = "zircon-a"

@@ -14,13 +14,14 @@ declare_args() {
 }
 
 have_libvulkan = build_libvulkan_goldfish != ""
-group("goldfish-vulkan") {
-  public_deps = []
+group("goldfish-vulkan-system") {
   if (have_libvulkan) {
-    public_deps += [
-      ":goldfish",
-      ":goldfish-config",
-    ]
+    public_deps = [ ":goldfish" ]
+  }
+}
+group("goldfish-vulkan-config") {
+  if (have_libvulkan) {
+    public_deps = [ ":goldfish-config" ]
   }
 }
 

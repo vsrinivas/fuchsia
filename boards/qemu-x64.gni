@@ -47,16 +47,18 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 
 board_zedboot_bootfs_labels += _common_bootfs_deps
 
+board_system_image_deps = [
+  "//garnet/packages/prod:drivers-system",
+  "//src/media/audio/bundles:virtual_audio_driver",
+]
+
 board_package_labels = [
   "//garnet/bin/power_manager",
   "//garnet/bin/power_manager:base_config",
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
-
-  # Include all drivers for now.
-  "//garnet/packages/prod:drivers",
+  "//garnet/packages/prod:drivers-support",
   "//src/hwinfo:default_board_config",
-  "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
 max_fuchsia_zbi_size = "16777216"  # 16 MiB

@@ -15,7 +15,6 @@ group("acpidump") {
 group("all") {
   testonly = true
   public_deps = [
-    ":drivers",
     "//garnet/packages/prod:acpidump",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:bluetooth_a2dp",
@@ -39,7 +38,8 @@ group("all") {
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:magma-arm-mali",
+    "//garnet/packages/prod:magma-arm-mali-config",
+    "//garnet/packages/prod:magma-arm-mali-system",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
@@ -206,12 +206,32 @@ group("debug_agent") {
   public_deps = [ "//src/developer/debug/debug_agent" ]
 }
 
-# WARNING: Known to topaz.
+# TODO(fxb/61170): remove when all product/board files use the two targets
+# below instead.
 group("drivers") {
   testonly = true
   public_deps = [
+    ":drivers-support",
+    ":drivers-system",
+  ]
+}
+
+# Tools and configs supporting drivers.
+group("drivers-support") {
+  public_deps = [ "//garnet/packages/prod:vulkan" ]
+  if (target_cpu == "x64") {
+    public_deps += [
+      "//garnet/packages/prod:goldfish-vulkan-config",
+      "//garnet/packages/prod:magma-intel-gen-config",
+    ]
+  }
+}
+
+# Note: elements of this group are all installed in the system package.
+group("drivers-system") {
+  testonly = true
+  public_deps = [
     "//garnet/packages/prod:bluetooth_drivers",
-    "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
     "//src/camera/drivers:all",
     "//src/connectivity/ppp:drivers",
@@ -221,8 +241,8 @@ group("drivers") {
   ]
   if (target_cpu == "x64") {
     public_deps += [
-      "//garnet/packages/prod:goldfish-vulkan",
-      "//garnet/packages/prod:magma-intel-gen",
+      "//garnet/packages/prod:goldfish-vulkan-system",
+      "//garnet/packages/prod:magma-intel-gen-system",
     ]
   }
 }
@@ -235,9 +255,15 @@ group("far") {
   ]
 }
 
-group("goldfish-vulkan") {
+group("goldfish-vulkan-system") {
   testonly = true
-  public_deps = [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
+  public_deps =
+      [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-system" ]
+}
+
+group("goldfish-vulkan-config") {
+  public_deps =
+      [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config" ]
 }
 
 group("guest_runner") {
@@ -278,10 +304,25 @@ group("iquery") {
   public_deps = [ "//src/diagnostics/iquery" ]
 }
 
+# TODO(fxb/61170): remove when all product/board files use the two targets
+# below instead.
 group("magma-arm-mali") {
   public_deps = [
+    ":magma-arm-mali-config",
+    ":magma-arm-mali-system",
+  ]
+}
+
+group("magma-arm-mali-system") {
+  public_deps = [
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan-system",
+  ]
+}
+
+group("magma-arm-mali-config") {
+  public_deps = [
     "//garnet/packages/prod:sysmem_connector",
-    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan-config",
   ]
 }
 
@@ -291,10 +332,16 @@ group("magma-img-rgx-mt8167") {
 }
 
 if (target_cpu == "x64") {
-  group("magma-intel-gen") {
+  group("magma-intel-gen-system") {
+    public_deps = [
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan-system",
+    ]
+  }
+
+  group("magma-intel-gen-config") {
     public_deps = [
       "//garnet/packages/prod:sysmem_connector",
-      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan-config",
     ]
   }
 }

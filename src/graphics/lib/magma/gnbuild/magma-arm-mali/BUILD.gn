@@ -11,15 +11,18 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 have_libvulkan_mali =
     build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm
 
-group("magma-vulkan") {
+group("magma-vulkan-system") {
   if (!magma_enable_developer_build) {
     public_deps = [
       ":magma-arm-mali",
       ":msd-arm-mali",
     ]
-    if (have_libvulkan_mali) {
-      public_deps += [ ":magma-arm-mali-config" ]
-    }
+  }
+}
+
+group("magma-vulkan-config") {
+  if (!magma_enable_developer_build && have_libvulkan_mali) {
+    public_deps = [ ":magma-arm-mali-config" ]
   }
 }
 

@@ -18,6 +18,8 @@ meta_package_labels += [
   "//src/sys/component_index:component_index",
 ]
 
+product_system_image_deps = [ "//src/connectivity/bluetooth:core" ]
+
 base_package_labels += [
   "//build/info:build-info",
   "//garnet/bin/log_listener:log_listener",
@@ -34,7 +36,6 @@ base_package_labels += [
   "//src/cobalt/bin/app:config",
   "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
   "//src/cobalt/bin/system-metrics:config",
-  "//src/connectivity/bluetooth:core",
   "//src/connectivity/management/reachability",
   "//src/connectivity/management/reachability:reachability_sysmgr_config",
   "//src/connectivity/management:network_config_default",
@@ -57,6 +58,9 @@ base_package_labels += [
   "//src/sys/core",
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
+
+  # TODO(fxb/61170): move to product_system_image_deps when dependents know
+  # to find it there.
   "//src/sys/pkg:pkgfs-disable-executability-restrictions",
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
@@ -80,6 +84,7 @@ base_package_labels += [ "//tools/cargo-gnaw:install-cargo-gnaw" ]
 
 cache_package_labels += [ "//src/developer/ffx:runtime" ]
 
+product_system_image_deps += [ "//bundles:tools-system" ]
 universe_package_labels += [ "//bundles:tools" ]
 
 product_bootfs_labels -=
