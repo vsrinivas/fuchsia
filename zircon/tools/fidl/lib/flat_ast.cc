@@ -1349,7 +1349,6 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   switch (kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
-    case Decl::Kind::kResource:
     case Decl::Kind::kService:
     case Decl::Kind::kStruct:
     case Decl::Kind::kTable:
@@ -1369,6 +1368,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
       break;
     }
     case Decl::Kind::kConst:
+    case Decl::Kind::kResource:
       break;
   }  // switch
   return true;
