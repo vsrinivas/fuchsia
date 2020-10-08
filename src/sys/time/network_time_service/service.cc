@@ -53,6 +53,7 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
     time_external::TimeSample sample;
     sample.set_monotonic((before + after) / 2);
     sample.set_utc(ret.second->get());
+    sample.set_standard_deviation(EstimateStandardDeviation(before, after));
     sample_watcher_.Update(std::move(sample));
     dispatcher_last_success_time_.emplace(async::Now(dispatcher));
     status = time_external::Status::OK;
@@ -129,6 +130,15 @@ void TimeServiceImpl::ResetPushSourceClient(zx_status_t epitaph) {
   push_source_binding_.Unbind();
   sample_watcher_.ResetClient();
   status_watcher_.ResetClient();
+}
+
+zx_time_t EstimateStandardDeviation(zx_time_t mono_before, zx_time_t mono_after) {
+  // Coarsely approximate error based on the round trip time. Here we assume the error
+  // distribution is normal and the midpoint of the rtt is the mean. In a normal distribution
+  // nearly all samples fall within 3*standard_distribution of the mean, so the rtt is
+  // roughly 6*standard_deviation.
+  // TODO(fxbug.dev/61462) - add in errors from the 'radius' value provided by roughtime.
+  return (mono_after - mono_before) / 6;
 }
 
 }  // namespace network_time_service

@@ -100,6 +100,10 @@ class TimeServiceImpl : public time_external::PushSource {
   RetryConfig retry_config_;
 };
 
+// Estimate the standard deviation based on the monotonic times taken before and after a server was
+// polled.
+zx_time_t EstimateStandardDeviation(zx_time_t mono_before, zx_time_t mono_after);
+
 }  // namespace network_time_service
 
 #endif  // SRC_SYS_TIME_NETWORK_TIME_SERVICE_SERVICE_H_

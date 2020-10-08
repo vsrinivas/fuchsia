@@ -158,6 +158,8 @@ TEST_F(PushSourceTest, WatchSample) {
     EXPECT_LT(sample.utc(), kExpectedTimeNanos + kTimeSpreadNanos);
     EXPECT_GT(sample.monotonic(), mono_before);
     EXPECT_LT(sample.monotonic(), mono_after);
+    EXPECT_GT(sample.standard_deviation(), 0);
+    EXPECT_LT(sample.standard_deviation(), EstimateStandardDeviation(mono_before, mono_after));
     first_call_complete = true;
   });
   RunLoopUntilIdle();
@@ -171,6 +173,8 @@ TEST_F(PushSourceTest, WatchSample) {
     EXPECT_LT(sample.utc(), kExpectedTimeNanos + kTimeSpreadNanos);
     EXPECT_GT(sample.monotonic(), mono_before);
     EXPECT_LT(sample.monotonic(), mono_after);
+    EXPECT_GT(sample.standard_deviation(), 0);
+    EXPECT_LT(sample.standard_deviation(), EstimateStandardDeviation(mono_before, mono_after));
     second_call_complete = true;
   });
   // Next poll should only complete after the configured wait period.

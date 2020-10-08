@@ -33,6 +33,11 @@ impl RetryStrategy {
 }
 
 const HTTPS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
+/// A coarse approximation of the standard deviation of a sample. The error is dominated by the
+/// effect of the time quantization, so we neglect error from network latency entirely and return
+/// a standard deviation of a uniform distribution 1 second wide.
+// TODO(satsukiu): replace with a more accurate estimate
+const STANDARD_DEVIATION: zx::Duration = zx::Duration::from_millis(289);
 
 #[async_trait]
 /// An `HttpsDateClient` can make requests against a given uri to retrieve a UTC time.
@@ -146,7 +151,7 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
         Ok(TimeSample {
             utc: Some(utc.into_nanos()),
             monotonic: Some(monotonic_center),
-            standard_deviation: None,
+            standard_deviation: Some(STANDARD_DEVIATION.into_nanos()),
         })
     }
 }
@@ -317,6 +322,7 @@ mod test {
             assert_eq!(expected_utc_time.into_nanos(), sample.utc.unwrap());
             assert!(sample.monotonic.unwrap() >= monotonic_before);
             assert!(sample.monotonic.unwrap() <= monotonic_after);
+            assert_eq!(sample.standard_deviation.unwrap(), STANDARD_DEVIATION.into_nanos());
         }
     }
 
