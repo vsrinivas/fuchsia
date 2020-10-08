@@ -41,9 +41,9 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   {{- end -}}
     {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}
-  _request.GetFidlMessage().Call({{ .Name }}Response::Type, _client, _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call({{ .Name }}Response::Type, _client, _response_bytes, _response_byte_capacity);
   {{- else }}
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   {{- end }}
   status_ = _request.status();
   error_ = _request.error();

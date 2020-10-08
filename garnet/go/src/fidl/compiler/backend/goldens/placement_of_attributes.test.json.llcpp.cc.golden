@@ -19,7 +19,7 @@ extern "C" const fidl_type_t example_ExampleProtocolMethodResponseTable;
 ExampleProtocol::ResultOf::Method::Method(zx_handle_t _client,
                                           ::llcpp::exampleusing::Empty& arg) {
   MethodOwnedRequest _request(0, arg);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -28,7 +28,7 @@ ExampleProtocol::UnownedResultOf::Method::Method(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, ::llcpp::exampleusing::Empty& arg) {
   MethodUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, arg);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }

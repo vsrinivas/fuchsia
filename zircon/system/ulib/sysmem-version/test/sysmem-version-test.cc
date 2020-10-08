@@ -60,28 +60,31 @@ class LinearSnap {
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    fidl::FidlMessage message(linear_data_, kMaxDataSize, 0, handles, ZX_CHANNEL_MAX_MSG_HANDLES,
-                              0);
+    fidl::OutgoingMessage outgoing_message(linear_data_, kMaxDataSize, 0, handles,
+                                           ZX_CHANNEL_MAX_MSG_HANDLES, 0);
 
-    message.LinearizeAndEncode(FidlType::Type, &aligned);
-    if (!message.ok()) {
-      printf("Encoded error: %s\n", (message.error() == nullptr) ? "" : message.error());
+    outgoing_message.LinearizeAndEncode(FidlType::Type, &aligned);
+    if (!outgoing_message.ok()) {
+      printf("Encoded error: %s\n",
+             (outgoing_message.error() == nullptr) ? "" : outgoing_message.error());
     }
-    ZX_ASSERT(message.ok());
-    ZX_ASSERT(message.error() == nullptr);
+    ZX_ASSERT(outgoing_message.ok());
+    ZX_ASSERT(outgoing_message.error() == nullptr);
 
-    ZX_ASSERT(message.byte_actual() <= sizeof(snap_data_));
-    memcpy(snap_data_, message.bytes(), message.byte_actual());
-    snap_data_size_ = message.byte_actual();
+    ZX_ASSERT(outgoing_message.byte_actual() <= sizeof(snap_data_));
+    memcpy(snap_data_, outgoing_message.bytes(), outgoing_message.byte_actual());
+    snap_data_size_ = outgoing_message.byte_actual();
 
-    ZX_ASSERT(message.handle_actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
-    memcpy(snap_handles_, message.handles(), message.handle_actual() * sizeof(zx_handle_t));
-    snap_handles_count_ = message.handle_actual();
+    ZX_ASSERT(outgoing_message.handle_actual() * sizeof(zx_handle_t) <= sizeof(snap_handles_));
+    memcpy(snap_handles_, outgoing_message.handles(),
+           outgoing_message.handle_actual() * sizeof(zx_handle_t));
+    snap_handles_count_ = outgoing_message.handle_actual();
 
     // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
-    message.Decode(FidlType::Type);
-    ZX_ASSERT(message.ok());
-    ZX_ASSERT(message.error() == nullptr);
+    fidl::IncomingMessage incoming_message(std::move(outgoing_message));
+    incoming_message.Decode(FidlType::Type);
+    ZX_ASSERT(incoming_message.ok());
+    ZX_ASSERT(incoming_message.error() == nullptr);
 
     // At this point, the handles are in linear_data_ and value_'s message() is stored directly in
     // linear_data_.

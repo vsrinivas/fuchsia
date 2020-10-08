@@ -129,7 +129,7 @@ class SecondProtocol final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -137,7 +137,7 @@ class SecondProtocol final {
     MethodOnSecondRequest& Message() {
       return *reinterpret_cast<MethodOnSecondRequest*>(message_.bytes());
     }
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class MethodOnSecondOwnedRequest final {
@@ -149,7 +149,9 @@ class SecondProtocol final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -323,7 +325,7 @@ class FirstProtocol final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -331,7 +333,7 @@ class FirstProtocol final {
     MethodOnFirstRequest& Message() {
       return *reinterpret_cast<MethodOnFirstRequest*>(message_.bytes());
     }
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class MethodOnFirstOwnedRequest final {
@@ -343,7 +345,9 @@ class FirstProtocol final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

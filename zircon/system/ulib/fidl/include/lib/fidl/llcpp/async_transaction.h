@@ -47,7 +47,7 @@ class AsyncTransaction final : public Transaction {
 
   virtual ~AsyncTransaction() { ZX_ASSERT(!owned_binding_); }
 
-  zx_status_t Reply(fidl::FidlMessage* message) final;
+  zx_status_t Reply(fidl::OutgoingMessage* message) final;
 
   void EnableNextDispatch() final;
 

@@ -34,7 +34,7 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 }  // namespace
 SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
   AddOwnedRequest _request(0, a, b);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       AddResponse::Type, _client, bytes_,
       AddResponse::PrimarySize + AddResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -44,7 +44,7 @@ SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
 SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b,
                                    zx_time_t _deadline) {
   AddOwnedRequest _request(0, a, b);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       AddResponse::Type, _client, bytes_,
       AddResponse::PrimarySize + AddResponse::MaxOutOfLine, _deadline);
   status_ = _request.status();
@@ -59,8 +59,8 @@ SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
                                           uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   AddUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a, b);
-  _request.GetFidlMessage().Call(AddResponse::Type, _client, _response_bytes,
-                                 _response_byte_capacity);
+  _request.GetOutgoingMessage().Call(AddResponse::Type, _client,
+                                     _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -116,7 +116,7 @@ void SimpleProtocol::AddResponseContext::OnReply(uint8_t* reply) {
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   AddOwnedRequest _request(_context->Txid(), a, b);
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result SimpleProtocol::ClientImpl::Add(::fidl::BytePart _request_buffer,
@@ -126,7 +126,7 @@ void SimpleProtocol::AddResponseContext::OnReply(uint8_t* reply) {
 
   AddUnownedRequest _request(_request_buffer.data(), _request_buffer.capacity(),
                              _context->Txid(), a, b);
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::DispatchEvent(
@@ -186,13 +186,13 @@ namespace entries {
 
 ::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
   AddOwnedResponse _response{sum};
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(
     ::fidl::BytePart _buffer, int32_t sum) {
   AddUnownedResponse _response(_buffer.data(), _buffer.capacity(), sum);
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 void SimpleProtocol::AddRequest::_InitHeader(zx_txid_t _txid) {

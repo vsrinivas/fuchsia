@@ -14,7 +14,7 @@ Reply(::fidl::BytePart _buffer {{- if .Response }}, {{ end }}{{ template "Params
   {{ .Name }}UnownedResponse _response(_buffer.data(), _buffer.capacity()
   {{- template "CommaPassthroughMessageParams" .Response -}}
   );
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 {{- end }}
 

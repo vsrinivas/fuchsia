@@ -328,7 +328,7 @@ class Example final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -336,7 +336,7 @@ class Example final {
     fooResponse& Message() {
       return *reinterpret_cast<fooResponse*>(message_.bytes());
     }
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class fooOwnedResponse final {
@@ -349,7 +349,9 @@ class Example final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -372,7 +374,7 @@ class Example final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -380,7 +382,7 @@ class Example final {
     fooRequest& Message() {
       return *reinterpret_cast<fooRequest*>(message_.bytes());
     }
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class fooOwnedRequest final {
@@ -394,7 +396,9 @@ class Example final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

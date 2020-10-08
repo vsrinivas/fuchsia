@@ -35,11 +35,11 @@ const fragmentSyncRequestManagedTmpl = `
   {{ .Name }}OwnedRequest _request(0
     {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}
-  _request.GetFidlMessage().Call({{ .Name }}Response::Type, _client,
+  _request.GetOutgoingMessage().Call({{ .Name }}Response::Type, _client,
                                  {{- template "ResponseReceivedByteAccess" . }},
                                  {{ template "ResponseReceivedSize" . }});
   {{- else }}
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   {{- end }}
   status_ = _request.status();
   error_ = _request.error();
@@ -54,7 +54,7 @@ const fragmentSyncRequestManagedTmpl = `
    {
   {{ .Name }}OwnedRequest _request(0
     {{- template "CommaPassthroughMessageParams" .Request -}});
-  _request.GetFidlMessage().Call({{ .Name }}Response::Type, _client,
+  _request.GetOutgoingMessage().Call({{ .Name }}Response::Type, _client,
                                  {{- template "ResponseReceivedByteAccess" . }},
                                  {{ template "ResponseReceivedSize" . }},
                                  _deadline);

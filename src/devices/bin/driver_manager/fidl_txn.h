@@ -32,7 +32,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
           This provides Devmgr with the correct status value.\n");
   }
 
-  zx_status_t Reply(fidl::FidlMessage* message) override {
+  zx_status_t Reply(fidl::OutgoingMessage* message) override {
     ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
     auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());
     hdr->txid = txid_;

@@ -172,7 +172,7 @@ extern "C" const fidl_type_t
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
       bytes_,
       StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
@@ -185,7 +185,7 @@ TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client,
                                                  zx_time_t _deadline) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
       bytes_,
       StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
@@ -201,7 +201,7 @@ TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
       _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -213,7 +213,7 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
       bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -226,7 +226,7 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
       bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -239,7 +239,7 @@ TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
       _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -312,7 +312,7 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(
       _context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result
@@ -322,7 +322,7 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
 
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(
       _context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
@@ -392,7 +392,7 @@ TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(
       _context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result
@@ -402,7 +402,7 @@ TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
 
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(
       _context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 std::optional<::fidl::UnbindInfo> TestProtocol::ClientImpl::DispatchEvent(
@@ -478,7 +478,7 @@ namespace entries {
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedResponse _response{xu};
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
@@ -487,14 +487,14 @@ namespace entries {
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse _response(
       _buffer.data(), _buffer.capacity(), xu);
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedResponse _response{xu};
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
@@ -503,7 +503,7 @@ namespace entries {
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse _response(
       _buffer.data(), _buffer.capacity(), xu);
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 void TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest::

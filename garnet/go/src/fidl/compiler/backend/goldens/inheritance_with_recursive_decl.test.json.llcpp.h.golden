@@ -133,7 +133,7 @@ class Parent final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -143,7 +143,7 @@ class Parent final {
     }
     zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
                                   FirstRequest::MaxNumHandles)];
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class FirstOwnedRequest final {
@@ -155,7 +155,9 @@ class Parent final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -406,7 +408,7 @@ class Child final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -416,7 +418,7 @@ class Child final {
     }
     zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
                                   FirstRequest::MaxNumHandles)];
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class FirstOwnedRequest final {
@@ -428,7 +430,9 @@ class Child final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -457,7 +461,7 @@ class Child final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -467,7 +471,7 @@ class Child final {
     }
     zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
                                   SecondRequest::MaxNumHandles)];
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class SecondOwnedRequest final {
@@ -479,7 +483,9 @@ class Child final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

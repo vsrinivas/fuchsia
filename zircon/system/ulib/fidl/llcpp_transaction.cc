@@ -58,7 +58,7 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-fidl::Result CompleterBase::SendReply(::fidl::FidlMessage* message) {
+fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message) {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
   if (unlikely(!needs_to_reply_)) {

@@ -36,7 +36,7 @@ extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
 }  // namespace
 Interface::ResultOf::Method::Method(zx_handle_t _client) {
   MethodOwnedRequest _request(0);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }

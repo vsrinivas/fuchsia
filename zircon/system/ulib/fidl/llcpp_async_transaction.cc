@@ -40,7 +40,7 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
   }
 }
 
-zx_status_t AsyncTransaction::Reply(fidl::FidlMessage* message) {
+zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
   ZX_ASSERT(txid_ != 0);
   auto txid = txid_;
   txid_ = 0;

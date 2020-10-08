@@ -31,7 +31,7 @@ extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
 }  // namespace
 Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
   GetChildOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       GetChildResponse::Type, _client, bytes_,
       GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -40,7 +40,7 @@ Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
 
 Parent::ResultOf::GetChild::GetChild(zx_handle_t _client, zx_time_t _deadline) {
   GetChildOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(
+  _request.GetOutgoingMessage().Call(
       GetChildResponse::Type, _client, bytes_,
       GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine,
       _deadline);
@@ -53,17 +53,18 @@ Parent::UnownedResultOf::GetChild::GetChild(zx_handle_t _client,
                                             uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   GetChildOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(GetChildResponse::Type, _client,
-                                 _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call(GetChildResponse::Type, _client,
+                                     _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 
 Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
   GetChildRequestOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client, bytes_,
-                                 GetChildRequestResponse::PrimarySize +
-                                     GetChildRequestResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call(GetChildRequestResponse::Type, _client,
+                                     bytes_,
+                                     GetChildRequestResponse::PrimarySize +
+                                         GetChildRequestResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -71,10 +72,11 @@ Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
 Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client,
                                                    zx_time_t _deadline) {
   GetChildRequestOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client, bytes_,
-                                 GetChildRequestResponse::PrimarySize +
-                                     GetChildRequestResponse::MaxOutOfLine,
-                                 _deadline);
+  _request.GetOutgoingMessage().Call(GetChildRequestResponse::Type, _client,
+                                     bytes_,
+                                     GetChildRequestResponse::PrimarySize +
+                                         GetChildRequestResponse::MaxOutOfLine,
+                                     _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -84,15 +86,15 @@ Parent::UnownedResultOf::GetChildRequest::GetChildRequest(
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   GetChildRequestOwnedRequest _request(0);
-  _request.GetFidlMessage().Call(GetChildRequestResponse::Type, _client,
-                                 _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call(GetChildRequestResponse::Type, _client,
+                                     _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 
 Parent::ResultOf::TakeChild::TakeChild(zx_handle_t _client, ::zx::channel& c) {
   TakeChildOwnedRequest _request(0, c);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -103,7 +105,7 @@ Parent::UnownedResultOf::TakeChild::TakeChild(zx_handle_t _client,
                                               ::zx::channel& c) {
   TakeChildUnownedRequest _request(_request_bytes, _request_byte_capacity, 0,
                                    c);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -111,7 +113,7 @@ Parent::UnownedResultOf::TakeChild::TakeChild(zx_handle_t _client,
 Parent::ResultOf::TakeChildRequest::TakeChildRequest(zx_handle_t _client,
                                                      ::zx::channel& r) {
   TakeChildRequestOwnedRequest _request(0, r);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -121,7 +123,7 @@ Parent::UnownedResultOf::TakeChildRequest::TakeChildRequest(
     uint32_t _request_byte_capacity, ::zx::channel& r) {
   TakeChildRequestUnownedRequest _request(_request_bytes,
                                           _request_byte_capacity, 0, r);
-  _request.GetFidlMessage().Write(_client);
+  _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -177,14 +179,14 @@ void Parent::GetChildResponseContext::OnReply(uint8_t* reply) {
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   GetChildOwnedRequest _request(_context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result Parent::ClientImpl::GetChild(GetChildResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   GetChildOwnedRequest _request(_context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 Parent::ResultOf::GetChildRequest Parent::ClientImpl::GetChildRequest_Sync() {
@@ -238,7 +240,7 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   GetChildRequestOwnedRequest _request(_context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result Parent::ClientImpl::GetChildRequest(
@@ -246,7 +248,7 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
   GetChildRequestOwnedRequest _request(_context->Txid());
-  return _request.GetFidlMessage().Write(this, _context);
+  return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result Parent::ClientImpl::TakeChild(::zx::channel c) {
@@ -369,26 +371,26 @@ namespace entries {
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::zx::channel c) {
   GetChildOwnedResponse _response{c};
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel c) {
   GetChildUnownedResponse _response(_buffer.data(), _buffer.capacity(), c);
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::zx::channel r) {
   GetChildRequestOwnedResponse _response{r};
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel r) {
   GetChildRequestUnownedResponse _response(_buffer.data(), _buffer.capacity(),
                                            r);
-  return CompleterBase::SendReply(&_response.GetFidlMessage());
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 void Parent::GetChildRequest::_InitHeader(zx_txid_t _txid) {

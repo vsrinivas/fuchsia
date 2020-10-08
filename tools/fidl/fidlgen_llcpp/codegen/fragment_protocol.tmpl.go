@@ -420,7 +420,7 @@ class {{ .Name }} final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -430,7 +430,7 @@ class {{ .Name }} final {
     {{- if gt .ResponseMaxHandles 0 }}
       zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Response::MaxNumHandles)];
     {{- end }}
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class {{ .Name }}OwnedResponse final {
@@ -449,7 +449,7 @@ class {{ .Name }} final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -497,7 +497,7 @@ class {{ .Name }} final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -507,7 +507,7 @@ class {{ .Name }} final {
     {{- if gt .RequestMaxHandles 0 }}
       zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Request::MaxNumHandles)];
     {{- end }}
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class {{ .Name }}OwnedRequest final {
@@ -526,7 +526,7 @@ class {{ .Name }} final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

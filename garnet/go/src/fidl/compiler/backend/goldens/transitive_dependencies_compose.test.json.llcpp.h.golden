@@ -190,7 +190,7 @@ class Top final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -198,7 +198,7 @@ class Top final {
     GetFooResponse& Message() {
       return *reinterpret_cast<GetFooResponse*>(message_.bytes());
     }
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class GetFooOwnedResponse final {
@@ -210,7 +210,9 @@ class Top final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -235,7 +237,7 @@ class Top final {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 
@@ -243,7 +245,7 @@ class Top final {
     GetFooRequest& Message() {
       return *reinterpret_cast<GetFooRequest*>(message_.bytes());
     }
-    ::fidl::FidlMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
   class GetFooOwnedRequest final {
@@ -255,7 +257,9 @@ class Top final {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::FidlMessage& GetFidlMessage() { return message_.GetFidlMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
 
     void Write(zx_handle_t client) { message_.Write(client); }
 

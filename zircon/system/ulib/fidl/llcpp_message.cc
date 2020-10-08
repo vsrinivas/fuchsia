@@ -10,8 +10,9 @@
 
 namespace fidl {
 
-FidlMessage::FidlMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
-                         zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual)
+OutgoingMessage::OutgoingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
+                                 zx_handle_t* handles, uint32_t handle_capacity,
+                                 uint32_t handle_actual)
     : ::fidl::Result(ZX_OK, nullptr),
       message_{.bytes = bytes,
                .handles = handles,
@@ -24,13 +25,13 @@ FidlMessage::FidlMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_a
   }
 }
 
-FidlMessage::~FidlMessage() {
+OutgoingMessage::~OutgoingMessage() {
   if (handle_actual() > 0) {
     zx_handle_close_many(handles(), handle_actual());
   }
 }
 
-void FidlMessage::LinearizeAndEncode(const fidl_type_t* message_type, void* data) {
+void OutgoingMessage::LinearizeAndEncode(const fidl_type_t* message_type, void* data) {
   if (status_ == ZX_OK) {
     uint32_t num_bytes_actual;
     uint32_t num_handles_actual;
@@ -44,12 +45,7 @@ void FidlMessage::LinearizeAndEncode(const fidl_type_t* message_type, void* data
   }
 }
 
-void FidlMessage::Decode(const fidl_type_t* message_type) {
-  status_ = fidl_decode(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
-  ReleaseHandles();
-}
-
-void FidlMessage::Write(zx_handle_t channel) {
+void OutgoingMessage::Write(zx_handle_t channel) {
   if (status_ != ZX_OK) {
     return;
   }
@@ -60,8 +56,8 @@ void FidlMessage::Write(zx_handle_t channel) {
   ReleaseHandles();
 }
 
-void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
-                       uint32_t result_capacity, zx_time_t deadline) {
+void OutgoingMessage::Call(const fidl_type_t* response_type, zx_handle_t channel,
+                           uint8_t* result_bytes, uint32_t result_capacity, zx_time_t deadline) {
   if (status_ != ZX_OK) {
     return;
   }
@@ -87,8 +83,8 @@ void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, ui
   ReleaseHandles();
 }
 
-::fidl::Result FidlMessage::Write(::fidl::internal::ClientBase* client,
-                                  ::fidl::internal::ResponseContext* context) {
+::fidl::Result OutgoingMessage::Write(::fidl::internal::ClientBase* client,
+                                      ::fidl::internal::ResponseContext* context) {
   if (auto channel = client->GetChannel()) {
     Write(channel->handle());
   } else {
@@ -100,6 +96,32 @@ void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, ui
     delete context;
   }
   return ::fidl::Result(status_, error_);
+}
+
+IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
+                                 zx_handle_t* handles, uint32_t handle_capacity,
+                                 uint32_t handle_actual)
+    : ::fidl::Result(ZX_OK, nullptr),
+      message_{.bytes = bytes,
+               .handles = handles,
+               .num_bytes = byte_actual,
+               .num_handles = handle_actual},
+      byte_capacity_(byte_capacity),
+      handle_capacity_(handle_capacity) {
+  if (byte_capacity < byte_actual) {
+    SetResult(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall);
+  }
+}
+
+IncomingMessage::~IncomingMessage() {
+  if (handle_actual() > 0) {
+    zx_handle_close_many(handles(), handle_actual());
+  }
+}
+
+void IncomingMessage::Decode(const fidl_type_t* message_type) {
+  status_ = fidl_decode(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
+  ReleaseHandles();
 }
 
 }  // namespace fidl

@@ -16,7 +16,7 @@ void ChannelTransaction::Dispatch(fidl_msg_t msg) {
   binding_->dispatch_fn_(binding_->interface_, &msg, this);
 }
 
-zx_status_t ChannelTransaction::Reply(fidl::FidlMessage* message) {
+zx_status_t ChannelTransaction::Reply(fidl::OutgoingMessage* message) {
   ZX_ASSERT(txid_ != 0);
   ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
   auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());

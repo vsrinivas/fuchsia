@@ -24,7 +24,7 @@
 
 namespace fidl {
 
-class FidlMessage;
+class OutgoingMessage;
 
 // An abstract transaction, encapsulating the logic of sending reply messages.
 // The transaction type is polymorphic, to cater to a variety of transports and usage patterns.
@@ -91,7 +91,7 @@ class Transaction {
   // Implementation must fill in the correct transaction ID.
   // |Reply| usually consumes the handles (in which case |ReleaseHandles()| has been called).
   // If not, the destructor of |FidlMessage| will close them.
-  virtual zx_status_t Reply(fidl::FidlMessage* message) = 0;
+  virtual zx_status_t Reply(fidl::OutgoingMessage* message) = 0;
 
   // Should send an epitaph and then close the underlying transport e.g. channel.
   virtual void Close(zx_status_t epitaph) = 0;
@@ -143,7 +143,7 @@ class CompleterBase {
 
   ~CompleterBase();
 
-  fidl::Result SendReply(::fidl::FidlMessage* message);
+  fidl::Result SendReply(::fidl::OutgoingMessage* message);
 
   // Invokes transaction_.InternalError().
   void InternalError(UnbindInfo error);

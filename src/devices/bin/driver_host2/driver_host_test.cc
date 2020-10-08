@@ -84,7 +84,7 @@ class TestTransaction : public fidl::Transaction {
     return std::make_unique<TestTransaction>(epitaph_);
   }
 
-  zx_status_t Reply(fidl::FidlMessage* message) override {
+  zx_status_t Reply(fidl::OutgoingMessage* message) override {
     EXPECT_TRUE(false);
     return ZX_OK;
   }

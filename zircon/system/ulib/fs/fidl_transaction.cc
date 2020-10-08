@@ -18,7 +18,7 @@ namespace fs {
 
 namespace internal {
 
-zx_status_t FidlTransaction::Reply(fidl::FidlMessage* message) {
+zx_status_t FidlTransaction::Reply(fidl::OutgoingMessage* message) {
   ZX_ASSERT(transaction_id_ != 0);
   ZX_ASSERT(message->byte_actual() >= sizeof(fidl_message_header_t));
   auto hdr = reinterpret_cast<fidl_message_header_t*>(message->bytes());

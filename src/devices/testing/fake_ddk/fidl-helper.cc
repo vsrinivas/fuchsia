@@ -12,7 +12,7 @@ static_assert(alignof(fidl::Transaction) > 1);
 constexpr uintptr_t kTransactionIsBoxed = 0x1;
 
 zx_status_t DdkReply(fidl_txn_t* txn, const fidl_msg_t* msg) {
-  fidl::FidlMessage message(msg);
+  fidl::OutgoingMessage message(msg);
   // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting
   // this scope.
   auto fidl_txn = FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
