@@ -55,7 +55,6 @@ class SystemInstance : public FsProvider {
   zx_status_t CreateSvcJob(const zx::job& root_job);
   zx_status_t MaybeCreateShellJob(const zx::job& root_job,
                                   llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
-  zx_status_t PrepareChannels();
 
   zx_status_t StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
                            bool require_system, Coordinator* coordinator);
@@ -80,12 +79,6 @@ class SystemInstance : public FsProvider {
   void do_autorun(const char* name, const char* cmd, const zx::resource& root_resource);
 
   zx_status_t InitializeDriverHostSvcDir();
-
-  // The handle used to transmit messages to device_name_provider.
-  zx::channel device_name_provider_client_;
-
-  // The handle used by device_name_provider to serve incoming requests.
-  zx::channel device_name_provider_server_;
 
   // The outgoing (exposed) connection to the svchost.
   zx::channel svchost_outgoing_;

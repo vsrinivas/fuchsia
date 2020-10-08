@@ -348,12 +348,6 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  status = system_instance.PrepareChannels();
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create other system channels: %s", zx_status_get_string(status));
-    return status;
-  }
-
   if (devmgr_args.start_svchost) {
     zx::channel root_server, root_client;
     status = zx::channel::create(0, &root_server, &root_client);

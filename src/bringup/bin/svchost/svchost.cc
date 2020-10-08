@@ -219,6 +219,7 @@ static constexpr const char* devcoordinator_services[] = {
     llcpp::fuchsia::boot::RootJobForInspect::Name,
     llcpp::fuchsia::boot::RootJob::Name,
     llcpp::fuchsia::boot::RootResource::Name,
+    llcpp::fuchsia::device::NameProvider::Name,
     llcpp::fuchsia::boot::WriteOnlyLog::Name,
     llcpp::fuchsia::hardware::power::statecontrol::Admin::Name,
     llcpp::fuchsia::hardware::pty::Device::Name,
@@ -317,7 +318,6 @@ int main(int argc, char** argv) {
   zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
   zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
   zx::channel devcoordinator_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
-  zx::channel device_name_provider_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 8)));
 
   zx_status_t status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
@@ -379,8 +379,6 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), devcoordinator_services,
                    zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
-  publish_service(outgoing.svc_dir(), llcpp::fuchsia::device::NameProvider::Name,
-                  zx::unowned_channel(device_name_provider_svc));
 
   if (virtcon_proxy_channel.is_valid()) {
     publish_proxy_service(outgoing.svc_dir(), llcpp::fuchsia::virtualconsole::SessionManager::Name,

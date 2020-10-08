@@ -1,6 +1,10 @@
 {
     children: [
         {
+            name: "device_name_provider",
+            url: "fuchsia-boot:///#meta/device-name-provider.cm",
+        },
+        {
             name: "driver_manager",
             url: "fuchsia-boot:///#meta/driver_manager.cm",
             environment: "#ddk-env",
@@ -125,6 +129,14 @@
             to: [ "#miscsvc" ],
         },
         {
+            protocol: [
+                "/svc/fuchsia.boot.Arguments",
+                "/svc/fuchsia.boot.WriteOnlyLog",
+            ],
+            from: "parent",
+            to: [ "#device_name_provider" ],
+        },
+        {
             protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
             from: "parent",
             to: [
@@ -175,7 +187,6 @@
                 "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.manager.BindDebugger",
                 "/svc/fuchsia.device.manager.DebugDumper",
-                "/svc/fuchsia.device.NameProvider",
                 "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
                 "/svc/fuchsia.kernel.MexecBroker",
@@ -192,6 +203,7 @@
             from: "#driver_manager",
             to: [
                 "#console-launcher",
+                "#device_name_provider",
                 "#fshost",
                 "#miscsvc",
                 "#sysinfo",
@@ -309,6 +321,18 @@
                 "#console-launcher",
                 "#driver_manager",
             ],
+        },
+        {
+            protocol: "/svc/fuchsia.device.NameProvider",
+            from: "#device_name_provider",
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
+
+            // TODO: Once svchost is spawned by component manager, we can
+            // remove this.
+            dependency: "weak_for_migration",
         },
 
         // Offer the misc service to the driver_manager
@@ -515,11 +539,14 @@
             from: "#fshost",
         },
         {
+            protocol: "/svc/fuchsia.device.NameProvider",
+            from: "#device_name_provider",
+        },
+        {
             protocol: [
                 "/svc/fuchsia.device.manager.Administrator",
                 "/svc/fuchsia.device.manager.BindDebugger",
                 "/svc/fuchsia.device.manager.DebugDumper",
-                "/svc/fuchsia.device.NameProvider",
                 "/svc/fuchsia.kernel.DebugBroker",
                 "/svc/fuchsia.scheduler.ProfileProvider",
                 "/svc/fuchsia.tracing.kernel.Controller",

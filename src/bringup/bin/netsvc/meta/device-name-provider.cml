@@ -1,0 +1,23 @@
+{
+    program: {
+        binary: "bin/device-name-provider",
+    },
+    use: [
+        { runner: "elf" },
+
+        // For ethernet and network device access.
+        {
+            directory: "/dev",
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.boot.Arguments" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.device.NameProvider",
+            from: "self",
+        },
+    ],
+}

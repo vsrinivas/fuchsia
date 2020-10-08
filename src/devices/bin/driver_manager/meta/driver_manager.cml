@@ -91,6 +91,7 @@
 
                 // Used by a test (fxbug.dev/50992)
                 "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.device.NameProvider",
 
                 // Used by crashsvc to report exceptions (fxbug.dev/50992)
                 "/svc/fuchsia.exception.Handler",

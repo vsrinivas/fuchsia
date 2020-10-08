@@ -44,7 +44,6 @@ struct ServiceStarterArgs {
 
 struct ServiceStarterParams {
   std::string netsvc_interface;
-  std::string zircon_nodename;
   std::string clock_backstop;
   std::string autorun_boot;
   bool netsvc_disable = true;
@@ -63,7 +62,6 @@ struct ConsoleParams {
 ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   fidl::StringView string_keys[]{
       "netsvc.interface",
-      "zircon.nodename",
       "clock.backstop",
       "zircon.autorun.boot",
   };
@@ -73,9 +71,8 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
   if (string_resp.ok()) {
     auto& values = string_resp->values;
     ret.netsvc_interface = std::string{values[0].data(), values[0].size()};
-    ret.zircon_nodename = std::string{values[1].data(), values[1].size()};
-    ret.clock_backstop = std::string{values[2].data(), values[2].size()};
-    ret.autorun_boot = std::string{values[3].data(), values[3].size()};
+    ret.clock_backstop = std::string{values[1].data(), values[1].size()};
+    ret.autorun_boot = std::string{values[2].data(), values[2].size()};
   }
 
   llcpp::fuchsia::boot::BoolPair bool_keys[]{
@@ -249,16 +246,6 @@ zx_status_t SystemInstance::MaybeCreateShellJob(
   return ZX_OK;
 }
 
-zx_status_t SystemInstance::PrepareChannels() {
-  zx_status_t status =
-      zx::channel::create(0, &device_name_provider_client_, &device_name_provider_server_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
                                          bool require_system, Coordinator* coordinator) {
   zx::channel dir_request, svchost_local;
@@ -311,21 +298,6 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   status = zx::channel::create(0, &virtcon_client, &virtcon_fidl_);
   if (status != ZX_OK) {
     return status;
-  }
-
-  zx::channel device_name_provider_svc;
-  {
-    zx::channel device_name_provider_svc_req;
-    status = zx::channel::create(0, &device_name_provider_svc_req, &device_name_provider_svc);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_service_connect_at(device_name_provider_client_.get(), "svc",
-                                     device_name_provider_svc_req.release());
-    if (status != ZX_OK) {
-      return status;
-    }
   }
 
   zx::channel devcoordinator_svc;
@@ -412,12 +384,6 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   actions.push_back((fdio_spawn_action_t){
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = PA_HND(PA_USER0, 7), .handle = devcoordinator_svc.release()},
-  });
-
-  // Add handle to channel to allow svchost to talk to device_name_provider.
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 8), .handle = device_name_provider_svc.release()},
   });
 
   // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
@@ -516,7 +482,6 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
   bool vruncmd = false;
 
   auto params = GetServiceStarterParams(coordinator->boot_args());
-
   const char* interface =
       params.netsvc_interface.empty() ? nullptr : params.netsvc_interface.data();
 
@@ -549,30 +514,6 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
     if (status != ZX_OK) {
       vruncmd = false;
     }
-  }
-
-  if (!coordinator->disable_netsvc()) {
-    // Launch device-name-provider with access to /dev, to discover network interfaces.
-    const zx_handle_t handles[] = {device_name_provider_server_.release()};
-    const uint32_t types[] = {PA_DIRECTORY_REQUEST};
-    const char* nodename = params.zircon_nodename.empty() ? nullptr : params.zircon_nodename.data();
-    const char* args[] = {
-        "/boot/bin/device-name-provider", nullptr, nullptr, nullptr, nullptr, nullptr};
-    int argc = 1;
-
-    if (interface != nullptr) {
-      args[argc++] = "--interface";
-      args[argc++] = interface;
-    }
-
-    if (nodename != nullptr) {
-      args[argc++] = "--nodename";
-      args[argc++] = nodename;
-    }
-
-    launcher_.Launch(svc_job_, "device-name-provider", args, nullptr, -1,
-                     coordinator->root_resource(), handles, types, countof(handles), nullptr,
-                     FS_DEV | FS_SVC);
   }
 
   if (!params.virtcon_disable) {
