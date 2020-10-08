@@ -29,17 +29,27 @@ protocol CastProvider {
 };
 
 [Discoverable]
-protocol KronkProvider {
-    compose Provider;
-};
-
-[Discoverable]
 protocol DisplayProvider {
     compose Provider;
 };
 
 [Discoverable]
+protocol KronkProvider {
+    compose Provider;
+};
+
+[Discoverable]
+protocol ThreadProvider {
+    compose Provider;
+};
+
+[Discoverable]
 protocol UltrasoundProvider {
+    compose Provider;
+};
+
+[Discoverable]
+protocol WeaveProvider {
     compose Provider;
 };
 
