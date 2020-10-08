@@ -8,7 +8,7 @@ import("//build/go/go_test.gni")
 go_library("mdns") {
   deps = [
     "//third_party/golibs:golang.org/x/net",
-    "//third_party/golibs:golang.org/x/sys",
+    "//tools/lib/logger",
   ]
 }
 

@@ -12,8 +12,21 @@ import (
 	"log"
 	"os"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+
 	"github.com/google/subcommands"
 )
+
+var (
+	colors = color.ColorAuto
+	level  = logger.InfoLevel
+)
+
+func init() {
+	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
+	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
+}
 
 func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
@@ -22,8 +35,13 @@ func main() {
 	subcommands.Register(&listCmd{}, "")
 	subcommands.Register(&resolveCmd{}, "")
 
+	flag.Parse()
+
 	log.SetFlags(log.Lshortfile)
 
-	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	l := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "device-finder ")
+	l.SetFlags(logger.Lshortfile)
+	ctx := logger.WithLogger(context.Background(), l)
+
+	os.Exit(int(subcommands.Execute(ctx)))
 }

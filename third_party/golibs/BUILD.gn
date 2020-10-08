@@ -162,7 +162,10 @@ golib("golang.org/x/crypto") {
   ]
 }
 golib("golang.org/x/net") {
-  deps = [ ":golang.org/x/text" ]
+  deps = [
+    ":golang.org/x/sys",
+    ":golang.org/x/text",
+  ]
 }
 golib("golang.org/x/time") {
 }

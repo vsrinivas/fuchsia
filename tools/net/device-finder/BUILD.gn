@@ -9,9 +9,9 @@ import("//build/go/go_test.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [
-    "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
-    "//third_party/golibs:golang.org/x/net",
+    "//tools/lib/color",
+    "//tools/lib/logger",
     "//tools/net/mdns",
     "//tools/net/netboot",
   ]
@@ -25,7 +25,10 @@ go_binary("device-finder") {
 
 go_test("dev_finder_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/device-finder/cmd" ]
-  deps = [ ":main" ]
+  deps = [
+    ":main",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }
 
 install_host_tools("host") {

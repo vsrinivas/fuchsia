@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"syscall"
 
@@ -39,14 +38,8 @@ func main() {
 	flag.Parse()
 
 	l := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
-
-	const logFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
-	l.SetFlags(logFlags)
+	l.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
 	ctx := logger.WithLogger(context.Background(), l)
-
-	// Our mDNS library doesn't use the logger library, so set stdlib log flags
-	// in addition to logger flags.
-	log.SetFlags(logFlags)
 
 	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
 	os.Exit(int(subcommands.Execute(ctx)))

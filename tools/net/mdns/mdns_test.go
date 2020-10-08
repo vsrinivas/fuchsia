@@ -6,6 +6,7 @@ package mdns
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"testing"
@@ -57,6 +58,11 @@ func (f *fakeAddr) String() string {
 
 type fakePacketConn struct {
 	packetCh chan []byte
+	ifi      *net.Interface
+}
+
+func (f *fakePacketConn) MulticastInterface() (*net.Interface, error) {
+	return f.ifi, nil
 }
 
 func (f *fakePacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
@@ -102,39 +108,12 @@ type fakeNetFactory struct {
 	ttlCh    chan int
 }
 
-func (f *fakeNetFactory) MakeUDPSocket(port, ttl int, ip net.IP, iface *net.Interface) (net.PacketConn, error) {
-	if iface.Name == fakeIfaceMCastUpConnectToError.Name {
-		return nil, fmt.Errorf("returning testing error for iface %q", iface.Name)
+func (f *fakeNetFactory) MakeUDPSocket(ifi *net.Interface, _ *net.UDPAddr, ttl int) (packetConn, error) {
+	if ifi.Name == fakeIfaceMCastUpConnectToError.Name {
+		return nil, fmt.Errorf("returning testing error for iface %q", ifi.Name)
 	}
 	f.ttlCh <- ttl
-	return &fakePacketConn{packetCh: f.packetCh}, nil
-}
-
-func (f *fakeNetFactory) MakePacketReceiver(conn net.PacketConn, ipv6 bool) packetReceiver {
-	return &fakePacketReceiver{packetConn: conn}
-}
-
-type fakePacketReceiver struct {
-	packetConn net.PacketConn
-}
-
-func (f *fakePacketReceiver) ReadPacket(buf []byte) (size int, iface *net.Interface, src net.Addr, err error) {
-	size, _, err = f.packetConn.ReadFrom(buf)
-	src = &fakeAddr{}
-	iface = fakeIfaceMCastUp
-	err = nil
-	return
-}
-
-func (f *fakePacketReceiver) JoinGroup(i *net.Interface, n net.Addr) error {
-	if i.Name == fakeIfaceMCastUpJoinGroupError.Name {
-		return fmt.Errorf("returning testing error for iface %q", i.Name)
-	}
-	return nil
-}
-
-func (f *fakePacketReceiver) Close() error {
-	return nil
+	return &fakePacketConn{packetCh: f.packetCh, ifi: ifi}, nil
 }
 
 // Returns a fake mDNS connection, a multicast packet channel, a unicast
@@ -145,169 +124,61 @@ func (f *fakePacketReceiver) Close() error {
 // Keep in mind if running multiple ConnectTo's it will simply add multiple
 // readers to ONE channel. This doesn't support something like mapping ports to
 // specific channels or the like.
-func makeFakeMDNSConn(v6 bool) (mDNSConn, chan []byte, chan []byte, chan int) {
+func makeFakeMDNSConn(v6 bool) (mDNSConnBase, chan []byte, chan int) {
 	// NOTE: In the event that some sort of mapping is going to be made or
 	// multiple values intend to be pushed into these channels, then this
 	// implementation will need to be updated.
-	ucast := make(chan []byte, 1)
-	mcast := make(chan []byte, 1)
+	in := make(chan []byte, 1)
 	ttl := make(chan int, 1)
+	// TODO(awdavies): Should this be a dep injection from a function rather
+	// than constructed purely for tests?
+	c := mDNSConnBase{
+		netFactory: &fakeNetFactory{packetCh: in, ttlCh: ttl},
+		ttl:        -1,
+	}
 	if v6 {
-		// TODO(awdavies): Should this be a dep injection from a function rather
-		// than constructed purely for tests?
-		c := &mDNSConn6{mDNSConnBase{
-			netFactory: &fakeNetFactory{packetCh: ucast, ttlCh: ttl},
-			ttl:        -1,
-		}}
-		// This needs to be initialized, which happens in the |InitReceiver|
-		// function inside of the MDNS |Start| function.
-		c.receiver = &fakePacketReceiver{
-			packetConn: &fakePacketConn{packetCh: mcast},
-		}
-		c.SetIp(defaultMDNSMulticastIPv6)
-		return c, mcast, ucast, ttl
+		c.dst.IP = defaultMDNSMulticastIPv6
 	} else {
-		c := &mDNSConn4{mDNSConnBase{
-			netFactory: &fakeNetFactory{packetCh: ucast, ttlCh: ttl},
-			ttl:        -1,
-		}}
-		c.receiver = &fakePacketReceiver{
-			packetConn: &fakePacketConn{packetCh: mcast},
-		}
-		c.SetIp(defaultMDNSMulticastIPv4)
-		return c, mcast, ucast, ttl
+		c.dst.IP = defaultMDNSMulticastIPv4
 	}
+	return c, in, ttl
 }
 
-func TestConnectToAnyAddr(t *testing.T) {
-	iface := *fakeIfaceMCastUp
-	for _, test := range []struct {
-		name            string
-		addrs           []net.Addr
-		expectConnected bool
-		ipv6            bool
-	}{
-		{
-			name:            "ipv6 only expect ipv4",
-			ipv6:            false,
-			expectConnected: false,
-			addrs: []net.Addr{
-				&net.IPAddr{IP: net.ParseIP("fe80::1234:1234:1234:1234")},
-				&net.IPAddr{IP: net.ParseIP("fe80::1456:1456:1456:1456")},
-				&net.IPAddr{IP: net.ParseIP("fe80::6789:6789:6789:6789")},
-			},
-		},
-		{
-			name:            "ipv4 only expect ipv6",
-			ipv6:            true,
-			expectConnected: false,
-			addrs: []net.Addr{
-				&net.IPAddr{IP: net.ParseIP("127.1.1.2")},
-				&net.IPAddr{IP: net.ParseIP("128.1.1.2")},
-				&net.IPAddr{IP: net.ParseIP("129.1.1.2")},
-			},
-		},
-		{
-			name:            "ipv4 only expect ipv4",
-			ipv6:            false,
-			expectConnected: true,
-			addrs: []net.Addr{
-				&net.IPAddr{IP: net.ParseIP("127.1.1.2")},
-				&net.IPAddr{IP: net.ParseIP("128.1.1.2")},
-				&net.IPAddr{IP: net.ParseIP("129.1.1.2")},
-			},
-		},
-		{
-			name:            "ipv6 only expect ipv6",
-			ipv6:            true,
-			expectConnected: true,
-			addrs: []net.Addr{
-				&net.IPAddr{IP: net.ParseIP("fe80::1456:1456:1456:1456")},
-				&net.IPAddr{IP: net.ParseIP("fe80::6789:6789:6789:6789")},
-			},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			c, _, _, _ := makeFakeMDNSConn(test.ipv6)
-			defer c.Close()
-			connected, err := connectToAnyAddr(c, &iface, test.addrs, 1234, test.ipv6)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if connected != test.expectConnected {
-				t.Errorf("connection invalid: want %t, got %t", test.expectConnected, connected)
-			}
-		})
-	}
-}
-
-func TestConnectToAnyIface_noValidConnections(t *testing.T) {
-	ifaces := []net.Interface{
-		*fakeIfaceMCastDown,
-		*fakeIfaceMCastUpJoinGroupError,
-		*fakeIfaceMCastUpConnectToError,
-		*fakeIfaceMCastDown,
-	}
-	c, _, _, _ := makeFakeMDNSConn(false)
+func TestCast4(t *testing.T) {
+	c, in, ttl := makeFakeMDNSConn(false)
 	defer c.Close()
-	if err := connectOnAllIfaces(c, ifaces, 1234, false); err == nil {
-		t.Errorf("expected err. func successful")
-	}
-}
-
-func TestConnectToAnyIface_oneValidConnection(t *testing.T) {
-	ifaces := []net.Interface{
-		*fakeIfaceMCastDown,
-		*fakeIfaceMCastUpJoinGroupError,
-		*fakeIfaceMCastUpConnectToError,
-		*fakeIfaceMCastUp,
-		*fakeIfaceMCastDown,
-	}
-	c, _, _, _ := makeFakeMDNSConn(false)
-	defer c.Close()
-	if err := connectOnAllIfaces(c, ifaces, 1234, false); err != nil {
-		t.Errorf("expected successful connection, received err: %v", err)
-	}
-}
-
-func TestUCast4(t *testing.T) {
-	c, _, ucast, ttl := makeFakeMDNSConn(false)
-	defer c.Close()
-	c.SetAcceptUnicastResponses(true)
-	ip := net.ParseIP("192.168.2.2")
-	if err := c.ConnectTo(12345, ip, fakeIfaceMCastUp); err != nil {
-		t.Errorf("Unable to connect to port: %v", err)
-		return
+	c.dst.IP = net.ParseIP("192.168.2.2")
+	c.dst.Port = 12345
+	if err := c.JoinGroup(fakeIfaceMCastUp); err != nil {
+		t.Fatalf("Unable to connect to port: %s", err)
 	}
 	ttlWant := -1
 	ttlGot := <-ttl
 	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
-		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
+		t.Fatalf("ttl for senders incorrect (-want +got)\n%s", d)
 	}
-	if err := c.ConnectTo(12345, ip, fakeIfaceMCastUp); err != nil {
-		t.Errorf("Unable to connect to port: %v", err)
-		return
+	if err := c.JoinGroup(fakeIfaceMCastUp); err != nil {
+		t.Fatalf("Unable to connect to port: %s", err)
 	}
 	ttlGot = <-ttl
 	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
 		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
 	}
 
-	rpChan := c.Listen()
+	rpChan := c.Listen(context.Background())
 
 	want := []byte{0, 1, 2, 3, 4}
 	// "Write" packet to the unicast listeners.
-	ucast <- want
+	in <- want
 	got := <-rpChan
 	// Compare a subsection, as this will by default return a kilobyte buffer.
 	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
-		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
+		t.Errorf("read/write mismatch (-wrote +read)\n%s", d)
 	}
 }
 
 func TestTTLValues(t *testing.T) {
-	c, _, _, _ := makeFakeMDNSConn(false)
+	c, _, _ := makeFakeMDNSConn(false)
 	defer c.Close()
 	// Expecting errors.
 	if err := c.SetMCastTTL(256); err == nil {
@@ -323,14 +194,13 @@ func TestTTLValues(t *testing.T) {
 	}
 }
 
-func TestUCast6(t *testing.T) {
-	c, _, ucast, ttl := makeFakeMDNSConn(true)
+func TestCast6(t *testing.T) {
+	c, in, ttl := makeFakeMDNSConn(true)
 	defer c.Close()
-	c.SetAcceptUnicastResponses(true)
-	ip := net.ParseIP("2001:db8::1")
-	if err := c.ConnectTo(1234, ip, fakeIfaceMCastUp); err != nil {
-		t.Errorf("Unable to connect to port: %v", err)
-		return
+	c.dst.IP = net.ParseIP("2001:db8::1")
+	c.dst.Port = 1234
+	if err := c.JoinGroup(fakeIfaceMCastUp); err != nil {
+		t.Fatalf("Unable to connect to port: %s", err)
 	}
 	ttlWant := -1
 	ttlGot := <-ttl
@@ -339,9 +209,8 @@ func TestUCast6(t *testing.T) {
 	}
 
 	c.SetMCastTTL(0)
-	if err := c.ConnectTo(12345, ip, fakeIfaceMCastUp); err != nil {
-		t.Errorf("Unable to connect to port: %v", err)
-		return
+	if err := c.JoinGroup(fakeIfaceMCastUp); err != nil {
+		t.Fatalf("Unable to connect to port: %s", err)
 	}
 	ttlWant = 0
 	ttlGot = <-ttl
@@ -349,83 +218,15 @@ func TestUCast6(t *testing.T) {
 		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
 	}
 
-	rpChan := c.Listen()
+	rpChan := c.Listen(context.Background())
 
 	want := []byte{0, 9, 2, 9, 2}
 	// "Write" packets to the listeners.
-	ucast <- want
+	in <- want
 	got := <-rpChan
 	// Compare a subsection, as this will by default return a kilobyte buffer.
 	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
-		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
-	}
-}
-
-func TestMCast6(t *testing.T) {
-	c, mcast, ucast, ttl := makeFakeMDNSConn(true)
-	defer c.Close()
-	ip := net.ParseIP("2001:db8::1")
-	if err := c.ConnectTo(1234, ip, fakeIfaceMCastUp); err != nil {
-		t.Errorf("Unable to connect to port: %v", err)
-		return
-	}
-
-	rpChan := c.Listen()
-
-	doNotWant := []byte{1, 2, 3, 1, 2, 3, 4, 5}
-	want := []byte{0, 9, 2, 9, 2}
-	// "Write" packets to the listeners. Ucast should always be ignored since
-	// accepting unicast hasn't been set to true.
-	ucast <- doNotWant
-	mcast <- want
-	got := <-rpChan
-	// Compare a subsection, as this will by default return a kilobyte buffer.
-	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
-		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
-	}
-	ttlWant := -1
-	ttlGot := <-ttl
-	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
-		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
-	}
-}
-
-func TestMCast4(t *testing.T) {
-	c, mcast, ucast, ttl := makeFakeMDNSConn(false)
-	defer c.Close()
-	ip := net.ParseIP("192.168.10.10")
-	ttlWant := 23
-	c.SetMCastTTL(ttlWant)
-	if err := c.ConnectTo(1234, ip, fakeIfaceMCastUp); err != nil {
-		t.Errorf("Unable to connect to port: %v", err)
-		return
-	}
-	ttlGot := <-ttl
-	if d := cmp.Diff(ttlWant, ttlGot); d != "" {
-		t.Errorf("ttl for senders incorrect (-want +got)\n%s", d)
-	}
-
-	rpChan := c.Listen()
-
-	doNotWant := []byte{1, 2, 3, 1, 2, 3, 4, 5}
-	want := []byte{0, 9, 2, 9, 2}
-	// "Write" packets to the listeners. Ucast should always be ignored since
-	// accepting unicast hasn't been set to true.
-	ucast <- doNotWant
-	mcast <- want
-	got := <-rpChan
-	// Compare a subsection, as this will by default return a kilobyte buffer.
-	if d := cmp.Diff(want, got.data[:len(want)]); d != "" {
-		t.Errorf("read/write ucast mismatch (-wrote +read)\n%s", d)
-	}
-}
-
-func TestConnectToRejectedMDNS4(t *testing.T) {
-	c, _, _, _ := makeFakeMDNSConn(false)
-	defer c.Close()
-	ip := net.ParseIP("2001:db8::1")
-	if err := c.ConnectTo(12345, ip, fakeIfaceMCastUp); err == nil {
-		t.Errorf("ConnectTo expected error when connecting to IPv6 addr")
+		t.Errorf("read/write mismatch (-wrote +read)\n%s", d)
 	}
 }
 
@@ -527,40 +328,40 @@ func TestIpToDnsRecordType(t *testing.T) {
 func TestSetAddress(t *testing.T) {
 	m := NewMDNS()
 	m.EnableIPv4()
-	got := m.ipToSend()
+	got := m.conn4.dst.IP
 	// Should send to the default address.
 	want := net.ParseIP("224.0.0.251")
 	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("ipToSend (default): mismatch (-want +got)\n%s", d)
+		t.Errorf("IP mismatch (-want +got)\n%s", d)
 	}
 
 	if err := m.SetAddress("11.22.33.44"); err != nil {
 		t.Errorf("SetAddress() returned error: %s", err)
 	} else {
-		got = m.ipToSend()
+		got = m.conn4.dst.IP
 		// Should send to the given custom address.
 		want = net.ParseIP("11.22.33.44")
 		if d := cmp.Diff(want, got); d != "" {
-			t.Errorf("ipToSend (custom): mismatch (-want +got)\n%s", d)
+			t.Errorf("IP mismatch (-want +got)\n%s", d)
 		}
 	}
 
 	m = NewMDNS()
 	m.EnableIPv6()
-	got = m.ipToSend()
+	got = m.conn6.dst.IP
 	want = net.ParseIP("ff02::fb")
 	if d := cmp.Diff(want, got); d != "" {
-		t.Errorf("ipToSend (default): mismatch (-want +got)\n%s", d)
+		t.Errorf("IP mismatch (-want +got)\n%s", d)
 	}
 
 	if err := m.SetAddress("11:22::33:44"); err != nil {
 		t.Errorf("SetAddress() returned error: %s", err)
 	} else {
-		got = m.ipToSend()
+		got = m.conn6.dst.IP
 		// Should send to the given custom address.
 		want = net.ParseIP("11:22::33:44")
 		if d := cmp.Diff(want, got); d != "" {
-			t.Errorf("ipToSend (custom): mismatch (-want +got)\n%s", d)
+			t.Errorf("IP mismatch (-want +got)\n%s", d)
 		}
 	}
 }
