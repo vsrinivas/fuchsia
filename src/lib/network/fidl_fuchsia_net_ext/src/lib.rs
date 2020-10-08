@@ -112,8 +112,8 @@ impl std::str::FromStr for IpAddress {
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Subnet {
-    addr: IpAddress,
-    prefix_len: u8,
+    pub addr: IpAddress,
+    pub prefix_len: u8,
 }
 
 impl std::fmt::Display for Subnet {
