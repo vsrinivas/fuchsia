@@ -40,8 +40,8 @@ mod controller;
 use crate::stream::{Stream, Streams};
 pub use controller::ControllerPool;
 
-/// A Peer represents an A2DP peer which can be connected to this device.
-/// A2DP peers are specific to a Bluetooth peer and only one should exist for each unique PeerId.
+/// A Peer represents an A2DP peer which may be connected to this device.
+/// Only one A2DP peer should exist for each Bluetooth peer.
 #[derive(Inspect)]
 pub struct Peer {
     /// The id of the peer we are connected to.
@@ -410,15 +410,20 @@ impl PeerInner {
         Ok(())
     }
 
+    /// Starts the stream which is in the local Streams with `local_id`
     fn start_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
+        // TODO(fxbug.dev/49525): Get a ticket for streaming
         info!("Starting stream: {:?}", stream);
-        stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))
+        let _stream_finished = stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))?;
+        // TODO(fxbug.dev/49525): Drop a ticket when the streaming is done
+        Ok(())
     }
 
     fn suspend_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         info!("Suspending stream: {:?}", stream);
+        // TODO(fxbug.dev/49525): Suspending should drop the ticket (setup by the start_local_stream)
         stream.suspend().map_err(|c| avdtp::Error::RequestInvalid(c))
     }
 
@@ -1282,13 +1287,6 @@ mod tests {
             x => panic!("Set capabilities should be ready but got {:?}", x),
         };
 
-        // The task should be created locally
-        let media_task = match exec.run_until_stalled(&mut next_task_fut) {
-            Poll::Ready(Some(task)) => task,
-            x => panic!("Local task should be created at this point: {:?}", x),
-        };
-        assert!(!media_task.is_started());
-
         let open_fut = remote_peer.open(&sbc_endpoint_id);
         pin_mut!(open_fut);
         match exec.run_until_stalled(&mut open_fut) {
@@ -1307,6 +1305,12 @@ mod tests {
         match exec.run_until_stalled(&mut start_fut) {
             Poll::Ready(Ok(())) => {}
             x => panic!("Start should be ready but got {:?}", x),
+        };
+
+        // The task should be created locally
+        let media_task = match exec.run_until_stalled(&mut next_task_fut) {
+            Poll::Ready(Some(task)) => task,
+            x => panic!("Local task should be created at this point: {:?}", x),
         };
 
         // Should have started the media task

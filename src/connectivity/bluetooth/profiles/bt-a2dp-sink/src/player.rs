@@ -50,7 +50,8 @@ struct AudioConsumerSink {
     stream_sink: StreamSinkProxy,
     audio_consumer: AudioConsumerProxy,
     /// A set of futures that finish when packets are no longer in use by the sink.
-    send_futures: FuturesUnordered<MapOk<QueryResponseFut<()>, Box<dyn FnOnce(()) -> usize>>>,
+    send_futures:
+        FuturesUnordered<MapOk<QueryResponseFut<()>, Box<dyn FnOnce(()) -> usize + Send>>>,
 }
 
 impl AudioConsumerSink {
@@ -302,7 +303,7 @@ impl SbcHeader {
 /// media subsystem.
 pub struct Player {
     codec_config: MediaCodecConfig,
-    audio_sink: Pin<Box<dyn AsyncWrite>>,
+    audio_sink: Pin<Box<dyn AsyncWrite + Send>>,
     watch_status_stream: HangingGetStream<AudioConsumerStatus>,
     playing: bool,
     next_packet_flags: mpsc::Sender<u32>,
@@ -346,7 +347,7 @@ impl Player {
 
         let (sender, receiver) = mpsc::channel(1);
 
-        let mut audio_sink: Pin<Box<dyn AsyncWrite>> = Box::pin(AudioConsumerSink::build(
+        let mut audio_sink: Pin<Box<dyn AsyncWrite + Send>> = Box::pin(AudioConsumerSink::build(
             &mut audio_consumer,
             codec_config.sampling_frequency().unwrap_or(DEFAULT_SAMPLE_RATE),
             compression,

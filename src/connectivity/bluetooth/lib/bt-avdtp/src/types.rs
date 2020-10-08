@@ -18,6 +18,7 @@ pub type Result<T> = result::Result<T, Error>;
 
 /// The error type of the AVDTP library.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// The value that was sent on the wire was out of range.
     #[error("Value was out of range")]
@@ -99,10 +100,6 @@ pub enum Error {
     /// An error from another source
     #[error(transparent)]
     Other(#[from] anyhow::Error),
-
-    #[doc(hidden)]
-    #[error("__Nonexhaustive error should never be created.")]
-    __Nonexhaustive,
 }
 
 /// Generates an enum value where each variant can be converted into a constant in the given

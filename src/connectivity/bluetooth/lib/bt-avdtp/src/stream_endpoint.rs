@@ -29,6 +29,7 @@ use crate::{
 
 pub type StreamEndpointUpdateCallback = Box<dyn Fn(&StreamEndpoint) -> () + Sync + Send>;
 
+/// The state of a StreamEndpoint.
 #[derive(PartialEq, Debug)]
 pub enum StreamState {
     Idle,
@@ -53,10 +54,10 @@ impl StreamState {
     }
 }
 
-/// An AVDTP Transport Stream, which implements the Basic service
-/// See Section 7.2
-/// Audio frames are currently not delivered anywhere, and are counted and dropped.
-/// TODO(jamuraa): setup a delivery mechanism that is compatible with Media
+/// An AVDTP StreamEndpoint. StreamEndpoints represent a particular capability of the application
+/// to be a source of sink of media. Included here to aid negotiating the stream connection.
+/// See Section 5.3 of the AVDTP 1.3 Specification for more information about the Stream Endpoint
+/// Architecture.
 pub struct StreamEndpoint {
     /// Local stream endpoint id.  This should be unique per AVDTP Peer.
     id: StreamEndpointId,
@@ -869,7 +870,6 @@ mod tests {
         // Expect a "yes" response.
         expect_remote_recv(&[0x42, 0x08], &signaling);
 
-        // TODO(jamuraa): We need to wait until the timer expires for now.
         exec.wake_next_timer();
         let complete = exec.run_until_stalled(&mut release_fut);
         // Now we're waiting on response from the Abort

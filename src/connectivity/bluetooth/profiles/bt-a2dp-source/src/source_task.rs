@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::Error,
     bt_a2dp::{codec::MediaCodecConfig, inspect::DataStreamInspect, media_task::*},
     bt_avdtp::MediaStream,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
@@ -11,9 +11,10 @@ use {
     fuchsia_bluetooth::types::PeerId,
     fuchsia_trace as trace,
     futures::{
-        future::{AbortHandle, Abortable},
+        channel::oneshot,
+        future::{BoxFuture, Shared},
         lock::Mutex,
-        AsyncWriteExt, TryStreamExt,
+        AsyncWriteExt, FutureExt, TryFutureExt, TryStreamExt,
     },
     log::{info, trace, warn},
     std::sync::Arc,
@@ -39,7 +40,7 @@ impl MediaTaskBuilder for SourceTaskBuilder {
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> Result<Box<dyn MediaTask>, Error> {
+    ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
         Ok(Box::new(self.configure_task(peer_id, codec_config, data_stream_inspect)?))
     }
 }
@@ -56,11 +57,11 @@ impl SourceTaskBuilder {
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> Result<ConfiguredSourceTask, Error> {
-        let channel_map = match codec_config.channel_count()? {
-            1 => vec![AudioChannelId::Cf],
-            2 => vec![AudioChannelId::Lf, AudioChannelId::Rf],
-            _ => return Err(format_err!("SourceTask only supports up to 2 channels")),
+    ) -> Result<ConfiguredSourceTask, MediaTaskError> {
+        let channel_map = match codec_config.channel_count() {
+            Ok(1) => vec![AudioChannelId::Cf],
+            Ok(2) => vec![AudioChannelId::Lf, AudioChannelId::Rf],
+            Ok(_) | Err(_) => return Err(MediaTaskError::ConfigurationNotSupported),
         };
         let pcm_format = PcmFormat {
             pcm_mode: AudioPcmMode::Linear,
@@ -68,10 +69,11 @@ impl SourceTaskBuilder {
             frames_per_second: codec_config.sampling_frequency()?,
             channel_map,
         };
-        let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)?;
+        let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)
+            .map_err(|_e| MediaTaskError::ConfigurationNotSupported)?;
         if let Err(e) = EncodedStream::build(pcm_format.clone(), source_stream, codec_config) {
             trace!("SourceTaskBuilder: can't build encoded stream: {:?}", e);
-            return Err(e);
+            return Err(MediaTaskError::Other(format!("Can't build encoded stream: {}", e)));
         }
         Ok(ConfiguredSourceTask::build(
             pcm_format,
@@ -95,13 +97,56 @@ pub(crate) struct ConfiguredSourceTask {
     peer_id: PeerId,
     /// Configuration providing the format of encoded audio requested by the peer.
     codec_config: MediaCodecConfig,
-    /// Handle used to stop the streaming task when stopped.
-    stop_sender: Option<AbortHandle>,
     /// Data Stream inspect object for tracking total bytes / current transfer speed.
     data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
 }
 
 impl ConfiguredSourceTask {
+    /// Build a new ConfiguredSourceTask.  Usually only called by SourceTaskBuilder.
+    /// `ConfiguredSourceTask::start` will only return errors if the settings here cannot produce a
+    /// stream.  No checks are done when building.
+    pub(crate) fn build(
+        pcm_format: PcmFormat,
+        source_type: sources::AudioSourceType,
+        peer_id: PeerId,
+        codec_config: &MediaCodecConfig,
+        data_stream_inspect: DataStreamInspect,
+    ) -> Self {
+        Self {
+            pcm_format,
+            source_type,
+            peer_id,
+            codec_config: codec_config.clone(),
+            data_stream_inspect: Arc::new(Mutex::new(data_stream_inspect)),
+        }
+    }
+}
+
+impl MediaTaskRunner for ConfiguredSourceTask {
+    fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError> {
+        let source_stream =
+            sources::build_stream(&self.peer_id, self.pcm_format.clone(), self.source_type)
+                .map_err(|e| MediaTaskError::Other(format!("Building stream: {}", e)))?;
+        let encoded_stream =
+            EncodedStream::build(self.pcm_format.clone(), source_stream, &self.codec_config)
+                .map_err(|e| MediaTaskError::Other(format!("Can't build encoded stream: {}", e)))?;
+        let stream_task = RunningSourceTask::build(
+            self.codec_config.clone(),
+            encoded_stream,
+            stream,
+            self.data_stream_inspect.clone(),
+        );
+        let _ = self.data_stream_inspect.try_lock().map(|mut l| l.start());
+        Ok(Box::new(stream_task))
+    }
+}
+
+struct RunningSourceTask {
+    stream_task: Option<fasync::Task<()>>,
+    result_fut: Shared<BoxFuture<'static, Result<(), MediaTaskError>>>,
+}
+
+impl RunningSourceTask {
     /// The main streaming task. Reads encoded audio from the encoded_stream and packages into RTP
     /// packets, sending the resulting RTP packets using `media_stream`.
     async fn stream_task(
@@ -141,63 +186,38 @@ impl ConfiguredSourceTask {
         }
     }
 
-    /// Build a new ConfiguredSourceTask.  Usually only called by SourceTaskBuilder.
-    /// `ConfiguredSourceTask::start` will only return errors if the settings here can not produce a
-    /// stream.  No checks are done when building.
-    pub(crate) fn build(
-        pcm_format: PcmFormat,
-        source_type: sources::AudioSourceType,
-        peer_id: PeerId,
-        codec_config: &MediaCodecConfig,
-        data_stream_inspect: DataStreamInspect,
+    fn build(
+        codec_config: MediaCodecConfig,
+        encoded_stream: EncodedStream,
+        media_stream: MediaStream,
+        inspect: Arc<Mutex<DataStreamInspect>>,
     ) -> Self {
-        Self {
-            pcm_format,
-            source_type,
-            peer_id,
-            codec_config: codec_config.clone(),
-            stop_sender: None,
-            data_stream_inspect: Arc::new(Mutex::new(data_stream_inspect)),
-        }
-    }
-}
-
-impl MediaTask for ConfiguredSourceTask {
-    fn start(&mut self, stream: MediaStream) -> Result<(), Error> {
-        if self.stop_sender.is_some() {
-            return Err(format_err!("Already started, can't start again"));
-        }
-        let source_stream =
-            sources::build_stream(&self.peer_id, self.pcm_format.clone(), self.source_type)?;
-        let encoded_stream =
-            EncodedStream::build(self.pcm_format.clone(), source_stream, &self.codec_config)?;
-        let inspect = self.data_stream_inspect.clone();
-        let stream_fut =
-            Self::stream_task(self.codec_config.clone(), encoded_stream, stream, inspect);
-        let _ = self.data_stream_inspect.try_lock().map(|mut l| l.start());
-        let (stop_handle, stop_registration) = AbortHandle::new_pair();
-        let stream_fut = Abortable::new(stream_fut, stop_registration);
-        fasync::Task::spawn(async move {
+        let (sender, receiver) = oneshot::channel();
+        let stream_task_fut =
+            Self::stream_task(codec_config, encoded_stream, media_stream, inspect);
+        let wrapped_task = fasync::Task::spawn(async move {
             trace::instant!("bt-a2dp-source", "Media:Start", trace::Scope::Thread);
-            match stream_fut.await {
-                Err(_) | Ok(Ok(())) => {}
-                Ok(Err(e)) => warn!("ConfiguredSourceTask ended with error: {:?}", e),
-            };
-        })
-        .detach();
-        self.stop_sender = Some(stop_handle);
-        Ok(())
-    }
-
-    fn stop(&mut self) -> Result<(), Error> {
-        trace::instant!("bt-a2dp-source", "Media:Stop", trace::Scope::Thread);
-        self.stop_sender.take().map(|x| x.abort());
-        Ok(())
+            let result = stream_task_fut
+                .await
+                .map_err(|e| MediaTaskError::Other(format!("Error in streaming audio: {}", e)));
+            let _ = sender.send(result);
+        });
+        let result_fut = receiver.map_ok_or_else(|_err| Ok(()), |result| result).boxed().shared();
+        Self { stream_task: Some(wrapped_task), result_fut }
     }
 }
 
-impl Drop for ConfiguredSourceTask {
-    fn drop(&mut self) {
-        let _ = self.stop();
+impl MediaTask for RunningSourceTask {
+    fn finished(&mut self) -> BoxFuture<'static, Result<(), MediaTaskError>> {
+        self.result_fut.clone().boxed()
+    }
+
+    fn stop(&mut self) -> Result<(), MediaTaskError> {
+        if let Some(_task) = self.stream_task.take() {
+            trace::instant!("bt-a2dp-source", "Media:Stopped", trace::Scope::Thread);
+        }
+        // Either a result already happened, or we just sent an Ok(()) by dropping the result
+        // sender.
+        self.result().unwrap_or(Ok(()))
     }
 }

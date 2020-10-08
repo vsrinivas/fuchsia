@@ -127,7 +127,7 @@ fn source_media_stream_stats() {
     let weak_local = Arc::downgrade(&local);
     let stream = MediaStream::new(Arc::new(Mutex::new(true)), weak_local);
 
-    task.start(stream).expect("started");
+    let _running_task = task.start(stream).expect("media should start");
 
     let _ = exec.run_singlethreaded(remote.next()).expect("some packet");
 

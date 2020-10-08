@@ -7,12 +7,13 @@ use {
     bt_a2dp::{codec::MediaCodecConfig, inspect::DataStreamInspect, media_task::*},
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, MediaStream},
-    fuchsia_async,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_cobalt::CobaltSender,
     fuchsia_trace as trace,
     futures::{
-        future::{AbortHandle, Abortable, Aborted},
+        channel::oneshot,
+        future::{BoxFuture, Future, Shared},
         lock::Mutex,
         select, FutureExt, StreamExt,
     },
@@ -45,7 +46,7 @@ impl MediaTaskBuilder for SinkTaskBuilder {
         _peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> Result<Box<dyn MediaTask>, Error> {
+    ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
         Ok(Box::new(ConfiguredSinkTask::new(
             codec_config,
             self.cobalt_sender.clone(),
@@ -60,8 +61,6 @@ struct ConfiguredSinkTask {
     codec_config: MediaCodecConfig,
     /// Used to send statistics about the length of playback to cobalt.
     cobalt_sender: CobaltSender,
-    /// Handle used to stop the streaming task when stopped.
-    stop_sender: Option<AbortHandle>,
     /// Data Stream inspect object for tracking total bytes / current transfer speed.
     stream_inspect: Arc<Mutex<DataStreamInspect>>,
     /// Session ID for Media
@@ -79,55 +78,26 @@ impl ConfiguredSinkTask {
             codec_config: codec_config.clone(),
             cobalt_sender,
             stream_inspect: Arc::new(Mutex::new(stream_inspect)),
-            stop_sender: None,
             session_id,
         }
     }
 }
 
-impl MediaTask for ConfiguredSinkTask {
-    fn start(&mut self, stream: MediaStream) -> Result<(), Error> {
+impl MediaTaskRunner for ConfiguredSinkTask {
+    fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError> {
         let codec_config = self.codec_config.clone();
         let session_id = self.session_id;
-        let player_fut = media_stream_task(
+        let media_player_fut = media_stream_task(
             stream,
             Box::new(move || player::Player::new(session_id, codec_config.clone())),
             self.stream_inspect.clone(),
         );
 
         let _ = self.stream_inspect.try_lock().map(|mut l| l.start());
-        let (stop_handle, stop_registration) = AbortHandle::new_pair();
-        let player_fut = Abortable::new(player_fut, stop_registration);
-        let cobalt_sender = self.cobalt_sender.clone();
         let codec_type = self.codec_config.codec_type().clone();
-        fuchsia_async::Task::local(async move {
-            let start_time = fuchsia_async::Time::now();
-            trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
-            if let Err(Aborted) = player_fut.await {
-                info!("Player stopped via stop signal");
-            }
-            trace::instant!("bt-a2dp-sink", "Media:Stop", trace::Scope::Thread);
-            let end_time = fuchsia_async::Time::now();
-
-            report_stream_metrics(
-                cobalt_sender,
-                &codec_type,
-                (end_time - start_time).into_seconds(),
-            );
-        })
-        .detach();
-        self.stop_sender = Some(stop_handle);
-        Ok(())
+        let task = RunningSinkTask::start(media_player_fut, self.cobalt_sender.clone(), codec_type);
+        Ok(Box::new(task))
     }
-
-    fn stop(&mut self) -> Result<(), Error> {
-        self.stop_sender.take().map(|x| x.abort());
-        Ok(())
-    }
-}
-
-impl Drop for ConfiguredSinkTask {
-    fn drop(&mut self) {}
 }
 
 #[derive(Error, Debug)]
@@ -143,32 +113,85 @@ enum StreamingError {
     PlayerClosed,
 }
 
+/// Sink task which is running a given media_task future, and will send it's result to multiple
+/// interested parties.
+/// Reports the streaming metrics to Cobalt when streaming has completed.
+struct RunningSinkTask {
+    media_task: Option<fasync::Task<()>>,
+    _cobalt_task: fasync::Task<()>,
+    result_fut: Shared<fasync::Task<Result<(), MediaTaskError>>>,
+}
+
+impl RunningSinkTask {
+    fn start(
+        media_task: impl Future<Output = Result<(), MediaTaskError>> + Send + 'static,
+        cobalt_sender: CobaltSender,
+        codec_type: avdtp::MediaCodecType,
+    ) -> Self {
+        let (sender, receiver) = oneshot::channel();
+        let wrapped_media_task = fasync::Task::spawn(async move {
+            let result = media_task.await;
+            let _ = sender.send(result);
+        });
+        let recv_task = fasync::Task::spawn(async move {
+            // Receives the result of the media task, or Canceled, from the stop() dropping it
+            receiver.await.unwrap_or(Ok(()))
+        });
+        let result_fut = recv_task.shared();
+        let cobalt_result = result_fut.clone();
+        let cobalt_task = fasync::Task::spawn(async move {
+            let start_time = fasync::Time::now();
+            trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
+            let _ = cobalt_result.await;
+            trace::instant!("bt-a2dp-sink", "Media:Stop", trace::Scope::Thread);
+            let end_time = fasync::Time::now();
+
+            report_stream_metrics(
+                cobalt_sender,
+                &codec_type,
+                (end_time - start_time).into_seconds(),
+            );
+        });
+        Self { media_task: Some(wrapped_media_task), result_fut, _cobalt_task: cobalt_task }
+    }
+}
+
+impl MediaTask for RunningSinkTask {
+    fn finished(&mut self) -> BoxFuture<'static, Result<(), MediaTaskError>> {
+        self.result_fut.clone().boxed()
+    }
+
+    fn stop(&mut self) -> Result<(), MediaTaskError> {
+        if let Some(_task) = self.media_task.take() {
+            info!("Media Task stopped via stop signal");
+        }
+        // Either there was already a result, or we just send Ok(()) by dropping the sender.
+        self.result().unwrap_or(Ok(()))
+    }
+}
+
 /// Wrapper function for media streaming that handles creation of the Player and the media stream
 /// metrics reporting
 async fn media_stream_task(
     mut stream: (impl futures::Stream<Item = avdtp::Result<Vec<u8>>> + std::marker::Unpin),
-    player_gen: Box<dyn Fn() -> Result<player::Player, Error>>,
+    player_gen: Box<dyn Fn() -> Result<player::Player, Error> + Send>,
     inspect: Arc<Mutex<DataStreamInspect>>,
-) {
+) -> Result<(), MediaTaskError> {
     loop {
-        let mut player = match player_gen() {
-            Ok(v) => v,
-            Err(e) => {
-                info!("Can't setup player: {:?}", e);
-                break;
-            }
-        };
+        let mut player = player_gen()
+            .map_err(|e| MediaTaskError::Other(format!("Can't setup player: {:?}", e)))?;
         // Get the first status from the player to confirm it is setup.
         if let player::PlayerEvent::Closed = player.next_event().await {
-            info!("Player failed during startup");
-            break;
+            return Err(MediaTaskError::Other(format!("Player failed during startup")));
         }
 
         match decode_media_stream(&mut stream, player, inspect.clone()).await {
             StreamingError::PlayerClosed => info!("Player closed, rebuilding.."),
             e => {
-                info!("Unrecoverable streaming error: {:?}", e);
-                break;
+                return Err(MediaTaskError::Other(format!(
+                    "Unrecoverable streaming error: {:?}",
+                    e
+                )));
             }
         };
     }
@@ -245,7 +268,7 @@ async fn decode_media_stream(
                 trace::flow_end!("bluetooth", "ProfilePacket", packet_count);
 
                 let _ = inspect.try_lock().map(|mut l| {
-                    l.record_transferred(pkt.len(), fuchsia_async::Time::now());
+                    l.record_transferred(pkt.len(), fasync::Time::now());
                 });
 
                 if let Some(len) = preload.len() {
@@ -309,7 +332,6 @@ mod tests {
         AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
         StreamSinkRequest,
     };
-    use fuchsia_async as fasync;
     use fuchsia_inspect as inspect;
     use fuchsia_inspect_derive::WithInspect;
     use fuchsia_zircon::DurationNum;

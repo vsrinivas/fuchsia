@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     bt_avdtp::{
         self as avdtp, ErrorCode, ServiceCapability, ServiceCategory, StreamEndpoint,
         StreamEndpointId,
@@ -10,18 +11,24 @@ use {
     fuchsia_bluetooth::types::PeerId,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect, WithInspect},
+    futures::{future::BoxFuture, FutureExt, TryFutureExt},
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
 };
 
 use crate::codec::MediaCodecConfig;
 use crate::inspect::DataStreamInspect;
-use crate::media_task::{MediaTask, MediaTaskBuilder};
+use crate::media_task::{MediaTask, MediaTaskBuilder, MediaTaskRunner};
 
+/// Manages a local StreamEndpoint and its associated media task, starting and stopping the
+/// related media task in sync with the endpoint's configured or streaming state.
+/// Note that this does not coordinate state with peer, which is done by bt_a2dp::Peer.
 pub struct Stream {
     endpoint: StreamEndpoint,
     /// The builder for media tasks associated with this endpoint.
     media_task_builder: Arc<Box<dyn MediaTaskBuilder>>,
-    /// The MediaTask which is currently active for this endpoint, if it is configured.
+    /// The MediaTaskRunner for this endpoint, if it is configured.
+    media_task_runner: Option<Box<dyn MediaTaskRunner>>,
+    /// The MediaTask, if it is running.
     media_task: Option<Box<dyn MediaTask>>,
     /// The peer associated with thie endpoint, if it is configured.
     /// Used during reconfiguration for MediaTask recreation.
@@ -62,6 +69,7 @@ impl Stream {
         Self {
             endpoint,
             media_task_builder: Arc::new(Box::new(media_task_builder)),
+            media_task_runner: None,
             media_task: None,
             peer_id: None,
             inspect: Default::default(),
@@ -72,6 +80,7 @@ impl Stream {
         Self {
             endpoint: self.endpoint.as_new(),
             media_task_builder: self.media_task_builder.clone(),
+            media_task_runner: None,
             media_task: None,
             peer_id: None,
             inspect: Default::default(),
@@ -102,7 +111,7 @@ impl Stream {
         &self,
         peer_id: &PeerId,
         requested_cap: &ServiceCapability,
-    ) -> Option<Box<dyn MediaTask>> {
+    ) -> Option<Box<dyn MediaTaskRunner>> {
         let requested = match MediaCodecConfig::try_from(requested_cap) {
             Err(_) => return None,
             Ok(config) => config,
@@ -129,7 +138,7 @@ impl Stream {
         match find_codec_capability(&capabilities) {
             None => return Err((ServiceCategory::None, unsupported)),
             Some(requested) => {
-                self.media_task = match self.build_media_task(peer_id, requested) {
+                self.media_task_runner = match self.build_media_task(peer_id, requested) {
                     None => return Err((ServiceCategory::MediaCodec, unsupported)),
                     Some(task) => Some(task),
                 };
@@ -145,7 +154,7 @@ impl Stream {
     ) -> Result<(), (ServiceCategory, ErrorCode)> {
         let peer_id = self.peer_id.as_ref().ok_or((ServiceCategory::None, ErrorCode::BadState))?;
         if let Some(requested_codec_cap) = find_codec_capability(&capabilities) {
-            self.media_task = match self.build_media_task(peer_id, requested_codec_cap) {
+            self.media_task_runner = match self.build_media_task(peer_id, requested_codec_cap) {
                 None => {
                     return Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration))
                 }
@@ -155,25 +164,29 @@ impl Stream {
         self.endpoint.reconfigure(capabilities)
     }
 
-    fn media_task_ref(&mut self) -> Result<&mut Box<dyn MediaTask>, ErrorCode> {
-        self.media_task.as_mut().ok_or(ErrorCode::BadState)
+    fn media_runner_ref(&mut self) -> Result<&mut Box<dyn MediaTaskRunner>, ErrorCode> {
+        self.media_task_runner.as_mut().ok_or(ErrorCode::BadState)
     }
 
     /// Attempt to start the endpoint.  If the endpoint is successfully started, the media task is
-    /// started.
-    pub fn start(&mut self) -> Result<(), ErrorCode> {
-        if self.media_task.is_none() {
+    /// started and a future that will finish when the media task finishes is returned.
+    pub fn start(&mut self) -> Result<BoxFuture<'static, Result<(), Error>>, ErrorCode> {
+        if self.media_task_runner.is_none() {
             return Err(ErrorCode::BadState);
-        }
+        };
         let transport = self.endpoint.take_transport().ok_or(ErrorCode::BadState)?;
         let _ = self.endpoint.start()?;
-        self.media_task_ref()?.start(transport).or(Err(ErrorCode::BadState))
+        let mut task = self.media_runner_ref()?.start(transport).or(Err(ErrorCode::BadState))?;
+        let finished = task.finished();
+        self.media_task = Some(task);
+        Ok(finished.err_into().boxed())
     }
 
     /// Suspends the media processor and endpoint.
     pub fn suspend(&mut self) -> Result<(), ErrorCode> {
         self.endpoint.suspend()?;
-        self.media_task_ref()?.stop().or(Err(ErrorCode::BadState))
+        let _ = self.media_task.take().ok_or(ErrorCode::BadState)?.stop();
+        Ok(())
     }
 
     /// Releases the endpoint and stops the processing of audio.
@@ -433,27 +446,108 @@ pub(crate) mod tests {
         assert!(stream.configure(&PeerId(1), &remote_id, vec![]).is_err());
         assert!(stream.configure(&PeerId(1), &remote_id, vec![sbc_codec_cap]).is_ok());
 
+        stream.endpoint_mut().establish().expect("establishment should start okay");
+        let (_remote, transport) = Channel::create();
+        stream.endpoint_mut().receive_channel(transport).expect("should be ready for a channel");
+
+        assert!(stream.start().is_ok());
+
+        // Task should be created here.
+        let task = {
+            pin_mut!(next_task_fut);
+            match exec.run_until_stalled(&mut next_task_fut) {
+                Poll::Ready(Some(task)) => task,
+                x => panic!("Expected next task to be sent after start, got {:?}", x),
+            }
+        };
+
+        assert_eq!(task.peer_id, PeerId(1));
+        assert_eq!(task.codec_config, expected_codec_config);
+
+        assert!(task.is_started());
+        assert!(stream.suspend().is_ok());
+        assert!(!task.is_started());
+        assert!(stream.start().is_ok());
+
+        let next_task_fut = task_builder.next_task();
+        // Task should be created here.
+        let task = {
+            pin_mut!(next_task_fut);
+            match exec.run_until_stalled(&mut next_task_fut) {
+                Poll::Ready(Some(task)) => task,
+                x => panic!("Expected next task to be sent after start, got {:?}", x),
+            }
+        };
+
+        assert!(task.is_started());
+    }
+
+    #[test]
+    fn test_media_task_ending_ends_future() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let mut task_builder = TestMediaTaskBuilder::new();
+        let mut stream = Stream::build(make_sbc_endpoint(1), task_builder.builder());
+        let next_task_fut = task_builder.next_task();
+        let remote_id = 1_u8.try_into().expect("good id");
+
+        let sbc_codec_cap = sbc_mediacodec_capability();
+        let expected_codec_config =
+            MediaCodecConfig::try_from(&sbc_codec_cap).expect("codec config");
+
+        assert!(stream.configure(&PeerId(1), &remote_id, vec![]).is_err());
+        assert!(stream.configure(&PeerId(1), &remote_id, vec![sbc_codec_cap]).is_ok());
+
+        stream.endpoint_mut().establish().expect("establishment should start okay");
+        let (_remote, transport) = Channel::create();
+        stream.endpoint_mut().receive_channel(transport).expect("should be ready for a channel");
+
+        let stream_finish_fut = stream.start().expect("start to succeed with a future");
+        pin_mut!(stream_finish_fut);
+
+        let task = {
+            pin_mut!(next_task_fut);
+            match exec.run_until_stalled(&mut next_task_fut) {
+                Poll::Ready(Some(task)) => task,
+                x => panic!("Expected next task to be sent after start, got {:?}", x),
+            }
+        };
+
+        assert_eq!(task.peer_id, PeerId(1));
+        assert_eq!(task.codec_config, expected_codec_config);
+
+        // Does not need to be polled to be started.
+        assert!(task.is_started());
+
+        assert!(exec.run_until_stalled(&mut stream_finish_fut).is_pending());
+
+        task.end_prematurely(Some(Ok(())));
+        assert!(!task.is_started());
+
+        // The future should be finished, since the task ended.
+        match exec.run_until_stalled(&mut stream_finish_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected to get ready Ok from finish future, but got {:?}", x),
+        };
+
+        // Should still be able to suspend the stream.
+        assert!(stream.suspend().is_ok());
+
+        // And be able to restart it.
+        let result_fut = stream.start().expect("start to succeed with a future");
+
+        let next_task_fut = task_builder.next_task();
         pin_mut!(next_task_fut);
         let task = match exec.run_until_stalled(&mut next_task_fut) {
             Poll::Ready(Some(task)) => task,
             x => panic!("Expected next task to be sent during configure, got {:?}", x),
         };
 
-        assert_eq!(task.peer_id, PeerId(1));
-        assert_eq!(task.codec_config, expected_codec_config);
-
-        stream.endpoint_mut().establish().expect("establishment should start okay");
-        let (_remote, transport) = Channel::create();
-        stream.endpoint_mut().receive_channel(transport).expect("should be ready for a channel");
-
-        match stream.start() {
-            Ok(()) => {}
-            x => panic!("Expected OK but got {:?}", x),
-        };
         assert!(task.is_started());
-        assert!(stream.suspend().is_ok());
-        assert!(!task.is_started());
-        assert!(stream.start().is_ok());
+
+        // Dropping the result future shouldn't stop the media task.
+        drop(result_fut);
+
         assert!(task.is_started());
     }
 }
