@@ -31,14 +31,11 @@ static const sysmem_metadata_t sysmem_metadata = {
     // VDEC range is a fixed location within the overall optee reserved range passed to Zircon
     // during boot - the specific location is obtained by sysmem calling the secmem TA via
     // fuchsia::sysmem::Tee protocol between sysmem and TEE Controller.
-    .protected_memory_size = 128 * 1024 * 1024,
-    // Support h.264 5.1, which has a max DPB size of 70,778,880 bytes (with NV12), and add some
-    // extra size for additional pictures for buffering and several framebuffers (1024*608*4 bytes
-    // each), for a total of 100 MiB.
-    // Also include enough space for 0.5 seconds of camera streaming at 2720*2176*1.5 bytes @ 30Hz,
-    // for a total of 127 MiB.
-    // TODO(fxbug.dev/39523): revisit contiguous memory requirements for camera
-    .contiguous_memory_size = (100 + 127) * 1024 * 1024,
+
+    // The values below aren't used and are overridden by the kernel command-line set in the board
+    // file.
+    .protected_memory_size = 0,
+    .contiguous_memory_size = 0,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {
