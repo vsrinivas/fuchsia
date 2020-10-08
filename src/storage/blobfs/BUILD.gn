@@ -83,10 +83,12 @@ zx_library("blobfs") {
     "blobfs/cache-policy.h",
     "blobfs/mkfs.h",
     "blobfs/blobfs_inspector.h",
+    "blobfs/blob-layout.h",
   ]
   sources = [
     "allocator/extent-reserver.cc",
     "allocator/node-reserver.cc",
+    "blob-layout.cc",
     "blobfs-checker.cc",
     "common.cc",
     "compression-settings.cc",
