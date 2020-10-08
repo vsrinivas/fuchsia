@@ -18,7 +18,10 @@ meta_package_labels += [
   "//src/sys/component_index:component_index",
 ]
 
-product_system_image_deps = [ "//src/connectivity/bluetooth:core" ]
+product_system_image_deps = [
+  "//src/connectivity/bluetooth:core",
+  "//src/sys/pkg:pkgfs-disable-executability-restrictions",
+]
 
 base_package_labels += [
   "//build/info:build-info",
@@ -58,10 +61,6 @@ base_package_labels += [
   "//src/sys/core",
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
-
-  # TODO(fxb/61170): move to product_system_image_deps when dependents know
-  # to find it there.
-  "//src/sys/pkg:pkgfs-disable-executability-restrictions",
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
   "//src/sys/stash:pkg",
