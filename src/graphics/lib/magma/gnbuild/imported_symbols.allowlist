@@ -464,6 +464,7 @@ zx_resource_create
 zx_socket_create
 zx_socket_write
 zx_status_get_string
+zx_stream_create
 zx_stream_readv
 zx_stream_readv_at
 zx_stream_seek
