@@ -92,7 +92,7 @@ class ZirconPlatformBuffer : public PlatformBuffer {
   bool Write(const void* buffer, uint64_t offset, uint64_t length) override;
   bool SetName(const char* name) override;
 
-  uint64_t num_pages() { return size_ / PAGE_SIZE; }
+  uint64_t num_pages() const { return size_ / PAGE_SIZE; }
 
  private:
   zx_status_t vmar_unmap() {
