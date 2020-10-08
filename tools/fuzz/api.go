@@ -99,9 +99,9 @@ func (c *APICommand) Execute(out io.Writer) error {
 			fmt.Fprintf(out, "%s\n", name)
 		}
 	case GetData:
-		return instance.Get(c.srcPath, c.dstPath)
+		return instance.Get(c.fuzzer, c.srcPath, c.dstPath)
 	case PutData:
-		return instance.Put(c.srcPath, c.dstPath)
+		return instance.Put(c.fuzzer, c.srcPath, c.dstPath)
 	case RunFuzzer:
 		// TODO(fxbug.dev/45431): buffer output so we don't get prematurely terminated by CF
 		return instance.RunFuzzer(out, c.fuzzer, c.extraArgs...)

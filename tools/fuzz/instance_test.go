@@ -111,13 +111,26 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("expected error when running invalid fuzzer")
 	}
 
-	// TODO(fxbug.dev/45425): Flesh out the mocks to catch more errors
-	if err := i.Get("/path/to/remoteFile", "/path/to/localFile"); err != nil {
+	remotePath := "data/path/to/remoteFile"
+	if err := i.Get("foo/bar", remotePath, "/path/to/localFile"); err != nil {
 		t.Fatalf("Error getting from instance: %s", err)
 	}
 
-	if err := i.Put("/path/to/localFile", "/path/to/remoteFile"); err != nil {
+	expected := []string{"/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/remoteFile"}
+	got := i.Connector.(*mockConnector).PathsGot
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("incorrect file get list: %v", got)
+	}
+
+	remotePath = "data/path/to/otherFile"
+	if err := i.Put("foo/bar", "/path/to/localFile", remotePath); err != nil {
 		t.Fatalf("Error putting to instance: %s", err)
+	}
+
+	expected = []string{"/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/otherFile"}
+	got = i.Connector.(*mockConnector).PathsPut
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("incorrect file put list: %v", got)
 	}
 
 	if err := i.Stop(); err != nil {

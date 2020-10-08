@@ -14,6 +14,10 @@ type mockConnector struct {
 	connected             bool
 	shouldFailToConnect   bool
 	shouldFailToGetSysLog bool
+
+	// Store history of Get/Put paths to enable basic checks
+	PathsGot []string
+	PathsPut []string
 }
 
 func (c *mockConnector) Connect() error {
@@ -38,10 +42,12 @@ func (c *mockConnector) Command(name string, args ...string) InstanceCmd {
 }
 
 func (c *mockConnector) Get(targetSrc string, hostDst string) error {
+	c.PathsGot = append(c.PathsGot, targetSrc)
 	return nil
 }
 
 func (c *mockConnector) Put(hostSrc string, targetDst string) error {
+	c.PathsPut = append(c.PathsPut, targetDst)
 	return nil
 }
 

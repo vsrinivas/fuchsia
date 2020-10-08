@@ -19,8 +19,8 @@ type Instance interface {
 	Start() error
 	Stop() error
 	ListFuzzers() []string
-	Get(targetSrc, hostDst string) error
-	Put(hostSrc, targetDst string) error
+	Get(fuzzerName, targetSrc, hostDst string) error
+	Put(fuzzerName, hostSrc, targetDst string) error
 	RunFuzzer(out io.Writer, name string, args ...string) error
 	Handle() (Handle, error)
 	Close()
@@ -130,14 +130,22 @@ func (i *BaseInstance) RunFuzzer(out io.Writer, name string, args ...string) err
 	return fuzzer.Run(i.Connector, out, "implementMe")
 }
 
-// Get copies files from the Instance to the host
-func (i *BaseInstance) Get(targetSrc, hostDst string) error {
-	return i.Connector.Get(targetSrc, hostDst)
+// Get copies files from a fuzzer namespace on the Instance to the host
+func (i *BaseInstance) Get(fuzzerName, targetSrc, hostDst string) error {
+	fuzzer, err := i.Build.Fuzzer(fuzzerName)
+	if err != nil {
+		return err
+	}
+	return i.Connector.Get(fuzzer.AbsPath(targetSrc), hostDst)
 }
 
-// Put copies files from the host to the Instance
-func (i *BaseInstance) Put(hostSrc, targetDst string) error {
-	return i.Connector.Put(hostSrc, targetDst)
+// Put copies files from the host to a fuzzer namespace on the Instance
+func (i *BaseInstance) Put(fuzzerName, hostSrc, targetDst string) error {
+	fuzzer, err := i.Build.Fuzzer(fuzzerName)
+	if err != nil {
+		return err
+	}
+	return i.Connector.Put(hostSrc, fuzzer.AbsPath(targetDst))
 }
 
 // Stop shuts down the Instance
