@@ -139,11 +139,12 @@ template("hotsort_target_internal") {
   _gen_spv_target_name = "gen_spv_${_hs_target_name}"
   graphics_compute_compile_glsl_shader_foreach(_gen_spv_target_name) {
     # Ensure we only keep the .comp files as sources for this step.
-    set_sources_assignment_filter([
-                                    "*.h",
-                                    "*.c",
-                                  ])
-    sources = get_target_outputs(":${_gen_comp_target_name}")
+    sources = []
+    foreach(src, get_target_outputs(":${_gen_comp_target_name}")) {
+      if (get_path_info(src, "extension") == "comp") {
+        sources += [ src ]
+      }
+    }
     inputs = [ "${_hotsort_dir}/platforms/vk/targets/hs_glsl_macros.h" ] +
              _hs_target_gen_includes +
              get_target_outputs(":${_gen_copy_target_name}")
