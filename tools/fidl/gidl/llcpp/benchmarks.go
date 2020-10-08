@@ -19,7 +19,7 @@ import (
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
-#include <benchmarkfidl/llcpp/fidl.h>
+#include <{{ .FidlLibrary }}/llcpp/fidl.h>
 #include <lib/fidl/cpp/test/handle_util.h>
 #include <perftest/perftest.h>
 
@@ -31,26 +31,27 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace {
 
+{{ range .Benchmarks }}
 {{- if .HandleDefs }}
-std::vector<zx_handle_t> _BuildHandles() {
+std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 	return {{ .HandleDefs }};
 }
 
-{{ .Type }} _BuildFromHandles(const std::vector<zx_handle_t>& handle_defs) {
+{{ .Type }} BuildFromHandles{{ .Name }}(const std::vector<zx_handle_t>& handle_defs) {
   {{ .ValueBuildHeap }}
   auto result =  {{ .ValueVarHeap }};
   return result;
 }
 
 {{ .Type }} Build{{ .Name }}Heap() {
-  return _BuildFromHandles(_BuildHandles());
+  return BuildFromHandles{{ .Name }}(BuildHandles{{ .Name }}());
 }
 {{- else }}
-std::tuple<> _BuildEmptyContext() {
+std::tuple<> BuildEmptyContext{{ .Name }}() {
 	return std::make_tuple();
 }
 
-{{ .Type }} _BuildFromEmptyContext(std::tuple<> _context) {
+{{ .Type }} BuildFromEmptyContext{{ .Name }}(std::tuple<> _context) {
 	{{ .ValueBuildHeap }}
 	auto result = {{ .ValueVarHeap }};
 	return result;
@@ -65,9 +66,9 @@ std::tuple<> _BuildEmptyContext() {
 
 bool BenchmarkBuilder{{ .Name }}Heap(perftest::RepeatState* state) {
 {{- if .HandleDefs }}
-  return llcpp_benchmarks::BuilderBenchmark(state, _BuildFromHandles, _BuildHandles);
+  return llcpp_benchmarks::BuilderBenchmark(state, BuildFromHandles{{ .Name }}, BuildHandles{{ .Name }});
 {{- else }}
-  return llcpp_benchmarks::BuilderBenchmark(state, _BuildFromEmptyContext, _BuildEmptyContext);
+  return llcpp_benchmarks::BuilderBenchmark(state, BuildFromEmptyContext{{ .Name }}, BuildEmptyContext{{ .Name }});
 {{- end }}
 }
 
@@ -87,8 +88,10 @@ bool BenchmarkEchoCall{{ .Name }}(perftest::RepeatState* state) {
 	return llcpp_benchmarks::EchoCallBenchmark<{{ .EchoCallProtocolType }}>(state, Build{{ .Name }}Heap);
 }
 {{- end -}}
+{{ end }}
 
 void RegisterTests() {
+	{{ range .Benchmarks }}
 	perftest::RegisterTest("LLCPP/Builder/{{ .Path }}/Steps", BenchmarkBuilder{{ .Name }}Heap);
 	perftest::RegisterTest("LLCPP/Encode/{{ .Path }}/Steps", BenchmarkEncode{{ .Name }});
 	perftest::RegisterTest("LLCPP/Decode/{{ .Path }}/Steps", BenchmarkDecode{{ .Name }});
@@ -98,23 +101,31 @@ void RegisterTests() {
 	{{ if .EnableEchoCallBenchmark }}
 	perftest::RegisterTest("LLCPP/EchoCall/{{ .Path }}/Steps", BenchmarkEchoCall{{ .Name }});
 	{{- end -}}
+	{{ end }}
 }
 PERFTEST_CTOR(RegisterTests)
 
 } // namespace
 `))
 
-type benchmarkTmplInput struct {
+type benchmark struct {
 	Path, Name, Type, EventProtocolType, EchoCallProtocolType string
 	ValueBuildHeap, ValueVarHeap                              string
 	HandleDefs                                                string
 	EnableSendEventBenchmark, EnableEchoCallBenchmark         bool
 }
 
+type benchmarkTmplInput struct {
+	FidlLibrary string
+	Benchmarks  []benchmark
+}
+
 // Generate generates Low-Level C++ benchmarks.
 func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
-	files := map[string][]byte{}
+	tmplInput := benchmarkTmplInput{
+		FidlLibrary: libraryName(config.CppBenchmarksFidlLibrary),
+	}
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
@@ -124,28 +135,32 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 			continue
 		}
 		valBuildHeap, valVarHeap := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
-		var buf bytes.Buffer
-		if err := benchmarkTmpl.Execute(&buf, benchmarkTmplInput{
+		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
 			Path:                     gidlBenchmark.Name,
 			Name:                     benchmarkName(gidlBenchmark.Name),
-			Type:                     benchmarkTypeFromValue(gidlBenchmark.Value),
-			EventProtocolType:        benchmarkTypeFromValue(gidlBenchmark.Value) + "EventProtocol",
-			EchoCallProtocolType:     benchmarkTypeFromValue(gidlBenchmark.Value) + "EchoCall",
+			Type:                     benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value),
+			EventProtocolType:        benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EventProtocol",
+			EchoCallProtocolType:     benchmarkTypeFromValue(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value) + "EchoCall",
 			ValueBuildHeap:           valBuildHeap,
 			ValueVarHeap:             valVarHeap,
 			HandleDefs:               libcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
 			EnableSendEventBenchmark: gidlBenchmark.EnableSendEventBenchmark,
 			EnableEchoCallBenchmark:  gidlBenchmark.EnableEchoCallBenchmark,
-		}); err != nil {
-			return nil, nil, err
-		}
-		files[benchmarkName("_"+gidlBenchmark.Name)] = buf.Bytes()
+		})
 	}
-	return nil, files, nil
+	var buf bytes.Buffer
+	if err := benchmarkTmpl.Execute(&buf, tmplInput); err != nil {
+		return nil, nil, err
+	}
+	return buf.Bytes(), nil, nil
 }
 
-func benchmarkTypeFromValue(value gidlir.Value) string {
-	return fmt.Sprintf("llcpp::benchmarkfidl::%s", gidlir.TypeFromValue(value))
+func libraryName(librarySuffix string) string {
+	return fmt.Sprintf("benchmarkfidl%s", strings.ReplaceAll(librarySuffix, " ", ""))
+}
+
+func benchmarkTypeFromValue(librarySuffix string, value gidlir.Value) string {
+	return fmt.Sprintf("llcpp::%s::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
 }
 
 func benchmarkName(gidlName string) string {

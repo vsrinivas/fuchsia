@@ -8,19 +8,29 @@ import("//build/testing/environments.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-gidl_llcpp_benchmarks("benchmark_suite_llcpp") {
-  testonly = true
-  inputs = benchmark_suite_gidl_files
-  fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
-  deps = [
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/fidl/cpp:handle_util",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fidl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/perftest",
-  ]
+gidl_deps = []
+foreach(suite, benchmark_suites) {
+  suite_target = "benchmark_suite__${suite.name}"
+  gidl_deps += [ ":" + suite_target ]
+
+  gidl_llcpp_benchmarks(suite_target) {
+    testonly = true
+    inputs = suite.gidl
+    fidl = suite.fidl_target
+    deps = [
+      "//sdk/lib/fidl/cpp",
+      "//sdk/lib/fidl/cpp:handle_util",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fidl",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/perftest",
+    ]
+    extra_args = [
+      "-cpp-benchmarks-fidl-library",
+      suite.fidl_library_suffix,
+    ]
+  }
 }
 
 executable("bin") {
@@ -28,13 +38,12 @@ executable("bin") {
   testonly = true
   sources = [ "main.cc" ]
   deps = [
-    ":benchmark_suite_llcpp",
-    "//src/zircon/lib/zircon",
-    "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/perftest",
-  ]
+           "//src/zircon/lib/zircon",
+           "//zircon/public/lib/fbl",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//zircon/system/ulib/async-loop:async-loop-default",
+           "//zircon/system/ulib/perftest",
+         ] + gidl_deps
 }
 
 package("llcpp") {

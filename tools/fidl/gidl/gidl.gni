@@ -351,7 +351,7 @@ template("gidl_cpp_benchmarks") {
 }
 
 template("gidl_llcpp_benchmarks") {
-  gidl_multiple_file_source_set(target_name) {
+  gidl_single_file_source_set(target_name) {
     type = "benchmark"
     language = "llcpp"
     bindings_suffix = "_llcpp"
