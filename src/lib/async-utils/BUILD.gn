@@ -11,12 +11,13 @@ rustc_library("async-utils") {
   with_unit_tests = true
   deps = [
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//src/lib/fuchsia-async" ]
 
   sources = [
     "src/event.rs",
