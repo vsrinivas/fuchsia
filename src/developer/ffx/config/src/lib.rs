@@ -35,6 +35,7 @@ pub mod api;
 pub mod constants;
 pub mod environment;
 pub mod logging;
+pub mod sdk;
 
 mod cache;
 mod file_backed_config;
@@ -276,6 +277,21 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
     let config = load_config(build_dir).await?;
     let read_guard = config.read().await;
     writeln!(writer, "{}", *read_guard).context("displaying config")
+}
+
+pub async fn get_sdk() -> Result<sdk::Sdk> {
+    if let Ok(manifest) = get("sdk.root").await {
+        if get("sdk.type").await.unwrap_or("".to_string()) == "in-tree" {
+            sdk::Sdk::from_build_dir(manifest)
+        } else {
+            sdk::Sdk::from_sdk_dir(manifest)
+        }
+    } else {
+        ffx_core::ffx_bail!(
+            "SDK directory could not be found. Please set with \
+                             `ffx config set sdk.root <PATH_TO_SDK_DIR>`"
+        );
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -56,6 +56,7 @@ if (is_host) {
       "src/persistent_config.rs",
       "src/priority_config.rs",
       "src/runtime.rs",
+      "src/sdk.rs",
     ]
   }
 }

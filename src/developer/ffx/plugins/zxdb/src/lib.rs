@@ -17,6 +17,9 @@ pub async fn debug(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_zxdb_plugin_args::DebugCommand,
 ) -> Result<(), Error> {
+    let sdk = ffx_config::get_sdk().await?;
+    let zxdb_path = sdk.get_host_tool("zxdb")?;
+
     // Connect to the debug_agent on the device.
     let (sock_server, sock_client) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
@@ -30,11 +33,15 @@ pub async fn debug(
     let listener = async_std::os::unix::net::UnixListener::bind(&cmd.socket_location).await?;
 
     // Start the local debugger.
-    // TODO(fxbug.dev/57639) Remove dependency on fx.
-    std::process::Command::new("fx")
-        .args(&["debug", "--no-agent", "--", "--unix-connect", &cmd.socket_location])
+    std::process::Command::new(zxdb_path)
+        .args(&[
+            "--unix-connect",
+            &cmd.socket_location,
+            "--symbol-server",
+            "gs://fuchsia-artifacts-release/debug",
+        ])
         .spawn()
-        .expect("fx debug failed to start");
+        .expect("zxdb failed to start");
 
     loop {
         // Wait for a connection on the unix socket.
