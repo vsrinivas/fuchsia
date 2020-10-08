@@ -1490,7 +1490,8 @@ static void demo_prepare_pipeline(struct demo* demo) {
   VkPipelineDepthStencilStateCreateInfo ds;
   VkPipelineViewportStateCreateInfo vp;
   VkPipelineMultisampleStateCreateInfo ms;
-  VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+  const size_t kMaxDynamicStates = 4;
+  VkDynamicState dynamicStateEnables[kMaxDynamicStates];
   VkPipelineDynamicStateCreateInfo dynamicState;
   VkResult U_ASSERT_ONLY err;
 
