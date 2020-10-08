@@ -15,9 +15,10 @@ use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_inspect;
+use wlan_rsn::auth;
 use wlan_sme::client::{
-    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, EstablishRsnaFailure, InfoEvent,
-    SelectNetworkFailure,
+    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, EstablishRsnaFailure,
+    EstablishRsnaFailureReason, InfoEvent, SelectNetworkFailure,
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
@@ -249,19 +250,26 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
         ConnectResult::Failed(ConnectFailure::SelectNetwork(
             SelectNetworkFailure::CredentialError(_),
         )) => fidl_sme::ConnectResultCode::WrongCredentialType,
+
         // Assuming the correct type of credentials are given, a bad password
-        // will cause EstablishRsnaFailure::KeyFrameExchangeTimeout. This error
-        // is not returned if and only if a bad password is given, but a bad
-        // password is the most likely cause. The authenticator will silently
-        // drop EAPOL handshake frames when the password is wrong.
+        // will cause a variety of errors depending on the security type. All of
+        // the following cases assume no frames were dropped unintentionally. For example,
+        // it's possible to conflate a WPA2 bad password error with a dropped frame at just
+        // the right moment since the error itself is *caused by* a dropped frame.
+
+        // For WPA1 and WPA2, the error will be EstablishRsnaFailure::KeyFrameExchangeTimeout.
+        // When the authenticator receives a bad MIC (derived from the password), it will silently
+        // drop the EAPOL handshake frame it received.
         //
         // NOTE: The alternative possibilities for seeing an
         // EstablishRsnaFailure::KeyFrameExchangeTimeout are an error in
         // our crypto parameter parsing and crypto implementation, or a lost
         // connection with the AP.
-        ConnectResult::Failed(ConnectFailure::EstablishRsna(
-            EstablishRsnaFailure::KeyFrameExchangeTimeout,
-        )) => fidl_sme::ConnectResultCode::CredentialRejected,
+        ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
+            auth_method: Some(auth::MethodName::Psk),
+            reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+        })) => fidl_sme::ConnectResultCode::CredentialRejected,
+
         ConnectResult::Failed(..) => fidl_sme::ConnectResultCode::Failed,
     }
 }

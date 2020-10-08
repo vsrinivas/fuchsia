@@ -299,7 +299,7 @@ impl ConnectAttempts {
                 ConnectFailure::AssociationFailure(..) => {
                     pending_stats.assoc_end_at.replace(now);
                 }
-                ConnectFailure::EstablishRsna(..) => {
+                ConnectFailure::EstablishRsnaFailure(..) => {
                     pending_stats.rsna_end_at.replace(now);
                 }
                 _ => (),
@@ -374,10 +374,11 @@ mod tests {
         super::*,
         crate::client::{
             test_utils::{fake_bss_with_rates, fake_protected_bss_description, fake_scan_request},
-            EstablishRsnaFailure, SelectNetworkFailure,
+            EstablishRsnaFailure, EstablishRsnaFailureReason, SelectNetworkFailure,
         },
         anyhow::format_err,
         wlan_common::assert_variant,
+        wlan_rsn::auth,
     };
 
     #[test]
@@ -463,8 +464,13 @@ mod tests {
         assert!(stats_collector.report_key_exchange_timeout().is_ok());
 
         assert!(stats_collector.report_supplicant_error(format_err!("blah")).is_ok());
-        let stats =
-            stats_collector.report_connect_finished(EstablishRsnaFailure::OverallTimeout.into());
+        let stats = stats_collector.report_connect_finished(
+            EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::OverallTimeout,
+            }
+            .into(),
+        );
 
         assert_variant!(stats, Ok(stats) => {
             assert!(stats.supplicant_error.is_some());
@@ -491,7 +497,11 @@ mod tests {
         });
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let failure2: ConnectFailure = EstablishRsnaFailure::OverallTimeout.into();
+        let failure2: ConnectFailure = EstablishRsnaFailure {
+            auth_method: Some(auth::MethodName::Psk),
+            reason: EstablishRsnaFailureReason::OverallTimeout,
+        }
+        .into();
         let stats = stats_collector.report_connect_finished(failure2.clone().into());
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 2);
@@ -523,7 +533,11 @@ mod tests {
         let _stats = stats_collector.report_connect_finished(failure1.clone().into());
 
         assert!(stats_collector.report_connect_started(b"bar".to_vec()).is_none());
-        let failure2: ConnectFailure = EstablishRsnaFailure::OverallTimeout.into();
+        let failure2: ConnectFailure = EstablishRsnaFailure {
+            auth_method: Some(auth::MethodName::Psk),
+            reason: EstablishRsnaFailureReason::OverallTimeout,
+        }
+        .into();
         let stats = stats_collector.report_connect_finished(failure2.clone().into());
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 1);

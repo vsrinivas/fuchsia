@@ -426,7 +426,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
                     1,
                 );
             }
-            ConnectFailure::EstablishRsna(..) => {
+            ConnectFailure::EstablishRsnaFailure(..) => {
                 sender.with_component().log_event_count(
                     metrics::ESTABLISH_RSNA_FAILURE_METRIC_ID,
                     protection_dim as u32,
@@ -653,7 +653,8 @@ mod tests {
                 ConnectStats, DisconnectInfo, DisconnectSource, PreviousDisconnectInfo,
                 ScanEndStats, ScanResult, ScanStartStats, SupplicantProgress,
             },
-            ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
+            ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
+            SelectNetworkFailure,
         },
     };
 
@@ -837,7 +838,11 @@ mod tests {
     #[test]
     fn test_log_connect_stats_establish_rsna_failure() {
         let connect_stats = ConnectStats {
-            result: EstablishRsnaFailure::OverallTimeout.into(),
+            result: EstablishRsnaFailure {
+                auth_method: None,
+                reason: EstablishRsnaFailureReason::OverallTimeout,
+            }
+            .into(),
             ..fake_connect_stats()
         };
         let expected_metrics_subset = hashset! {

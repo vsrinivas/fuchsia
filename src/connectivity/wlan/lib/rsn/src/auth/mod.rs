@@ -39,6 +39,12 @@ pub enum Method {
     Sae(SaeData),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MethodName {
+    Psk,
+    Sae,
+}
+
 impl std::fmt::Debug for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         match self {

@@ -21,6 +21,10 @@ pub fn fake_wpa2_s_rsne() -> Rsne {
     fake_wpa2_a_rsne().derive_wpa2_s_rsne().expect("Unable to derive supplicant RSNE")
 }
 
-pub fn fake_wpa3_rsne() -> Rsne {
+pub fn fake_wpa3_a_rsne() -> Rsne {
     Rsne::wpa3_ccmp_rsne()
+}
+
+pub fn fake_wpa3_s_rsne() -> Rsne {
+    fake_wpa3_a_rsne().derive_wpa3_s_rsne().expect("Unable to derive supplicant RSNE")
 }

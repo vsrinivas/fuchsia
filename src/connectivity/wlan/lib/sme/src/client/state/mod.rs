@@ -14,7 +14,8 @@ use {
             info::{DisconnectInfo, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
-            report_connect_finished, ConnectFailure, ConnectResult, EstablishRsnaFailure, Status,
+            report_connect_finished, ConnectFailure, ConnectResult, EstablishRsnaFailure,
+            EstablishRsnaFailureReason, Status,
         },
         clone_utils::clone_bss_desc,
         phy_selection::derive_phy_cbw,
@@ -43,7 +44,10 @@ use {
         mac::Bssid,
         RadioConfig,
     },
-    wlan_rsn::rsna::{AuthStatus, SecAssocUpdate, UpdateSink},
+    wlan_rsn::{
+        auth,
+        rsna::{AuthStatus, SecAssocUpdate, UpdateSink},
+    },
     wlan_statemachine::*,
     zerocopy::AsBytes,
 };
@@ -102,6 +106,7 @@ pub struct Associated {
     cfg: ClientConfig,
     responder: Option<Responder<ConnectResult>>,
     bss: Box<BssDescription>,
+    auth_method: Option<auth::MethodName>,
     last_rssi: i8,
     last_snr: i8,
     link_state: LinkState,
@@ -349,6 +354,7 @@ impl Associating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Associated, Idle> {
+        let auth_method = self.cmd.protection.get_rsn_auth_method();
         let wmm_param =
             conf.wmm_param.as_ref().and_then(|p| match ie::parse_wmm_param(&p.bytes[..]) {
                 Ok(param) => Some(*param),
@@ -395,10 +401,14 @@ impl Associating {
 
                 match LinkState::new(self.cmd.protection, context) {
                     Ok(link_state) => link_state,
-                    Err(failure) => {
+                    Err(failure_reason) => {
                         state_change_ctx.set_msg(format!("failed to initialized LinkState"));
                         send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
-                        report_connect_finished(self.cmd.responder, context, failure.into());
+                        report_connect_finished(
+                            self.cmd.responder,
+                            context,
+                            EstablishRsnaFailure { auth_method, reason: failure_reason }.into(),
+                        );
                         return Err(Idle { cfg: self.cfg });
                     }
                 }
@@ -424,6 +434,7 @@ impl Associating {
         Ok(Associated {
             cfg: self.cfg,
             responder,
+            auth_method,
             last_rssi: self.cmd.bss.rssi_dbm,
             last_snr: self.cmd.bss.snr_db,
             bss: self.cmd.bss,
@@ -570,7 +581,11 @@ impl Associated {
                 context.info.report_disconnect(disconnect_info);
             }
             None => {
-                let connect_result = EstablishRsnaFailure::InternalError.into();
+                let connect_result = EstablishRsnaFailure {
+                    auth_method: self.auth_method,
+                    reason: EstablishRsnaFailureReason::InternalError,
+                }
+                .into();
                 report_connect_finished(self.responder, context, connect_result);
             }
         }
@@ -611,8 +626,16 @@ impl Associated {
         let link_state =
             match self.link_state.on_eapol_ind(ind, &self.bss, state_change_ctx, context) {
                 Ok(link_state) => link_state,
-                Err(failure) => {
-                    report_connect_finished(self.responder, context, failure.into());
+                Err(failure_reason) => {
+                    report_connect_finished(
+                        self.responder,
+                        context,
+                        EstablishRsnaFailure {
+                            auth_method: self.auth_method,
+                            reason: failure_reason,
+                        }
+                        .into(),
+                    );
                     send_deauthenticate_request(&self.bss, &context.mlme_sink);
                     return Err(Idle { cfg: self.cfg });
                 }
@@ -642,8 +665,13 @@ impl Associated {
     ) -> Result<Self, Idle> {
         match self.link_state.handle_timeout(event_id, event, state_change_ctx, context) {
             Ok(link_state) => Ok(Associated { link_state, ..self }),
-            Err(failure) => {
-                report_connect_finished(self.responder, context, failure.into());
+            Err(failure_reason) => {
+                report_connect_finished(
+                    self.responder,
+                    context,
+                    EstablishRsnaFailure { auth_method: self.auth_method, reason: failure_reason }
+                        .into(),
+                );
                 send_deauthenticate_request(&self.bss, &context.mlme_sink);
                 Err(Idle { cfg: self.cfg })
             }
@@ -1165,7 +1193,7 @@ mod tests {
         create_assoc_conf, create_auth_conf, create_join_conf, expect_stream_empty,
         fake_negotiated_channel_and_capabilities, fake_protected_bss_description,
         fake_unprotected_bss_description, fake_wep_bss_description, fake_wmm_param,
-        fake_wpa1_bss_description, mock_supplicant, MockSupplicant, MockSupplicantController,
+        fake_wpa1_bss_description, mock_psk_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -1257,7 +1285,7 @@ mod tests {
     #[test]
     fn connect_to_wpa1_network() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
 
         let state = idle_state();
         let (command, receiver) = connect_command_wpa1(supplicant);
@@ -1318,10 +1346,10 @@ mod tests {
     #[test]
     fn associate_happy_path_protected() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
 
         let state = idle_state();
-        let (command, receiver) = connect_command_rsna(supplicant);
+        let (command, receiver) = connect_command_wpa2(supplicant);
         let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
 
@@ -1573,8 +1601,8 @@ mod tests {
     #[test]
     fn supplicant_fails_to_start_while_associating() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
-        let (command, receiver) = connect_command_rsna(supplicant);
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, receiver) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = associating_state(command);
 
@@ -1585,15 +1613,19 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        let result: ConnectResult = EstablishRsnaFailure::StartSupplicantFailed.into();
+        let result: ConnectResult = EstablishRsnaFailure {
+            auth_method: Some(auth::MethodName::Psk),
+            reason: EstablishRsnaFailureReason::StartSupplicantFailed,
+        }
+        .into();
         expect_result(receiver, result.clone());
     }
 
     #[test]
     fn bad_eapol_frame_while_establishing_rsna() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
-        let (command, mut receiver) = connect_command_rsna(supplicant);
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, mut receiver) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1616,8 +1648,8 @@ mod tests {
     #[test]
     fn supplicant_fails_to_process_eapol_while_establishing_rsna() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
-        let (command, mut receiver) = connect_command_rsna(supplicant);
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, mut receiver) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1638,7 +1670,7 @@ mod tests {
     #[test]
     fn reject_foreign_eapol_frames() {
         let mut h = TestHelper::new();
-        let (supplicant, mock) = mock_supplicant();
+        let (supplicant, mock) = mock_psk_supplicant();
         let state = link_up_state_protected(supplicant, [7; 6]);
         mock.set_on_eapol_frame_callback(|| {
             panic!("eapol frame should not have been processed");
@@ -1660,8 +1692,8 @@ mod tests {
     #[test]
     fn wrong_password_while_establishing_rsna() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
-        let (command, receiver) = connect_command_rsna(supplicant);
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, receiver) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1670,15 +1702,19 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        let result: ConnectResult = EstablishRsnaFailure::InternalError.into();
+        let result: ConnectResult = EstablishRsnaFailure {
+            auth_method: Some(auth::MethodName::Psk),
+            reason: EstablishRsnaFailureReason::InternalError,
+        }
+        .into();
         expect_result(receiver, result.clone());
     }
 
     #[test]
     fn overall_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
-        let (supplicant, _suppl_mock) = mock_supplicant();
-        let (command, receiver) = connect_command_rsna(supplicant);
+        let (supplicant, _suppl_mock) = mock_psk_supplicant();
+        let (command, receiver) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
 
         // Start in an "Associating" state
@@ -1700,14 +1736,21 @@ mod tests {
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, EstablishRsnaFailure::OverallTimeout.into());
+        expect_result(
+            receiver,
+            EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::OverallTimeout,
+            }
+            .into(),
+        );
     }
 
     #[test]
     fn key_frame_exchange_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
-        let (command, receiver) = connect_command_rsna(supplicant);
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, receiver) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1728,13 +1771,20 @@ mod tests {
         }
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, EstablishRsnaFailure::KeyFrameExchangeTimeout.into());
+        expect_result(
+            receiver,
+            EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+            }
+            .into(),
+        );
     }
 
     #[test]
     fn gtk_rotation_during_link_up() {
         let mut h = TestHelper::new();
-        let (supplicant, suppl_mock) = mock_supplicant();
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
         let bssid = [7; 6];
         let state = link_up_state_protected(supplicant, bssid);
 
@@ -2036,9 +2086,9 @@ mod tests {
 
     #[test]
     fn join_failure_rsne_wrapped_in_legacy_wpa() {
-        let (supplicant, _suppl_mock) = mock_supplicant();
+        let (supplicant, _suppl_mock) = mock_psk_supplicant();
 
-        let (mut command, _receiver) = connect_command_rsna(supplicant);
+        let (mut command, _receiver) = connect_command_wpa2(supplicant);
         // Take the RSNA and wrap it in LegacyWpa to make it invalid.
         if let Protection::Rsna(rsna) = command.protection {
             command.protection = Protection::LegacyWpa(rsna);
@@ -2055,7 +2105,7 @@ mod tests {
 
     #[test]
     fn join_failure_legacy_wpa_wrapped_in_rsna() {
-        let (supplicant, _suppl_mock) = mock_supplicant();
+        let (supplicant, _suppl_mock) = mock_psk_supplicant();
 
         let (mut command, _receiver) = connect_command_wpa1(supplicant);
         // Take the LegacyWpa RSNA and wrap it in Rsna to make it invalid.
@@ -2365,7 +2415,7 @@ mod tests {
         (cmd, receiver)
     }
 
-    fn connect_command_rsna(
+    fn connect_command_wpa2(
         supplicant: MockSupplicant,
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
@@ -2438,6 +2488,7 @@ mod tests {
     }
 
     fn establishing_rsna_state(cmd: ConnectCommand) -> ClientState {
+        let auth_method = cmd.protection.get_rsn_auth_method();
         let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
         let link_state =
             testing::new_state(EstablishingRsna { rsna, rsna_timeout: None, resp_timeout: None })
@@ -2445,6 +2496,7 @@ mod tests {
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss: cmd.bss,
+            auth_method,
             responder: cmd.responder,
             last_rssi: 60,
             last_snr: 0,
@@ -2469,6 +2521,7 @@ mod tests {
             cfg: ClientConfig::default(),
             responder: None,
             bss,
+            auth_method: None,
             last_rssi: 60,
             last_snr: 30,
             link_state,
@@ -2489,16 +2542,15 @@ mod tests {
                 .expect("invalid NegotiatedProtection"),
             supplicant: Box::new(supplicant),
         };
-        let link_state = testing::new_state(LinkUp {
-            protection: Protection::Rsna(rsna),
-            since: now(),
-            ping_event: None,
-        })
-        .into();
+        let protection = Protection::Rsna(rsna);
+        let auth_method = protection.get_rsn_auth_method();
+        let link_state =
+            testing::new_state(LinkUp { protection, since: now(), ping_event: None }).into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss: Box::new(bss),
             responder: None,
+            auth_method,
             last_rssi: 60,
             last_snr: 30,
             link_state,

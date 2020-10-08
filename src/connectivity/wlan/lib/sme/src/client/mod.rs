@@ -46,6 +46,7 @@ use {
     wep_deprecated,
     wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, mac::MacAddr, RadioConfig},
     wlan_inspect::wrappers::InspectWlanChan,
+    wlan_rsn::auth,
 };
 
 pub use self::{
@@ -123,7 +124,7 @@ pub enum ConnectFailure {
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
     AssociationFailure(fidl_mlme::AssociateResultCodes),
-    EstablishRsna(EstablishRsnaFailure),
+    EstablishRsnaFailure(EstablishRsnaFailure),
 }
 
 impl ConnectFailure {
@@ -139,9 +140,14 @@ impl ConnectFailure {
                 fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => true,
                 _ => false,
             },
-            ConnectFailure::EstablishRsna(failure) => match failure {
-                EstablishRsnaFailure::KeyFrameExchangeTimeout
-                | EstablishRsnaFailure::OverallTimeout => true,
+            ConnectFailure::EstablishRsnaFailure(failure) => match failure {
+                EstablishRsnaFailure {
+                    reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+                    ..
+                }
+                | EstablishRsnaFailure {
+                    reason: EstablishRsnaFailureReason::OverallTimeout, ..
+                } => true,
                 _ => false,
             },
             _ => false,
@@ -172,7 +178,13 @@ impl From<SelectNetworkFailure> for ConnectFailure {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum EstablishRsnaFailure {
+pub struct EstablishRsnaFailure {
+    pub auth_method: Option<auth::MethodName>,
+    pub reason: EstablishRsnaFailureReason,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum EstablishRsnaFailureReason {
     StartSupplicantFailed,
     KeyFrameExchangeTimeout,
     OverallTimeout,
@@ -181,7 +193,7 @@ pub enum EstablishRsnaFailure {
 
 impl From<EstablishRsnaFailure> for ConnectFailure {
     fn from(failure: EstablishRsnaFailure) -> Self {
-        ConnectFailure::EstablishRsna(failure)
+        ConnectFailure::EstablishRsnaFailure(failure)
     }
 }
 

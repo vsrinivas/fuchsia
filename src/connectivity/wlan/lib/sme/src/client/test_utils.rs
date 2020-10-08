@@ -25,7 +25,7 @@ use {
         ie::{rsn::rsne::Rsne, write_wpa1_ie, *},
         mac,
     },
-    wlan_rsn::{format_rsn_err, rsna::UpdateSink, Error},
+    wlan_rsn::{auth, format_rsn_err, rsna::UpdateSink, Error},
     zerocopy::AsBytes,
 };
 
@@ -234,7 +234,7 @@ pub fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg
     );
 }
 
-pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
+fn mock_supplicant(auth_method: auth::MethodName) -> (MockSupplicant, MockSupplicantController) {
     let started = Arc::new(AtomicBool::new(false));
     let start_failure = Arc::new(Mutex::new(None));
     let sink = Arc::new(Mutex::new(Ok(UpdateSink::default())));
@@ -244,6 +244,7 @@ pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
         start_failure: start_failure.clone(),
         on_eapol_frame: sink.clone(),
         on_eapol_frame_cb: on_eapol_frame_cb.clone(),
+        auth_method,
     };
     let mock = MockSupplicantController {
         started,
@@ -254,6 +255,14 @@ pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
     (supplicant, mock)
 }
 
+pub fn mock_psk_supplicant() -> (MockSupplicant, MockSupplicantController) {
+    mock_supplicant(auth::MethodName::Psk)
+}
+
+pub fn mock_sae_supplicant() -> (MockSupplicant, MockSupplicantController) {
+    mock_supplicant(auth::MethodName::Sae)
+}
+
 type Cb = dyn Fn() + Send + 'static;
 
 pub struct MockSupplicant {
@@ -261,6 +270,7 @@ pub struct MockSupplicant {
     start_failure: Arc<Mutex<Option<anyhow::Error>>>,
     on_eapol_frame: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
+    auth_method: auth::MethodName,
 }
 
 impl Supplicant for MockSupplicant {
@@ -312,6 +322,9 @@ impl Supplicant for MockSupplicant {
         _event_id: u64,
     ) -> Result<(), anyhow::Error> {
         unimplemented!()
+    }
+    fn get_auth_method(&self) -> auth::MethodName {
+        self.auth_method
     }
 }
 

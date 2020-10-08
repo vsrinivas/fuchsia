@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod fake_ies;
 pub mod intersect;
 pub mod rsn;
 pub mod wpa;
 pub mod wsc;
 
 mod constants;
-mod fake_ies;
 mod fields;
 mod id;
 mod parse;

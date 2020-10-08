@@ -47,6 +47,7 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         update_sink: &mut UpdateSink,
         event_id: u64,
     ) -> Result<(), anyhow::Error>;
+    fn get_auth_method(&self) -> auth::MethodName;
 }
 
 impl Supplicant for wlan_rsn::Supplicant {
@@ -84,6 +85,10 @@ impl Supplicant for wlan_rsn::Supplicant {
         event_id: u64,
     ) -> Result<(), anyhow::Error> {
         wlan_rsn::Supplicant::on_sae_timeout(self, update_sink, event_id)
+    }
+
+    fn get_auth_method(&self) -> auth::MethodName {
+        self.auth_method
     }
 }
 
@@ -179,6 +184,7 @@ mod tests {
         },
         test_utils::fake_device_info,
     };
+    use wlan_common::assert_variant;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -207,6 +213,18 @@ mod tests {
     }
 
     #[test]
+    fn test_wpa2_get_auth_method() {
+        let bss = fake_protected_bss_description(b"foo_bss".to_vec());
+        let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
+        let protection = get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
+            .expect("expected successful RSNA with valid PSK");
+        assert_variant!(protection, Protection::Rsna(_));
+        if let Protection::Rsna(rsna) = protection {
+            assert_eq!(rsna.supplicant.get_auth_method(), auth::MethodName::Psk);
+        }
+    }
+
+    #[test]
     fn test_get_rsna_invalid_psk() {
         let bss = fake_protected_bss_description(b"foo_bss".to_vec());
         // PSK too short
@@ -221,6 +239,18 @@ mod tests {
         let credential = fidl_sme::Credential::Password(vec![0xBB; 8]);
         get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful SAE RSNA with valid credential");
+    }
+
+    #[test]
+    fn test_wpa3_get_auth_method() {
+        let bss = fake_wpa3_bss_description(b"foo_bss".to_vec());
+        let credential = fidl_sme::Credential::Password(vec![0xBB; 8]);
+        let protection = get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
+            .expect("expected successful SAE RSNA with valid credential");
+        assert_variant!(protection, Protection::Rsna(_));
+        if let Protection::Rsna(rsna) = protection {
+            assert_eq!(rsna.supplicant.get_auth_method(), auth::MethodName::Sae);
+        }
     }
 
     #[test]

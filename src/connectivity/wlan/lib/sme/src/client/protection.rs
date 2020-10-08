@@ -5,8 +5,9 @@
 use {
     crate::client::rsn::Rsna,
     anyhow::{format_err, Error},
+    wep_deprecated,
     wlan_common::ie::write_wpa1_ie,
-    wlan_rsn::ProtectionInfo,
+    wlan_rsn::{auth, ProtectionInfo},
 };
 
 #[derive(Debug)]
@@ -18,6 +19,21 @@ pub enum Protection {
     // logic.
     LegacyWpa(Rsna),
     Rsna(Rsna),
+}
+
+impl Protection {
+    pub fn get_rsn_auth_method(&self) -> Option<auth::MethodName> {
+        let rsna = match self {
+            Self::LegacyWpa(rsna) => rsna,
+            Self::Rsna(rsna) => rsna,
+            // Neither WEP or Open use an RSN, so None is returned.
+            Self::Wep(_) | Self::Open => {
+                return None;
+            }
+        };
+
+        Some(rsna.supplicant.get_auth_method())
+    }
 }
 
 #[derive(Debug)]
@@ -63,5 +79,63 @@ pub(crate) fn build_protection_ie(protection: &Protection) -> Result<Option<Prot
             let () = s_rsne.write_into(&mut buf).unwrap();
             Ok(Some(ProtectionIe::Rsne(buf)))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::client::{
+            rsn::Rsna,
+            test_utils::{mock_psk_supplicant, mock_sae_supplicant},
+        },
+        wep_deprecated::derive_key,
+        wlan_common::ie::{
+            fake_ies::fake_wpa_ie,
+            rsn::fake_rsnes::{fake_wpa2_s_rsne, fake_wpa3_s_rsne},
+        },
+        wlan_rsn::{rsna::NegotiatedProtection, ProtectionInfo},
+    };
+
+    #[test]
+    fn test_get_rsn_auth_method() {
+        // Open
+        let protection = Protection::Open;
+        assert!(protection.get_rsn_auth_method().is_none());
+
+        // Wep
+        let protection = Protection::Wep(derive_key(&[1; 5]).expect("unable to derive WEP key"));
+        assert!(protection.get_rsn_auth_method().is_none());
+
+        // WPA1
+        let protection_info = ProtectionInfo::LegacyWpa(fake_wpa_ie());
+        let negotiated_protection = NegotiatedProtection::from_protection(&protection_info)
+            .expect("could create mocked WPA1 NegotiatedProtection");
+        let protection = Protection::LegacyWpa(Rsna {
+            negotiated_protection,
+            supplicant: Box::new(mock_psk_supplicant().0),
+        });
+        assert_eq!(protection.get_rsn_auth_method(), Some(auth::MethodName::Psk));
+
+        // WPA2
+        let protection_info = ProtectionInfo::Rsne(fake_wpa2_s_rsne());
+        let negotiated_protection = NegotiatedProtection::from_protection(&protection_info)
+            .expect("could create mocked WPA2 NegotiatedProtection");
+        let protection = Protection::Rsna(Rsna {
+            negotiated_protection,
+            supplicant: Box::new(mock_psk_supplicant().0),
+        });
+        assert_eq!(protection.get_rsn_auth_method(), Some(auth::MethodName::Psk));
+
+        // WPA3
+        let protection_info = ProtectionInfo::Rsne(fake_wpa3_s_rsne());
+        let negotiated_protection = NegotiatedProtection::from_protection(&protection_info)
+            .expect("could create mocked WPA3 NegotiatedProtection");
+        let protection = Protection::Rsna(Rsna {
+            negotiated_protection,
+            supplicant: Box::new(mock_sae_supplicant().0),
+        });
+        assert_eq!(protection.get_rsn_auth_method(), Some(auth::MethodName::Sae));
     }
 }

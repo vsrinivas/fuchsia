@@ -10,7 +10,7 @@ use {
             info::ConnectionPingInfo,
             internal::Context,
             rsn::Rsna,
-            EstablishRsnaFailure,
+            EstablishRsnaFailureReason,
         },
         sink::MlmeSink,
         timer::EventId,
@@ -61,7 +61,7 @@ statemachine!(
 #[derive(Debug)]
 enum RsnaStatus {
     Established,
-    Failed(EstablishRsnaFailure),
+    Failed(EstablishRsnaFailureReason),
     Unchanged,
     Progressed { new_resp_timeout: Option<EventId> },
 }
@@ -90,14 +90,14 @@ impl EstablishingRsna {
     fn handle_establishing_rsna_timeout(
         mut self,
         event_id: EventId,
-    ) -> Result<Self, EstablishRsnaFailure> {
+    ) -> Result<Self, EstablishRsnaFailureReason> {
         if !triggered(&self.rsna_timeout, event_id) {
             return Ok(self);
         }
 
         error!("timeout establishing RSNA");
         cancel(&mut self.rsna_timeout);
-        Err(EstablishRsnaFailure::OverallTimeout)
+        Err(EstablishRsnaFailureReason::OverallTimeout)
     }
 
     fn handle_key_frame_exchange_timeout(
@@ -105,7 +105,7 @@ impl EstablishingRsna {
         timeout: event::KeyFrameExchangeTimeout,
         event_id: EventId,
         context: &mut Context,
-    ) -> Result<Self, EstablishRsnaFailure> {
+    ) -> Result<Self, EstablishRsnaFailureReason> {
         if triggered(&self.resp_timeout, event_id) {
             if timeout.attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
                 warn!("timeout waiting for key frame for attempt {}; retrying", timeout.attempt);
@@ -121,7 +121,7 @@ impl EstablishingRsna {
             } else {
                 error!("timeout waiting for key frame for last attempt; deauth");
                 cancel(&mut self.resp_timeout);
-                Err(EstablishRsnaFailure::KeyFrameExchangeTimeout)
+                Err(EstablishRsnaFailureReason::KeyFrameExchangeTimeout)
             }
         } else {
             Ok(self)
@@ -151,7 +151,7 @@ impl LinkState {
     pub fn new(
         protection: Protection,
         context: &mut Context,
-    ) -> Result<Self, EstablishRsnaFailure> {
+    ) -> Result<Self, EstablishRsnaFailureReason> {
         match protection {
             Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
                 context.info.report_rsna_started(context.att_id);
@@ -170,7 +170,7 @@ impl LinkState {
                     Err(e) => {
                         error!("could not start Supplicant: {}", e);
                         context.info.report_supplicant_error(anyhow::anyhow!(e));
-                        Err(EstablishRsnaFailure::StartSupplicantFailed)
+                        Err(EstablishRsnaFailureReason::StartSupplicantFailed)
                     }
                 }
             }
@@ -206,7 +206,7 @@ impl LinkState {
         bss: &BssDescription,
         state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
-    ) -> Result<Self, EstablishRsnaFailure> {
+    ) -> Result<Self, EstablishRsnaFailureReason> {
         match self {
             Self::EstablishingRsna(state) => {
                 let (transition, mut state) = state.release_data();
@@ -252,7 +252,7 @@ impl LinkState {
         event: Event,
         state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
-    ) -> Result<Self, EstablishRsnaFailure> {
+    ) -> Result<Self, EstablishRsnaFailureReason> {
         match self {
             Self::EstablishingRsna(state) => match event {
                 Event::EstablishingRsnaTimeout(..) => {
@@ -463,7 +463,7 @@ fn process_eapol_ind(
                     // ESS Security Association was successfully established. Link is now up.
                     SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
                     SecAssocStatus::WrongPassword => {
-                        return RsnaStatus::Failed(EstablishRsnaFailure::InternalError)
+                        return RsnaStatus::Failed(EstablishRsnaFailureReason::InternalError)
                     }
                     _ => (),
                 }

@@ -15,6 +15,7 @@ use crate::key::{
 use crate::key_data::kde;
 use crate::psk;
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate};
+use crate::ProtectionInfo;
 use crate::{Authenticator, Supplicant};
 use eapol::KeyFrameTx;
 use hex::FromHex;
@@ -25,7 +26,7 @@ use wlan_common::{
         rsn::{
             akm,
             cipher::{self, Cipher},
-            fake_wpa2_a_rsne, fake_wpa2_s_rsne, fake_wpa3_rsne,
+            fake_wpa2_a_rsne, fake_wpa2_s_rsne, fake_wpa3_a_rsne, fake_wpa3_s_rsne,
             suite_selector::OUI,
         },
         write_wpa1_ie,
@@ -81,7 +82,7 @@ pub fn get_wpa1_protection() -> NegotiatedProtection {
 }
 
 pub fn get_wpa3_protection() -> NegotiatedProtection {
-    NegotiatedProtection::from_rsne(&fake_wpa3_rsne())
+    NegotiatedProtection::from_rsne(&fake_wpa3_s_rsne())
         .expect("error creating WPA3 NegotiatedProtection")
 }
 
@@ -98,7 +99,7 @@ pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
 }
 
 pub fn get_wpa3_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
-    let s_rsne = fake_wpa3_rsne();
+    let s_rsne = fake_wpa3_s_rsne();
     let akm = &s_rsne.akm_suites[0];
     let cipher = s_rsne
         .pairwise_cipher_suites
@@ -263,8 +264,8 @@ where
         FourwayConfig::Wpa3 => (
             eapol::ProtocolVersion::IEEE802DOT1X2004,
             eapol::KeyInformation(0x13c8),
-            fake_wpa3_rsne(),
-            fake_wpa3_rsne(),
+            fake_wpa3_a_rsne(),
+            fake_wpa3_s_rsne(),
         ),
     };
     let mut w = kde::Writer::new(vec![]);
@@ -386,8 +387,8 @@ pub fn make_wpa2_fourway_cfg(role: Role) -> fourway::Config {
 
 pub fn make_wpa3_fourway_cfg(role: Role) -> fourway::Config {
     let cipher = Cipher { oui: OUI, suite_type: cipher::CCMP_128 };
-    let s_protection = ProtectionInfo::Rsne(fake_wpa3_rsne());
-    let a_protection = ProtectionInfo::Rsne(fake_wpa3_rsne());
+    let s_protection = ProtectionInfo::Rsne(fake_wpa3_s_rsne());
+    let a_protection = ProtectionInfo::Rsne(fake_wpa3_a_rsne());
     make_fourway_cfg(role, cipher, s_protection, a_protection)
 }
 

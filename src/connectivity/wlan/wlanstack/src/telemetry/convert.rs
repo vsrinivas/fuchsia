@@ -96,7 +96,7 @@ pub(super) fn convert_to_fail_at_dim(
         ConnectFailure::JoinFailure(..) => Join,
         ConnectFailure::AuthenticationFailure(..) => Authentication,
         ConnectFailure::AssociationFailure(..) => Association,
-        ConnectFailure::EstablishRsna(..) => EstablishRsna,
+        ConnectFailure::EstablishRsnaFailure(..) => EstablishRsna,
     }
 }
 
