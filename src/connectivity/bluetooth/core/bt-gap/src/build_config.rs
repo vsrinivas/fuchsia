@@ -4,13 +4,10 @@
 
 use {
     fidl_fuchsia_bluetooth_sys::{self as sys, LeSecurityMode},
-    futures::Future,
     serde::{Deserialize, Serialize},
     serde_json,
     std::{cmp::PartialEq, convert::Into, fs::OpenOptions, path::Path},
 };
-
-use crate::{host_device::HostDevice, types};
 
 static OVERRIDE_CONFIG_FILE_PATH: &'static str = "/config/data/build-config.json";
 static DEFAULT_CONFIG_FILE_PATH: &'static str = "/pkg/data/default.json";
@@ -58,11 +55,6 @@ pub enum LeSecurityModeDef {
 }
 
 impl Config {
-    pub fn apply(&self, host: &HostDevice) -> impl Future<Output = types::Result<()>> {
-        let equivalent_settings = self.clone().into();
-        host.apply_sys_settings(&equivalent_settings)
-    }
-
     pub fn update_with_sys_settings(&self, new_settings: &sys::Settings) -> Self {
         let mut new_config = self.clone();
         new_config.le.privacy_enabled = new_settings.le_privacy.unwrap_or(self.le.privacy_enabled);
@@ -102,7 +94,7 @@ fn load_internal(override_file_path: &Path, default_file_path: &Path) -> Config 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::host_device;
+    use crate::host_device::HostDevice;
     use {
         fidl::encoding::Decodable,
         fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
@@ -152,7 +144,7 @@ mod tests {
     async fn apply_config() {
         let (host_proxy, host_server) =
             fidl::endpoints::create_proxy_and_stream::<HostMarker>().unwrap();
-        let host_device = host_device::test::new_mock(
+        let host_device = HostDevice::mock(
             HostId(42),
             Address::Public([1, 2, 3, 4, 5, 6]),
             Path::new("/dev/host"),
@@ -201,7 +193,7 @@ mod tests {
             assert_eq!(expected_reqs.into_iter().collect::<Vec<String>>(), Vec::<String>::new());
         };
         let apply_config = async {
-            test_config.apply(&host_device).await.unwrap();
+            host_device.apply_config(test_config.clone()).await.unwrap();
             // Drop `host_device` so the host server request stream terminates
             drop(host_device)
         };

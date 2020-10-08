@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{host_device, host_dispatcher, services::access};
+use crate::{
+    host_device::{self, HostDevice},
+    host_dispatcher,
+    services::access,
+};
 use {
     fidl_fuchsia_bluetooth_host::HostMarker,
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, TechnologyType},
+    fidl_fuchsia_bluetooth_sys::AccessMarker,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::{
-        inspect::{placeholder_node, Inspectable},
-        types::{Address, HostId, HostInfo},
-    },
+    fuchsia_bluetooth::types::{Address, HostId},
     futures::{future::join, stream::FuturesUnordered},
     parking_lot::RwLock,
     proptest::prelude::*,
@@ -53,7 +54,7 @@ fn run_access_and_host<F, T>(
     executor: &mut fuchsia_async::Executor,
     access_sessions: &mut FuturesUnordered<T>,
     host_task: &mut Pin<Box<F>>,
-    host: Arc<RwLock<host_device::HostDevice>>,
+    host: host_device::HostDevice,
 ) -> bool
 where
     T: futures::Future,
@@ -70,12 +71,10 @@ where
     }
 
     // Send and process WatchHost request
-    let _ = executor.run_until_stalled(&mut Box::pin(join(
-        host_device::refresh_host_info(host.clone()),
-        host_task,
-    )));
+    let _ = executor
+        .run_until_stalled(&mut Box::pin(join(host.clone().refresh_test_host_info(), host_task)));
 
-    host.read().get_info().discovering
+    host.info().discovering
 }
 
 proptest! {
@@ -87,23 +86,11 @@ proptest! {
 
         // Add mock host to dispatcher and make active
         let host_id = HostId(1);
-        let active_host_path = PathBuf::from("/dev/host1");
-        let host_info = HostInfo {
-            id: host_id,
-            technology: TechnologyType::DualMode,
-            address: Address::Public([0, 0, 0, 0, 0, 1]),
-            local_name: None,
-            active: false,
-            discoverable: false,
-            discovering: false,
-        };
+        let host_address = Address::Public([0, 0, 0, 0, 0, 1]);
         let (host_proxy, host_stream) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
-        let mock_host = Arc::new(RwLock::new(host_device::HostDevice::new(
-            active_host_path.clone(),
-            host_proxy,
-            Inspectable::new(host_info.clone(), placeholder_node()),
-        )));
-        let host_info = Arc::new(RwLock::new(host_info));
+        let mock_host = HostDevice::mock(host_id, host_address, &PathBuf::from("/dev/host1"), host_proxy);
+        let host_info = Arc::new(RwLock::new(mock_host.info()));
+
         hd.add_test_host(host_id, mock_host.clone());
         hd.set_active_host(host_id)?;
 

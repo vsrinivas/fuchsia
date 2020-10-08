@@ -7,26 +7,23 @@ use {
     async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, TechnologyType},
+    fidl_fuchsia_bluetooth_sys::AccessMarker,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::{
-        inspect::{placeholder_node, Inspectable},
-        types::{
-            pairing_options::{BondableMode, PairingOptions, SecurityLevel},
-            Address, HostId, HostInfo, PeerId, Technology,
-        },
+    fuchsia_bluetooth::types::{
+        pairing_options::{BondableMode, PairingOptions, SecurityLevel},
+        Address, HostId, PeerId, Technology,
     },
     futures::{future, stream::TryStreamExt},
     matches::assert_matches,
     parking_lot::RwLock,
-    std::{
-        collections::HashMap,
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{collections::HashMap, path::Path, sync::Arc},
 };
 
-use crate::{host_device, host_dispatcher, services::access};
+use crate::{
+    host_device::{self, HostDevice},
+    host_dispatcher,
+    services::access,
+};
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_pair() -> Result<(), Error> {
@@ -55,9 +52,8 @@ async fn test_pair() -> Result<(), Error> {
 
     let address = Address::Public([1, 2, 3, 4, 5, 6]);
     let host_id = HostId(42);
-    let path = Path::new("/dev/host");
-    let host_device = host_device::test::new_mock(host_id, address, path, host_proxy);
-    dispatcher.add_test_host(host_id, Arc::new(RwLock::new(host_device)));
+    let host_device = HostDevice::mock(host_id, address, Path::new("/dev/host"), host_proxy);
+    dispatcher.add_test_host(host_id, host_device);
 
     let (client, server) = endpoints::create_proxy_and_stream::<AccessMarker>()?;
     let run_access = access::run(dispatcher, server);
@@ -104,27 +100,21 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
     let hd = host_dispatcher::test::make_simple_test_dispatcher()?;
 
     // Add Host #1 to dispatcher and make active
-    let active_host_path = PathBuf::from("/dev/host1");
-    let host_info_1 = example_host_info(1);
     let (host_proxy_1, host_server_1) = endpoints::create_proxy_and_stream::<HostMarker>()?;
-    let host_1 = Arc::new(RwLock::new(host_device::HostDevice::new(
-        active_host_path.clone(),
-        host_proxy_1,
-        Inspectable::new(host_info_1.clone(), placeholder_node()),
-    )));
-    let host_info_1 = Arc::new(RwLock::new(host_info_1));
+    let active_host_path = Path::new("/dev/host1");
+    let addr = Address::Public([0, 0, 0, 0, 0, 1]);
+    let host_1 = HostDevice::mock(HostId(1), addr, active_host_path, host_proxy_1).as_inactive();
+    let host_info_1 = Arc::new(RwLock::new(host_1.info()));
+
     hd.add_test_host(HostId(1), host_1.clone());
     hd.set_active_host(HostId(1))?;
 
     // Add Host #2 to dispatcher
-    let host_info_2 = example_host_info(2);
     let (host_proxy_2, host_server_2) = endpoints::create_proxy_and_stream::<HostMarker>()?;
-    let host_2 = Arc::new(RwLock::new(host_device::HostDevice::new(
-        PathBuf::from("/dev/host2"),
-        host_proxy_2,
-        Inspectable::new(host_info_2.clone(), placeholder_node()),
-    )));
-    let host_info_2 = Arc::new(RwLock::new(host_info_2));
+    let addr = Address::Public([0, 0, 0, 0, 0, 2]);
+    let inactive_host_path = Path::new("/dev/host2");
+    let host_2 = HostDevice::mock(HostId(2), addr, inactive_host_path, host_proxy_2).as_inactive();
+    let host_info_2 = Arc::new(RwLock::new(host_2.info()));
     hd.add_test_host(HostId(2), host_2.clone());
 
     // Create access server future
@@ -139,20 +129,16 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         assert_matches!(response, Ok(Ok(())));
 
         // Assert that Host #1 is now marked as discovering
-        host_device::refresh_host_info(host_1.clone())
-            .await
-            .expect("did not receive Host #1 info update");
-        let is_discovering = host_1.read().get_info().discovering.clone();
+        host_1.clone().refresh_test_host_info().await.expect("did not receive Host #1 info update");
+        let is_discovering = host_1.info().discovering.clone();
         assert!(is_discovering);
 
         // Deactivate Host #1
-        hd.rm_adapter(&active_host_path).await;
+        hd.rm_adapter(active_host_path).await;
 
         // Assert that Host #2 is now marked as discovering
-        host_device::refresh_host_info(host_2.clone())
-            .await
-            .expect("did not receive Host #2 info update");
-        let is_discovering = host_2.read().get_info().discovering.clone();
+        host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");
+        let is_discovering = host_2.info().discovering.clone();
         assert!(is_discovering);
 
         // Drop discovery session, which contains an internal reference to the dispatcher state,
@@ -160,13 +146,9 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         drop(discovery_session);
 
         // TODO(fxbug.dev/59420): Remove the double refresh once the cause is understood and fixed
-        host_device::refresh_host_info(host_2.clone())
-            .await
-            .expect("did not receive Host #2 info update");
-        host_device::refresh_host_info(host_2.clone())
-            .await
-            .expect("did not receive Host #2 info update");
-        let is_discovering = host_2.read().get_info().discovering.clone();
+        host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");
+        host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");
+        let is_discovering = host_2.info().discovering.clone();
         assert!(!is_discovering);
 
         Ok(())
@@ -180,16 +162,4 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
     )
     .await
     .map(|_: ((), (), (), ())| ())
-}
-
-fn example_host_info(host_no: u8) -> HostInfo {
-    HostInfo {
-        id: HostId(host_no.into()),
-        technology: TechnologyType::DualMode,
-        address: Address::Public([0, 0, 0, 0, 0, host_no]),
-        local_name: None,
-        active: false,
-        discoverable: false,
-        discovering: false,
-    }
 }

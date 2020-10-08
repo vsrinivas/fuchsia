@@ -4,12 +4,12 @@
 
 use {
     anyhow::format_err,
-    fidl_fuchsia_bluetooth as fbt,
+    fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
-    fidl_fuchsia_bluetooth_sys as sys,
+    fidl_fuchsia_bluetooth_sys as sys, fuchsia_async as fasync,
     fuchsia_bluetooth::{
         inspect::Inspectable,
-        types::{BondingData, HostData, HostInfo, Peer, PeerId},
+        types::{Address, BondingData, HostData, HostId, HostInfo, Peer, PeerId},
     },
     futures::{Future, FutureExt, StreamExt, TryFutureExt},
     log::{error, info, trace, warn},
@@ -17,25 +17,31 @@ use {
     pin_utils::pin_mut,
     std::{
         convert::TryInto,
-        path::PathBuf,
+        path::{Path, PathBuf},
         sync::{Arc, Weak},
     },
 };
 
-use crate::types::{self, from_fidl_result, Error};
+#[cfg(test)]
+use {fidl_fuchsia_bluetooth_sys::TechnologyType, fuchsia_bluetooth::inspect::placeholder_node};
+
+use crate::{
+    build_config,
+    types::{self, from_fidl_result, Error},
+};
 
 /// When the host dispatcher requests discovery on a host device, the host device starts discovery
 /// and returns a HostDiscoverySession. The state of discovery on the host device persists until
 /// this session is dropped.
 pub struct HostDiscoverySession {
-    adap: Weak<RwLock<HostDevice>>,
+    host: Weak<HostDeviceState>,
 }
 
 impl Drop for HostDiscoverySession {
     fn drop(&mut self) {
         trace!("HostDiscoverySession ended");
-        if let Some(host) = self.adap.upgrade() {
-            if let Err(err) = host.write().stop_discovery() {
+        if let Some(host) = self.host.upgrade() {
+            if let Err(err) = host.proxy.stop_discovery() {
                 // TODO(fxbug.dev/45325) - we should close the host channel if an error is returned
                 warn!("Unexpected error response when stopping discovery: {:?}", err);
             }
@@ -43,10 +49,36 @@ impl Drop for HostDiscoverySession {
     }
 }
 
-pub struct HostDevice {
-    pub path: PathBuf,
-    host: HostProxy,
-    info: Inspectable<HostInfo>,
+/// When the host dispatcher requests being discoverable on a host device, the host device enables
+/// discoverable and returns a HostDiscoverableSession. The discoverable state on the host device
+/// persists until this session is dropped.
+pub struct HostDiscoverableSession {
+    host: Weak<HostDeviceState>,
+}
+
+impl Drop for HostDiscoverableSession {
+    fn drop(&mut self) {
+        trace!("HostDiscoverableSession ended");
+        if let Some(host) = self.host.upgrade() {
+            let await_response = host.proxy.set_discoverable(false);
+            fasync::Task::spawn(async move {
+                if let Err(err) = await_response.await {
+                    // TODO(fxbug.dev/45325) - we should close the host channel if an error is returned
+                    warn!("Unexpected error response when disabling discoverable: {:?}", err);
+                }
+            })
+            .detach();
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct HostDevice(Arc<HostDeviceState>);
+
+pub struct HostDeviceState {
+    device_path: PathBuf,
+    proxy: HostProxy,
+    info: RwLock<Inspectable<HostInfo>>,
 }
 
 // Many HostDevice methods return impl Future rather than being implemented as `async`. This has an
@@ -55,99 +87,120 @@ pub struct HostDevice {
 // If they were instead declared async, the function body would not be executed until the first time
 // the future was polled.
 impl HostDevice {
-    pub fn new(path: PathBuf, host: HostProxy, info: Inspectable<HostInfo>) -> Self {
-        HostDevice { path, host, info }
+    pub fn new(device_path: PathBuf, proxy: HostProxy, info: Inspectable<HostInfo>) -> Self {
+        HostDevice(Arc::new(HostDeviceState { device_path, proxy, info: RwLock::new(info) }))
     }
 
-    pub fn get_host(&self) -> &HostProxy {
-        &self.host
+    pub fn proxy(&self) -> &HostProxy {
+        &self.0.proxy
     }
 
-    pub fn get_info(&self) -> &HostInfo {
-        &self.info
+    pub fn info(&self) -> HostInfo {
+        self.0.info.read().clone()
+    }
+
+    pub fn id(&self) -> HostId {
+        self.0.info.read().id.into()
+    }
+
+    pub fn address(&self) -> Address {
+        self.0.info.read().address
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.0.device_path
     }
 
     pub fn set_name(&self, mut name: String) -> impl Future<Output = types::Result<()>> {
-        self.host.set_local_name(&mut name).map(from_fidl_result)
+        self.0.proxy.set_local_name(&mut name).map(from_fidl_result)
     }
 
-    pub fn set_device_class(
-        &self,
-        mut cod: fbt::DeviceClass,
-    ) -> impl Future<Output = types::Result<()>> {
-        self.host.set_device_class(&mut cod).map(from_fidl_result)
+    pub fn set_device_class(&self, mut dc: DeviceClass) -> impl Future<Output = types::Result<()>> {
+        self.0.proxy.set_device_class(&mut dc).map(from_fidl_result)
     }
 
     pub fn establish_discovery_session(
-        host: &Arc<RwLock<HostDevice>>,
+        &self,
     ) -> impl Future<Output = types::Result<HostDiscoverySession>> {
-        let token = HostDiscoverySession { adap: Arc::downgrade(host) };
-        host.write().host.start_discovery().map(from_fidl_result).map_ok(|_| token)
+        let token = HostDiscoverySession { host: Arc::downgrade(&self.0) };
+        self.0.proxy.start_discovery().map(from_fidl_result).map_ok(|_| token)
     }
 
-    pub fn connect(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {
+    pub fn connect(&self, id: PeerId) -> impl Future<Output = types::Result<()>> {
         let mut id: fbt::PeerId = id.into();
-        self.host.connect(&mut id).map(from_fidl_result)
+        self.0.proxy.connect(&mut id).map(from_fidl_result)
     }
 
-    pub fn disconnect(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {
+    pub fn disconnect(&self, id: PeerId) -> impl Future<Output = types::Result<()>> {
         let mut id: fbt::PeerId = id.into();
-        self.host.disconnect(&mut id).map(from_fidl_result)
+        self.0.proxy.disconnect(&mut id).map(from_fidl_result)
     }
 
     pub fn pair(
-        &mut self,
+        &self,
         id: PeerId,
         options: sys::PairingOptions,
     ) -> impl Future<Output = types::Result<()>> {
         let mut id: fbt::PeerId = id.into();
-        self.host.pair(&mut id, options).map(from_fidl_result)
+        self.0.proxy.pair(&mut id, options).map(from_fidl_result)
     }
 
-    pub fn forget(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {
+    pub fn forget(&self, id: PeerId) -> impl Future<Output = types::Result<()>> {
         let mut id: fbt::PeerId = id.into();
-        self.host.forget(&mut id).map(from_fidl_result)
+        self.0.proxy.forget(&mut id).map(from_fidl_result)
     }
 
     pub fn close(&self) -> types::Result<()> {
-        self.host.close().map_err(|e| e.into())
+        self.0.proxy.close().map_err(|e| e.into())
     }
 
     pub fn restore_bonds(
         &self,
         bonds: Vec<BondingData>,
     ) -> impl Future<Output = types::Result<Vec<sys::BondingData>>> {
-        self.host
+        self.0
+            .proxy
             .restore_bonds(&mut bonds.into_iter().map(sys::BondingData::from))
             .map_err(|e| e.into())
     }
 
     pub fn set_connectable(&self, value: bool) -> impl Future<Output = types::Result<()>> {
-        self.host.set_connectable(value).map(from_fidl_result)
+        self.0.proxy.set_connectable(value).map(from_fidl_result)
     }
 
-    pub fn stop_discovery(&self) -> types::Result<()> {
-        self.host.stop_discovery().map_err(|e| e.into())
-    }
-
-    pub fn set_discoverable(&self, discoverable: bool) -> impl Future<Output = types::Result<()>> {
-        self.host.set_discoverable(discoverable).map(from_fidl_result)
+    pub fn establish_discoverable_session(
+        &self,
+    ) -> impl Future<Output = types::Result<HostDiscoverableSession>> {
+        let host = Arc::downgrade(&self.0);
+        self.0
+            .proxy
+            .set_discoverable(true)
+            .map(from_fidl_result)
+            .map_ok(move |_| HostDiscoverableSession { host })
     }
 
     pub fn set_local_data(&self, data: HostData) -> types::Result<()> {
-        self.host.set_local_data(data.into()).map_err(|e| e.into())
+        self.0.proxy.set_local_data(data.into()).map_err(|e| e.into())
     }
 
     pub fn enable_privacy(&self, enable: bool) -> types::Result<()> {
-        self.host.enable_privacy(enable).map_err(Error::from)
+        self.0.proxy.enable_privacy(enable).map_err(Error::from)
     }
 
     pub fn enable_background_scan(&self, enable: bool) -> types::Result<()> {
-        self.host.enable_background_scan(enable).map_err(Error::from)
+        self.0.proxy.enable_background_scan(enable).map_err(Error::from)
     }
 
     pub fn set_le_security_mode(&self, mode: sys::LeSecurityMode) -> types::Result<()> {
-        self.host.set_le_security_mode(mode).map_err(Error::from)
+        self.0.proxy.set_le_security_mode(mode).map_err(Error::from)
+    }
+
+    pub fn apply_config(
+        &self,
+        config: build_config::Config,
+    ) -> impl Future<Output = types::Result<()>> {
+        let equivalent_settings = config.into();
+        self.apply_sys_settings(&equivalent_settings)
     }
 
     /// `apply_sys_settings` applies each field present in `settings` to the host device, leaving
@@ -174,6 +227,100 @@ impl HostDevice {
                 res => res.map(|_| ()),
             }
         }
+    }
+
+    /// Monitors updates from a bt-host device and notifies `listener`. The returned Future represents
+    /// a task that never ends in successful operation and only returns in case of a failure to
+    /// communicate with the bt-host device.
+    pub async fn watch_events<H: HostListener + Clone>(self, listener: H) -> types::Result<()> {
+        let handle_fidl = self.clone().handle_fidl_events(listener.clone());
+        let watch_peers = self.clone().watch_peers(listener.clone());
+        let watch_state = self.watch_state(listener);
+        pin_mut!(handle_fidl);
+        pin_mut!(watch_peers);
+        pin_mut!(watch_state);
+        futures::select! {
+            res1 = handle_fidl.fuse() => res1,
+            res2 = watch_peers.fuse() => res2,
+            res3 = watch_state.fuse() => res3,
+        }
+    }
+
+    async fn watch_peers<H: HostListener + Clone>(self, mut listener: H) -> types::Result<()> {
+        let proxy = self.0.proxy.clone();
+        loop {
+            let (updated, removed) = proxy.watch_peers().await?;
+            for peer in updated.into_iter() {
+                listener.on_peer_updated(peer.try_into()?).await;
+            }
+            for id in removed.into_iter() {
+                listener.on_peer_removed(id.into()).await;
+            }
+        }
+    }
+
+    async fn watch_state<H: HostListener>(self, mut listener: H) -> types::Result<()> {
+        loop {
+            let info = self.clone().refresh_host_info().await?;
+            listener.on_host_updated(info).await?;
+        }
+    }
+
+    async fn handle_fidl_events<H: HostListener>(self, mut listener: H) -> types::Result<()> {
+        let mut stream = self.0.proxy.take_event_stream();
+        while let Some(event) = stream.next().await {
+            match event? {
+                HostEvent::OnNewBondingData { data } => {
+                    info!("Received bonding data");
+                    let data: BondingData = match data.try_into() {
+                        Err(e) => {
+                            error!("Invalid bonding data, ignoring: {:#?}", e);
+                            continue;
+                        }
+                        Ok(data) => data,
+                    };
+                    if let Err(e) = listener.on_new_host_bond(data.into()).await {
+                        error!("Failed to persist bonding data: {:#?}", e);
+                    }
+                }
+            };
+        }
+        Err(types::Error::InternalError(format_err!("Host FIDL event stream terminated")))
+    }
+
+    async fn refresh_host_info(self) -> types::Result<HostInfo> {
+        let proxy = self.0.proxy.clone();
+        let info = proxy.watch_state().await?;
+        let info: HostInfo = info.try_into()?;
+        self.0.info.write().update(info.clone());
+        Ok(info)
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn refresh_test_host_info(self) -> types::Result<HostInfo> {
+        self.refresh_host_info().await
+    }
+
+    #[cfg(test)]
+    pub(crate) fn mock(id: HostId, address: Address, path: &Path, proxy: HostProxy) -> HostDevice {
+        let info = HostInfo {
+            id,
+            technology: TechnologyType::DualMode,
+            address,
+            active: true,
+            local_name: None,
+            discoverable: false,
+            discovering: false,
+        };
+        HostDevice::new(path.into(), proxy, Inspectable::new(info, placeholder_node()))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn as_inactive(self) -> HostDevice {
+        let mut new_info = self.info();
+        new_info.active = false;
+        self.0.info.write().update(new_info);
+        self
     }
 }
 
@@ -215,121 +362,15 @@ pub trait HostListener {
     fn on_host_updated(&mut self, info: HostInfo) -> Self::HostInfoFut;
 }
 
-// TODO(armansito): It feels odd to expose it only so it is available to test/host_device.rs. It
-// might be better to move the host_device tests into this module.
-pub async fn refresh_host_info(host: Arc<RwLock<HostDevice>>) -> types::Result<HostInfo> {
-    let proxy = host.read().host.clone();
-    let info = proxy.watch_state().await?;
-    let info: HostInfo = info.try_into()?;
-    host.write().info.update(info.clone());
-    Ok(info)
-}
-
-/// Monitors updates from a bt-host device and notifies `listener`. The returned Future represents
-/// a task that never ends in successful operation and only returns in case of a failure to
-/// communicate with the bt-host device.
-pub async fn watch_events<H: HostListener + Clone>(
-    listener: H,
-    host: Arc<RwLock<HostDevice>>,
-) -> types::Result<()> {
-    let handle_fidl = handle_fidl_events(listener.clone(), host.clone());
-    let watch_peers = watch_peers(listener.clone(), host.clone());
-    let watch_state = watch_state(listener, host);
-    pin_mut!(handle_fidl);
-    pin_mut!(watch_peers);
-    pin_mut!(watch_state);
-    futures::select! {
-        res1 = handle_fidl.fuse() => res1,
-        res2 = watch_peers.fuse() => res2,
-        res3 = watch_state.fuse() => res3,
-    }
-}
-
-async fn handle_fidl_events<H: HostListener>(
-    mut listener: H,
-    host: Arc<RwLock<HostDevice>>,
-) -> types::Result<()> {
-    let mut stream = host.read().host.take_event_stream();
-    while let Some(event) = stream.next().await {
-        match event? {
-            HostEvent::OnNewBondingData { data } => {
-                info!("Received bonding data");
-                let data: BondingData = match data.try_into() {
-                    Err(e) => {
-                        error!("Invalid bonding data, ignoring: {:#?}", e);
-                        continue;
-                    }
-                    Ok(data) => data,
-                };
-                if let Err(e) = listener.on_new_host_bond(data.into()).await {
-                    error!("Failed to persist bonding data: {:#?}", e);
-                }
-            }
-        };
-    }
-    Err(types::Error::InternalError(format_err!("Host FIDL event stream terminated")))
-}
-
-async fn watch_peers<H: HostListener + Clone>(
-    mut listener: H,
-    host: Arc<RwLock<HostDevice>>,
-) -> types::Result<()> {
-    let proxy = host.read().host.clone();
-    loop {
-        let (updated, removed) = proxy.watch_peers().await?;
-        for peer in updated.into_iter() {
-            listener.on_peer_updated(peer.try_into()?).await;
-        }
-        for id in removed.into_iter() {
-            listener.on_peer_removed(id.into()).await;
-        }
-    }
-}
-
-async fn watch_state<H: HostListener>(
-    mut listener: H,
-    host: Arc<RwLock<HostDevice>>,
-) -> types::Result<()> {
-    loop {
-        let info = refresh_host_info(host.clone()).await?;
-        listener.on_host_updated(info).await?;
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
 
     use {
         fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream},
-        fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
-        fuchsia_bluetooth::inspect::placeholder_node,
-        fuchsia_bluetooth::types::{Address, HostId},
+        fidl_fuchsia_bluetooth_sys::HostInfo as FidlHostInfo,
         futures::{future, TryStreamExt},
-        std::path::Path,
     };
-
-    pub(crate) fn new_mock(
-        id: HostId,
-        address: Address,
-        path: &Path,
-        proxy: HostProxy,
-    ) -> HostDevice {
-        let info = HostInfo {
-            id,
-            technology: TechnologyType::DualMode,
-            address,
-            active: true,
-            local_name: None,
-            discoverable: false,
-            discovering: false,
-        };
-        HostDevice {
-            path: path.into(),
-            host: proxy,
-            info: Inspectable::new(info, placeholder_node()),
-        }
-    }
 
     /// Runs a HostRequestStream that handles StartDiscovery, StopDiscovery, & WatchState requests.
     pub(crate) async fn run_discovery_host_server(

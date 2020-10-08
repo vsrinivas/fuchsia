@@ -6,20 +6,17 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
-    fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
-    fuchsia_bluetooth::{
-        inspect::{placeholder_node, Inspectable},
-        types::{Address, BondingData, HostId, HostInfo, Peer, PeerId},
-    },
+    fidl_fuchsia_bluetooth_sys::HostInfo as FidlHostInfo,
+    fuchsia_bluetooth::types::{Address, BondingData, HostId, HostInfo, Peer, PeerId},
     futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
-    std::{path::PathBuf, sync::Arc},
+    std::{path::Path, sync::Arc},
 };
 
-use crate::host_device;
+use crate::host_device::{HostDevice, HostListener};
 
 // An impl that ignores all events
-impl host_device::HostListener for () {
+impl HostListener for () {
     type PeerUpdatedFut = future::Ready<()>;
     fn on_peer_updated(&mut self, _peer: Peer) -> Self::PeerRemovedFut {
         future::ready(())
@@ -45,28 +42,14 @@ impl host_device::HostListener for () {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn host_device_set_local_name() -> Result<(), Error> {
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
-
-    let info = HostInfo {
-        id: HostId(1),
-        technology: TechnologyType::DualMode,
-        address: Address::Public([0, 0, 0, 0, 0, 0]),
-        local_name: None,
-        active: false,
-        discoverable: false,
-        discovering: false,
-    };
-    let host = Arc::new(RwLock::new(host_device::HostDevice::new(
-        PathBuf::from("/dev/class/bt-host/test"),
-        client,
-        Inspectable::new(info.clone(), placeholder_node()),
-    )));
-    let name = "EXPECTED_NAME".to_string();
-
-    let info = Arc::new(RwLock::new(info));
+    let address = Address::Public([0, 0, 0, 0, 0, 0]);
+    let host = HostDevice::mock(HostId(1), address, Path::new("/dev/class/bt-host/test"), client);
+    let expected_name = "EXPECTED_NAME".to_string();
+    let info = Arc::new(RwLock::new(host.info()));
     let server = Arc::new(RwLock::new(server));
 
     // Assign a name and verify that that it gets written to the bt-host over FIDL.
-    let set_name = host.write().set_name(name.clone());
+    let set_name = host.set_name(expected_name.clone());
     let expect_fidl = expect_call(server.clone(), |_, e| match e {
         HostRequest::SetLocalName { local_name, responder } => {
             info.write().local_name = Some(local_name);
@@ -80,9 +63,9 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let _ = expect_result.expect("FIDL result unsatisfied");
 
     refresh_host(host.clone(), server.clone(), info.read().clone()).await;
-    let host_name = host.read().get_info().local_name.clone();
+    let host_name = host.info().local_name.clone();
     println!("name: {:?}", host_name);
-    assert!(host_name == Some(name));
+    assert!(host_name == Some(expected_name));
     Ok(())
 }
 
@@ -92,27 +75,13 @@ async fn host_device_set_local_name() -> Result<(), Error> {
 async fn test_discovery_session() -> Result<(), Error> {
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
 
-    let info = HostInfo {
-        id: HostId(1),
-        technology: TechnologyType::DualMode,
-        address: Address::Public([0, 0, 0, 0, 0, 0]),
-        local_name: None,
-        active: false,
-        discoverable: false,
-        discovering: false,
-    };
-
-    let host = Arc::new(RwLock::new(host_device::HostDevice::new(
-        PathBuf::from("/dev/class/bt-host/test"),
-        client,
-        Inspectable::new(info.clone(), placeholder_node()),
-    )));
-
-    let info = Arc::new(RwLock::new(info));
+    let address = Address::Public([0, 0, 0, 0, 0, 0]);
+    let host = HostDevice::mock(HostId(1), address, Path::new("/dev/class/bt-host/test"), client);
+    let info = Arc::new(RwLock::new(host.info()));
     let server = Arc::new(RwLock::new(server));
 
     // Simulate request to establish discovery session
-    let establish_discovery_session = host_device::HostDevice::establish_discovery_session(&host);
+    let establish_discovery_session = host.establish_discovery_session();
     let expect_fidl = expect_call(server.clone(), |_, e| match e {
         HostRequest::StartDiscovery { responder } => {
             info.write().discovering = true;
@@ -128,7 +97,7 @@ async fn test_discovery_session() -> Result<(), Error> {
 
     // Assert that host is now marked as discovering
     refresh_host(host.clone(), server.clone(), info.read().clone()).await;
-    let is_discovering = host.read().get_info().discovering.clone();
+    let is_discovering = host.info().discovering.clone();
     assert!(is_discovering);
 
     // Simulate drop of discovery session
@@ -144,7 +113,7 @@ async fn test_discovery_session() -> Result<(), Error> {
 
     // Assert that host is no longer marked as discovering
     refresh_host(host.clone(), server.clone(), info.read().clone()).await;
-    let is_discovering = host.read().get_info().discovering.clone();
+    let is_discovering = host.info().discovering.clone();
     assert!(!is_discovering);
 
     Ok(())
@@ -166,12 +135,8 @@ where
 }
 
 // Updates host with new info
-async fn refresh_host(
-    host: Arc<RwLock<host_device::HostDevice>>,
-    server: Arc<RwLock<HostRequestStream>>,
-    info: HostInfo,
-) {
-    let refresh = host_device::refresh_host_info(host);
+async fn refresh_host(host: HostDevice, server: Arc<RwLock<HostRequestStream>>, info: HostInfo) {
+    let refresh = host.refresh_test_host_info();
     let expect_fidl = expect_call(server, |_, e| match e {
         HostRequest::WatchState { responder } => {
             responder.send(FidlHostInfo::from(info))?;

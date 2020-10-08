@@ -46,7 +46,7 @@ use {
 
 use crate::{
     build_config, generic_access_service,
-    host_device::{self, HostDevice, HostDiscoverySession, HostListener},
+    host_device::{HostDevice, HostDiscoverableSession, HostDiscoverySession, HostListener},
     services::pairing::{
         pairing_dispatcher::{PairingDispatcher, PairingDispatcherHandle},
         PairingDelegate,
@@ -112,29 +112,6 @@ impl Drop for DiscoverySession {
     }
 }
 
-// We use tokens to track the reference counting for discovery/discoverable states
-// As long as at least one user maintains an Arc<> to the token, the state persists
-// Once all references are dropped, the `Drop` trait on the token causes the state
-// to be terminated.
-pub struct DiscoverableRequestToken {
-    adap: Weak<RwLock<HostDevice>>,
-}
-
-impl Drop for DiscoverableRequestToken {
-    fn drop(&mut self) {
-        if let Some(host) = self.adap.upgrade() {
-            let await_response = host.write().set_discoverable(false);
-            fasync::Task::spawn(async move {
-                if let Err(err) = await_response.await {
-                    // TODO(fxbug.dev/45325) - we should close the host channel if an error is returned
-                    warn!("Unexpected error response when disabling discoverable: {:?}", err);
-                }
-            })
-            .detach();
-        }
-    }
-}
-
 struct HostDispatcherInspect {
     _inspect: inspect::Node,
     peers: inspect::Node,
@@ -175,7 +152,7 @@ impl HostDispatcherInspect {
 /// It appears as a Host to higher level systems, and is responsible for
 /// routing commands to the appropriate HostAdapter
 struct HostDispatcherState {
-    host_devices: HashMap<HostId, Arc<RwLock<HostDevice>>>,
+    host_devices: HashMap<HostId, HostDevice>,
     active_id: Option<HostId>,
 
     // Component storage.
@@ -185,7 +162,7 @@ struct HostDispatcherState {
     name: String,
     appearance: Appearance,
     discovery: DiscoveryState,
-    discoverable: Option<Weak<DiscoverableRequestToken>>,
+    discoverable: Option<Weak<HostDiscoverableSession>>,
     pub input: InputCapability,
     pub output: OutputCapability,
     pub config_settings: build_config::Config,
@@ -223,7 +200,7 @@ impl HostDispatcherState {
             }
 
             // Shut down the previously active host.
-            let _ = self.host_devices[&id].write().close();
+            let _ = self.host_devices[&id].close();
         }
 
         if self.host_devices.contains_key(&adapter_id) {
@@ -295,13 +272,7 @@ impl HostDispatcherState {
             Some(delegate) => {
                 let (dispatcher, handle) = PairingDispatcher::new(delegate, input, output);
                 for host in self.host_devices.values() {
-                    let (id, proxy) = {
-                        let host = host.read();
-                        let proxy = host.get_host().clone();
-                        let info = host.get_info();
-                        (HostId::from(info.id), proxy)
-                    };
-                    handle.add_host(id, proxy.clone());
+                    handle.add_host(host.id(), host.proxy().clone());
                 }
                 // Old pairing dispatcher dropped; this drops all host pairings
                 self.pairing_dispatcher = Some(handle);
@@ -337,7 +308,7 @@ impl HostDispatcherState {
 
     /// Return the active host. If the Host is currently not set,
     /// it will make the first ID in it's host_devices active
-    fn get_active_host(&mut self) -> Option<Arc<RwLock<HostDevice>>> {
+    fn get_active_host(&mut self) -> Option<HostDevice> {
         self.get_active_id().and_then(|id| self.host_devices.get(&id)).cloned()
     }
 
@@ -349,7 +320,7 @@ impl HostDispatcherState {
         }
     }
 
-    fn add_host(&mut self, id: HostId, host: Arc<RwLock<HostDevice>>) {
+    fn add_host(&mut self, id: HostId, host: HostDevice) {
         info!("Host added: {}", id.to_string());
         self.host_devices.insert(id, host.clone());
 
@@ -358,9 +329,7 @@ impl HostDispatcherState {
 
         // Notify Control interface clients about the new device.
         self.notify_event_listeners(|l| {
-            let _res = l.send_on_adapter_updated(&mut control::AdapterInfo::from(
-                host.read().get_info().clone(),
-            ));
+            let _res = l.send_on_adapter_updated(&mut control::AdapterInfo::from(host.info()));
         });
 
         // Resolve pending adapter futures.
@@ -380,7 +349,7 @@ impl HostDispatcherState {
     }
 
     fn get_active_host_info(&mut self) -> Option<HostInfo> {
-        self.get_active_host().map(|host| host.read().get_info().clone())
+        self.get_active_host().map(|host| host.info())
     }
 
     pub fn notify_event_listeners<F>(&mut self, mut f: F)
@@ -463,9 +432,9 @@ impl HostDispatcher {
     pub async fn set_name(&self, name: String) -> types::Result<()> {
         self.state.write().name = name;
         match self.get_active_adapter().await {
-            Some(adapter) => {
-                let fut = adapter.write().set_name(self.state.read().name.clone());
-                fut.await
+            Some(host) => {
+                let name = self.state.read().name.clone();
+                host.set_name(name).await
             }
             None => Err(types::Error::no_host()),
         }
@@ -474,10 +443,7 @@ impl HostDispatcher {
     pub async fn set_device_class(&self, class: DeviceClass) -> types::Result<()> {
         let class_repr = class.debug();
         let res = match self.get_active_adapter().await {
-            Some(adapter) => {
-                let fut = adapter.write().set_device_class(class);
-                fut.await
-            }
+            Some(host) => host.set_device_class(class).await,
             None => Err(types::Error::no_host()),
         };
 
@@ -511,10 +477,10 @@ impl HostDispatcher {
             (state.host_devices.clone(), state.config_settings.clone())
         };
         for (host_id, device) in host_devices {
-            let fut = device.read().apply_sys_settings(&new_settings);
+            let fut = device.apply_sys_settings(&new_settings);
             if let Err(e) = fut.await {
                 warn!("Unable to apply new settings to host {}: {:?}", host_id, e);
-                let failed_host_path = device.read().path.clone();
+                let failed_host_path = device.path().to_path_buf();
                 self.rm_adapter(&failed_host_path).await;
             }
         }
@@ -573,7 +539,9 @@ impl HostDispatcher {
         Ok(dispatcher_session)
     }
 
-    pub async fn set_discoverable(&self) -> types::Result<Arc<DiscoverableRequestToken>> {
+    // TODO(fxbug.dev/61352) - This is susceptible to the same ToCtoToU race condition as
+    // start_discovery. We can fix with the same tri-state pattern as for discovery
+    pub async fn set_discoverable(&self) -> types::Result<Arc<HostDiscoverableSession>> {
         let strong_current_token =
             self.state.read().discoverable.as_ref().and_then(|token| token.upgrade());
         if let Some(token) = strong_current_token {
@@ -582,10 +550,7 @@ impl HostDispatcher {
 
         match self.get_active_adapter().await {
             Some(host) => {
-                let weak_host = Arc::downgrade(&host);
-                let fut = host.write().set_discoverable(true);
-                fut.await?;
-                let token = Arc::new(DiscoverableRequestToken { adap: weak_host });
+                let token = Arc::new(host.establish_discoverable_session().await?);
                 self.state.write().discoverable = Some(Arc::downgrade(&token));
                 Ok(token)
             }
@@ -598,24 +563,23 @@ impl HostDispatcher {
     }
 
     pub async fn forget(&self, peer_id: PeerId) -> types::Result<()> {
-        // Try to delete from each adapter, even if it might not have the peer.
+        // Try to delete from each host, even if it might not have the peer.
         // peers will be updated by the disconnection(s).
-        let adapters = self.get_all_adapters().await;
-        if adapters.is_empty() {
+        let hosts = self.get_all_adapters().await;
+        if hosts.is_empty() {
             return Err(sys::Error::Failed.into());
         }
-        let mut adapters_removed: u32 = 0;
-        for adapter in adapters {
-            let adapter_path = adapter.read().path.clone();
+        let mut hosts_removed: u32 = 0;
+        for host in hosts {
+            let host_path = host.path().to_path_buf();
 
-            let fut = adapter.write().forget(peer_id);
-            match fut.await {
-                Ok(()) => adapters_removed += 1,
+            match host.forget(peer_id).await {
+                Ok(()) => hosts_removed += 1,
                 Err(types::Error::SysError(sys::Error::PeerNotFound)) => {
-                    trace!("No peer {} on adapter {:?}; ignoring", peer_id, adapter_path);
+                    trace!("No peer {} on host {:?}; ignoring", peer_id, host_path);
                 }
                 err => {
-                    error!("Could not forget peer {} on adapter {:?}", peer_id, adapter_path);
+                    error!("Could not forget peer {} on host {:?}", peer_id, host_path);
                     return err;
                 }
             }
@@ -625,8 +589,8 @@ impl HostDispatcher {
             return Err(format_err!("Couldn't remove peer").into());
         }
 
-        if adapters_removed == 0 {
-            return Err(format_err!("No adapters had peer").into());
+        if hosts_removed == 0 {
+            return Err(format_err!("No hosts had peer").into());
         }
         Ok(())
     }
@@ -634,10 +598,7 @@ impl HostDispatcher {
     pub async fn connect(&self, peer_id: PeerId) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
-            Some(host) => {
-                let fut = host.write().connect(peer_id);
-                fut.await
-            }
+            Some(host) => host.connect(peer_id).await,
             None => Err(types::Error::SysError(sys::Error::Failed)),
         }
     }
@@ -647,10 +608,7 @@ impl HostDispatcher {
     pub async fn pair(&self, id: PeerId, pairing_options: PairingOptions) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
-            Some(host) => {
-                let fut = host.write().pair(id, pairing_options.into());
-                fut.await
-            }
+            Some(host) => host.pair(id, pairing_options.into()).await,
             None => Err(sys::Error::Failed.into()),
         }
     }
@@ -659,35 +617,31 @@ impl HostDispatcher {
     pub async fn disconnect(&self, peer_id: PeerId) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
-            Some(host) => {
-                let fut = host.write().disconnect(peer_id);
-                fut.await
-            }
+            Some(host) => host.disconnect(peer_id).await,
             None => Err(types::Error::no_host()),
         }
     }
 
-    pub async fn get_active_adapter(&self) -> Option<Arc<RwLock<HostDevice>>> {
+    pub async fn get_active_adapter(&self) -> Option<HostDevice> {
         let adapter = self.when_hosts_found().await;
         let mut wstate = adapter.state.write();
         wstate.get_active_host()
     }
 
-    pub async fn get_all_adapters(&self) -> Vec<Arc<RwLock<HostDevice>>> {
+    pub async fn get_all_adapters(&self) -> Vec<HostDevice> {
         let _ = self.when_hosts_found().await;
         self.state.read().host_devices.values().cloned().collect()
     }
 
     pub async fn get_adapters(&self) -> Vec<HostInfo> {
         let hosts = self.state.read();
-        hosts.host_devices.values().map(|host| host.read().get_info().clone()).collect()
+        hosts.host_devices.values().map(|host| host.info()).collect()
     }
 
     pub async fn request_host_service(self, chan: zx::Channel, service: HostService) {
         match self.get_active_adapter().await {
             Some(host) => {
-                let host = host.read();
-                let host = host.get_host();
+                let host = host.proxy();
                 match service {
                     HostService::LeCentral => {
                         let remote = ServerEnd::<CentralMarker>::new(chan.into());
@@ -832,8 +786,7 @@ impl HostDispatcher {
         let host_devices: Vec<_> = self.state.read().host_devices.values().cloned().collect();
 
         for host in host_devices {
-            let address = host.read().get_info().address;
-            try_restore_bonds(host.clone(), self.clone(), &address).await?;
+            try_restore_bonds(host.clone(), self.clone(), &host.address()).await?;
         }
         Ok(())
     }
@@ -859,39 +812,38 @@ impl HostDispatcher {
         //   - LE background scan for auto-connection
         //   - BR/EDR connectable mode
 
-        self.state.read().config_settings.apply(&host_device.clone().read()).await?;
-        let address = host_device.read().get_info().address.clone();
+        let config = self.state.read().config_settings.clone();
+        host_device.apply_config(config).await?;
+
+        let address = host_device.address();
         assign_host_data(host_device.clone(), self.clone(), &address).await?;
         try_restore_bonds(host_device.clone(), self.clone(), &address)
             .await
             .map_err(|e| e.as_failure())?;
 
         // Assign the name that is currently assigned to the HostDispatcher as the local name.
-        let fut = host_device.read().set_name(self.state.read().name.clone());
+        let fut = host_device.set_name(self.state.read().name.clone());
         fut.await.map_err(|e| e.as_failure())?;
 
         let (gatt_server_proxy, remote_gatt_server) = fidl::endpoints::create_proxy()?;
-        host_device.read().get_host().request_gatt_server_(remote_gatt_server)?;
+        host_device.proxy().request_gatt_server_(remote_gatt_server)?;
         self.spawn_gas_proxy(gatt_server_proxy).await?;
 
         // Ensure the current active pairing delegate (if it exists) handles this host
         self.handle_pairing_requests(host_device.clone());
 
-        let id: HostId = host_device.read().get_info().id.into();
-        self.state.write().add_host(id.clone(), host_device.clone());
+        self.state.write().add_host(host_device.id(), host_device.clone());
 
         self.notify_host_watchers().await;
 
         // Start listening to Host interface events.
-        fasync::Task::spawn(host_device::watch_events(self.clone(), host_device.clone()).map(
-            |r| {
-                r.unwrap_or_else(|err| {
-                    warn!("Error handling host event: {:?}", err);
-                    // TODO(fxbug.dev/44180): This should probably remove the bt-host since termination of the
-                    // `watch_events` task indicates that it no longer functions properly.
-                })
-            },
-        ))
+        fasync::Task::spawn(host_device.watch_events(self.clone()).map(|r| {
+            r.unwrap_or_else(|err| {
+                warn!("Error handling host event: {:?}", err);
+                // TODO(fxbug.dev/44180): This should probably remove the bt-host since termination of the
+                // `watch_events` task indicates that it no longer functions properly.
+            })
+        }))
         .detach();
 
         Ok(())
@@ -902,13 +854,8 @@ impl HostDispatcher {
     fn notify_host_watchers(&self) -> impl Future<Output = ()> {
         let mut publisher = self.state.write().watch_hosts_publisher.clone();
         // Wait for the hanging get watcher to update so we can linearize updates
-        let current_hosts: Vec<_> = self
-            .state
-            .write()
-            .host_devices
-            .values()
-            .map(|host| host.read().get_info().clone())
-            .collect();
+        let current_hosts: Vec<_> =
+            self.state.write().host_devices.values().map(|host| host.info()).collect();
         async move {
             publisher
                 .set(current_hosts)
@@ -928,7 +875,7 @@ impl HostDispatcher {
             let ids: Vec<HostId> = hd
                 .host_devices
                 .iter()
-                .filter(|(_, ref host)| host.read().path == host_path)
+                .filter(|(_, ref host)| host.path() == host_path)
                 .map(|(k, _)| k.clone())
                 .collect();
 
@@ -975,22 +922,16 @@ impl HostDispatcher {
     }
 
     /// Route pairing requests from this host through our pairing dispatcher, if it exists
-    fn handle_pairing_requests(&self, host: Arc<RwLock<HostDevice>>) {
+    fn handle_pairing_requests(&self, host: HostDevice) {
         let mut dispatcher = self.state.write();
 
         if let Some(handle) = &mut dispatcher.pairing_dispatcher {
-            let (id, proxy) = {
-                let host = host.read();
-                let proxy = host.get_host().clone();
-                let info = host.get_info();
-                (HostId::from(info.id), proxy)
-            };
-            handle.add_host(id, proxy);
+            handle.add_host(host.id(), host.proxy().clone());
         }
     }
 
     #[cfg(test)]
-    pub(crate) fn add_test_host(&self, id: HostId, host: Arc<RwLock<HostDevice>>) {
+    pub(crate) fn add_test_host(&self, id: HostId, host: HostDevice) {
         let mut state = self.state.write();
         state.add_host(id, host)
     }
@@ -1075,7 +1016,7 @@ impl Future for WhenHostsFound {
 }
 
 /// Initialize a HostDevice
-async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDevice>>, Error> {
+async fn init_host(path: &Path, node: inspect::Node) -> Result<HostDevice, Error> {
     // Connect to the host device.
     let host = File::open(path).map_err(|_| format_err!("failed to open bt-host device"))?;
     let handle = bt::host::open_host_channel(&host)?;
@@ -1088,11 +1029,11 @@ async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDe
     let host_info = host.watch_state().await.context("failed to obtain bt-host information")?;
     let host_info = Inspectable::new(HostInfo::try_from(host_info)?, node);
 
-    Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, host_info))))
+    Ok(HostDevice::new(path.to_path_buf(), host, host_info))
 }
 
 async fn try_restore_bonds(
-    host_device: Arc<RwLock<HostDevice>>,
+    host_device: HostDevice,
     hd: HostDispatcher,
     address: &Address,
 ) -> types::Result<()> {
@@ -1102,7 +1043,7 @@ async fn try_restore_bonds(
         Some(data) => data,
         None => return Ok(()),
     };
-    let fut = host_device.read().restore_bonds(data);
+    let fut = host_device.restore_bonds(data);
     let result = fut.await;
     match result {
         Err(e) => {
@@ -1130,7 +1071,7 @@ fn generate_irk() -> Result<sys::Key, zx::Status> {
 }
 
 async fn assign_host_data(
-    host_device: Arc<RwLock<HostDevice>>,
+    host: HostDevice,
     hd: HostDispatcher,
     address: &Address,
 ) -> Result<(), Error> {
@@ -1152,7 +1093,6 @@ async fn assign_host_data(
             new_data
         }
     };
-    let host = host_device.read();
     host.set_local_data(data).map_err(|e| e.into())
 }
 
@@ -1470,8 +1410,8 @@ pub(crate) mod test {
         let id_val = id.0 as u8;
         let address = Address::Public([id_val; 6]);
         let path = format!("/dev/host{}", id_val);
-        let host_device = host_device::test::new_mock(id, address, Path::new(&path), host_proxy);
-        dispatcher.add_test_host(id, Arc::new(RwLock::new(host_device)));
+        let host_device = HostDevice::mock(id, address, Path::new(&path), host_proxy);
+        dispatcher.add_test_host(id, host_device);
         Ok(host_server)
     }
 }
