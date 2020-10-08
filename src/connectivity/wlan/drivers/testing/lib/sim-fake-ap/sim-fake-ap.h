@@ -38,6 +38,11 @@ class FakeAp : public StationIfc {
     size_t key_len;
     std::array<uint8_t, kMaxKeyLen> key;
     enum SimSecProtoType sec_type = SEC_PROTO_TYPE_OPEN;
+
+    // TODO (fxb/61139): Remove this field which is currently used to
+    // determine success or failure of a simulated authentication
+    // out of band.
+    bool expect_challenge_failure = false;
   };
 
   struct Client {

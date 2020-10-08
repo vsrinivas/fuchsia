@@ -462,6 +462,27 @@ TEST_F(AuthTest, WEP40) {
   VerifyAuthFrames();
 }
 
+TEST_F(AuthTest, WEP40ChallengeFailure) {
+  Init();
+  sec_type_ = SEC_TYPE_WEP_SHARED40;
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_SHARED_KEY,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WEP,
+                   .expect_challenge_failure = true});
+  SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
+
+  env_->Run(kTestDuration);
+  // It should be a failed shared_key authentication
+  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(3, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
+  expect_auth_frames_.emplace_back(4, simulation::AUTH_TYPE_SHARED_KEY,
+                                   WLAN_STATUS_CODE_CHALLENGE_FAILURE);
+  VerifyAuthFrames();
+
+  // Assoc should have failed
+  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+}
+
 TEST_F(AuthTest, WEPOPEN) {
   Init();
   sec_type_ = SEC_TYPE_WEP_OPEN;

@@ -840,7 +840,10 @@ void SimFirmware::AuthClearContext() {
 }
 
 void SimFirmware::AssocHandleFailure() {
-  if (assoc_state_.num_attempts >= assoc_max_retries_) {
+  if (assoc_state_.num_attempts >= assoc_max_retries_
+      // The firmware has been observed to not retry when there is an
+      // authentication challenge failure.
+      || assoc_state_.state == AssocState::AUTHENTICATION_CHALLENGE_FAILURE) {
     BRCMF_DBG(SIM, "Assoc failed. Send E_SET_SSID with failure");
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, kClientIfidx);
     AssocClearContext();
@@ -986,6 +989,10 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
         AuthStart();
         return;
       }
+
+      // Challenge failure should not occur until the fourth frame.
+      ZX_ASSERT(frame->status_ != WLAN_STATUS_CODE_CHALLENGE_FAILURE);
+
       // If we receive the second auth frame when we are expecting it, we send out the third one and
       // set another timer for it.
       auto callback = std::make_unique<std::function<void()>>();
@@ -1002,6 +1009,17 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
       hw_.Tx(auth_req_frame);
     } else if (auth_state_.state == AuthState::EXPECTING_FOURTH && frame->seq_num_ == 4) {
+      if (frame->status_ == WLAN_STATUS_CODE_CHALLENGE_FAILURE) {
+        assoc_state_.state = AssocState::AUTHENTICATION_CHALLENGE_FAILURE;
+        auth_state_.state = AuthState::NOT_AUTHENTICATED;
+        BRCMF_DBG(SIM, "Auth shared challenge failure, Handle failure");
+        SendEventToDriver(0, nullptr, BRCMF_E_AUTH, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr,
+                          0,  // TODO: determine what the flags should be
+                          frame->status_, frame->src_addr_);
+        AssocHandleFailure();
+        return;
+      }
+
       // If we receive the fourth auth frame when we are expecting it, start association
       auth_state_.state = AuthState::AUTHENTICATED;
       // Remember the last auth'd bssid
@@ -2547,6 +2565,7 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
   msg_be->event_type = htobe32(event_type);
   msg_be->status = htobe32(status);
   msg_be->reason = htobe32(reason);
+  msg_be->auth_type = htobe32(iface_tbl_[ifidx].auth_type);
   msg_be->ifidx = ifidx;
   msg_be->bsscfgidx = iface_tbl_[ifidx].bsscfgidx;
 

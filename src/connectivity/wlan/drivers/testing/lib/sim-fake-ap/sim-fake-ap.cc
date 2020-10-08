@@ -370,8 +370,19 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
           // We've already checked whether the seq_num is 1.
           client->status_ = Client::AUTHENTICATING;
         } else if (client->status_ == Client::AUTHENTICATING) {
-          if (auth_req_frame->seq_num_ == 3)
+          if (auth_req_frame->seq_num_ == 3) {
+            if (security_.expect_challenge_failure) {
+              // Refuse authentication if this AP has been configured to.
+              // TODO (fxb/61139): Actually check the challenge response rather than hardcoding
+              // authentication success or failure using expect_challenge_failure.
+              RemoveClient(auth_req_frame->src_addr_);
+              ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
+                               auth_req_frame->auth_type_, WLAN_STATUS_CODE_CHALLENGE_FAILURE);
+              return;
+            }
+
             client->status_ = Client::AUTHENTICATED;
+          }
           // If the seq num is 1, we will just send out a resp and keep the status.
         }
         // If the status is already AUTHENTICATED, we will just send out a resp and keep the status.

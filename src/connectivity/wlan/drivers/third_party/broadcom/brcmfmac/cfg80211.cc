@@ -33,6 +33,7 @@
 #include <wifi/wifi-config.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/phy.h>
+#include <wlan/common/status_code.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
@@ -113,13 +114,14 @@ struct parsed_vndr_ies {
   struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
 
-#define BRCMF_CONNECT_STATUS_LIST          \
-  X(BRCMF_CONNECT_STATUS_CONNECTED)        \
-  X(BRCMF_CONNECT_STATUS_DEAUTHENTICATING) \
-  X(BRCMF_CONNECT_STATUS_DISASSOCIATING)   \
-  X(BRCMF_CONNECT_STATUS_NO_NETWORK)       \
-  X(BRCMF_CONNECT_STATUS_LINK_FAILED)      \
-  X(BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT)
+#define BRCMF_CONNECT_STATUS_LIST            \
+  X(BRCMF_CONNECT_STATUS_CONNECTED)          \
+  X(BRCMF_CONNECT_STATUS_DEAUTHENTICATING)   \
+  X(BRCMF_CONNECT_STATUS_DISASSOCIATING)     \
+  X(BRCMF_CONNECT_STATUS_NO_NETWORK)         \
+  X(BRCMF_CONNECT_STATUS_LINK_FAILED)        \
+  X(BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT) \
+  X(BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED)
 
 #define X(CONNECT_STATUS) CONNECT_STATUS,
 enum brcmf_connect_status_t : uint8_t { BRCMF_CONNECT_STATUS_LIST };
@@ -4567,6 +4569,9 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
     cfg->connect_timer->Stop();
     BRCMF_DBG(CONN, "connect_status %s", brcmf_get_connect_status_str(connect_status));
     switch (connect_status) {
+      case BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED:
+        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+        break;
       case BRCMF_CONNECT_STATUS_CONNECTED:
         brcmf_get_assoc_ies(cfg, ifp);
         brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
@@ -4697,6 +4702,30 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
             MAC_FMT_ARGS(assoc_ind_params.peer_sta_address));
 
   wlanif_impl_ifc_assoc_ind(&ndev->if_proto, &assoc_ind_params);
+  return ZX_OK;
+}
+
+// Handler for AUTH event (client only)
+static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                            void* data) {
+  BRCMF_DBG_EVENT(ifp, e, "%s", [](uint32_t reason) {
+    return wlan_status_code_str(static_cast<wlan_status_code_t>(reason));
+  });
+
+  ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
+
+  if (e->status != BRCMF_E_STATUS_SUCCESS) {
+    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+    struct net_device* ndev = ifp->ndev;
+
+    BRCMF_ERR("Failed to authenticate with AP.");
+    BRCMF_ERR("  auth %s", brcmf_fweh_get_auth_type_str(e->auth_type));
+    BRCMF_ERR("  status %s", brcmf_fweh_get_event_status_str(e->status));
+    BRCMF_ERR("  reason %s", wlan_status_code_str(static_cast<wlan_status_code_t>(e->reason)));
+    BRCMF_ERR("  flags 0x%x", e->flags);
+    brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED);
+  }
+
   return ZX_OK;
 }
 
@@ -5015,6 +5044,7 @@ static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
 
 static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_LINK, brcmf_process_link_event);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH, brcmf_process_auth_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_process_auth_ind_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_process_deauth_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_process_deauth_event);

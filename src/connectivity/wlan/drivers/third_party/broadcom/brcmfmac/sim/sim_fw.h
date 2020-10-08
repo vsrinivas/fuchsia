@@ -143,6 +143,7 @@ class SimFirmware {
     enum AssocStateName {
       NOT_ASSOCIATED,
       SCANNING,
+      AUTHENTICATION_CHALLENGE_FAILURE,
       ASSOCIATING,
       ASSOCIATED,
     } state = NOT_ASSOCIATED;
