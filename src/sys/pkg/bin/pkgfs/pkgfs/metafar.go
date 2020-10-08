@@ -142,6 +142,8 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 
+	name = filepath.Join(d.path, name)
+
 	if name == "" {
 		if flags.File() || (!flags.Directory() && !flags.Path()) {
 			return newMetaFile(d.blob, d.fs, flags), nil, nil, nil
@@ -149,10 +151,7 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 		return nil, d, nil, nil
 	}
 
-	name = filepath.Join(d.path, name)
-
 	if flags.Create() || flags.Truncate() || flags.Write() || flags.Append() {
-
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 

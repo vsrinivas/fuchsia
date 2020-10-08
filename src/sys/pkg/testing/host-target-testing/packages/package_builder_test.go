@@ -151,6 +151,7 @@ func TestAddResource(t *testing.T) {
 
 	expectedFiles := map[string]struct{}{
 		"meta/contents": {},
+		"meta/foo/one":  {},
 		"meta/package":  {},
 		"blah/z":        {},
 	}

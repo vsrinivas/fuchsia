@@ -69,6 +69,8 @@ func installTestPackage(installJustMetaFar bool) string {
 	return bi[0].Merkle.String()
 }
 
+var testPackageMerkle string
+
 // tmain exists for the defer convenience, so that defers are run before os.Exit gets called.
 func tmain(m *testing.M) int {
 	// Undo the defaults that print to the system log...
@@ -80,7 +82,7 @@ func tmain(m *testing.M) int {
 	panicErrWithInfo(blobDir.StartBlobfs(), "Starting blobfs")
 	defer blobDir.Destroy()
 
-	testPackageMerkle := installTestPackage(false)
+	testPackageMerkle = installTestPackage(false)
 	systemImageMerkle := installTestPackage(true)
 
 	d, err := ioutil.TempDir("", "pkgfs-test-mount")
@@ -260,6 +262,90 @@ func pkgfsStat(path string) (os.FileInfo, error) {
 	}
 	defer f.Close()
 	return f.Stat()
+}
+
+func TestMetaFarRootDuality(t *testing.T) {
+	path := "packages/static-package/0/meta"
+
+	t.Run("meta is a file containing the merkleroot", func(t *testing.T) {
+		f, err := iou.OpenFrom(pkgfsDir, path, 0, 0777)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(b) != 64 && string(b) == testPackageMerkle {
+			t.Fatalf("expected 64 byte merkleroot of %q, got %q", testPackageMerkle, string(b))
+		}
+	})
+
+	t.Run("meta is a directory containing files", func(t *testing.T) {
+		f, err := iou.OpenFrom(pkgfsDir, path, syscall.O_DIRECTORY, 0777)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		list, err := f.Readdirnames(-1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, item := range list {
+			if item == "contents" {
+				return
+			}
+		}
+		t.Fatalf("did not find 'contents' file among meta/ readdir: %v", list)
+	})
+
+	t.Run("meta subdirectories are openable and listable", func(t *testing.T) {
+		f, err := iou.OpenFrom(pkgfsDir, "packages/static-package/0/meta/foo", 0, 0777)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		fi, err := f.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !fi.IsDir() {
+			t.Fatal("expected static-package/0/meta/foo to be a directory, not a file")
+		}
+		list, err := f.Readdirnames(-1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(list) != 1 && list[0] == "one" {
+			t.Fatalf("expected list to contain one file, got %v", list)
+		}
+	})
+
+	t.Run("meta subdirectories do not have file/directory duality", func(t *testing.T) {
+		// protect against regression of name prefix fixup in metafar.go,
+		// wherein at time of test authorship, a "." open would open meta/
+		// instead.
+		d, err := pkgfsDir.Open("packages/static-package/0/meta/foo", syscall.O_DIRECTORY, 0777)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer d.Close()
+
+		f, err := iou.OpenFrom(d.(*fdio.Directory), "", syscall.O_RDONLY, 0777)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		fi, err := f.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !fi.IsDir() {
+			t.Fatal("expected static-package/0/meta/foo to be a directory, not a file")
+		}
+	})
+
 }
 
 func TestExecutability(t *testing.T) {

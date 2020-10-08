@@ -47,6 +47,10 @@ func TestPackage(cfg *Config) {
 	if _, err := fmt.Fprintf(mfst, "meta/package=%s\n", pkgJSON); err != nil {
 		panic(err)
 	}
+	// Add additional test directory and file under meta/ for pkgfs meta/ tests.
+	if _, err := fmt.Fprintf(mfst, "meta/foo/one=%s\n", pkgJSON); err != nil {
+		panic(err)
+	}
 
 	for _, name := range TestFiles {
 		path := filepath.Join(pkgPath, name)
