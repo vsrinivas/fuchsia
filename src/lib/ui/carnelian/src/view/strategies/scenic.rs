@@ -200,11 +200,6 @@ impl ScenicViewStrategy {
         root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         view.add_child(&root_node);
 
-        session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(
-            fidl_fuchsia_ui_input::Command::SetHardKeyboardDelivery(SetHardKeyboardDeliveryCmd {
-                delivery_request: true,
-            }),
-        ));
         (view, root_node, content_material, content_node)
     }
 
