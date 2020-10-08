@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/golang/glog"
@@ -96,7 +97,7 @@ func TestSSHGet(t *testing.T) {
 	}
 }
 
-func TestSSHGetNonexistentFile(t *testing.T) {
+func TestSSHGetNonexistentSourceFile(t *testing.T) {
 	c, _ := getFakeSSHConnector(t)
 	defer c.Close()
 
@@ -104,6 +105,18 @@ func TestSSHGetNonexistentFile(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	if err := c.Get("/testfile", tmpDir); err == nil {
+		t.Fatal("expected error but succeeded")
+	}
+}
+
+func TestSSHGetToNonexistentDestDir(t *testing.T) {
+	c, _ := getFakeSSHConnector(t)
+	defer c.Close()
+
+	tmpDir := getTempdir(t)
+	defer os.RemoveAll(tmpDir)
+
+	if err := c.Get("/testfile", filepath.Join(tmpDir, "nope")); err == nil {
 		t.Fatal("expected error but succeeded")
 	}
 }
@@ -123,6 +136,8 @@ func TestSSHPut(t *testing.T) {
 	}
 
 	remotePath := "/some/dir"
+	fs.files = []*fakeFile{{name: remotePath, isDir: true}}
+
 	if err := c.Put(tmpFile, remotePath); err != nil {
 		t.Fatalf("error putting file: %s", err)
 	}
@@ -183,12 +198,157 @@ func TestSSHPutGlob(t *testing.T) {
 	}
 
 	remotePath := "/some/dir"
+	fs.files = []*fakeFile{{name: remotePath, isDir: true}}
+
 	if err := c.Put(path.Join(tmpDir, "*"), remotePath); err != nil {
 		t.Fatalf("error putting file: %s", err)
 	}
 
 	for _, testFile := range testFiles {
 		expectRemoteFileWithContent(t, fs, path.Join(remotePath, testFile.name), testFile.content)
+	}
+}
+
+func TestSSHGetDir(t *testing.T) {
+	c, fs := getFakeSSHConnector(t)
+	defer c.Close()
+
+	// Set up remote file structure
+
+	testFiles := []*fakeFile{
+		{name: "/x/outer/a", content: "apple"},
+		{name: "/x/outer/inner/b", content: "banana"},
+		{name: "/x/outer/inner/j", content: "jabuticaba"},
+	}
+
+	testDirs := []*fakeFile{
+		{name: "/x", isDir: true},
+		{name: "/x/outer", isDir: true},
+		{name: "/x/outer/inner", isDir: true},
+	}
+
+	fs.files = append(testFiles, testDirs...)
+
+	// Get /outer (contains file and subdirectory)
+
+	tmpDir := getTempdir(t)
+	defer os.RemoveAll(tmpDir)
+
+	srcDir := "/x/outer"
+	if err := c.Get(srcDir, tmpDir); err != nil {
+		t.Fatalf("error getting dir: %s", err)
+	}
+
+	for _, testFile := range testFiles {
+		relPath := strings.TrimPrefix(testFile.name, path.Dir(srcDir))
+		got, err := ioutil.ReadFile(path.Join(tmpDir, relPath))
+		if err != nil {
+			t.Fatalf("error reading fetched file: %s", err)
+		}
+
+		if diff := cmp.Diff(testFile.content, string(got)); diff != "" {
+			t.Fatalf("fetched file has unexpected content (-want +got):\n%s", diff)
+		}
+	}
+
+	// Get /outer/inner (contains files)
+
+	tmpDir = getTempdir(t)
+	defer os.RemoveAll(tmpDir)
+
+	srcDir = "/x/outer/inner"
+	if err := c.Get(srcDir, tmpDir); err != nil {
+		t.Fatalf("error getting dir: %s", err)
+	}
+
+	for _, testFile := range testFiles {
+		relName := strings.TrimPrefix(testFile.name, path.Dir(srcDir))
+		got, err := ioutil.ReadFile(path.Join(tmpDir, relName))
+
+		if !strings.HasPrefix(testFile.name, srcDir) {
+			if err == nil {
+				t.Fatalf("unexpected file retrieved: %q", testFile.name)
+			}
+		} else {
+			if err != nil {
+				t.Fatalf("error reading fetched file: %s", err)
+			}
+
+			if diff := cmp.Diff(testFile.content, string(got)); diff != "" {
+				t.Fatalf("fetched file has unexpected content (-want +got):\n%s", diff)
+			}
+		}
+	}
+}
+
+func TestSSHPutDir(t *testing.T) {
+	tmpDir := getTempdir(t)
+	defer os.RemoveAll(tmpDir)
+
+	testFiles := []*fakeFile{
+		{name: "/outer/a", content: "apple"},
+		{name: "/outer/inner/b", content: "banana"},
+		{name: "/outer/inner/j", content: "jabuticaba"},
+	}
+
+	testDirs := []*fakeFile{
+		{name: "/outer", isDir: true},
+		{name: "/outer/inner", isDir: true},
+	}
+
+	for _, testDir := range testDirs {
+		newDir := path.Join(tmpDir, testDir.name)
+		if err := os.Mkdir(newDir, 0755); err != nil {
+			t.Fatalf("error creating local dir: %s", err)
+		}
+	}
+
+	for _, testFile := range testFiles {
+		tmpFile := path.Join(tmpDir, testFile.name)
+		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0644); err != nil {
+			t.Fatalf("error writing local file: %s", err)
+		}
+	}
+
+	// Put /outer (contains file and subdirectory)
+
+	c, fs := getFakeSSHConnector(t)
+	defer c.Close()
+
+	remotePath := "/some/dir"
+	fs.files = []*fakeFile{{name: remotePath, isDir: true}}
+
+	if err := c.Put(path.Join(tmpDir, "outer"), remotePath); err != nil {
+		t.Fatalf("error putting dir: %s", err)
+	}
+
+	for _, testFile := range testFiles {
+		expectRemoteFileWithContent(t, fs, path.Join(remotePath, testFile.name), testFile.content)
+	}
+
+	// Put /outer/inner (contains files)
+
+	c, fs = getFakeSSHConnector(t)
+	defer c.Close()
+
+	fs.files = []*fakeFile{{name: remotePath, isDir: true}}
+
+	srcDir := "/outer/inner"
+	if err := c.Put(path.Join(tmpDir, srcDir), remotePath); err != nil {
+		t.Fatalf("error putting dir: %s", err)
+	}
+
+	for _, testFile := range testFiles {
+		relName := strings.TrimPrefix(testFile.name, path.Dir(srcDir))
+		remotePath := path.Join(remotePath, relName)
+
+		if strings.HasPrefix(testFile.name, srcDir) {
+			expectRemoteFileWithContent(t, fs, remotePath, testFile.content)
+		} else {
+			if _, err := fs.getFile(remotePath); err == nil {
+				t.Fatalf("unexpected remote file created: %q", remotePath)
+			}
+		}
 	}
 }
 

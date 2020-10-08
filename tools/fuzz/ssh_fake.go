@@ -277,6 +277,15 @@ func (s *fakeSftp) Fileread(r *sftp.Request) (io.ReaderAt, error) {
 func (s *fakeSftp) Filewrite(r *sftp.Request) (io.WriterAt, error) {
 	glog.Infof("sftp write: %v", r)
 
+	// Enforce that directory must exist
+	enclosingDir := path.Dir(r.Filepath)
+	if enclosingDir != "." {
+		if dir, err := s.getFile(enclosingDir); err != nil || !dir.isDir {
+			glog.Errorf("directory doesn't exist: %q", enclosingDir)
+			return nil, os.ErrNotExist
+		}
+	}
+
 	// Note: this doesn't handle pre-existing files
 	f := &fakeFile{name: r.Filepath}
 	s.files = append(s.files, f)
@@ -287,7 +296,25 @@ func (s *fakeSftp) Filewrite(r *sftp.Request) (io.WriterAt, error) {
 func (s *fakeSftp) Filecmd(r *sftp.Request) error {
 	glog.Infof("sftp cmd: %v", r)
 
-	return fmt.Errorf("unsupported: %v", r)
+	switch r.Method {
+	case "Mkdir":
+		// Make sure it doesn't already exist
+		if _, err := s.getFile(r.Filepath); err == nil {
+			return os.ErrExist
+		}
+
+		// Make sure its parent dir exists
+		if f, err := s.getFile(path.Dir(r.Filepath)); err != nil || !f.isDir {
+			return os.ErrNotExist
+		}
+
+		f := &fakeFile{name: r.Filepath, isDir: true}
+		s.files = append(s.files, f)
+
+		return nil
+	default:
+		return fmt.Errorf("unsupported: %v", r)
+	}
 }
 
 func (s *fakeSftp) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
@@ -305,7 +332,8 @@ func (s *fakeSftp) Filelist(r *sftp.Request) (sftp.ListerAt, error) {
 		if f.isDir {
 			var children []os.FileInfo
 			for _, f2 := range s.files {
-				if !f2.isDir && strings.HasPrefix(f2.name, f.name) {
+				// Only list files/dirs in the immediate directory
+				if dir := path.Dir(f2.name); dir == f.name {
 					children = append(children, f2)
 				}
 			}

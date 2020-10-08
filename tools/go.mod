@@ -15,6 +15,7 @@ require (
 	github.com/google/subcommands v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
+	github.com/kr/fs v0.1.0
 	github.com/kr/pretty v0.1.0
 	github.com/pkg/sftp v1.12.0
 	github.com/smartystreets/assertions v1.2.0 // indirect

@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/kr/fs"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -41,10 +42,12 @@ type Connector interface {
 	// TODO(fxbug.dev/47479): In some cases, we should be able to relax the above restriction
 	Command(name string, args ...string) InstanceCmd
 
-	// Copies targetSrc (may include globs) to hostDst
+	// Copies targetSrc (may include globs) to hostDst, which is always assumed
+	// to be a directory. Directories are copied recursively.
 	Get(targetSrc, hostDst string) error
 
-	// Copies hostSrc (may include globs) to targetDst
+	// Copies hostSrc (may include globs) to targetDst, which is always assumed
+	// to be a directory. Directories are copied recursively.
 	Put(hostSrc, targetDst string) error
 
 	// Retrieves a syslog from the instance, filtered to the given process ID
@@ -168,24 +171,46 @@ func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
 		return fmt.Errorf("no files matching glob: '%s'", targetSrc)
 	}
 
-	for _, src := range srcList {
-		glog.Infof("Copying [remote]:%s to %s", src, hostDst)
+	for _, root := range srcList {
+		walker := c.sftpClient.Walk(root)
+		for walker.Step() {
+			if err := walker.Err(); err != nil {
+				return fmt.Errorf("error while walking %q: %s", root, err)
+			}
 
-		fin, err := c.sftpClient.Open(src)
-		if err != nil {
-			return fmt.Errorf("error opening remote file: %s", err)
-		}
-		defer fin.Close()
-		// TODO(fxbug.dev/45429): handle non-dir dst, ensure exists, etc
-		fout, err := os.Create(path.Join(hostDst, path.Base(src)))
-		if err != nil {
-			return fmt.Errorf("error creating local file: %s", err)
-		}
-		defer fout.Close()
-		if _, err := io.Copy(fout, fin); err != nil {
-			return fmt.Errorf("error copying file: %s", err)
-		}
+			src := walker.Path()
+			relPath, err := filepath.Rel(filepath.Dir(root), src)
+			if err != nil {
+				return fmt.Errorf("error taking relpath for %q: %s", src, err)
+			}
+			dst := path.Join(hostDst, relPath)
 
+			// Create local directory if necessary
+			if walker.Stat().IsDir() {
+				if _, err := os.Stat(dst); os.IsNotExist(err) {
+					os.Mkdir(dst, os.ModeDir|0755)
+				}
+				continue
+			}
+
+			glog.Infof("Copying [remote]:%s to %s", src, dst)
+
+			fin, err := c.sftpClient.Open(src)
+			if err != nil {
+				return fmt.Errorf("error opening remote file: %s", err)
+			}
+			defer fin.Close()
+
+			fout, err := os.Create(dst)
+			if err != nil {
+				return fmt.Errorf("error creating local file: %s", err)
+			}
+			defer fout.Close()
+			if _, err := io.Copy(fout, fin); err != nil {
+				return fmt.Errorf("error copying file: %s", err)
+			}
+
+		}
 	}
 	return nil
 }
@@ -207,22 +232,51 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 		return fmt.Errorf("no files matching glob: '%s'", hostSrc)
 	}
 
-	for _, src := range srcList {
-		glog.Infof("Copying %s to [remote]:%s", src, targetDst)
+	for _, root := range srcList {
+		walker := fs.Walk(root)
+		for walker.Step() {
+			if err := walker.Err(); err != nil {
+				return fmt.Errorf("error while walking %q: %s", root, err)
+			}
 
-		fin, err := os.Open(src)
-		defer fin.Close()
-		if err != nil {
-			return fmt.Errorf("error opening local file: %s", err)
-		}
-		// TODO(fxbug.dev/45429): handle non-dir dst, ensure exists, etc
-		fout, err := c.sftpClient.Create(path.Join(targetDst, path.Base(src)))
-		defer fout.Close()
-		if err != nil {
-			return fmt.Errorf("error creating remote file: %s", err)
-		}
-		if _, err := io.Copy(fout, fin); err != nil {
-			return fmt.Errorf("error copying file: %s", err)
+			src := walker.Path()
+			relPath, err := filepath.Rel(filepath.Dir(root), src)
+			if err != nil {
+				return fmt.Errorf("error taking relpath for %q: %s", src, err)
+			}
+			// filepath.Rel converts to host OS separators, while remote is always /
+			dst := path.Join(targetDst, filepath.ToSlash(relPath))
+
+			// Create remote directory if necessary
+			if walker.Stat().IsDir() {
+				if _, err := c.sftpClient.Stat(dst); err == nil {
+					continue
+				} else if !os.IsNotExist(err) {
+					return fmt.Errorf("error stat-ing remote directory %q: %s", dst, err)
+				}
+
+				if err := c.sftpClient.Mkdir(dst); err != nil {
+					return fmt.Errorf("error creating remote directory %q: %s", dst, err)
+				}
+				continue
+			}
+
+			glog.Infof("Copying %s to [remote]:%s", src, dst)
+
+			fin, err := os.Open(src)
+			defer fin.Close()
+			if err != nil {
+				return fmt.Errorf("error opening local file: %s", err)
+			}
+
+			fout, err := c.sftpClient.Create(dst)
+			defer fout.Close()
+			if err != nil {
+				return fmt.Errorf("error creating remote file: %s", err)
+			}
+			if _, err := io.Copy(fout, fin); err != nil {
+				return fmt.Errorf("error copying file: %s", err)
+			}
 		}
 
 	}
