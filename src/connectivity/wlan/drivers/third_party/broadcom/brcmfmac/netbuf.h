@@ -14,6 +14,7 @@
 
 #include <zircon/types.h>
 
+#include <limits>
 #include <memory>
 
 #include <ddk/driver.h>
@@ -261,7 +262,9 @@ struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size);
 void brcmf_netbuf_free(struct brcmf_netbuf* netbuf);
 
 static inline uint32_t brcmf_netbuf_head_space(struct brcmf_netbuf* netbuf) {
-  return netbuf->data - netbuf->allocated_buffer;
+  const ptrdiff_t space = netbuf->data - netbuf->allocated_buffer;
+  ZX_DEBUG_ASSERT(space <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(space);
 }
 
 static inline uint32_t brcmf_netbuf_tail_space(struct brcmf_netbuf* netbuf) {

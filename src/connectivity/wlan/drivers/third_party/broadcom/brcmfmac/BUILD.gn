@@ -50,7 +50,6 @@ source_set("debug") {
     "//src/lib/ddk",
     "//zircon/system/public",
   ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for utility classes.  Classes here should be small and self-contained, having no
@@ -83,9 +82,6 @@ source_set("linuxisms") {
     "//sdk/banjo/ddk.protocol.ethernet",
     "//zircon/system/public",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for DMA buffer handling.
