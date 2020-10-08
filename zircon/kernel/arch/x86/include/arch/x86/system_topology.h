@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ARCH_X86_SYSTEM_TOPOLOGY_H
-#define ARCH_X86_SYSTEM_TOPOLOGY_H
+#ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_SYSTEM_TOPOLOGY_H_
+#define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_SYSTEM_TOPOLOGY_H_
 
 #include <lib/acpi_tables.h>
 #include <zircon/boot/image.h>
@@ -21,4 +21,4 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 
 }  // namespace x86
 
-#endif  // ARCH_X86_SYSTEM_TOPOLOGY_H
+#endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_SYSTEM_TOPOLOGY_H_
