@@ -41,11 +41,6 @@ class AcpiParser {
   // Print tables to debug output.
   void DumpTables() const;
 
-  // Iterate over the Multiple APIC Description Table (MADT) entries,
-  // calling the given callback once per entry.
-  using MadtEntryCallback = fbl::Function<void(const void* entry, size_t entry_len)>;
-  zx_status_t EnumerateMadtEntries(uint8_t search_type, const MadtEntryCallback&) const;
-
  private:
   // Create a new AcpiParser.
   //
