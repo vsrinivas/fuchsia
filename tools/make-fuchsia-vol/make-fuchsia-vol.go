@@ -637,13 +637,13 @@ func optimalBlockAlign(first, byteSize, logical, physical, optimal uint64) (star
 
 func fuchsiaTool(name string) string {
 	var tool string
-	tool, _ = exec.LookPath(tool)
+	tool, _ = exec.LookPath(name)
 	if tool == "" {
 		needFuchsiaBuildDir()
 		tool, _ = exec.LookPath(filepath.Join(*fuchsiaBuildDir, "host_x64", name))
 	}
 	if tool == "" {
-		log.Fatalf("Could not find %q, you might need to build zircon", name)
+		log.Fatalf("Could not find %q, you might need to build fuchsia", name)
 	}
 	return tool
 }
