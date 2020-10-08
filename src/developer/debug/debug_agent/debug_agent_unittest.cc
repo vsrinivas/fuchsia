@@ -21,8 +21,6 @@
 #include "src/developer/debug/shared/test_with_loop.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-using namespace fuchsia::exception;
-
 namespace debug_agent {
 namespace {
 

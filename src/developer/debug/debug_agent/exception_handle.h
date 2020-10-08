@@ -19,6 +19,9 @@ class ThreadHandle;
 // tests in overrides of this class.
 class ExceptionHandle {
  public:
+  // How this exception should be resolved when closed.
+  enum class Resolution { kTryNext, kHandled };
+
   ExceptionHandle() = default;
   virtual ~ExceptionHandle() = default;
 
@@ -32,11 +35,10 @@ class ExceptionHandle {
   // but that would be less efficient and all callers currently have existing ThreadHandles.
   virtual debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const = 0;
 
-  // Returns the associated ZX_EXCEPTION_STATE_* constant characterizing the state of the exception.
-  virtual fitx::result<zx_status_t, uint32_t> GetState() const = 0;
+  // Returns the current resolution for the exception.
+  virtual fitx::result<zx_status_t, Resolution> GetResolution() const = 0;
 
-  // Given a ZX_EXCEPTION_STATE_* constant, sets the state of the exception.
-  virtual zx_status_t SetState(uint32_t state) = 0;
+  virtual zx_status_t SetResolution(Resolution resolution) = 0;
 
   // Returns the associated the exception handling strategy.
   virtual fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> GetStrategy() const = 0;

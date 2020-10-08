@@ -5,9 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_LIMBO_PROVIDER_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_LIMBO_PROVIDER_H_
 
-#include <fuchsia/exception/cpp/fidl.h>
-#include <lib/sys/cpp/service_directory.h>
-
 #include <map>
 #include <vector>
 

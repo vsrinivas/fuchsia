@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_EXCEPTION_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_EXCEPTION_HANDLE_H_
 
-#include <zircon/syscalls/exception.h>
+#include <zircon/status.h>
 
 #include <functional>
 #include <utility>
@@ -23,7 +23,7 @@ class MockExceptionHandle : public ExceptionHandle {
  public:
   // std::function and not fit::, as it is more convenient for test logic to
   // have MockExceptionHandle as copyable.
-  using SetStateCallback = std::function<void(uint32_t)>;
+  using SetStateCallback = std::function<void(Resolution)>;
   using SetStrategyCallback = std::function<void(debug_ipc::ExceptionStrategy)>;
 
   MockExceptionHandle() = default;
@@ -46,11 +46,13 @@ class MockExceptionHandle : public ExceptionHandle {
 
   void set_type(debug_ipc::ExceptionType type) { type_ = type; }
 
-  fitx::result<zx_status_t, uint32_t> GetState() const override { return fitx::ok(state_); }
+  fitx::result<zx_status_t, Resolution> GetResolution() const override {
+    return fitx::ok(resolution_);
+  }
 
-  zx_status_t SetState(uint32_t state) override {
-    state_ = state;
-    on_state_change_(state);
+  zx_status_t SetResolution(Resolution resolution) override {
+    resolution_ = resolution;
+    on_state_change_(resolution);
     return ZX_OK;
   }
 
@@ -67,9 +69,9 @@ class MockExceptionHandle : public ExceptionHandle {
  private:
   uint64_t thread_koid_ = ZX_KOID_INVALID;
   debug_ipc::ExceptionType type_ = debug_ipc::ExceptionType::kGeneral;
-  uint32_t state_ = ZX_EXCEPTION_STATE_TRY_NEXT;
+  Resolution resolution_ = Resolution::kTryNext;
   debug_ipc::ExceptionStrategy strategy_ = debug_ipc::ExceptionStrategy::kFirstChance;
-  SetStateCallback on_state_change_ = [](uint32_t) {};
+  SetStateCallback on_state_change_ = [](Resolution) {};
   SetStrategyCallback on_strategy_change_ = [](debug_ipc::ExceptionStrategy) {};
 };
 

@@ -6,7 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/shared/logging/logging.h"

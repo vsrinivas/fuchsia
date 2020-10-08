@@ -4,8 +4,6 @@
 
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 
-#include <lib/zx/event.h>
-
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
@@ -17,7 +15,6 @@
 #include "src/developer/debug/debug_agent/mock_thread.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
-#include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
 namespace debug_agent {
 
@@ -35,10 +32,10 @@ TEST(DebuggedThread, Resume) {
   MockThread* thread = process.AddThread(kThreadKoid);
   EXPECT_FALSE(thread->in_exception());
 
-  uint32_t exception_state = 0u;
+  ExceptionHandle::Resolution resolution = ExceptionHandle::Resolution::kTryNext;
   debug_ipc::ExceptionStrategy exception_strategy = debug_ipc::ExceptionStrategy::kNone;
   auto exception = std::make_unique<MockExceptionHandle>(
-      [&exception_state](uint32_t new_state) { exception_state = new_state; },
+      [&resolution](ExceptionHandle::Resolution new_res) { resolution = new_res; },
       [&exception_strategy](debug_ipc::ExceptionStrategy new_strategy) {
         exception_strategy = new_strategy;
       });
@@ -47,13 +44,13 @@ TEST(DebuggedThread, Resume) {
   thread->ClientResume(
       debug_ipc::ResumeRequest{.how = debug_ipc::ResumeRequest::How::kResolveAndContinue});
   EXPECT_FALSE(thread->in_exception());
-  EXPECT_EQ(exception_state, ZX_EXCEPTION_STATE_HANDLED);
+  EXPECT_EQ(resolution, ExceptionHandle::Resolution::kHandled);
   EXPECT_EQ(exception_strategy, debug_ipc::ExceptionStrategy::kNone);
 
-  exception_state = 0u;
+  resolution = ExceptionHandle::Resolution::kTryNext;
   exception_strategy = debug_ipc::ExceptionStrategy::kNone;
   exception = std::make_unique<MockExceptionHandle>(
-      [&exception_state](uint32_t new_state) { exception_state = new_state; },
+      [&resolution](ExceptionHandle::Resolution new_res) { resolution = new_res; },
       [&exception_strategy](debug_ipc::ExceptionStrategy new_strategy) {
         exception_strategy = new_strategy;
       });
@@ -62,7 +59,7 @@ TEST(DebuggedThread, Resume) {
   thread->ClientResume(
       debug_ipc::ResumeRequest{.how = debug_ipc::ResumeRequest::How::kForwardAndContinue});
   EXPECT_FALSE(thread->in_exception());
-  EXPECT_EQ(exception_state, 0u);
+  EXPECT_EQ(resolution, ExceptionHandle::Resolution::kTryNext);
   EXPECT_EQ(exception_strategy, debug_ipc::ExceptionStrategy::kSecondChance);
 }
 
@@ -83,7 +80,7 @@ TEST(DebuggedThread, OnException) {
   {
     debug_ipc::ExceptionStrategy applied_strategy = debug_ipc::ExceptionStrategy::kNone;
     auto exception = std::make_unique<MockExceptionHandle>(
-        [](uint32_t new_state) {},
+        [](ExceptionHandle::Resolution) {},
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
@@ -102,7 +99,7 @@ TEST(DebuggedThread, OnException) {
   {
     debug_ipc::ExceptionStrategy applied_strategy = debug_ipc::ExceptionStrategy::kNone;
     auto exception = std::make_unique<MockExceptionHandle>(
-        [](uint32_t new_state) {},
+        [](ExceptionHandle::Resolution) {},
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
@@ -136,7 +133,7 @@ TEST(DebuggedThread, OnException) {
   {
     debug_ipc::ExceptionStrategy applied_strategy = debug_ipc::ExceptionStrategy::kNone;
     auto exception = std::make_unique<MockExceptionHandle>(
-        [](uint32_t new_state) {},
+        [](ExceptionHandle::Resolution) {},
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
@@ -157,7 +154,7 @@ TEST(DebuggedThread, OnException) {
   {
     debug_ipc::ExceptionStrategy applied_strategy = debug_ipc::ExceptionStrategy::kNone;
     auto exception = std::make_unique<MockExceptionHandle>(
-        [](uint32_t new_state) {},
+        [](ExceptionHandle::Resolution) {},
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });

@@ -18,17 +18,34 @@ debug_ipc::ExceptionType ZirconExceptionHandle::GetType(const ThreadHandle& thre
   return arch::DecodeExceptionType(thread.GetNativeHandle(), info_.type);
 }
 
-fitx::result<zx_status_t, uint32_t> ZirconExceptionHandle::GetState() const {
+fitx::result<zx_status_t, ExceptionHandle::Resolution> ZirconExceptionHandle::GetResolution()
+    const {
   uint32_t state = 0;
-  zx_status_t status = exception_.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
-  if (status != ZX_OK) {
+  if (zx_status_t status = exception_.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+      status != ZX_OK)
     return fitx::error(status);
+
+  switch (state) {
+    case ZX_EXCEPTION_STATE_TRY_NEXT:
+      return fitx::ok(Resolution::kTryNext);
+    case ZX_EXCEPTION_STATE_HANDLED:
+      return fitx::ok(Resolution::kHandled);
   }
-  return fitx::ok(state);
+  FX_NOTREACHED();
+  return fitx::error(ZX_ERR_BAD_STATE);
 }
 
-zx_status_t ZirconExceptionHandle::SetState(uint32_t state) {
-  return exception_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
+zx_status_t ZirconExceptionHandle::SetResolution(Resolution state) {
+  uint32_t zx_state = 0;
+  switch (state) {
+    case Resolution::kTryNext:
+      zx_state = ZX_EXCEPTION_STATE_TRY_NEXT;
+      break;
+    case Resolution::kHandled:
+      zx_state = ZX_EXCEPTION_STATE_HANDLED;
+      break;
+  }
+  return exception_.set_property(ZX_PROP_EXCEPTION_STATE, &zx_state, sizeof(state));
 }
 
 fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> ZirconExceptionHandle::GetStrategy() const {

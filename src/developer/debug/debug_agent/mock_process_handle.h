@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_HANDLE_H_
 
+#include <zircon/status.h>
+
 #include <string>
 
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"

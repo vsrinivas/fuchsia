@@ -224,10 +224,10 @@ executable("unit_tests") {
     "debugged_thread_unittest.cc",
     "hardware_breakpoint_unittest.cc",
     "software_breakpoint_unittest.cc",
-    "system_interface_unittest.cc",
     "unwind_unittest.cc",
     "watchpoint_unittest.cc",
     "zircon_limbo_provider_unittest.cc",
+    "zircon_system_interface_unittest.cc",
   ]
 
   if (current_cpu == "x64") {
