@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
-rustc_binary("bin") {
+# `update` is conceptually a binary, but it built as a lib here so it can be
+# aggregated into //src/sys/pkg/bin/multi-universal-tool to save disk space.
+rustc_library("lib") {
   name = "update"
   with_unit_tests = true
   edition = "2018"
@@ -25,17 +27,24 @@ rustc_binary("bin") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
+  source_root = "src/main.rs"
   sources = [
     "src/args.rs",
     "src/main.rs",
   ]
+
+  visibility = [
+    ":*",
+    "//src/sys/pkg/bin/multi-universal-tool:*",
+  ]
 }
 
 package("update-bin") {
-  deps = [ ":bin" ]
+  deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
   binaries = [
     {
       name = "update"
+      source = "multi_universal_tool"
       shell = true
     },
   ]
@@ -47,13 +56,13 @@ package("update-bin") {
   ]
 }
 
-test_package("update-bin-tests") {
-  deps = [ ":bin_test" ]
+unittest_package("update-lib-tests") {
+  deps = [ ":lib_test" ]
 
   tests = [
     {
-      name = "update_bin_test"
-      dest = "update-bin-test"
+      name = "update_lib_test"
+      dest = "update-test"
       environments = basic_envs
     },
   ]
@@ -61,5 +70,5 @@ test_package("update-bin-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":update-bin-tests" ]
+  deps = [ ":update-lib-tests" ]
 }

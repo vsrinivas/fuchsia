@@ -457,8 +457,9 @@ impl MockSpaceManagerService {
 }
 
 fn assert_no_errors(output: &Output) {
-    assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stdout valid utf8"), "");
-    assert!(output.exit_status.success());
+    let stdout = std::str::from_utf8(&output.stdout).expect("stdout valid utf8");
+    assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stderr valid utf8"), "");
+    assert!(output.exit_status.success(), "status: {:?}\nstdout: {}", output.exit_status, stdout);
 }
 
 fn assert_stdout(output: &Output, expected: &str) {

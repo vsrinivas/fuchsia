@@ -1,6 +1,0 @@
-{
-    "program": {
-        "binary": "test/update-bin-test"
-    },
-    "sandbox": {}
-}

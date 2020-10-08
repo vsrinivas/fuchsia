@@ -60,7 +60,7 @@ group("recovery") {
 group("tools") {
   public_deps = [
     "bin/amber:amberctl",
-    "bin/pkgctl",
+    "bin/pkgctl:pkgctl-bin",
     "bin/update:update-bin",
   ]
   deps = [ "//build/validate:non_production_tag" ]

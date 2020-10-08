@@ -137,10 +137,10 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+pub fn main() -> Result<(), Error> {
+    let mut executor = fasync::Executor::new()?;
     let args::Update { cmd } = argh::from_env();
-    handle_cmd(cmd).await
+    executor.run_singlethreaded(handle_cmd(cmd))
 }
 
 #[cfg(test)]

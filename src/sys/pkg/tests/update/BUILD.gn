@@ -30,13 +30,13 @@ rustc_test("driver") {
 test_package("update-integration-tests") {
   deps = [
     ":driver",
-    "//src/sys/pkg/bin/update:bin",
+    "//src/sys/pkg/bin/multi-universal-tool",
   ]
 
   binaries = [
     {
       name = "update"
-      dest = "update"
+      source = "multi_universal_tool"
     },
   ]
 

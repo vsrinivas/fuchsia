@@ -3,11 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bin") {
+# `pkgctl` is conceptually a binary, but it built as a lib here so it can be
+# aggregated into //src/sys/pkg/bin/multi-universal-tool to save disk space.
+rustc_library("lib") {
   name = "pkgctl"
   with_unit_tests = true
   edition = "2018"
@@ -33,20 +35,27 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  source_root = "src/main.rs"
   sources = [
     "src/args.rs",
     "src/error.rs",
     "src/main.rs",
   ]
+
+  visibility = [
+    ":*",
+    "//src/sys/pkg/bin/multi-universal-tool:*",
+  ]
 }
 
-package("pkgctl") {
-  deps = [ ":bin" ]
+package("pkgctl-bin") {
+  package_name = "pkgctl"
+  deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
 
   binaries = [
     {
       name = "pkgctl"
-      dest = "pkgctl"
+      source = "multi_universal_tool"
       shell = true
     },
   ]
@@ -59,13 +68,13 @@ package("pkgctl") {
   ]
 }
 
-test_package("pkgctl-tests") {
-  deps = [ ":bin_test" ]
+unittest_package("pkgctl-tests") {
+  deps = [ ":lib_test" ]
 
   tests = [
     {
-      name = "pkgctl_bin_test"
-      dest = "pkgctl-bin-test"
+      name = "pkgctl_lib_test"
+      dest = "pkgctl-test"
       environments = basic_envs
     },
   ]

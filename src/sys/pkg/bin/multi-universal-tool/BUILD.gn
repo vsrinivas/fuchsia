@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("multi-universal-tool") {
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//src/sys/pkg/bin/pkgctl:lib",
+    "//src/sys/pkg/bin/update:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+unittest_package("multi-universal-tool-tests") {
+  deps = [ ":multi-universal-tool_test" ]
+
+  tests = [
+    {
+      name = "multi_universal_tool_bin_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":multi-universal-tool-tests" ]
+}

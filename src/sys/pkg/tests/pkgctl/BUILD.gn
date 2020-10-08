@@ -40,13 +40,13 @@ rustc_test("driver") {
 test_package("pkgctl-integration-tests") {
   deps = [
     ":driver",
-    "//src/sys/pkg/bin/pkgctl:bin",
+    "//src/sys/pkg/bin/multi-universal-tool",
   ]
 
   binaries = [
     {
       name = "pkgctl"
-      dest = "pkgctl"
+      source = "multi_universal_tool"
     },
   ]
 

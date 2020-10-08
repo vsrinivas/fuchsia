@@ -36,22 +36,10 @@ use {
 mod args;
 mod error;
 
-fn main() {
+pub fn main() -> Result<(), anyhow::Error> {
+    let mut executor = fasync::Executor::new()?;
     let Args { command } = argh::from_env();
-    let mut executor = match fasync::Executor::new().context("Error creating executor") {
-        Ok(executor) => executor,
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            exit(1);
-        }
-    };
-    exit(match executor.run_singlethreaded(main_helper(command)) {
-        Ok(code) => code,
-        Err(error) => {
-            eprintln!("Error: {:?}", error);
-            1
-        }
-    });
+    exit(executor.run_singlethreaded(main_helper(command))?)
 }
 
 async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
