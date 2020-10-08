@@ -42,8 +42,8 @@ impl TryFrom<ExtentInfo> for Extent {
         Ok(Extent {
             storage_range: extent_c.start..extent_c.end,
             properties: ExtentProperties {
-                extent_state: extent_c.extent.to_kind()?,
-                data_state: extent_c.data.to_kind()?,
+                extent_kind: extent_c.extent.to_kind()?,
+                data_kind: extent_c.data.to_kind()?,
             },
             data: None,
         })
@@ -294,22 +294,21 @@ mod test {
     };
 
     fn get_same_properties() -> (ExtentProperties, ExtentProperties) {
-        let p =
-            ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Unmodified };
+        let p = ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified };
         (p, p)
     }
     fn get_different_properties() -> (ExtentProperties, ExtentProperties) {
         (
-            ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Unmodified },
-            ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Unmodified },
+            ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified },
+            ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Unmodified },
         )
     }
 
     // First property's priority is lower.
     fn get_lower_priority_properties() -> (ExtentProperties, ExtentProperties) {
         let (a, b) = (
-            ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Unmodified },
-            ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Unmodified },
+            ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified },
+            ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Unmodified },
         );
         assert!(a < b);
         (a, b)

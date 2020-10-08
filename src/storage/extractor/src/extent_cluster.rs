@@ -21,13 +21,13 @@ fn should_dump_data(extent: &Extent, dump_pii: bool) -> bool {
     // either Skipped or it is Zeroes.
     // We dump Pii only when we forced to dump Pii or it was `Modified` by the
     // storage software to obfuscate the Pii data.
-    match properties.extent_state {
-        ExtentKind::Data => match properties.data_state {
+    match properties.extent_kind {
+        ExtentKind::Data => match properties.data_kind {
             DataKind::Modified => true,
             DataKind::Unmodified => true,
             _ => false,
         },
-        ExtentKind::Pii => match properties.data_state {
+        ExtentKind::Pii => match properties.data_kind {
             DataKind::Modified => true,
             DataKind::Unmodified => dump_pii,
             _ => false,
@@ -260,13 +260,13 @@ mod test {
     static INSERTED_ADDRESS_END: u64 = 30;
 
     static LOW_PRIORITY_PROPERTIES: ExtentProperties =
-        ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Zeroes };
+        ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Zeroes };
 
     static HIGH_PRIORITY_PROPERTIES: ExtentProperties =
-        ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Zeroes };
+        ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Zeroes };
 
     static INSERTED_PROPERTIES: ExtentProperties =
-        ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Unmodified };
+        ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified };
 
     static OVERLAPPING_RIGHT_ADDRESS: Range<u64> =
         INSERTED_ADDRESS_END - 5..INSERTED_ADDRESS_END + 6;
@@ -623,15 +623,15 @@ mod test {
     }
 
     fn dumpable_data_properties() -> ExtentProperties {
-        ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Modified }
+        ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Modified }
     }
 
     fn skippable_data_properties() -> ExtentProperties {
-        ExtentProperties { extent_state: ExtentKind::Unmmapped, data_state: DataKind::Skipped }
+        ExtentProperties { extent_kind: ExtentKind::Unmmapped, data_kind: DataKind::Skipped }
     }
 
     fn pii_data_properties() -> ExtentProperties {
-        ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Unmodified }
+        ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Unmodified }
     }
 
     fn setup_cluster_write_test(
@@ -732,8 +732,8 @@ mod test {
         assert_eq!(new_size, options.alignment * 5)
     }
 
-    fn verify_should_dump_data(estate: ExtentKind, dstate: DataKind, dump_pii: bool, dump: bool) {
-        let properties = ExtentProperties { extent_state: estate, data_state: dstate };
+    fn verify_should_dump_data(ekind: ExtentKind, dkind: DataKind, dump_pii: bool, dump: bool) {
+        let properties = ExtentProperties { extent_kind: ekind, data_kind: dkind };
         let extent = Extent::new(4..10, properties, None).unwrap();
         assert_eq!(
             should_dump_data(&extent, dump_pii),

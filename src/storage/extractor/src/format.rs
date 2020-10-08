@@ -327,8 +327,8 @@ impl From<Extent> for ExtentInfo {
         ExtentInfo {
             start: extent.storage_range().start,
             end: extent.storage_range().end,
-            extent: ExtentKindInfo::new(extent.properties().extent_state),
-            data: DataKindInfo::new(extent.properties().data_state),
+            extent: ExtentKindInfo::new(extent.properties().extent_kind),
+            data: DataKindInfo::new(extent.properties().data_kind),
             _padding: [0; 6],
         }
     }
@@ -617,7 +617,7 @@ mod test {
     fn test_extent_info_deserialie() {
         let extent = Extent::new(
             10..20,
-            ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Modified },
+            ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Modified },
             None,
         )
         .unwrap();
@@ -630,8 +630,8 @@ mod test {
         let read_extent = ExtentInfo::deserialize_from(&mut buffer).unwrap();
         assert_eq!(read_extent.start, extent.start());
         assert_eq!(read_extent.end, extent.end());
-        assert_eq!(read_extent.data.to_kind().unwrap(), extent.properties.data_state);
-        assert_eq!(read_extent.extent.to_kind().unwrap(), extent.properties.extent_state);
+        assert_eq!(read_extent.data.to_kind().unwrap(), extent.properties.data_kind);
+        assert_eq!(read_extent.extent.to_kind().unwrap(), extent.properties.extent_kind);
     }
 
     #[test]

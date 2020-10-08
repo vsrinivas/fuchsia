@@ -60,21 +60,21 @@ pub enum DataKind {
 
 /// Properties of an extent
 ///
-/// extent_state has higher priority than data_state.
+/// extent_kind has higher priority than data_kind.
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug)]
 pub struct ExtentProperties {
     // Extent's type.
-    pub extent_state: ExtentKind,
+    pub extent_kind: ExtentKind,
 
     // Data type.
-    pub data_state: DataKind,
+    pub data_kind: DataKind,
 }
 
 impl ExtentProperties {
     /// Returns `true` if the extent's data is considered PII.
     pub fn is_pii(&self) -> bool {
-        self.extent_state == ExtentKind::Pii
+        self.extent_kind == ExtentKind::Pii
     }
 
     // Returns `true` if self has higher priority than the other.
@@ -88,14 +88,14 @@ mod test {
     use crate::properties::{DataKind, ExtentKind, ExtentProperties};
 
     #[test]
-    fn test_extent_state_priority() {
+    fn test_extent_kind_priority() {
         assert!(ExtentKind::Unmmapped < ExtentKind::Unused);
         assert!(ExtentKind::Unused < ExtentKind::Data);
         assert!(ExtentKind::Data < ExtentKind::Pii);
     }
 
     #[test]
-    fn test_data_state_priority() {
+    fn test_data_kind_priority() {
         assert!(DataKind::Skipped < DataKind::Zeroes);
         assert!(DataKind::Zeroes < DataKind::Unmodified);
         assert!(DataKind::Unmodified < DataKind::Modified);
@@ -103,40 +103,40 @@ mod test {
 
     #[test]
     fn test_extent_properties_priority() {
-        let low_priority_extent_state =
-            ExtentProperties { extent_state: ExtentKind::Unused, data_state: DataKind::Unmodified };
+        let low_priority_extent_kind =
+            ExtentProperties { extent_kind: ExtentKind::Unused, data_kind: DataKind::Unmodified };
         let high_priority =
-            ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Modified };
-        assert!(low_priority_extent_state < high_priority);
-        let low_priority_data_state =
-            ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Unmodified };
-        assert!(low_priority_data_state < high_priority);
+            ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Modified };
+        assert!(low_priority_extent_kind < high_priority);
+        let low_priority_data_kind =
+            ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified };
+        assert!(low_priority_data_kind < high_priority);
     }
 
     #[test]
     fn test_is_pii() {
-        let p = ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Modified };
+        let p = ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Modified };
         assert!(p.is_pii());
     }
 
     #[test]
     fn test_not_pii() {
-        let p = ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Modified };
+        let p = ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Modified };
         assert!(!p.is_pii());
     }
 
     #[test]
-    fn test_overrides_extent_state() {
-        let p = ExtentProperties { extent_state: ExtentKind::Pii, data_state: DataKind::Modified };
-        let q = ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Modified };
+    fn test_overrides_extent_kind() {
+        let p = ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Modified };
+        let q = ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Modified };
         assert!(p.overrides(&q));
         assert!(!q.overrides(&p));
     }
 
     #[test]
-    fn test_overrides_data_state() {
-        let p = ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Modified };
-        let q = ExtentProperties { extent_state: ExtentKind::Data, data_state: DataKind::Zeroes };
+    fn test_overrides_data_kind() {
+        let p = ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Modified };
+        let q = ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Zeroes };
         assert!(p.overrides(&q));
         assert!(!q.overrides(&p));
     }
