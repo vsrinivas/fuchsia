@@ -4512,7 +4512,11 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   struct brcmf_cfg80211_info* cfg = nullptr;
   struct wireless_dev* wdev = nullptr;
 
-  BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
+  // TODO(b/155092471): This if can be removed once brcmf_notify_channel_switch() is no longer
+  // called out-of-band by brcmf_bss_connect_done().
+  if (e != nullptr) {
+    BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
+  }
 
   cfg = ifp->drvr->config;
   wdev = ndev_to_wdev(ndev);
@@ -4589,7 +4593,8 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
                 !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &iface->vif->sme_state)) {
               continue;
             }
-            brcmf_notify_channel_switch(iface, nullptr, nullptr);
+            BRCMF_INFO("Updating SoftAP channel after client associated... (b/155092471)");
+            (void)brcmf_notify_channel_switch(iface, nullptr, nullptr);
           }
         }
 
