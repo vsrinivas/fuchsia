@@ -50,13 +50,22 @@ class AcpiParser {
   // Create a new AcpiParser.
   //
   // |reader| and |sdt| must outlive the created instance.
-  AcpiParser(PhysMemReader& reader, const AcpiRsdt* rsdt, const AcpiXsdt* xsdt, size_t num_tables)
-      : reader_(&reader), rsdt_(rsdt), xsdt_(xsdt), num_tables_(num_tables) {}
+  AcpiParser(PhysMemReader& reader, const AcpiRsdt* rsdt, const AcpiXsdt* xsdt, size_t num_tables,
+             zx_paddr_t root_table_addr)
+      : reader_(&reader),
+        rsdt_(rsdt),
+        xsdt_(xsdt),
+        num_tables_(num_tables),
+        root_table_addr_(root_table_addr) {}
 
-  PhysMemReader* reader_;  // Owned elsewhere. Non-null.
-  const AcpiRsdt* rsdt_;   // Owned elsewhere. May be null.
-  const AcpiXsdt* xsdt_;   // Owned elsewhere. May be null.
-  size_t num_tables_;      // Number of top level tables
+  // Get the physical address of the given table, or return 0 if the table does not exist.
+  zx_paddr_t GetTablePhysAddr(size_t index) const;
+
+  PhysMemReader* reader_;       // Owned elsewhere. Non-null.
+  const AcpiRsdt* rsdt_;        // Owned elsewhere. May be null.
+  const AcpiXsdt* xsdt_;        // Owned elsewhere. May be null.
+  size_t num_tables_;           // Number of top level tables
+  zx_paddr_t root_table_addr_;  // Physical address of the root table.
 };
 
 // A PhysMemReader translates physical addresses (such as those in the ACPI tables and the RSDT
