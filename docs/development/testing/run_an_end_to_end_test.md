@@ -35,6 +35,9 @@ Verify the following requirements:
 Before you can run the `screen_is_not_black_no_basemgr_test` end-to-end test, you first
 need to build your Fuchsia image to include the test in the build artifacts:
 
+Note: The examples in this guide use the `workstation` product. End-to-end tests work with most
+products except `core`.
+
 1.  To add the end-to-end test, run the `fx set` command with the following
     `--with` option:
 

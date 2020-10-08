@@ -177,6 +177,9 @@ Do the following:
 Before you can run an end-to-end test, you first need to configure and build a
 Fuchsia image to include the test in the build artifacts:
 
+Note: The examples in this guide use the `terminal` product. End-to-end tests work with most
+products except `core`.
+
 1.  Configure your Fuchsia image to include the `my_e2e_test_example` test
     directory and the `test` target group:
 
