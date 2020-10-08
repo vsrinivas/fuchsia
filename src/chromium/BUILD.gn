@@ -5,6 +5,7 @@
 import("//build/config.gni")
 import("//build/packages/prebuilt_package.gni")
 import("//build/packages/prebuilt_test_manifest.gni")
+import("//build/testing/host_test_data.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
 declare_args() {
@@ -82,80 +83,92 @@ icu_tzdata_config_data("tzdata_for_web_engine") {
   for_pkg = "web_engine"
 }
 
-# Prebuilt FAR tests
-test_env = [ nuc_env ]
-
-group("chromium_tests_group") {
-  testonly = true
-  deps = [
-    ":chromium_tests",
-
-    # The targets below have exactly the same contents, so will not be taking
-    # extra storage in configurations that use them both.
-    ":tzdata_for_base_unittests",
-    ":tzdata_for_chromium_tests_base_unittests",
-    ":tzdata_for_media_unittests",
-  ]
-}
-
-prebuilt_test_manifest("chromium_tests") {
-  if (use_chromium_canary) {
-    archive_dir = "//prebuilt/third_party/chromium_tests_latest/arch/x64"
-  } else {
-    archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
+if (is_host) {
+  host_test_data("chromedriver") {
+    if (use_chromium_canary) {
+      sources = [
+        "//prebuilt/third_party/chromedriver_latest/linux-x64/chromedriver",
+      ]
+    } else {
+      sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
+    }
   }
-  environments = test_env
-  log_settings = {
-    max_severity = "ERROR"
+} else {
+  # Prebuilt FAR tests
+  test_env = [ nuc_env ]
+
+  group("chromium_tests_group") {
+    testonly = true
+    deps = [
+      ":chromium_tests",
+
+      # The targets below have exactly the same contents, so will not be taking
+      # extra storage in configurations that use them both.
+      ":tzdata_for_base_unittests",
+      ":tzdata_for_chromium_tests_base_unittests",
+      ":tzdata_for_media_unittests",
+    ]
   }
 
-  disabled_tests = []
+  prebuilt_test_manifest("chromium_tests") {
+    if (use_chromium_canary) {
+      archive_dir = "//prebuilt/third_party/chromium_tests_latest/arch/x64"
+    } else {
+      archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
+    }
+    environments = test_env
+    log_settings = {
+      max_severity = "ERROR"
+    }
 
-  # Tests temporarily disabled due to flake.
-  # crbug.com/1060489
-  disabled_tests += [
-    {
-      component_name = "cast_runner_integration_tests"
-      package = "cast_runner_integration_tests"
-    },
-    {
-      component_name = "web_runner_integration_tests"
-      package = "web_runner_integration_tests"
-    },
-  ]
+    disabled_tests = []
 
-  # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=47760
-  disabled_tests += [
-    {
-      component_name = "base_unittests"
-      package = "base_unittests"
-    },
-  ]
-}
+    # Tests temporarily disabled due to flake.
+    # crbug.com/1060489
+    disabled_tests += [
+      {
+        component_name = "cast_runner_integration_tests"
+        package = "cast_runner_integration_tests"
+      },
+      {
+        component_name = "web_runner_integration_tests"
+        package = "web_runner_integration_tests"
+      },
+    ]
 
-icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
-  for_pkg = "chromium_tests_base_unittests"
-  testonly = true
-}
+    # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=47760
+    disabled_tests += [
+      {
+        component_name = "base_unittests"
+        package = "base_unittests"
+      },
+    ]
+  }
 
-icu_tzdata_config_data("tzdata_for_base_unittests") {
-  for_pkg = "base_unittests"
-  testonly = true
-}
+  icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
+    for_pkg = "chromium_tests_base_unittests"
+    testonly = true
+  }
 
-icu_tzdata_config_data("tzdata_for_media_unittests") {
-  for_pkg = "media_unittests"
-  testonly = true
-}
+  icu_tzdata_config_data("tzdata_for_base_unittests") {
+    for_pkg = "base_unittests"
+    testonly = true
+  }
 
-group("tests") {
-  testonly = true
+  icu_tzdata_config_data("tzdata_for_media_unittests") {
+    for_pkg = "media_unittests"
+    testonly = true
+  }
 
-  deps = [
-    ":chromium_tests_group",
-    ":web_engine",
-    ":web_runner",
-    "web_runner_tests:tests",
-    "//src/fonts:downstream_test_deps",
-  ]
+  group("tests") {
+    testonly = true
+
+    deps = [
+      ":chromium_tests_group",
+      ":web_engine",
+      ":web_runner",
+      "web_runner_tests:tests",
+      "//src/fonts:downstream_test_deps",
+    ]
+  }
 }
