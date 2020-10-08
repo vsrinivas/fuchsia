@@ -118,7 +118,7 @@ struct AcpiXsdt {
   AcpiSdtHeader header;
 
   // array of uint64s are placed immediately afterwards
-  uint32_t addr64[0];
+  uint64_t addr64[0];
 
   size_t size() const { return header.length; }
   static constexpr auto kSignature = AcpiSignature("XSDT");

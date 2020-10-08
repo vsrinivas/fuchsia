@@ -32,15 +32,26 @@ TEST(AcpiParser, EmptyTables) {
   EXPECT_EQ(result.error_value(), ZX_ERR_NOT_FOUND);
 }
 
+// Ensure that the named table exists, and passed some basic checks.
+void VerifyTableExists(const AcpiParser& parser, const char* signature) {
+  // Fetch the table.
+  const AcpiSdtHeader* table = parser.GetTableBySignature(AcpiSignature(signature));
+  ASSERT_TRUE(table != nullptr) << "Table does not exist.";
+
+  // Ensure signature matches.
+  EXPECT_EQ(memcmp(table, signature, 4), 0) << "Table has invalid signature.";
+
+  // Ensure length is sensible.
+  ASSERT_GE(table->length, sizeof(AcpiSdtHeader));
+}
+
 TEST(AcpiParser, ParseQemuTables) {
   FakePhysMemReader reader(&kQemuTables);
   AcpiParser result = AcpiParser::Init(reader, kQemuTables.rsdp).value();
   ASSERT_EQ(4u, result.num_tables());
 
   // Ensure we can read the HPET table.
-  const AcpiSdtHeader* hpet_table = result.GetTableBySignature(AcpiSignature("HPET"));
-  ASSERT_TRUE(hpet_table != nullptr);
-  EXPECT_TRUE(memcmp(hpet_table, "HPET", 4) == 0);
+  VerifyTableExists(result, "HPET");
 }
 
 TEST(AcpiParser, ParseIntelNucTables) {
@@ -48,6 +59,8 @@ TEST(AcpiParser, ParseIntelNucTables) {
   FakePhysMemReader reader(&kIntelNuc7i5dnTables);
   AcpiParser result = AcpiParser::Init(reader, kIntelNuc7i5dnTables.rsdp).value();
   EXPECT_EQ(28u, result.num_tables());
+  VerifyTableExists(result, "HPET");
+  VerifyTableExists(result, "DBG2");
 }
 
 TEST(AcpiParser, ParseFuchsiaHypervisor) {
