@@ -40,6 +40,12 @@ namespace {
 
 static constexpr const char kBootfsVmexName[] = "bootfs_vmex";
 
+struct Resources {
+  // TODO(smpham): Remove root resource.
+  zx::resource root;
+  zx::resource mmio;
+};
+
 // Wire up stdout so that printf() and friends work.
 zx_status_t SetupStdout(const zx::debuglog& log) {
   zx::debuglog dup;
@@ -173,7 +179,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc,
-                       const zx::resource& root_rsrc, const zx::debuglog& log, async::Loop& loop,
+                       Resources& resources, const zx::debuglog& log, async::Loop& loop,
                        const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
@@ -229,9 +235,12 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
   nametable[count++] = "/svc";
 
+  // Pass on mmio resources to the next process.
+  launchpad_add_handle(lp, resources.mmio.release(), PA_HND(PA_MMIO_RESOURCE, 0));
+
   // Duplicate the root resource to pass to the next process.
   zx::resource root_rsrc_dup;
-  status = root_rsrc.duplicate(ZX_RIGHT_SAME_RIGHTS, &root_rsrc_dup);
+  status = resources.root.duplicate(ZX_RIGHT_SAME_RIGHTS, &root_rsrc_dup);
   ZX_ASSERT_MSG(status == ZX_OK && root_rsrc_dup.is_valid(), "Failed to duplicate root resource");
   launchpad_add_handle(lp, root_rsrc_dup.release(), PA_HND(PA_RESOURCE, 0));
 
@@ -324,14 +333,18 @@ int main(int argc, char** argv) {
   zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
   ZX_ASSERT(bootfs_vmo.is_valid());
 
-  // Take the root resource
-  printf("bootsvc: Taking root resource handle...\n");
-  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-  ZX_ASSERT_MSG(root_resource.is_valid(), "Invalid root resource handle\n");
+  // Take the resources.
+  printf("bootsvc: Taking resources...\n");
+  Resources resources;
+  resources.mmio.reset(zx_take_startup_handle(PA_HND(PA_MMIO_RESOURCE, 0)));
+  ZX_ASSERT_MSG(resources.mmio.is_valid(), "Invalid MMIO root resource handle\n");
+  resources.root.reset(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  ZX_ASSERT_MSG(resources.root.is_valid(), "Invalid root resource handle\n");
 
   // Create a VMEX resource object to provide the bootfs service.
+  // TODO(smpham): Pass VMEX resource from kernel.
   zx::resource bootfs_vmex_rsrc;
-  status = zx::resource::create(root_resource, ZX_RSRC_KIND_VMEX, 0, 0, kBootfsVmexName,
+  status = zx::resource::create(resources.root, ZX_RSRC_KIND_VMEX, 0, 0, kBootfsVmexName,
                                 sizeof(kBootfsVmexName), &bootfs_vmex_rsrc);
   ZX_ASSERT_MSG(status == ZX_OK, "Failed to create VMEX resource");
 
@@ -388,7 +401,7 @@ int main(int argc, char** argv) {
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::cref(root_resource),
+  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
               std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
       .detach();
 

@@ -339,6 +339,14 @@ TEST(BootsvcIntegrationTest, BootArguments) {
   EXPECT_STR_EQ(environ[1], "bootfskey=bootfsvalue");
 }
 
+// Test that we can get the resources passed from the kernel.
+TEST(BootsvcIntegrationTest, ResourcesAvailable) {
+  zx::resource mmio_resource(zx_take_startup_handle(PA_HND(PA_MMIO_RESOURCE, 0)));
+  ASSERT_TRUE(mmio_resource.is_valid());
+  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  ASSERT_TRUE(root_resource.is_valid());
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
