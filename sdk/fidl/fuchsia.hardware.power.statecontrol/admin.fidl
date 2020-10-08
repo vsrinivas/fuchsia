@@ -35,7 +35,20 @@ const uint32 MAX_SYSTEM_POWER_STATES = 7;
 // TODO(fxbug.dev/52274): Track how long it takes to persist the reboot reason and adjust this value.
 const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 
-/// Provides administration services for the device manager service and the device tree it controls.
+/// Provides methods to request that the system be transitioned into a supported power state.
+///
+/// Note (see fxbug.dev/58348):
+/// These methods do not return until after the state transition has been completed. In most cases
+/// (e.g. Reboot), a successful transition means that the caller does not actually observe the
+/// completion because the system will be rebooted before the call is completed. The implication is
+/// that using a synchronous FIDL client with these methods will result in a blocked thread for the
+/// duration of the call, or even for the remainder of the component's life (in the case of Reboot).
+/// Therefore, if a synchronous FIDL client is to be used with this protocol then care should be
+/// taken to avoid handling any shutdown-induced callbacks on the same thread that was used to
+/// initiate the transition. Example callbacks include [`fuchsia.process.lifecycle/Lifecycle.Stop`]
+/// and [`fuchsia.hardware.power.statecontrol/RebootMethodsWatcher.OnReboot`].
+/// Alternatively, the caller could choose to use an asynchronous FIDL client with this protocol to
+/// avoid blocking their calling thread.
 [Discoverable]
 protocol Admin {
     /// Asks the device to enter a fully on state.
@@ -58,7 +71,7 @@ protocol Admin {
     [Transitional]
     Poweroff() -> () error zx.status;
 
-    /// Perfroms a kernel mexec.
+    /// Performs a kernel mexec.
     [Transitional]
     Mexec() -> () error zx.status;
 
