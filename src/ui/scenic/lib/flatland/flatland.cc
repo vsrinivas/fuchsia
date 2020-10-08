@@ -40,15 +40,9 @@ Flatland::Flatland(scheduling::SessionId session_id,
       uber_struct_queue_(uber_struct_queue),
       sysmem_allocator_(std::move(sysmem_allocator)),
       transform_graph_(session_id_),
-      local_root_(transform_graph_.CreateTransform()) {
-  zx_status_t status = zx::event::create(0, &buffer_collection_release_fence_);
-  FX_DCHECK(status == ZX_OK);
-}
+      local_root_(transform_graph_.CreateTransform()) {}
 
 Flatland::~Flatland() {
-  // TODO(fxbug.dev/53330): remove this function call when FrameScheduler is integrated.
-  SignalBufferReleaseFence();
-
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
@@ -85,32 +79,17 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
       }
     }
 
-    // Check if deregistered buffer collections can be garbage collected with the Renderer. Use the
-    // default dispatcher since that is the same one Present() is running on.
-    auto dispatcher = async_get_default_dispatcher();
+    // Collect the list of deregistered buffer collections that are unreferenced by any Images,
+    // meaning they can be released from the Renderer.
+    std::vector<GlobalBufferCollectionId> buffers_to_release;
     for (auto released_iter = released_buffer_collection_ids_.begin();
          released_iter != released_buffer_collection_ids_.end();) {
       const auto global_collection_id = *released_iter;
       auto buffer_data_kv = buffer_collections_.find(global_collection_id);
       FX_DCHECK(buffer_data_kv != buffer_collections_.end());
 
-      // If a buffer collection is no longer referenced by any Images, wait on a release fence to
-      // deregister it from the Renderer.
       if (buffer_data_kv->second.image_count == 0) {
-        // Use a self-referencing async::WaitOnce to perform Renderer deregistration. This is
-        // primarily so the handler does not have to live in the Flatland instance, which may be
-        // destroyed before the release fence is signaled. WaitOnce moves the handler to the stack
-        // prior to invoking it, so it is safe for the handler to delete the WaitOnce on exit.
-        auto wait = std::make_shared<async::WaitOnce>(buffer_collection_release_fence_.get(),
-                                                      ZX_EVENT_SIGNALED);
-        zx_status_t status = wait->Begin(
-            dispatcher, [copy_ref = wait, renderer_ref = renderer_, global_collection_id](
-                            async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
-                            const zx_packet_signal_t* /*signal*/) mutable {
-              FX_DCHECK(status == ZX_OK);
-              renderer_ref->DeregisterCollection(global_collection_id);
-            });
-        FX_DCHECK(status == ZX_OK);
+        buffers_to_release.push_back(global_collection_id);
 
         // Delete local references to the GlobalBufferCollectionId.
         buffer_collections_.erase(buffer_data_kv);
@@ -118,6 +97,39 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
       } else {
         ++released_iter;
       }
+    }
+
+    // If there are buffer collections ready for release, create a release fence for the current
+    // Present() and delay release until that fence is reached to ensure that the buffer
+    // collections are no longer referenced in any render data.
+    if (!buffers_to_release.empty()) {
+      // Use the default dispatcher, which is the same one this Present() is running on.
+      auto dispatcher = async_get_default_dispatcher();
+
+      // Create a release fence specifically for the buffer collections.
+      zx::event buffer_collection_release_fence;
+      zx_status_t status = zx::event::create(0, &buffer_collection_release_fence);
+      FX_DCHECK(status == ZX_OK);
+
+      // Use a self-referencing async::WaitOnce to perform Renderer deregistration. This is
+      // primarily so the handler does not have to live in the Flatland instance, which may be
+      // destroyed before the release fence is signaled. WaitOnce moves the handler to the stack
+      // prior to invoking it, so it is safe for the handler to delete the WaitOnce on exit.
+      auto wait = std::make_shared<async::WaitOnce>(buffer_collection_release_fence.get(),
+                                                    ZX_EVENT_SIGNALED);
+      status =
+          wait->Begin(dispatcher, [copy_ref = wait, renderer_ref = renderer_, buffers_to_release](
+                                      async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
+                                      const zx_packet_signal_t* /*signal*/) mutable {
+            FX_DCHECK(status == ZX_OK);
+            for (const auto& global_collection_id : buffers_to_release) {
+              renderer_ref->DeregisterCollection(global_collection_id);
+            }
+          });
+      FX_DCHECK(status == ZX_OK);
+
+      // Push the new release fence into the user-provided list.
+      release_fences.push_back(std::move(buffer_collection_release_fence));
     }
 
     auto uber_struct = std::make_unique<UberStruct>();
@@ -898,14 +910,6 @@ std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) 
     return std::nullopt;
   }
   return handle_kv->second;
-}
-
-void Flatland::SignalBufferReleaseFence() {
-  buffer_collection_release_fence_.signal(0, ZX_EVENT_SIGNALED);
-
-  // Recreate the release fence since an event cannot be unsignaled.
-  zx_status_t status = zx::event::create(0, &buffer_collection_release_fence_);
-  FX_DCHECK(status == ZX_OK);
 }
 
 void Flatland::ReportError() { failure_since_previous_present_ = true; }

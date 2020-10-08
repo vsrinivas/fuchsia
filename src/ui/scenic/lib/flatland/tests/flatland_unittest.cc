@@ -62,11 +62,16 @@ using fuchsia::ui::scenic::internal::Vec2;
 namespace {
 
 // Convenience struct for the PRESENT_WITH_ARGS macro to avoid having to update it every time
-// a new argument is added to Flatland::Present().
+// a new argument is added to Flatland::Present(). This struct also includes additional flags
+// to PRESENT_WITH_ARGS itself for testing timing-related Present() functionality.
 struct PresentArgs {
+  // Arguments to Flatland::Present().
   zx::time requested_presentation_time;
   std::vector<zx::event> acquire_fences;
   std::vector<zx::event> release_fences;
+
+  // Arguments to the PRESENT_WITH_ARGS macro.
+  bool skip_session_update = false;
 };
 
 }  // namespace
@@ -100,7 +105,9 @@ struct PresentArgs {
     EXPECT_TRUE(processed_callback);                                                         \
     /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */          \
     RunLoopUntilIdle();                                                                      \
-    mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();                          \
+    if (!args.skip_session_update) {                                                         \
+      mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();                        \
+    }                                                                                        \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -321,11 +328,11 @@ class FlatlandTest : public gtest::TestLoopFixture {
  protected:
   MockFlatlandPresenter* mock_flatland_presenter_;
   MockRenderer* mock_renderer_;
+  std::shared_ptr<Renderer> renderer_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
 
  private:
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
-  std::shared_ptr<Renderer> renderer_;
   const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
   std::atomic<BufferCollectionId> next_global_collection_id_ = 1;
@@ -3038,12 +3045,10 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionErrorCases) {
   flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
   PRESENT(flatland, true);
 
+  // The PRESENT macro triggers release fences, which in turn triggers the Renderer call.
   flatland.DeregisterBufferCollection(kBufferCollectionId);
-  PRESENT(flatland, true);
-
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId)).Times(1);
-  flatland.SignalBufferReleaseFence();
-  RunLoopUntilIdle();
+  PRESENT(flatland, true);
 
   flatland.DeregisterBufferCollection(kBufferCollectionId);
   PRESENT(flatland, false);
@@ -3076,18 +3081,22 @@ TEST_F(FlatlandTest, DeregisterMultipleBufferCollectionsSameEvent) {
 
   PRESENT(flatland, true);
 
-  // Deregister both buffer collections so they're both witing on the release fence. Do it one at a
-  // time so the Waits are registered on different calls to Present().
+  // Deregister both buffer collections so they're both waiting on the same release fence.
   flatland.DeregisterBufferCollection(kBufferCollectionId1);
-  PRESENT(flatland, true);
-
   flatland.DeregisterBufferCollection(kBufferCollectionId2);
-  PRESENT(flatland, true);
+
+  // Skip session updates to test that release fences are what trigger the Renderer calls.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(0);
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(0);
+
+  PresentArgs args;
+  args.skip_session_update = true;
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   // Signal the release fence.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(1);
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(1);
-  flatland.SignalBufferReleaseFence();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
 
@@ -3107,9 +3116,16 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
   }
 
   // Deregister it, but don't signal the release fence yet.
-  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(0);
   flatland.DeregisterBufferCollection(kBufferCollectionId);
-  PRESENT(flatland, true);
+
+  {
+    // Skip session updates to test that release fences are what trigger the Renderer calls.
+    EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(0);
+
+    PresentArgs args;
+    args.skip_session_update = true;
+    PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  }
 
   // Register another buffer collection with that same ID.
   const GlobalBufferCollectionId kGlobalBufferCollectionId2 = 3;
@@ -3119,23 +3135,26 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
   {
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
     flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
-    PRESENT(flatland, true);
+
+    // Skip session updates to test that release fences are what trigger the Renderer calls.
+    EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(0);
+
+    PresentArgs args;
+    args.skip_session_update = true;
+    PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
   // Signal the release fences, which should result deregister the first one from the renderer.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(1);
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(0);
-  flatland.SignalBufferReleaseFence();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 
   // Deregister the second one, signal the release fences, and verify the second global ID was
   // deregistered.
   flatland.DeregisterBufferCollection(kBufferCollectionId);
-  PRESENT(flatland, true);
-
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId2)).Times(1);
-  flatland.SignalBufferReleaseFence();
-  RunLoopUntilIdle();
+  PRESENT(flatland, true);
 }
 
 // Tests that a buffer collection is not deregistered from the Renderer until it is not referenced
@@ -3175,14 +3194,57 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   PRESENT(flatland, true);
 
   // Remove the Image from the transform. This triggers the creation of the release fence, but
-  // still does not result in a deregestration call.
+  // still does not result in a deregestration call. Skip session updates to test that release
+  // fences are what trigger the Renderer calls.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(0);
   flatland.SetContentOnTransform(0, kTransformId);
-  PRESENT(flatland, true);
 
-  // Signal the release fences, which results in the deregistration call,
+  PresentArgs args;
+  args.skip_session_update = true;
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+
+  // Signal the release fences, which triggers the deregistration call.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(1);
-  flatland.SignalBufferReleaseFence();
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  RunLoopUntilIdle();
+}
+
+TEST_F(FlatlandTest, DeregisterCollectionCompletesAfterFlatlandDestruction) {
+  const GlobalBufferCollectionId kGlobalBufferCollectionId = 1;
+
+  {
+    Flatland flatland = CreateFlatland();
+
+    // Register a buffer collection.
+    EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _))
+        .WillOnce(Return(kGlobalBufferCollectionId));
+
+    const BufferCollectionId kBufferCollectionId = 2;
+
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+    flatland.RegisterBufferCollection(kBufferCollectionId, std::move(token));
+    PRESENT(flatland, true);
+
+    // Deregister the buffer collection.
+    flatland.DeregisterBufferCollection(kBufferCollectionId);
+
+    // Skip session updates to test that release fences are what trigger the Renderer calls.
+    EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId)).Times(0);
+
+    PresentArgs args;
+    args.skip_session_update = true;
+    PRESENT_WITH_ARGS(flatland, std::move(args), true);
+
+    // |flatland| falls out of scope.
+  }
+
+  // Reset the last known reference to the Renderer to demonstrate that the Wait keeps it alive.
+  renderer_.reset();
+
+  // Signal the release fences, which triggers the deregistration call, even though the Flatland
+  // instance and Renderer associated with the call have been cleaned up.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId)).Times(1);
+  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
 
@@ -3406,11 +3468,9 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
 
   // Clear the graph, then signal the release fence and ensure the buffer collection is released.
   flatland.ClearGraph();
-  PRESENT(flatland, true);
 
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id1)).Times(1);
-  flatland.SignalBufferReleaseFence();
-  RunLoopUntilIdle();
+  PRESENT(flatland, true);
 
   // The buffer collection and Image ID should be available for re-use.
   ImageProperties properties2;

@@ -127,12 +127,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // exist for this Flatland instance, returns std::nullopt.
   std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
 
-  // TODO(fxbug.dev/53330): remove this function when FrameScheduler is integrated.
-  // For signaling the buffer collection release fence in tests only. Calling this function will
-  // signal the zx::event required for buffer collection deregistration. Each call will signal
-  // the event once.
-  void SignalBufferReleaseFence();
-
  private:
   void ReportError();
 
@@ -270,12 +264,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // The set of GlobalBufferCollectionIds associated with released BufferCollectionIds that have
   // not yet been garbage collected.
   std::unordered_set<GlobalBufferCollectionId> released_buffer_collection_ids_;
-
-  // TODO(fxbug.dev/53330): remove this event when FrameScheduler is integrated.
-  // For testing purposes only. When a deregistered buffer collection is ready for garbage
-  // collection, the deregister call is placed in a Wait that runs when this event is signaled.
-  // Tests can call SignalBufferReleaseFence() to signal this event.
-  zx::event buffer_collection_release_fence_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;
