@@ -10,10 +10,8 @@ use {
         channel::{Cbw, Phy},
         ie::{
             rsn::{
-                akm::{self, Akm},
-                cipher::{self, Cipher},
-                rsne::{RsnCapabilities, Rsne},
-                OUI,
+                akm::{self, Akm, AKM_PSK},
+                cipher::{self, Cipher, CIPHER_CCMP_128, CIPHER_TKIP},
             },
             wpa::WpaIe,
             *,
@@ -26,75 +24,12 @@ use {
     zerocopy::AsBytes,
 };
 
-pub fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
-    let a_rsne = Rsne {
-        version: 1,
-        group_data_cipher_suite: data.map(|t| make_cipher(t)),
-        pairwise_cipher_suites: pairwise.into_iter().map(|t| make_cipher(t)).collect(),
-        akm_suites: akms.into_iter().map(|t| make_akm(t)).collect(),
-        ..Default::default()
-    };
-    a_rsne
-}
-
-pub fn wpa2_psk_ccmp_rsne_with_caps(caps: RsnCapabilities) -> Rsne {
-    let a_rsne = Rsne {
-        version: 1,
-        group_data_cipher_suite: Some(make_cipher(cipher::CCMP_128)),
-        pairwise_cipher_suites: vec![make_cipher(cipher::CCMP_128)],
-        akm_suites: vec![make_akm(akm::PSK)],
-        rsn_capabilities: Some(caps),
-        ..Default::default()
-    };
-    a_rsne
-}
-
-pub fn wpa3_mixed_psk_ccmp_rsne() -> Rsne {
-    Rsne {
-        version: 1,
-        group_data_cipher_suite: Some(make_cipher(cipher::CCMP_128)),
-        pairwise_cipher_suites: vec![make_cipher(cipher::CCMP_128)],
-        akm_suites: vec![make_akm(akm::SAE), make_akm(akm::PSK)],
-        rsn_capabilities: Some(RsnCapabilities(0).with_mgmt_frame_protection_cap(true)),
-        ..Default::default()
-    }
-}
-
-pub fn wpa3_psk_ccmp_rsne() -> Rsne {
-    Rsne {
-        version: 1,
-        group_data_cipher_suite: Some(make_cipher(cipher::CCMP_128)),
-        pairwise_cipher_suites: vec![make_cipher(cipher::CCMP_128)],
-        akm_suites: vec![make_akm(akm::SAE)],
-        rsn_capabilities: Some(
-            RsnCapabilities(0)
-                .with_mgmt_frame_protection_cap(true)
-                .with_mgmt_frame_protection_req(true),
-        ),
-        ..Default::default()
-    }
-}
-
 pub fn make_wpa1_ie() -> WpaIe {
     WpaIe {
-        multicast_cipher: make_cipher(cipher::TKIP),
-        unicast_cipher_list: vec![make_cipher(cipher::TKIP)],
-        akm_list: vec![make_akm(akm::PSK)],
+        multicast_cipher: CIPHER_TKIP,
+        unicast_cipher_list: vec![CIPHER_TKIP],
+        akm_list: vec![AKM_PSK],
     }
-}
-
-pub fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(s_rsne.len());
-    s_rsne.write_into(&mut buf).expect("error writing RSNE into buffer");
-    buf
-}
-
-fn make_cipher(suite_type: u8) -> cipher::Cipher {
-    cipher::Cipher { oui: OUI, suite_type }
-}
-
-fn make_akm(suite_type: u8) -> akm::Akm {
-    akm::Akm { oui: OUI, suite_type }
 }
 
 pub fn eapol_key_frame() -> eapol::KeyFrameBuf {
@@ -163,7 +98,7 @@ pub fn wpa1_gtk() -> Gtk {
 }
 
 pub fn akm() -> Akm {
-    make_akm(akm::PSK)
+    AKM_PSK
 }
 
 pub fn wpa1_akm() -> Akm {
@@ -171,7 +106,7 @@ pub fn wpa1_akm() -> Akm {
 }
 
 pub fn cipher() -> Cipher {
-    make_cipher(cipher::CCMP_128)
+    CIPHER_CCMP_128
 }
 
 pub fn wpa1_cipher() -> Cipher {

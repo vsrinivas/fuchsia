@@ -48,7 +48,6 @@ rustc_library("wlan-sme") {
     "src/ap/mod.rs",
     "src/ap/remote_client/mod.rs",
     "src/ap/remote_client/state.rs",
-    "src/ap/rsn.rs",
     "src/ap/test_utils.rs",
     "src/capabilities.rs",
     "src/client/bss.rs",

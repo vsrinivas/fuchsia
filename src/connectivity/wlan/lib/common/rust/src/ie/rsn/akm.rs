@@ -32,6 +32,12 @@ pub const EAP_SUITEB_SHA384: u8 = 12;
 pub const FT_EAP_SHA384: u8 = 13;
 // 14-255 - Reserved.
 
+// Shorthands for the most commonly constructed akm suites
+pub const AKM_EAP: Akm = Akm::new_dot11(EAP);
+pub const AKM_PSK: Akm = Akm::new_dot11(PSK);
+pub const AKM_FT_PSK: Akm = Akm::new_dot11(FT_PSK);
+pub const AKM_SAE: Akm = Akm::new_dot11(SAE);
+
 #[derive(PartialOrd, PartialEq, Eq, Clone)]
 pub struct Akm {
     pub oui: Oui,
@@ -166,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_new_dot11() {
-        let psk = Akm::new_dot11(PSK);
+        let psk = AKM_PSK;
         assert!(!psk.is_vendor_specific());
         assert!(psk.has_known_algorithm());
         assert!(!psk.is_reserved());

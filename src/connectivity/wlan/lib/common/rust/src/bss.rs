@@ -108,10 +108,12 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
         let supports_wpa_1 = self
             .get_wpa_ie()
             .map(|wpa_ie| {
-                let mut rsne = ie::rsn::rsne::Rsne::new();
-                rsne.group_data_cipher_suite = Some(wpa_ie.multicast_cipher);
-                rsne.pairwise_cipher_suites = wpa_ie.unicast_cipher_list;
-                rsne.akm_suites = wpa_ie.akm_list;
+                let rsne = ie::rsn::rsne::Rsne {
+                    group_data_cipher_suite: Some(wpa_ie.multicast_cipher),
+                    pairwise_cipher_suites: wpa_ie.unicast_cipher_list,
+                    akm_suites: wpa_ie.akm_list,
+                    ..Default::default()
+                };
                 suite_filter::WPA1_PERSONAL.is_satisfied(&rsne)
             })
             .unwrap_or(false);

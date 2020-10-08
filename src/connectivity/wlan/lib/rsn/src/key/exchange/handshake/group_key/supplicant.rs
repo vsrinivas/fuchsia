@@ -174,7 +174,7 @@ mod tests {
     use crate::key_data::kde;
     use crate::rsna::{test_util, Dot11VerifiedKeyFrame, NegotiatedProtection, Role};
     use wlan_common::big_endian::BigEndianU64;
-    use wlan_common::ie::rsn::cipher::{Cipher, BIP_CMAC_128, CCMP_128, TKIP};
+    use wlan_common::ie::rsn::cipher::{Cipher, CIPHER_BIP_CMAC_128, CIPHER_CCMP_128, TKIP};
     use wlan_common::organization::Oui;
 
     const KCK: [u8; 16] = [1; 16];
@@ -242,7 +242,7 @@ mod tests {
     }
 
     fn fake_gtk() -> Gtk {
-        Gtk::from_gtk(GTK.to_vec(), GTK_KEY_ID, Cipher::new_dot11(CCMP_128), GTK_RSC)
+        Gtk::from_gtk(GTK.to_vec(), GTK_KEY_ID, CIPHER_CCMP_128, GTK_RSC)
             .expect("error creating expected GTK")
     }
 
@@ -251,7 +251,7 @@ mod tests {
             igtk: IGTK.to_vec(),
             ipn: IGTK_IPN,
             key_id: IGTK_KEY_ID,
-            cipher: Cipher::new_dot11(BIP_CMAC_128),
+            cipher: CIPHER_BIP_CMAC_128,
         }
     }
 

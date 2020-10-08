@@ -5,8 +5,8 @@
 use {
     crate::{
         ap::{
-            aid, authenticator::Authenticator, event::*, remote_client::RemoteClient,
-            rsn::is_valid_rsne_subset, Context, RsnCfg,
+            aid, authenticator::Authenticator, event::*, remote_client::RemoteClient, Context,
+            RsnCfg,
         },
         timer::EventId,
     },
@@ -78,7 +78,7 @@ fn new_authenticator_from_rsne(
 ) -> Result<Box<dyn Authenticator>, anyhow::Error> {
     let (_, s_rsne) =
         rsne::from_bytes(s_rsne_bytes).map_err(|e| format_err!("failed to parse RSNE: {:?}", e))?;
-    ensure!(is_valid_rsne_subset(&s_rsne, &a_rsn.rsne)?, "incompatible client RSNE");
+    ensure!(s_rsne.is_valid_subset_of(&a_rsn.rsne)?, "incompatible client RSNE");
 
     let nonce_reader = NonceReader::new(&device_addr)?;
     let gtk_provider = GtkProvider::new(NegotiatedProtection::from_rsne(&s_rsne)?.group_data)?;
@@ -781,9 +781,9 @@ mod tests {
         wlan_common::{
             assert_variant,
             ie::rsn::{
-                akm, cipher,
-                rsne::{RsnCapabilities, Rsne},
-                OUI,
+                akm::AKM_PSK,
+                cipher::{CIPHER_CCMP_128, CIPHER_GCMP_256},
+                rsne::Rsne,
             },
             mac::MacAddr,
         },
@@ -792,23 +792,6 @@ mod tests {
 
     const AP_ADDR: MacAddr = [6u8; 6];
     const CLIENT_ADDR: MacAddr = [7u8; 6];
-
-    fn make_cipher(suite_type: u8) -> cipher::Cipher {
-        cipher::Cipher { oui: OUI, suite_type }
-    }
-
-    fn make_akm(suite_type: u8) -> akm::Akm {
-        akm::Akm { oui: OUI, suite_type }
-    }
-
-    fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
-        let mut rsne = Rsne::new();
-        rsne.group_data_cipher_suite = data.map(make_cipher);
-        rsne.pairwise_cipher_suites = pairwise.into_iter().map(make_cipher).collect();
-        rsne.akm_suites = akms.into_iter().map(make_akm).collect();
-        rsne.rsn_capabilities = Some(RsnCapabilities(0));
-        rsne
-    }
 
     fn make_remote_client() -> RemoteClient {
         RemoteClient::new(CLIENT_ADDR)
@@ -1288,7 +1271,7 @@ mod tests {
         let state: States =
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1340,9 +1323,19 @@ mod tests {
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
         let mut rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
-        rsn_cfg.rsne = make_rsne(Some(cipher::GCMP_256), vec![cipher::CCMP_128], vec![akm::PSK]);
+        rsn_cfg.rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_GCMP_256),
+            pairwise_cipher_suites: vec![CIPHER_CCMP_128],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
 
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_CCMP_128),
+            pairwise_cipher_suites: vec![CIPHER_CCMP_128],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1585,7 +1578,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1644,7 +1637,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1697,7 +1690,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
@@ -1742,7 +1735,7 @@ mod tests {
 
         let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
 
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
+        let s_rsne = Rsne::wpa2_psk_ccmp_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 

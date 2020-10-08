@@ -6,13 +6,11 @@ mod aid;
 mod authenticator;
 mod event;
 mod remote_client;
-mod rsn;
 #[cfg(test)]
 pub mod test_utils;
 
 use event::*;
 use remote_client::*;
-use rsn::*;
 
 use {
     crate::{
@@ -716,7 +714,9 @@ fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, anyhow
         Ok(None)
     } else {
         let psk = psk::compute(password, ssid)?;
-        Ok(Some(RsnCfg { psk, rsne: create_wpa2_psk_rsne() }))
+        // Note: TKIP is legacy and considered insecure. Only allow CCMP usage
+        // for group and pairwise ciphers.
+        Ok(Some(RsnCfg { psk, rsne: Rsne::wpa2_psk_ccmp_rsne() }))
     }
 }
 

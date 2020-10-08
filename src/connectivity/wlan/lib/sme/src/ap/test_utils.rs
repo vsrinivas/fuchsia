@@ -4,10 +4,10 @@
 
 use eapol;
 use std::sync::{Arc, Mutex};
-use wlan_common::ie::rsn::rsne::RsnCapabilities;
+use wlan_common::ie::rsn::rsne::{RsnCapabilities, Rsne};
 use wlan_rsn::{rsna::UpdateSink, Error, NegotiatedProtection};
 
-use crate::{ap::authenticator::Authenticator, test_utils};
+use crate::ap::authenticator::Authenticator;
 
 #[derive(Debug)]
 pub struct MockAuthenticator {
@@ -46,7 +46,7 @@ impl MockAuthenticator {
         initiate_mock: Arc<Mutex<UpdateSink>>,
         on_eapol_frame_mock: Arc<Mutex<UpdateSink>>,
     ) -> Self {
-        let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        let rsne = Rsne::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
         MockAuthenticator {
             initiate: initiate_mock,
             on_eapol_frame: on_eapol_frame_mock,

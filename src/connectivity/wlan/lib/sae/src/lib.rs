@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_wlan_mlme::AuthenticateResultCodes as ResultCode,
     log::warn,
     mundane::{hash::Digest, hmac},
-    wlan_common::ie::rsn::akm::{self, Akm},
+    wlan_common::ie::rsn::akm::{self, Akm, AKM_PSK, AKM_SAE},
     wlan_common::mac::MacAddr,
 };
 
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn bad_akm() {
-        let akm = Akm::new_dot11(akm::PSK);
+        let akm = AKM_PSK;
         let res = new_sae_handshake(19, akm, Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B);
         assert!(res.is_err());
         assert!(format!("{}", res.err().unwrap())
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn bad_fcg() {
-        let akm = Akm::new_dot11(akm::SAE);
+        let akm = AKM_SAE;
         let res = new_sae_handshake(200, akm, Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B);
         assert!(res.is_err());
         assert!(format!("{}", res.err().unwrap()).contains("Unsupported SAE group id: 200"));
@@ -421,7 +421,7 @@ mod tests {
     // Test helper to advance through successful steps of an SAE handshake.
     impl TestHandshake {
         fn new() -> Self {
-            let akm = Akm::new_dot11(akm::SAE);
+            let akm = AKM_SAE;
             let mut sta1 =
                 new_sae_handshake(19, akm.clone(), Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B)
                     .unwrap();
@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn password_mismatch() {
-        let akm = Akm::new_dot11(akm::SAE);
+        let akm = AKM_SAE;
         let mut sta1 =
             new_sae_handshake(19, akm.clone(), Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B)
                 .unwrap();

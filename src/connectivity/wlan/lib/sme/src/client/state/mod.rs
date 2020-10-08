@@ -1154,7 +1154,7 @@ mod tests {
     use futures::channel::{mpsc, oneshot};
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
-    use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities, RadioConfig};
+    use wlan_common::{assert_variant, ie::rsn::rsne::Rsne, RadioConfig};
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
         rsna::{SecAssocUpdate, UpdateSink},
@@ -2370,7 +2370,7 @@ mod tests {
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let bss = protected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7]);
-        let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        let rsne = Rsne::wpa2_psk_ccmp_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
             responder: Some(responder),
@@ -2483,7 +2483,7 @@ mod tests {
 
     fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
         let bss = protected_bss(b"foo".to_vec(), bssid);
-        let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
+        let rsne = Rsne::wpa2_psk_ccmp_rsne();
         let rsna = Rsna {
             negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
                 .expect("invalid NegotiatedProtection"),

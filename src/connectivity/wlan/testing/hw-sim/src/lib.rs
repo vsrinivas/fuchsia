@@ -25,7 +25,11 @@ use {
         bss::Protection,
         data_writer,
         ie::{
-            rsn::{akm, cipher, rsne},
+            rsn::{
+                akm,
+                cipher::{self, CIPHER_CCMP_128, CIPHER_TKIP},
+                rsne,
+            },
             wpa::WpaIe,
         },
         mac, mgmt_writer,
@@ -259,12 +263,7 @@ pub fn send_association_response(
 }
 
 fn default_wpa2_psk_rsne() -> wlan_common::ie::rsn::rsne::Rsne {
-    let mut rsne = rsne::Rsne::new();
-    rsne.group_data_cipher_suite = Some(cipher::Cipher::new_dot11(cipher::CCMP_128));
-    rsne.pairwise_cipher_suites = vec![cipher::Cipher::new_dot11(cipher::CCMP_128)];
-    rsne.akm_suites = vec![akm::Akm::new_dot11(akm::PSK)];
-    rsne.rsn_capabilities = Some(rsne::RsnCapabilities(0));
-    rsne
+    rsne::Rsne::wpa2_psk_ccmp_rsne()
 }
 
 fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
@@ -316,8 +315,7 @@ pub fn create_deprecated_wpa1_psk_authenticator(
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
-    let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::TKIP))
-        .expect("creating gtk provider");
+    let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_TKIP).expect("creating gtk provider");
     let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
     let s_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
     let a_protection = wlan_rsn::ProtectionInfo::LegacyWpa(default_deprecated_wpa1_vendor_ie());
@@ -339,8 +337,7 @@ pub fn create_wpa2_psk_authenticator(
     passphrase: &str,
 ) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
-    let gtk_provider = wlan_rsn::GtkProvider::new(cipher::Cipher::new_dot11(cipher::CCMP_128))
-        .expect("creating gtk provider");
+    let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
     let psk = wlan_rsn::psk::compute(passphrase.as_bytes(), ssid).expect("computing PSK");
     let s_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());
     let a_rsne = wlan_rsn::ProtectionInfo::Rsne(default_wpa2_psk_rsne());

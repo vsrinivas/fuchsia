@@ -32,6 +32,13 @@ pub const BIP_GMAC_256: u8 = 12;
 pub const BIP_CMAC_256: u8 = 13;
 // 14-255 - Reserved.
 
+// Shorthands for the most commonly constructed ciphers
+pub const CIPHER_TKIP: Cipher = Cipher::new_dot11(TKIP);
+pub const CIPHER_CCMP_128: Cipher = Cipher::new_dot11(CCMP_128);
+pub const CIPHER_BIP_CMAC_128: Cipher = Cipher::new_dot11(BIP_CMAC_128);
+pub const CIPHER_GCMP_256: Cipher = Cipher::new_dot11(GCMP_256);
+pub const CIPHER_BIP_CMAC_256: Cipher = Cipher::new_dot11(BIP_CMAC_256);
+
 #[derive(PartialOrd, PartialEq, Eq, Clone, Hash)]
 pub struct Cipher {
     pub oui: Oui,
@@ -161,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_new_dot11() {
-        let ccmp = Cipher::new_dot11(CCMP_128);
+        let ccmp = CIPHER_CCMP_128;
         assert!(!ccmp.is_vendor_specific());
         assert!(ccmp.has_known_usage());
         assert!(ccmp.is_enhanced());

@@ -4,7 +4,7 @@
 
 pub mod akm;
 pub mod cipher;
-mod fake_rsnes;
+pub mod fake_rsnes;
 mod pmkid;
 pub mod rsne;
 pub mod suite_filter;

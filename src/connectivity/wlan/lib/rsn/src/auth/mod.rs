@@ -13,10 +13,7 @@ use crate::{
 use anyhow;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use log::warn;
-use wlan_common::{
-    ie::rsn::akm::{self, Akm},
-    mac::MacAddr,
-};
+use wlan_common::{ie::rsn::akm::AKM_SAE, mac::MacAddr};
 use wlan_sae as sae;
 use zerocopy::ByteSlice;
 
@@ -66,7 +63,7 @@ impl Method {
             Config::Sae { password, mac, peer_mac } => {
                 let handshake = sae::new_sae_handshake(
                     sae::DEFAULT_GROUP_ID,
-                    Akm::new_dot11(akm::SAE),
+                    AKM_SAE,
                     password,
                     mac,
                     peer_mac.clone(),

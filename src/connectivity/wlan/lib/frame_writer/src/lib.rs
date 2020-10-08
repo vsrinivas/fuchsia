@@ -329,13 +329,7 @@ mod tests {
 
     #[test]
     fn write_rsne() {
-        let rsne = rsne::Rsne {
-            version: rsne::VERSION,
-            group_data_cipher_suite: Some(Cipher::new_dot11(CCMP_128)),
-            pairwise_cipher_suites: vec![Cipher::new_dot11(CCMP_128)],
-            akm_suites: vec![Akm::new_dot11(PSK)],
-            ..Default::default()
-        };
+        let rsne = rsne::Rsne::wpa2_psk_ccmp_rsne();
 
         let buffer_provider = BufferProvider;
         let (buf, bytes_written) = write_frame!(buffer_provider, {

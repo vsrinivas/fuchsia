@@ -6,7 +6,7 @@ use {
     crate::{
         capabilities::{ClientCapabilities, StaCapabilities},
         client::{bss::BssInfo, rsn::Supplicant},
-        test_utils::{self, *},
+        test_utils::*,
         Ssid,
     },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -22,7 +22,7 @@ use {
         assert_variant,
         bss::Protection,
         channel,
-        ie::{rsn::rsne::RsnCapabilities, write_wpa1_ie, *},
+        ie::{rsn::rsne::Rsne, write_wpa1_ie, *},
         mac,
     },
     wlan_rsn::{format_rsn_err, rsna::UpdateSink, Error},
@@ -92,18 +92,18 @@ pub fn fake_wpa1_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
 }
 
 pub fn fake_protected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
-    let a_rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
-    fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
+    let a_rsne = Rsne::wpa2_psk_ccmp_rsne();
+    fake_bss_description(ssid, Some(a_rsne.into_bytes()))
 }
 
 pub fn fake_wpa3_mixed_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
-    let a_rsne = test_utils::wpa3_mixed_psk_ccmp_rsne();
-    fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
+    let a_rsne = Rsne::wpa3_mixed_psk_ccmp_rsne();
+    fake_bss_description(ssid, Some(a_rsne.into_bytes()))
 }
 
 pub fn fake_wpa3_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
-    let a_rsne = test_utils::wpa3_psk_ccmp_rsne();
-    fake_bss_description(ssid, Some(test_utils::rsne_as_bytes(a_rsne)))
+    let a_rsne = Rsne::wpa3_ccmp_rsne();
+    fake_bss_description(ssid, Some(a_rsne.into_bytes()))
 }
 
 pub fn fake_vht_bss_description() -> fidl_mlme::BssDescription {

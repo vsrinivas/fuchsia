@@ -4,11 +4,31 @@
 
 use {
     super::{
-        akm::{self, Akm},
-        cipher::{self, Cipher},
+        akm::{self, Akm, AKM_EAP},
+        cipher::{self, Cipher, CIPHER_BIP_CMAC_128, CIPHER_CCMP_128},
     },
     crate::ie,
 };
+
+// IEEE 802.11-2016, 9.4.2.25.2
+// If group data cipher suite field is not included in RSNE, CCMP-128 is the default for
+// non-DMG STA.
+pub const DEFAULT_GROUP_DATA_CIPHER: Cipher = CIPHER_CCMP_128;
+
+// IEEE 802.11-2016, 9.4.2.25.2
+// If pairwise cipher suite field is not included in RSNE, CCMP-128 is the default for
+// non-DMG STA.
+pub const DEFAULT_PAIRWISE_CIPHER: [Cipher; 1] = [CIPHER_CCMP_128];
+
+// IEEE 802.11-2016, 9.4.2.25.3
+// If akm suite list field is not included in RSNE, suite selector value 00-0F-AC:1
+// (i.e. akm::EAP) is the default.
+pub const DEFAULT_AKM: [Akm; 1] = [AKM_EAP];
+
+// IEEE 802.11-2016, 9.4.2.25.2
+// If management frame protection is enabled, and group management cipher suite field is
+// not included in RSNE, BIP-CMAC-128 is the default.
+pub const DEFAULT_GROUP_MGMT_CIPHER: Cipher = CIPHER_BIP_CMAC_128;
 
 pub struct SuiteFilter<'a> {
     known_group_data_ciphers: &'a [u8],
@@ -19,28 +39,16 @@ pub struct SuiteFilter<'a> {
 
 impl<'a> SuiteFilter<'a> {
     pub fn is_satisfied(&self, rsne: &ie::rsn::rsne::Rsne) -> bool {
-        // IEEE 802.11-2016, 9.4.2.25.2
-        // If group data cipher suite field is not included in RSNE, CCMP-128 is the default for
-        // non-DMG STA.
-        const DEFAULT_GROUP_DATA_CIPHER: Cipher = Cipher::new_dot11(cipher::CCMP_128);
         let group_data_cipher =
             rsne.group_data_cipher_suite.as_ref().unwrap_or(&DEFAULT_GROUP_DATA_CIPHER);
         let group_data_satisfied = group_data_cipher.has_known_usage()
             && self.known_group_data_ciphers.iter().any(|s| group_data_cipher.suite_type == *s);
 
-        // IEEE 802.11-2016, 9.4.2.25.3
-        // If akm suite list field is not included in RSNE, suite selector value 00-0F-AC:1
-        // (i.e. akm::EAP) is the default.
-        const DEFAULT_AKM: [Akm; 1] = [Akm::new_dot11(akm::EAP)];
         let akms = if rsne.akm_suites.is_empty() { &DEFAULT_AKM[..] } else { &rsne.akm_suites[..] };
         let akm_satisfied = akms
             .iter()
             .any(|a| a.has_known_algorithm() && self.known_akms.iter().any(|s| a.suite_type == *s));
 
-        // IEEE 802.11-2016, 9.4.2.25.2
-        // If pairwise cipher suite field is not included in RSNE, CCMP-128 is the default for
-        // non-DMG STA.
-        const DEFAULT_PAIRWISE_CIPHER: [Cipher; 1] = [Cipher::new_dot11(cipher::CCMP_128)];
         let pairwise_ciphers = if rsne.pairwise_cipher_suites.is_empty() {
             &DEFAULT_PAIRWISE_CIPHER[..]
         } else {
@@ -50,10 +58,6 @@ impl<'a> SuiteFilter<'a> {
             c.has_known_usage() && self.known_pairwise_ciphers.iter().any(|s| c.suite_type == *s)
         });
 
-        // IEEE 802.11-2016, 9.4.2.25.2
-        // If management frame protection is enabled, and group management cipher suite field is
-        // not included in RSNE, BIP-CMAC-128 is the default.
-        const DEFAULT_GROUP_MGMT_CIPHER: Cipher = Cipher::new_dot11(cipher::BIP_CMAC_128);
         let group_mgmt_cipher =
             rsne.group_mgmt_cipher_suite.as_ref().unwrap_or(&DEFAULT_GROUP_MGMT_CIPHER);
         let group_mgmt_satisfied = self
@@ -160,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_suite_filter_empty_rsne() {
-        let rsne = ie::rsn::rsne::Rsne::new();
+        let rsne = ie::rsn::rsne::Rsne::default();
         assert!(WPA2_ENTERPRISE.is_satisfied(&rsne));
         assert!(!WPA2_PERSONAL.is_satisfied(&rsne));
     }
