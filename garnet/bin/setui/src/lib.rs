@@ -124,12 +124,13 @@ pub struct AgentConfiguration {
     pub agent_types: HashSet<AgentType>,
 }
 
-impl From<AgentType> for AgentBlueprintHandle {
-    fn from(agent_type: AgentType) -> AgentBlueprintHandle {
+impl From<AgentType> for Option<AgentBlueprintHandle> {
+    fn from(agent_type: AgentType) -> Option<AgentBlueprintHandle> {
         match agent_type {
-            AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
-            AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
-            AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
+            AgentType::Earcons => Some(crate::agent::earcons::agent::blueprint::create()),
+            // TODO(fxb/57919): Enable when media buttons agent is fully implemented.
+            AgentType::MediaButtons => None,
+            AgentType::Restore => Some(crate::agent::restore_agent::blueprint::create()),
         }
     }
 }
@@ -198,7 +199,7 @@ impl Environment {
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
-    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
+    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> Option<AgentBlueprintHandle>>>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
@@ -289,7 +290,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub fn agent_mapping<F>(mut self, agent_mapping_func: F) -> EnvironmentBuilder<T>
     where
-        F: Fn(AgentType) -> AgentBlueprintHandle + 'static,
+        F: Fn(AgentType) -> Option<AgentBlueprintHandle> + 'static,
     {
         self.agent_mapping_func = Some(Box::new(agent_mapping_func));
         self
@@ -356,7 +357,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let agent_blueprints = self
             .agent_mapping_func
             .map(|agent_mapping_func| {
-                agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
+                agent_types
+                    .into_iter()
+                    .filter_map(|agent_type| (agent_mapping_func)(agent_type))
+                    .collect()
             })
             .unwrap_or(self.agent_blueprints);
 
@@ -700,4 +704,25 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+
+    // Validates that MediaButtonsAgent is the only agent that maps to no agent creation when
+    // using the default agent mapping.
+    #[test]
+    fn test_default_agent_mapping() {
+        assert!(
+            <Option<AgentBlueprintHandle> as From<AgentType>>::from(AgentType::Earcons).is_some(),
+            "Earcons agent should be enabled"
+        );
+        assert!(
+            <Option<AgentBlueprintHandle> as From<AgentType>>::from(AgentType::MediaButtons)
+                .is_none(),
+            "MediaButtons agent should be disabled"
+        );
+        assert!(
+            <Option<AgentBlueprintHandle> as From<AgentType>>::from(AgentType::Restore).is_some(),
+            "Restore agent should be enabled"
+        );
+    }
+}

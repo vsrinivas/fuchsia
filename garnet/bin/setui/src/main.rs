@@ -62,6 +62,6 @@ fn main() -> Result<(), Error> {
     // block here and therefore continue without waiting for the result.
     EnvironmentBuilder::new(Arc::new(Mutex::new(storage_factory)))
         .configuration(configuration)
-        .agent_mapping(<AgentBlueprintHandle as From<AgentType>>::from)
+        .agent_mapping(<Option<AgentBlueprintHandle> as From<AgentType>>::from)
         .spawn(executor)
 }
