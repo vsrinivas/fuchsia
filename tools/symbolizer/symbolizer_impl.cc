@@ -130,6 +130,17 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
                                std::string_view message) {
   InitProcess();
 
+  // Find the module to see if the stack might be corrupt.
+  const debug_ipc::Module* module = nullptr;
+  if (auto next = aux_modules_info_.upper_bound(address); next != aux_modules_info_.begin()) {
+    next--;
+    const auto& aux_info = next->second;
+    const auto& prev = modules_[aux_info.id];
+    if (address - prev.base <= aux_info.size) {
+      module = &prev;
+    }
+  }
+
   uint64_t call_address = address;
   // Substracts 1 from the address if it's a return address or unknown. It shouldn't be an issue
   // for unknown addresses as most instructions are more than 1 byte.
@@ -144,8 +155,10 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
   for (size_t i = 0; i < stack.size(); i++) {
     // Frame number.
     std::string out = "   #" + std::to_string(frame_index);
-    if (i > 0) {
-      out += "." + std::to_string(i);
+
+    // Append a sequence for inline frames, i.e. not the last frame.
+    if (i != stack.size() - 1) {
+      out += "." + std::to_string(stack.size() - 1 - i);
     }
 
     // Pad to 9.
@@ -156,17 +169,6 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
 
     // Print the absolute address first.
     out += fxl::StringPrintf("0x%016" PRIx64 " in", address);
-
-    // Find the module to see if the stack might be corrupt.
-    const debug_ipc::Module* module = nullptr;
-    if (auto next = aux_modules_info_.upper_bound(address); next != aux_modules_info_.begin()) {
-      next--;
-      const auto& aux_info = next->second;
-      const auto& prev = modules_[aux_info.id];
-      if (address - prev.base <= aux_info.size) {
-        module = &prev;
-      }
-    }
 
     if (module) {
       // Function name.

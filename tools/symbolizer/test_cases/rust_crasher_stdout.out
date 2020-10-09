@@ -6,29 +6,29 @@ stack backtrace:
 [[[ELF module #0x2 "libstd-771befcd97ac0955.so" BuildID=69f7458ba652c884 0x34db40f8000]]]
 [[[ELF module #0x3 "<vDSO>" BuildID=b60aa30791277c5b 0x82377173f000]]]
 [[[ELF module #0x4 "libc.so" BuildID=8ce60b04bdfd0610 0x80e2c31bb000]]]
-   #0    0x0000034db41abba4 in std::backtrace_rs::backtrace::libunwind::trace library/std/src/../../backtrace/src/backtrace/libunwind.rs:96 <libstd-771befcd97ac0955.so>+0xb3ba4
-   #0.1  0x0000034db41abba4 in std::backtrace_rs::backtrace::trace_unsynchronized<closure-1> library/std/src/../../backtrace/src/backtrace/mod.rs:66 <libstd-771befcd97ac0955.so>+0xb3ba4
-   #0.2  0x0000034db41abba4 in std::sys_common::backtrace::_print_fmt library/std/src/sys_common/backtrace.rs:79 <libstd-771befcd97ac0955.so>+0xb3ba4
-   #0.3  0x0000034db41abba4 in std::sys_common::backtrace::_print::{{impl}}::fmt library/std/src/sys_common/backtrace.rs:58 <libstd-771befcd97ac0955.so>+0xb3ba4
+   #0.3  0x0000034db41abba4 in std::backtrace_rs::backtrace::libunwind::trace library/std/src/../../backtrace/src/backtrace/libunwind.rs:96 <libstd-771befcd97ac0955.so>+0xb3ba4
+   #0.2  0x0000034db41abba4 in std::backtrace_rs::backtrace::trace_unsynchronized<closure-1> library/std/src/../../backtrace/src/backtrace/mod.rs:66 <libstd-771befcd97ac0955.so>+0xb3ba4
+   #0.1  0x0000034db41abba4 in std::sys_common::backtrace::_print_fmt library/std/src/sys_common/backtrace.rs:79 <libstd-771befcd97ac0955.so>+0xb3ba4
+   #0    0x0000034db41abba4 in std::sys_common::backtrace::_print::{{impl}}::fmt library/std/src/sys_common/backtrace.rs:58 <libstd-771befcd97ac0955.so>+0xb3ba4
    #1    0x0000034db4213d30 in core::fmt::write library/core/src/fmt/mod.rs:1117 <libstd-771befcd97ac0955.so>+0x11bd30
    #2    0x0000034db419e690 in std::io::Write::write_fmt<std::sys::unix::stdio::Stderr> library/std/src/io/mod.rs:1510 <libstd-771befcd97ac0955.so>+0xa6690
-   #3    0x0000034db41afa1c in std::sys_common::backtrace::_print library/std/src/sys_common/backtrace.rs:61 <libstd-771befcd97ac0955.so>+0xb7a1c
+   #3.2  0x0000034db41afa1c in std::sys_common::backtrace::_print library/std/src/sys_common/backtrace.rs:61 <libstd-771befcd97ac0955.so>+0xb7a1c
    #3.1  0x0000034db41afa1c in std::sys_common::backtrace::print library/std/src/sys_common/backtrace.rs:48 <libstd-771befcd97ac0955.so>+0xb7a1c
-   #3.2  0x0000034db41afa1c in std::panicking::default_hook::{{closure}} library/std/src/panicking.rs:200 <libstd-771befcd97ac0955.so>+0xb7a1c
+   #3    0x0000034db41afa1c in std::panicking::default_hook::{{closure}} library/std/src/panicking.rs:200 <libstd-771befcd97ac0955.so>+0xb7a1c
    #4    0x0000034db41af738 in std::panicking::default_hook library/std/src/panicking.rs:219 <libstd-771befcd97ac0955.so>+0xb7738
    #5    0x0000034db41b01d8 in std::panicking::rust_panic_with_hook library/std/src/panicking.rs:569 <libstd-771befcd97ac0955.so>+0xb81d8
    #6    0x00000075701d2070 in std::panicking::begin_panic::{{closure}}<&str> /b/s/w/ir/k/rust/library/std/src/panicking.rs:498 <>+0x1070
    #7    0x00000075701d2034 in std::sys_common::backtrace::__rust_end_short_backtrace<closure-0,!> /b/s/w/ir/k/rust/library/std/src/sys_common/backtrace.rs:153 <>+0x1034
    #8    0x00000075701d20a4 in std::panicking::begin_panic<&str> /b/s/w/ir/k/rust/library/std/src/panicking.rs:497 <>+0x10a4
    #9    0x00000075701d2150 in rust_crasher::main ../../src/developer/forensics/crasher/rust/src/main.rs:6 <>+0x1150
-   #10   0x00000075701d2040 in core::ops::function::FnOnce::call_once<fn(),()> /b/s/w/ir/k/rust/library/core/src/ops/function.rs:233 <>+0x1040
-   #10.1 0x00000075701d2040 in std::sys_common::backtrace::__rust_begin_short_backtrace<fn(),()> /b/s/w/ir/k/rust/library/std/src/sys_common/backtrace.rs:137 <>+0x1040
+   #10.1 0x00000075701d2040 in core::ops::function::FnOnce::call_once<fn(),()> /b/s/w/ir/k/rust/library/core/src/ops/function.rs:233 <>+0x1040
+   #10   0x00000075701d2040 in std::sys_common::backtrace::__rust_begin_short_backtrace<fn(),()> /b/s/w/ir/k/rust/library/std/src/sys_common/backtrace.rs:137 <>+0x1040
    #11   0x00000075701d21b0 in std::rt::lang_start::{{closure}}<()> /b/s/w/ir/k/rust/library/std/src/rt.rs:66 <>+0x11b0
-   #12   0x0000034db41b03d8 in core::ops::function::impls::{{impl}}::call_once<(),Fn<()>> /b/s/w/ir/k/rust/library/core/src/ops/function.rs:265 <libstd-771befcd97ac0955.so>+0xb83d8
-   #12.1 0x0000034db41b03d8 in std::panicking::try::do_call<&Fn<()>,i32> library/std/src/panicking.rs:373 <libstd-771befcd97ac0955.so>+0xb83d8
+   #12.4 0x0000034db41b03d8 in core::ops::function::impls::{{impl}}::call_once<(),Fn<()>> /b/s/w/ir/k/rust/library/core/src/ops/function.rs:265 <libstd-771befcd97ac0955.so>+0xb83d8
+   #12.3 0x0000034db41b03d8 in std::panicking::try::do_call<&Fn<()>,i32> library/std/src/panicking.rs:373 <libstd-771befcd97ac0955.so>+0xb83d8
    #12.2 0x0000034db41b03d8 in std::panicking::try<i32,&Fn<()>> library/std/src/panicking.rs:337 <libstd-771befcd97ac0955.so>+0xb83d8
-   #12.3 0x0000034db41b03d8 in std::panic::catch_unwind<&Fn<()>,i32> library/std/src/panic.rs:394 <libstd-771befcd97ac0955.so>+0xb83d8
-   #12.4 0x0000034db41b03d8 in std::rt::lang_start_internal library/std/src/rt.rs:51 <libstd-771befcd97ac0955.so>+0xb83d8
+   #12.1 0x0000034db41b03d8 in std::panic::catch_unwind<&Fn<()>,i32> library/std/src/panic.rs:394 <libstd-771befcd97ac0955.so>+0xb83d8
+   #12   0x0000034db41b03d8 in std::rt::lang_start_internal library/std/src/rt.rs:51 <libstd-771befcd97ac0955.so>+0xb83d8
    #13   0x00000075701d219c in std::rt::lang_start<()> /b/s/w/ir/k/rust/library/std/src/rt.rs:65 <>+0x119c
    #14   0x00000075701d2174 in main <>+0x1174
    #15   0x000080e2c3217dfc in start_main ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:112 <libc.so>+0x5cdfc
