@@ -9,7 +9,7 @@ use crate::rfcomm::frame::{
     FrameParseError,
 };
 
-/// The NonSupportedCommand Response is always 1 byte. See GSM 5.4.6.3.8.
+/// The NonSupportedCommand Response is always 1 byte. See GSM 7.10 Section 5.4.6.3.8.
 const NON_SUPPORTED_COMMAND_RESPONSE_LENGTH: usize = 1;
 
 bitfield! {
@@ -21,8 +21,8 @@ bitfield! {
 }
 
 /// This response is sent whenever a command type is not supported by the device.
-/// Defined in GSM 5.4.6.3.8.
-#[derive(Debug, PartialEq)]
+/// Defined in GSM 7.10 Section 5.4.6.3.8.
+#[derive(Clone, Debug, PartialEq)]
 pub struct NonSupportedCommandParams {
     /// The C/R bit is set to the same value as the C/R bit in the non-supported command.
     pub cr_bit: bool,
@@ -58,7 +58,7 @@ impl Encodable for NonSupportedCommandParams {
         }
 
         let mut command_fields = NonSupportedCommandField(0);
-        // The E/A bit is always set for this command (GSM 5.4.6.3.8.).
+        // The E/A bit is always set for this command (GSM 7.10 Section 5.4.6.3.8.).
         command_fields.set_ea_bit(true);
         command_fields.set_cr_bit(self.cr_bit);
         command_fields.set_command(self.non_supported_command);

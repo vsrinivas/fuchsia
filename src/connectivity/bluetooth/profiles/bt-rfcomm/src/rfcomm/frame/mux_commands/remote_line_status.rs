@@ -13,7 +13,7 @@ use crate::rfcomm::{
 };
 
 /// The length (in bytes) of the RLS command.
-/// Defined in GSM 5.4.6.3.10.
+/// Defined in GSM 7.10 Section 5.4.6.3.10.
 const REMOTE_LINE_STATUS_COMMAND_LENGTH: usize = 2;
 
 bitfield! {
@@ -46,10 +46,16 @@ impl PartialEq for RlsError {
     }
 }
 
+impl Clone for RlsError {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
 /// The Remote Line Status Command is used to indicate the status of the Remote Port Line.
 /// It is used whenever the port settings change.
-/// Defined in GSM 5.4.6.3.10, with RFCOMM specifics in RFCOMM 5.5.2.
-#[derive(Debug, PartialEq)]
+/// Defined in GSM 7.10 Section 5.4.6.3.10, with RFCOMM specifics in RFCOMM 5.5.2.
+#[derive(Clone, Debug, PartialEq)]
 pub struct RemoteLineStatusParams {
     pub dlci: DLCI,
     /// The status associated with the remote port line.
@@ -86,7 +92,7 @@ impl Encodable for RemoteLineStatusParams {
             return Err(FrameParseError::BufferTooSmall);
         }
 
-        // E/A bit = 1, C/R bit = 1 (always). See GSM 5.4.6.3.10 Table 14.
+        // E/A bit = 1, C/R bit = 1 (always). See GSM 7.10 Section 5.4.6.3.10 Table 14.
         let mut address_field = RLSAddressField(0);
         address_field.set_ea_bit(true);
         address_field.set_cr_bit(true);

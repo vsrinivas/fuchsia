@@ -9,13 +9,13 @@ use crate::rfcomm::frame::{
 
 /// The length (in bytes) of a Flow Control Command. Both Flow Control On and Off commands
 /// contain no parameters.
-/// Defined in GSM 5.4.6.3.5 & 5.4.6.3.6.
+/// Defined in GSM 7.10 Section 5.4.6.3.5 & 5.4.6.3.6.
 const FLOW_CONTROL_COMMAND_LENGTH: usize = 0;
 
 /// The Flow Control Command is used to enable/disable aggregate flow.
 /// The command contains no parameters.
-/// Defined in GSM 5.4.6.3.5 & 5.4.6.3.6.
-#[derive(Debug, PartialEq)]
+/// Defined in GSM 7.10 Section 5.4.6.3.5 & 5.4.6.3.6.
+#[derive(Clone, Debug, PartialEq)]
 pub struct FlowControlParams {}
 
 impl Decodable for FlowControlParams {

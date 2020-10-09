@@ -23,7 +23,8 @@ pub use self::{
     modem_status::ModemStatusParams,
     non_supported::NonSupportedCommandParams,
     remote_line_status::RemoteLineStatusParams,
-    remote_port_negotiation::RemotePortNegotiationParams, test_command::TestCommandParams,
+    remote_port_negotiation::RemotePortNegotiationParams,
+    test_command::TestCommandParams,
 };
 use crate::pub_decodable_enum;
 use crate::rfcomm::{
@@ -48,11 +49,11 @@ pub_decodable_enum! {
 }
 
 /// The minimum size (in bytes) of a MuxCommand. 1 Byte for the Type field,
-/// and at least 1 byte for the Length field. See GSM 5.4.6.1.
+/// and at least 1 byte for the Length field. See GSM 7.10 Section 5.4.6.1.
 const MIN_MUX_COMMAND_SIZE: usize = 2;
 
 /// The MuxCommand Type Field is the first byte in the payload.
-/// See GSM 5.4.6.1.
+/// See GSM 7.10 Section 5.4.6.1.
 const MUX_COMMAND_TYPE_IDX: usize = 0;
 bitfield! {
     struct TypeField(u8);
@@ -65,11 +66,11 @@ bitfield! {
 impl TypeField {
     fn command_type(&self) -> Result<MuxCommandMarker, FrameParseError> {
         MuxCommandMarker::try_from(self.command_type_raw())
-            .or(Err(FrameParseError::UnsupportedMuxCommandType))
+            .or(Err(FrameParseError::UnsupportedMuxCommandType(self.command_type_raw())))
     }
 
     fn command_response(&self) -> CommandResponse {
-        // See GSM 5.4.6.2 on how the cr_bit translates to CommandResponse.
+        // See GSM 7.10 Section 5.4.6.2 on how the cr_bit translates to CommandResponse.
         if self.cr_bit() {
             CommandResponse::Command
         } else {
@@ -79,11 +80,11 @@ impl TypeField {
 }
 
 /// The MuxCommand Length Field starts at the second byte in the payload.
-/// See GSM 5.4.6.1.
+/// See GSM 7.10 Section 5.4.6.1.
 const MUX_COMMAND_LENGTH_IDX: usize = 1;
 
 /// The length field is represented as multiple E/A padded octets, each 7-bits wide.
-/// See GSM 5.2.1.4.
+/// See GSM 7.10 Section 5.2.1.4.
 const MUX_COMMAND_LENGTH_SHIFT: usize = 7;
 
 bitfield! {
@@ -94,7 +95,7 @@ bitfield! {
 }
 
 /// The parameters associated with a Mux Command.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MuxCommandParams {
     ParameterNegotiation(ParameterNegotiationParams),
     FlowControlOn(FlowControlParams),
@@ -174,7 +175,7 @@ impl Encodable for MuxCommandParams {
 }
 
 /// Converts the `length` into a vector of E/A padded octets in conformance with the message
-/// format defined in GSM 5.4.6.1.
+/// format defined in GSM 7.10 Section 5.4.6.1.
 fn length_to_ea_format(mut length: usize) -> Vec<u8> {
     if length == 0 {
         // Return single octet with 0 length.
@@ -202,7 +203,7 @@ fn length_to_ea_format(mut length: usize) -> Vec<u8> {
 }
 
 /// Represents an RFCOMM multiplexer command.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MuxCommand {
     /// The parameters associated with this MuxCommand - see RFCOMM 4.3 for the supported commands.
     pub params: MuxCommandParams,
@@ -275,7 +276,7 @@ impl Encodable for MuxCommand {
             return Err(FrameParseError::BufferTooSmall);
         }
 
-        // The CommandResponse bit for the type field is set according to GSM 5.4.6.2.
+        // The CommandResponse bit for the type field is set according to GSM 7.10 Section 5.4.6.2.
         let cr_bit = if self.command_response == CommandResponse::Command { true } else { false };
 
         // Type Field: E/A = 1 always.
@@ -323,7 +324,7 @@ mod tests {
         ];
         assert_matches!(
             MuxCommand::decode(&buf[..]),
-            Err(FrameParseError::UnsupportedMuxCommandType)
+            Err(FrameParseError::UnsupportedMuxCommandType(0b111111))
         );
     }
 

@@ -18,7 +18,7 @@ use crate::rfcomm::{
 };
 
 /// The length (in bytes) of a DLC Parameter Negotiation command.
-/// Defined in GSM 5.4.6.3.1.
+/// Defined in GSM 7.10 Section 5.4.6.3.1.
 const DLC_PARAMETER_NEGOTIATION_LENGTH: usize = 8;
 
 pub_decodable_enum! {
@@ -51,7 +51,7 @@ impl DLCParameterNegotiationFields<[u8; DLC_PARAMETER_NEGOTIATION_LENGTH]> {
 }
 
 /// The DLC Parameter Negotiation command - used to negotiate parameters for a given DLC.
-/// See GSM 5.4.6.3.1 for the fields and RFCOMM 5.5.3 for modifications.
+/// See GSM 7.10 Section 5.4.6.3.1 for the fields and RFCOMM 5.5.3 for modifications.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParameterNegotiationParams {
     pub dlci: DLCI,

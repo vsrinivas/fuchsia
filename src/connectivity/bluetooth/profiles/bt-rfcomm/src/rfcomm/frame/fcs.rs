@@ -4,7 +4,7 @@
 
 use log::trace;
 
-// CRC table for calculating FCS. GSM Annex B, Section B.3.5.
+// CRC table for calculating FCS. GSM 7.10 Annex B, Section B.3.5.
 const CRC_TABLE: [u8; 256] = [
     0x00, 0x91, 0xE3, 0x72, 0x07, 0x96, 0xE4, 0x75, 0x0E, 0x9F, 0xED, 0x7C, 0x09, 0x98, 0xEA, 0x7B,
     0x1C, 0x8D, 0xFF, 0x6E, 0x1B, 0x8A, 0xF8, 0x69, 0x12, 0x83, 0xF1, 0x60, 0x15, 0x84, 0xF6, 0x67,
@@ -25,8 +25,8 @@ const CRC_TABLE: [u8; 256] = [
 ];
 
 /// Returns the FCS calculation for the provided byte `buf`.
-/// This calculation is derived exactly as specified in GSM 5.2.1.6. See GSM B.3.3 for the
-/// algorithm.
+/// This calculation is derived exactly as specified in GSM 7.10 Section 5.2.1.6.
+/// See GSM 7.10 Section B.3.3 for the algorithm.
 pub fn calculate_fcs(buf: &[u8]) -> u8 {
     trace!("Calculating FCS for buf: {:?}", buf);
     let mut fcs: u8 = 0xFF;
@@ -42,8 +42,8 @@ pub fn calculate_fcs(buf: &[u8]) -> u8 {
 
 /// Given the `fcs` value and the associated `buf`, returns true if the Frame Check Sequence
 /// calculation is valid for the buffer.
-/// This calculation is derived exactly as specified in GSM 5.2.1.6. See GSM B.3.4 for the
-/// algorithm.
+/// This calculation is derived exactly as specified in GSM 7.10 Section 5.2.1.6.
+/// See GSM 7.10 Section B.3.4 for the algorithm.
 pub fn verify_fcs(fcs: u8, buf: &[u8]) -> bool {
     trace!("Verifying FCS {:?} with buf: {:?}", fcs, buf);
     let mut calculated_fcs: u8 = 0xFF;
@@ -85,13 +85,13 @@ mod tests {
         assert!(verify_fcs(fcs, &buf[..]));
     }
 
-    /// Tests calculating the FCS from the example frame provided in GSM Annex B.1.
+    /// Tests calculating the FCS from the example frame provided in GSM 7.10 Annex B.1.
     #[test]
     fn test_calculate_fcs_sabm_example() {
-        // The expected FCS value is defined in GSM Annex B.3.1.
+        // The expected FCS value is defined in GSM 7.10 Annex B.3.1.
         let expected_fcs = 0b10001001;
 
-        // The frame is defined in GSM Annex B.1.
+        // The frame is defined in GSM 7.10 Annex B.1.
         let example_frame = [0b00000111, 0b00111111];
 
         let fcs = calculate_fcs(&example_frame[..]);

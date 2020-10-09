@@ -19,7 +19,7 @@ const MODEM_STATUS_COMMAND_WITHOUT_BREAK_LENGTH: usize = 2;
 const MODEM_STATUS_COMMAND_WITH_BREAK_LENGTH: usize = 3;
 
 bitfield! {
-    /// The Modem Status Address field defined in GSM 5.4.6.3.7 Figure 9.
+    /// The Modem Status Address field defined in GSM 7.10 Section 5.4.6.3.7 Figure 9.
     struct ModemStatusAddressField(u8);
     impl Debug;
     bool;
@@ -35,7 +35,7 @@ impl ModemStatusAddressField {
 }
 
 bitfield! {
-    /// The Modem Status Signals defined in GSM 5.4.6.3.7 Figure 10.
+    /// The Modem Status Signals defined in GSM 7.10 Section 5.4.6.3.7 Figure 10.
     pub struct ModemStatusSignals(u8);
     impl Debug;
     bool;
@@ -47,8 +47,14 @@ bitfield! {
     pub data_valid, _: 7;
 }
 
+impl Clone for ModemStatusSignals {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
 bitfield! {
-    /// The Modem Status Break value defined in GSM 5.4.6.3.7 Figure 11.
+    /// The Modem Status Break value defined in GSM 7.10 Section 5.4.6.3.7 Figure 11.
     struct ModemStatusBreakField(u8);
     impl Debug;
     bool;
@@ -64,12 +70,12 @@ impl PartialEq for ModemStatusSignals {
 }
 
 /// Modem Status Command is used to convey V .24 control signals to the DLC.
-/// Defined in GSM 6.4.6.3.7.
-#[derive(Debug, PartialEq)]
+/// Defined in GSM 7.10 Section 6.4.6.3.7.
+#[derive(Clone, Debug, PartialEq)]
 pub struct ModemStatusParams {
     pub dlci: DLCI,
     pub signals: ModemStatusSignals,
-    // Break signal in data stream. In units of 200ms as defined in GSM 5.4.6.3.7.
+    // Break signal in data stream. In units of 200ms as defined in GSM 7.10 Section 5.4.6.3.7.
     pub break_value: Option<u8>,
 }
 
@@ -118,7 +124,7 @@ impl Encodable for ModemStatusParams {
             return Err(FrameParseError::BufferTooSmall);
         }
 
-        // Address field. E/A bit = 1, C/R bit = 1. See GSM 5.4.6.3.7 Figure 9.
+        // Address field. E/A bit = 1, C/R bit = 1. See GSM 7.10 Section 5.4.6.3.7 Figure 9.
         let mut address_field = ModemStatusAddressField(0);
         address_field.set_ea_bit(true);
         address_field.set_cr_bit(true);

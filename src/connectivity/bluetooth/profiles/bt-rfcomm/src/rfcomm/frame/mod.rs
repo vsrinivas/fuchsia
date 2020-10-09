@@ -104,8 +104,8 @@ pub enum FrameParseError {
     InvalidFrame,
     #[error("Frame type is unsupported")]
     UnsupportedFrameType,
-    #[error("Mux Command type is unsupported")]
-    UnsupportedMuxCommandType,
+    #[error("Mux Command type {} is unsupported", .0)]
+    UnsupportedMuxCommandType(u8),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -113,7 +113,7 @@ pub enum FrameParseError {
 pub_decodable_enum! {
     /// The type of frame provided in the Control field.
     /// The P/F bit is set to 0 for all frame types.
-    /// See table 2, GSM 07.10 5.2.1.3 and RFCOMM 4.2.
+    /// See table 2, GSM 7.10 Section 07.10 5.2.1.3 and RFCOMM 4.2.
     FrameTypeMarker<u8, Error> {
         SetAsynchronousBalancedMode => 0b00101111,
         UnnumberedAcknowledgement => 0b01100011,
@@ -189,7 +189,7 @@ impl Encodable for UserData {
 }
 
 /// The data associated with a UIH Frame.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum UIHData {
     /// A UIH Frame with user data.
     User(UserData),
@@ -219,7 +219,7 @@ impl Encodable for UIHData {
 
 /// The types of frames supported in RFCOMM.
 /// See RFCOMM 4.2 for the supported frame types.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FrameData {
     SetAsynchronousBalancedMode,
     UnnumberedAcknowledgement,
@@ -229,7 +229,7 @@ pub enum FrameData {
 }
 
 impl FrameData {
-    fn marker(&self) -> FrameTypeMarker {
+    pub fn marker(&self) -> FrameTypeMarker {
         match self {
             FrameData::SetAsynchronousBalancedMode => FrameTypeMarker::SetAsynchronousBalancedMode,
             FrameData::UnnumberedAcknowledgement => FrameTypeMarker::UnnumberedAcknowledgement,
@@ -292,7 +292,7 @@ impl Encodable for FrameData {
 /// See RFCOMM 5.1.
 const MIN_FRAME_SIZE: usize = 4;
 
-/// The Address field is the first byte in the frame. See GSM 5.2.1.2.
+/// The Address field is the first byte in the frame. See GSM 7.10 Section 5.2.1.2.
 const FRAME_ADDRESS_IDX: usize = 0;
 bitfield! {
     pub struct AddressField(u8);
@@ -308,7 +308,7 @@ impl AddressField {
     }
 }
 
-/// The Control field is the second byte in the frame. See GSM 5.2.1.3.
+/// The Control field is the second byte in the frame. See GSM 7.10 Section 5.2.1.3.
 const FRAME_CONTROL_IDX: usize = 1;
 bitfield! {
     pub struct ControlField(u8);
@@ -319,19 +319,20 @@ bitfield! {
 
 impl ControlField {
     fn frame_type(&self) -> Result<FrameTypeMarker, FrameParseError> {
-        // The P/F bit is ignored when determining Frame Type. See RFCOMM 4.2 and GSM 5.2.1.3.
+        // The P/F bit is ignored when determining Frame Type. See RFCOMM 4.2 and GSM 7.10
+        // Section 5.2.1.3.
         const FRAME_TYPE_MASK: u8 = 0b11101111;
         FrameTypeMarker::try_from(self.frame_type_raw() & FRAME_TYPE_MASK)
             .or(Err(FrameParseError::UnsupportedFrameType))
     }
 }
 
-/// The Information field is the third byte in the frame. See GSM 5.2.1.4.
+/// The Information field is the third byte in the frame. See GSM 7.10 Section 5.2.1.4.
 const FRAME_INFORMATION_IDX: usize = 2;
 
 /// The information field can be represented as two E/A padded octets, each 7-bits wide.
 /// This shift is used to access the upper bits of a two-octet field.
-/// See GSM 5.2.1.4.
+/// See GSM 7.10 Section 5.2.1.4.
 const INFORMATION_SECOND_OCTET_SHIFT: usize = 7;
 
 /// The maximum length that can be represented in a single E/A padded octet.
@@ -358,7 +359,7 @@ fn is_two_octet_length(length: usize) -> bool {
 }
 
 /// The highest-level unit of data that is passed around in RFCOMM.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Frame {
     /// The role of the device associated with this frame.
     pub role: Role,
@@ -474,7 +475,7 @@ impl Frame {
             role,
             dlci: DLCI::MUX_CONTROL_DLCI,
             data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_response)),
-            poll_final: false, // Always unset for UIH response, GSM 5.4.3.1.
+            poll_final: false, // Always unset for UIH response, GSM 7.10 Section 5.4.3.1.
             command_response: CommandResponse::Response,
             credits: None,
         }
@@ -521,9 +522,9 @@ impl Encodable for Frame {
         }
 
         // If the multiplexer has started, the C/R bit of the Address Field is set based on
-        // GSM 5.2.1.2 Table 1.
+        // GSM 7.10 Section 5.2.1.2 Table 1.
         // Otherwise, the frame must be a Mux Startup frame, in which case the C/R bit is always
-        // set - see GSM 5.4.4.1 and 5.4.4.2.
+        // set - see GSM 7.10 Section 5.4.4.1 and 5.4.4.2.
         let cr_bit = if self.role.is_multiplexer_started() {
             match (&self.role, &self.command_response) {
                 (Role::Initiator, CommandResponse::Command)

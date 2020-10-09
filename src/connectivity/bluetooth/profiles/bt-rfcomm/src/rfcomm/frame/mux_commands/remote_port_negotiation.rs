@@ -22,7 +22,7 @@ const REMOTE_PORT_NEGOTIATION_SHORT_LENGTH: usize = 1;
 const REMOTE_PORT_NEGOTIATION_LONG_LENGTH: usize = 8;
 
 /// The length (in bytes) of the values associated with an RPN command.
-/// Defined in GSM 5.4.6.3.9 Table 11.
+/// Defined in GSM 7.10 Section 5.4.6.3.9 Table 11.
 const REMOTE_PORT_NEGOTIATION_VALUES_LENGTH: usize = 7;
 
 bitfield! {
@@ -39,21 +39,24 @@ impl RPNAddressField {
     }
 }
 
-// TODO(fxbug.dev/59582): Per RFCOMM 5.5.1, the handling of the command is implementation specific. It may be
-// beneficial to add better accessors & strong types for some of these fields if we plan on
-// supporting these customizations in the future.
+/// The PortValues mask indicating a unanimous accepting of all negotiated
+/// port values.
+/// Bit 8 is reserved. Bits 15,16 are unused. All unused/reserved bits are set to 0.
+/// Defined in GSM 7.10 Section 5.4.6.3.9.
+const PORT_VALUES_UNANIMOUS_ACCEPT_MASK: u16 = 0b0011111101111111;
+
 bitfield! {
     pub struct PortValues([u8]);
     impl Debug;
-    pub u8, baud_rate, _: 7, 0;
-    pub u8, data_bits, _: 9, 8;
-    pub bool, stop_bit, _: 10;
-    pub bool, parity, _: 11;
-    pub u8, parity_type, _: 13, 12;
-    pub u8, flow_control, _: 21, 16;
-    pub u8, xon_character, _: 31, 24;
-    pub u8, xoff_character, _: 39, 32;
-    pub u16, mask, _: 55, 40;
+    pub u8, baud_rate, set_baud_rate: 7, 0;
+    pub u8, data_bits, set_data_bits: 9, 8;
+    pub bool, stop_bit, set_stop_bit: 10;
+    pub bool, parity, set_parity: 11;
+    pub u8, parity_type, set_parity_type: 13, 12;
+    pub u8, flow_control, set_flow_control: 21, 16;
+    pub u8, xon_character, set_xon_character: 31, 24;
+    pub u8, xoff_character, set_xoff_character: 39, 32;
+    pub u16, mask, set_mask: 55, 40;
 }
 
 impl PartialEq for PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]> {
@@ -62,13 +65,57 @@ impl PartialEq for PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]> {
     }
 }
 
+impl Clone for PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl Default for PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]> {
+    /// Returns the default values for the PortValues.
+    ///
+    /// The `parity` and `mask` fields do not have defaults in the spec and are set to 0.
+    /// See GSM 7.10 Section 5.4.6.3.9 below Table 12 for the default values.
+    fn default() -> Self {
+        let mut values = PortValues([0; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]);
+        values.set_baud_rate(0x03);
+        values.set_data_bits(0b11);
+        values.set_stop_bit(false);
+        values.set_parity(false);
+        values.set_parity_type(0); // No default defined.
+        values.set_flow_control(0x00);
+        values.set_xon_character(0x01);
+        values.set_xoff_character(0x03);
+        values.set_mask(0x00); // No default defined.
+        values
+    }
+}
+
 /// The Remote Port Negotiation (RPN) command is used whenever the port settings change.
-/// Defined in GSM 5.4.6.3.9, with RFCOMM notes in RFCOMM 5.5.1.
-#[derive(Debug, PartialEq)]
+/// Defined in GSM 7.10 Section 5.4.6.3.9, with RFCOMM notes in RFCOMM 5.5.1.
+#[derive(Clone, Debug, PartialEq)]
 pub struct RemotePortNegotiationParams {
     pub dlci: DLCI,
     /// The optional port values to be used when negotiation the parameters.
     pub port_values: Option<PortValues<[u8; REMOTE_PORT_NEGOTIATION_VALUES_LENGTH]>>,
+}
+
+impl RemotePortNegotiationParams {
+    /// Returns the appropriate response for the RPN Command.
+    ///
+    /// If there are no port_values, then the command is a request for the current port_values.
+    /// Returns the default values specified in GSM 7.10 Section 5.4.6.3.9.
+    /// Otherwise, it's a negotiation request for port values. Returns the negotiated
+    /// port values.
+    pub fn response(&self) -> Self {
+        let port_values = self.port_values.clone().map_or(PortValues::default(), |mut values| {
+            // This implementation unanimously accepts the port values given by
+            // the remote peer.
+            values.set_mask(PORT_VALUES_UNANIMOUS_ACCEPT_MASK);
+            values
+        });
+        Self { dlci: self.dlci, port_values: Some(port_values) }
+    }
 }
 
 impl Decodable for RemotePortNegotiationParams {
@@ -113,7 +160,7 @@ impl Encodable for RemotePortNegotiationParams {
             return Err(FrameParseError::BufferTooSmall);
         }
 
-        // E/A bit = 1, C/R bit = 1. See GSM 5.4.6.3.9 Table 10.
+        // E/A bit = 1, C/R bit = 1. See GSM 7.10 Section 5.4.6.3.9 Table 10.
         let mut address_field = RPNAddressField(0);
         address_field.set_ea_bit(true);
         address_field.set_cr_bit(true);

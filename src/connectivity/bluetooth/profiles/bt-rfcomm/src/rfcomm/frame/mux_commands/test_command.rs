@@ -18,8 +18,8 @@ const TEST_COMMAND_MAX_PATTERN_LENGTH: usize = Channel::DEFAULT_MAX_TX;
 /// The Test Command is used to test the connection between two entities in a Session.
 /// The command can be arbitrarily sized, and contains a pattern that must be echoed
 /// back.
-/// See GSM 5.4.6.3.4.
-#[derive(Debug, PartialEq)]
+/// See 7.10 Section GSM 5.4.6.3.4.
+#[derive(Clone, Debug, PartialEq)]
 pub struct TestCommandParams {
     pub test_pattern: Vec<u8>,
 }
