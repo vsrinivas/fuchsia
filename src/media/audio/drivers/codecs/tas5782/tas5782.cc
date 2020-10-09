@@ -9,12 +9,13 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/media/audio/drivers/codecs/tas5782/ti_tas5782-bind.h"
 
 namespace {
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
@@ -305,10 +306,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ti_tas5782, audio::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5782),
-ZIRCON_DRIVER_END(ti_tas5782)
-    // clang-format on
+ZIRCON_DRIVER(ti_tas5782, audio::driver_ops, "zircon", "0.1")
