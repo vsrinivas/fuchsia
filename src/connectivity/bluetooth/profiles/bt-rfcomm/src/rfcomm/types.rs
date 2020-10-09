@@ -17,6 +17,8 @@ pub const MAX_RFCOMM_FRAME_SIZE: usize = Channel::DEFAULT_MAX_TX;
 
 #[derive(Error, Debug)]
 pub enum RfcommError {
+    #[error("DLCI {:?} is not established", .0)]
+    ChannelNotEstablished(DLCI),
     #[error("DLCI {:?} is already established", .0)]
     ChannelAlreadyEstablished(DLCI),
     #[error("Multiplexer has already started")]

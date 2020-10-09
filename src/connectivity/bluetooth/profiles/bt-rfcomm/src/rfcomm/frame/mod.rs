@@ -163,7 +163,7 @@ impl FrameTypeMarker {
 }
 
 /// A UIH Frame that contains user data.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UserData {
     pub information: Vec<u8>,
 }
@@ -476,6 +476,32 @@ impl Frame {
             data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_response)),
             poll_final: false, // Always unset for UIH response, GSM 5.4.3.1.
             command_response: CommandResponse::Response,
+            credits: None,
+        }
+    }
+
+    pub fn make_user_data_frame(role: Role, dlci: DLCI, user_data: UserData) -> Self {
+        // TODO(58668): When credit based flow control is supported, the `poll_final` bit
+        // is redefined for UIH frames. See RFCOMM 6.5.2. We should set this bit
+        // accordingly, depending on the existence of credits. However, in all other cases
+        // the poll_final bit is always unset.
+        Self {
+            role,
+            dlci,
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::User(user_data)),
+            poll_final: false, // Unset for UIH frames.
+            command_response: CommandResponse::Command,
+            credits: None,
+        }
+    }
+
+    pub fn make_disc_command(role: Role, dlci: DLCI) -> Self {
+        Self {
+            role,
+            dlci,
+            data: FrameData::Disconnect,
+            poll_final: true, // Always set for Disconnect.
+            command_response: CommandResponse::Command,
             credits: None,
         }
     }
