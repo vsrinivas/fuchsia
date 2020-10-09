@@ -108,6 +108,13 @@ When writing TODOs:
    another contributor to pick up the TODO without consulting any external
    sources, including the referenced issue.
 
+#### Provide citations
+
+When an implementation is following some specification/document (e.g. RFCs),
+include a comment with both a quote and citation of the relevant portion(s) of
+the document near the implementation. The quote lets readers know why something
+is being done and the citation allows a reader to get more context.
+
 ### Error Messages
 
 As with code comments, consider the future reader of the error messages emitted
