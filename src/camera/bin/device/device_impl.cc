@@ -177,6 +177,8 @@ void DeviceImpl::PostSetConfiguration(uint32_t index) {
 void DeviceImpl::SetConfiguration(uint32_t index) {
   streams_.clear();
   streams_.resize(configurations_[index].streams().size());
+  stream_to_pending_legacy_stream_request_params_.clear();
+  stream_request_sent_to_controller_.clear();
   current_configuration_index_ = index;
   FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
@@ -406,11 +408,47 @@ void DeviceImpl::OnStreamRequested(
         max_camping_buffers_callback(max_camping_buffers);
 
         // Get the legacy stream using the negotiated buffers.
-        controller_->CreateStream(current_configuration_index_, index, format_index,
-                                  std::move(buffers), std::move(request));
+        stream_to_pending_legacy_stream_request_params_.insert_or_assign(
+            index,
+            ControllerCreateStreamParams{format_index, std::move(buffers), std::move(request)});
+        MaybeConnectToLegacyStreams();
 
         collection->Close();
       });
+}
+
+constexpr uint32_t kMaxLegacyStreamRequestRequeueCount = 6;
+constexpr zx::duration kLegacyStreamRequestDelay = zx::msec(1500);
+
+// TODO(fxbug.dev/42241): Remove workaround once ordering constraint is removed.
+void DeviceImpl::MaybeConnectToLegacyStreams() {
+  if (stream_to_pending_legacy_stream_request_params_.empty()) {
+    return;
+  }
+
+  bool preceding_streams_bound = true;
+  for (uint32_t i = 0; i < streams_.size(); ++i) {
+    auto it = stream_to_pending_legacy_stream_request_params_.find(i);
+    if (it != stream_to_pending_legacy_stream_request_params_.end()) {
+      auto& [index, params] = *it;
+      if (preceding_streams_bound ||
+          params.requeue_count++ == kMaxLegacyStreamRequestRequeueCount) {
+        // If all preceding streams are bound, or the threshold requeue count has been reached,
+        // immediately send the creation request and delete the pending map element.
+        controller_->CreateStream(current_configuration_index_, index, params.format_index,
+                                  std::move(params.buffers), std::move(params.request));
+        stream_request_sent_to_controller_[index] = true;
+        stream_to_pending_legacy_stream_request_params_.erase(it);
+      }
+    }
+    if (!stream_request_sent_to_controller_[i]) {
+      preceding_streams_bound = false;
+    }
+  }
+
+  // If any pending requests still exist, retry after a delay.
+  async::PostDelayedTask(
+      loop_.dispatcher(), [this] { MaybeConnectToLegacyStreams(); }, kLegacyStreamRequestDelay);
 }
 
 void DeviceImpl::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {

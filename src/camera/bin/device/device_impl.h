@@ -84,6 +84,9 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
                          fit::function<void(uint32_t)> max_camping_buffers_callback,
                          uint32_t format_index);
 
+  // TODO(fxbug.dev/42241): Remove workaround once ordering constraint is removed.
+  void MaybeConnectToLegacyStreams();
+
   // |fuchsia::ui::policy::MediaButtonsListener|
   void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override;
 
@@ -128,6 +131,14 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
     camera::HangingGetHelper<MuteState> mute_state_;
   };
 
+  struct ControllerCreateStreamParams {
+    uint32_t format_index;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffers;
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request;
+    uint32_t requeue_count = 0;
+  };
+  std::map<uint32_t, ControllerCreateStreamParams> stream_to_pending_legacy_stream_request_params_;
+  std::map<uint32_t, bool> stream_request_sent_to_controller_;
   async::Loop loop_;
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
