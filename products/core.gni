@@ -19,7 +19,7 @@ meta_package_labels += [
 ]
 
 product_system_image_deps = [
-  "//src/connectivity/bluetooth:core",
+  "//src/connectivity/bluetooth:core-system",
   "//src/sys/pkg:pkgfs-disable-executability-restrictions",
 ]
 
@@ -39,6 +39,7 @@ base_package_labels += [
   "//src/cobalt/bin/app:config",
   "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
   "//src/cobalt/bin/system-metrics:config",
+  "//src/connectivity/bluetooth:core",
   "//src/connectivity/management/reachability",
   "//src/connectivity/management/reachability:reachability_sysmgr_config",
   "//src/connectivity/management:network_config_default",
