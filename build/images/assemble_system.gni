@@ -40,6 +40,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     [list of labels] The objects installed on the bootfs partition of the
 #     generated ZBI.
 #
+#   system_image_deps (optional)
+#     [list of labels] The objects installed in the system image.
+#
 #   ramdisk_fvm_in_zbi (default: false)
 #     [boolean] Whether the generated ZBI should contain the system's FVM as a ramdisk.
 #
@@ -77,6 +80,11 @@ template("assemble_system") {
   }
   if (defined(invoker.universe_packages)) {
     universe_packages = invoker.universe_packages
+  }
+
+  system_image_deps = []
+  if (defined(invoker.system_image_deps)) {
+    system_image_deps += invoker.system_image_deps
   }
 
   # Must be unique among assembled systems.
@@ -161,7 +169,7 @@ template("assemble_system") {
     outputs = [ system_image_manifest_args ]
     data_keys = [ "system_image_rsps" ]
     walk_keys = [ "system_image_barrier" ]
-    deps = [ ":${image_name}_base_packages" ]
+    deps = [ ":${image_name}_base_packages" ] + system_image_deps
   }
 
   boot_manifest = "$target_out_dir/${image_name}.boot.manifest"
@@ -261,9 +269,14 @@ template("assemble_system") {
     # Referenced by guest_package.
     testonly = true
     output_name = "$target_out_dir/$target_name"
+
     # This target is only ever used for a ram-based FVM, so the slice size chosen does not need
     # to be the same as used in other places.
-    args = [ "create", "--slice", "1048576" ]
+    args = [
+      "create",
+      "--slice",
+      "1048576",
+    ]
     partitions = [
       {
         type = "blob"
