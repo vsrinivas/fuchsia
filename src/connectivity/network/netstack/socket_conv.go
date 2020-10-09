@@ -930,7 +930,20 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		return ep.SetSockOptBool(tcpip.ReceiveTClassOption, v != 0)
 
 	default:
-		syslog.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)
+		func() {
+			var optName string
+			switch name {
+			case C.IPV6_UNICAST_HOPS:
+				optName = "IPV6_UNICAST_HOPS"
+			case C.IPV6_HOPLIMIT:
+				optName = "IPV6_HOPLIMIT"
+			default:
+				syslog.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)
+				return
+			}
+			v, _ := parseIntOrChar(optVal)
+			syslog.Infof("unimplemented setsockopt(SOL_IPV6,%s,%d)", optName, v)
+		}()
 
 	}
 	return tcpip.ErrUnknownProtocolOption
