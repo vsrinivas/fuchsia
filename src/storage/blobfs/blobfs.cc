@@ -36,6 +36,7 @@
 #include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
+#include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
 #include <fs/pseudo_dir.h>
@@ -70,11 +71,10 @@ struct DirectoryCookie {
 };
 
 // Writeback enabled, journaling enabled.
-zx::status<std::unique_ptr<Journal>> InitializeJournal(fs::TransactionHandler* transaction_handler,
-                                                       VmoidRegistry* registry,
-                                                       uint64_t journal_start,
-                                                       uint64_t journal_length,
-                                                       JournalSuperblock journal_superblock) {
+zx::status<std::unique_ptr<Journal>> InitializeJournal(
+    fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
+    uint64_t journal_length, JournalSuperblock journal_superblock,
+    std::shared_ptr<fs::MetricsTrait> journal_metrics) {
   const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
 
   std::unique_ptr<BlockingRingBuffer> journal_buffer;
@@ -93,9 +93,11 @@ zx::status<std::unique_ptr<Journal>> InitializeJournal(fs::TransactionHandler* t
     return zx::error(status);
   }
 
+  auto options = Journal::Options();
+  options.metrics = journal_metrics;
   return zx::ok(std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
                                           std::move(journal_buffer), std::move(writeback_buffer),
-                                          journal_start, Journal::Options()));
+                                          journal_start, options));
 }
 
 // Writeback enabled, journaling disabled.
@@ -196,7 +198,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   if (options->metrics) {
-    fs->metrics_.Collect();
+    fs->metrics_->Collect();
   }
 
   if (options->journal) {
@@ -217,9 +219,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     switch (options->writability) {
       case blobfs::Writability::Writable: {
         FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
-        auto journal_or =
-            InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                              JournalBlocks(fs->info_), std::move(journal_superblock));
+        auto journal_or = InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                                            JournalBlocks(fs->info_), std::move(journal_superblock),
+                                            fs->metrics_);
         if (journal_or.is_error()) {
           FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
           return journal_or.error_value();
@@ -864,7 +866,7 @@ zx_status_t Blobfs::InitializeVnodes() {
                      digest.ToString().c_str(), node_index - 1);
       return status;
     }
-    metrics_.IncrementCompressionFormatMetric(*inode);
+    metrics_->IncrementCompressionFormatMetric(*inode);
   }
 
   if (total_allocated != info_.alloc_inode_count) {
@@ -933,12 +935,12 @@ zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& o
   return TransactionManager::RunRequests(operations);
 }
 
-BlobfsMetrics Blobfs::CreateMetrics() {
+std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics() {
+  bool enable_page_in_metrics = false;
 #ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
-  return BlobfsMetrics{true};
-#else
-  return BlobfsMetrics{false};
+  enable_page_in_metrics = true;
 #endif
+  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics);
 }
 
 }  // namespace blobfs

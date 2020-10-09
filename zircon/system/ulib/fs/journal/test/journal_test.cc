@@ -10,16 +10,23 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <optional>
 #include <vector>
 
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <fs/journal/format.h>
 #include <fs/journal/header_view.h>
 #include <fs/journal/initializer.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
+#include <fs/metrics/composite_latency_event.h>
+#include <fs/metrics/events.h>
+#include <fs/metrics/histograms.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
+
+#include "fs/journal/internal/metrics.h"
 
 namespace fs {
 namespace {
@@ -1324,10 +1331,11 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
         return ZX_OK;
       },
   };
+  auto metrics(std::make_shared<JournalMetrics>(nullptr, 0, 0));
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
-                                 journal_buffer->capacity());
+                                 journal_buffer->capacity(), metrics);
 
   // Reserve operations[1] in memory before operations[0].
   //
@@ -1452,8 +1460,9 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   };
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  auto metrics(std::make_shared<JournalMetrics>(nullptr, 0, 0));
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
-                                 journal_buffer->capacity());
+                                 journal_buffer->capacity(), metrics);
 
   // Issue the first operation, so the next operation will wrap around.
   storage::BlockingRingBufferReservation reservation;
@@ -1565,8 +1574,9 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   };
   MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  auto metrics(std::make_shared<JournalMetrics>(nullptr, 0, 0));
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
-                                 journal_buffer->capacity());
+                                 journal_buffer->capacity(), metrics);
 
   // Issue the first operation, so the next operation will wrap around.
   storage::BlockingRingBufferReservation reservation;
@@ -2759,6 +2769,152 @@ TEST_F(JournalTest, WriteMetadataWithBadBlockCountFails) {
                      });
   journal.schedule_task(std::move(promise));
   EXPECT_EQ(sync_completion_wait(&sync_completion, zx::duration::infinite().get()), ZX_OK);
+}
+
+class FakeFsMetrics : public fs::MetricsTrait {
+ public:
+  using Histograms = fs_metrics::Histograms;
+  static constexpr std::string_view kComponentName = "fakefs";
+  FakeFsMetrics() : inspector_() {
+    std::unique_ptr<cobalt_client::InMemoryLogger> logger =
+        std::make_unique<cobalt_client::InMemoryLogger>();
+    logger_ = logger.get();
+    collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
+    metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(), kComponentName);
+    histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
+  }
+
+  inspect::Node* GetInspectRoot() override { return &inspector_.GetRoot(); }
+  cobalt_client::Collector* GetCollector() override { return collector_.get(); }
+  fs_metrics::CompositeLatencyEvent NewLatencyEvent(fs_metrics::Event event) override {
+    fs_metrics::CompositeLatencyEvent latency_event(event, histograms_.get(), metrics_.get());
+    return latency_event;
+  }
+  void Flush() { collector_->Flush(); }
+
+  uint32_t GetObservations(fs_metrics::Event event) const {
+    cobalt_client::MetricOptions options = {};
+    options.metric_id = static_cast<uint32_t>(event);
+    options.component = FakeFsMetrics::kComponentName;
+    options.event_codes = {};
+    auto entry = logger_->histograms().find(options);
+    if (logger_->histograms().end() == entry) {
+      return 0;
+    }
+    uint32_t observations = 0;
+    for (const auto it : entry->second) {
+      observations += it.second;
+    }
+    return observations;
+  }
+
+ private:
+  inspect::Inspector inspector_;
+  cobalt_client::InMemoryLogger* logger_;
+  std::unique_ptr<cobalt_client::Collector> collector_;
+  std::unique_ptr<fs_metrics::FsCommonMetrics> metrics_;
+  std::unique_ptr<Histograms> histograms_;
+};
+
+// Tests that the metrics get updated for common journal operations.
+TEST_F(JournalTest, MetricsUpdates) {
+  storage::VmoBuffer buffer = registry()->InitializeBuffer(5);
+
+  // We're using the same source buffer, but use:
+  // - operations[0] as data
+  // - operations[1] as metadata
+  // - operations[2] as data
+  const std::vector<storage::UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(buffer.vmo().get()),
+          {
+              storage::OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 20,
+              .length = 1,
+          },
+      },
+      {
+          zx::unowned_vmo(buffer.vmo().get()),
+          {
+              storage::OperationType::kWrite,
+              .vmo_offset = 1,
+              .dev_offset = 200,
+              .length = 1,
+          },
+      },
+      {
+          zx::unowned_vmo(buffer.vmo().get()),
+          {
+              storage::OperationType::kWrite,
+              .vmo_offset = 2,
+              .dev_offset = 2000,
+              .length = 1,
+          },
+      },
+  };
+
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), 0);
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      // Operation[0]: Data.
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[0], requests);
+        verifier.ExtendDataOffset(operations[0].op.length);
+        return ZX_OK;
+      },
+      // Operation[1]: Metadata (journal, then metadata).
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyJournalWrite(operations[1], requests);
+        return ZX_OK;
+      },
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyMetadataWrite(operations[1], requests);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
+        return ZX_OK;
+      },
+      // Operation[2]: Data.
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        verifier.VerifyDataWrite(operations[2], requests);
+        verifier.ExtendDataOffset(operations[2].op.length);
+        return ZX_OK;
+      },
+      // Final operation: Updating the info block on journal teardown.
+      [&](const std::vector<storage::BufferedOperation>& requests) {
+        uint64_t sequence_number = 1;
+        verifier.VerifyInfoBlockWrite(sequence_number, requests);
+        registry()->VerifyReplay({}, sequence_number);
+        return ZX_OK;
+      }};
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
+
+  std::shared_ptr<FakeFsMetrics> f = std::make_shared<FakeFsMetrics>();
+  {
+    auto options = Journal::Options();
+    options.metrics = f;
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0, options);
+    auto promise = journal.WriteData({operations[0]})
+                       .and_then(journal.Sync())
+                       .and_then(journal.WriteMetadata({operations[1]}))
+                       .and_then(journal.WriteData({operations[2]}))
+                       .and_then(journal.Sync());
+    journal.schedule_task(std::move(promise));
+  }
+  f->Flush();
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriteData), static_cast<uint32_t>(2));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriteMetadata), static_cast<uint32_t>(1));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalSync), static_cast<uint32_t>(3));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalTrimData), static_cast<uint32_t>(0));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalScheduleTask), static_cast<uint32_t>(2));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriterWriteData),
+            static_cast<uint32_t>(2));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriterWriteMetadata),
+            static_cast<uint32_t>(1));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriterTrimData),
+            static_cast<uint32_t>(0));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriterSync), static_cast<uint32_t>(3));
+  ASSERT_EQ(f->GetObservations(fs_metrics::Event::kJournalWriterWriteInfoBlock),
+            static_cast<uint32_t>(1));
 }
 
 zx_status_t MakeJournalHelper(uint8_t* dest_buffer, uint64_t blocks, uint64_t block_size) {

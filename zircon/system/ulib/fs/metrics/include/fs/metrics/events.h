@@ -36,19 +36,19 @@ enum class Event : uint32_t {
   kCompression = 16,
 
   // Journal events
-  kJournalWriteData = 17,
-  kJournalWriteMetadata = 18,
-  kJournalTrimData = 19,
-  kJournalSync = 20,
-  kJournalScheduleTask = 21,
-  kJournalWriterWriteData = 22,
-  kJournalWriterWriteMetadata = 23,
-  kJournalWriterTrimData = 24,
-  kJournalWriterSync = 25,
-  kJournalWriterWriteInfoBlock = 26,
+  kJournalWriteData = 18,
+  kJournalWriteMetadata = 19,
+  kJournalTrimData = 20,
+  kJournalSync = 21,
+  kJournalScheduleTask = 22,
+  kJournalWriterWriteData = 23,
+  kJournalWriterWriteMetadata = 24,
+  kJournalWriterTrimData = 25,
+  kJournalWriterSync = 26,
+  kJournalWriterWriteInfoBlock = 27,
 
   // This is an event used to identify last or invalid event.
-  kInvalidEvent = 27,
+  kInvalidEvent = 28,
 };
 
 enum class CorruptionSource { kUnknown = 0, kFvm = 1, kBlobfs = 2, kMinfs = 3 };

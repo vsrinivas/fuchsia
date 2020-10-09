@@ -5,7 +5,10 @@
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
+#include <cstdio>
+
 #include <fs/journal/internal/journal_writer.h>
+#include <fs/metrics/events.h>
 #include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 
@@ -22,18 +25,23 @@ namespace internal {
 
 JournalWriter::JournalWriter(TransactionHandler* transaction_handler,
                              JournalSuperblock journal_superblock, uint64_t journal_start_block,
-                             uint64_t entries_length)
+                             uint64_t entries_length, std::shared_ptr<JournalMetrics> metrics)
     : transaction_handler_(transaction_handler),
       journal_superblock_(std::move(journal_superblock)),
+      metrics_(metrics),
       journal_start_block_(journal_start_block),
       next_sequence_number_(journal_superblock_.sequence_number()),
       next_entry_start_block_(journal_superblock_.start()),
       entries_length_(entries_length) {}
 
-JournalWriter::JournalWriter(TransactionHandler* transaction_handler)
-    : transaction_handler_(transaction_handler) {}
+JournalWriter::JournalWriter(TransactionHandler* transaction_handler,
+                             std::shared_ptr<JournalMetrics> metrics)
+    : transaction_handler_(transaction_handler), metrics_(metrics) {}
 
 fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
+  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteData);
+  uint32_t block_count = 0;
+
   // If any of the data operations we're about to write overlap with in-flight metadata
   // operations, then we risk those metadata operations "overwriting" our data blocks
   // on replay.
@@ -57,11 +65,14 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
       }
       break;
     }
+    block_count += operation.op.length;
   }
 
+  event.set_block_count(block_count);
   zx_status_t status = WriteOperations(work.operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
+    event.set_success(false);
     return fit::error(status);
   }
   return fit::ok();
@@ -70,6 +81,9 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
 fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work) {
   const uint64_t block_count = work.reservation.length();
   FS_TRACE_DEBUG("WriteMetadata: Writing %zu blocks (includes header, commit)\n", block_count);
+  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteMetadata);
+  event.set_block_count(block_count);
+  event.set_success(false);
 
   // Ensure the info block is caught up, so it doesn't point to the middle of an invalid entry.
   zx_status_t status = WriteInfoBlockIfIntersect(block_count);
@@ -100,16 +114,19 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
                    zx_status_get_string(status));
     return fit::error(status);
   }
+  event.set_success(true);
   return fit::ok();
 }
 
 fit::result<void, zx_status_t> JournalWriter::TrimData(
     std::vector<storage::BufferedOperation> operations) {
   FS_TRACE_DEBUG("TrimData: trimming %zu blocks\n", BlockCount(operations));
+  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterTrimData);
 
   zx_status_t status = transaction_handler_->RunRequests(operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("TrimData: Failed to trim requests: %s\n", zx_status_get_string(status));
+    event.set_success(false);
     return fit::error(status);
   }
   return fit::ok();
@@ -152,7 +169,9 @@ zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferVie
 }
 
 fit::result<void, zx_status_t> JournalWriter::Sync() {
+  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterSync);
   if (!IsWritebackEnabled()) {
+    event.set_success(false);
     return fit::error(ZX_ERR_IO_REFUSED);
   }
   if (!IsJournalingEnabled()) {
@@ -166,6 +185,7 @@ fit::result<void, zx_status_t> JournalWriter::Sync() {
 
   zx_status_t status = WriteInfoBlock();
   if (status != ZX_OK) {
+    event.set_success(false);
     return fit::error(status);
   }
   return fit::ok();
@@ -250,6 +270,8 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
 }
 
 zx_status_t JournalWriter::WriteInfoBlock() {
+  auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteInfoBlock);
+  event.set_block_count(InfoLength());
   ZX_DEBUG_ASSERT(next_sequence_number_ > journal_superblock_.sequence_number());
   FS_TRACE_DEBUG("WriteInfoBlock: Updating sequence_number from %zu to %zu\n",
                  journal_superblock_.sequence_number(), next_sequence_number_);
@@ -266,6 +288,7 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   journal_operations.push_back(operation);
   zx_status_t status = WriteOperations(journal_operations);
   if (status != ZX_OK) {
+    event.set_success(false);
     return status;
   }
 

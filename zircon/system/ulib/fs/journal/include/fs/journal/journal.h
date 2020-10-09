@@ -8,16 +8,20 @@
 #include <lib/fit/barrier.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/sequencer.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 
+#include <cobalt-client/cpp/collector.h>
 #include <fbl/vector.h>
 #include <fs/journal/background_executor.h>
 #include <fs/journal/format.h>
 #include <fs/journal/internal/journal_writer.h>
+#include <fs/journal/internal/metrics.h>
 #include <fs/journal/superblock.h>
+#include <fs/metrics/events.h>
 #include <fs/transaction/transaction_handler.h>
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/ring_buffer.h>
@@ -62,6 +66,11 @@ class Journal final : public fit::executor {
     // if there were to be a power-loss event, the file system would see new data with old
     // metadata. See fxbug.dev/37958 for more details.
     bool sequence_data_writes = true;
+
+    // Pointer to MetricsTrait that helps journal maintain metrics.
+    // The reference to MetricsTrait is dropped when Journal object is destroyed.
+    // A nullptr implies that the user doesn't use/want journal metrics.
+    std::shared_ptr<MetricsTrait> metrics;
   };
 
   // Constructs a Journal with journaling enabled. This is the traditional constructor
@@ -120,7 +129,10 @@ class Journal final : public fit::executor {
   Promise Sync();
 
   // Schedules a promise to the journals background thread executor.
-  void schedule_task(fit::pending_task task) final { executor_.schedule_task(std::move(task)); }
+  void schedule_task(fit::pending_task task) final {
+    auto event = metrics_->NewLatencyEvent(fs_metrics::Event::kJournalScheduleTask);
+    executor_.schedule_task(std::move(task));
+  }
 
   // See comment below for write_metadata_callback_ for how this might be used.
   void set_write_metadata_callback(fit::callback<void(zx_status_t)> callback) {
@@ -132,6 +144,8 @@ class Journal final : public fit::executor {
   bool IsWritebackEnabled() const { return writer_.IsWritebackEnabled(); }
 
  private:
+  JournalMetrics* metrics() { return metrics_.get(); }
+
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer_;
   std::unique_ptr<storage::BlockingRingBuffer> writeback_buffer_;
 
@@ -145,6 +159,10 @@ class Journal final : public fit::executor {
   // the order they are enqueued. To fulfill this requirement, a sequencer guarantees
   // ordering of internal promise structures before they are handed to |executor_|.
   fit::sequencer metadata_sequencer_;
+
+  // Journal metrics. This metrics is shared with JournalWriter and potentially other threads.
+  // The reference to MetricsTrait is dropped when Journal object is destroyed.
+  std::shared_ptr<JournalMetrics> metrics_;
 
   internal::JournalWriter writer_;
 

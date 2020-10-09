@@ -14,6 +14,7 @@
 
 #include <blobfs/format.h>
 #include <cobalt-client/cpp/collector.h>
+#include <fs/journal/journal.h>
 #include <fs/metrics/cobalt_metrics.h>
 #include <fs/metrics/composite_latency_event.h>
 #include <fs/metrics/events.h>
@@ -36,7 +37,7 @@ struct BlobPageInFrequencies {
 };
 
 // This class is not thread-safe except for the read_metrics() and verification_metrics() accessors.
-class BlobfsMetrics {
+class BlobfsMetrics : public fs::MetricsTrait {
  public:
   explicit BlobfsMetrics(bool should_record_page_in = false);
   ~BlobfsMetrics();
@@ -68,9 +69,12 @@ class BlobfsMetrics {
 
   // Returns a new Latency event for the given event. This requires the event to be backed up by
   // an histogram in both cobalt metrics and Inspect.
-  LatencyEvent NewLatencyEvent(fs_metrics::Event event) {
+  fs_metrics::CompositeLatencyEvent NewLatencyEvent(fs_metrics::Event event) final {
     return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_fs_common_metrics());
   }
+
+  cobalt_client::Collector* GetCollector() override { return mutable_collector(); }
+  inspect::Node* GetInspectRoot() override { return &journal_stats_; }
 
   // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
   // the |inode| header, and increments the counter for that format with the inode's |blob_size|.
@@ -100,10 +104,10 @@ class BlobfsMetrics {
   // Accessor for BlobFS Inspector. This Inspector serves the BlobFS inspect tree.
   inspect::Inspector* inspector() { return &inspector_; }
 
- private:
   // Returns the underlying collector of cobalt metrics.
   cobalt_client::Collector* mutable_collector() { return cobalt_metrics_.mutable_collector(); }
 
+ private:
   // Flushes the metrics to the cobalt client and schedules itself to flush again.
   void ScheduleMetricFlush();
 
@@ -140,6 +144,7 @@ class BlobfsMetrics {
   inspect::Node paged_read_stats_ = root_.CreateChild("paged_read_stats");
   inspect::Node unpaged_read_stats_ = root_.CreateChild("unpaged_read_stats");
   inspect::Node page_in_frequency_stats_ = root_.CreateChild("page_in_frequency_stats");
+  inspect::Node journal_stats_ = root_.CreateChild("journal_stats");
 
   // Allocation properties
   inspect::UintProperty blobs_created_property_ =

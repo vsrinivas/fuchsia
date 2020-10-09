@@ -59,8 +59,13 @@ zx_library("journal") {
       "superblock.cc",
     ]
     public_deps = [
+      "//sdk/lib/sys/inspect/cpp",
+      "//zircon/system/ulib/cobalt-client",
       "//zircon/system/ulib/disk_inspector",
       "//zircon/system/ulib/fs",
+      "//zircon/system/ulib/fs/metrics:metrics-cobalt",
+      "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
+      "//zircon/system/ulib/fs/metrics:metrics-inspect",
       "//zircon/system/ulib/fs/transaction",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/range",

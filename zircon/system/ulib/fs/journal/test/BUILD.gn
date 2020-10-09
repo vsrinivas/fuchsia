@@ -52,13 +52,19 @@ test("journal-unit") {
     "superblock_test.cc",
   ]
   deps = [
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/cobalt-client",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fs/journal",
+    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
+    "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
+    "//zircon/system/ulib/fs/metrics:metrics-inspect",
     "//zircon/third_party/ulib/cksum",
   ]
 
@@ -68,9 +74,14 @@ test("journal-unit") {
 source_set("fuzz-utils") {
   sources = [ "fuzzer_utils.cc" ]
   public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fs/journal",
+    "//zircon/system/ulib/fs/metrics:metrics-cobalt",
+    "//zircon/system/ulib/fs/metrics:metrics-composite-latency-event",
+    "//zircon/system/ulib/fs/metrics:metrics-inspect",
     "//zircon/third_party/ulib/cksum",
   ]
 }

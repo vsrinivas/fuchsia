@@ -264,7 +264,7 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
   }
 
   // Replay the requested journal entries, then the new header.
-  if (operations.size() > 0) {
+  if (!operations.empty()) {
     // Update to the new sequence_number (in-memory).
     journal_superblock.Update(next_entry_start, sequence_number);
 
@@ -288,7 +288,7 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
     operation.op.vmo_offset = 0;
     operation.op.dev_offset = journal_start;
     operation.op.length = kJournalMetadataBlocks;
-    operations.push_back(std::move(operation));
+    operations.push_back(operation);
     status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("journal: Cannot update journal superblock: %d\n", status);
