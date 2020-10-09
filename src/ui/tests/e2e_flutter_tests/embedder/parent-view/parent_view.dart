@@ -18,6 +18,7 @@ const _kChildAppUrl =
     'fuchsia-pkg://fuchsia.com/child-view#meta/child-view.cmx';
 
 Future<void> main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
   final parser = ArgParser()
     ..addFlag('showOverlay', defaultsTo: false)
     ..addFlag('hitTestable', defaultsTo: true)
