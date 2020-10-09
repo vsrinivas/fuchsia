@@ -160,8 +160,8 @@ impl ExtentCluster {
     /// The extent's data is read from the in_stream.
     fn write_data(
         &self,
-        out_stream: &mut dyn Write,
         in_stream: &mut dyn ReadAndSeek,
+        out_stream: &mut dyn Write,
     ) -> Result<u64, Error> {
         let mut size = 0;
         for (_, extent) in &self.extent_tree {
@@ -177,8 +177,13 @@ impl ExtentCluster {
             let mut r = in_stream.take(bytes_to_read);
 
             // Read from the storage.
-            r.read(&mut read_buffer[..bytes_to_read as usize])
-                .map_err(move |_| Error::ReadFailed)?;
+            r.read(&mut read_buffer[..bytes_to_read as usize]).map_err(move |_| {
+                eprintln!(
+                    "Failed to read {} bytes from {} offset for {:?}",
+                    bytes_to_read, offset, extent
+                );
+                Error::ReadFailed
+            })?;
 
             // Write to the image file
             out_stream.write_all(&read_buffer).map_err(move |_| Error::WriteFailed)?;
@@ -217,10 +222,10 @@ impl ExtentCluster {
     /// then writing cluster header, extent info and extent data to the image file.
     pub fn write(
         &mut self,
-        mut out_stream: &mut dyn Write,
         mut in_stream: &mut dyn ReadAndSeek,
         _current_offset: u64,
         last_cluster: bool,
+        mut out_stream: &mut dyn Write,
     ) -> Result<u64, Error> {
         if !last_cluster {
             todo!("Support for more than one cluster is not implemented.")
@@ -231,7 +236,7 @@ impl ExtentCluster {
         let _data_size = self.data_size();
 
         let mut size = self.write_metadata(out_stream)?;
-        size = size + self.write_data(&mut out_stream, &mut in_stream)?;
+        size = size + self.write_data(&mut in_stream, &mut out_stream)?;
         Ok(size)
     }
 }
@@ -642,7 +647,7 @@ mod test {
     fn test_extent_cluster_write() {
         let (mut cluster, options, mut out_buffer, mut in_buffer) = setup_cluster_write_test(false);
 
-        let size = cluster.write(&mut out_buffer, &mut in_buffer, 0, true).unwrap();
+        let size = cluster.write(&mut in_buffer, 0, true, &mut out_buffer).unwrap();
         assert!(size > 0);
         assert_eq!(size % options.alignment, 0);
         assert_eq!(out_buffer.len() as u64, size);
@@ -651,7 +656,7 @@ mod test {
     #[test]
     fn test_extent_cluster_write_no_data() {
         let (mut cluster, options, mut out_buffer, mut in_buffer) = setup_cluster_write_test(false);
-        let size = cluster.write(&mut out_buffer, &mut in_buffer, 0, true).unwrap();
+        let size = cluster.write(&mut in_buffer, 0, true, &mut out_buffer).unwrap();
         assert!(size > 0);
         assert_eq!(size % options.alignment, 0);
         assert_eq!(out_buffer.len() as u64, size);
@@ -669,7 +674,7 @@ mod test {
         }
 
         let mut new_buffer: Vec<u8> = vec![];
-        let new_size = cluster.write(&mut new_buffer, &mut in_buffer, 0, true).unwrap();
+        let new_size = cluster.write(&mut in_buffer, 0, true, &mut new_buffer).unwrap();
         assert!(new_size > size);
         assert_eq!(new_size % options.alignment, 0);
         assert_eq!(new_buffer.len() as u64, new_size);
@@ -692,7 +697,7 @@ mod test {
         cluster.add_extent(&data_extent2).unwrap();
         cluster.add_extent(&pii_extent).unwrap();
 
-        let new_size = cluster.write(&mut out_buffer, &mut in_buffer, 0, true).unwrap();
+        let new_size = cluster.write(&mut in_buffer, 0, true, &mut out_buffer).unwrap();
         assert_eq!(new_size % options.alignment, 0);
         assert_eq!(out_buffer.len() as u64, new_size);
 
@@ -714,7 +719,7 @@ mod test {
         cluster.add_extent(&no_data_extent).unwrap();
         cluster.add_extent(&pii_extent).unwrap();
 
-        let new_size = cluster.write(&mut out_buffer, &mut in_buffer, 0, true).unwrap();
+        let new_size = cluster.write(&mut in_buffer, 0, true, &mut out_buffer).unwrap();
         assert_eq!(new_size % options.alignment, 0);
         assert_eq!(out_buffer.len() as u64, new_size);
 

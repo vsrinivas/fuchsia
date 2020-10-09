@@ -31,7 +31,7 @@ use {
 /// use extractor_lib::extractor::{Extractor, ExtractorOptions};
 ///
 /// let options: ExtractorOptions = Default::default();
-/// let mut extractor = Extractor::new(out_file, in_file, options);
+/// let mut extractor = Extractor::new(in_file, options, out_file);
 /// extractor.add(10..11, default_properties(), None).unwrap();
 /// extractor.add(12..14, default_properties(), None).unwrap();
 /// extractor.write().unwrap();
@@ -62,9 +62,9 @@ impl Extractor {
     /// Operations performed on in_stream and out_stream are byte granular.
     /// Extractor may not perform `alignment` granular operations.
     pub fn new(
-        out_stream: Box<dyn Write>,
         in_stream: Box<dyn ReadAndSeek>,
         options: ExtractorOptions,
+        out_stream: Box<dyn Write>,
     ) -> Extractor {
         let cluster = ExtentCluster::new(&options);
         Extractor {
@@ -133,10 +133,10 @@ impl Extractor {
         }
         bytes_written = bytes_written
             + self.extent_cluster.write(
-                &mut self.out_stream,
                 &mut self.in_stream,
                 self.current_offset,
                 true,
+                &mut self.out_stream,
             )?;
         self.out_stream.flush().map_err(|_| Error::WriteFailed)?;
         self.current_offset = self.current_offset + bytes_written;
@@ -174,7 +174,7 @@ mod test {
 
         let mut options: ExtractorOptions = Default::default();
         options.alignment = 1;
-        let extractor = Extractor::new(out_buffer, in_buffer, options);
+        let extractor = Extractor::new(in_buffer, options, out_buffer);
         extractor
     }
 
@@ -239,9 +239,9 @@ mod test {
         }
 
         let extractor = Extractor::new(
-            Box::new(out_file.try_clone().unwrap()),
             Box::new(in_file.try_clone().unwrap()),
             Default::default(),
+            Box::new(out_file.try_clone().unwrap()),
         );
         (extractor, options, out_file, in_file)
     }
