@@ -10,6 +10,7 @@ use crate::message::messenger::{Messenger, MessengerClient};
 use crate::message::receptor::Receptor;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
 use thiserror::Error;
@@ -53,6 +54,7 @@ pub enum Status {
     // Received by the intended address.
     Received,
     // Could not be delivered to the specified target.
+    // TODO(61469): add intended address to this enum.
     Undeliverable,
     // Acknowledged by a recipient.
     Acknowledged,
@@ -60,19 +62,91 @@ pub enum Status {
 }
 
 /// The intended recipients for a message.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Audience<A> {
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+pub enum Audience<A: Address + 'static> {
     // All non-broker messengers outside of the sender.
     Broadcast,
+    // A Audience Group.
+    Group(group::Group<A>),
     // The messenger at the specified address.
     Address(A),
     // The messenger with the specified signature.
     Messenger(Signature<A>),
 }
 
+impl<A: Address + 'static> Audience<A> {
+    /// Indicates whether a message directed towards this `Audience` must match
+    /// to a messenger or if it's okay for the message to be delivered to no
+    /// one. For example, broadcasts are meant to be delivered to any
+    /// (potentially no) messenger.
+    pub fn requires_delivery(&self) -> bool {
+        match self {
+            Audience::Broadcast => false,
+            Audience::Group(group) => {
+                group.audiences.iter().any(|audience| audience.requires_delivery())
+            }
+            Audience::Address(_) | Audience::Messenger(_) => true,
+        }
+    }
+
+    pub fn contains(&self, audience: &Audience<A>) -> bool {
+        audience.flatten().is_subset(&self.flatten())
+    }
+
+    fn flatten(&self) -> HashSet<Audience<A>> {
+        match self {
+            Audience::Group(group) => {
+                group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
+            }
+            _ => [self.clone()].iter().cloned().collect(),
+        }
+    }
+}
+
+pub mod group {
+    use super::{Address, Audience};
+    #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+    pub struct Group<A: Address + 'static> {
+        pub audiences: Vec<Audience<A>>,
+    }
+
+    impl<A: Address + 'static> Group<A> {
+        pub fn contains(&self, audience: &Audience<A>) -> bool {
+            for target in &self.audiences {
+                if target == audience {
+                    return true;
+                } else if let Audience::Group(group) = target {
+                    if group.contains(audience) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    pub struct Builder<A: Address + 'static> {
+        audiences: Vec<Audience<A>>,
+    }
+
+    impl<A: Address + 'static> Builder<A> {
+        pub fn new() -> Self {
+            Self { audiences: vec![] }
+        }
+
+        pub fn add(mut self, audience: Audience<A>) -> Self {
+            self.audiences.push(audience);
+            self
+        }
+
+        pub fn build(self) -> Group<A> {
+            Group { audiences: self.audiences }
+        }
+    }
+}
 /// An identifier that can be used to send messages directly to a Messenger.
 /// Included with Message instances.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum Signature<A> {
     // Messenger at a given address.
     Address(A),
@@ -187,8 +261,8 @@ pub mod filter {
             for condition in &self.conditions {
                 let match_found = match condition {
                     Condition::Audience(audience) => matches!(
-                        message.get_message_type(),
-                        MessageType::Origin(target) if target == *audience),
+                            message.get_message_type(),
+                            MessageType::Origin(target) if target.contains(audience)),
                     Condition::Custom(check_fn) => (check_fn)(message),
                     Condition::Filter(filter) => filter.matches(&message),
                 };

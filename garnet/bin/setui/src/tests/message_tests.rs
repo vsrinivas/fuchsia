@@ -5,7 +5,7 @@
 use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
-    filter, Address, Audience, MessageEvent, MessengerType, Payload, Status,
+    filter, group, Address, Audience, MessageEvent, MessengerType, Payload, Status,
 };
 use crate::message::message_client::MessageClient;
 use crate::message::receptor::Receptor;
@@ -997,7 +997,7 @@ async fn test_broker_filter_combined_all() {
         .await
         .expect("broker should be created");
 
-    // Send REPLY message. Should not match broker since content does not match
+    // Send REPLY message. Should not match broker since content does not match.
     messenger.message(REPLY, Audience::Address(target_address)).send().ack();
     // Other receptors should receive the broadcast as well.
     verify_payload(REPLY, &mut receptor, None).await;
@@ -1008,4 +1008,118 @@ async fn test_broker_filter_combined_all() {
     verify_payload(ORIGINAL, &mut broker_receptor, None).await;
     // Ensure target gets message as well.
     verify_payload(ORIGINAL, &mut receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_group_message() {
+    // Prepare a message hub with a sender and multiple targets.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send message.
+    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    // Receptors for messages.
+    let target_address_1 = TestAddress::Foo(1);
+    let (_, mut receptor_1) =
+        messenger_factory.create(MessengerType::Addressable(target_address_1)).await.unwrap();
+    let target_address_2 = TestAddress::Foo(2);
+    let (_, mut receptor_2) =
+        messenger_factory.create(MessengerType::Addressable(target_address_2)).await.unwrap();
+    let (_, mut receptor_3) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    let audience = Audience::Group(
+        group::Builder::new()
+            .add(Audience::Address(target_address_1))
+            .add(Audience::Address(target_address_2))
+            .build(),
+    );
+    // Send message targeting both receptors.
+    messenger.message(ORIGINAL, audience).send().ack();
+    // Receptors should both receive the message.
+    verify_payload(ORIGINAL, &mut receptor_1, None).await;
+    verify_payload(ORIGINAL, &mut receptor_2, None).await;
+
+    // Broadcast and ensure the untargeted receptor gets that message next
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+    verify_payload(BROADCAST, &mut receptor_3, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_group_message_redundant_targets() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    // Receptors for messages.
+    let target_address = TestAddress::Foo(1);
+    let (target_messenger, mut receptor) =
+        messenger_factory.create(MessengerType::Addressable(target_address)).await.unwrap();
+    // Create audience with multiple references to same messenger.
+    let audience = Audience::Group(
+        group::Builder::new()
+            .add(Audience::Address(target_address))
+            .add(Audience::Messenger(target_messenger.get_signature()))
+            .add(Audience::Broadcast)
+            .build(),
+    );
+
+    // Send Original message.
+    messenger.message(ORIGINAL, audience.clone()).send().ack();
+    // Receptor should receive message.
+    verify_payload(ORIGINAL, &mut receptor, None).await;
+
+    // Send Reply message.
+    messenger.message(REPLY, audience).send().ack();
+    // Receptor should receive Reply message and not another Original message.
+    verify_payload(REPLY, &mut receptor, None).await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_audience_matching() {
+    let target_audience = Audience::Address(TestAddress::Foo(1));
+    // An audience should contain itself.
+    assert!(target_audience.contains(&target_audience));
+    // An audience with only broadcast should not match.
+    {
+        let audience = Audience::Group(group::Builder::new().add(Audience::Broadcast).build());
+        assert!(!audience.contains(&target_audience));
+    }
+    // An audience group with the target audience should match.
+    {
+        let audience = Audience::Group(group::Builder::new().add(target_audience.clone()).build());
+        assert!(audience.contains(&target_audience));
+    }
+    // An audience group with the target audience nested should match.
+    {
+        let audience = Audience::Group(
+            group::Builder::new()
+                .add(Audience::Group(group::Builder::new().add(target_audience.clone()).build()))
+                .build(),
+        );
+        assert!(audience.contains(&target_audience));
+    }
+    // An a subset should be contained within a superset and a superset should
+    // not be contained in a subset.
+    {
+        let target_audience_2 = Audience::Address(TestAddress::Foo(2));
+        let target_audience_3 = Audience::Address(TestAddress::Foo(3));
+
+        let audience_subset = Audience::Group(
+            group::Builder::new()
+                .add(target_audience.clone())
+                .add(target_audience_2.clone())
+                .build(),
+        );
+
+        let audience_set = Audience::Group(
+            group::Builder::new()
+                .add(target_audience.clone())
+                .add(target_audience_2.clone())
+                .add(target_audience_3.clone())
+                .build(),
+        );
+
+        assert!(audience_set.contains(&audience_subset));
+        assert!(!audience_subset.contains(&audience_set));
+    }
 }

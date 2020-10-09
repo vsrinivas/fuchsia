@@ -11,10 +11,12 @@ use crate::message::base::{
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
+use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 use std::sync::Arc;
 
 /// Type definition for a handle to the MessageHub. There is a single instance
@@ -223,45 +225,20 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             // If no broker was added, the original target now should participate.
             if target_messengers.is_empty() {
                 if let MessageType::Origin(audience) = message_type {
-                    match audience {
-                        Audience::Address(address) => {
-                            if let Some(&messenger_id) = self.addresses.get(&address) {
-                                target_messengers.push(messenger_id);
-                                require_delivery = true;
-                            } else {
-                                // This error will occur if the sender specifies a non-existent
-                                // address.
-                                message.report_status(Status::Undeliverable).await;
-                            }
-                        }
-                        Audience::Messenger(signature) => {
-                            match signature {
-                                Signature::Address(address) => {
-                                    if let Some(&messenger_id) = self.addresses.get(&address) {
-                                        target_messengers.push(messenger_id);
-                                        require_delivery = true;
-                                    } else {
-                                        // This error will occur if the sender specifies a non-existent
-                                        // address.
-                                        message.report_status(Status::Undeliverable).await;
-                                    }
-                                }
-                                Signature::Anonymous(id) => {
-                                    target_messengers.push(id);
-                                }
-                            }
-                        }
-                        Audience::Broadcast => {
-                            // Broadcasts don't require any audience.
-                            message.report_status(Status::Broadcasted).await;
+                    if let Ok((resolved_messengers, delivery_required)) =
+                        self.resolve_audience(sender_id, &audience)
+                    {
+                        target_messengers.append(&mut Vec::from_iter(resolved_messengers));
+                        require_delivery |= delivery_required;
+                    } else {
+                        // This error will occur if the sender specifies a non-existent
+                        // address.
+                        message.report_status(Status::Undeliverable).await;
+                    }
 
-                            // Gather all messengers
-                            for &id in self.beacons.keys() {
-                                if id != sender_id && !self.is_broker(id) {
-                                    target_messengers.push(id);
-                                }
-                            }
-                        }
+                    if audience.contains(&Audience::Broadcast) {
+                        // Broadcasts don't require any audience.
+                        message.report_status(Status::Broadcasted).await;
                     }
                 }
             }
@@ -296,6 +273,63 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 })
                 .await;
         }
+    }
+
+    /// Resolves the audience into a set of MessengerIds. Also returns whether
+    /// delivery is required (broadcasts for example don't require delivery
+    /// confirmation). If there is an issue resolving an audience, an error
+    /// is returned. Errors should halt any further processing on the audience
+    /// set.
+    fn resolve_audience(
+        &self,
+        sender_id: MessengerId,
+        audience: &Audience<A>,
+    ) -> Result<(HashSet<MessengerId>, bool), Error> {
+        let mut return_set = HashSet::new();
+        let mut delivery_required = false;
+
+        match audience {
+            Audience::Address(address) => {
+                delivery_required = true;
+                if let Some(&messenger_id) = self.addresses.get(&address) {
+                    return_set.insert(messenger_id);
+                } else {
+                    return Err(format_err!("could not resolve address"));
+                }
+            }
+            Audience::Group(group) => {
+                for audience in &group.audiences {
+                    let resolved_audience = self.resolve_audience(sender_id, &audience)?;
+                    return_set.extend(resolved_audience.0);
+                    delivery_required |= resolved_audience.1;
+                }
+            }
+            Audience::Messenger(signature) => {
+                delivery_required = true;
+                match signature {
+                    Signature::Address(address) => {
+                        if let Some(&messenger_id) = self.addresses.get(&address) {
+                            return_set.insert(messenger_id);
+                        } else {
+                            return Err(format_err!("could not resolve signature"));
+                        }
+                    }
+                    Signature::Anonymous(id) => {
+                        return_set.insert(*id);
+                    }
+                }
+            }
+            Audience::Broadcast => {
+                // Gather all messengers
+                for &id in self.beacons.keys() {
+                    if id != sender_id && !self.is_broker(id) {
+                        return_set.insert(id);
+                    }
+                }
+            }
+        }
+
+        Ok((return_set, delivery_required))
     }
 
     async fn process_messenger_request(&mut self, action: MessengerAction<P, A>) {
