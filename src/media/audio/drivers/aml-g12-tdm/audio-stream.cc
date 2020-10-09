@@ -11,12 +11,13 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_call.h>
+
+#include "src/media/audio/drivers/aml-g12-tdm/aml_tdm-bind.h"
 
 namespace audio {
 namespace aml_g12 {
@@ -736,11 +737,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace audio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_tdm, audio::aml_g12::driver_ops, "aml-tdm", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_TDM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-ZIRCON_DRIVER_END(aml_tdm)
-    // clang-format on
+ZIRCON_DRIVER(aml_tdm, audio::aml_g12::driver_ops, "aml-tdm", "0.1")

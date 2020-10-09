@@ -14,6 +14,7 @@ executable("aml-g12-tdm-test-bin") {
     "test.cc",
   ]
   deps = [
+    "../:aml-g12-tdm-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/banjo/ddk.protocol.i2c",
