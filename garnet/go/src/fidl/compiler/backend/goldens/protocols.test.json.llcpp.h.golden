@@ -724,7 +724,7 @@ class Transitional final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(RequestResponse)];
       auto& _response = *new (_response_buffer) RequestResponse(y);
-      message_.LinearizeAndEncode(RequestResponse::Type, &_response);
+      message_.LinearizeAndEncode<RequestResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -773,7 +773,7 @@ class Transitional final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(RequestRequest)];
       auto& _request = *new (_request_buffer) RequestRequest(_txid, x);
-      message_.LinearizeAndEncode(RequestRequest::Type, &_request);
+      message_.LinearizeAndEncode<RequestRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -821,7 +821,7 @@ class Transitional final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(OneWayRequest)];
       auto& _request = *new (_request_buffer) OneWayRequest(_txid, x);
-      message_.LinearizeAndEncode(OneWayRequest::Type, &_request);
+      message_.LinearizeAndEncode<OneWayRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -868,7 +868,7 @@ class Transitional final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventResponse)];
       auto& _response = *new (_response_buffer) EventResponse(x);
-      message_.LinearizeAndEncode(EventResponse::Type, &_response);
+      message_.LinearizeAndEncode<EventResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -1459,7 +1459,7 @@ class ChannelProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodARequest)];
       auto& _request = *new (_request_buffer) MethodARequest(_txid, a, b);
-      message_.LinearizeAndEncode(MethodARequest::Type, &_request);
+      message_.LinearizeAndEncode<MethodARequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -1507,7 +1507,7 @@ class ChannelProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(EventAResponse)];
       auto& _response = *new (_response_buffer) EventAResponse(a, b);
-      message_.LinearizeAndEncode(EventAResponse::Type, &_response);
+      message_.LinearizeAndEncode<EventAResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -1554,7 +1554,7 @@ class ChannelProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MethodBResponse)];
       auto& _response = *new (_response_buffer) MethodBResponse(result);
-      message_.LinearizeAndEncode(MethodBResponse::Type, &_response);
+      message_.LinearizeAndEncode<MethodBResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -1603,7 +1603,7 @@ class ChannelProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodBRequest)];
       auto& _request = *new (_request_buffer) MethodBRequest(_txid, a, b);
-      message_.LinearizeAndEncode(MethodBRequest::Type, &_request);
+      message_.LinearizeAndEncode<MethodBRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -1654,7 +1654,7 @@ class ChannelProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MutateSocketResponse)];
       auto& _response = *new (_response_buffer) MutateSocketResponse(b);
-      message_.LinearizeAndEncode(MutateSocketResponse::Type, &_response);
+      message_.LinearizeAndEncode<MutateSocketResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -1708,7 +1708,7 @@ class ChannelProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MutateSocketRequest)];
       auto& _request = *new (_request_buffer) MutateSocketRequest(_txid, a);
-      message_.LinearizeAndEncode(MutateSocketRequest::Type, &_request);
+      message_.LinearizeAndEncode<MutateSocketRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2740,7 +2740,7 @@ class WithAndWithoutRequestResponse final {
       FIDL_ALIGNDECL uint8_t
           _request_buffer[sizeof(NoRequestNoResponseRequest)];
       auto& _request = *new (_request_buffer) NoRequestNoResponseRequest(_txid);
-      message_.LinearizeAndEncode(NoRequestNoResponseRequest::Type, &_request);
+      message_.LinearizeAndEncode<NoRequestNoResponseRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2791,8 +2791,7 @@ class WithAndWithoutRequestResponse final {
           _response_buffer[sizeof(NoRequestEmptyResponseResponse)];
       auto& _response =
           *new (_response_buffer) NoRequestEmptyResponseResponse();
-      message_.LinearizeAndEncode(NoRequestEmptyResponseResponse::Type,
-                                  &_response);
+      message_.LinearizeAndEncode<NoRequestEmptyResponseResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2845,8 +2844,7 @@ class WithAndWithoutRequestResponse final {
           _request_buffer[sizeof(NoRequestEmptyResponseRequest)];
       auto& _request =
           *new (_request_buffer) NoRequestEmptyResponseRequest(_txid);
-      message_.LinearizeAndEncode(NoRequestEmptyResponseRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<NoRequestEmptyResponseRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2894,8 +2892,7 @@ class WithAndWithoutRequestResponse final {
         : message_(_bytes, _byte_size, sizeof(NoRequestWithResponseResponse),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL NoRequestWithResponseResponse _response(ret);
-      message_.LinearizeAndEncode(NoRequestWithResponseResponse::Type,
-                                  &_response);
+      message_.LinearizeAndEncode<NoRequestWithResponseResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2949,8 +2946,7 @@ class WithAndWithoutRequestResponse final {
           _request_buffer[sizeof(NoRequestWithResponseRequest)];
       auto& _request =
           *new (_request_buffer) NoRequestWithResponseRequest(_txid);
-      message_.LinearizeAndEncode(NoRequestWithResponseRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<NoRequestWithResponseRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2998,8 +2994,7 @@ class WithAndWithoutRequestResponse final {
         : message_(_bytes, _byte_size, sizeof(WithRequestNoResponseRequest),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL WithRequestNoResponseRequest _request(_txid, arg);
-      message_.LinearizeAndEncode(WithRequestNoResponseRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<WithRequestNoResponseRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -3053,8 +3048,7 @@ class WithAndWithoutRequestResponse final {
           _response_buffer[sizeof(WithRequestEmptyResponseResponse)];
       auto& _response =
           *new (_response_buffer) WithRequestEmptyResponseResponse();
-      message_.LinearizeAndEncode(WithRequestEmptyResponseResponse::Type,
-                                  &_response);
+      message_.LinearizeAndEncode<WithRequestEmptyResponseResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -3103,8 +3097,7 @@ class WithAndWithoutRequestResponse final {
         : message_(_bytes, _byte_size, sizeof(WithRequestEmptyResponseRequest),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL WithRequestEmptyResponseRequest _request(_txid, arg);
-      message_.LinearizeAndEncode(WithRequestEmptyResponseRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<WithRequestEmptyResponseRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -3154,8 +3147,7 @@ class WithAndWithoutRequestResponse final {
         : message_(_bytes, _byte_size, sizeof(WithRequestWithResponseResponse),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL WithRequestWithResponseResponse _response(ret);
-      message_.LinearizeAndEncode(WithRequestWithResponseResponse::Type,
-                                  &_response);
+      message_.LinearizeAndEncode<WithRequestWithResponseResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -3205,8 +3197,7 @@ class WithAndWithoutRequestResponse final {
         : message_(_bytes, _byte_size, sizeof(WithRequestWithResponseRequest),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL WithRequestWithResponseRequest _request(_txid, arg);
-      message_.LinearizeAndEncode(WithRequestWithResponseRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<WithRequestWithResponseRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -3258,7 +3249,7 @@ class WithAndWithoutRequestResponse final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEmptyResponseResponse)];
       auto& _response = *new (_response_buffer) OnEmptyResponseResponse();
-      message_.LinearizeAndEncode(OnEmptyResponseResponse::Type, &_response);
+      message_.LinearizeAndEncode<OnEmptyResponseResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -3305,7 +3296,7 @@ class WithAndWithoutRequestResponse final {
         : message_(_bytes, _byte_size, sizeof(OnWithResponseResponse), nullptr,
                    0, 0) {
       FIDL_ALIGNDECL OnWithResponseResponse _response(ret);
-      message_.LinearizeAndEncode(OnWithResponseResponse::Type, &_response);
+      message_.LinearizeAndEncode<OnWithResponseResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -4094,7 +4085,7 @@ class WithErrorSyntax final {
         : message_(_bytes, _byte_size, sizeof(ResponseAsStructResponse),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL ResponseAsStructResponse _response(result);
-      message_.LinearizeAndEncode(ResponseAsStructResponse::Type, &_response);
+      message_.LinearizeAndEncode<ResponseAsStructResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -4145,7 +4136,7 @@ class WithErrorSyntax final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ResponseAsStructRequest)];
       auto& _request = *new (_request_buffer) ResponseAsStructRequest(_txid);
-      message_.LinearizeAndEncode(ResponseAsStructRequest::Type, &_request);
+      message_.LinearizeAndEncode<ResponseAsStructRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -4193,7 +4184,7 @@ class WithErrorSyntax final {
         : message_(_bytes, _byte_size, sizeof(ErrorAsPrimitiveResponse),
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL ErrorAsPrimitiveResponse _response(result);
-      message_.LinearizeAndEncode(ErrorAsPrimitiveResponse::Type, &_response);
+      message_.LinearizeAndEncode<ErrorAsPrimitiveResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -4244,7 +4235,7 @@ class WithErrorSyntax final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsPrimitiveRequest)];
       auto& _request = *new (_request_buffer) ErrorAsPrimitiveRequest(_txid);
-      message_.LinearizeAndEncode(ErrorAsPrimitiveRequest::Type, &_request);
+      message_.LinearizeAndEncode<ErrorAsPrimitiveRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -4292,7 +4283,7 @@ class WithErrorSyntax final {
         : message_(_bytes, _byte_size, sizeof(ErrorAsEnumResponse), nullptr, 0,
                    0) {
       FIDL_ALIGNDECL ErrorAsEnumResponse _response(result);
-      message_.LinearizeAndEncode(ErrorAsEnumResponse::Type, &_response);
+      message_.LinearizeAndEncode<ErrorAsEnumResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -4343,7 +4334,7 @@ class WithErrorSyntax final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(ErrorAsEnumRequest)];
       auto& _request = *new (_request_buffer) ErrorAsEnumRequest(_txid);
-      message_.LinearizeAndEncode(ErrorAsEnumRequest::Type, &_request);
+      message_.LinearizeAndEncode<ErrorAsEnumRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

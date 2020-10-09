@@ -17,8 +17,8 @@ extern "C" const fidl_type_t top_TopGetFooResponseTable;
 }  // namespace
 Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
   GetFooOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      GetFooResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<GetFooResponse>(
+      _client, bytes_,
       GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
@@ -26,8 +26,8 @@ Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
 
 Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client, zx_time_t _deadline) {
   GetFooOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      GetFooResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<GetFooResponse>(
+      _client, bytes_,
       GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine, _deadline);
   status_ = _request.status();
   error_ = _request.error();
@@ -38,8 +38,8 @@ Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
                                      uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   GetFooOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(GetFooResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<GetFooResponse>(_client, _response_bytes,
+                                                     _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

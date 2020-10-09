@@ -49,7 +49,7 @@ class OutgoingMessage final : public ::fidl::Result {
   void ReleaseHandles() { message_.num_handles = 0; }
 
   // Linearizes and encodes a message. |data| is a pointer to a buffer which holds the source
-  // message body which type is defined by |message_type|.
+  // message body which type is defined by |FidlType|.
   // If this function succeed:
   // - |status_| is ZX_OK
   // - |message_| holds the data for the linearized version of |data|.
@@ -57,7 +57,10 @@ class OutgoingMessage final : public ::fidl::Result {
   // - |status_| is not ZX_OK
   // - |error_message_| holds an explanation of the failure
   // - |message_| is undefined
-  void LinearizeAndEncode(const fidl_type_t* message_type, void* data);
+  template <typename FidlType>
+  void LinearizeAndEncode(FidlType* data) {
+    LinearizeAndEncode(FidlType::Type, data);
+  }
 
   // Uses zx_channel_write to write the linearized message.
   // Before calling Write, LinearizeAndEncode must be called.
@@ -66,14 +69,37 @@ class OutgoingMessage final : public ::fidl::Result {
   // For requests with a response, uses zx_channel_call to write the linearized message.
   // Before calling Call, LinearizeAndEncode must be called.
   // If the call succeed, |result_bytes| contains the decoded linearized result.
-  void Call(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
-            uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE);
+  template <typename FidlType>
+  void Call(zx_handle_t channel, uint8_t* result_bytes, uint32_t result_capacity,
+            zx_time_t deadline = ZX_TIME_INFINITE) {
+    Call(FidlType::Type, channel, result_bytes, result_capacity, deadline);
+  }
 
   // For asynchronous clients, writes a request.
   ::fidl::Result Write(::fidl::internal::ClientBase* client,
                        ::fidl::internal::ResponseContext* context);
 
  private:
+  // Linearizes and encodes a message. |data| is a pointer to a buffer which holds the source
+  // message body which type is defined by |message_type|.
+  // If this function succeed:
+  // - |status_| is ZX_OK
+  // - |message_| holds the data for the linearized version of |data|.
+  // If this function fails:
+  // - |status_| is not ZX_OK
+  // - |error_message_| holds an explanation of the failure
+  // - |message_| is undefined
+  // The handles in the message are always consumed by LinearizeAndEncode. If it succeeds they will
+  // be transferred into |handles_|. If it fails, some handles may be transferred into |handles_|
+  // and the rest will be closed.
+  void LinearizeAndEncode(const fidl_type_t* message_type, void* data);
+
+  // For requests with a response, uses zx_channel_call to write the linearized message.
+  // Before calling Call, LinearizeAndEncode must be called.
+  // If the call succeed, |result_bytes| contains the decoded linearized result.
+  void Call(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
+            uint32_t result_capacity, zx_time_t deadline);
+
   fidl_msg_t message_;
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;
@@ -126,12 +152,20 @@ class IncomingMessage final : public ::fidl::Result {
   // when interfacing with low-level channel operations which consume the handles.
   void ReleaseHandles() { message_.num_handles = 0; }
 
+  // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
+  // |bytes()| contains the decoded object.
+  // This method should be used after a read.
+  template <typename FidlType>
+  void Decode() {
+    Decode(FidlType::Type);
+  }
+
+ private:
   // Decodes the message using |message_type|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type);
 
- private:
   fidl_msg_t message_;
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;

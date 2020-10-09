@@ -57,8 +57,8 @@ extern "C" const fidl_type_t test_name_TransitionalEventEventTable;
 }  // namespace
 Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
   RequestOwnedRequest _request(0, x);
-  _request.GetOutgoingMessage().Call(
-      RequestResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<RequestResponse>(
+      _client, bytes_,
       RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
@@ -67,8 +67,8 @@ Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
 Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x,
                                          zx_time_t _deadline) {
   RequestOwnedRequest _request(0, x);
-  _request.GetOutgoingMessage().Call(
-      RequestResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<RequestResponse>(
+      _client, bytes_,
       RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine, _deadline);
   status_ = _request.status();
   error_ = _request.error();
@@ -80,8 +80,8 @@ Transitional::UnownedResultOf::Request::Request(
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   RequestUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, x);
-  _request.GetOutgoingMessage().Call(RequestResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<RequestResponse>(_client, _response_bytes,
+                                                      _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -422,8 +422,8 @@ ChannelProtocol::UnownedResultOf::MethodA::MethodA(
 ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
                                             int64_t b) {
   MethodBOwnedRequest _request(0, a, b);
-  _request.GetOutgoingMessage().Call(
-      MethodBResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<MethodBResponse>(
+      _client, bytes_,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
@@ -432,8 +432,8 @@ ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
 ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
                                             int64_t b, zx_time_t _deadline) {
   MethodBOwnedRequest _request(0, a, b);
-  _request.GetOutgoingMessage().Call(
-      MethodBResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<MethodBResponse>(
+      _client, bytes_,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine, _deadline);
   status_ = _request.status();
   error_ = _request.error();
@@ -446,8 +446,8 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
     : bytes_(_response_bytes) {
   MethodBUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a,
                                  b);
-  _request.GetOutgoingMessage().Call(MethodBResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<MethodBResponse>(_client, _response_bytes,
+                                                      _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -455,8 +455,8 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
 ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
                                                       ::zx::socket& a) {
   MutateSocketOwnedRequest _request(0, a);
-  _request.GetOutgoingMessage().Call(
-      MutateSocketResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<MutateSocketResponse>(
+      _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
@@ -466,8 +466,8 @@ ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
                                                       ::zx::socket& a,
                                                       zx_time_t _deadline) {
   MutateSocketOwnedRequest _request(0, a);
-  _request.GetOutgoingMessage().Call(
-      MutateSocketResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<MutateSocketResponse>(
+      _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine,
       _deadline);
   status_ = _request.status();
@@ -481,8 +481,8 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
     : bytes_(_response_bytes) {
   MutateSocketUnownedRequest _request(_request_bytes, _request_byte_capacity, 0,
                                       a);
-  _request.GetOutgoingMessage().Call(MutateSocketResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<MutateSocketResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -943,8 +943,8 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse::
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
     NoRequestEmptyResponse(zx_handle_t _client) {
   NoRequestEmptyResponseOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      NoRequestEmptyResponseResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
+      _client, bytes_,
       NoRequestEmptyResponseResponse::PrimarySize +
           NoRequestEmptyResponseResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -954,8 +954,8 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
     NoRequestEmptyResponse(zx_handle_t _client, zx_time_t _deadline) {
   NoRequestEmptyResponseOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      NoRequestEmptyResponseResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
+      _client, bytes_,
       NoRequestEmptyResponseResponse::PrimarySize +
           NoRequestEmptyResponseResponse::MaxOutOfLine,
       _deadline);
@@ -968,9 +968,8 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   NoRequestWithResponseOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(NoRequestWithResponseResponse::Type,
-                                     _client, bytes_->data(),
-                                     ZX_CHANNEL_MAX_MSG_BYTES);
+  _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -980,9 +979,8 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   NoRequestWithResponseOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(NoRequestWithResponseResponse::Type,
-                                     _client, bytes_->data(),
-                                     ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+  _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -992,9 +990,8 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
                           uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   NoRequestWithResponseOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(NoRequestWithResponseResponse::Type,
-                                     _client, _response_bytes,
-                                     _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1022,8 +1019,8 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
     WithRequestEmptyResponse(zx_handle_t _client,
                              const ::fidl::StringView& arg) {
   WithRequestEmptyResponseOwnedRequest _request(0, arg);
-  _request.GetOutgoingMessage().Call(
-      WithRequestEmptyResponseResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
+      _client, bytes_,
       WithRequestEmptyResponseResponse::PrimarySize +
           WithRequestEmptyResponseResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -1034,8 +1031,8 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
     WithRequestEmptyResponse(zx_handle_t _client, const ::fidl::StringView& arg,
                              zx_time_t _deadline) {
   WithRequestEmptyResponseOwnedRequest _request(0, arg);
-  _request.GetOutgoingMessage().Call(
-      WithRequestEmptyResponseResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
+      _client, bytes_,
       WithRequestEmptyResponseResponse::PrimarySize +
           WithRequestEmptyResponseResponse::MaxOutOfLine,
       _deadline);
@@ -1052,9 +1049,8 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
     : bytes_(_response_bytes) {
   WithRequestEmptyResponseUnownedRequest _request(
       _request_bytes, _request_byte_capacity, 0, arg);
-  _request.GetOutgoingMessage().Call(WithRequestEmptyResponseResponse::Type,
-                                     _client, _response_bytes,
-                                     _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1064,9 +1060,8 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   WithRequestWithResponseOwnedRequest _request(0, arg);
-  _request.GetOutgoingMessage().Call(WithRequestWithResponseResponse::Type,
-                                     _client, bytes_->data(),
-                                     ZX_CHANNEL_MAX_MSG_BYTES);
+  _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1077,9 +1072,8 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   WithRequestWithResponseOwnedRequest _request(0, arg);
-  _request.GetOutgoingMessage().Call(WithRequestWithResponseResponse::Type,
-                                     _client, bytes_->data(),
-                                     ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+  _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1093,9 +1087,8 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
     : bytes_(_response_bytes) {
   WithRequestWithResponseUnownedRequest _request(
       _request_bytes, _request_byte_capacity, 0, arg);
-  _request.GetOutgoingMessage().Call(WithRequestWithResponseResponse::Type,
-                                     _client, _response_bytes,
-                                     _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1812,8 +1805,8 @@ extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client) {
   ResponseAsStructOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      ResponseAsStructResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
+      _client, bytes_,
       ResponseAsStructResponse::PrimarySize +
           ResponseAsStructResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -1823,11 +1816,11 @@ WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
 WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client, zx_time_t _deadline) {
   ResponseAsStructOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(ResponseAsStructResponse::Type, _client,
-                                     bytes_,
-                                     ResponseAsStructResponse::PrimarySize +
-                                         ResponseAsStructResponse::MaxOutOfLine,
-                                     _deadline);
+  _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
+      _client, bytes_,
+      ResponseAsStructResponse::PrimarySize +
+          ResponseAsStructResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1837,8 +1830,8 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ResponseAsStructOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(ResponseAsStructResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1846,8 +1839,8 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
 WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client) {
   ErrorAsPrimitiveOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      ErrorAsPrimitiveResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
+      _client, bytes_,
       ErrorAsPrimitiveResponse::PrimarySize +
           ErrorAsPrimitiveResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -1857,11 +1850,11 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
 WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client, zx_time_t _deadline) {
   ErrorAsPrimitiveOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(ErrorAsPrimitiveResponse::Type, _client,
-                                     bytes_,
-                                     ErrorAsPrimitiveResponse::PrimarySize +
-                                         ErrorAsPrimitiveResponse::MaxOutOfLine,
-                                     _deadline);
+  _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
+      _client, bytes_,
+      ErrorAsPrimitiveResponse::PrimarySize +
+          ErrorAsPrimitiveResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -1871,16 +1864,16 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ErrorAsPrimitiveOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(ErrorAsPrimitiveResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 
 WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
   ErrorAsEnumOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      ErrorAsEnumResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
+      _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
@@ -1889,8 +1882,8 @@ WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
 WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client,
                                                     zx_time_t _deadline) {
   ErrorAsEnumOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      ErrorAsEnumResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
+      _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine,
       _deadline);
   status_ = _request.status();
@@ -1902,8 +1895,8 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   ErrorAsEnumOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(ErrorAsEnumResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

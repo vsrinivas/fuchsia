@@ -126,7 +126,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
       auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
-      message_.LinearizeAndEncode(FirstRequest::Type, &_request);
+      message_.LinearizeAndEncode<FirstRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -401,7 +401,7 @@ class Child final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
       auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
-      message_.LinearizeAndEncode(FirstRequest::Type, &_request);
+      message_.LinearizeAndEncode<FirstRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -454,7 +454,7 @@ class Child final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
       auto& _request = *new (_request_buffer) SecondRequest(_txid, request);
-      message_.LinearizeAndEncode(SecondRequest::Type, &_request);
+      message_.LinearizeAndEncode<SecondRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

@@ -302,7 +302,7 @@ class EmptyProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)];
       auto& _request = *new (_request_buffer) SendRequest(_txid, e);
-      message_.LinearizeAndEncode(SendRequest::Type, &_request);
+      message_.LinearizeAndEncode<SendRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -351,7 +351,7 @@ class EmptyProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(ReceiveResponse)];
       auto& _response = *new (_response_buffer) ReceiveResponse(e);
-      message_.LinearizeAndEncode(ReceiveResponse::Type, &_response);
+      message_.LinearizeAndEncode<ReceiveResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -401,7 +401,7 @@ class EmptyProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(SendAndReceiveResponse)];
       auto& _response = *new (_response_buffer) SendAndReceiveResponse(e);
-      message_.LinearizeAndEncode(SendAndReceiveResponse::Type, &_response);
+      message_.LinearizeAndEncode<SendAndReceiveResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -452,7 +452,7 @@ class EmptyProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)];
       auto& _request = *new (_request_buffer) SendAndReceiveRequest(_txid, e);
-      message_.LinearizeAndEncode(SendAndReceiveRequest::Type, &_request);
+      message_.LinearizeAndEncode<SendAndReceiveRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

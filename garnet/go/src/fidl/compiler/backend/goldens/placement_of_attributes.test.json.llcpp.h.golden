@@ -530,7 +530,7 @@ class ExampleProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
       auto& _request = *new (_request_buffer) MethodRequest(_txid, arg);
-      message_.LinearizeAndEncode(MethodRequest::Type, &_request);
+      message_.LinearizeAndEncode<MethodRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

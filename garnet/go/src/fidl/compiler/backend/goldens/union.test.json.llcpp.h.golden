@@ -2797,9 +2797,8 @@ class TestProtocol final {
                    nullptr, 0, 0) {
       FIDL_ALIGNDECL StrictXUnionHenceResponseMayBeStackAllocatedResponse
           _response(xu);
-      message_.LinearizeAndEncode(
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type,
-          &_response);
+      message_.LinearizeAndEncode<
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2857,8 +2856,8 @@ class TestProtocol final {
       auto& _request =
           *new (_request_buffer)
               StrictXUnionHenceResponseMayBeStackAllocatedRequest(_txid);
-      message_.LinearizeAndEncode(
-          StrictXUnionHenceResponseMayBeStackAllocatedRequest::Type, &_request);
+      message_.LinearizeAndEncode<
+          StrictXUnionHenceResponseMayBeStackAllocatedRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2913,9 +2912,8 @@ class TestProtocol final {
               nullptr, 0, 0) {
       FIDL_ALIGNDECL FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
           _response(xu);
-      message_.LinearizeAndEncode(
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type,
-          &_response);
+      message_.LinearizeAndEncode<
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -2974,9 +2972,8 @@ class TestProtocol final {
       auto& _request =
           *new (_request_buffer)
               FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(_txid);
-      message_.LinearizeAndEncode(
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::Type,
-          &_request);
+      message_.LinearizeAndEncode<
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

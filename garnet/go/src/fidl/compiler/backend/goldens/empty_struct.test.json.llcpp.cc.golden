@@ -50,10 +50,10 @@ EmptyProtocol::UnownedResultOf::Send::Send(
 EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
     zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e) {
   SendAndReceiveOwnedRequest _request(0, e);
-  _request.GetOutgoingMessage().Call(SendAndReceiveResponse::Type, _client,
-                                     bytes_,
-                                     SendAndReceiveResponse::PrimarySize +
-                                         SendAndReceiveResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
+      _client, bytes_,
+      SendAndReceiveResponse::PrimarySize +
+          SendAndReceiveResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -62,11 +62,11 @@ EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
     zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e,
     zx_time_t _deadline) {
   SendAndReceiveOwnedRequest _request(0, e);
-  _request.GetOutgoingMessage().Call(SendAndReceiveResponse::Type, _client,
-                                     bytes_,
-                                     SendAndReceiveResponse::PrimarySize +
-                                         SendAndReceiveResponse::MaxOutOfLine,
-                                     _deadline);
+  _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
+      _client, bytes_,
+      SendAndReceiveResponse::PrimarySize +
+          SendAndReceiveResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -78,8 +78,8 @@ EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
     : bytes_(_response_bytes) {
   SendAndReceiveUnownedRequest _request(_request_bytes, _request_byte_capacity,
                                         0, e);
-  _request.GetOutgoingMessage().Call(SendAndReceiveResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

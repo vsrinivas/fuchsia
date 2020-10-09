@@ -594,8 +594,8 @@ class Protocol final {
                    sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                    0) {
       FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response(f);
-      message_.LinearizeAndEncode(RequestStrictResponseFlexibleResponse::Type,
-                                  &_response);
+      message_.LinearizeAndEncode<RequestStrictResponseFlexibleResponse>(
+          &_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -647,8 +647,8 @@ class Protocol final {
                    sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
                    0) {
       FIDL_ALIGNDECL RequestStrictResponseFlexibleRequest _request(_txid, s);
-      message_.LinearizeAndEncode(RequestStrictResponseFlexibleRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<RequestStrictResponseFlexibleRequest>(
+          &_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -700,8 +700,8 @@ class Protocol final {
                    sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                    0) {
       FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response(f);
-      message_.LinearizeAndEncode(RequestFlexibleResponseStrictResponse::Type,
-                                  &_response);
+      message_.LinearizeAndEncode<RequestFlexibleResponseStrictResponse>(
+          &_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -753,8 +753,8 @@ class Protocol final {
                    sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
                    0) {
       FIDL_ALIGNDECL RequestFlexibleResponseStrictRequest _request(_txid, s);
-      message_.LinearizeAndEncode(RequestFlexibleResponseStrictRequest::Type,
-                                  &_request);
+      message_.LinearizeAndEncode<RequestFlexibleResponseStrictRequest>(
+          &_request);
     }
 
     zx_status_t status() const { return message_.status(); }

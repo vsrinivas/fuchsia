@@ -32,9 +32,8 @@ extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 }  // namespace
 Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
   fooOwnedRequest _request(0, s);
-  _request.GetOutgoingMessage().Call(
-      fooResponse::Type, _client, bytes_,
-      fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<fooResponse>(
+      _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -42,9 +41,9 @@ Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
 Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
                             zx_time_t _deadline) {
   fooOwnedRequest _request(0, s);
-  _request.GetOutgoingMessage().Call(
-      fooResponse::Type, _client, bytes_,
-      fooResponse::PrimarySize + fooResponse::MaxOutOfLine, _deadline);
+  _request.GetOutgoingMessage().Call<fooResponse>(
+      _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -56,8 +55,8 @@ Example::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
                                    uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   fooUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, s);
-  _request.GetOutgoingMessage().Call(fooResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<fooResponse>(_client, _response_bytes,
+                                                  _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

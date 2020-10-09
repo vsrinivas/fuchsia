@@ -172,11 +172,12 @@ extern "C" const fidl_type_t
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
-      bytes_,
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage()
+      .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
+          _client, bytes_,
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
+              StrictXUnionHenceResponseMayBeStackAllocatedResponse::
+                  MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -185,12 +186,13 @@ TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client,
                                                  zx_time_t _deadline) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
-      bytes_,
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
-          StrictXUnionHenceResponseMayBeStackAllocatedResponse::MaxOutOfLine,
-      _deadline);
+  _request.GetOutgoingMessage()
+      .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
+          _client, bytes_,
+          StrictXUnionHenceResponseMayBeStackAllocatedResponse::PrimarySize +
+              StrictXUnionHenceResponseMayBeStackAllocatedResponse::
+                  MaxOutOfLine,
+          _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -201,9 +203,9 @@ TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type, _client,
-      _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage()
+      .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
+          _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -213,9 +215,9 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
-      bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
+  _request.GetOutgoingMessage()
+      .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
+          _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -226,9 +228,9 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
-      bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+  _request.GetOutgoingMessage()
+      .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
+          _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -239,9 +241,9 @@ TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type, _client,
-      _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage()
+      .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
+          _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

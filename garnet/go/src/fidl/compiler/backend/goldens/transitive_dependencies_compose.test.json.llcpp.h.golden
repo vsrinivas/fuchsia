@@ -183,7 +183,7 @@ class Top final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetFooResponse)];
       auto& _response = *new (_response_buffer) GetFooResponse(foo);
-      message_.LinearizeAndEncode(GetFooResponse::Type, &_response);
+      message_.LinearizeAndEncode<GetFooResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -230,7 +230,7 @@ class Top final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)];
       auto& _request = *new (_request_buffer) GetFooRequest(_txid);
-      message_.LinearizeAndEncode(GetFooRequest::Type, &_request);
+      message_.LinearizeAndEncode<GetFooRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

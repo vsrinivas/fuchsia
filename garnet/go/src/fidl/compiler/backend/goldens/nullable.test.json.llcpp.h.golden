@@ -410,7 +410,7 @@ class SimpleProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(AddResponse)];
       auto& _response = *new (_response_buffer) AddResponse(sum);
-      message_.LinearizeAndEncode(AddResponse::Type, &_response);
+      message_.LinearizeAndEncode<AddResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -458,7 +458,7 @@ class SimpleProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(AddRequest)];
       auto& _request = *new (_request_buffer) AddRequest(_txid, a, b);
-      message_.LinearizeAndEncode(AddRequest::Type, &_request);
+      message_.LinearizeAndEncode<AddRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

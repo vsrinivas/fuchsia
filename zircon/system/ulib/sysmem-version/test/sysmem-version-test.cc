@@ -63,7 +63,7 @@ class LinearSnap {
     fidl::OutgoingMessage outgoing_message(linear_data_, kMaxDataSize, 0, handles,
                                            ZX_CHANNEL_MAX_MSG_HANDLES, 0);
 
-    outgoing_message.LinearizeAndEncode(FidlType::Type, &aligned);
+    outgoing_message.LinearizeAndEncode<FidlType>(&aligned);
     if (!outgoing_message.ok()) {
       printf("Encoded error: %s\n",
              (outgoing_message.error() == nullptr) ? "" : outgoing_message.error());
@@ -82,7 +82,7 @@ class LinearSnap {
 
     // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
     fidl::IncomingMessage incoming_message(std::move(outgoing_message));
-    incoming_message.Decode(FidlType::Type);
+    incoming_message.Decode<FidlType>();
     ZX_ASSERT(incoming_message.ok());
     ZX_ASSERT(incoming_message.error() == nullptr);
 

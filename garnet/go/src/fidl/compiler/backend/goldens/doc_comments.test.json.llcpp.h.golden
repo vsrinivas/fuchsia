@@ -524,7 +524,7 @@ class Interface final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
       auto& _request = *new (_request_buffer) MethodRequest(_txid);
-      message_.LinearizeAndEncode(MethodRequest::Type, &_request);
+      message_.LinearizeAndEncode<MethodRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -571,7 +571,7 @@ class Interface final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(OnEventResponse)];
       auto& _response = *new (_response_buffer) OnEventResponse();
-      message_.LinearizeAndEncode(OnEventResponse::Type, &_response);
+      message_.LinearizeAndEncode<OnEventResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }

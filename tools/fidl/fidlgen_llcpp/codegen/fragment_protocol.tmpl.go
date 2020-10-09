@@ -413,7 +413,7 @@ class {{ .Name }} final {
         {{- template "PassthroughMessageParams" .Response -}}
         );
   {{- end }}
-        message_.LinearizeAndEncode({{ .Name }}Response::Type, &_response);
+        message_.LinearizeAndEncode<{{ .Name }}Response>(&_response);
       }
 
     zx_status_t status() const { return message_.status(); }
@@ -490,7 +490,7 @@ class {{ .Name }} final {
         {{- template "CommaPassthroughMessageParams" .Request -}}
         );
   {{- end }}
-        message_.LinearizeAndEncode({{ .Name }}Request::Type, &_request);
+        message_.LinearizeAndEncode<{{ .Name }}Request>(&_request);
       }
 
     zx_status_t status() const { return message_.status(); }

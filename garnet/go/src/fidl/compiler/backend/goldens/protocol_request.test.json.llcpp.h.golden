@@ -432,7 +432,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)];
       auto& _response = *new (_response_buffer) GetChildResponse(c);
-      message_.LinearizeAndEncode(GetChildResponse::Type, &_response);
+      message_.LinearizeAndEncode<GetChildResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -483,7 +483,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetChildRequest)];
       auto& _request = *new (_request_buffer) GetChildRequest(_txid);
-      message_.LinearizeAndEncode(GetChildRequest::Type, &_request);
+      message_.LinearizeAndEncode<GetChildRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -536,7 +536,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildRequestResponse)];
       auto& _response = *new (_response_buffer) GetChildRequestResponse(r);
-      message_.LinearizeAndEncode(GetChildRequestResponse::Type, &_response);
+      message_.LinearizeAndEncode<GetChildRequestResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -588,7 +588,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetChildRequestRequest)];
       auto& _request = *new (_request_buffer) GetChildRequestRequest(_txid);
-      message_.LinearizeAndEncode(GetChildRequestRequest::Type, &_request);
+      message_.LinearizeAndEncode<GetChildRequestRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -640,7 +640,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequest)];
       auto& _request = *new (_request_buffer) TakeChildRequest(_txid, c);
-      message_.LinearizeAndEncode(TakeChildRequest::Type, &_request);
+      message_.LinearizeAndEncode<TakeChildRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -695,7 +695,7 @@ class Parent final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequestRequest)];
       auto& _request = *new (_request_buffer) TakeChildRequestRequest(_txid, r);
-      message_.LinearizeAndEncode(TakeChildRequestRequest::Type, &_request);
+      message_.LinearizeAndEncode<TakeChildRequestRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

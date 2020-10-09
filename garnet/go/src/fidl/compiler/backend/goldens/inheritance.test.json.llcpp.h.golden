@@ -188,7 +188,7 @@ class super final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
       auto& _response = *new (_response_buffer) fooResponse(y);
-      message_.LinearizeAndEncode(fooResponse::Type, &_response);
+      message_.LinearizeAndEncode<fooResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -233,7 +233,7 @@ class super final {
                       const ::fidl::StringView& s)
         : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL fooRequest _request(_txid, s);
-      message_.LinearizeAndEncode(fooRequest::Type, &_request);
+      message_.LinearizeAndEncode<fooRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -542,7 +542,7 @@ class sub final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
       auto& _response = *new (_response_buffer) fooResponse(y);
-      message_.LinearizeAndEncode(fooResponse::Type, &_response);
+      message_.LinearizeAndEncode<fooResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -587,7 +587,7 @@ class sub final {
                       const ::fidl::StringView& s)
         : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL fooRequest _request(_txid, s);
-      message_.LinearizeAndEncode(fooRequest::Type, &_request);
+      message_.LinearizeAndEncode<fooRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

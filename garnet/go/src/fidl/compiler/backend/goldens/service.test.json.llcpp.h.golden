@@ -122,7 +122,7 @@ class SecondProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)];
       auto& _request = *new (_request_buffer) MethodOnSecondRequest(_txid);
-      message_.LinearizeAndEncode(MethodOnSecondRequest::Type, &_request);
+      message_.LinearizeAndEncode<MethodOnSecondRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -318,7 +318,7 @@ class FirstProtocol final {
       // (here and in fidl::Encode).
       FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)];
       auto& _request = *new (_request_buffer) MethodOnFirstRequest(_txid);
-      message_.LinearizeAndEncode(MethodOnFirstRequest::Type, &_request);
+      message_.LinearizeAndEncode<MethodOnFirstRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }

@@ -31,8 +31,8 @@ extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
 }  // namespace
 Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
   GetChildOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      GetChildResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<GetChildResponse>(
+      _client, bytes_,
       GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
@@ -40,8 +40,8 @@ Parent::ResultOf::GetChild::GetChild(zx_handle_t _client) {
 
 Parent::ResultOf::GetChild::GetChild(zx_handle_t _client, zx_time_t _deadline) {
   GetChildOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(
-      GetChildResponse::Type, _client, bytes_,
+  _request.GetOutgoingMessage().Call<GetChildResponse>(
+      _client, bytes_,
       GetChildResponse::PrimarySize + GetChildResponse::MaxOutOfLine,
       _deadline);
   status_ = _request.status();
@@ -53,18 +53,18 @@ Parent::UnownedResultOf::GetChild::GetChild(zx_handle_t _client,
                                             uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   GetChildOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(GetChildResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<GetChildResponse>(_client, _response_bytes,
+                                                       _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 
 Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
   GetChildRequestOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(GetChildRequestResponse::Type, _client,
-                                     bytes_,
-                                     GetChildRequestResponse::PrimarySize +
-                                         GetChildRequestResponse::MaxOutOfLine);
+  _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
+      _client, bytes_,
+      GetChildRequestResponse::PrimarySize +
+          GetChildRequestResponse::MaxOutOfLine);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -72,11 +72,11 @@ Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client) {
 Parent::ResultOf::GetChildRequest::GetChildRequest(zx_handle_t _client,
                                                    zx_time_t _deadline) {
   GetChildRequestOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(GetChildRequestResponse::Type, _client,
-                                     bytes_,
-                                     GetChildRequestResponse::PrimarySize +
-                                         GetChildRequestResponse::MaxOutOfLine,
-                                     _deadline);
+  _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
+      _client, bytes_,
+      GetChildRequestResponse::PrimarySize +
+          GetChildRequestResponse::MaxOutOfLine,
+      _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -86,8 +86,8 @@ Parent::UnownedResultOf::GetChildRequest::GetChildRequest(
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   GetChildRequestOwnedRequest _request(0);
-  _request.GetOutgoingMessage().Call(GetChildRequestResponse::Type, _client,
-                                     _response_bytes, _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

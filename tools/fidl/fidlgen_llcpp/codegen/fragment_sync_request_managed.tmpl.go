@@ -35,7 +35,7 @@ const fragmentSyncRequestManagedTmpl = `
   {{ .Name }}OwnedRequest _request(0
     {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}
-  _request.GetOutgoingMessage().Call({{ .Name }}Response::Type, _client,
+  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client,
                                  {{- template "ResponseReceivedByteAccess" . }},
                                  {{ template "ResponseReceivedSize" . }});
   {{- else }}
@@ -54,7 +54,7 @@ const fragmentSyncRequestManagedTmpl = `
    {
   {{ .Name }}OwnedRequest _request(0
     {{- template "CommaPassthroughMessageParams" .Request -}});
-  _request.GetOutgoingMessage().Call({{ .Name }}Response::Type, _client,
+  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client,
                                  {{- template "ResponseReceivedByteAccess" . }},
                                  {{ template "ResponseReceivedSize" . }},
                                  _deadline);

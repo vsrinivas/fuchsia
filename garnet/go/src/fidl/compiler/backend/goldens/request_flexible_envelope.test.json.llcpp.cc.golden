@@ -61,9 +61,8 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   RequestStrictResponseFlexibleOwnedRequest _request(0, s);
-  _request.GetOutgoingMessage().Call(
-      RequestStrictResponseFlexibleResponse::Type, _client, bytes_->data(),
-      ZX_CHANNEL_MAX_MSG_BYTES);
+  _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -75,9 +74,8 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   RequestStrictResponseFlexibleOwnedRequest _request(0, s);
-  _request.GetOutgoingMessage().Call(
-      RequestStrictResponseFlexibleResponse::Type, _client, bytes_->data(),
-      ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+  _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -91,9 +89,8 @@ Protocol::UnownedResultOf::RequestStrictResponseFlexible::
     : bytes_(_response_bytes) {
   RequestStrictResponseFlexibleUnownedRequest _request(
       _request_bytes, _request_byte_capacity, 0, s);
-  _request.GetOutgoingMessage().Call(
-      RequestStrictResponseFlexibleResponse::Type, _client, _response_bytes,
-      _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -104,9 +101,8 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   RequestFlexibleResponseStrictOwnedRequest _request(0, s);
-  _request.GetOutgoingMessage().Call(
-      RequestFlexibleResponseStrictResponse::Type, _client, bytes_->data(),
-      ZX_CHANNEL_MAX_MSG_BYTES);
+  _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -118,9 +114,8 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
   RequestFlexibleResponseStrictOwnedRequest _request(0, s);
-  _request.GetOutgoingMessage().Call(
-      RequestFlexibleResponseStrictResponse::Type, _client, bytes_->data(),
-      ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
+  _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
+      _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -134,9 +129,8 @@ Protocol::UnownedResultOf::RequestFlexibleResponseStrict::
     : bytes_(_response_bytes) {
   RequestFlexibleResponseStrictUnownedRequest _request(
       _request_bytes, _request_byte_capacity, 0, s);
-  _request.GetOutgoingMessage().Call(
-      RequestFlexibleResponseStrictResponse::Type, _client, _response_bytes,
-      _response_byte_capacity);
+  _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }

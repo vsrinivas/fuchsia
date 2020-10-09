@@ -321,7 +321,7 @@ class Example final {
                        ::llcpp::fidl::test::json::Example_foo_Result& result)
         : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
       FIDL_ALIGNDECL fooResponse _response(result);
-      message_.LinearizeAndEncode(fooResponse::Type, &_response);
+      message_.LinearizeAndEncode<fooResponse>(&_response);
     }
 
     zx_status_t status() const { return message_.status(); }
@@ -367,7 +367,7 @@ class Example final {
                       const ::fidl::StringView& s)
         : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
       FIDL_ALIGNDECL fooRequest _request(_txid, s);
-      message_.LinearizeAndEncode(fooRequest::Type, &_request);
+      message_.LinearizeAndEncode<fooRequest>(&_request);
     }
 
     zx_status_t status() const { return message_.status(); }
