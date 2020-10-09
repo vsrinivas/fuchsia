@@ -27,6 +27,7 @@ base_package_labels += [
   "//build/info:build-info",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
+  "//src/intl/intl_services:small",
   "//garnet/bin/setui:setui_service",
   "//garnet/bin/sshd-host",
   "//garnet/bin/sshd-host:config",

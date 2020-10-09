@@ -8,12 +8,16 @@ group("intl_services") {
   testonly = true
   public_deps = [
     ":pkg",
+    ":pkg_small",
     ":tests",
   ]
 }
 
 group("small") {
-  deps = [ "config:small" ]
+  deps = [
+    ":pkg_small",
+    "config:small",
+  ]
 }
 
 group("tests") {
@@ -58,6 +62,32 @@ package("pkg") {
   binaries = [
     {
       name = "intl_services_bin"
+      dest = "intl_services"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/intl_services.cmx"
+      dest = "intl_services.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
+
+package("pkg_small") {
+  package_name = "intl-services-small"
+  deps = [ "//src/ui/a11y/bin/a11y_manager:bin" ]
+
+  binaries = [
+    {
+      name = "a11y_manager"
       dest = "intl_services"
     },
   ]
