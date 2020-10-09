@@ -21,7 +21,7 @@ use fidl_fuchsia_ui_input::{
 use crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*, usages::Usages};
 use fuchsia_component as app;
 
-pub(crate) trait ServerConsumer {
+pub trait ServerConsumer {
     fn consume(
         &mut self,
         device: &mut DeviceDescriptor,
@@ -29,7 +29,23 @@ pub(crate) trait ServerConsumer {
     ) -> Result<(), Error>;
 }
 
-pub(crate) struct RegistryServerConsumer;
+pub struct RegistryServerConsumer {
+    svc_dir_path: Option<String>,
+}
+
+impl RegistryServerConsumer {
+    // Create a new consumer. Use default path to the service directory
+    // containing the InputDeviceRegistry protocol.
+    pub fn new() -> Self {
+        Self { svc_dir_path: None }
+    }
+
+    // Create a new consumer. Use |svc_dir_path| as the custom path to
+    // the service directory containing the InputDeviceRegistry protocol.
+    pub fn new_with_path(svc_dir_path: String) -> Self {
+        Self { svc_dir_path: Some(svc_dir_path) }
+    }
+}
 
 impl ServerConsumer for RegistryServerConsumer {
     fn consume(
@@ -37,7 +53,11 @@ impl ServerConsumer for RegistryServerConsumer {
         device: &mut DeviceDescriptor,
         server: ServerEnd<InputDeviceMarker>,
     ) -> Result<(), Error> {
-        let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;
+        let registry = if let Some(path) = &self.svc_dir_path {
+            app::client::connect_to_service_at::<InputDeviceRegistryMarker>(path.as_str())?
+        } else {
+            app::client::connect_to_service::<InputDeviceRegistryMarker>()?
+        };
         registry.register_device(device, server)?;
 
         Ok(())
@@ -204,7 +224,7 @@ pub(crate) fn text(
     Ok(())
 }
 
-pub(crate) fn tap_event(
+pub fn tap_event(
     x: u32,
     y: u32,
     width: u32,

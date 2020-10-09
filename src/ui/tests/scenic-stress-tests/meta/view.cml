@@ -1,0 +1,15 @@
+{
+    program: {
+        binary: "bin/view",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.ui.policy.Presenter",
+                "/svc/fuchsia.ui.scenic.Scenic",
+            ],
+        },
+    ],
+}

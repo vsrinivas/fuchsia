@@ -11,10 +11,10 @@ use {
 
 pub mod inverse_keymap;
 pub mod keymaps;
+pub mod synthesizer;
 pub mod usages;
 
 mod legacy_backend;
-mod synthesizer;
 
 /// Simulates a media button event.
 pub async fn media_button_event_command(
@@ -24,14 +24,21 @@ pub async fn media_button_event_command(
     reset: bool,
     pause: bool,
 ) -> Result<(), Error> {
-    media_button_event(volume_up, volume_down, mic_mute, reset, pause, &mut RegistryServerConsumer)
+    media_button_event(
+        volume_up,
+        volume_down,
+        mic_mute,
+        reset,
+        pause,
+        &mut RegistryServerConsumer::new(),
+    )
 }
 
 /// Simulates a key press of specified `usage`.
 ///
 /// `duration` is the time spent between key-press and key-release events.
 pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<(), Error> {
-    keyboard_event(usage, duration, &mut RegistryServerConsumer)
+    keyboard_event(usage, duration, &mut RegistryServerConsumer::new())
 }
 
 /// Simulates `input` being typed on a [qwerty] keyboard by making use of [`InverseKeymap`].
@@ -40,7 +47,7 @@ pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<()
 ///
 /// [qwerty]: keymaps/constant.QWERTY_MAP.html
 pub async fn text_command(input: String, duration: Duration) -> Result<(), Error> {
-    text(input, duration, &mut RegistryServerConsumer)
+    text(input, duration, &mut RegistryServerConsumer::new())
 }
 
 /// Simulates `tap_event_count` taps at coordinates `(x, y)` for a touchscreen with horizontal
@@ -58,7 +65,7 @@ pub async fn tap_event_command(
     tap_event_count: usize,
     duration: Duration,
 ) -> Result<(), Error> {
-    tap_event(x, y, width, height, tap_event_count, duration, &mut RegistryServerConsumer)
+    tap_event(x, y, width, height, tap_event_count, duration, &mut RegistryServerConsumer::new())
 }
 
 /// Simulates `tap_event_count` times to repeat the multi-finger-taps, for touchscreen with
@@ -81,7 +88,7 @@ pub async fn multi_finger_tap_event_command(
         height,
         tap_event_count,
         duration,
-        &mut RegistryServerConsumer,
+        &mut RegistryServerConsumer::new(),
     )
 }
 
@@ -104,7 +111,17 @@ pub async fn swipe_command(
     move_event_count: usize,
     duration: Duration,
 ) -> Result<(), Error> {
-    swipe(x0, y0, x1, y1, width, height, move_event_count, duration, &mut RegistryServerConsumer)
+    swipe(
+        x0,
+        y0,
+        x1,
+        y1,
+        width,
+        height,
+        move_event_count,
+        duration,
+        &mut RegistryServerConsumer::new(),
+    )
 }
 
 /// Simulates swipe with fingers starting at `start_fingers`, and moving to `end_fingers`,
@@ -149,7 +166,7 @@ pub async fn multi_finger_swipe_command(
         height,
         move_event_count,
         duration,
-        &mut RegistryServerConsumer,
+        &mut RegistryServerConsumer::new(),
     )
 }
 
