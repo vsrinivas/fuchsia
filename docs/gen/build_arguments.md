@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1192
+From //build/config/BUILDCONFIG.gn:1201
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -885,7 +885,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:955
+From //build/config/BUILDCONFIG.gn:964
 
 ### fastboot_product
 
@@ -1574,7 +1574,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:865
+From //build/config/BUILDCONFIG.gn:874
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2284,7 +2284,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1182
+From //build/config/BUILDCONFIG.gn:1191
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2293,7 +2293,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1187
+From //build/config/BUILDCONFIG.gn:1196
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2331,7 +2331,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1001
+From //build/config/BUILDCONFIG.gn:1010
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2591,7 +2591,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:975
+From //build/config/BUILDCONFIG.gn:984
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
