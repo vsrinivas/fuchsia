@@ -64,7 +64,7 @@ const AttachmentKeys kDefaultAttachments = {
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
 
-constexpr zx::duration kDefaultBugReportFlowDuration = zx::usec(5);
+constexpr zx::duration kDefaultSnapshotFlowDuration = zx::usec(5);
 
 // Returns a Screenshot with the right dimensions, no image.
 std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
@@ -180,7 +180,7 @@ class DataProviderTest : public UnitTestFixture {
     return out_response;
   }
 
-  Snapshot GetSnapshot(zx::duration snapshot_flow_duration = kDefaultBugReportFlowDuration) {
+  Snapshot GetSnapshot(zx::duration snapshot_flow_duration = kDefaultSnapshotFlowDuration) {
     FX_CHECK(data_provider_ && clock_);
 
     Snapshot snapshot;
@@ -343,7 +343,7 @@ TEST_F(DataProviderTest, GetSnapshot_SmokeTest) {
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::SnapshotGenerationFlow::kSuccess,
-                                kDefaultBugReportFlowDuration.to_usecs()),
+                                kDefaultSnapshotFlowDuration.to_usecs()),
                   cobalt::Event(cobalt::SnapshotVersion::kV_01, attachment_size),
               }));
 }
