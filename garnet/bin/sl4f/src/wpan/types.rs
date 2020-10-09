@@ -10,6 +10,7 @@ pub enum WpanMethod {
     GetNetworkName,
     GetPartitionId,
     GetThreadRloc16,
+    GetThreadRouterId,
     GetWeaveNodeId,
     InitializeProxies,
 }
@@ -25,6 +26,7 @@ impl std::str::FromStr for WpanMethod {
             "GetNetworkName" => Ok(WpanMethod::GetNetworkName),
             "GetPartitionId" => Ok(WpanMethod::GetPartitionId),
             "GetThreadRloc16" => Ok(WpanMethod::GetThreadRloc16),
+            "GetThreadRouterId" => Ok(WpanMethod::GetThreadRouterId),
             "GetWeaveNodeId" => Ok(WpanMethod::GetWeaveNodeId),
             "InitializeProxies" => Ok(WpanMethod::InitializeProxies),
             _ => return Err(format_err!("invalid Wpan FIDL method: {}", method)),

@@ -18,6 +18,7 @@ impl Facade for WpanFacade {
             WpanMethod::GetNetworkName => to_value(self.get_network_name().await?),
             WpanMethod::GetPartitionId => to_value(self.get_partition_id().await?),
             WpanMethod::GetThreadRloc16 => to_value(self.get_thread_rloc16().await?),
+            WpanMethod::GetThreadRouterId => to_value(self.get_thread_router_id().await?),
             WpanMethod::GetWeaveNodeId => to_value(self.get_weave_node_id().await?),
             WpanMethod::InitializeProxies => to_value(self.initialize_proxies().await?),
         }?)

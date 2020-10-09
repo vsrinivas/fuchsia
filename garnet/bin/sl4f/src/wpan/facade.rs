@@ -112,6 +112,15 @@ impl WpanFacade {
         };
         Ok(partition_id)
     }
+
+    ///Returns the thread router id from the DeviceTest proxy service.
+    pub async fn get_thread_router_id(&self) -> Result<u8, Error> {
+        let router_id = match self.device_test.read().as_ref() {
+            Some(device_test) => device_test.get_thread_router_id().await?,
+            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+        };
+        Ok(router_id)
+    }
 }
 
 #[cfg(test)]
@@ -236,5 +245,11 @@ mod tests {
     async fn test_get_partition_id() {
         let facade = MOCK_TESTER.create_facade_and_serve();
         MockTester::assert_wpan_fn(facade.0.get_partition_id(), facade.1).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_thread_router_id() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_thread_router_id(), facade.1).await;
     }
 }
