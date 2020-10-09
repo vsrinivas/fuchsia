@@ -134,11 +134,8 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // TODO(fxbug.dev/43242): This is currently FIN-ACK, ACK but should be FIN-ACK, FIN-ACK.
     const EXPECTED_PACKET_COUNT: i64 = 2;
 
-    // TODO(fxbug.dev/42092): make these sent/received expected values the same.
-    // TCP payload size (12) + TCP headers (20)
-    const EXPECTED_SENT_PACKET_SIZE: i64 = 32;
     // TCP payload size (12) + TCP headers (20) + IP minimum size (20)
-    const EXPECTED_RECEIVED_PACKET_SIZE: i64 = 52;
+    const EXPECTED_PACKET_SIZE: i64 = 52;
 
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::PACKETS_SENT_METRIC_ID)
@@ -158,13 +155,12 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         "packets received. events: {:?}",
         MultilineSlice(&events_post_first_drop),
     );
-    let res = events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
-        .iter()
-        .map(|ev| ev.count)
-        .max();
-    assert!(
-        res == Some(EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE)
-            || res == Some(EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE),
+    assert_eq!(
+        events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .max(),
+        Some(EXPECTED_PACKET_COUNT * EXPECTED_PACKET_SIZE),
         "bytes sent. events: {:?}",
         MultilineSlice(&events_post_first_drop),
     );
@@ -173,7 +169,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             .iter()
             .map(|ev| ev.count)
             .max(),
-        Some(EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE),
+        Some(EXPECTED_PACKET_COUNT * EXPECTED_PACKET_SIZE),
         "bytes received. events: {:?}",
         MultilineSlice(&events_post_first_drop),
     );
