@@ -8,10 +8,7 @@ arbitrary data structures as log records.
 
 ## Validation
 
-<!-- TODO(fxbug.dev/50240) update when limit relaxed -->
-
-The size of a log record is currently capped at 32kb as a result of the number of bits used for
-recording size.
+The size of a log record is capped at 32kb.
 
 Writers that send oversize or invalid records to the diagnostics service will have their streams
 closed and an error recorded by the diagnostics service.
@@ -41,8 +38,6 @@ their encoder. These types allow for cross-validating interoperability of log re
 The required metadata for a log record are a record type, the overall length of the record, and a
 timestamp. These are encoded in the first 16 bytes of a record:
 
-<!-- TODO(fxbug.dev/50239) update diagrams when we use more bits for size -->
-<!-- TODO(fxbug.dev/50517) finalize bits used for severity -->
 ```
 .---------------------------------------------------------------.
 |       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
@@ -67,16 +62,12 @@ Values for severity are defined in [/sdk/fidl/fuchsia.diagnostics.stream/source.
 ## Arguments
 
 Log record data is conveyed via a list of typed key-value pairs. The keys are always non-empty
-strings, and the values can have several types. Each record can have up to 15 arguments.
-
-<!-- TODO(fxbug.dev/50240) update docs when limit on arg count relaxed -->
+strings, and the values can have several types.
 
 ### Argument header
 
 Each argument has an 8-byte header, followed by the argument name, followed by the argument's value.
 The name is padded with zeroes to 8-byte alignment before the argument's content is written.
-
-<!-- TODO(fxbug.dev/50239) update diagrams when we use more bits for size -->
 
 ```
 .---------------------------------------------------------------.
