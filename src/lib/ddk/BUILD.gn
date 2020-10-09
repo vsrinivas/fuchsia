@@ -82,6 +82,15 @@ zx_library("ddk") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+# This target is part of a soft transition.
+zx_library("ddk-deprecated-binding-headers-for-vendors") {
+  sdk = "source"
+  sdk_publishable = false
+  sdk_headers = [ "ddk/binding.h" ]
+  sources = []
+  public_deps = [ ":ddk" ]
+}
+
 zx_library("ddk-device-headers") {
   sdk = "source"
   sdk_publishable = false
