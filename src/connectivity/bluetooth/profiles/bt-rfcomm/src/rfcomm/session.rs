@@ -8,12 +8,13 @@ use {
     fuchsia_bluetooth::types::{Channel, PeerId},
     futures::{
         channel::mpsc,
+        future::BoxFuture,
         select,
         task::{noop_waker_ref, Context},
         Future, FutureExt, SinkExt, StreamExt,
     },
     log::{error, info, trace, warn},
-    std::{collections::HashMap, convert::TryInto, sync::Arc},
+    std::{collections::HashMap, convert::TryInto},
 };
 
 use crate::rfcomm::channel::SessionChannel;
@@ -21,10 +22,13 @@ use crate::rfcomm::frame::{
     mux_commands::{CreditBasedFlowHandshake, MuxCommand, MuxCommandParams},
     Encodable, Frame, FrameData, UIHData,
 };
-use crate::rfcomm::server::Clients;
 use crate::rfcomm::types::{
     CommandResponse, RfcommError, Role, ServerChannel, DLCI, MAX_RFCOMM_FRAME_SIZE,
 };
+
+/// A function used to relay an opened RFCOMM channel to a client.
+type ChannelOpenedFn =
+    Box<dyn Fn(ServerChannel, Channel) -> BoxFuture<'static, Result<(), Error>> + Send + Sync>;
 
 /// The parameters associated with this Session.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -242,30 +246,27 @@ impl SessionMultiplexer {
 /// An owner of the `SessionInner` should use `SessionInner::create()` to start a new RFCOMM
 /// Session over the provided `data_receiver`.
 pub struct SessionInner {
-    /// The remote peer that is connected for this session.
-    peer_id: PeerId,
-
     /// The session multiplexer that manages the current state of the session and any opened
     /// RFCOMM channels.
     multiplexer: SessionMultiplexer,
 
-    /// The local RFCOMM clients. Any opened RFCOMM channels will be relayed to `clients`.
-    clients: Arc<Clients>,
+    /// The channel opened callback that is called anytime a new RFCOMM channel is opened. The
+    /// `SessionInner` will relay the client end of the channel to this closure.
+    channel_opened_fn: ChannelOpenedFn,
 }
 
 impl SessionInner {
     /// Creates a new RFCOMM SessionInner and returns a Future that processes data over the
     /// provided `data_receiver`.
-    /// `frame_sender` is used to relay RFCOMM frames to be sent to the remote peer for this
-    /// session.
-    /// `clients` are the local RFCOMM clients that have registered for any RFCOMM channels.
+    /// `frame_sender` is used to relay RFCOMM frames to be sent to the remote peer.
+    /// `channel_opened_fn` is used by the SessionInner to relay opened RFCOMM channels to
+    /// local clients.
     pub fn create(
-        peer_id: PeerId,
         data_receiver: mpsc::Receiver<Vec<u8>>,
         frame_sender: mpsc::Sender<Frame>,
-        clients: Arc<Clients>,
+        channel_opened_fn: ChannelOpenedFn,
     ) -> impl Future<Output = Result<(), Error>> {
-        let session = Self { peer_id, multiplexer: SessionMultiplexer::create(), clients };
+        let session = Self { multiplexer: SessionMultiplexer::create(), channel_opened_fn };
         session.run(data_receiver, frame_sender)
     }
 
@@ -316,12 +317,11 @@ impl SessionInner {
     /// Relays the `channel` opened for the provided `server_channel` to the local clients
     /// of the session.
     async fn relay_channel_to_client(
-        &mut self,
+        &self,
         server_channel: ServerChannel,
         channel: Channel,
     ) -> Result<(), RfcommError> {
-        self.clients
-            .deliver_channel(self.peer_id, server_channel, channel)
+        (self.channel_opened_fn)(server_channel, channel)
             .await
             .map_err(|e| format_err!("{:?}", e).into())
     }
@@ -520,9 +520,14 @@ pub struct Session {
 
 impl Session {
     /// Creates a new RFCOMM Session with peer `id` over the `l2cap_channel`. Any multiplexed
-    /// RFCOMM channels will be relayed to the `clients` of this Session.
-    pub fn create(id: PeerId, l2cap_channel: Channel, clients: Arc<Clients>) -> Self {
-        let task = fasync::Task::spawn(Session::session_task(id, l2cap_channel, clients));
+    /// RFCOMM channels will be relayed using the `channel_opened_callback`.
+    pub fn create(
+        id: PeerId,
+        l2cap_channel: Channel,
+        channel_opened_callback: ChannelOpenedFn,
+    ) -> Self {
+        let task =
+            fasync::Task::spawn(Session::session_task(id, l2cap_channel, channel_opened_callback));
         Self { task }
     }
 
@@ -536,7 +541,7 @@ impl Session {
     ///
     /// The lifetime of this task is tied to the provided `l2cap` channel. When the remote peer
     /// disconnects, the `l2cap` channel will close, and therefore the task will terminate.
-    async fn session_task(id: PeerId, l2cap: Channel, clients: Arc<Clients>) {
+    async fn session_task(id: PeerId, l2cap: Channel, channel_opened_callback: ChannelOpenedFn) {
         // The `session_inner_task` communicates with the `peer_processing_task` using two mpsc
         // channels.
 
@@ -554,7 +559,7 @@ impl Session {
         // Business logic of the RFCOMM session - parsing and handling frames, modifying the state
         // of the session, and multiplexing RFCOMM channels.
         let session_inner_task =
-            SessionInner::create(id.clone(), data_receiver, frame_sender, clients.clone())
+            SessionInner::create(data_receiver, frame_sender, channel_opened_callback)
                 .boxed()
                 .fuse();
 
@@ -625,11 +630,9 @@ impl Session {
 pub(crate) mod tests {
     use super::*;
 
-    use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr as bredr;
     use fuchsia_async as fasync;
-    use futures::{pin_mut, task::Poll, Future};
-    use std::convert::TryFrom;
+    use futures::{lock::Mutex, pin_mut, task::Poll, Future};
+    use std::{convert::TryFrom, sync::Arc};
 
     use crate::rfcomm::frame::mux_commands::*;
 
@@ -678,26 +681,21 @@ pub(crate) mod tests {
         }
     }
 
-    /// Creates and returns the Future associated with the Session processing task and a
-    /// receiver for RFCOMM channels.
+    /// Creates and returns the SessionInner processing task. Uses a channel_opened_fn that
+    /// indiscriminately accepts all opened RFCOMM channels.
     fn setup_session_task() -> (impl Future<Output = ()>, Channel) {
-        let clients = Arc::new(Clients::new());
         let (local, remote) = Channel::create();
-        let session_fut = Session::session_task(PeerId(1), local, clients);
+        let channel_opened_fn = Box::new(|_server_channel, _channel| async { Ok(()) }.boxed());
+        let session_fut = Session::session_task(PeerId(1), local, channel_opened_fn);
         (session_fut, remote)
     }
 
-    /// Creates and returns a new Session. Returns the Clients which can be modified
-    /// to test session behavior.
-    fn setup_session() -> (SessionInner, Arc<Clients>) {
-        let random_id = PeerId(1);
-        let clients = Arc::new(Clients::new());
-        let session = SessionInner {
-            peer_id: random_id,
-            multiplexer: SessionMultiplexer::create(),
-            clients: clients.clone(),
-        };
-        (session, clients)
+    /// Creates and returns a new SessionInner - the channel_opened_fn will indiscriminately accept
+    /// all opened RFCOMM channels.
+    fn setup_session() -> SessionInner {
+        let channel_opened_fn = Box::new(|_server_channel, _channel| async { Ok(()) }.boxed());
+        let session = SessionInner { multiplexer: SessionMultiplexer::create(), channel_opened_fn };
+        session
     }
 
     #[test]
@@ -732,7 +730,7 @@ pub(crate) mod tests {
     fn test_receiving_user_sabm_before_mux_startup_is_rejected() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut session, _clients) = setup_session();
+        let mut session = setup_session();
         assert_eq!(session.role(), Role::Unassigned);
 
         let sabm = make_sabm_command(Role::Initiator, DLCI::try_from(3).unwrap());
@@ -751,7 +749,7 @@ pub(crate) mod tests {
     fn test_receiving_mux_sabm_starts_multiplexer_with_ua_response() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut session, _clients) = setup_session();
+        let mut session = setup_session();
 
         {
             // Remote sends us an SABM command.
@@ -775,7 +773,7 @@ pub(crate) mod tests {
     fn test_receiving_mux_sabm_after_mux_startup_is_rejected() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut session, _clients) = setup_session();
+        let mut session = setup_session();
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         let sabm = make_sabm_command(Role::Initiator, DLCI::MUX_CONTROL_DLCI);
@@ -795,7 +793,7 @@ pub(crate) mod tests {
     fn test_receiving_multiple_pn_commands_results_in_set_parameters() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut session, _clients) = setup_session();
+        let mut session = setup_session();
         assert!(!session.session_parameters_negotiated());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
@@ -835,16 +833,8 @@ pub(crate) mod tests {
     fn test_dlcpn_renegotiation_does_not_update_parameters() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        let (mut session, clients) = setup_session();
+        let mut session = setup_session();
         assert!(session.multiplexer().start(Role::Responder).is_ok());
-
-        // Profile client registers for a server channel.
-        let (c, _s) = create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();
-        let mut reg_fut = Box::pin(clients.new_client(c));
-        let server_channel = match exec.run_until_stalled(&mut reg_fut) {
-            Poll::Ready(Some(sc)) => sc,
-            x => panic!("Expected assigned server channel, got: {:?}", x),
-        };
 
         // Remote peer initiates DLCPN.
         {
@@ -867,7 +857,8 @@ pub(crate) mod tests {
         assert_eq!(session.session_parameters(), expected_parameters);
 
         // Remote peer sends SABM over a user DLCI - this will establish the DLCI.
-        let user_dlci = DLCI::try_from(server_channel.0 << 1).unwrap();
+        let generic_dlci = 6;
+        let user_dlci = DLCI::try_from(generic_dlci).unwrap();
         {
             let user_sabm = make_sabm_command(Role::Initiator, user_dlci);
             let mut handle_fut = Box::pin(session.handle_frame(user_sabm));
@@ -897,15 +888,59 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_establish_dlci_request_relays_channel_to_channel_open_fn() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        // Create the session.
+        let mut session = setup_session();
+
+        // Use a channel_open_fn that increments a shared `count` every time it is used.
+        let count: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+        let count_clone = count.clone();
+        session.channel_opened_fn = Box::new(move |_server_channel, _channel| {
+            let count_local = count_clone.clone();
+            async move {
+                let mut w_count = count_local.lock().await;
+                *w_count += 1;
+                Ok(())
+            }
+            .boxed()
+        });
+        assert!(session.multiplexer().start(Role::Responder).is_ok());
+
+        // Remote peer sends SABM over a user DLCI - we expect a UA response.
+        let random_dlci = 8;
+        let user_dlci = DLCI::try_from(random_dlci).unwrap();
+        {
+            let user_sabm = make_sabm_command(Role::Initiator, user_dlci);
+            let mut handle_fut = Box::pin(session.handle_frame(user_sabm));
+            match exec.run_until_stalled(&mut handle_fut) {
+                Poll::Ready(Ok(frame)) => {
+                    assert_eq!(frame.data, FrameData::UnnumberedAcknowledgement);
+                }
+                x => panic!("Expected a frame but got {:?}", x),
+            }
+        }
+        // We expect the `channel_opened_fn` to be called once.
+        let mut read_fut = Box::pin(count.lock());
+        let res = exec.run_singlethreaded(&mut read_fut);
+        assert_eq!(*res, 1);
+    }
+
+    #[test]
     fn test_no_registered_clients_rejects_establish_dlci_request() {
         let mut exec = fasync::Executor::new().unwrap();
 
-        // Create the session - there are no profile clients.
-        let (mut session, _clients) = setup_session();
+        // Create the session - set the channel_send_fn to unanimously reject
+        // channels, to simulate failure.
+        let mut session = setup_session();
+        session.channel_opened_fn = Box::new(|_server_channel, _channel| {
+            async { Err(format_err!("Always rejecting")) }.boxed()
+        });
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
-        // Remote peer sends SABM over a user DLCI - this should be rejected since
-        // there are no profiles registered for said DLCI in `_clients`.
+        // Remote peer sends SABM over a user DLCI - this should be rejected with a
+        // DM response frame because channel delivery failed.
         let user_dlci = DLCI::try_from(6).unwrap();
         {
             let user_sabm = make_sabm_command(Role::Initiator, user_dlci);

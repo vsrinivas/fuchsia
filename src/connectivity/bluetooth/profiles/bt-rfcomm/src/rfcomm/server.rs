@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{Channel, PeerId},
-    futures::lock::Mutex,
+    futures::{lock::Mutex, FutureExt},
     log::{info, trace},
     std::{
         collections::{HashMap, HashSet},
@@ -148,7 +148,16 @@ impl RfcommServer {
         }
         info!("Received new l2cap connection from peer {:?}", id);
 
-        let session = Session::create(id, l2cap, self.clients.clone());
+        // Create a new RFCOMM Session with the provided `channel_opened_callback` which will be
+        // called anytime an RFCOMM channel is created. Opened RFCOMM channels will be delivered
+        // to the `clients` of the `RfcommServer`.
+        let clients = self.clients.clone();
+        let channel_opened_callback = Box::new(move |server_channel, channel| {
+            let peer_id = id;
+            let clients = clients.clone();
+            async move { clients.deliver_channel(peer_id, server_channel, channel).await }.boxed()
+        });
+        let session = Session::create(id, l2cap, channel_opened_callback);
         self.sessions.insert(id, session);
 
         Ok(())
