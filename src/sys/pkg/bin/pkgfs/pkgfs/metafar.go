@@ -314,21 +314,20 @@ func (f *metaFarFile) Read(p []byte, off int64, whence int) (int, error) {
 
 func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 	var err error
-	var n int64
 	switch whence {
 	case fs.WhenceFromCurrent:
 		f.off = f.off + offset
 	case fs.WhenceFromStart:
 		f.off = offset
 	case fs.WhenceFromEnd:
-		err = fs.ErrNotSupported
+		f.off = int64(f.er.Length) + offset
 	default:
 		return 0, fs.ErrInvalidArgs
 	}
 	if err != nil {
 		return f.off, goErrToFSErr(err)
 	}
-	return n, nil
+	return f.off, nil
 }
 
 func (f *metaFarFile) Stat() (int64, time.Time, time.Time, error) {

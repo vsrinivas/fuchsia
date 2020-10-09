@@ -292,12 +292,51 @@ func TestMetaFarRootDuality(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		found := false
 		for _, item := range list {
 			if item == "contents" {
-				return
+				found = true
+				break
 			}
 		}
-		t.Fatalf("did not find 'contents' file among meta/ readdir: %v", list)
+		if !found {
+			t.Fatalf("did not find 'contents' file among meta/ readdir: %v", list)
+		}
+
+		contents, err := iou.OpenFrom(pkgfsDir, filepath.Join(path, "contents"), 0, 0777)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer contents.Close()
+		fi, err := contents.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		offset, err := contents.Seek(17, io.SeekStart)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if offset != 17 {
+			t.Fatalf("Tried to seek to 17 but got %d", offset)
+		}
+		offset, err = contents.Seek(-7, io.SeekCurrent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if offset != 10 {
+			t.Fatalf("Tried to seek to 17-7 but got %d", offset)
+		}
+		offset, err = contents.Seek(0, io.SeekEnd)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if offset == 0 {
+			t.Fatalf("Tried to seek to end but got %d", offset)
+		}
+		if offset != fi.Size() {
+			t.Fatalf("Seek to end arrived at %d but expected %d size", offset, fi.Size())
+		}
 	})
 
 	t.Run("meta subdirectories are openable and listable", func(t *testing.T) {
