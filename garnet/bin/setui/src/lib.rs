@@ -43,6 +43,7 @@ use {
     crate::switchboard::switchboard::SwitchboardBuilder,
     anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
+    fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_inspect::component,
@@ -522,6 +523,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 ) -> Result<(), Error> {
     let core_messenger_factory = internal::core::message::create_hub();
     let switchboard_messenger_factory = internal::switchboard::message::create_hub();
+    let policy_messenger_factory = internal::policy::message::create_hub();
     let setting_handler_messenger_factory = internal::handler::message::create_hub();
 
     for blueprint in event_subscriber_blueprints {
@@ -674,6 +676,14 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         setup,
         Setup
     );
+
+    // TODO(fxbug.dev/fxb/60925): allow configuration of policy API
+    service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
+        crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(
+            policy_messenger_factory.clone(),
+            stream,
+        );
+    });
 
     for blueprint in agent_blueprints {
         if agent_authority.register(blueprint).await.is_err() {

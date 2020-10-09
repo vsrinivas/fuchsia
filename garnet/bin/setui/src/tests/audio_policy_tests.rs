@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::audio::policy::{
-    Property, Request as AudioRequest, Response as AudioResponse, StateBuilder, Transform,
-    TransformFlags,
+    PolicyId, Property, PropertyTarget, Request as AudioRequest, Response as AudioResponse,
+    StateBuilder, Transform, TransformFlags,
 };
 use crate::internal;
 use crate::message::base::{Audience, MessengerType};
@@ -32,12 +32,12 @@ async fn test_state_builder() {
     let retrieved_properties = state.get_properties();
     assert_eq!(retrieved_properties.len(), properties.len());
 
-    let mut seen_ids = HashSet::new();
+    let mut seen_targets = HashSet::<PropertyTarget>::new();
     for property in retrieved_properties.iter().cloned() {
-        let id = property.id;
-        // make sure only unique ids are encountered
-        assert!(!seen_ids.contains(&id));
-        seen_ids.insert(id);
+        let target = property.target;
+        // make sure only unique targets are encountered
+        assert!(!seen_targets.contains(&target));
+        seen_targets.insert(target);
         // ensure the specified transforms are present
         assert_eq!(
             property.available_transforms,
@@ -50,26 +50,33 @@ async fn test_state_builder() {
 async fn test_property_transforms() {
     let supported_transforms = TransformFlags::TRANSFORM_MAX | TransformFlags::TRANSFORM_MIN;
     let transforms = [Transform::Min(0.1), Transform::Max(0.9)];
-    let mut property = Property::new(24, AudioStreamType::Media, supported_transforms);
+    let mut property = Property::new(AudioStreamType::Media, supported_transforms);
+    let mut property2 = Property::new(AudioStreamType::Background, supported_transforms);
 
     for transform in transforms.iter().cloned() {
         property.add_transform(transform);
+        property2.add_transform(transform);
     }
 
     // Ensure policy size matches transforms specified
     assert_eq!(property.active_policies.len(), transforms.len());
+    assert_eq!(property2.active_policies.len(), transforms.len());
 
-    let retrieved_ids: HashSet<u64> =
+    let mut retrieved_ids: HashSet<PolicyId> =
         HashSet::from_iter(property.active_policies.iter().map(|policy| policy.id));
+    retrieved_ids.extend(property2.active_policies.iter().map(|policy| policy.id));
 
-    // Make sure all ids are unique.
-    assert_eq!(retrieved_ids.len(), transforms.len());
-    let retrieved_transforms: Vec<Transform> =
-        property.active_policies.iter().map(|policy| policy.transform).collect();
+    // Make sure all ids are unique, even across properties.
+    assert_eq!(retrieved_ids.len(), transforms.len() * 2);
 
     // Verify transforms are present.
-    for transform in retrieved_transforms {
-        assert!(transforms.contains(&transform));
+    let retrieved_transforms: Vec<Transform> =
+        property.active_policies.iter().map(|policy| policy.transform).collect();
+    let retrieved_transforms2: Vec<Transform> =
+        property2.active_policies.iter().map(|policy| policy.transform).collect();
+    for transform in transforms.iter() {
+        assert!(retrieved_transforms.contains(&transform));
+        assert!(retrieved_transforms2.contains(&transform));
     }
 }
 

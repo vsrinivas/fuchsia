@@ -18,6 +18,7 @@ use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
 use std::hash::Hash;
 
+/// Convenience macro to make a switchboard request and send the result to a responder.
 #[macro_export]
 macro_rules! request_respond {
     ($context:ident, $responder:ident, $setting_type:expr, $request:expr, $success:expr, $error:expr, $marker:expr) => {

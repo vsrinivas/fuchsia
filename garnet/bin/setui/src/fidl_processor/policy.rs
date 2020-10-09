@@ -11,6 +11,19 @@ use crate::switchboard::base::SettingType;
 use crate::ExitSender;
 use fuchsia_syslog::fx_log_err;
 
+/// Convenience macro to make a policy request and send the result to a responder.
+#[macro_export]
+macro_rules! policy_request_respond {
+    ($context:ident, $responder:ident, $setting_type:expr, $request:expr, $payload_type:ident) => {
+        match $context.request($setting_type, $request).await {
+            Ok(crate::policy::base::response::Payload::$payload_type(response)) => {
+                $responder.send_response(response.into())
+            }
+            _ => $responder.on_error(),
+        };
+    };
+}
+
 /// `RequestCallback` closures are handed a request and the surrounding
 /// context. They are expected to hand back a future that returns when the
 /// request is processed. The returned value is a result with an optional

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// This macro generates a mod containing the logic to process a FIDL stream.
+/// This macro generates a mod containing the logic to process a FIDL stream for the
+/// fuchsia.settings namespace.
 /// Callers can spawn a handler task by invoking fidl_io::spawn.
 /// Macro usages specify the interface's base name (prefix for all generated
 /// classes), along with a repeated set of the following:
@@ -15,10 +16,12 @@
 macro_rules! fidl_process_full {
     ($interface:ident $(,$setting_type:expr, $fidl_settings:ty,
             $fidl_responder:ty, $change_func_key:ty, $handle_func:ident)+$(,)*) => {
-        type HandleResult<'a> = LocalBoxFuture<'a, Result<Option<paste::paste!{[<$interface Request>]}>, anyhow::Error>>;
+        type HandleResult<'a> = LocalBoxFuture<'a, Result<Option<
+                paste::paste!{[<$interface Request>]}>, anyhow::Error>>;
 
         pub mod fidl_io {
-            paste::paste!{use fidl_fuchsia_settings::{[<$interface Marker>], [<$interface RequestStream>]};}
+            paste::paste!{use fidl_fuchsia_settings::{[<$interface Marker>],
+                    [<$interface RequestStream>]};}
             use super::*;
             use fuchsia_async as fasync;
             use crate::fidl_processor::processor::SettingsFidlProcessor;
@@ -28,28 +31,83 @@ macro_rules! fidl_process_full {
             pub fn spawn (switchboard_messenger_factory: switchboard::message::Factory,
                     stream: paste::paste!{[<$interface RequestStream>]}) {
                 fasync::Task::local(async move {
-                    let messenger = if let Ok((messenger, _)) = switchboard_messenger_factory.create(MessengerType::Unbound).await {
+                    let messenger = if let Ok((messenger, _)) = switchboard_messenger_factory
+                            .create(MessengerType::Unbound).await {
                         messenger
                     } else {
                         return
                     };
 
-                    let mut processor = SettingsFidlProcessor::<paste::paste!{[<$interface Marker>]}>::new(stream, messenger).await;
-                        $(processor
-                            .register::<$fidl_settings, $fidl_responder, $change_func_key>(
-                                $setting_type,
-                                Box::new(
-                                    move |context, req| -> HandleResult<'_> {
-                                        async move {
-                                            $handle_func(context, req).await
-                                        }
-                                        .boxed_local()
-                                    },
-                                ),
-                            )
-                            .await;)*
-                        processor.process().await;
+                    let mut processor = SettingsFidlProcessor::<
+                            paste::paste!{[<$interface Marker>]}>::new(stream, messenger).await;
+                    $(processor
+                        .register::<$fidl_settings, $fidl_responder, $change_func_key>(
+                            $setting_type,
+                            Box::new(
+                                move |context, req| -> HandleResult<'_> {
+                                    async move {
+                                        $handle_func(context, req).await
+                                    }
+                                    .boxed_local()
+                                },
+                            ),
+                        )
+                        .await;)*
+                    processor.process().await;
                 }).detach();
+            }
+        }
+    };
+}
+
+/// This macro generates a mod containing the logic to process a FIDL stream for the
+/// fuchsia.settings.policy namespace.
+/// Callers can spawn a handler task by invoking fidl_io::spawn.
+/// Macro usages specify the interface's base name and a handler function for requests.
+// TODO(fxbug.dev/61433): consider returning spawned task instead of detaching
+#[macro_export]
+macro_rules! fidl_process_policy {
+    ($interface:ident, $handle_func:ident) => {
+        type HandleResult<'a> = LocalBoxFuture<
+            'a,
+            Result<Option<paste::paste! {[<$interface Request>]}>, anyhow::Error>,
+        >;
+
+        pub mod fidl_io {
+            paste::paste! {use fidl_fuchsia_settings_policy::{[<$interface Marker>],
+            [<$interface RequestStream>]};}
+            use super::*;
+            use crate::fidl_processor::processor::PolicyFidlProcessor;
+            use crate::internal::policy;
+            use crate::message::base::MessengerType;
+            use fuchsia_async as fasync;
+
+            pub fn spawn(
+                policy_messenger_factory: policy::message::Factory,
+                stream: paste::paste! {[<$interface RequestStream>]},
+            ) {
+                fasync::Task::local(async move {
+                    let messenger = if let Ok((messenger, _)) =
+                        policy_messenger_factory.create(MessengerType::Unbound).await
+                    {
+                        messenger
+                    } else {
+                        return;
+                    };
+
+                    let mut processor =
+                        PolicyFidlProcessor::<paste::paste! {[<$interface Marker>]}>::new(
+                            stream, messenger,
+                        )
+                        .await;
+                    processor
+                        .register(Box::new(move |context, req| -> HandleResult<'_> {
+                            async move { $handle_func(context, req).await }.boxed_local()
+                        }))
+                        .await;
+                    processor.process().await;
+                })
+                .detach();
             }
         }
     };
@@ -143,6 +201,7 @@ macro_rules! fidl_process_2 {
     };
 }
 
+/// Implements the Sender trait for the given FIDL responder(s) that send typed data.
 #[macro_export]
 macro_rules! fidl_hanging_get_responder {
     ($marker_type:ty $(, $setting_type:ty, $responder_type:ty)+$(,)*) => {
@@ -166,18 +225,23 @@ macro_rules! fidl_hanging_get_responder {
     };
 }
 
+/// Implements the Sender trait for the given FIDL responder(s) that send a result type.
 #[macro_export]
-macro_rules! fidl_hanging_get_result_responder {
-    ($setting_type:ty, $responder_type:ty, $marker_debug_name:expr) => {
-        impl Sender<$setting_type> for $responder_type {
-            fn send_response(self, data: $setting_type) {
-                self.send(&mut Ok(data)).log_fidl_response_error($marker_debug_name);
+macro_rules! fidl_result_sender_for_responder {
+    ($marker_type:ty $(, $result_type:ty, $responder_type:ty)+$(,)*) => {
+        $(impl Sender<$result_type> for $responder_type {
+            fn send_response(self, mut result: $result_type) {
+                self.send(&mut result).log_fidl_response_error(
+                <$marker_type as ServiceMarker>::DEBUG_NAME);
             }
 
             fn on_error(self) {
-                self.send(&mut Err(fidl_fuchsia_settings::Error::Failed))
-                    .log_fidl_response_error($marker_debug_name);
+                fx_log_err!(
+                    "error occurred watching for service: {:?}",
+                    <$marker_type as ServiceMarker>::DEBUG_NAME
+                );
+                self.control_handle().shutdown_with_epitaph(Status::INTERNAL);
             }
-        }
+        })+
     };
 }
