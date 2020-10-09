@@ -16,7 +16,7 @@ TEST(CommandLineOptionsTest, ValidOptions) {
 
   const Error error = ParseCommandLine(sizeof(argv) / sizeof(char*), argv, &options);
   ASSERT_TRUE(error.empty());
-  ASSERT_TRUE(options.symbol_index_files.empty());
+  ASSERT_TRUE(options.symbol_servers.empty());
   ASSERT_EQ(options.ids_txts.size(), 1UL);
   ASSERT_EQ(options.ids_txts[0], "path/to/ids.txt");
   ASSERT_EQ(options.symbol_paths.size(), 1UL);

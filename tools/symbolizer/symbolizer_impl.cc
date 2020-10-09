@@ -30,26 +30,13 @@ namespace {
 
 void SetupCommandLineOptions(const CommandLineOptions& options, zxdb::MapSettingStore& settings) {
   using Settings = zxdb::ClientSettings;
-  const char* home = std::getenv("HOME");
 
   if (options.symbol_cache) {
     settings.SetString(Settings::System::kSymbolCache, *options.symbol_cache);
-  } else {
-    // Default value for symbol_cache.
-    if (home) {
-      settings.SetString(Settings::System::kSymbolCache,
-                         std::string(home) + "/.fuchsia/debug/symbol-cache");
-    }
   }
 
   if (!options.symbol_index_files.empty()) {
     settings.SetList(Settings::System::kSymbolIndexFiles, options.symbol_index_files);
-  } else {
-    // Default value for symbol_index_files.
-    if (home) {
-      settings.SetList(Settings::System::kSymbolIndexFiles,
-                       {std::string(home) + "/.fuchsia/debug/symbol-index"});
-    }
   }
 
   if (!options.symbol_servers.empty()) {

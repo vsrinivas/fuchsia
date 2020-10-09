@@ -13,7 +13,7 @@ if (is_host) {
       "log_parser.cc",
       "symbolizer_impl.cc",
     ]
-    deps = [
+    public_deps = [
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/symbols",
       "//src/lib/fxl",
@@ -43,9 +43,21 @@ if (is_host) {
     ]
     deps = [
       ":src",
-      "//src/lib/files",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
+    ]
+  }
+
+  test("symbolizer_e2e_tests") {
+    sources = [ "e2e_test.cc" ]
+    defines = [
+      "TEST_CASES_DIR=" + rebase_path("test_cases"),
+      "TEST_SYMBOLS_DIR=" +
+          rebase_path("//prebuilt/test_data/symbolizer/symbols"),
+    ]
+    deps = [
+      ":src",
       "//third_party/googletest:gtest",
     ]
   }
@@ -59,4 +71,9 @@ install_host_tools("host") {
 group("tests") {
   testonly = true
   deps = [ ":symbolizer_tests($host_toolchain)" ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  deps = [ ":symbolizer_e2e_tests($host_toolchain)" ]
 }

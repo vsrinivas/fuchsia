@@ -90,6 +90,17 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
     return kHelpIntro + parser.GetHelp();
   }
 
+  // Setup default values.
+  if (const char* home = std::getenv("HOME"); home) {
+    std::string home_str = home;
+    if (!options->symbol_cache) {
+      options->symbol_cache = home_str + "/.fuchsia/debug/symbol-cache";
+    }
+    if (options->symbol_index_files.empty()) {
+      options->symbol_index_files.push_back(home_str + "/.fuchsia/debug/symbol-index");
+    }
+  }
+
   return Error();
 }
 
