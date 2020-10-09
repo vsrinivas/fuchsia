@@ -42,6 +42,7 @@ class AudioBuffer {
   const std::vector<SampleT>& samples() const { return samples_; }
   std::vector<SampleT>& samples() { return samples_; }
 
+  size_t NumSamples() const { return samples_.size(); }
   size_t NumFrames() const { return samples_.size() / format_.channels(); }
   size_t NumBytes() const { return NumFrames() * format_.bytes_per_frame(); }
   size_t SampleIndex(size_t frame, size_t chan) const { return frame * format_.channels() + chan; }
@@ -102,6 +103,13 @@ class AudioBufferSlice {
   size_t end_frame() const { return end_frame_; }
   bool empty() const { return !buf_ || start_frame_ == end_frame_; }
 
+  typename std::vector<SampleT>::const_iterator begin() const {
+    return buf_->samples().begin() + start_frame_;
+  };
+  typename std::vector<SampleT>::const_iterator end() const {
+    return buf_->samples().begin() + end_frame_;
+  };
+
   size_t NumFrames() const { return end_frame_ - start_frame_; }
   size_t NumBytes() const { return NumFrames() * format().bytes_per_frame(); }
   size_t NumSamples() const { return NumFrames() * format().channels(); }
@@ -114,8 +122,14 @@ class AudioBufferSlice {
     return buf_->SampleAt(start_frame_ + frame, chan);
   }
 
+  // Return a subslice of this slice.
+  AudioBufferSlice<SampleFormat> Subslice(size_t slice_start, size_t slice_end) const {
+    return AudioBufferSlice<SampleFormat>(buf_, start_frame_ + slice_start,
+                                          start_frame_ + slice_end);
+  }
+
   // Return a buffer containing the given channel only.
-  AudioBuffer<SampleFormat> GetChannel(size_t chan) {
+  AudioBuffer<SampleFormat> GetChannel(size_t chan) const {
     auto new_format = Format::Create({
                                          .sample_format = SampleFormat,
                                          .channels = 1,
@@ -125,6 +139,17 @@ class AudioBufferSlice {
     AudioBuffer<SampleFormat> out(new_format, NumFrames());
     for (size_t frame = 0; frame < NumFrames(); frame++) {
       out.samples()[frame] = SampleAt(frame, chan);
+    }
+    return out;
+  }
+
+  // Return a buffer that contains a clone of this slice.
+  AudioBuffer<SampleFormat> Clone() const {
+    AudioBuffer<SampleFormat> out(format(), NumFrames());
+    for (size_t frame = 0; frame < NumFrames(); frame++) {
+      for (size_t chan = 0; chan < format().channels(); chan++) {
+        out.samples()[out.SampleIndex(frame, chan)] = SampleAt(frame, chan);
+      }
     }
     return out;
   }

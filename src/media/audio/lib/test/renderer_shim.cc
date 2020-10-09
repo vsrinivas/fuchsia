@@ -41,6 +41,25 @@ void RendererShimImpl::SetPtsUnits(uint32_t ticks_per_second_numerator,
       TimelineRate::Product(pts_ticks_per_second_, TimelineRate(1, format_.frames_per_second()));
 }
 
+void RendererShimImpl::SetReferenceClock(TestFixture* fixture, const zx::clock& clock) {
+  zx::clock dup = ::media::audio::clock::DuplicateClock(clock).take_value();
+  fidl_->SetReferenceClock(std::move(dup));
+  RetrieveReferenceClock(fixture);
+}
+
+void RendererShimImpl::RetrieveReferenceClock(TestFixture* fixture) {
+  bool done = false;
+  fidl_->GetReferenceClock([this, &done](zx::clock c) {
+    done = true;
+    reference_clock_ = std::move(c);
+  });
+  fixture->RunLoopUntil([&done]() { return done; });
+}
+
+zx::time RendererShimImpl::ReferenceTimeFromMonotonicTime(zx::time mono_time) {
+  return ::media::audio::clock::ReferenceTimeFromMonotonicTime(reference_clock_, mono_time).value();
+}
+
 void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64_t media_time) {
   fidl_->Play(
       reference_time.get(), media_time,
@@ -76,11 +95,11 @@ zx::time RendererShimImpl::PlaySynchronized(
   // where tolerance estimates the maximum execution delay between the time we compute the
   // next synchronized time and the time we call Play.
   const auto tolerance = zx::msec(5);
-  auto min_start_time = zx::clock::get_monotonic() + min_lead_time_.value() + tolerance;
-  auto mono_time = output_device->NextSynchronizedTimestamp(min_start_time);
-  // TODO(fxbug.dev/46650): Translate mono_time to the renderer's reference time.
-  Play(fixture, mono_time, media_time);
-  return mono_time;
+  auto min_start_time = zx::clock::get_monotonic() + *min_lead_time_ + tolerance;
+  auto reference_time =
+      ReferenceTimeFromMonotonicTime(output_device->NextSynchronizedTimestamp(min_start_time));
+  Play(fixture, reference_time, media_time);
+  return reference_time;
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -95,6 +114,7 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
   PacketVector out;
   for (auto& slice : slices) {
     payload_buffer_.Append(slice);
+    initial_pts = pts;
 
     for (size_t frame = 0; frame < slice.NumFrames(); frame += num_packet_frames()) {
       // Every packet is kPacketMs long, except the last packet might be shorter.
@@ -130,8 +150,11 @@ void RendererShimImpl::WaitForPackets(TestFixture* fixture,
                                       const std::vector<std::shared_ptr<Packet>>& packets,
                                       size_t ring_out_frames) {
   FX_CHECK(!packets.empty());
-  auto end_time = (*packets.rbegin())->end_ref_time;
-  auto timeout = end_time - zx::clock::get_monotonic();
+  auto end_time_reference = (*packets.rbegin())->end_ref_time;
+  auto end_time_mono =
+      ::media::audio::clock::MonotonicTimeFromReferenceTime(reference_clock_, end_time_reference)
+          .value();
+  auto timeout = end_time_mono - zx::clock::get_monotonic();
 
   // Wait until all packets are rendered AND the timeout is reached.
   // It's not sufficient to wait for just the packets, because that may not include ring_out_frames.

@@ -61,7 +61,8 @@ class HermeticAudioTest : public TestFixture {
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioRendererShim<SampleFormat>* CreateAudioRenderer(
       TypedFormat<SampleFormat> format, size_t frame_count,
-      fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA);
+      fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA,
+      std::optional<zx::clock> reference_clock = std::nullopt);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioCapturerShim<SampleFormat>* CreateAudioCapturer(

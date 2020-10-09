@@ -526,4 +526,30 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   EXPECT_TRUE(result);
   EXPECT_EQ(*result, 6lu);
 }
+
+TEST(AnalysisHelpers, MultiplyByTukeyWindow) {
+  auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
+  auto input = AudioBuffer(format, 13);
+  std::fill(input.samples().begin(), input.samples().end(), 1.0);
+  auto got = MultiplyByTukeyWindow(AudioBufferSlice(&input), 0.5);
+
+  std::vector<float> want(13);
+  std::fill(want.begin(), want.end(), 1.0);
+  // ramp up
+  want[0] = 0;
+  want[1] = 0.5 * (1 - cos(M_PI * 1.0 / 3.0));
+  want[2] = 0.5 * (1 - cos(M_PI * 2.0 / 3.0));
+  // ramp down
+  want[10] = 0.5 * (1 - cos(M_PI * 2.0 / 3.0));
+  want[11] = 0.5 * (1 - cos(M_PI * 1.0 / 3.0));
+  want[12] = 0;
+
+  using testing::ElementsAre;
+  using testing::FloatEq;
+  EXPECT_THAT(got.samples(),
+              ElementsAre(FloatEq(want[0]), FloatEq(want[1]), FloatEq(want[2]), FloatEq(want[3]),
+                          FloatEq(want[4]), FloatEq(want[5]), FloatEq(want[6]), FloatEq(want[7]),
+                          FloatEq(want[8]), FloatEq(want[9]), FloatEq(want[10]), FloatEq(want[11]),
+                          FloatEq(want[12])));
+}
 }  // namespace media::audio

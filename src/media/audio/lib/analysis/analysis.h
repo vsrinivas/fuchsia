@@ -44,6 +44,9 @@ void InverseFFT(double* real, double* imag, uint32_t buf_size);
 }  // namespace internal
 
 struct AudioFreqResult {
+  // Raw list of square magnitudes for all bins up to size/2.
+  std::vector<double> all_square_magnitudes;
+
   // Mapping from frequency -> magnitude, for each requested frequency.
   std::unordered_map<size_t, double> magnitudes;
   // Phase in radians, for each requested frequency.
@@ -125,6 +128,12 @@ std::optional<size_t> FindImpulseLeadingEdge(
   }
   return std::nullopt;
 }
+
+// Multiply the input buffer by a Tukey window, producing a new output buffer. A Tukey window
+// contains a ramp up from zero, followed by a flat top of 1.0, followed by a ramp down to zero.
+// The total width of the up and down ramps is described by the alpha parameter, which must be <= 1.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> slice, double alpha);
 
 }  // namespace media::audio
 

@@ -49,7 +49,11 @@ class RendererShimImpl {
 
   // Sets the units used by the presentation (media) timeline.
   // By default, we use format.frames_per_second / 1, which means 1 PTS tick = 1 frame.
+  // See FIDL's AudioRenderer::SetPtsUnits.
   void SetPtsUnits(uint32_t ticks_per_second_numerator, uint32_t ticks_per_second_denominator);
+
+  // Return the time in the current reference clock that corresponds to the given monotonic time.
+  zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time);
 
   // Send a Play command to the renderer and wait until it is processed.
   // Either time may be NO_TIMESTAMP, as described in the FIDL documentation.
@@ -98,6 +102,8 @@ class RendererShimImpl {
         inspect_id_(inspect_id),
         payload_buffer_(format, payload_frame_count) {}
 
+  void SetReferenceClock(TestFixture* fixture, const zx::clock& clock);
+  void RetrieveReferenceClock(TestFixture* fixture);
   void ResetEvents();
   void WatchEvents();
   VmoBackedBuffer& payload_buffer() { return payload_buffer_; }
@@ -107,6 +113,8 @@ class RendererShimImpl {
   const Format format_;
   const size_t payload_frame_count_;
   const size_t inspect_id_;
+
+  zx::clock reference_clock_;
 
   VmoBackedBuffer payload_buffer_;
   fuchsia::media::AudioRendererPtr fidl_;
@@ -130,12 +138,15 @@ class AudioRendererShim : public RendererShimImpl {
   // appropriately bound into the test environment.
   AudioRendererShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format fmt,
                     size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
-                    size_t inspect_id)
+                    size_t inspect_id, std::optional<zx::clock> reference_clock)
       : RendererShimImpl(fmt, payload_frame_count, inspect_id) {
     audio_core->CreateAudioRenderer(fidl().NewRequest());
     fixture->AddErrorHandler(fidl(), "AudioRenderer");
     WatchEvents();
 
+    if (reference_clock) {
+      SetReferenceClock(fixture, *reference_clock);
+    }
     fidl()->SetUsage(usage);
     fidl()->SetPcmStreamType({.sample_format = format().sample_format(),
                               .channels = format().channels(),
@@ -143,6 +154,7 @@ class AudioRendererShim : public RendererShimImpl {
 
     SetPtsUnits(format().frames_per_second(), 1);
     fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
+    RetrieveReferenceClock(fixture);
   }
 
   bool created() const { return has_min_lead_time(); }
@@ -178,6 +190,7 @@ class UltrasoundRendererShim : public RendererShimImpl {
     WatchEvents();
     SetPtsUnits(format().frames_per_second(), 1);
     fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
+    RetrieveReferenceClock(fixture);
   }
 
   void WaitForDevice() {

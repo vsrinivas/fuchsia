@@ -17,6 +17,17 @@ namespace media::audio {
 
 namespace internal {
 
+template <typename T>
+double SampleToDouble(T value) {
+  return static_cast<double>(value);
+}
+
+template <>
+double SampleToDouble<uint8_t>(uint8_t value) {
+  // In case of uint8 input data, bias from a zero of 0x80 to 0.0
+  return static_cast<double>(value) - 128.0;
+}
+
 // Perform a Fast Fourier Transform on the provided data arrays.
 //
 // On input, real[] and imag[] contain 'buf_size' number of double-float values in the time domain
@@ -247,13 +258,8 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
   std::vector<double> reals(buf_size);
   std::vector<double> imags(buf_size);
   for (size_t frame = 0; frame < buf_size; ++frame) {
-    reals[frame] = slice.SampleAt(frame, 0);
+    reals[frame] = internal::SampleToDouble(slice.SampleAt(frame, 0));
     imags[frame] = 0.0;
-
-    // In case of uint8 input data, bias from a zero of 0x80 to 0.0
-    if (SampleFormat == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
-      reals[frame] -= 128.0;
-    }
   }
   internal::FFT(reals.data(), imags.data(), buf_size);
 
@@ -275,11 +281,15 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
 
   AudioFreqResult out;
 
+  for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
+    out.all_square_magnitudes.push_back(reals[bin] * reals[bin] + imags[bin] * imags[bin]);
+  }
+
   // Calculate magnitude and phase of primary signal.
   double sum_sq_magn_signal = 0.0;
   for (auto freq : freqs) {
     FX_CHECK(freq <= buf_sz_2);
-    auto mag2 = reals[freq] * reals[freq] + imags[freq] * imags[freq];
+    auto mag2 = out.all_square_magnitudes[freq];
     sum_sq_magn_signal += mag2;
     out.magnitudes[freq] = std::sqrt(mag2);
     out.phases[freq] = internal::GetPhase(reals[freq], imags[freq]);
@@ -290,7 +300,7 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
   double sum_sq_magn_other = 0.0;
   for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
     if (freqs.count(bin) == 0) {
-      sum_sq_magn_other += reals[bin] * reals[bin] + imags[bin] * imags[bin];
+      sum_sq_magn_other += out.all_square_magnitudes[bin];
     }
   }
   out.total_magn_other = std::sqrt(sum_sq_magn_other);
@@ -298,9 +308,36 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
   return out;
 }
 
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> slice,
+                                                double alpha) {
+  FX_CHECK(alpha <= 1);
+
+  auto out = slice.Clone();
+  size_t ramp_length_frames = static_cast<size_t>(alpha / 2 * slice.NumFrames());
+
+  for (size_t frame = 0; frame < ramp_length_frames; ++frame) {
+    double x = static_cast<double>(frame) / static_cast<double>(ramp_length_frames);
+    double w = 0.5 * (1.0 - std::cos(M_PI * x));
+    for (size_t chan = 0; chan < slice.format().channels(); ++chan) {
+      size_t a = slice.SampleIndex(frame, chan);
+      size_t b = slice.NumSamples() - 1 - a;
+
+      double a_val = w * internal::SampleToDouble(slice.buf()->samples()[a]);
+      double b_val = w * internal::SampleToDouble(slice.buf()->samples()[b]);
+
+      out.samples()[a] = static_cast<typename AudioBuffer<SampleFormat>::SampleT>(a_val);
+      out.samples()[b] = static_cast<typename AudioBuffer<SampleFormat>::SampleT>(b_val);
+    }
+  }
+
+  return out;
+}
+
 // Explicitly instantiate all possible implementations.
-#define INSTANTIATE(T) \
-  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::unordered_set<size_t>);
+#define INSTANTIATE(T)                                                                            \
+  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::unordered_set<size_t>); \
+  template AudioBuffer<T> MultiplyByTukeyWindow<T>(AudioBufferSlice<T>, double);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 

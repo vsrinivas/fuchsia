@@ -139,10 +139,11 @@ VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioRendererShim<SampleFormat>* HermeticAudioTest::CreateAudioRenderer(
-    TypedFormat<SampleFormat> format, size_t frame_count, fuchsia::media::AudioRenderUsage usage) {
+    TypedFormat<SampleFormat> format, size_t frame_count, fuchsia::media::AudioRenderUsage usage,
+    std::optional<zx::clock> reference_clock) {
   auto ptr = std::make_unique<AudioRendererShim<SampleFormat>>(
       static_cast<TestFixture*>(this), audio_core_, format, frame_count, usage,
-      renderer_shim_next_inspect_id_++);
+      renderer_shim_next_inspect_id_++, std::move(reference_clock));
   auto out = ptr.get();
   renderers_.push_back(std::move(ptr));
 
@@ -444,20 +445,20 @@ void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& pat
 }
 
 // Explicitly instantiate all possible implementations.
-#define INSTANTIATE(T)                                                                \
-  template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(                      \
-      const audio_stream_unique_id_t&, TypedFormat<T>, size_t,                        \
-      std::optional<DevicePlugProperties>, float);                                    \
-  template VirtualInput<T>* HermeticAudioTest::CreateInput<T>(                        \
-      const audio_stream_unique_id_t&, TypedFormat<T>, size_t,                        \
-      std::optional<DevicePlugProperties>, float);                                    \
-  template AudioRendererShim<T>* HermeticAudioTest::CreateAudioRenderer<T>(           \
-      TypedFormat<T>, size_t, fuchsia::media::AudioRenderUsage);                      \
-  template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(           \
-      TypedFormat<T>, size_t, fuchsia::media::AudioCapturerConfiguration);            \
-  template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>( \
-      TypedFormat<T>, size_t, bool);                                                  \
-  template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>( \
+#define INSTANTIATE(T)                                                                     \
+  template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(                           \
+      const audio_stream_unique_id_t&, TypedFormat<T>, size_t,                             \
+      std::optional<DevicePlugProperties>, float);                                         \
+  template VirtualInput<T>* HermeticAudioTest::CreateInput<T>(                             \
+      const audio_stream_unique_id_t&, TypedFormat<T>, size_t,                             \
+      std::optional<DevicePlugProperties>, float);                                         \
+  template AudioRendererShim<T>* HermeticAudioTest::CreateAudioRenderer<T>(                \
+      TypedFormat<T>, size_t, fuchsia::media::AudioRenderUsage, std::optional<zx::clock>); \
+  template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(                \
+      TypedFormat<T>, size_t, fuchsia::media::AudioCapturerConfiguration);                 \
+  template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(      \
+      TypedFormat<T>, size_t, bool);                                                       \
+  template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(      \
       TypedFormat<T>, size_t, bool);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)

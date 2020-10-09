@@ -62,6 +62,23 @@ void CompareAudioBuffers(AudioBufferSlice<SampleFormat> got_slice,
                          AudioBufferSlice<SampleFormat> want_slice,
                          CompareAudioBufferOptions options);
 
+struct ExpectAudioBufferOptions {
+  // These options control additional debugging output in failure cases.
+  std::string test_label;
+  size_t num_frames_per_packet = 100;
+};
+
+// Expect that the given slice is silent.
+// Equivalent to CompareAudioBuffers(got_slice, AudioBufferSlice(), {.partial = true}).
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+void ExpectSilentAudioBuffer(AudioBufferSlice<SampleFormat> slice,
+                             ExpectAudioBufferOptions options);
+
+// Expect that the given slice is not silent.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+void ExpectNonSilentAudioBuffer(AudioBufferSlice<SampleFormat> slice,
+                                ExpectAudioBufferOptions options);
+
 }  // namespace media::audio::test
 
 #endif  // SRC_MEDIA_AUDIO_LIB_TEST_COMPARATORS_H_
