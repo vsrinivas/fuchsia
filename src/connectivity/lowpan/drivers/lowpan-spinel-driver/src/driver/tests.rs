@@ -114,6 +114,7 @@ async fn test_spinel_lowpan_driver() {
                             net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
                             channel: Some(11),
                             panid: Some(0x1234),
+                            ..Identity::empty()
                         },
                         credential: Some(Box::new(Credential::MasterKey(vec![
                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15

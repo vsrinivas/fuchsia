@@ -18,5 +18,5 @@ fidl("fuchsia.lowpan") {
     "state.fidl",
   ]
 
-  public_deps = []
+  public_deps = [ "//sdk/fidl/fuchsia.net" ]
 }

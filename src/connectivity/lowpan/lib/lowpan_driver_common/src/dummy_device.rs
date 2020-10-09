@@ -238,6 +238,7 @@ impl Driver for DummyDevice {
                         net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
                         channel: Some(11),
                         panid: Some(0x1234),
+                        ..Identity::empty()
                     },
                     rssi: -40,
                     lqi: 0,
@@ -256,6 +257,7 @@ impl Driver for DummyDevice {
                             net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
                             channel: Some(11),
                             panid: Some(0x1234),
+                            ..Identity::empty()
                         },
                         rssi: -60,
                         lqi: 0,
@@ -269,6 +271,7 @@ impl Driver for DummyDevice {
                             net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
                             channel: Some(12),
                             panid: Some(0x5678),
+                            ..Identity::empty()
                         },
                         rssi: -26,
                         lqi: 0,
@@ -316,6 +319,7 @@ impl Driver for DummyDevice {
             net_type: None,
             channel: None,
             panid: None,
+            ..Identity::empty()
         });
 
         ready(initial).into_stream().chain(pending()).boxed()

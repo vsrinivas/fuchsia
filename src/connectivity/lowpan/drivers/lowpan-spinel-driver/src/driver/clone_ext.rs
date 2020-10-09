@@ -29,6 +29,7 @@ impl CloneExt for fidl_fuchsia_lowpan::Identity {
             net_type: self.net_type.clone(),
             channel: self.channel.clone(),
             panid: self.panid.clone(),
+            mesh_local_prefix: self.mesh_local_prefix.clone(),
         }
     }
 }

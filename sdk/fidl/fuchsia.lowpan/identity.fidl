@@ -35,4 +35,18 @@ table Identity {
 
     /// PANID for 802.14.5-based networks (or the equivalent).
     5: uint16 panid;
+
+    /// IPv6 Mesh-local prefix.
+    ///
+    /// This parameter allows you to determine the mesh-local
+    /// IPv6 prefix for the current network, or to specify one
+    /// when provisioning the interface for a network or forming
+    /// a new network.
+    ///
+    /// The prefix length is always 64 bits, so only the upper
+    /// 64 bits of the value are used: the least significant bits
+    /// must be ignored when read and zero when set.
+    ///
+    /// This field is ignored when supplied to `JoinNetwork()`.
+    6: Ipv6Prefix mesh_local_prefix;
 };

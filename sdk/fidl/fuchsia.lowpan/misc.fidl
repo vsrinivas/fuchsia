@@ -4,6 +4,8 @@
 
 library fuchsia.lowpan;
 
+using fuchsia.net;
+
 const uint8 LQI_UNSPECIFIED = 0;
 const int8 RSSI_UNSPECIFIED = -128;
 const uint16 CHANNEL_UNSPECIFIED = 65535;
@@ -19,3 +21,5 @@ const string NET_TYPE_RAW_6LOWPAN = "fuchsia.lowpan.net_type.6lowpan";
 using NetworkType = string:MAX_NET_TYPE_LEN;
 
 using ChannelIndex = uint16;
+
+using Ipv6Prefix = fuchsia.net.Ipv6Address;
