@@ -205,7 +205,12 @@ void SymbolizerImpl::OnDownloadsStopped(size_t num_succeeded, size_t num_failed)
   loop_.QuitNow();
 }
 
-void SymbolizerImpl::DidCreateSymbolServer(zxdb::SymbolServer* server) { waiting_auth_ = true; }
+void SymbolizerImpl::DidCreateSymbolServer(zxdb::SymbolServer* server) {
+  if (server->state() == zxdb::SymbolServer::State::kInitializing ||
+      server->state() == zxdb::SymbolServer::State::kBusy) {
+    waiting_auth_ = true;
+  }
+}
 
 void SymbolizerImpl::OnSymbolServerStatusChanged(zxdb::SymbolServer* unused_server) {
   if (!waiting_auth_) {
