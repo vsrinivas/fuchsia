@@ -33,6 +33,7 @@ source_set("nonhardware_tests") {
     "test_context.cc",
     "test_engine_command_streamer.cc",
     "test_hardware_status_page.cc",
+    "test_instruction_decoder.cc",
     "test_instructions.cc",
     "test_ppgtt.cc",
     "test_progress.cc",
