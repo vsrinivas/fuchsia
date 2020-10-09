@@ -74,10 +74,6 @@ void WorkQueue::Schedule(WorkItem* work) {
   list_node_t* node;
   lock_.lock();
 
-  if (current_ == work) {
-    lock_.unlock();
-    return;
-  }
   list_for_every(&list_, node) {
     if (node == &work->item) {
       lock_.unlock();

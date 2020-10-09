@@ -61,22 +61,28 @@ TEST(Workqueue, JobsInOrder) {
   delete queue;
 }
 
-TEST(Workqueue, ScheduleTwiceIgnored) {
+TEST(Workqueue, ScheduleDeduplication) {
   WorkQueue* queue = new WorkQueue("MyWork");
   TestWork work1;
   TestWork work2;
   work1.work = WorkItem(handler);
   work2.work = WorkItem(handler);
-  // Test for both current and pending work
+  // Queue up the first work item and wait for it to start
   queue->Schedule(&work1.work);
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+  sync_completion_wait(&work1.entered, ZX_TIME_INFINITE);
+  // Then before it's allowed to proceed queue it again, this is allowed
   queue->Schedule(&work1.work);
+  // Before the first work item completes queue up the second work item twice.
+  // Because it's not running it should be deduplicated.
   queue->Schedule(&work2.work);
   queue->Schedule(&work2.work);
+  // Allow both work items to proceed.
   sync_completion_signal(&work1.proceed);
   sync_completion_signal(&work2.proceed);
+  // Destroy the queue to wait for all work items to complete
   delete queue;
-  EXPECT_EQ(work1.state, 2);
+  // The first work item should have run twice, the second only once.
+  EXPECT_EQ(work1.state, 4);
   EXPECT_EQ(work2.state, 2);
 }
 
