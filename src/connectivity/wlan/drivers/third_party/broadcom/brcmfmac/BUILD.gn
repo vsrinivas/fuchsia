@@ -102,7 +102,6 @@ source_set("dmabuf") {
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Sources for the BCDC firmware protocol.

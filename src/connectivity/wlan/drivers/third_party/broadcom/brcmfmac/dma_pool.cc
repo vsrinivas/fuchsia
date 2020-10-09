@@ -7,7 +7,11 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <cstddef>
+#include <limits>
 #include <utility>
+
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -223,12 +227,16 @@ zx_status_t DmaPool::Allocate(Buffer* out_buffer) {
   Record* const record = head.record;
   record->next_free = nullptr;
   record->state.store(Record::State::kAllocated, std::memory_order::memory_order_release);
-  const int index = record - &records_[0];
+  const auto index = record - &records_[0];
+  if (index < 0 || index > std::numeric_limits<int>::max()) {
+    BRCMF_ERR("DmaPool::Buffer cannot be created, invalid index (out of range)");
+    return ZX_ERR_INTERNAL;
+  }
   // This is a new allocation, so we disregard its existing contents.  Setting `read_size` to
   // `buffer_size_` will skip the cache invalidations for CPU access.
   const size_t read_size = buffer_size_;
   const size_t write_size = 0;
-  *out_buffer = Buffer(this, index, read_size, write_size);
+  *out_buffer = Buffer(this, static_cast<int>(index), read_size, write_size);
   return ZX_OK;
 }
 
