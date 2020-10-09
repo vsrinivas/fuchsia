@@ -100,8 +100,13 @@ class PcieTest : public zxtest::Test {
     trans_ops_.read32 = read32_wrapper;
     trans_ops_.read_prph = read_prph_wrapper;
     trans_ops_.write_prph = write_prph_wrapper;
+    trans_ops_.read_mem = read_mem_wrapper;
+    trans_ops_.write_mem = write_mem_wrapper;
     trans_ops_.grab_nic_access = grab_nic_access_wrapper;
     trans_ops_.release_nic_access = release_nic_access_wrapper;
+    trans_ops_.ref = ref_wrapper;
+    trans_ops_.unref = unref_wrapper;
+
     cfg_.base_params = &base_params_;
     trans_ = iwl_trans_alloc(sizeof(struct iwl_trans_pcie_wrapper), &cfg_, &trans_ops_);
     ASSERT_NE(trans_, nullptr);
@@ -109,6 +114,15 @@ class PcieTest : public zxtest::Test {
     wrapper->test = this;
     trans_pcie_ = &wrapper->trans_pcie;
     fake_bti_create(&trans_pcie_->bti);
+
+    // Setup the op_mode and its ops. Note that we re-define the 'op_mode_specific' filed to pass
+    // the test object reference into the mock function.
+    op_mode_ops_.rx = rx_wrapper;
+    op_mode_ops_.queue_full = queue_full_wrapper;
+    op_mode_ops_.queue_not_full = queue_not_full_wrapper;
+    op_mode_.ops = &op_mode_ops_;
+    op_mode_.op_mode_specific = this;
+    trans_->op_mode = &op_mode_;
   }
 
   ~PcieTest() override {
@@ -160,6 +174,28 @@ class PcieTest : public zxtest::Test {
     }
   }
 
+  mock_function::MockFunction<zx_status_t, uint32_t, void*, int> mock_read_mem_;
+  static zx_status_t read_mem_wrapper(struct iwl_trans* trans, uint32_t addr, void* buf,
+                                      int dwords) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->mock_read_mem_.HasExpectations()) {
+      return wrapper->test->mock_read_mem_.Call(addr, buf, dwords);
+    } else {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+
+  mock_function::MockFunction<zx_status_t, uint32_t, const void*, int> mock_write_mem_;
+  static zx_status_t write_mem_wrapper(struct iwl_trans* trans, uint32_t addr, const void* buf,
+                                       int dwords) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->mock_write_mem_.HasExpectations()) {
+      return wrapper->test->mock_write_mem_.Call(addr, buf, dwords);
+    } else {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+
   mock_function::MockFunction<bool, unsigned long*> mock_grab_nic_access_;
   static bool grab_nic_access_wrapper(struct iwl_trans* trans, unsigned long* flags) {
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
@@ -178,6 +214,47 @@ class PcieTest : public zxtest::Test {
     }
   }
 
+  mock_function::MockFunction<void> ref_;
+  static void ref_wrapper(struct iwl_trans* trans) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->ref_.HasExpectations()) {
+      wrapper->test->ref_.Call();
+    }
+  }
+
+  mock_function::MockFunction<void> unref_;
+  static void unref_wrapper(struct iwl_trans* trans) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->unref_.HasExpectations()) {
+      wrapper->test->unref_.Call();
+    }
+  }
+
+  mock_function::MockFunction<void, struct napi_struct*, struct iwl_rx_cmd_buffer*> op_mode_rx_;
+  static void rx_wrapper(struct iwl_op_mode* op_mode, struct napi_struct* napi,
+                         struct iwl_rx_cmd_buffer* rxb) {
+    auto test = reinterpret_cast<PcieTest*>(op_mode->op_mode_specific);
+    if (test->op_mode_rx_.HasExpectations()) {
+      test->op_mode_rx_.Call(napi, rxb);
+    }
+  }
+
+  mock_function::MockFunction<void, int> op_mode_queue_full_;
+  static void queue_full_wrapper(struct iwl_op_mode* op_mode, int queue) {
+    auto test = reinterpret_cast<PcieTest*>(op_mode->op_mode_specific);
+    if (test->op_mode_queue_full_.HasExpectations()) {
+      test->op_mode_queue_full_.Call(queue);
+    }
+  }
+
+  mock_function::MockFunction<void, int> op_mode_queue_not_full_;
+  static void queue_not_full_wrapper(struct iwl_op_mode* op_mode, int queue) {
+    auto test = reinterpret_cast<PcieTest*>(op_mode->op_mode_specific);
+    if (test->op_mode_queue_not_full_.HasExpectations()) {
+      test->op_mode_queue_not_full_.Call(queue);
+    }
+  }
+
   // Helper function to mark uCode-originated packets. uCode-originated means the packet is from
   // firmware (either a packet from air or a notification from firmware), rather than from driver.
   // Then this packet will NOT be reclaimed by driver (because there is nothing to reclaim).
@@ -187,11 +264,10 @@ class PcieTest : public zxtest::Test {
   //
   void markUcodeOrignated(uint32_t from, uint32_t to) {
     struct iwl_rxq* rxq = &trans_pcie_->rxq[0];  // the command queue
-    for(uint32_t i = from; i <= to; ++i) {
+    for (uint32_t i = from; i <= to; ++i) {
       struct iwl_rx_mem_buffer* rxb = rxq->queue[i];
-      for(size_t offset = 0;
-          offset < io_buffer_size(&rxb->io_buf, 0);
-          offset += ZX_ALIGN(1, FH_RSCSR_FRAME_ALIGN)) {  // move to next packet
+      for (size_t offset = 0; offset < io_buffer_size(&rxb->io_buf, 0);
+           offset += ZX_ALIGN(1, FH_RSCSR_FRAME_ALIGN)) {  // move to next packet
         struct iwl_rx_cmd_buffer rxcb = {
             ._io_buf = rxb->io_buf,
             ._offset = static_cast<int>(offset),
@@ -208,6 +284,8 @@ class PcieTest : public zxtest::Test {
   struct iwl_base_params base_params_;
   struct iwl_cfg cfg_;
   struct iwl_trans_ops trans_ops_;
+  struct iwl_op_mode op_mode_;
+  struct iwl_op_mode_ops op_mode_ops_;
 };
 
 TEST_F(PcieTest, DisableInterrupts) {
@@ -390,6 +468,77 @@ class TxTest : public PcieTest {
     iwl_pcie_tx_free(trans_);
     free(trans_->loop);
   }
+
+ protected:
+  // The following class member variables will be set up after this call.
+  //
+  //  * txq_id_
+  //  * txq_
+  //
+  void SetupTxQueue() {
+    ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+    // Setup the queue
+    txq_id_ = IWL_MVM_DQA_MIN_DATA_QUEUE;
+    iwl_trans_txq_scd_cfg scd_cfg = {};
+    ASSERT_FALSE(
+        iwl_trans_pcie_txq_enable(trans_, txq_id_, /*ssn*/ 0, &scd_cfg, /*wdg_timeout*/ 0));
+    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans_);
+    txq_ = trans_pcie->txq[txq_id_];
+
+    ASSERT_EQ(txq_->read_ptr, 0);
+    ASSERT_EQ(txq_->write_ptr, 0);
+    int available_space = iwl_queue_space(trans_, txq_);
+    ASSERT_EQ(available_space, TFD_QUEUE_SIZE_MAX - 1);
+  }
+
+  // Copy an arbitray packet / device command into the member variables:
+  //
+  //  * mac_pkt_
+  //  * pkt_
+  //  * dev_cmd_
+  //
+  void SetupTxPacket() {
+    uint8_t mac_pkt[] = {
+        0x08, 0x01,                          // frame_ctrl
+        0x00, 0x00,                          // duration
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66,  // MAC1
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC2
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC3
+        0x00, 0x00,                          // seq_ctrl
+    };
+    ASSERT_GE(sizeof(mac_pkt_), sizeof(mac_pkt));
+    memcpy(mac_pkt_, mac_pkt, sizeof(mac_pkt));
+
+    wlan_tx_packet_t pkt = {
+        .packet_head =
+            {
+                .data_buffer = mac_pkt_,
+                .data_size = sizeof(mac_pkt_),
+            },
+        .info =
+            {
+                .tx_flags = 0,
+                .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+            },
+    };
+    pkt_ = pkt;
+
+    iwl_device_cmd dev_cmd = {
+        .hdr =
+            {
+                .cmd = TX_CMD,
+            },
+    };
+    dev_cmd_ = dev_cmd;
+  }
+
+ protected:
+  int txq_id_;
+  struct iwl_txq* txq_;
+  uint8_t mac_pkt_[2048];
+  wlan_tx_packet_t pkt_;
+  iwl_device_cmd dev_cmd_;
 };
 
 TEST_F(TxTest, Init) {
@@ -782,6 +931,87 @@ TEST_F(TxTest, ReclaimCmdQueueInFlightFlag) {
   // make it equal to the write_ptr. This will clear the inflight flag.
   iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 3);
   ASSERT_FALSE(trans_pcie->ref_cmd_in_flight);
+}
+
+TEST_F(TxTest, TxDataCornerCaseUnusedQueue) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+  wlan_tx_packet_t pkt = {};
+  iwl_device_cmd dev_cmd = {};
+  // unused queue
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            iwl_trans_pcie_tx(trans_, &pkt, &dev_cmd, /* txq_id */ IWL_MVM_DQA_MIN_DATA_QUEUE));
+}
+
+TEST_F(TxTest, TxDataCornerPacketTail) {
+  SetupTxQueue();
+  SetupTxPacket();
+
+  wlan_tx_packet_t pkt = pkt_;
+  pkt.packet_tail_count = 1;  // whatever non-zero value.
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_trans_pcie_tx(trans_, &pkt, &dev_cmd_, txq_id_));
+}
+
+TEST_F(TxTest, TxNormal) {
+  SetupTxQueue();
+  SetupTxPacket();
+
+  ref_.ExpectCall();
+  ASSERT_EQ(0, txq_->read_ptr);
+  ASSERT_EQ(0, txq_->write_ptr);
+  // Tx a packet and see the write pointer advanced.
+  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+  ASSERT_EQ(0, txq_->read_ptr);
+  ASSERT_EQ(1, txq_->write_ptr);
+  ASSERT_EQ(TFD_QUEUE_SIZE_MAX - 1 - /* this packet */ 1, iwl_queue_space(trans_, txq_));
+  ref_.VerifyAndClear();
+}
+
+TEST_F(TxTest, TxNormalThenReclaim) {
+  SetupTxQueue();
+  SetupTxPacket();
+
+  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+
+  unref_.ExpectCall();
+  // reclaim a packet and see the reader pointer advanced.
+  iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ 1);
+  ASSERT_EQ(1, txq_->write_ptr);
+  unref_.VerifyAndClear();
+}
+
+// Note that even the number of queued packets exceed the high mark, the function still returns
+// OK. Beside checking the txq->write_ptr, we also expect queue_full is called.
+//
+TEST_F(TxTest, TxSoManyPackets) {
+  SetupTxQueue();
+  SetupTxPacket();
+
+  // Fill up all space.
+  op_mode_queue_full_.ExpectCall(txq_id_);
+  for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
+    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+    ASSERT_EQ(MIN(TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE, i + 1), txq_->write_ptr);
+  }
+  op_mode_queue_full_.VerifyAndClear();
+}
+
+// Follow-up test of TxSoManyPackets(), but focus on queue_not_full.
+//
+TEST_F(TxTest, TxSoManyPacketsThenReclaim) {
+  SetupTxQueue();
+  SetupTxPacket();
+
+  // Fill up all space.
+  for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
+    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+  }
+
+  op_mode_queue_not_full_.ExpectCall(txq_id_);
+  // reclaim
+  iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE);
+  // We don't have much to check. But at least we can ensure the call doesn't crash.
+  op_mode_queue_not_full_.VerifyAndClear();
 }
 
 class StuckTimerTest : public PcieTest {

@@ -73,6 +73,16 @@ using std::atomic_int;
 #define RX_PENDING_WATERMARK 16
 #define FIRST_RX_QUEUE 512
 
+// The reserved space in TxQ before we can insert more packets.
+//
+// The number comes from the comment of 'DMA-QUEUE-GENERAL-FUNCTIONS' section in the tx.c.
+// The driver needs to keep at least 2 empty entries to distinguish the full/empty state.
+//
+// (Note that this is how the original code does. It looks too conservative. But there might be
+//  some hardware/firmware design consideration.
+//
+#define TX_RESERVED_SPACE 3
+
 struct iwl_host_cmd;
 
 /*This file includes the declaration that are internal to the
