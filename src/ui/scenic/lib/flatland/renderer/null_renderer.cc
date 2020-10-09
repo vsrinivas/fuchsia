@@ -13,21 +13,38 @@ NullRenderer::NullRenderer(
     const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& display_controller)
     : display_controller_(display_controller) {}
 
-GlobalBufferCollectionId NullRenderer::RegisterTextureCollection(
+bool NullRenderer::RegisterTextureCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(sysmem_allocator, std::move(token));
+  return RegisterCollection(collection_id, sysmem_allocator, std::move(token));
 }
 
-GlobalBufferCollectionId NullRenderer::RegisterRenderTargetCollection(
+bool NullRenderer::RegisterRenderTargetCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(sysmem_allocator, std::move(token));
+  return RegisterCollection(collection_id, sysmem_allocator, std::move(token));
 }
 
-GlobalBufferCollectionId NullRenderer::RegisterCollection(
+bool NullRenderer::RegisterCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  FX_DCHECK(collection_id != sysmem_util::kInvalidId);
+
+  // Check for a null token here before we try to duplicate it to get the
+  // vulkan token.
+  if (!token.is_valid()) {
+    FX_LOGS(ERROR) << "Token is invalid.";
+    return false;
+  }
+
+  if (collection_map_.find(collection_id) != collection_map_.end()) {
+    FX_LOGS(ERROR) << "Duplicate GlobalBufferCollectionID: " << collection_id;
+    return false;
+  }
+
   // Create a duped display token.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
   if (display_controller_) {
@@ -45,16 +62,15 @@ GlobalBufferCollectionId NullRenderer::RegisterCollection(
 
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Unable to register collection.";
-    return kInvalidId;
+    return false;
   }
 
-  auto identifier = scenic_impl::GenerateUniqueCollectionId();
   if (display_controller_) {
     const fuchsia::hardware::display::ImageConfig& image_config = {
         .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
     };
 
-    auto result = scenic_impl::ImportBufferCollection(identifier, *display_controller_.get(),
+    auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                       std::move(display_token), image_config);
     FX_DCHECK(result);
   }
@@ -63,11 +79,11 @@ GlobalBufferCollectionId NullRenderer::RegisterCollection(
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
-  collection_map_[identifier] = std::move(result.value());
-  return identifier;
+  collection_map_[collection_id] = std::move(result.value());
+  return true;
 }
 
-void NullRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
+void NullRenderer::DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
@@ -94,7 +110,7 @@ void NullRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) 
 }
 
 std::optional<BufferCollectionMetadata> NullRenderer::Validate(
-    GlobalBufferCollectionId collection_id) {
+    sysmem_util::GlobalBufferCollectionId collection_id) {
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is trickier than in the
   // other two cases for this class since we are mutating the buffer collection in this call. So we
   // can only convert this to a lock free structure if the elements in the map are changed to be
@@ -139,7 +155,7 @@ void NullRenderer::Render(const ImageMetadata& render_target,
                           const std::vector<zx::event>& release_fences) {
   for (const auto& image : images) {
     auto collection_id = image.collection_id;
-    FX_DCHECK(collection_id != kInvalidId);
+    FX_DCHECK(collection_id != sysmem_util::kInvalidId);
 
     // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
     std::unique_lock<std::mutex> lock(lock_);

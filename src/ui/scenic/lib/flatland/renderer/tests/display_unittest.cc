@@ -106,9 +106,10 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
   // Register the collection with the renderer, which sets the vk constraints.
-  auto renderer_collection_id =
-      renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
-  EXPECT_NE(renderer_collection_id, flatland::Renderer::kInvalidId);
+  auto renderer_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer.RegisterTextureCollection(renderer_collection_id, sysmem_allocator_.get(),
+                                                   std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Validating should fail, because we've only set the renderer constraints.
   auto buffer_metadata = renderer.Validate(renderer_collection_id);
@@ -190,7 +191,7 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
       .height = kHeight,
       .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
   };
-  auto display_collection_id = scenic_impl::GenerateUniqueCollectionId();
+  auto display_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
   ASSERT_NE(display_collection_id, 0U);
 
   bool res = scenic_impl::ImportBufferCollection(display_collection_id, *display_controller.get(),

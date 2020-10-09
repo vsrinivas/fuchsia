@@ -45,24 +45,16 @@ glm::ivec4 GetPixel(uint8_t* vmo_host, uint32_t width, uint32_t x, uint32_t y) {
 
 }  // anonymous namespace
 
-// Make sure a valid token can be used to register a buffer collection. Make
-// sure also that multiple calls to register buffer collection return
-// different values for the GlobalBufferCollectionId.
+// Make sure a valid token can be used to register a buffer collection.
 void RegisterCollectionTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = CreateSysmemTokens(sysmem_allocator);
   auto tokens2 = CreateSysmemTokens(sysmem_allocator);
 
   // First id should be valid.
-  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.local_token));
-  EXPECT_NE(bcid, Renderer::kInvalidId);
-
-  // Second id should be valid.
-  auto bcid2 =
-      renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens2.local_token));
-  EXPECT_NE(bcid2, Renderer::kInvalidId);
-
-  // Ids should not equal eachother.
-  EXPECT_NE(bcid, bcid2);
+  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result =
+      renderer->RegisterTextureCollection(bcid, sysmem_allocator, std::move(tokens.local_token));
+  EXPECT_TRUE(result);
 }
 
 // Multiple clients may need to reference the same buffer collection in the renderer
@@ -82,15 +74,16 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_EQ(status, ZX_OK);
 
   // First id should be valid.
-  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.local_token));
-  EXPECT_NE(bcid, Renderer::kInvalidId);
+  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result =
+      renderer->RegisterTextureCollection(bcid, sysmem_allocator, std::move(tokens.local_token));
+  EXPECT_TRUE(result);
 
   // Second id should be valid.
-  auto bcid2 = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.dup_token));
-  EXPECT_NE(bcid2, Renderer::kInvalidId);
-
-  // Ids should not equal eachother.
-  EXPECT_NE(bcid, bcid2);
+  auto bcid2 = sysmem_util::GenerateUniqueBufferCollectionId();
+  result =
+      renderer->RegisterTextureCollection(bcid2, sysmem_allocator, std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Set the client constraints.
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(client_token));
@@ -107,13 +100,14 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_EQ(result_2->vmo_count, 1U);
 }
 
-// Make sure a bad token returns Renderer::kInvalidId. A "bad token" here can
+// Make sure a bad token returns Renderer::sysmem_util::kInvalidId. A "bad token" here can
 // either be a null token, or a token that's a valid channel but just not a
 // valid buffer collection token.
 void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   // Null token should fail.
-  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, nullptr);
-  EXPECT_EQ(bcid, Renderer::kInvalidId);
+  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer->RegisterTextureCollection(bcid, sysmem_allocator, nullptr);
+  EXPECT_FALSE(result);
 
   // A valid channel that isn't a buffer collection should also fail.
   zx::channel local_endpoint;
@@ -121,8 +115,10 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
   zx::channel::create(0, &local_endpoint, &remote_endpoint);
   flatland::BufferCollectionHandle handle{std::move(remote_endpoint)};
   ASSERT_TRUE(handle.is_valid());
-  bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(handle));
-  EXPECT_EQ(bcid, Renderer::kInvalidId);
+
+  bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  result = renderer->RegisterTextureCollection(bcid, sysmem_allocator, std::move(handle));
+  EXPECT_FALSE(result);
 }
 
 // Test the Validate() function. First call Validate() without setting the client
@@ -131,8 +127,10 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
 void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = CreateSysmemTokens(sysmem_allocator);
 
-  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.dup_token));
-  EXPECT_NE(bcid, Renderer::kInvalidId);
+  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result =
+      renderer->RegisterTextureCollection(bcid, sysmem_allocator, std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // The buffer collection should not be valid here.
   EXPECT_FALSE(renderer->Validate(bcid).has_value());
@@ -140,11 +138,11 @@ void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token));
 
   // The buffer collection *should* be valid here.
-  auto result = renderer->Validate(bcid);
-  EXPECT_TRUE(result.has_value());
+  auto validate_result = renderer->Validate(bcid);
+  EXPECT_TRUE(validate_result.has_value());
 
   // There should be 1 vmo.
-  EXPECT_EQ(result->vmo_count, 1U);
+  EXPECT_EQ(validate_result->vmo_count, 1U);
 }
 
 // Simple deregistration test that calls DeregisterCollection() directly without
@@ -153,8 +151,10 @@ void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_
 void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = CreateSysmemTokens(sysmem_allocator);
 
-  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.dup_token));
-  EXPECT_NE(bcid, Renderer::kInvalidId);
+  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result =
+      renderer->RegisterTextureCollection(bcid, sysmem_allocator, std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // The buffer collection should not be valid here.
   EXPECT_FALSE(renderer->Validate(bcid).has_value());
@@ -162,11 +162,11 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token));
 
   // The buffer collection *should* be valid here.
-  auto result = renderer->Validate(bcid);
-  EXPECT_TRUE(result.has_value());
+  auto validate_result = renderer->Validate(bcid);
+  EXPECT_TRUE(validate_result.has_value());
 
   // There should be 1 vmo.
-  EXPECT_EQ(result->vmo_count, 1U);
+  EXPECT_EQ(validate_result->vmo_count, 1U);
 
   // Now deregister the collection.
   renderer->DeregisterCollection(bcid);
@@ -181,7 +181,7 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 void MultithreadingTest(Renderer* renderer) {
   const uint32_t kNumThreads = 50;
 
-  std::set<GlobalBufferCollectionId> bcid_set;
+  std::set<sysmem_util::GlobalBufferCollectionId> bcid_set;
   std::mutex lock;
 
   auto register_and_validate_function = [&renderer, &bcid_set, &lock](bool register_texture) {
@@ -194,16 +194,17 @@ void MultithreadingTest(Renderer* renderer) {
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
 
     auto tokens = CreateSysmemTokens(sysmem_allocator.get());
-    GlobalBufferCollectionId bcid = Renderer::kInvalidId;
+    auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+    bool result = false;
     if (register_texture) {
-      bcid = renderer->RegisterTextureCollection(sysmem_allocator.get(),
-                                                 std::move(tokens.local_token));
+      result = renderer->RegisterTextureCollection(bcid, sysmem_allocator.get(),
+                                                   std::move(tokens.local_token));
     } else {
-      bcid = renderer->RegisterRenderTargetCollection(sysmem_allocator.get(),
-                                                      std::move(tokens.local_token));
+      result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator.get(),
+                                                        std::move(tokens.local_token));
     }
 
-    EXPECT_NE(bcid, Renderer::kInvalidId);
+    EXPECT_TRUE(result);
 
     SetClientConstraintsAndWaitForAllocated(sysmem_allocator.get(), std::move(tokens.dup_token));
 
@@ -214,11 +215,11 @@ void MultithreadingTest(Renderer* renderer) {
     }
 
     // The buffer collection *should* be valid here.
-    auto result = renderer->Validate(bcid);
-    EXPECT_TRUE(result.has_value());
+    auto validate_result = renderer->Validate(bcid);
+    EXPECT_TRUE(validate_result.has_value());
 
     // There should be 1 vmo.
-    EXPECT_EQ(result->vmo_count, 1U);
+    EXPECT_EQ(validate_result->vmo_count, 1U);
 
     loop.RunUntilIdle();
   };
@@ -257,10 +258,13 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
   auto target_tokens = CreateSysmemTokens(sysmem_allocator);
 
   // Register the render target with the renderer.
-  GlobalBufferCollectionId target_id;
   fuchsia::sysmem::BufferCollectionInfo_2 target_info = {};
-  target_id = renderer->RegisterRenderTargetCollection(sysmem_allocator,
-                                                       std::move(target_tokens.dup_token));
+
+  auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  auto result = renderer->RegisterRenderTargetCollection(target_id, sysmem_allocator,
+                                                         std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto client_target_collection =
@@ -434,8 +438,11 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   auto target_tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
   // Register and validate the collection with the renderer.
-  auto collection_id =
-      renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
+  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  auto result = renderer.RegisterTextureCollection(collection_id, sysmem_allocator_.get(),
+                                                   std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
@@ -445,8 +452,11 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
       /*width*/ 60,
       /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
 
-  auto target_id = renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(),
-                                                           std::move(target_tokens.dup_token));
+  auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
+                                                   std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto client_target = CreateClientPointerWithConstraints(
@@ -581,8 +591,11 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   auto target_tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
 
   // Register and validate the collection with the renderer.
-  auto collection_id =
-      renderer.RegisterTextureCollection(sysmem_allocator_.get(), std::move(tokens.dup_token));
+  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  auto result = renderer.RegisterTextureCollection(collection_id, sysmem_allocator_.get(),
+                                                   std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
@@ -592,8 +605,10 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       /*width*/ 60,
       /*height*/ 40, buffer_usage, std::make_optional(memory_constraints));
 
-  auto target_id = renderer.RegisterRenderTargetCollection(sysmem_allocator_.get(),
-                                                           std::move(target_tokens.dup_token));
+  auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
+                                                   std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto client_target = CreateClientPointerWithConstraints(

@@ -25,20 +25,23 @@ class VkRenderer final : public Renderer {
   ~VkRenderer() override;
 
   // |Renderer|.
-  GlobalBufferCollectionId RegisterTextureCollection(
+  bool RegisterTextureCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  GlobalBufferCollectionId RegisterRenderTargetCollection(
+  bool RegisterRenderTargetCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  void DeregisterCollection(GlobalBufferCollectionId collection_id) override;
+  void DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  std::optional<BufferCollectionMetadata> Validate(GlobalBufferCollectionId collection_id) override;
+  std::optional<BufferCollectionMetadata> Validate(
+      sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
@@ -49,10 +52,10 @@ class VkRenderer final : public Renderer {
   void WaitIdle();
 
  private:
-  GlobalBufferCollectionId RegisterCollection(
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      vk::ImageUsageFlags usage);
+  bool RegisterCollection(sysmem_util::GlobalBufferCollectionId collection_id,
+                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                          vk::ImageUsageFlags usage);
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
   // ExtractRenderTarget() and ExtractTexture() are wrapper functions to ExtractImage()
@@ -73,9 +76,11 @@ class VkRenderer final : public Renderer {
   // This mutex is used to protect access to |collection_map_|, |collection_metadata_map_|,
   // and |vk_collection_map_|.
   std::mutex lock_;
-  std::unordered_map<GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
-  std::unordered_map<GlobalBufferCollectionId, BufferCollectionMetadata> collection_metadata_map_;
-  std::unordered_map<GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA> vk_collection_map_;
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionMetadata>
+      collection_metadata_map_;
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA>
+      vk_collection_map_;
 
   uint32_t frame_number_ = 0;
 };

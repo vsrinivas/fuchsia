@@ -42,33 +42,42 @@ VkRenderer::~VkRenderer() {
   }
 }
 
-GlobalBufferCollectionId VkRenderer::RegisterRenderTargetCollection(
+bool VkRenderer::RegisterRenderTargetCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(sysmem_allocator, std::move(token),
+  return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
                             escher::RectangleCompositor::kRenderTargetUsageFlags);
 }
 
-GlobalBufferCollectionId VkRenderer::RegisterTextureCollection(
+bool VkRenderer::RegisterTextureCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(sysmem_allocator, std::move(token),
+  return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
                             escher::RectangleCompositor::kTextureUsageFlags);
 }
 
-GlobalBufferCollectionId VkRenderer::RegisterCollection(
+bool VkRenderer::RegisterCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     vk::ImageUsageFlags usage) {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   FX_DCHECK(vk_device);
+  FX_DCHECK(collection_id != sysmem_util::kInvalidId);
 
   // Check for a null token here before we try to duplicate it to get the
   // vulkan token.
   if (!token.is_valid()) {
     FX_LOGS(ERROR) << "Token is invalid.";
-    return kInvalidId;
+    return false;
+  }
+
+  if (collection_map_.find(collection_id) != collection_map_.end()) {
+    FX_LOGS(ERROR) << "Duplicate GlobalBufferCollectionID: " << collection_id;
+    return false;
   }
 
   auto vk_constraints =
@@ -104,12 +113,8 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Unable to register collection.";
-    return kInvalidId;
+    return false;
   }
-
-  // This id will be used for both the renderer and display controller handles.
-  auto identifier = scenic_impl::GenerateUniqueCollectionId();
-  FX_DCHECK(identifier != Renderer::kInvalidId);
 
   // Create a duped display token.
   if (display_controller_) {
@@ -117,7 +122,7 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
         .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
     };
 
-    auto result = scenic_impl::ImportBufferCollection(identifier, *display_controller_.get(),
+    auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                       std::move(display_token), image_config);
     FX_DCHECK(result);
   }
@@ -138,12 +143,12 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
-  collection_map_[identifier] = std::move(result.value());
-  vk_collection_map_[identifier] = std::move(vk_collection);
-  return identifier;
+  collection_map_[collection_id] = std::move(result.value());
+  vk_collection_map_[collection_id] = std::move(vk_collection);
+  return true;
 }
 
-void VkRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
+void VkRenderer::DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
@@ -180,7 +185,7 @@ void VkRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
 }
 
 std::optional<BufferCollectionMetadata> VkRenderer::Validate(
-    GlobalBufferCollectionId collection_id) {
+    sysmem_util::GlobalBufferCollectionId collection_id) {
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is trickier than in the
   // other cases for this class since we are mutating the buffer collection in this call. So we can
   // only convert this to a lock free structure if the elements in the map are changed to be values

@@ -24,20 +24,23 @@ class NullRenderer : public Renderer {
   ~NullRenderer() override = default;
 
   // |Renderer|.
-  GlobalBufferCollectionId RegisterTextureCollection(
+  bool RegisterTextureCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  GlobalBufferCollectionId RegisterRenderTargetCollection(
+  bool RegisterRenderTargetCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  void DeregisterCollection(GlobalBufferCollectionId collection_id) override;
+  void DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  std::optional<BufferCollectionMetadata> Validate(GlobalBufferCollectionId collection_id) override;
+  std::optional<BufferCollectionMetadata> Validate(
+      sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
@@ -45,16 +48,17 @@ class NullRenderer : public Renderer {
               const std::vector<zx::event>& release_fences = {}) override;
 
  private:
-  GlobalBufferCollectionId RegisterCollection(
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
+  bool RegisterCollection(sysmem_util::GlobalBufferCollectionId collection_id,
+                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
 
   const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
 
   // This mutex is used to protect access to |collection_map_| and |collection_metadata_map_|.
   std::mutex lock_;
-  std::unordered_map<GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
-  std::unordered_map<GlobalBufferCollectionId, BufferCollectionMetadata> collection_metadata_map_;
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionMetadata>
+      collection_metadata_map_;
 };
 
 }  // namespace flatland

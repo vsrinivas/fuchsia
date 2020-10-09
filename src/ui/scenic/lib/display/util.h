@@ -10,16 +10,14 @@
 
 #include <cstdint>
 
-namespace scenic_impl {
-using DisplayBufferCollectionId = uint64_t;
-using DisplayEventId = uint64_t;
+#include "src/ui/scenic/lib/sysmem/id.h"
 
-// Atomically produces a new id that can be used to reference a buffer collection.
-DisplayBufferCollectionId GenerateUniqueCollectionId();
+namespace scenic_impl {
+using DisplayEventId = uint64_t;
 
 // Imports a sysmem buffer collection token to a display controller, and sets the constraints.
 // A successful import will return true, otherwise it will return false.
-bool ImportBufferCollection(DisplayBufferCollectionId identifier,
+bool ImportBufferCollection(sysmem_util::GlobalBufferCollectionId identifier,
                             const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
                             fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
                             const fuchsia::hardware::display::ImageConfig& image_config);

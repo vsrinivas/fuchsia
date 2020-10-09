@@ -246,9 +246,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // identity matrix for its transform.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
 
-  // A mapping from user-generated buffer collection IDs to Renderer-generated buffer collection
+  // A mapping from user-generated buffer collection IDs to global buffer collection
   // IDs.
-  std::unordered_map<BufferCollectionId, GlobalBufferCollectionId> buffer_collection_ids_;
+  std::unordered_map<BufferCollectionId, sysmem_util::GlobalBufferCollectionId>
+      buffer_collection_ids_;
 
   // The metadata associated with a particular buffer collection and the number of Images that
   // currently reference that buffer collection.
@@ -257,13 +258,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
     size_t image_count = 0;
   };
 
-  // A mapping from Renderer-generated buffer collection ID to the data associated with each
+  // A mapping from global buffer collection ID to the data associated with each
   // collection.
-  std::unordered_map<GlobalBufferCollectionId, BufferCollectionData> buffer_collections_;
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionData>
+      buffer_collections_;
 
-  // The set of GlobalBufferCollectionIds associated with released BufferCollectionIds that have
-  // not yet been garbage collected.
-  std::unordered_set<GlobalBufferCollectionId> released_buffer_collection_ids_;
+  // The set of sysmem_util::GlobalBufferCollectionIds associated with released BufferCollectionIds
+  // that have not yet been garbage collected.
+  std::unordered_set<sysmem_util::GlobalBufferCollectionId> released_buffer_collection_ids_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;

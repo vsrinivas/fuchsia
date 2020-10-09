@@ -269,7 +269,7 @@ TEST_F(EngineTest, BadBufferRegistration) {
 
   // Try to register a buffer collection without first adding a display.
   auto renderer_id = engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
-  EXPECT_EQ(renderer_id, Renderer::kInvalidId);
+  EXPECT_EQ(renderer_id, sysmem_util::kInvalidId);
 
   // Now add the display.
   engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
@@ -277,12 +277,12 @@ TEST_F(EngineTest, BadBufferRegistration) {
   // Try again with 0 vmos. This should also fail.
   auto renderer_id_2 =
       engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, /*num_vmos*/ 0);
-  EXPECT_EQ(renderer_id_2, Renderer::kInvalidId);
+  EXPECT_EQ(renderer_id_2, sysmem_util::kInvalidId);
 
   // Now use a positive vmo number, this should work.
   auto renderer_id_3 =
       engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
-  EXPECT_NE(renderer_id_3, Renderer::kInvalidId);
+  EXPECT_NE(renderer_id_3, sysmem_util::kInvalidId);
 }
 
 // Test to make sure we can register framebuffers to the renderer and display
@@ -308,7 +308,7 @@ TEST_F(EngineTest, BufferRegistrationTest) {
   Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
   engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
   auto renderer_id = engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
-  EXPECT_NE(renderer_id, Renderer::kInvalidId);
+  EXPECT_NE(renderer_id, sysmem_util::kInvalidId);
 
   // We can check the result of buffer registration by the engine through the renderer.
   // We should see the same number of vmos we told the engine to create, as well as each

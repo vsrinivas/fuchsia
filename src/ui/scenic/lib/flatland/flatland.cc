@@ -81,7 +81,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
 
     // Collect the list of deregistered buffer collections that are unreferenced by any Images,
     // meaning they can be released from the Renderer.
-    std::vector<GlobalBufferCollectionId> buffers_to_release;
+    std::vector<sysmem_util::GlobalBufferCollectionId> buffers_to_release;
     for (auto released_iter = released_buffer_collection_ids_.begin();
          released_iter != released_buffer_collection_ids_.end();) {
       const auto global_collection_id = *released_iter;
@@ -91,7 +91,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
       if (buffer_data_kv->second.image_count == 0) {
         buffers_to_release.push_back(global_collection_id);
 
-        // Delete local references to the GlobalBufferCollectionId.
+        // Delete local references to the sysmem_util::GlobalBufferCollectionId.
         buffer_collections_.erase(buffer_data_kv);
         released_iter = released_buffer_collection_ids_.erase(released_iter);
       } else {
@@ -536,13 +536,15 @@ void Flatland::RegisterBufferCollection(
     return;
   }
 
+  // Grab a new unique global buffer collection id.
+  auto global_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+
   // Register the texture collection immediately since the client may block on buffers being
   // allocated before calling Present().
-  auto global_collection_id =
-      renderer_->RegisterTextureCollection(sysmem_allocator_.get(), std::move(token));
+  auto result = renderer_->RegisterTextureCollection(global_collection_id, sysmem_allocator_.get(),
+                                                     std::move(token));
 
-  // But don't allow the collection to be referenced in other function calls until presented.
-  if (global_collection_id == Renderer::kInvalidId) {
+  if (!result) {
     FX_LOGS(ERROR)
         << "RegisterBufferCollection failed to register the sysmem token with the renderer.";
     ReportError();

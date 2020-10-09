@@ -14,17 +14,17 @@ namespace flatland {
 // Mock class of Renderer for Flatland API testing.
 class MockRenderer : public Renderer {
  public:
-  MOCK_METHOD2(RegisterTextureCollection,
-               GlobalBufferCollectionId(
-                   fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
-  MOCK_METHOD2(RegisterRenderTargetCollection,
-               GlobalBufferCollectionId(
-                   fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
-  MOCK_METHOD1(DeregisterCollection, void(GlobalBufferCollectionId collection_id));
-  MOCK_METHOD1(Validate,
-               std::optional<BufferCollectionMetadata>(GlobalBufferCollectionId collection_id));
+  MOCK_METHOD3(RegisterTextureCollection,
+               bool(sysmem_util::GlobalBufferCollectionId collection_id,
+                    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
+  MOCK_METHOD3(RegisterRenderTargetCollection,
+               bool(sysmem_util::GlobalBufferCollectionId collection_id,
+                    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
+  MOCK_METHOD1(DeregisterCollection, void(sysmem_util::GlobalBufferCollectionId collection_id));
+  MOCK_METHOD1(Validate, std::optional<BufferCollectionMetadata>(
+                             sysmem_util::GlobalBufferCollectionId collection_id));
   MOCK_METHOD4(Render,
                void(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
                     const std::vector<ImageMetadata>& images,

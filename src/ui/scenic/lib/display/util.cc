@@ -10,14 +10,7 @@
 
 namespace scenic_impl {
 
-DisplayBufferCollectionId GenerateUniqueCollectionId() {
-  // This function will be called from multiple threads, and thus needs an atomic
-  // incrementor for the id.
-  static std::atomic<DisplayBufferCollectionId> buffer_collection_id = 0;
-  return ++buffer_collection_id;
-}
-
-bool ImportBufferCollection(DisplayBufferCollectionId buffer_collection_id,
+bool ImportBufferCollection(sysmem_util::GlobalBufferCollectionId buffer_collection_id,
                             const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
                             fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
                             const fuchsia::hardware::display::ImageConfig& image_config) {

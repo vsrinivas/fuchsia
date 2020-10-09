@@ -245,12 +245,12 @@ void Engine::AddDisplay(uint64_t display_id, TransformHandle transform, glm::uve
                               .pixel_scale = std::move(pixel_scale)};
 }
 
-GlobalBufferCollectionId Engine::RegisterTargetCollection(
+sysmem_util::GlobalBufferCollectionId Engine::RegisterTargetCollection(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator, uint64_t display_id, uint32_t num_vmos) {
   FX_DCHECK(sysmem_allocator);
   auto iter = display_map_.find(display_id);
   if (iter == display_map_.end() || num_vmos == 0) {
-    return Renderer::kInvalidId;
+    return sysmem_util::kInvalidId;
   }
 
   auto display_info = iter->second;
@@ -270,9 +270,10 @@ GlobalBufferCollectionId Engine::RegisterTargetCollection(
   FX_DCHECK(status == ZX_OK);
 
   // Register the buffer collection with the renderer and display simultaneously.
-  auto renderer_collection_id =
-      renderer_->RegisterRenderTargetCollection(sysmem_allocator, std::move(renderer_token));
-  FX_DCHECK(renderer_collection_id != Renderer::kInvalidId);
+  auto renderer_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer_->RegisterRenderTargetCollection(renderer_collection_id, sysmem_allocator,
+                                                          std::move(renderer_token));
+  FX_DCHECK(result);
 
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(engine_token), num_vmos,
                                           width, height, kNoneUsage, std::nullopt);

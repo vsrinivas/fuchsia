@@ -238,6 +238,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/scenic:take_screenshot_delegate_deprecated",
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//src/ui/scenic/lib/sysmem",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
   ]

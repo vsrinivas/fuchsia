@@ -35,7 +35,7 @@ class Engine {
   // to the Engine via |AddDisplay| before this is called with the same display_id.
   // The result is a GlobalBufferCollectionId which references the collection for both the
   // renderer and the display. If the collection failed to allocate, the id will be 0.
-  GlobalBufferCollectionId RegisterTargetCollection(
+  sysmem_util::GlobalBufferCollectionId RegisterTargetCollection(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator, uint64_t display_id, uint32_t num_vmos);
 
  private:
