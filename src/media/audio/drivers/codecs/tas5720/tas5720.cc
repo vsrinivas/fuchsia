@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
@@ -15,6 +14,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+
+#include "src/media/audio/drivers/codecs/tas5720/ti_tas5720-bind.h"
 
 namespace {
 // This codec offers a DAI interface with 2 channel I2S, even though it is a mono amp with the
@@ -339,9 +340,6 @@ static zx_driver_ops_t driver_ops = []() {
 }  // namespace audio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ti_tas5720, audio::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5720),
-ZIRCON_DRIVER_END(ti_tas5720)
-    // clang-format on
+ZIRCON_DRIVER(ti_tas5720, audio::driver_ops, "zircon", "0.1")
+
+// clang-format on
