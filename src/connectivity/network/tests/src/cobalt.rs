@@ -158,12 +158,13 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         "packets received. events: {:?}",
         MultilineSlice(&events_post_first_drop),
     );
-    assert_eq!(
-        events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
-            .max(),
-        Some(EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE),
+    let res = events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
+        .iter()
+        .map(|ev| ev.count)
+        .max();
+    assert!(
+        res == Some(EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE)
+            || res == Some(EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE),
         "bytes sent. events: {:?}",
         MultilineSlice(&events_post_first_drop),
     );
