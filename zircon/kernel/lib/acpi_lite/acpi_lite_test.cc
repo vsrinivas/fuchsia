@@ -8,6 +8,7 @@
 #include <lib/zx/status.h>
 #include <string.h>
 
+#include <initializer_list>
 #include <memory>
 
 #include <gtest/gtest.h>
@@ -204,6 +205,77 @@ TEST(AcpiParser, RsdPtrAutodetect) {
   EXPECT_EQ(4u, result->num_tables());
 }
 #endif
+
+// An empty AcpiParser.
+class EmptyAcpiParser final : public AcpiParserInterface {
+  size_t num_tables() const override { return 0u; }
+
+  const AcpiSdtHeader* GetTableAtIndex(size_t index) const override { return nullptr; }
+};
+
+// Create an AcpiParser that returns a single table.
+class FakeAcpiParser final : public AcpiParserInterface {
+ public:
+  FakeAcpiParser(const void* data, size_t size) {
+    // Ensure the fake data meets the requirements of the AcpiParserInterface.
+    ZX_ASSERT(size >= sizeof(AcpiSdtHeader));
+    const auto* header = reinterpret_cast<const AcpiSdtHeader*>(data);
+    ZX_ASSERT(header->length <= size);
+
+    // Copy the data.
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data);
+    bytes_.assign(bytes, bytes + size);
+  }
+
+  size_t num_tables() const override { return 1u; }
+
+  const AcpiSdtHeader* GetTableAtIndex(size_t index) const override {
+    if (index > 0) {
+      return nullptr;
+    }
+    return reinterpret_cast<const AcpiSdtHeader*>(bytes_.data());
+  };
+
+ private:
+  std::vector<uint8_t> bytes_;
+};
+
+TEST(GetTableByType, NothingFound) {
+  EmptyAcpiParser parser;
+  EXPECT_EQ(nullptr, GetTableByType<AcpiHpetTable>(parser));
+}
+
+TEST(GetTableByType, ValidEntryFound) {
+  AcpiHpetTable table = {
+      .header =
+          {
+              .sig = AcpiHpetTable::kSignature,
+              .length = sizeof(AcpiHpetTable),
+          },
+      .flags = 42,
+  };
+  table.header.checksum = AcpiChecksum(&table, sizeof(table));
+  FakeAcpiParser parser(&table, sizeof(table));
+
+  const AcpiHpetTable* result = GetTableByType<AcpiHpetTable>(parser);
+  ASSERT_NE(result, nullptr);
+  EXPECT_EQ(result->flags, 42);
+}
+
+TEST(GetTableByType, ShortEntry) {
+  AcpiHpetTable table = {
+      .header =
+          {
+              .sig = AcpiHpetTable::kSignature,
+              // Length is too short to hold a |AcpiHpetTable|.
+              .length = sizeof(AcpiHpetTable) - 1,
+          },
+  };
+  table.header.checksum = AcpiChecksum(&table, sizeof(table) - 1);
+  FakeAcpiParser parser(&table, sizeof(table));
+
+  EXPECT_EQ(GetTableByType<AcpiHpetTable>(parser), nullptr);
+}
 
 }  // namespace
 }  // namespace acpi_lite

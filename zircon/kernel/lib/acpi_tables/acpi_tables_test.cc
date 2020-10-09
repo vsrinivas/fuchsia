@@ -89,21 +89,6 @@ bool test_interrupt_source_overrides() {
   END_TEST;
 }
 
-bool test_hpet() {
-  BEGIN_TEST;
-  AcpiTables tables(&acpi_test_data::kEveTableProvider);
-
-  acpi_hpet_descriptor hpet;
-  ASSERT_EQ(ZX_OK, tables.hpet(&hpet));
-
-  EXPECT_EQ(0xFED00000u, hpet.address);
-  EXPECT_EQ(false, hpet.port_io);
-  EXPECT_EQ(0, hpet.minimum_tick);
-  EXPECT_EQ(0, hpet.sequence);
-
-  END_TEST;
-}
-
 bool test_numa_z840() {
   BEGIN_TEST;
   AcpiTables tables(&acpi_test_data::kZ840TableProvider);
@@ -175,7 +160,6 @@ UNITTEST("Enumerate cpus using pixelbook eve data", test_cpus_eve)
 UNITTEST("Enumerate cpus using HP z840 data.", test_cpus_z840)
 UNITTEST("Enumerate io_apic_ids.", test_io)
 UNITTEST("Enumerate interrupt_source_overrides.", test_interrupt_source_overrides)
-UNITTEST("Lookup HPET.", test_hpet)
 UNITTEST("Enumerate NUMA regions using HP z840 data.", test_numa_z840)
 UNITTEST("Enumerate NUMA regions using Threadripper 2970 data.", test_numa_2970wx)
 UNITTEST("Parse DBG2 table entry.", test_dbg2_parsing)

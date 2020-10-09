@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "acpi.h"
-
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/zircon.h>
 #include <lib/acpi_tables.h>
@@ -12,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <ktl/optional.h>
+#include <platform/pc/acpi.h>
 
 namespace {
 
@@ -29,6 +28,11 @@ int ConsoleAcpiDump(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 }  // namespace
+
+acpi_lite::AcpiParser& GlobalAcpiLiteParser() {
+  ASSERT_MSG(global_acpi_parser != nullptr, "PlatformInitAcpi() not called.");
+  return *global_acpi_parser;
+}
 
 void PlatformInitAcpi(zx_paddr_t acpi_rsdp) {
   // Create AcpiParser.

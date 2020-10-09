@@ -316,37 +316,6 @@ zx_status_t AcpiTables::GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) co
   return ZX_OK;
 }
 
-zx_status_t AcpiTables::hpet(acpi_hpet_descriptor* hpet) const {
-  const acpi_lite::AcpiSdtHeader* table =
-      GetTableBySignature(*tables_, acpi_lite::AcpiHpetTable::kSignature);
-  if (table == nullptr) {
-    TRACEF("could not find HPET\n");
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  acpi_lite::AcpiHpetTable* hpet_tbl = (acpi_lite::AcpiHpetTable*)table;
-  if (hpet_tbl->header.length != sizeof(acpi_lite::AcpiHpetTable)) {
-    TRACEF("Unexpected HPET table length\n");
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  hpet->minimum_tick = hpet_tbl->minimum_tick;
-  hpet->sequence = hpet_tbl->sequence;
-  hpet->address = hpet_tbl->address.address;
-  switch (hpet_tbl->address.address_space_id) {
-    case ACPI_ADDR_SPACE_IO:
-      hpet->port_io = true;
-      break;
-    case ACPI_ADDR_SPACE_MEMORY:
-      hpet->port_io = false;
-      break;
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
   // Find the DBG2 table entry.
   const acpi_lite::AcpiSdtHeader* table =

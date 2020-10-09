@@ -6,6 +6,8 @@
 
 #include <bits.h>
 #include <err.h>
+#include <lib/acpi_lite.h>
+#include <lib/acpi_lite/structures.h>
 #include <lib/acpi_tables.h>
 #include <lib/affine/ratio.h>
 #include <zircon/types.h>
@@ -17,6 +19,7 @@
 #include <ktl/algorithm.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
+#include <platform/pc/acpi.h>
 #include <platform/pc/hpet.h>
 #include <vm/vm_aspace.h>
 
@@ -41,7 +44,6 @@ struct hpet_registers {
 
 DECLARE_SINGLETON_SPINLOCK(hpet_lock);
 
-static struct acpi_hpet_descriptor hpet_desc;
 static bool hpet_present = false;
 static struct hpet_registers* hpet_regs;
 uint64_t _hpet_ticks_per_ms;
@@ -68,12 +70,17 @@ static uint64_t min_ticks_ahead;
 #define TIMER_CAP_IRQS(reg) static_cast<uint32_t>(BITS_SHIFT(reg, 63, 32))
 
 static void hpet_init(uint level) {
-  zx_status_t status = AcpiTables::Default().hpet(&hpet_desc);
-  if (status != ZX_OK) {
+  // Look up the HPET table.
+  const acpi_lite::AcpiHpetTable* hpet_desc =
+      acpi_lite::GetTableByType<acpi_lite::AcpiHpetTable>(GlobalAcpiLiteParser());
+  if (hpet_desc == nullptr) {
+    dprintf(INFO, "No HPET ACPI table found.\n");
     return;
   }
 
-  if (hpet_desc.port_io) {
+  // Ensure the HPET table uses MMIO.
+  if (hpet_desc->address.address_space_id != ACPI_ADDR_SPACE_MEMORY) {
+    dprintf(INFO, "HPET unsupported: require MMIO-based HPET.\n");
     return;
   }
 
@@ -81,7 +88,7 @@ static void hpet_init(uint level) {
       "hpet", PAGE_SIZE,          /* size */
       (void**)&hpet_regs,         /* returned virtual address */
       PAGE_SIZE_SHIFT,            /* alignment log2 */
-      (paddr_t)hpet_desc.address, /* physical address */
+      hpet_desc->address.address, /* physical address */
       0,                          /* vmm flags */
       ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
   if (res != ZX_OK) {
@@ -144,11 +151,10 @@ static void hpet_init(uint level) {
   hpet_present = true;
 
   dprintf(INFO, "HPET: detected at %#" PRIx64 " ticks per ms %" PRIu64 " num timers %hhu\n",
-          hpet_desc.address, _hpet_ticks_per_ms, num_timers);
+          hpet_desc->address.address, _hpet_ticks_per_ms, num_timers);
 
   // things went well, cancel our cleanup auto-call
   cleanup.cancel();
-  return;
 }
 
 /* Begin running after ACPI tables are up */

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_KERNEL_PLATFORM_PC_ACPI_H_
-#define ZIRCON_KERNEL_PLATFORM_PC_ACPI_H_
+#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_ACPI_H_
+#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_ACPI_H_
 
+#include <lib/acpi_lite.h>
 #include <zircon/types.h>
 
 // Set up an ACPI for the platform.
@@ -12,4 +13,7 @@
 // Panic on failure.
 void PlatformInitAcpi(zx_paddr_t acpi_rsdp);
 
-#endif  // ZIRCON_KERNEL_PLATFORM_PC_ACPI_H_
+// Get global acpi_lite instance.
+acpi_lite::AcpiParser& GlobalAcpiLiteParser();
+
+#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_ACPI_H_

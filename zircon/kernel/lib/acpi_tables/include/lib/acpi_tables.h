@@ -14,15 +14,6 @@
 #include <arch/x86/apic.h>
 #include <fbl/function.h>
 
-// TODO(edcoyne): rename this to C++ naming.
-struct acpi_hpet_descriptor {
-  uint64_t address;
-  bool port_io;
-
-  uint16_t minimum_tick;
-  uint8_t sequence;
-};
-
 constexpr uint8_t kAcpiMaxNumaRegions = 5;
 
 struct AcpiNumaRegion {
@@ -81,10 +72,6 @@ class AcpiTables {
 
   // Sets count equal to the number of overrides registered in the system.
   zx_status_t interrupt_source_overrides_count(uint32_t* count) const;
-
-  // Lookup high precision event timer information. Returns ZX_OK and
-  // populates hpet if successful, otherwise returns error.
-  zx_status_t hpet(acpi_hpet_descriptor* hpet) const;
 
   // Lookup low-level debug port information. Returns ZX_OK and
   // populates info if successful, otherwise returns error.

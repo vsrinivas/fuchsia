@@ -27,6 +27,9 @@ class AcpiParserInterface {
   virtual size_t num_tables() const = 0;
 
   // Return the i'th table. Return nullptr if the index is out of range.
+  //
+  // If the return value is non-null, it is guaranteed that the returned
+  // pointer |p| points to memory at least |p->length| bytes long.
   virtual const AcpiSdtHeader* GetTableAtIndex(size_t index) const = 0;
 };
 
@@ -72,6 +75,20 @@ class AcpiParser final : public AcpiParserInterface {
 
 // Get the first table matching the given signature. Return nullptr if no table found.
 const AcpiSdtHeader* GetTableBySignature(const AcpiParserInterface& parser, AcpiSignature sig);
+
+// Get the first table of the given type. Return nullptr if no table found, or the
+// table is invalid.,
+template <typename T>
+const T* GetTableByType(const AcpiParserInterface& parser) {
+  const AcpiSdtHeader* header = GetTableBySignature(parser, T::kSignature);
+  if (header == nullptr) {
+    return nullptr;
+  }
+  if (header->length < sizeof(T)) {
+    return nullptr;
+  }
+  return reinterpret_cast<const T*>(header);
+}
 
 // A PhysMemReader translates physical addresses (such as those in the ACPI tables and the RSDT
 // itself) into pointers directly readable by the acpi_lite library.

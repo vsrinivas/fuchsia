@@ -51,6 +51,7 @@
 #include <platform/crashlog.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
+#include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/smbios.h>
 #include <vm/bootalloc.h>
@@ -58,8 +59,6 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-
-#include "acpi.h"
 
 extern "C" {
 #include <efi/runtime-services.h>
