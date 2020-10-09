@@ -12,6 +12,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+namespace acpi_lite {
+
 // First byte and length of the x86 BIOS read-only area, [0xe0'000, 0xff'fff].
 //
 // Reference: ACPI v6.3, Section 5.2.5.1
@@ -342,5 +344,7 @@ static_assert(sizeof(AcpiDbg2Device) == 22);
 #define ACPI_DBG2_SUBTYPE_1394_STANDARD 0x0000
 #define ACPI_DBG2_SUBTYPE_USB_XHCI 0x0000
 #define ACPI_DBG2_SUBTYPE_USB_EHCI 0x0001
+
+}  // namespace acpi_lite
 
 #endif  // ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_STRUCTURES_H_

@@ -11,6 +11,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+namespace acpi_lite {
+
 // Write the signature into the given buffer.
 //
 // Buffer must have a length of at least 5.
@@ -18,3 +20,5 @@ void AcpiSignature::WriteToBuffer(char* buffer) const {
   memcpy(buffer, &value, sizeof(AcpiSignature));
   buffer[sizeof(AcpiSignature)] = 0;
 }
+
+}  // namespace acpi_lite

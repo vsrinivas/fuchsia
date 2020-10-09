@@ -13,11 +13,11 @@ namespace acpi_test_data {
 
 class FakeTableProvider : public acpi_lite::AcpiParserInterface {
  public:
-  explicit FakeTableProvider(fbl::Span<const AcpiSdtHeader*> tables) : tables_(tables) {}
+  explicit FakeTableProvider(fbl::Span<const acpi_lite::AcpiSdtHeader*> tables) : tables_(tables) {}
 
   size_t num_tables() const override { return tables_.size(); }
 
-  const AcpiSdtHeader* GetTableAtIndex(size_t index) const override {
+  const acpi_lite::AcpiSdtHeader* GetTableAtIndex(size_t index) const override {
     if (index >= tables_.size()) {
       return nullptr;
     }
@@ -25,7 +25,7 @@ class FakeTableProvider : public acpi_lite::AcpiParserInterface {
   }
 
  private:
-  fbl::Span<const AcpiSdtHeader*> tables_;
+  fbl::Span<const acpi_lite::AcpiSdtHeader*> tables_;
 };
 
 // Dumped from pixelbook eve.
@@ -46,9 +46,9 @@ inline const uint8_t kEveHpetTableData[]{
     0x0,  0xD0, 0xFE, 0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x0,  0x61, 0xCC, 0x68, 0x61,
 };
 
-inline const AcpiSdtHeader* kEveTables[]{
-    reinterpret_cast<const AcpiSdtHeader*>(kEveMadtTableData),
-    reinterpret_cast<const AcpiSdtHeader*>(kEveHpetTableData),
+inline const acpi_lite::AcpiSdtHeader* kEveTables[]{
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(kEveMadtTableData),
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(kEveHpetTableData),
 };
 
 // Dumped from HP z840 with dual Xeon E2690v4 processors.
@@ -509,9 +509,9 @@ inline const uint8_t kZ840SratTableData[]{
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-inline const AcpiSdtHeader* kZ840Tables[]{
-    reinterpret_cast<const AcpiSdtHeader*>(kZ840MadtTableData),
-    reinterpret_cast<const AcpiSdtHeader*>(kZ840SratTableData),
+inline const acpi_lite::AcpiSdtHeader* kZ840Tables[]{
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(kZ840MadtTableData),
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(kZ840SratTableData),
 };
 
 inline const uint8_t k2970wxMadtTableData[]{
@@ -654,9 +654,9 @@ inline const uint8_t k2970wxSratTableData[]{
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-inline const AcpiSdtHeader* k2970wxTables[]{
-    reinterpret_cast<const AcpiSdtHeader*>(k2970wxMadtTableData),
-    reinterpret_cast<const AcpiSdtHeader*>(k2970wxSratTableData),
+inline const acpi_lite::AcpiSdtHeader* k2970wxTables[]{
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(k2970wxMadtTableData),
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(k2970wxSratTableData),
 };
 
 inline const uint8_t kDbg2TestData[]{
@@ -669,8 +669,8 @@ inline const uint8_t kDbg2TestData[]{
     0x53, 0x42, 0x2e, 0x50, 0x43, 0x49, 0x30, 0x2e, 0x55, 0x41, 0x52, 0x32, 0x00,
 };
 
-inline const AcpiSdtHeader* kDbg2Table[]{
-    reinterpret_cast<const AcpiSdtHeader*>(kDbg2TestData),
+inline const acpi_lite::AcpiSdtHeader* kDbg2Table[]{
+    reinterpret_cast<const acpi_lite::AcpiSdtHeader*>(kDbg2TestData),
 };
 
 inline const FakeTableProvider kZ840TableProvider(kZ840Tables);

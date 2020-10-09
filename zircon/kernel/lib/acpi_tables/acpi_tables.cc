@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <err.h>
 #include <lib/acpi_lite.h>
+#include <lib/acpi_lite/structures.h>
 #include <trace.h>
 
 #include <ktl/optional.h>
@@ -16,8 +17,6 @@
 #include <lk/init.h>
 
 #define LOCAL_TRACE 0
-
-using acpi_lite::AcpiParser;
 
 namespace {
 
@@ -82,7 +81,7 @@ inline zx_status_t ReadVariableLengthStruct(ktl::span<const uint8_t> data, F T::
 // We assume that the memory being pointed contains at least sizeof(T)
 // bytes. Return an error if the header isn't valid.
 template <typename T>
-inline zx_status_t ReadAcpiEntry(const AcpiSdtHeader* header, T* out,
+inline zx_status_t ReadAcpiEntry(const acpi_lite::AcpiSdtHeader* header, T* out,
                                  ktl::span<const uint8_t>* payload) {
   // Read the length. Use "memcpy" to avoid unaligned reads.
   uint32_t length;
@@ -113,8 +112,8 @@ inline zx_status_t ReadAcpiEntry(const AcpiSdtHeader* header, T* out,
 
 zx_status_t AcpiTables::cpu_count(uint32_t* cpu_count) const {
   uint32_t count = 0;
-  auto visitor = [&count](AcpiSubTableHeader* record) {
-    AcpiMadtLocalApicEntry* lapic = (AcpiMadtLocalApicEntry*)record;
+  auto visitor = [&count](acpi_lite::AcpiSubTableHeader* record) {
+    acpi_lite::AcpiMadtLocalApicEntry* lapic = (acpi_lite::AcpiMadtLocalApicEntry*)record;
     if (!(lapic->flags & ACPI_MADT_FLAG_ENABLED)) {
       LTRACEF("Skipping disabled processor %02x\n", lapic->apic_id);
       return ZX_OK;
@@ -136,8 +135,8 @@ zx_status_t AcpiTables::cpu_count(uint32_t* cpu_count) const {
 zx_status_t AcpiTables::cpu_apic_ids(uint32_t* apic_ids, uint32_t array_size,
                                      uint32_t* apic_id_count) const {
   uint32_t count = 0;
-  auto visitor = [apic_ids, array_size, &count](AcpiSubTableHeader* record) {
-    AcpiMadtLocalApicEntry* lapic = (AcpiMadtLocalApicEntry*)record;
+  auto visitor = [apic_ids, array_size, &count](acpi_lite::AcpiSubTableHeader* record) {
+    acpi_lite::AcpiMadtLocalApicEntry* lapic = (acpi_lite::AcpiMadtLocalApicEntry*)record;
     if (!(lapic->flags & ACPI_MADT_FLAG_ENABLED)) {
       LTRACEF("Skipping disabled processor %02x\n", lapic->apic_id);
       return ZX_OK;
@@ -166,8 +165,8 @@ zx_status_t AcpiTables::io_apic_count(uint32_t* io_apics_count) const {
 zx_status_t AcpiTables::io_apics(io_apic_descriptor* io_apics, uint32_t array_size,
                                  uint32_t* io_apics_count) const {
   uint32_t count = 0;
-  auto visitor = [io_apics, array_size, &count](AcpiSubTableHeader* record) {
-    AcpiMadtIoApicEntry* io_apic = (AcpiMadtIoApicEntry*)record;
+  auto visitor = [io_apics, array_size, &count](acpi_lite::AcpiSubTableHeader* record) {
+    acpi_lite::AcpiMadtIoApicEntry* io_apic = (acpi_lite::AcpiMadtIoApicEntry*)record;
     if (count >= array_size) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -194,12 +193,13 @@ zx_status_t AcpiTables::interrupt_source_overrides(io_apic_isa_override* overrid
                                                    uint32_t array_size,
                                                    uint32_t* overrides_count) const {
   uint32_t count = 0;
-  auto visitor = [overrides, array_size, &count](AcpiSubTableHeader* record) {
+  auto visitor = [overrides, array_size, &count](acpi_lite::AcpiSubTableHeader* record) {
     if (count >= array_size) {
       return ZX_ERR_INVALID_ARGS;
     }
 
-    AcpiMadtIntSourceOverrideEntry* iso = (AcpiMadtIntSourceOverrideEntry*)record;
+    acpi_lite::AcpiMadtIntSourceOverrideEntry* iso =
+        (acpi_lite::AcpiMadtIntSourceOverrideEntry*)record;
 
     ASSERT(iso->bus == 0);  // 0 means ISA, ISOs are only ever for ISA IRQs
     overrides[count].isa_irq = iso->source;
@@ -251,7 +251,7 @@ zx_status_t AcpiTables::interrupt_source_overrides(io_apic_isa_override* overrid
 
 zx_status_t AcpiTables::NumInMadt(uint8_t type, uint32_t* element_count) const {
   uint32_t count = 0;
-  auto visitor = [&count](AcpiSubTableHeader* record) {
+  auto visitor = [&count](acpi_lite::AcpiSubTableHeader* record) {
     count++;
     return ZX_OK;
   };
@@ -274,9 +274,9 @@ zx_status_t AcpiTables::ForEachInMadt(uint8_t type, V visitor) const {
   }
 
   uintptr_t addr;
-  AcpiSubTableHeader* record_hdr;
+  acpi_lite::AcpiSubTableHeader* record_hdr;
   for (addr = records_start; addr < records_end; addr += record_hdr->length) {
-    record_hdr = (AcpiSubTableHeader*)addr;
+    record_hdr = (acpi_lite::AcpiSubTableHeader*)addr;
     if (record_hdr->type == type) {
       status = visitor(record_hdr);
       if (status != ZX_OK) {
@@ -293,12 +293,13 @@ zx_status_t AcpiTables::ForEachInMadt(uint8_t type, V visitor) const {
 }
 
 zx_status_t AcpiTables::GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) const {
-  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiMadtTable::kSignature);
+  const acpi_lite::AcpiSdtHeader* table =
+      GetTableBySignature(*tables_, acpi_lite::AcpiMadtTable::kSignature);
   if (table == nullptr) {
     TRACEF("could not find MADT\n");
     return ZX_ERR_NOT_FOUND;
   }
-  AcpiMadtTable* madt = (AcpiMadtTable*)table;
+  acpi_lite::AcpiMadtTable* madt = (acpi_lite::AcpiMadtTable*)table;
   uintptr_t records_start = ((uintptr_t)madt) + sizeof(*madt);
   uintptr_t records_end = ((uintptr_t)madt) + madt->header.length;
   if (records_start >= records_end) {
@@ -316,14 +317,15 @@ zx_status_t AcpiTables::GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) co
 }
 
 zx_status_t AcpiTables::hpet(acpi_hpet_descriptor* hpet) const {
-  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiHpetTable::kSignature);
+  const acpi_lite::AcpiSdtHeader* table =
+      GetTableBySignature(*tables_, acpi_lite::AcpiHpetTable::kSignature);
   if (table == nullptr) {
     TRACEF("could not find HPET\n");
     return ZX_ERR_NOT_FOUND;
   }
 
-  AcpiHpetTable* hpet_tbl = (AcpiHpetTable*)table;
-  if (hpet_tbl->header.length != sizeof(AcpiHpetTable)) {
+  acpi_lite::AcpiHpetTable* hpet_tbl = (acpi_lite::AcpiHpetTable*)table;
+  if (hpet_tbl->header.length != sizeof(acpi_lite::AcpiHpetTable)) {
     TRACEF("Unexpected HPET table length\n");
     return ZX_ERR_NOT_FOUND;
   }
@@ -347,14 +349,15 @@ zx_status_t AcpiTables::hpet(acpi_hpet_descriptor* hpet) const {
 
 zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
   // Find the DBG2 table entry.
-  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiDbg2Table::kSignature);
+  const acpi_lite::AcpiSdtHeader* table =
+      GetTableBySignature(*tables_, acpi_lite::AcpiDbg2Table::kSignature);
   if (table == nullptr) {
     TRACEF("acpi: could not find debug port (v2) ACPI entry\n");
     return ZX_ERR_NOT_FOUND;
   }
 
   // Read the DBG2 header.
-  AcpiDbg2Table debug_table;
+  acpi_lite::AcpiDbg2Table debug_table;
   ktl::span<const uint8_t> payload;
   zx_status_t status = ReadAcpiEntry(table, &debug_table, &payload);
   if (status != ZX_OK) {
@@ -369,13 +372,14 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
   }
 
   // Read the first device payload.
-  AcpiDbg2Device device;
+  acpi_lite::AcpiDbg2Device device;
   ktl::span<const uint8_t> device_payload;
-  status = ReadVariableLengthStruct<AcpiDbg2Device>(payload,
-                                                    /*length_field=*/&AcpiDbg2Device::length,
-                                                    /*out=*/&device,
-                                                    /*payload=*/&device_payload,
-                                                    /*offset=*/debug_table.offset);
+  status = ReadVariableLengthStruct<acpi_lite::AcpiDbg2Device>(
+      payload,
+      /*length_field=*/&acpi_lite::AcpiDbg2Device::length,
+      /*out=*/&device,
+      /*payload=*/&device_payload,
+      /*offset=*/debug_table.offset);
   if (status != ZX_OK) {
     TRACEF("acpi: Could not parse DBG2 device.\n");
     return status;
@@ -396,7 +400,7 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
   }
 
   // Get base address and length.
-  AcpiGenericAddress address;
+  acpi_lite::AcpiGenericAddress address;
   status = ReadStruct(device_payload, &address, /*offset=*/device.base_address_offset);
   if (status != ZX_OK) {
     TRACEF("acpi: Failed to read DBG2 address registers.\n");
@@ -423,13 +427,14 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
 
 zx_status_t AcpiTables::VisitCpuNumaPairs(
     fbl::Function<void(const AcpiNumaDomain&, uint32_t)> visitor) const {
-  const AcpiSdtHeader* table = GetTableBySignature(*tables_, AcpiSratTable::kSignature);
+  const acpi_lite::AcpiSdtHeader* table =
+      GetTableBySignature(*tables_, acpi_lite::AcpiSratTable::kSignature);
   if (table == nullptr) {
     printf("Could not find SRAT table.\n");
     return ZX_ERR_NOT_FOUND;
   }
 
-  AcpiSratTable* srat = (AcpiSratTable*)table;
+  acpi_lite::AcpiSratTable* srat = (acpi_lite::AcpiSratTable*)table;
 
   static constexpr size_t kSratHeaderSize = 48;
   static constexpr size_t kMaxNumaDomains = 10;
@@ -438,11 +443,13 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(
   // First find all numa domains.
   size_t offset = kSratHeaderSize;
   while (offset < srat->header.length) {
-    AcpiSubTableHeader* sub_header = (AcpiSubTableHeader*)((uint64_t)table + offset);
+    acpi_lite::AcpiSubTableHeader* sub_header =
+        (acpi_lite::AcpiSubTableHeader*)((uint64_t)table + offset);
     DEBUG_ASSERT(sub_header->length > 0);
     offset += sub_header->length;
     if (sub_header->type == ACPI_SRAT_TYPE_MEMORY_AFFINITY) {
-      const AcpiSratMemoryAffinityEntry* mem = (AcpiSratMemoryAffinityEntry*)sub_header;
+      const acpi_lite::AcpiSratMemoryAffinityEntry* mem =
+          (acpi_lite::AcpiSratMemoryAffinityEntry*)sub_header;
       if (!(mem->flags & ACPI_SRAT_FLAG_ENABLED)) {
         // Ignore disabled entries.
         continue;
@@ -463,11 +470,12 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(
   // Then visit all cpu apic ids and provide the accompanying numa region.
   offset = kSratHeaderSize;
   while (offset < srat->header.length) {
-    AcpiSubTableHeader* sub_header = (AcpiSubTableHeader*)((uint64_t)table + offset);
+    acpi_lite::AcpiSubTableHeader* sub_header =
+        (acpi_lite::AcpiSubTableHeader*)((uint64_t)table + offset);
     offset += sub_header->length;
     const auto type = sub_header->type;
     if (type == ACPI_SRAT_TYPE_PROCESSOR_AFFINITY) {
-      const auto* cpu = (AcpiSratProcessorAffinityEntry*)sub_header;
+      const auto* cpu = (acpi_lite::AcpiSratProcessorAffinityEntry*)sub_header;
       if (!(cpu->flags & ACPI_SRAT_FLAG_ENABLED)) {
         // Ignore disabled entries.
         continue;
@@ -482,7 +490,7 @@ zx_status_t AcpiTables::VisitCpuNumaPairs(
       visitor(domains[domain], cpu->apic_id);
 
     } else if (type == ACPI_SRAT_TYPE_PROCESSOR_X2APIC_AFFINITY) {
-      const auto* cpu = (AcpiSratProcessorX2ApicAffinityEntry*)sub_header;
+      const auto* cpu = (acpi_lite::AcpiSratProcessorX2ApicAffinityEntry*)sub_header;
       if (!(cpu->flags & ACPI_SRAT_FLAG_ENABLED)) {
         // Ignore disabled entries.
         continue;
