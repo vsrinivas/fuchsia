@@ -16,7 +16,7 @@ TEST(TextMatchTest, TokenSingle) {
   ParseResult result = Token("bob")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -26,7 +26,7 @@ TEST(TextMatchTest, TokenMulti) {
   ParseResult result = Token("bob")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -43,7 +43,7 @@ TEST(TextMatchTest, AnyChar) {
   ParseResult result = AnyChar("abc")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -53,7 +53,7 @@ TEST(TextMatchTest, AnyCharMulti) {
   ParseResult result = AnyChar("abc")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -70,7 +70,7 @@ TEST(TextMatchTest, AnyCharBut) {
   ParseResult result = AnyCharBut("123#!")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -80,7 +80,7 @@ TEST(TextMatchTest, AnyCharButMulti) {
   ParseResult result = AnyCharBut("123#!")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -97,7 +97,7 @@ TEST(TextMatchTest, CharGroup) {
   ParseResult result = CharGroup("a-c")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -107,7 +107,7 @@ TEST(TextMatchTest, CharGroupMulti) {
   ParseResult result = CharGroup("a-c")(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 

@@ -14,9 +14,9 @@ const std::string MATCH_REPLACE("%MATCH%");
 fit::function<ParseResult(ParseResult)> ErSkip(
     std::string_view message, fit::function<ParseResult(ParseResult)> skip_parser) {
   return [message, skip_parser = std::move(skip_parser)](ParseResult prefix) {
-    auto skip = skip_parser(ParseResult(prefix.tail()));
+    auto skip = skip_parser(prefix);
 
-    if (skip && skip.error_score() == 0) {
+    if (skip && skip.errors() == prefix.errors()) {
       auto pos = message.find(MATCH_REPLACE);
 
       if (pos != std::string::npos) {
@@ -34,12 +34,8 @@ fit::function<ParseResult(ParseResult)> ErSkip(
   };
 }
 
-fit::function<ParseResult(ParseResult)> ErInsert(std::string_view message, size_t length) {
-  return [message, length](ParseResult prefix) { return prefix.Expected(length, message); };
-}
-
-fit::function<ParseResult(ParseResult)> ErInsert(std::string_view message, std::string_view token) {
-  return ErInsert(message, token.size());
+fit::function<ParseResult(ParseResult)> ErInsert(std::string_view message) {
+  return [message](ParseResult prefix) { return prefix.Expected(message); };
 }
 
 }  // namespace shell::parser

@@ -33,16 +33,22 @@ fit::function<ParseResult(ParseResult)> Alt(fit::function<ParseResult(ParseResul
   return [a = std::move(a), b = std::move(b)](ParseResult prefix) {
     auto a_result = a(prefix);
 
-    if (a_result && a_result.error_score() == 0) {
+    if (a_result && a_result.errors() == prefix.errors()) {
       return a_result;
     } else {
       auto b_result = b(prefix);
 
-      if (a_result && (!b_result || b_result.error_score() >= a_result.error_score())) {
+      if (!b_result) {
         return a_result;
+      } else if (!a_result) {
+        return b_result;
+      } else if (b_result.errors() == prefix.errors()) {
+        return b_result;
+      } else if (a_result.parsed_successfully() >= b_result.parsed_successfully()) {
+        return a_result;
+      } else {
+        return b_result;
       }
-
-      return b_result;
     }
   };
 }
@@ -59,9 +65,9 @@ ParseResult EOS(ParseResult prefix) {
 
 fit::function<ParseResult(ParseResult)> Not(fit::function<ParseResult(ParseResult)> inv) {
   return [inv = std::move(inv)](ParseResult prefix) {
-    auto inv_result = inv(ParseResult(prefix.tail()));
+    auto inv_result = inv(prefix);
 
-    if (inv_result && inv_result.error_score() == 0) {
+    if (inv_result && inv_result.errors() == prefix.errors()) {
       return ParseResult::kEnd;
     }
 
@@ -72,14 +78,13 @@ fit::function<ParseResult(ParseResult)> Not(fit::function<ParseResult(ParseResul
 fit::function<ParseResult(ParseResult)> Multi(size_t min, size_t max,
                                               fit::function<ParseResult(ParseResult)> child) {
   return [child = std::move(child), min, max](ParseResult prefix) {
-    size_t score_floor = prefix.error_score();
     size_t count = 0;
     ParseResult result = prefix;
 
     for (ParseResult next = ParseResult::kEnd; result && count < max; ++count) {
       next = child(result);
 
-      if ((!next || next.error_score() > score_floor) && count >= min) {
+      if ((!next || next.errors() > prefix.errors()) && count >= min) {
         return result;
       }
 

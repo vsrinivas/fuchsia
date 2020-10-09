@@ -16,7 +16,7 @@ TEST(CombinatorTest, Seq) {
   auto result = Seq(Token("bob"), Token("smith"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(8u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob' 'smith')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -27,7 +27,7 @@ TEST(CombinatorTest, Seq3) {
 
   ASSERT_TRUE(result);
   EXPECT_EQ(13u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob' 'smith' 'jones')",
             result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
@@ -38,7 +38,7 @@ TEST(CombinatorTest, AltA) {
   auto result = Alt(Token("bob"), Token("smith"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -48,7 +48,7 @@ TEST(CombinatorTest, AltB) {
   auto result = Alt(Token("bob"), Token("smith"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(5u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('smith')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -58,7 +58,7 @@ TEST(CombinatorTest, Not) {
   auto result = Not(Token("bob"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(0u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("()", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -76,7 +76,7 @@ TEST(CombinatorTest, Maybe) {
   auto result = Maybe(Token("bob"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -86,7 +86,7 @@ TEST(CombinatorTest, MaybeFail) {
   auto result = Maybe(Token("bob"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(0u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("()", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
 
@@ -96,7 +96,7 @@ TEST(CombinatorTest, Multi) {
   auto result = Multi(3, 5, Token("bob"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(12u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob' 'bob' 'bob' 'bob')",
             result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
@@ -107,7 +107,7 @@ TEST(CombinatorTest, MultiOverflow) {
   auto result = Multi(3, 5, Token("bob"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(15u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob' 'bob' 'bob' 'bob' 'bob')",
             result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }
@@ -125,7 +125,7 @@ TEST(CombinatorTest, OnePlus) {
   auto result = OnePlus(Token("bob"))(ParseResult(kTestString));
   ASSERT_TRUE(result);
   EXPECT_EQ(12u, result.offset());
-  EXPECT_EQ(0u, result.error_score());
+  EXPECT_EQ(0u, result.errors());
   EXPECT_EQ("('bob' 'bob' 'bob' 'bob')",
             result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 }

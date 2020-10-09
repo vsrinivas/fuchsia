@@ -14,11 +14,8 @@ namespace shell::parser {
 fit::function<ParseResult(ParseResult)> ErSkip(std::string_view message,
                                                fit::function<ParseResult(ParseResult)> skip_parser);
 
-// Handle an error by injecting the given amount of data into the parse stream.
-fit::function<ParseResult(ParseResult)> ErInsert(std::string_view message, size_t length);
-
-// Handle an error by injecting the given token into the parse stream.
-fit::function<ParseResult(ParseResult)> ErInsert(std::string_view message, std::string_view token);
+// Insert an error into the parse stream.
+fit::function<ParseResult(ParseResult)> ErInsert(std::string_view message);
 
 }  // namespace shell::parser
 

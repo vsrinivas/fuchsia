@@ -8,6 +8,6 @@
 
 namespace shell::parser {
 
-const ParseResult ParseResult::kEnd("", 0, 0, 0, 0);
+const ParseResult ParseResult::kEnd("", 0, 0, 0);
 
 }  // namespace shell::parser
