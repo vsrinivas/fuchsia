@@ -177,16 +177,6 @@ TEST_F(BasemgrTest, SessionLauncherCanOfferServices) {
       agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
   RunLoopUntil([&] { return connect_count > 0; });
   EXPECT_EQ(1, connect_count);
-
-  // Test that the provided services can still be reached if the session is restarted
-  // (fxbug.dev/61680).
-  session_shell->Exit(1);
-  RunLoopUntil([&] { return !session_shell->is_running() && !agent->is_running(); });
-  RunLoopUntil([&] { return session_shell->is_running() && agent->is_running(); });
-  auto test_ptr2 =
-      agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
-  RunLoopUntil([&] { return connect_count > 1; });
-  EXPECT_EQ(2, connect_count);
 }
 
 // Tests that basemgr starts a new session with a new configuration, and stops the existing one

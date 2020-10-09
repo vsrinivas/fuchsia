@@ -11,7 +11,6 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
@@ -77,6 +76,7 @@ class SessionProvider {
   fuchsia::hardware::power::statecontrol::Admin* const administrator_;  // Not owned.
   const modular::ModularConfigAccessor* const config_accessor_;         // Not owned.
   intl::IntlPropertyProviderImpl* const intl_property_provider_;        // Not owned.
+  fuchsia::sys::ServiceList services_from_session_launcher_;
   fit::function<void()> on_zero_sessions_;
 
   std::unique_ptr<SessionContextImpl> session_context_;
@@ -84,11 +84,6 @@ class SessionProvider {
   // Service directory from which |fuchsia.intl.PropertyProvider| and others will be served
   // to child |sessionmgr|s.
   vfs::PseudoDir sessionmgr_service_dir_;
-
-  // Names of services passed by session launcher.
-  const std::vector<std::string> session_launcher_service_names_;
-  // Exposes the services passed by session launcher to agents.
-  const sys::ServiceDirectory session_launcher_service_dir_;
 
   // The number of times that session had to be recovered from a crash, during a
   // given timeout. If the count exceed the max retry limit, a device

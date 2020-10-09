@@ -34,9 +34,8 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
       administrator_(administrator),
       config_accessor_(config_accessor),
       intl_property_provider_(intl_property_provider),
-      on_zero_sessions_(std::move(on_zero_sessions)),
-      session_launcher_service_names_(std::move(services_from_session_launcher.names)),
-      session_launcher_service_dir_(std::move(services_from_session_launcher.host_directory)) {
+      services_from_session_launcher_(std::move(services_from_session_launcher)),
+      on_zero_sessions_(std::move(on_zero_sessions)) {
   last_crash_time_ = zx::clock::get_monotonic();
   // Bind `fuchsia.intl.PropertyProvider` to the implementation instance owned by this class.
   sessionmgr_service_dir_.AddEntry(
@@ -62,14 +61,10 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
 
   // Session context initializes and holds the sessionmgr process.
-  fuchsia::sys::ServiceList services_from_session_launcher;
-  services_from_session_launcher.names = session_launcher_service_names_;
-  services_from_session_launcher.host_directory =
-      session_launcher_service_dir_.CloneChannel().TakeChannel();
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
       std::move(services),
-      std::move(services_from_session_launcher),
+      std::move(services_from_session_launcher_),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
