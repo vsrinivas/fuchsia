@@ -219,6 +219,11 @@ pub enum PropMac {
     EnergyScanResult,
     DataPollPeriod,
 
+    AllowList,
+    AllowListEnabled,
+    DenyList,
+    DenyListEnabled,
+
     Unknown(u32),
 }
 impl_sub_enum!(Prop::Mac, PropMac);
@@ -389,6 +394,10 @@ impl From<Prop> for u32 {
             Mac(PropMac::PromiscuousMode) => 0x38,
             Mac(PropMac::EnergyScanResult) => 0x39,
             Mac(PropMac::DataPollPeriod) => 0x3a,
+            Mac(PropMac::AllowList) => 0x1300,
+            Mac(PropMac::AllowListEnabled) => 0x1301,
+            Mac(PropMac::DenyList) => 0x1306,
+            Mac(PropMac::DenyListEnabled) => 0x1307,
             Mac(PropMac::Unknown(x)) => x,
 
             Net(PropNet::Saved) => 0x40,
@@ -512,6 +521,10 @@ impl From<u32> for Prop {
             0x38 => Mac(PropMac::PromiscuousMode),
             0x39 => Mac(PropMac::EnergyScanResult),
             0x3a => Mac(PropMac::DataPollPeriod),
+            0x1300 => Mac(PropMac::AllowList),
+            0x1301 => Mac(PropMac::AllowListEnabled),
+            0x1306 => Mac(PropMac::DenyList),
+            0x1307 => Mac(PropMac::DenyListEnabled),
             x if (x >= 0x30 && x < 0x40) || (x >= 0x1300 && x < 0x1400) => Mac(PropMac::Unknown(x)),
 
             0x40 => Net(PropNet::Saved),
