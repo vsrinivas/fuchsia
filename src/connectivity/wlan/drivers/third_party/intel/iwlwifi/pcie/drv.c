@@ -52,6 +52,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwlwifi-bind.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
+
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #endif  // NEEDS_PORTING
@@ -319,7 +320,7 @@ static const struct iwl_pci_device iwl_devices[] = {
     {IWL_PCI_DEVICE(0x08B2, 0xC220, iwl7260_2n_cfg)},
     {IWL_PCI_DEVICE(0x08B1, 0xC420, iwl7260_2n_cfg)},
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* 3160 Series */
     {IWL_PCI_DEVICE(0x08B3, 0x0070, iwl3160_2ac_cfg)},
     {IWL_PCI_DEVICE(0x08B3, 0x0072, iwl3160_2ac_cfg)},
@@ -411,7 +412,7 @@ static const struct iwl_pci_device iwl_devices[] = {
     {IWL_PCI_DEVICE(0x095A, 0x9400, iwl7265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x095A, 0x9E10, iwl7265_2ac_cfg)},
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* 8000 Series */
     {IWL_PCI_DEVICE(0x24F3, 0x0010, iwl8260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24F3, 0x1010, iwl8260_2ac_cfg)},
@@ -497,7 +498,7 @@ static const struct iwl_pci_device iwl_devices[] = {
 #endif  // CPTCFG_IWLMVM
 
 #if CPTCFG_IWLMVM || CPTCFG_IWLFMAC
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* 9000 Series */
     {IWL_PCI_DEVICE(0x02F0, 0x0030, iwl9560_2ac_cfg_soc)},
     {IWL_PCI_DEVICE(0x02F0, 0x0034, iwl9560_2ac_cfg_soc)},
@@ -966,7 +967,7 @@ static void iwl_pci_unbind(void* ctx) {
 static void iwl_pci_release(void* ctx) {
   struct iwl_trans* trans = (struct iwl_trans*)ctx;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* if RTPM was in use, restore it to the state before probe */
     if (trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
         /* We should not call forbid here, but we do for now.
@@ -979,7 +980,7 @@ static void iwl_pci_release(void* ctx) {
 
   iwl_drv_stop(trans->drv);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     iwl_trans_pcie_free(trans);
 #endif  // NEEDS_PORTING
   free(trans);
@@ -992,7 +993,7 @@ static zx_protocol_device_t device_ops = {
     .release = iwl_pci_release,
 };
 
-static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
+zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
   struct iwl_trans* iwl_trans;
   zx_status_t status;
 
@@ -1094,7 +1095,7 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
       .ops = &device_ops,
       .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
       .proto_ops = &wlanphy_ops,
-      .flags = DEVICE_ADD_NON_BINDABLE,
+      .flags = 0,
   };
 
   status = device_add(dev, &args, &iwl_trans->zxdev);
@@ -1135,7 +1136,7 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     goto fail_stop_device;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* if RTPM is in use, enable it in our device */
     if (iwl_trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
         /* We explicitly set the device to active here to
@@ -1167,17 +1168,7 @@ fail_remove_device:
   return status;
 }
 
-static zx_driver_ops_t iwlwifi_pci_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = iwl_pci_bind,
-};
-
-#define INTEL_VID 0x8086
-
-ZIRCON_DRIVER(iwlwifi_pci, iwlwifi_pci_driver_ops, "zircon", "0.1");
-
 #if 0  // NEEDS_PORTING
-
 /* PCI registers */
 #define PCI_CFG_RETRY_TIMEOUT 0x041
 
@@ -1399,5 +1390,5 @@ static const struct dev_pm_ops iwl_dev_pm_ops = {
 
 #define IWL_PM_OPS NULL
 
-#endif  /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM_SLEEP */
 #endif  // NEEDS_PORTING

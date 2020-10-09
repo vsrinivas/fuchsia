@@ -100,6 +100,8 @@ source_set("pcie") {
   configs += [ "//build/config:all_source" ]
 
   sources = [
+    "pcie/bind.cc",
+    "pcie/bind.h",
     "pcie/drv.c",
     "pcie/internal.h",
     "pcie/rx.c",
