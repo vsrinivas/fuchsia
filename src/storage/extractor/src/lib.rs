@@ -5,11 +5,13 @@
 pub mod error;
 mod extent;
 mod extent_cluster;
+pub mod extractor;
 pub mod format;
 pub mod properties;
 mod utils;
 pub use error::Error;
 pub use format::{DataKindInfo, ExtentInfo, ExtentKindInfo, EXTENT_KIND_UNMAPPED};
+pub use options::ExtractorOptions;
 pub mod options;
 
 pub use properties::{DataKind, ExtentKind, ExtentProperties};

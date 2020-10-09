@@ -86,7 +86,6 @@ impl Extent {
     // Sets storage_range start.
     // Test only helper routines that reduces boiler plate code.
     #[cfg(test)]
-    #[allow(dead_code)]
     pub(crate) fn set_start(&mut self, start: u64) {
         self.storage_range.start = start;
     }
@@ -94,7 +93,6 @@ impl Extent {
     // Sets storage_range end.
     // This function is available only for tests. It reduces boilerplate.
     #[cfg(test)]
-    #[allow(dead_code)]
     pub(crate) fn set_end(&mut self, end: u64) {
         self.storage_range.end = end;
     }

@@ -48,7 +48,6 @@ pub struct ExtentCluster {
 }
 
 impl ExtentCluster {
-    #[allow(dead_code)]
     pub fn new(options: &ExtractorOptions) -> Self {
         Self { extent_tree: Default::default(), options: options.clone() }
     }
@@ -114,7 +113,6 @@ impl ExtentCluster {
     }
 
     /// Adds an extent to extent cluster.
-    #[allow(dead_code)]
     pub fn add_extent(&mut self, extent: &Extent) -> Result<(), Error> {
         if !extent.storage_range().is_valid() {
             return Err(Error::InvalidRange);
@@ -123,14 +121,12 @@ impl ExtentCluster {
     }
 
     /// Returns number of extent in extent cluster.
-    #[allow(dead_code)]
     pub fn extent_count(&self) -> u64 {
         self.extent_tree.len() as u64
     }
 
     /// Returns number of data bytes that will be written
     /// in this cluster.
-    #[allow(dead_code)]
     fn data_size(&self) -> u64 {
         let mut size: u64 = 0;
         for (_, extent) in &self.extent_tree {
@@ -144,7 +140,6 @@ impl ExtentCluster {
 
     /// Writes ExtentCluster metadata to out_stream. crc32 to is crc of metadata and any
     /// padding required.
-    #[allow(dead_code)]
     fn write_metadata(&self, out_stream: &mut dyn Write) -> Result<u64, Error> {
         let mut size =
             ExtentClusterHeader::serialize_to(self.extent_count() as u64, 0, out_stream)?;
@@ -163,7 +158,6 @@ impl ExtentCluster {
     /// Write all the data in extents to the out_stream.
     ///
     /// The extent's data is read from the in_stream.
-    #[allow(dead_code)]
     fn write_data(
         &self,
         out_stream: &mut dyn Write,
@@ -195,7 +189,6 @@ impl ExtentCluster {
 
     /// Iterate over the extent_tree and check that they are in ascending order
     /// of start offset and they do not overlap.
-    #[allow(dead_code)]
     fn check_extent_tree(&self) {
         let mut prev_or: Option<Extent> = None;
 
@@ -222,7 +215,6 @@ impl ExtentCluster {
     ///
     /// This includes computing checksum of the cluster header and all the extent infos,
     /// then writing cluster header, extent info and extent data to the image file.
-    #[allow(dead_code)]
     pub fn write(
         &mut self,
         mut out_stream: &mut dyn Write,

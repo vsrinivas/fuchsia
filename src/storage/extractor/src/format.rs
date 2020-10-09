@@ -98,7 +98,6 @@ impl Header {
     }
 
     /// Returns size of serialized header considering alignement.
-    #[allow(dead_code)]
     pub fn serialized_size(&self) -> u64 {
         assert_ne!(self.alignment, 0);
         ((self.as_bytes().len() as u64 + self.alignment - 1) / self.alignment) * self.alignment
@@ -118,7 +117,6 @@ impl Header {
     }
 
     /// Updates extent cluster offset.
-    #[allow(dead_code)]
     pub fn set_extent_cluster_offset(&mut self, offset: u64) -> Result<(), Error> {
         self.check_extent_cluster_offset(offset)?;
         self.extent_cluster_offset = offset;
@@ -126,7 +124,6 @@ impl Header {
     }
 
     /// Returns current extent cluster offset.
-    #[allow(dead_code)]
     pub fn get_extent_cluster_offset(&self) -> u64 {
         self.extent_cluster_offset
     }
@@ -183,10 +180,10 @@ u8, kind, set_kind: 1, 0;
 }
 
 impl ExtentKindInfo {
-    #[allow(dead_code)]
     pub fn new(ekind: ExtentKind) -> Self {
         Self::from(ekind)
     }
+
     pub fn to_kind(&self) -> Result<ExtentKind, Error> {
         match self.kind() {
             EXTENT_KIND_UNMAPPED => Ok(ExtentKind::Unmmapped),
@@ -246,7 +243,6 @@ pub u8, kind, set_kind: 1, 0;
 }
 
 impl DataKindInfo {
-    #[allow(dead_code)]
     pub fn new(kind: DataKind) -> Self {
         Self::from(kind)
     }
@@ -345,7 +341,6 @@ impl ExtentInfo {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn serialized_size(&self) -> u64 {
         self.as_bytes().len() as u64
     }
@@ -411,7 +406,6 @@ impl ExtentClusterHeader {
         e
     }
 
-    #[allow(dead_code)]
     pub fn serialized_size(&self) -> u64 {
         self.as_bytes().len() as u64
     }

@@ -28,6 +28,7 @@ rustc_library("disk_extractor_lib") {
     "src/error.rs",
     "src/extent.rs",
     "src/extent_cluster.rs",
+    "src/extractor.rs",
     "src/format.rs",
     "src/lib.rs",
     "src/options.rs",
