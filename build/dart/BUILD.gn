@@ -15,22 +15,6 @@ declare_args() {
   concurrent_dart_jobs = default_concurrent_jobs.dart
 }
 
-group("disable_strict_deps_check_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that do not pass the Dart strict deps
-  # check, i.e. they import packages but do not specify them as GN deps.
-  # This is only intended to be used as a temporary allowlist. Do not add to this list.
-  visibility =
-      [ "//topaz/tools/protobuf/protoc_gen_dart:protoc_gen_dart_dart_library" ]
-}
-
 # Copies the patched SDK files for the dart runner
 # NOTE: copies to an _nnbd directory to allow for soft transition
 copy("platform_files") {
