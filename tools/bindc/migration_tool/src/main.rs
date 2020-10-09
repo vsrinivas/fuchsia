@@ -198,9 +198,10 @@ impl Migrator {
         output.push_str("import(\"//build/bind/bind.gni\")\n");
         output.push_str(&contents[first_import.start()..last_import.end()]);
         output.push_str("\n");
-        output.push_str("bind_rules(\"bind\") {\n");
+        output.push_str(format!("bind_rules(\"{}-bind\") {{\n", driver_name).as_str());
         output.push_str(format!("  rules = \"{}.bind\"\n", driver_name).as_str());
         output.push_str(format!("  output = \"{}-bind.h\"\n", driver_name).as_str());
+        output.push_str(format!("  tests = \"tests.json\"\n").as_str());
         if !self.libraries.is_empty() {
             output.push_str("  deps = [\n");
             for library in &self.libraries {
@@ -210,7 +211,7 @@ impl Migrator {
         }
         output.push_str("}\n");
         output.push_str(&contents[last_import.end()..deps_start]);
-        output.push_str("deps = [\n    \":bind\",");
+        output.push_str(format!("deps = [\n    \":{}-bind\",", driver_name).as_str());
         output.push_str(&contents[deps_end..]);
 
         file.seek(SeekFrom::Start(0)).map_err(|_| "Failed to seek to beginning of build file")?;
@@ -447,7 +448,7 @@ impl Migrator {
         source_output.push_str(&contents[include.end()..args.match_start]);
         source_output.push_str(
             format!(
-                "ZIRCON_DRIVER({}, {}, {}, {});\n",
+                "ZIRCON_DRIVER({}, {}, {}, {})\n",
                 args.driver_name, args.driver_ops, args.vendor, args.version
             )
             .as_str(),
@@ -461,7 +462,7 @@ impl Migrator {
         file.write_all(source_output.as_bytes()).unwrap();
 
         let mut bind_file_data = String::new();
-        bind_file_data.push_str("// Copyright 2019 The Fuchsia Authors. All rights reserved.\n");
+        bind_file_data.push_str("// Copyright 2020 The Fuchsia Authors. All rights reserved.\n");
         bind_file_data.push_str(
             "// Use of this source code is governed by a BSD-style license that can be\n",
         );
