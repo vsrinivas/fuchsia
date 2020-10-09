@@ -56,7 +56,7 @@ extern "C" const fidl_type_t test_name_TransitionalEventEventTable;
 
 }  // namespace
 Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
-  RequestOwnedRequest _request(0, x);
+  RequestRequest::OwnedOutgoingMessage _request(0, x);
   _request.GetOutgoingMessage().Call<RequestResponse>(
       _client, bytes_,
       RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine);
@@ -66,7 +66,7 @@ Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x) {
 
 Transitional::ResultOf::Request::Request(zx_handle_t _client, int64_t x,
                                          zx_time_t _deadline) {
-  RequestOwnedRequest _request(0, x);
+  RequestRequest::OwnedOutgoingMessage _request(0, x);
   _request.GetOutgoingMessage().Call<RequestResponse>(
       _client, bytes_,
       RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine, _deadline);
@@ -79,7 +79,8 @@ Transitional::UnownedResultOf::Request::Request(
     uint32_t _request_byte_capacity, int64_t x, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  RequestUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, x);
+  RequestRequest::UnownedOutgoingMessage _request(_request_bytes,
+                                                  _request_byte_capacity, 0, x);
   _request.GetOutgoingMessage().Call<RequestResponse>(_client, _response_bytes,
                                                       _response_byte_capacity);
   status_ = _request.status();
@@ -87,7 +88,7 @@ Transitional::UnownedResultOf::Request::Request(
 }
 
 Transitional::ResultOf::OneWay::OneWay(zx_handle_t _client, int64_t x) {
-  OneWayOwnedRequest _request(0, x);
+  OneWayRequest::OwnedOutgoingMessage _request(0, x);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -97,7 +98,8 @@ Transitional::UnownedResultOf::OneWay::OneWay(zx_handle_t _client,
                                               uint8_t* _request_bytes,
                                               uint32_t _request_byte_capacity,
                                               int64_t x) {
-  OneWayUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, x);
+  OneWayRequest::UnownedOutgoingMessage _request(_request_bytes,
+                                                 _request_byte_capacity, 0, x);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -152,7 +154,7 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  RequestOwnedRequest _request(_context->Txid(), x);
+  RequestRequest::OwnedOutgoingMessage _request(_context->Txid(), x);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -161,7 +163,7 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
     RequestResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  RequestUnownedRequest _request(
+  RequestRequest::UnownedOutgoingMessage _request(
       _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), x);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -341,26 +343,28 @@ namespace entries {
 }
 
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
-  RequestOwnedResponse _response{y};
+  RequestResponse::OwnedOutgoingMessage _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t y) {
-  RequestUnownedResponse _response(_buffer.data(), _buffer.capacity(), y);
+  RequestResponse::UnownedOutgoingMessage _response(_buffer.data(),
+                                                    _buffer.capacity(), y);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
                                          int64_t x) {
-  EventOwnedResponse _response{x};
+  EventResponse::OwnedOutgoingMessage _response{x};
   _response.Write(_channel->get());
   return _response.status();
 }
 
 zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
                                          ::fidl::BytePart _buffer, int64_t x) {
-  EventUnownedResponse _response(_buffer.data(), _buffer.capacity(), x);
+  EventResponse::UnownedOutgoingMessage _response(_buffer.data(),
+                                                  _buffer.capacity(), x);
   _response.Write(_channel->get());
   return _response.status();
 }
@@ -403,7 +407,7 @@ extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 }  // namespace
 ChannelProtocol::ResultOf::MethodA::MethodA(zx_handle_t _client, int64_t a,
                                             int64_t b) {
-  MethodAOwnedRequest _request(0, a, b);
+  MethodARequest::OwnedOutgoingMessage _request(0, a, b);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -412,8 +416,8 @@ ChannelProtocol::ResultOf::MethodA::MethodA(zx_handle_t _client, int64_t a,
 ChannelProtocol::UnownedResultOf::MethodA::MethodA(
     zx_handle_t _client, uint8_t* _request_bytes,
     uint32_t _request_byte_capacity, int64_t a, int64_t b) {
-  MethodAUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a,
-                                 b);
+  MethodARequest::UnownedOutgoingMessage _request(
+      _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -421,7 +425,7 @@ ChannelProtocol::UnownedResultOf::MethodA::MethodA(
 
 ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
                                             int64_t b) {
-  MethodBOwnedRequest _request(0, a, b);
+  MethodBRequest::OwnedOutgoingMessage _request(0, a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(
       _client, bytes_,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine);
@@ -431,7 +435,7 @@ ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
 
 ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
                                             int64_t b, zx_time_t _deadline) {
-  MethodBOwnedRequest _request(0, a, b);
+  MethodBRequest::OwnedOutgoingMessage _request(0, a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(
       _client, bytes_,
       MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine, _deadline);
@@ -444,8 +448,8 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
     uint32_t _request_byte_capacity, int64_t a, int64_t b,
     uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  MethodBUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a,
-                                 b);
+  MethodBRequest::UnownedOutgoingMessage _request(
+      _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(_client, _response_bytes,
                                                       _response_byte_capacity);
   status_ = _request.status();
@@ -454,7 +458,7 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
 
 ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
                                                       ::zx::socket& a) {
-  MutateSocketOwnedRequest _request(0, a);
+  MutateSocketRequest::OwnedOutgoingMessage _request(0, a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine);
@@ -465,7 +469,7 @@ ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
 ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
                                                       ::zx::socket& a,
                                                       zx_time_t _deadline) {
-  MutateSocketOwnedRequest _request(0, a);
+  MutateSocketRequest::OwnedOutgoingMessage _request(0, a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, bytes_,
       MutateSocketResponse::PrimarySize + MutateSocketResponse::MaxOutOfLine,
@@ -479,8 +483,8 @@ ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
     uint32_t _request_byte_capacity, ::zx::socket& a, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  MutateSocketUnownedRequest _request(_request_bytes, _request_byte_capacity, 0,
-                                      a);
+  MutateSocketRequest::UnownedOutgoingMessage _request(
+      _request_bytes, _request_byte_capacity, 0, a);
   _request.GetOutgoingMessage().Call<MutateSocketResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -557,7 +561,7 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  MethodBOwnedRequest _request(_context->Txid(), a, b);
+  MethodBRequest::OwnedOutgoingMessage _request(_context->Txid(), a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -566,9 +570,9 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
     MethodBResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  MethodBUnownedRequest _request(_request_buffer.data(),
-                                 _request_buffer.capacity(), _context->Txid(),
-                                 a, b);
+  MethodBRequest::UnownedOutgoingMessage _request(_request_buffer.data(),
+                                                  _request_buffer.capacity(),
+                                                  _context->Txid(), a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -625,7 +629,7 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  MutateSocketOwnedRequest _request(_context->Txid(), a);
+  MutateSocketRequest::OwnedOutgoingMessage _request(_context->Txid(), a);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -634,7 +638,7 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
     MutateSocketResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  MutateSocketUnownedRequest _request(
+  MutateSocketRequest::UnownedOutgoingMessage _request(
       _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), a);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -809,7 +813,7 @@ namespace entries {
 
 zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
                                              int64_t a, int64_t b) {
-  EventAOwnedResponse _response{a, b};
+  EventAResponse::OwnedOutgoingMessage _response{a, b};
   _response.Write(_channel->get());
   return _response.status();
 }
@@ -817,32 +821,35 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
 zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
                                              ::fidl::BytePart _buffer,
                                              int64_t a, int64_t b) {
-  EventAUnownedResponse _response(_buffer.data(), _buffer.capacity(), a, b);
+  EventAResponse::UnownedOutgoingMessage _response(_buffer.data(),
+                                                   _buffer.capacity(), a, b);
   _response.Write(_channel->get());
   return _response.status();
 }
 
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     int64_t result) {
-  MethodBOwnedResponse _response{result};
+  MethodBResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     ::fidl::BytePart _buffer, int64_t result) {
-  MethodBUnownedResponse _response(_buffer.data(), _buffer.capacity(), result);
+  MethodBResponse::UnownedOutgoingMessage _response(_buffer.data(),
+                                                    _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
-  MutateSocketOwnedResponse _response{b};
+  MutateSocketResponse::OwnedOutgoingMessage _response{b};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::socket b) {
-  MutateSocketUnownedResponse _response(_buffer.data(), _buffer.capacity(), b);
+  MutateSocketResponse::UnownedOutgoingMessage _response(_buffer.data(),
+                                                         _buffer.capacity(), b);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -934,7 +941,7 @@ extern "C" const fidl_type_t
 }  // namespace
 WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse::
     NoRequestNoResponse(zx_handle_t _client) {
-  NoRequestNoResponseOwnedRequest _request(0);
+  NoRequestNoResponseRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -942,7 +949,7 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestNoResponse::
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
     NoRequestEmptyResponse(zx_handle_t _client) {
-  NoRequestEmptyResponseOwnedRequest _request(0);
+  NoRequestEmptyResponseRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
       _client, bytes_,
       NoRequestEmptyResponseResponse::PrimarySize +
@@ -953,7 +960,7 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
     NoRequestEmptyResponse(zx_handle_t _client, zx_time_t _deadline) {
-  NoRequestEmptyResponseOwnedRequest _request(0);
+  NoRequestEmptyResponseRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<NoRequestEmptyResponseResponse>(
       _client, bytes_,
       NoRequestEmptyResponseResponse::PrimarySize +
@@ -967,7 +974,7 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
     NoRequestWithResponse(zx_handle_t _client)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  NoRequestWithResponseOwnedRequest _request(0);
+  NoRequestWithResponseRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -978,7 +985,7 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
     NoRequestWithResponse(zx_handle_t _client, zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  NoRequestWithResponseOwnedRequest _request(0);
+  NoRequestWithResponseRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -989,7 +996,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
     NoRequestWithResponse(zx_handle_t _client, uint8_t* _response_bytes,
                           uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  NoRequestWithResponseOwnedRequest _request(0);
+  NoRequestWithResponseRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<NoRequestWithResponseResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -998,7 +1005,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse::
     WithRequestNoResponse(zx_handle_t _client, const ::fidl::StringView& arg) {
-  WithRequestNoResponseOwnedRequest _request(0, arg);
+  WithRequestNoResponseRequest::OwnedOutgoingMessage _request(0, arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -1008,8 +1015,8 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
     WithRequestNoResponse(zx_handle_t _client, uint8_t* _request_bytes,
                           uint32_t _request_byte_capacity,
                           const ::fidl::StringView& arg) {
-  WithRequestNoResponseUnownedRequest _request(_request_bytes,
-                                               _request_byte_capacity, 0, arg);
+  WithRequestNoResponseRequest::UnownedOutgoingMessage _request(
+      _request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -1018,7 +1025,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
     WithRequestEmptyResponse(zx_handle_t _client,
                              const ::fidl::StringView& arg) {
-  WithRequestEmptyResponseOwnedRequest _request(0, arg);
+  WithRequestEmptyResponseRequest::OwnedOutgoingMessage _request(0, arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
       _client, bytes_,
       WithRequestEmptyResponseResponse::PrimarySize +
@@ -1030,7 +1037,7 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
     WithRequestEmptyResponse(zx_handle_t _client, const ::fidl::StringView& arg,
                              zx_time_t _deadline) {
-  WithRequestEmptyResponseOwnedRequest _request(0, arg);
+  WithRequestEmptyResponseRequest::OwnedOutgoingMessage _request(0, arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
       _client, bytes_,
       WithRequestEmptyResponseResponse::PrimarySize +
@@ -1047,7 +1054,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
                              uint8_t* _response_bytes,
                              uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  WithRequestEmptyResponseUnownedRequest _request(
+  WithRequestEmptyResponseRequest::UnownedOutgoingMessage _request(
       _request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Call<WithRequestEmptyResponseResponse>(
       _client, _response_bytes, _response_byte_capacity);
@@ -1059,7 +1066,7 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
     WithRequestWithResponse(zx_handle_t _client, const ::fidl::StringView& arg)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  WithRequestWithResponseOwnedRequest _request(0, arg);
+  WithRequestWithResponseRequest::OwnedOutgoingMessage _request(0, arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -1071,7 +1078,7 @@ WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
                             zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  WithRequestWithResponseOwnedRequest _request(0, arg);
+  WithRequestWithResponseRequest::OwnedOutgoingMessage _request(0, arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -1085,7 +1092,7 @@ WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
                             uint8_t* _response_bytes,
                             uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  WithRequestWithResponseUnownedRequest _request(
+  WithRequestWithResponseRequest::UnownedOutgoingMessage _request(
       _request_bytes, _request_byte_capacity, 0, arg);
   _request.GetOutgoingMessage().Call<WithRequestWithResponseResponse>(
       _client, _response_bytes, _response_byte_capacity);
@@ -1143,7 +1150,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  NoRequestEmptyResponseOwnedRequest _request(_context->Txid());
+  NoRequestEmptyResponseRequest::OwnedOutgoingMessage _request(
+      _context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1152,7 +1160,8 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
     NoRequestEmptyResponseResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  NoRequestEmptyResponseOwnedRequest _request(_context->Txid());
+  NoRequestEmptyResponseRequest::OwnedOutgoingMessage _request(
+      _context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1209,7 +1218,7 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  NoRequestWithResponseOwnedRequest _request(_context->Txid());
+  NoRequestWithResponseRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1217,7 +1226,7 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
     NoRequestWithResponseResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  NoRequestWithResponseOwnedRequest _request(_context->Txid());
+  NoRequestWithResponseRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1297,7 +1306,8 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  WithRequestEmptyResponseOwnedRequest _request(_context->Txid(), arg);
+  WithRequestEmptyResponseRequest::OwnedOutgoingMessage _request(
+      _context->Txid(), arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1307,9 +1317,9 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
     WithRequestEmptyResponseResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  WithRequestEmptyResponseUnownedRequest _request(_request_buffer.data(),
-                                                  _request_buffer.capacity(),
-                                                  _context->Txid(), arg);
+  WithRequestEmptyResponseRequest::UnownedOutgoingMessage _request(
+      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(),
+      arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1370,7 +1380,8 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  WithRequestWithResponseOwnedRequest _request(_context->Txid(), arg);
+  WithRequestWithResponseRequest::OwnedOutgoingMessage _request(
+      _context->Txid(), arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1380,9 +1391,9 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
     WithRequestWithResponseResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  WithRequestWithResponseUnownedRequest _request(_request_buffer.data(),
-                                                 _request_buffer.capacity(),
-                                                 _context->Txid(), arg);
+  WithRequestWithResponseRequest::UnownedOutgoingMessage _request(
+      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(),
+      arg);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1633,54 +1644,54 @@ namespace entries {
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestEmptyResponseCompleterBase::Reply() {
-  NoRequestEmptyResponseOwnedResponse _response{};
+  NoRequestEmptyResponseResponse::OwnedOutgoingMessage _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  NoRequestWithResponseOwnedResponse _response{ret};
+  NoRequestWithResponseResponse::OwnedOutgoingMessage _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestWithResponseCompleterBase::Reply(::fidl::BytePart _buffer,
                                               ::fidl::StringView ret) {
-  NoRequestWithResponseUnownedResponse _response(_buffer.data(),
-                                                 _buffer.capacity(), ret);
+  NoRequestWithResponseResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestEmptyResponseCompleterBase::Reply() {
-  WithRequestEmptyResponseOwnedResponse _response{};
+  WithRequestEmptyResponseResponse::OwnedOutgoingMessage _response{};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::StringView ret) {
-  WithRequestWithResponseOwnedResponse _response{ret};
+  WithRequestWithResponseResponse::OwnedOutgoingMessage _response{ret};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     WithRequestWithResponseCompleterBase::Reply(::fidl::BytePart _buffer,
                                                 ::fidl::StringView ret) {
-  WithRequestWithResponseUnownedResponse _response(_buffer.data(),
-                                                   _buffer.capacity(), ret);
+  WithRequestWithResponseResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), ret);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
     ::zx::unowned_channel _channel) {
-  OnEmptyResponseOwnedResponse _response{};
+  OnEmptyResponseResponse::OwnedOutgoingMessage _response{};
   _response.Write(_channel->get());
   return _response.status();
 }
 
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
     ::zx::unowned_channel _channel, ::fidl::StringView ret) {
-  OnWithResponseOwnedResponse _response{ret};
+  OnWithResponseResponse::OwnedOutgoingMessage _response{ret};
   _response.Write(_channel->get());
   return _response.status();
 }
@@ -1688,8 +1699,8 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
 zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
     ::zx::unowned_channel _channel, ::fidl::BytePart _buffer,
     ::fidl::StringView ret) {
-  OnWithResponseUnownedResponse _response(_buffer.data(), _buffer.capacity(),
-                                          ret);
+  OnWithResponseResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), ret);
   _response.Write(_channel->get());
   return _response.status();
 }
@@ -1804,7 +1815,7 @@ extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 }  // namespace
 WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client) {
-  ResponseAsStructOwnedRequest _request(0);
+  ResponseAsStructRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, bytes_,
       ResponseAsStructResponse::PrimarySize +
@@ -1815,7 +1826,7 @@ WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
 
 WithErrorSyntax::ResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client, zx_time_t _deadline) {
-  ResponseAsStructOwnedRequest _request(0);
+  ResponseAsStructRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, bytes_,
       ResponseAsStructResponse::PrimarySize +
@@ -1829,7 +1840,7 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ResponseAsStructOwnedRequest _request(0);
+  ResponseAsStructRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ResponseAsStructResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -1838,7 +1849,7 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
 
 WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client) {
-  ErrorAsPrimitiveOwnedRequest _request(0);
+  ErrorAsPrimitiveRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, bytes_,
       ErrorAsPrimitiveResponse::PrimarySize +
@@ -1849,7 +1860,7 @@ WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
 
 WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client, zx_time_t _deadline) {
-  ErrorAsPrimitiveOwnedRequest _request(0);
+  ErrorAsPrimitiveRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, bytes_,
       ErrorAsPrimitiveResponse::PrimarySize +
@@ -1863,7 +1874,7 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ErrorAsPrimitiveOwnedRequest _request(0);
+  ErrorAsPrimitiveRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ErrorAsPrimitiveResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -1871,7 +1882,7 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
 }
 
 WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
-  ErrorAsEnumOwnedRequest _request(0);
+  ErrorAsEnumRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine);
@@ -1881,7 +1892,7 @@ WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
 
 WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client,
                                                     zx_time_t _deadline) {
-  ErrorAsEnumOwnedRequest _request(0);
+  ErrorAsEnumRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, bytes_,
       ErrorAsEnumResponse::PrimarySize + ErrorAsEnumResponse::MaxOutOfLine,
@@ -1894,7 +1905,7 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
     zx_handle_t _client, uint8_t* _response_bytes,
     uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ErrorAsEnumOwnedRequest _request(0);
+  ErrorAsEnumRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<ErrorAsEnumResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -1961,7 +1972,7 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  ResponseAsStructOwnedRequest _request(_context->Txid());
+  ResponseAsStructRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -1969,7 +1980,7 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
     ResponseAsStructResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  ResponseAsStructOwnedRequest _request(_context->Txid());
+  ResponseAsStructRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -2033,7 +2044,7 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  ErrorAsPrimitiveOwnedRequest _request(_context->Txid());
+  ErrorAsPrimitiveRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -2041,7 +2052,7 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
     ErrorAsPrimitiveResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  ErrorAsPrimitiveOwnedRequest _request(_context->Txid());
+  ErrorAsPrimitiveRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -2102,7 +2113,7 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  ErrorAsEnumOwnedRequest _request(_context->Txid());
+  ErrorAsEnumRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -2110,7 +2121,7 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
     ErrorAsEnumResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  ErrorAsEnumOwnedRequest _request(_context->Txid());
+  ErrorAsEnumRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -2191,7 +2202,7 @@ namespace entries {
 
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
-  ResponseAsStructOwnedResponse _response{result};
+  ResponseAsStructResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result
@@ -2215,8 +2226,8 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
 ::fidl::Result WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
-  ResponseAsStructUnownedResponse _response(_buffer.data(), _buffer.capacity(),
-                                            result);
+  ResponseAsStructResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result
@@ -2234,7 +2245,7 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
 
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  ErrorAsPrimitiveOwnedResponse _response{result};
+  ErrorAsPrimitiveResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result
@@ -2254,8 +2265,8 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
-  ErrorAsPrimitiveUnownedResponse _response(_buffer.data(), _buffer.capacity(),
-                                            result);
+  ErrorAsPrimitiveResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result
@@ -2270,7 +2281,7 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
 
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
-  ErrorAsEnumOwnedResponse _response{result};
+  ErrorAsEnumResponse::OwnedOutgoingMessage _response{result};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result
@@ -2289,8 +2300,8 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
 ::fidl::Result WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
-  ErrorAsEnumUnownedResponse _response(_buffer.data(), _buffer.capacity(),
-                                       result);
+  ErrorAsEnumResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 ::fidl::Result

@@ -11,7 +11,7 @@ Reply(::fidl::BytePart _buffer {{- if .Response }}, {{ end }}{{ template "Params
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
 ::fidl::Result {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateMethodSignature" . }} {
-  {{ .Name }}UnownedResponse _response(_buffer.data(), _buffer.capacity()
+  {{ .Name }}Response::UnownedOutgoingMessage _response(_buffer.data(), _buffer.capacity()
   {{- template "CommaPassthroughMessageParams" .Response -}}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

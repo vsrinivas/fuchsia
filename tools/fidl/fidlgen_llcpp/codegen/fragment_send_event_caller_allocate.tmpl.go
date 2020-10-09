@@ -11,7 +11,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _channel, ::fidl::BytePart _buffer, {
 
 {{- define "SendEventCallerAllocateMethodDefinition" }}
 zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCallerAllocateMethodSignature" . }} {
-  {{ .Name }}UnownedResponse _response(_buffer.data(), _buffer.capacity()
+  {{ .Name }}Response::UnownedOutgoingMessage _response(_buffer.data(), _buffer.capacity()
   {{- template "CommaPassthroughMessageParams" .Response -}}
   );
   _response.Write(_channel->get());

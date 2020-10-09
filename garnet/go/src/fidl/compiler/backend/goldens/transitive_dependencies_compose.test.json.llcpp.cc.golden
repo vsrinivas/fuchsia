@@ -16,7 +16,7 @@ extern "C" const fidl_type_t top_TopGetFooResponseTable;
 
 }  // namespace
 Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
-  GetFooOwnedRequest _request(0);
+  GetFooRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
       GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine);
@@ -25,7 +25,7 @@ Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
 }
 
 Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client, zx_time_t _deadline) {
-  GetFooOwnedRequest _request(0);
+  GetFooRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<GetFooResponse>(
       _client, bytes_,
       GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine, _deadline);
@@ -37,7 +37,7 @@ Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
                                      uint8_t* _response_bytes,
                                      uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  GetFooOwnedRequest _request(0);
+  GetFooRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Call<GetFooResponse>(_client, _response_bytes,
                                                      _response_byte_capacity);
   status_ = _request.status();
@@ -91,14 +91,14 @@ void Top::GetFooResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  GetFooOwnedRequest _request(_context->Txid());
+  GetFooRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result Top::ClientImpl::GetFoo(GetFooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  GetFooOwnedRequest _request(_context->Txid());
+  GetFooRequest::OwnedOutgoingMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -153,13 +153,14 @@ namespace entries {
 
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
     ::llcpp::bottom::Foo foo) {
-  GetFooOwnedResponse _response{foo};
+  GetFooResponse::OwnedOutgoingMessage _response{foo};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::bottom::Foo foo) {
-  GetFooUnownedResponse _response(_buffer.data(), _buffer.capacity(), foo);
+  GetFooResponse::UnownedOutgoingMessage _response(_buffer.data(),
+                                                   _buffer.capacity(), foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

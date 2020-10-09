@@ -60,7 +60,7 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
                                   ::llcpp::fidl::test::json::StrictFoo& s)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  RequestStrictResponseFlexibleOwnedRequest _request(0, s);
+  RequestStrictResponseFlexibleRequest::OwnedOutgoingMessage _request(0, s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -73,7 +73,7 @@ Protocol::ResultOf::RequestStrictResponseFlexible::
                                   zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  RequestStrictResponseFlexibleOwnedRequest _request(0, s);
+  RequestStrictResponseFlexibleRequest::OwnedOutgoingMessage _request(0, s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -87,7 +87,7 @@ Protocol::UnownedResultOf::RequestStrictResponseFlexible::
                                   uint8_t* _response_bytes,
                                   uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  RequestStrictResponseFlexibleUnownedRequest _request(
+  RequestStrictResponseFlexibleRequest::UnownedOutgoingMessage _request(
       _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
       _client, _response_bytes, _response_byte_capacity);
@@ -100,7 +100,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
                                   ::llcpp::fidl::test::json::FlexibleFoo& s)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  RequestFlexibleResponseStrictOwnedRequest _request(0, s);
+  RequestFlexibleResponseStrictRequest::OwnedOutgoingMessage _request(0, s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
   status_ = _request.status();
@@ -113,7 +113,7 @@ Protocol::ResultOf::RequestFlexibleResponseStrict::
                                   zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  RequestFlexibleResponseStrictOwnedRequest _request(0, s);
+  RequestFlexibleResponseStrictRequest::OwnedOutgoingMessage _request(0, s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
       _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
   status_ = _request.status();
@@ -127,7 +127,7 @@ Protocol::UnownedResultOf::RequestFlexibleResponseStrict::
                                   uint8_t* _response_bytes,
                                   uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  RequestFlexibleResponseStrictUnownedRequest _request(
+  RequestFlexibleResponseStrictRequest::UnownedOutgoingMessage _request(
       _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
       _client, _response_bytes, _response_byte_capacity);
@@ -193,7 +193,8 @@ void Protocol::RequestStrictResponseFlexibleResponseContext::OnReply(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  RequestStrictResponseFlexibleOwnedRequest _request(_context->Txid(), s);
+  RequestStrictResponseFlexibleRequest::OwnedOutgoingMessage _request(
+      _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -202,7 +203,7 @@ void Protocol::RequestStrictResponseFlexibleResponseContext::OnReply(
     RequestStrictResponseFlexibleResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  RequestStrictResponseFlexibleUnownedRequest _request(
+  RequestStrictResponseFlexibleRequest::UnownedOutgoingMessage _request(
       _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -265,7 +266,8 @@ void Protocol::RequestFlexibleResponseStrictResponseContext::OnReply(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  RequestFlexibleResponseStrictOwnedRequest _request(_context->Txid(), s);
+  RequestFlexibleResponseStrictRequest::OwnedOutgoingMessage _request(
+      _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -274,7 +276,7 @@ void Protocol::RequestFlexibleResponseStrictResponseContext::OnReply(
     RequestFlexibleResponseStrictResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  RequestFlexibleResponseStrictUnownedRequest _request(
+  RequestFlexibleResponseStrictRequest::UnownedOutgoingMessage _request(
       _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -351,30 +353,30 @@ namespace entries {
 ::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::llcpp::fidl::test::json::FlexibleFoo f) {
-  RequestStrictResponseFlexibleOwnedResponse _response{f};
+  RequestStrictResponseFlexibleResponse::OwnedOutgoingMessage _response{f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::FlexibleFoo f) {
-  RequestStrictResponseFlexibleUnownedResponse _response(_buffer.data(),
-                                                         _buffer.capacity(), f);
+  RequestStrictResponseFlexibleResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::llcpp::fidl::test::json::StrictFoo f) {
-  RequestFlexibleResponseStrictOwnedResponse _response{f};
+  RequestFlexibleResponseStrictResponse::OwnedOutgoingMessage _response{f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::StrictFoo f) {
-  RequestFlexibleResponseStrictUnownedResponse _response(_buffer.data(),
-                                                         _buffer.capacity(), f);
+  RequestFlexibleResponseStrictResponse::UnownedOutgoingMessage _response(
+      _buffer.data(), _buffer.capacity(), f);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

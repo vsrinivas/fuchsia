@@ -11,7 +11,7 @@ Reply({{ template "Params" .Response }})
 
 {{- define "ReplyCFlavorMethodDefinition" }}
 ::fidl::Result {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorMethodSignature" . }} {
-  {{ .Name }}OwnedResponse _response{
+  {{ .Name }}Response::OwnedOutgoingMessage _response{
   {{- template "PassthroughMessageParams" .Response -}}
   };
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

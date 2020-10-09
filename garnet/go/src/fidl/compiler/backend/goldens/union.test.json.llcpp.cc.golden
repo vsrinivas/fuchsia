@@ -171,7 +171,8 @@ extern "C" const fidl_type_t
 }  // namespace
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client) {
-  StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
+  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedOutgoingMessage
+      _request(0);
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
           _client, bytes_,
@@ -185,7 +186,8 @@ TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
     StrictXUnionHenceResponseMayBeStackAllocated(zx_handle_t _client,
                                                  zx_time_t _deadline) {
-  StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
+  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedOutgoingMessage
+      _request(0);
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
           _client, bytes_,
@@ -202,7 +204,8 @@ TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated::
         zx_handle_t _client, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(0);
+  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedOutgoingMessage
+      _request(0);
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
           _client, _response_bytes, _response_byte_capacity);
@@ -214,7 +217,8 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(zx_handle_t _client)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedOutgoingMessage
+      _request(0);
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
           _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES);
@@ -227,7 +231,8 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
                                                    zx_time_t _deadline)
     : bytes_(std::make_unique<
              ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedOutgoingMessage
+      _request(0);
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
           _client, bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _deadline);
@@ -240,7 +245,8 @@ TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated::
         zx_handle_t _client, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(0);
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedOutgoingMessage
+      _request(0);
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
           _client, _response_bytes, _response_byte_capacity);
@@ -312,8 +318,8 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(
-      _context->Txid());
+  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedOutgoingMessage
+      _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -322,8 +328,8 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
     StrictXUnionHenceResponseMayBeStackAllocatedResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  StrictXUnionHenceResponseMayBeStackAllocatedOwnedRequest _request(
-      _context->Txid());
+  StrictXUnionHenceResponseMayBeStackAllocatedRequest::OwnedOutgoingMessage
+      _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -392,8 +398,8 @@ TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(
-      _context->Txid());
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedOutgoingMessage
+      _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -402,8 +408,8 @@ TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedRequest _request(
-      _context->Txid());
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::OwnedOutgoingMessage
+      _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -479,7 +485,8 @@ namespace entries {
 ::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
-  StrictXUnionHenceResponseMayBeStackAllocatedOwnedResponse _response{xu};
+  StrictXUnionHenceResponseMayBeStackAllocatedResponse::OwnedOutgoingMessage
+      _response{xu};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -487,15 +494,16 @@ namespace entries {
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::fidl::BytePart _buffer,
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
-  StrictXUnionHenceResponseMayBeStackAllocatedUnownedResponse _response(
-      _buffer.data(), _buffer.capacity(), xu);
+  StrictXUnionHenceResponseMayBeStackAllocatedResponse::UnownedOutgoingMessage
+      _response(_buffer.data(), _buffer.capacity(), xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedOwnedResponse _response{xu};
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::OwnedOutgoingMessage
+      _response{xu};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
@@ -503,8 +511,8 @@ namespace entries {
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::fidl::BytePart _buffer,
         ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
-  FlexibleXUnionHenceResponseMustBeHeapAllocatedUnownedResponse _response(
-      _buffer.data(), _buffer.capacity(), xu);
+  FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::UnownedOutgoingMessage
+      _response(_buffer.data(), _buffer.capacity(), xu);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 

@@ -478,6 +478,55 @@ class ExampleProtocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
 
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             zx_txid_t _txid, ::llcpp::exampleusing::Empty& arg)
+          : message_(_bytes, _byte_size, sizeof(MethodRequest), nullptr, 0, 0) {
+        // Destructors can't be called because it will lead to handle double
+        // close (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
+        auto& _request = *new (_request_buffer) MethodRequest(_txid, arg);
+        message_.LinearizeAndEncode<MethodRequest>(&_request);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      MethodRequest& Message() {
+        return *reinterpret_cast<MethodRequest*>(message_.bytes());
+      }
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(zx_txid_t _txid,
+                                    ::llcpp::exampleusing::Empty& arg)
+          : message_(bytes_, sizeof(bytes_), _txid, arg) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[MethodRequest::PrimarySize + MethodRequest::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
+
    private:
     void _InitHeader(zx_txid_t _txid);
   };
@@ -519,55 +568,6 @@ class ExampleProtocol final {
       Method* operator=(const Method&) = delete;
       ~Method() = default;
     };
-  };
-
-  class MethodUnownedRequest final {
-   public:
-    MethodUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                         ::llcpp::exampleusing::Empty& arg)
-        : message_(_bytes, _byte_size, sizeof(MethodRequest), nullptr, 0, 0) {
-      // Destructors can't be called because it will lead to handle double close
-      // (here and in fidl::Encode).
-      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)];
-      auto& _request = *new (_request_buffer) MethodRequest(_txid, arg);
-      message_.LinearizeAndEncode<MethodRequest>(&_request);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    MethodRequest& Message() {
-      return *reinterpret_cast<MethodRequest*>(message_.bytes());
-    }
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class MethodOwnedRequest final {
-   public:
-    explicit MethodOwnedRequest(zx_txid_t _txid,
-                                ::llcpp::exampleusing::Empty& arg)
-        : message_(bytes_, sizeof(bytes_), _txid, arg) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[MethodRequest::PrimarySize + MethodRequest::MaxOutOfLine];
-    MethodUnownedRequest message_;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding

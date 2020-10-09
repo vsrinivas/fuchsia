@@ -35,9 +35,9 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   ) {
   {{- end }}
   {{- if .Request -}}
-  {{ .Name }}UnownedRequest _request(_request_bytes, _request_byte_capacity, 0
+  {{ .Name }}Request::UnownedOutgoingMessage _request(_request_bytes, _request_byte_capacity, 0
   {{- else -}}
-  {{ .Name }}OwnedRequest _request(0
+  {{ .Name }}Request::OwnedOutgoingMessage _request(0
   {{- end -}}
     {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}

@@ -11,7 +11,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _channel {{- if .Response }}, {{ end 
 
 {{- define "SendEventCFlavorMethodDefinition" }}
 zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSignature" . }} {
-  {{ .Name }}OwnedResponse _response{
+  {{ .Name }}Response::OwnedOutgoingMessage _response{
   {{- template "PassthroughMessageParams" .Response -}}
   };
   _response.Write(_channel->get());

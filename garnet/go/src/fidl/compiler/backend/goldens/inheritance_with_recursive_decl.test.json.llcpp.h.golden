@@ -72,6 +72,59 @@ class Parent final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
 
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             zx_txid_t _txid, ::zx::channel& request)
+          : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                              FirstRequest::MaxNumHandles),
+                     0) {
+        // Destructors can't be called because it will lead to handle double
+        // close (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
+        auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
+        message_.LinearizeAndEncode<FirstRequest>(&_request);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FirstRequest& Message() {
+        return *reinterpret_cast<FirstRequest*>(message_.bytes());
+      }
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                    FirstRequest::MaxNumHandles)];
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& request)
+          : message_(bytes_, sizeof(bytes_), _txid, request) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[FirstRequest::PrimarySize + FirstRequest::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
+
    private:
     void _InitHeader(zx_txid_t _txid);
   };
@@ -112,59 +165,6 @@ class Parent final {
       First* operator=(const First&) = delete;
       ~First() = default;
     };
-  };
-
-  class FirstUnownedRequest final {
-   public:
-    FirstUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                        ::zx::channel& request)
-        : message_(
-              _bytes, _byte_size, sizeof(FirstRequest), handles_,
-              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, FirstRequest::MaxNumHandles),
-              0) {
-      // Destructors can't be called because it will lead to handle double close
-      // (here and in fidl::Encode).
-      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-      auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
-      message_.LinearizeAndEncode<FirstRequest>(&_request);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FirstRequest& Message() {
-      return *reinterpret_cast<FirstRequest*>(message_.bytes());
-    }
-    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                  FirstRequest::MaxNumHandles)];
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class FirstOwnedRequest final {
-   public:
-    explicit FirstOwnedRequest(zx_txid_t _txid, ::zx::channel& request)
-        : message_(bytes_, sizeof(bytes_), _txid, request) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FirstRequest::PrimarySize + FirstRequest::MaxOutOfLine];
-    FirstUnownedRequest message_;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding
@@ -297,6 +297,59 @@ class Child final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
 
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             zx_txid_t _txid, ::zx::channel& request)
+          : message_(_bytes, _byte_size, sizeof(FirstRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                              FirstRequest::MaxNumHandles),
+                     0) {
+        // Destructors can't be called because it will lead to handle double
+        // close (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
+        auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
+        message_.LinearizeAndEncode<FirstRequest>(&_request);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FirstRequest& Message() {
+        return *reinterpret_cast<FirstRequest*>(message_.bytes());
+      }
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                    FirstRequest::MaxNumHandles)];
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& request)
+          : message_(bytes_, sizeof(bytes_), _txid, request) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[FirstRequest::PrimarySize + FirstRequest::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
+
    private:
     void _InitHeader(zx_txid_t _txid);
   };
@@ -323,6 +376,59 @@ class Child final {
     static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
+
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             zx_txid_t _txid, ::zx::channel& request)
+          : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                              SecondRequest::MaxNumHandles),
+                     0) {
+        // Destructors can't be called because it will lead to handle double
+        // close (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
+        auto& _request = *new (_request_buffer) SecondRequest(_txid, request);
+        message_.LinearizeAndEncode<SecondRequest>(&_request);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      SecondRequest& Message() {
+        return *reinterpret_cast<SecondRequest*>(message_.bytes());
+      }
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
+                                    SecondRequest::MaxNumHandles)];
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& request)
+          : message_(bytes_, sizeof(bytes_), _txid, request) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[SecondRequest::PrimarySize + SecondRequest::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
 
    private:
     void _InitHeader(zx_txid_t _txid);
@@ -387,112 +493,6 @@ class Child final {
       Second* operator=(const Second&) = delete;
       ~Second() = default;
     };
-  };
-
-  class FirstUnownedRequest final {
-   public:
-    FirstUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                        ::zx::channel& request)
-        : message_(
-              _bytes, _byte_size, sizeof(FirstRequest), handles_,
-              std::min(ZX_CHANNEL_MAX_MSG_HANDLES, FirstRequest::MaxNumHandles),
-              0) {
-      // Destructors can't be called because it will lead to handle double close
-      // (here and in fidl::Encode).
-      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(FirstRequest)];
-      auto& _request = *new (_request_buffer) FirstRequest(_txid, request);
-      message_.LinearizeAndEncode<FirstRequest>(&_request);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FirstRequest& Message() {
-      return *reinterpret_cast<FirstRequest*>(message_.bytes());
-    }
-    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                  FirstRequest::MaxNumHandles)];
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class FirstOwnedRequest final {
-   public:
-    explicit FirstOwnedRequest(zx_txid_t _txid, ::zx::channel& request)
-        : message_(bytes_, sizeof(bytes_), _txid, request) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FirstRequest::PrimarySize + FirstRequest::MaxOutOfLine];
-    FirstUnownedRequest message_;
-  };
-
-  class SecondUnownedRequest final {
-   public:
-    SecondUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                         ::zx::channel& request)
-        : message_(_bytes, _byte_size, sizeof(SecondRequest), handles_,
-                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                            SecondRequest::MaxNumHandles),
-                   0) {
-      // Destructors can't be called because it will lead to handle double close
-      // (here and in fidl::Encode).
-      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SecondRequest)];
-      auto& _request = *new (_request_buffer) SecondRequest(_txid, request);
-      message_.LinearizeAndEncode<SecondRequest>(&_request);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    SecondRequest& Message() {
-      return *reinterpret_cast<SecondRequest*>(message_.bytes());
-    }
-    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                  SecondRequest::MaxNumHandles)];
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class SecondOwnedRequest final {
-   public:
-    explicit SecondOwnedRequest(zx_txid_t _txid, ::zx::channel& request)
-        : message_(bytes_, sizeof(bytes_), _txid, request) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[SecondRequest::PrimarySize + SecondRequest::MaxOutOfLine];
-    SecondUnownedRequest message_;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding

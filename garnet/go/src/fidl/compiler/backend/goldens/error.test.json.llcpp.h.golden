@@ -202,6 +202,53 @@ class Example final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(
+          uint8_t* _bytes, uint32_t _byte_size,
+          ::llcpp::fidl::test::json::Example_foo_Result& result)
+          : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
+        FIDL_ALIGNDECL fooResponse _response(result);
+        message_.LinearizeAndEncode<fooResponse>(&_response);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      fooResponse& Message() {
+        return *reinterpret_cast<fooResponse*>(message_.bytes());
+      }
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(
+          ::llcpp::fidl::test::json::Example_foo_Result& result)
+          : message_(bytes_, sizeof(bytes_), result) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
+
    private:
     void _InitHeader();
   };
@@ -228,6 +275,54 @@ class Example final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;
+
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             zx_txid_t _txid, const ::fidl::StringView& s)
+          : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
+        FIDL_ALIGNDECL fooRequest _request(_txid, s);
+        message_.LinearizeAndEncode<fooRequest>(&_request);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      fooRequest& Message() {
+        return *reinterpret_cast<fooRequest*>(message_.bytes());
+      }
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(zx_txid_t _txid,
+                                    const ::fidl::StringView& s)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+          bytes_;
+      UnownedOutgoingMessage message_;
+    };
 
    private:
     void _InitHeader(zx_txid_t _txid);
@@ -313,99 +408,6 @@ class Example final {
      private:
       uint8_t* bytes_;
     };
-  };
-
-  class fooUnownedResponse final {
-   public:
-    fooUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
-                       ::llcpp::fidl::test::json::Example_foo_Result& result)
-        : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-      FIDL_ALIGNDECL fooResponse _response(result);
-      message_.LinearizeAndEncode<fooResponse>(&_response);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    fooResponse& Message() {
-      return *reinterpret_cast<fooResponse*>(message_.bytes());
-    }
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class fooOwnedResponse final {
-   public:
-    explicit fooOwnedResponse(
-        ::llcpp::fidl::test::json::Example_foo_Result& result)
-        : message_(bytes_, sizeof(bytes_), result) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
-    fooUnownedResponse message_;
-  };
-
-  class fooUnownedRequest final {
-   public:
-    fooUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
-                      const ::fidl::StringView& s)
-        : message_(_bytes, _byte_size, sizeof(fooRequest), nullptr, 0, 0) {
-      FIDL_ALIGNDECL fooRequest _request(_txid, s);
-      message_.LinearizeAndEncode<fooRequest>(&_request);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    fooRequest& Message() {
-      return *reinterpret_cast<fooRequest*>(message_.bytes());
-    }
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class fooOwnedRequest final {
-   public:
-    explicit fooOwnedRequest(zx_txid_t _txid, const ::fidl::StringView& s)
-        : bytes_(std::make_unique<
-                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
-          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
-        bytes_;
-    fooUnownedRequest message_;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding

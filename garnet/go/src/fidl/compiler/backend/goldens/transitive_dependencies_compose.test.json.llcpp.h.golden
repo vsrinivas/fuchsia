@@ -67,6 +67,56 @@ class Top final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             ::llcpp::bottom::Foo& foo)
+          : message_(_bytes, _byte_size, sizeof(GetFooResponse), nullptr, 0,
+                     0) {
+        // Destructors can't be called because it will lead to handle double
+        // close (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetFooResponse)];
+        auto& _response = *new (_response_buffer) GetFooResponse(foo);
+        message_.LinearizeAndEncode<GetFooResponse>(&_response);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      GetFooResponse& Message() {
+        return *reinterpret_cast<GetFooResponse*>(message_.bytes());
+      }
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(::llcpp::bottom::Foo& foo)
+          : message_(bytes_, sizeof(bytes_), foo) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t
+          bytes_[GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
+
    private:
     void _InitHeader();
   };
@@ -88,6 +138,54 @@ class Top final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = GetFooResponse;
+
+    class UnownedOutgoingMessage final {
+     public:
+      UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
+                             zx_txid_t _txid)
+          : message_(_bytes, _byte_size, sizeof(GetFooRequest), nullptr, 0, 0) {
+        // Destructors can't be called because it will lead to handle double
+        // close (here and in fidl::Encode).
+        FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)];
+        auto& _request = *new (_request_buffer) GetFooRequest(_txid);
+        message_.LinearizeAndEncode<GetFooRequest>(&_request);
+      }
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      GetFooRequest& Message() {
+        return *reinterpret_cast<GetFooRequest*>(message_.bytes());
+      }
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedOutgoingMessage final {
+     public:
+      explicit OwnedOutgoingMessage(zx_txid_t _txid)
+          : message_(bytes_, sizeof(bytes_), _txid) {}
+
+      zx_status_t status() const { return message_.status(); }
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[GetFooRequest::PrimarySize + GetFooRequest::MaxOutOfLine];
+      UnownedOutgoingMessage message_;
+    };
 
    private:
     void _InitHeader(zx_txid_t _txid);
@@ -172,101 +270,6 @@ class Top final {
      private:
       uint8_t* bytes_;
     };
-  };
-
-  class GetFooUnownedResponse final {
-   public:
-    GetFooUnownedResponse(uint8_t* _bytes, uint32_t _byte_size,
-                          ::llcpp::bottom::Foo& foo)
-        : message_(_bytes, _byte_size, sizeof(GetFooResponse), nullptr, 0, 0) {
-      // Destructors can't be called because it will lead to handle double close
-      // (here and in fidl::Encode).
-      FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetFooResponse)];
-      auto& _response = *new (_response_buffer) GetFooResponse(foo);
-      message_.LinearizeAndEncode<GetFooResponse>(&_response);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    GetFooResponse& Message() {
-      return *reinterpret_cast<GetFooResponse*>(message_.bytes());
-    }
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class GetFooOwnedResponse final {
-   public:
-    explicit GetFooOwnedResponse(::llcpp::bottom::Foo& foo)
-        : message_(bytes_, sizeof(bytes_), foo) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[GetFooResponse::PrimarySize + GetFooResponse::MaxOutOfLine];
-    GetFooUnownedResponse message_;
-  };
-
-  class GetFooUnownedRequest final {
-   public:
-    GetFooUnownedRequest(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid)
-        : message_(_bytes, _byte_size, sizeof(GetFooRequest), nullptr, 0, 0) {
-      // Destructors can't be called because it will lead to handle double close
-      // (here and in fidl::Encode).
-      FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)];
-      auto& _request = *new (_request_buffer) GetFooRequest(_txid);
-      message_.LinearizeAndEncode<GetFooRequest>(&_request);
-    }
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    GetFooRequest& Message() {
-      return *reinterpret_cast<GetFooRequest*>(message_.bytes());
-    }
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class GetFooOwnedRequest final {
-   public:
-    explicit GetFooOwnedRequest(zx_txid_t _txid)
-        : message_(bytes_, sizeof(bytes_), _txid) {}
-
-    zx_status_t status() const { return message_.status(); }
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-    void Write(zx_handle_t client) { message_.Write(client); }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[GetFooRequest::PrimarySize + GetFooRequest::MaxOutOfLine];
-    GetFooUnownedRequest message_;
   };
 
   // Methods to make a sync FIDL call directly on an unowned channel, avoiding

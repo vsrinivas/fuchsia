@@ -35,7 +35,7 @@ extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
 
 }  // namespace
 Interface::ResultOf::Method::Method(zx_handle_t _client) {
-  MethodOwnedRequest _request(0);
+  MethodRequest::OwnedOutgoingMessage _request(0);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -190,7 +190,7 @@ namespace entries {
 }
 
 zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _channel) {
-  OnEventOwnedResponse _response{};
+  OnEventResponse::OwnedOutgoingMessage _response{};
   _response.Write(_channel->get());
   return _response.status();
 }

@@ -69,7 +69,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  {{ .Name }}OwnedRequest _request(_context->Txid()
+  {{ .Name }}Request::OwnedOutgoingMessage _request(_context->Txid()
   {{- template "CommaPassthroughMessageParams" .Request -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
@@ -78,9 +78,9 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
 ::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ if .Request }}
-  {{ .Name }}UnownedRequest _request(_request_buffer.data(), _request_buffer.capacity(), _context->Txid()
+  {{ .Name }}Request::UnownedOutgoingMessage _request(_request_buffer.data(), _request_buffer.capacity(), _context->Txid()
   {{- else }}
-  {{ .Name }}OwnedRequest _request(_context->Txid()
+  {{ .Name }}Request::OwnedOutgoingMessage _request(_context->Txid()
   {{- end }}
   {{- template "CommaPassthroughMessageParams" .Request -}}
   );
