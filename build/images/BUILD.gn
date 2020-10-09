@@ -10,6 +10,7 @@ import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_images.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
+import("//build/dev.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/collect_blob_manifest.gni")
@@ -225,7 +226,8 @@ generated_file(system_image_manifest_args) {
   deps = [
            ":base_packages",
            ":meta_packages",
-         ] + board_system_image_deps + product_system_image_deps
+         ] + board_system_image_deps + product_system_image_deps +
+         dev_system_image_deps
 }
 
 # The system_image "package" manifest is everything that appears in /system.

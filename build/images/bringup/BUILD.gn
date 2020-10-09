@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
+import("//build/dev.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
@@ -21,7 +22,8 @@ generated_file("system_package.manifest_args") {
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "system_image_barrier" ]
   deps = [ "//build/images:packages" ]
-  deps += board_system_image_deps + product_system_image_deps
+  deps += board_system_image_deps + product_system_image_deps +
+          dev_system_image_deps
 }
 
 generate_manifest("boot.manifest") {

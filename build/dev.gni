@@ -1,0 +1,11 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# A collection of GN arguments that developers can manually set to alter the
+# behavior of the build.
+
+declare_args() {
+  # List of labels for binaries to include in the system image.
+  dev_system_image_deps = []
+}
