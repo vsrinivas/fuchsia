@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_BLUETOOTH_HCI_ATHEROS_DEVICE_H_
-#define GARNET_DRIVERS_BLUETOOTH_HCI_ATHEROS_DEVICE_H_
+#ifndef GARNET_DRIVERS_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
+#define GARNET_DRIVERS_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
+
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <lib/sync/completion.h>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -11,8 +14,7 @@
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
-#include <lib/sync/completion.h>
+
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/hci.h"
@@ -105,4 +107,4 @@ class Device {
 
 }  // namespace btatheros
 
-#endif  // GARNET_DRIVERS_BLUETOOTH_HCI_ATHEROS_DEVICE_H_
+#endif  // GARNET_DRIVERS_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_

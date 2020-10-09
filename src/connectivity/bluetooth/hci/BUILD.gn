@@ -5,18 +5,14 @@
 group("hci") {
   testonly = true
   deps = [
-    "atheros",
     "emulator",
-    "intel",
     "lib:bt-hci",
     "passthrough",
+    "vendor",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "intel:tests",
-    "vendor:tests",
-  ]
+  deps = [ "vendor:tests" ]
 }

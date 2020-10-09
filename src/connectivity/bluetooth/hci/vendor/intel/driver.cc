@@ -16,7 +16,7 @@
 
 #include "device.h"
 #include "logging.h"
-#include "src/connectivity/bluetooth/hci/intel/bt_hci_intel-bind.h"
+#include "src/connectivity/bluetooth/hci/vendor/intel/bt_hci_intel-bind.h"
 
 // USB Product IDs that use the "secure" firmware method.
 constexpr uint16_t sfi_product_ids[] = {0x0025, 0x0a2b, 0x0aaa};

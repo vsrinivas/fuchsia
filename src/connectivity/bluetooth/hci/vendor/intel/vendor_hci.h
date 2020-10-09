@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_INTEL_VENDOR_HCI_H_
-#define SRC_CONNECTIVITY_BLUETOOTH_HCI_INTEL_VENDOR_HCI_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_VENDOR_HCI_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_VENDOR_HCI_H_
 
 #include <lib/zx/channel.h>
 
@@ -138,4 +138,4 @@ class VendorHci {
 
 }  // namespace btintel
 
-#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_INTEL_VENDOR_HCI_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_VENDOR_HCI_H_
