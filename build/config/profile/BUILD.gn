@@ -12,6 +12,7 @@ variant("profile") {
 
   if (is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
+    # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
     deps = [ "//src/zircon/lib/zircon" ]
 
     dynamic_linker_flags = "-dynamic-linker=profile/ld.so.1"
