@@ -185,6 +185,15 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
                     .await?;
             }
 
+            // Set the credential, if we have one.
+            if let Some(fidl_fuchsia_lowpan::Credential::MasterKey(key)) =
+                params.credential.map(|x| *x)
+            {
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropNet::MasterKey.into(), key).verify())
+                    .await?;
+            }
+
             if self.driver_state.lock().has_cap(Cap::NetSave) {
                 // If we have the NetSave capability, go ahead and send the
                 // net save command.
@@ -424,7 +433,24 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got get credential command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        if self.driver_state.lock().is_ready() {
+            self.get_property_simple::<Vec<u8>, _>(PropNet::MasterKey)
+                .and_then(|key| {
+                    futures::future::ready(if key.is_empty() {
+                        Ok(None)
+                    } else {
+                        Ok(Some(fidl_fuchsia_lowpan::Credential::MasterKey(key)))
+                    })
+                })
+                .await
+        } else {
+            Ok(None)
+        }
     }
 
     fn start_energy_scan(

@@ -9,7 +9,7 @@ use futures::prelude::*;
 use mock::*;
 
 use crate::spinel::mock::PROP_DEBUG_LOGGING_TEST;
-use fidl_fuchsia_lowpan::{Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
+use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
 use lowpan_driver_common::Driver as _;
 
 impl<DS> SpinelDriver<DS> {
@@ -115,7 +115,9 @@ async fn test_spinel_lowpan_driver() {
                             channel: Some(11),
                             panid: Some(0x1234),
                         },
-                        credential: None
+                        credential: Some(Box::new(Credential::MasterKey(vec![
+                            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+                        ]))),
                     })
                     .await,
                 Ok(())
@@ -134,6 +136,15 @@ async fn test_spinel_lowpan_driver() {
                     .unwrap(),
                 ConnectivityState::Ready
             );
+
+            traceln!("app_task: Checking credential...");
+            assert_eq!(
+                driver.get_credential().await,
+                Ok(Some(Credential::MasterKey(vec![
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+                ])))
+            );
+            traceln!("app_task: Credential is correct!");
 
             traceln!("app_task: Leaving network...");
             assert_eq!(driver.leave_network().await, Ok(()));
