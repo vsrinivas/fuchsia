@@ -31,6 +31,9 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:uuid",
     ]
+
+    non_rust_deps = [ "//src/lib/chunked-compression" ]
+
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     sources = [
@@ -55,9 +58,8 @@ if (!is_fuchsia) {
       "src/model.rs",
       "src/toolkit.rs",
     ]
-    inputs = [
-      "src/core/builtins.json",
-    ]
+
+    inputs = [ "src/core/builtins.json" ]
   }
 }
 
