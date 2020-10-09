@@ -147,7 +147,7 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   ui_handlers->session_shell.set_error_handler(
       [weak_this = weak_ptr_factory_.GetWeakPtr(), ui_handlers](zx_status_t status) mutable {
         FX_PLOGS(INFO, status) << "Failed to connect to SessionShell, using GraphicalPresenter";
-        if (weak_this->story_provider_impl_.get() && ui_handlers->graphical_presenter) {
+        if (weak_this && weak_this->story_provider_impl_.get() && ui_handlers->graphical_presenter) {
           weak_this->story_provider_impl_.get()->SetPresentationProtocol(
               PresentationProtocolPtr{std::move(ui_handlers->graphical_presenter)});
         }
@@ -157,7 +157,7 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   ui_handlers->graphical_presenter.set_error_handler(
       [weak_this = weak_ptr_factory_.GetWeakPtr(), ui_handlers](zx_status_t status) mutable {
         FX_PLOGS(INFO, status) << "Failed to connect to GraphicalPresenter, using SessionShell";
-        if (weak_this->story_provider_impl_.get() && ui_handlers->session_shell) {
+        if (weak_this && weak_this->story_provider_impl_.get() && ui_handlers->session_shell) {
           weak_this->story_provider_impl_.get()->SetPresentationProtocol(
               PresentationProtocolPtr{std::move(ui_handlers->session_shell)});
         }
