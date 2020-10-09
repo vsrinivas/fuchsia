@@ -25,6 +25,7 @@ TEST(PathCanonicalizationTest, Basic) {
   char out[PATH_MAX];
   TEST_CLEAN("/foo", "/foo", false);
   TEST_CLEAN("/foo/bar/baz", "/foo/bar/baz", false);
+  TEST_CLEAN("/foo/bar/baz/", "/foo/bar/baz", true);
 }
 
 TEST(PathCanonicalizationTest, DotDot) {
