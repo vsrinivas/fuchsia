@@ -24,6 +24,9 @@ def main():
         "--out-dir", required=True, help="Path to the Fuchsia build directory")
     args = parser.parse_args()
 
+    print("WARNING! `fx smoke-test` is currently broken.")
+    print("fxbug.dev/61759")
+
     # Find all modified files
     upstream = (
         subprocess.run(
