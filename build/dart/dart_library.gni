@@ -431,15 +431,6 @@ if (current_toolchain == dart_toolchain) {
     # Ensures that this target specifies all of the Dart packages that it
     # imports as direct dependencies.
 
-    disable_strict_deps_check = defined(invoker.disable_strict_deps_check) &&
-                                invoker.disable_strict_deps_check
-
-    # Opting out of strict deps requires that the package is present
-    # in a global allow-list.
-    if (disable_strict_deps_check) {
-      group_deps += []
-    }
-
     group("${invoker.target_name}_dart_build_info_self_marker") {
       metadata = {
         dart_build_info = [
@@ -515,8 +506,7 @@ if (current_toolchain == dart_toolchain) {
       # depended on.
       deps = dart_deps
 
-      if (!disable_strict_deps_check && !_package_excludes_contains_target &&
-          !_is_third_party_lib) {
+      if (!_package_excludes_contains_target && !_is_third_party_lib) {
         deps += [ ":${invoker.target_name}_strict_deps" ]
       } else {
         not_needed([

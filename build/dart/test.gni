@@ -62,7 +62,6 @@ template("dart_test") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "disable_strict_deps_check",
                              "sources",
                            ])
 

@@ -102,9 +102,6 @@ template("_dart_snapshot_invocation") {
 #
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
-#
-#   disable_strict_deps_check (optional)
-#     Prevents strict dependency check from being run on this target.
 template("dart_tool") {
   assert(defined(invoker.main_dart), "Must specify main_dart file")
 
@@ -164,7 +161,6 @@ template("dart_tool") {
                              "disable_analysis",
                              "testonly",
                              "visibility",
-                             "disable_strict_deps_check",
                            ])
     package_name = package_name
     package_root = package_root
