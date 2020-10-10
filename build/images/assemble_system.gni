@@ -169,7 +169,7 @@ template("assemble_system") {
     outputs = [ system_image_manifest_args ]
     data_keys = [ "system_image_rsps" ]
     walk_keys = [ "system_image_barrier" ]
-    deps = [ ":${image_name}_base_packages" ] + system_image_deps
+    deps = system_image_deps
   }
 
   boot_manifest = "$target_out_dir/${image_name}.boot.manifest"

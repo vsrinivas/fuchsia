@@ -19,7 +19,6 @@ recovery_packages = [
   "//build/info:build-info",
   "//garnet/bin/sysmgr",
   "//garnet/packages/prod:sysmem_connector",
-  "//garnet/packages/prod:broadcom",
   "//src/connectivity/management:network_config_default",
   "//src/connectivity/network:config",
   "//src/connectivity/wlan/config:default",
@@ -35,6 +34,8 @@ recovery_packages = [
   "//src/sys/stash",
   "//src/sys/time:recovery",
 ]
+
+recovery_system_image_deps = [ "//garnet/packages/prod:broadcom" ]
 
 recovery_eng_packages =
     recovery_packages + [
@@ -61,6 +62,8 @@ recovery_eng_packages =
 
 assemble_system("recovery-eng") {
   base_packages = recovery_eng_packages
+
+  system_image_deps = recovery_system_image_deps
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
@@ -94,6 +97,8 @@ assemble_system("recovery-eng") {
 
 assemble_system("recovery-fdr") {
   base_packages = recovery_packages
+
+  system_image_deps = recovery_system_image_deps
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
