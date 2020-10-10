@@ -101,9 +101,6 @@ class View {
   /// ```
   /// template parameters to functions that only make sense in the context
   /// of writable storage.
-  ///
-  /// TODO(mcgrathr, joshuaseaton): Figure out a straightforward means of
-  /// including `CreateResult` and `CloneResult` in Traits' namespace.
   class Traits : public StorageTraits<Storage> {
    public:
     using Base = StorageTraits<Storage>;
@@ -123,15 +120,34 @@ class View {
     // Whether Traits::Create() is defined.
     static constexpr bool CanCreate() { return SfinaeCreate(0); }
 
-   private:
-    // Gives an 'example' storage_type& value that is meant for use only within
-    // a decltype context.
-    static storage_type& storage_value() {
+    // Gives an 'example' value of a type convertible to storage& that can be
+    // used within a decltype context.
+    static storage_type& storage_declval() {
       return std::declval<std::reference_wrapper<storage_type>>().get();
     }
 
+    static inline bool NoSlop(uint32_t slop) { return slop == 0; }
+
+    // This is the actual object returned by a successful Traits::Create call.
+    // This can be use as `typename Traits::template CreateResult<>` both to
+    // get the right return type and to form a SFINAE check when used in a
+    // SFINAE context like a return value, argument type, or template parameter
+    // default type.
+    template <typename T = Base>
+    using CreateResult = std::decay_t<decltype(T::Create(storage_declval(), 0).value())>;
+
+    // This is the actual object returned by a successful Traits::Clone call.
+    // This can be use as `typename Traits::template CreateResult<>` both to
+    // get the right return type and to form a SFINAE check when used in a
+    // SFINAE context like a return value, argument type, or template parameter
+    // default type.
+    template <typename T = Base>
+    using CloneResult =
+        std::decay_t<decltype(T::Clone(storage_declval(), 0, 0, 0, NoSlop).value())>;
+
+   private:
     // SFINAE check for a Traits::Write method.
-    template <typename T = Base, typename = decltype(T::Write(storage_value(), 0, ByteView{}))>
+    template <typename T = Base, typename = decltype(T::Write(storage_declval(), 0, ByteView{}))>
     static constexpr bool SfinaeWrite(int ignored) {
       return true;
     }
@@ -140,7 +156,7 @@ class View {
     static constexpr bool SfinaeWrite(...) { return false; }
 
     // SFINAE check for a Traits::Create method.
-    template <typename T = Base, typename = decltype(T::Create(storage_value(), 0))>
+    template <typename T = Base, typename = decltype(T::Create(storage_declval(), 0))>
     static constexpr bool SfinaeCreate(int ignored) {
       return true;
     }
@@ -543,10 +559,18 @@ class View {
 
   // The does a SFINAE check for the StorageTraits<CopyStorage>::Write method
   // and yields the return type of Copy<CopyStorage>.
-  template <typename CopyStorage, typename T = std::decay_t<CopyStorage>,
-            typename = decltype(StorageTraits<T>::Write(
-                std::declval<std::reference_wrapper<T>>().get(), 0, ByteView{}))>
-  using CopyResult = fitx::result<Error, fitx::result<typename StorageTraits<T>::error_type>>;
+  template <typename CopyStorage,
+            // Shorthand the target type's Traits as T.
+            typename T = typename View<std::decay_t<CopyStorage>>::Traits>
+  using CopyResult =
+      std::enable_if_t<T::CanWrite(), fitx::result<Error, fitx::result<typename T::error_type>>>;
+
+  // This does a SFINAE check for Traits::Create method and yield the type of
+  // creating Copy calls.
+  template <typename T>
+  using CopyCreateResult =
+      fitx::result<Error,
+                   fitx::result<typename T::error_type, typename T::template CreateResult<>>>;
 
   // Copy a range of the underlying storage into an existing piece of storage,
   // which can be any mutable type with sufficient capacity.  The Error return
@@ -599,11 +623,8 @@ class View {
   // the unowned VMO storage types yield zx::vmo as the owning equivalent
   // storage type.  If the optional `to_offset` argument is nonzero, the new
   // storage starts with that many zero bytes before the copied data.
-  template <
-      // SFINAE check for Traits::Create method.
-      typename T = Traits, typename CreateResult = decltype(T::Create(
-                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
-  fitx::result<Error, CreateResult> Copy(uint32_t offset, uint32_t length, uint32_t to_offset = 0) {
+  template <typename T = Traits>
+  CopyCreateResult<T> Copy(uint32_t offset, uint32_t length, uint32_t to_offset = 0) {
     auto copy = CopyWithSlop(offset, length, to_offset,
                              [to_offset](uint32_t slop) { return slop == to_offset; });
     if (copy.is_error()) {
@@ -624,10 +645,8 @@ class View {
   }
 
   // Copy a single item's payload into newly-created storage.
-  template <  // SFINAE check for Traits::Create method.
-      typename T = Traits, typename CreateResult = decltype(T::Create(
-                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
-  fitx::result<Error, CreateResult> CopyRawItem(const iterator& it) {
+  template <typename T = Traits>
+  CopyCreateResult<T> CopyRawItem(const iterator& it) {
     return Copy(it.payload_offset(), (*it).header->length);
   }
 
@@ -639,10 +658,8 @@ class View {
   }
 
   // Copy a single item's header and payload into newly-created storage.
-  template <  // SFINAE check for Traits::Create method.
-      typename T = Traits, typename CreateResult = decltype(T::Create(
-                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
-  fitx::result<Error, CreateResult> CopyRawItemWithHeader(const iterator& it) {
+  template <typename T = Traits>
+  CopyCreateResult<T> CopyRawItemWithHeader(const iterator& it) {
     return Copy(it.item_offset(), sizeof(zbi_header_t) + (*it).header->length);
   }
 
@@ -667,11 +684,9 @@ class View {
 
   // Copy the subrange `[first,last)` of the ZBI into newly-created storage.
   // The storage will contain a new ZBI container with only those items.
-  template <  // SFINAE check for Traits::Create method.
-      typename T = Traits, typename CreateResult = decltype(T::Create(
-                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
-  fitx::result<Error, CreateResult> Copy(const iterator& first, const iterator& last) {
-    using CopyTraits = StorageTraits<std::decay_t<decltype(std::declval<CreateResult>().value())>>;
+  template <typename T = Traits>
+  CopyCreateResult<T> Copy(const iterator& first, const iterator& last) {
+    using CopyTraits = StorageTraits<typename T::template CreateResult<>>;
 
     auto [offset, length] = RangeBounds(first, last);
     constexpr auto slopcheck = [](uint32_t slop) {
@@ -733,16 +748,9 @@ class View {
     error_ = std::move(error);
   }
 
-  template <
-      typename SlopCheck,
-      // SFINAE check for Traits::Create method.
-      typename T = Traits,
-      typename Result = fitx::result<
-          typename T::error_type,
-          std::pair<std::decay_t<decltype(
-                        T::Create(std::declval<std::reference_wrapper<storage_type>>().get(), 0)
-                            .value())>,
-                    uint32_t>>>
+  template <typename SlopCheck, typename T = Traits,
+            typename Result = fitx::result<
+                typename T::error_type, std::pair<typename T::template CreateResult<>, uint32_t>>>
   fitx::result<Error, Result> CopyWithSlop(uint32_t offset, uint32_t length, uint32_t to_offset,
                                            SlopCheck&& slopcheck) {
     if (auto result = Clone(offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
@@ -776,25 +784,20 @@ class View {
     }
   }
 
-  template <typename SlopCheck,
-            // SFINAE check for Traits::Clone method.
-            typename T = Traits,
-            typename Result = std::decay_t<
-                decltype(T::Clone(std::declval<std::reference_wrapper<storage_type>>().get(), 0, 0,
-                                  0, std::declval<SlopCheck>())
-                             .value())>>
-  fitx::result<typename Traits::error_type, Result> Clone(uint32_t offset, uint32_t length,
-                                                          uint32_t to_offset,
-                                                          SlopCheck&& slopcheck) {
+  template <typename SlopCheck, typename T = Traits>
+  fitx::result<typename Traits::error_type,
+               // SFINAE in the return type if no Clone support.
+               typename T::template CloneResult<>>
+  Clone(uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
     return Traits::Clone(storage(), offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
   }
 
   // This overload is only used if SFINAE detected no Traits::Clone method.
-  template <typename T = Traits,  // SFINAE check for Traits::Create method.
-            typename CreateResult = std::decay_t<decltype(
-                T::Create(std::declval<std::reference_wrapper<storage_type>>().get(), 0).value())>>
-  fitx::result<typename Traits::error_type, std::optional<std::pair<CreateResult, uint32_t>>> Clone(
-      ...) {
+  template <typename T = Traits>
+  fitx::result<typename Traits::error_type,
+               // SFINAE in the return type if no Create support.
+               std::optional<std::pair<typename T::template CreateResult<>, uint32_t>>>
+  Clone(...) {
     return fitx::ok(std::nullopt);  // Can't do it.
   }
 
