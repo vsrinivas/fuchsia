@@ -77,7 +77,10 @@ impl RepositoryService {
 
         match self.repo_manager.write().insert(repo) {
             Ok(_) => Ok(()),
-            Err(InsertError::DynamicConfigurationDisabled) => Err(Status::ACCESS_DENIED),
+            Err(err @ InsertError::DynamicConfigurationDisabled) => {
+                fx_log_err!("error inserting repository: {:#}", anyhow!(err));
+                Err(Status::ACCESS_DENIED)
+            }
         }
     }
 
