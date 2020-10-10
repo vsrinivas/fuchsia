@@ -9,7 +9,7 @@ use {
             ToResolveStatus as _,
         },
         font_package_manager::FontPackageManager,
-        inspect_util, queue,
+        queue,
         repository_manager::RepositoryManager,
         repository_manager::{GetPackageError, GetPackageHashError},
         rewrite_manager::RewriteManager,
@@ -24,7 +24,6 @@ use {
     },
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect as inspect,
     fuchsia_pkg::PackagePath,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
@@ -37,28 +36,10 @@ use {
     system_image::CachePackages,
 };
 
+mod inspect;
+pub use inspect::ResolverService as ResolverServiceInspectState;
+
 pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<BlobId, Status>>;
-
-pub struct ResolverServiceInspectState {
-    _node: inspect::Node,
-
-    /// How many times the resolver service has fallen back to the
-    /// cache package set due to a remote repository returning NOT_FOUND.
-    /// TODO(fxbug.dev/50764): remove this stat when we remove this cache fallback behavior.
-    cache_fallbacks_due_to_not_found: inspect_util::Counter,
-}
-
-impl ResolverServiceInspectState {
-    pub fn new(node: inspect::Node) -> Self {
-        Self {
-            cache_fallbacks_due_to_not_found: inspect_util::Counter::new(
-                &node,
-                "cache_fallbacks_due_to_not_found",
-            ),
-            _node: node,
-        }
-    }
-}
 
 pub fn make_package_fetch_queue(
     cache: PackageCache,
@@ -183,7 +164,7 @@ fn missing_cache_package_disk_fallback(
     rewritten_url: &PkgUrl,
     pkg_url: &PkgUrl,
     system_cache_list: &CachePackages,
-    inspect_state: &ResolverServiceInspectState,
+    inspect: &ResolverServiceInspectState,
 ) -> Option<BlobId> {
     let possible_fallback = hash_from_cache_packages_manifest(&pkg_url, system_cache_list);
     if possible_fallback.is_some() {
@@ -197,7 +178,7 @@ fn missing_cache_package_disk_fallback(
             rewritten_url.name(),
             rewritten_url
         );
-        inspect_state.cache_fallbacks_due_to_not_found.increment();
+        inspect.cache_fallback_due_to_not_found();
     }
     possible_fallback
 }
@@ -292,14 +273,16 @@ async fn package_from_base_or_repo_or_cache(
     pkg_url: &PkgUrl,
     cache: PackageCache,
     blob_fetcher: BlobFetcher,
-    inspect_state: &ResolverServiceInspectState,
+    inspect: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
+    let package_inspect = inspect.resolve(pkg_url);
     if let Some(blob) = unpinned_base_package(pkg_url, base_package_index) {
         fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
         return Ok(blob);
     }
 
     let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
     package_from_repo_or_cache(
         repo_manager,
         system_cache_list,
@@ -307,7 +290,7 @@ async fn package_from_base_or_repo_or_cache(
         &rewritten_url,
         cache,
         blob_fetcher,
-        inspect_state,
+        inspect,
     )
     .await
     .map_err(|e| {

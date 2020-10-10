@@ -95,6 +95,7 @@ rustc_binary("bin") {
     "src/repository_manager.rs",
     "src/repository_service.rs",
     "src/resolver_service.rs",
+    "src/resolver_service/inspect.rs",
     "src/rewrite_manager.rs",
     "src/rewrite_service.rs",
     "src/test_util.rs",

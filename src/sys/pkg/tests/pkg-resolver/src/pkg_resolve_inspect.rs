@@ -5,6 +5,7 @@
 use {
     anyhow::format_err,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
+    fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
     fuchsia_inspect::{
         assert_inspect_tree,
@@ -12,6 +13,7 @@ use {
         testing::{AnyProperty, PropertyAssertion},
     },
     fuchsia_pkg_testing::{serve::handler as UriHandler, PackageBuilder, RepositoryBuilder},
+    lib::MountsBuilder,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     std::sync::Arc,
@@ -51,6 +53,7 @@ async fn initial_inspect_state() {
             },
             resolver_service: {
                 cache_fallbacks_due_to_not_found: 0u64,
+                active_package_resolves: {}
             },
             blob_fetcher: {}
         }
@@ -69,18 +72,7 @@ async fn adding_repo_updates_inspect_state() {
 
     assert_inspect_tree!(
         hierarchy,
-        root: {
-            rewrite_manager: {
-                dynamic_rules: {},
-                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("/data/rewrites.json"))),
-                static_rules: {},
-                generation: 0u64,
-            },
-            omaha_channel: {
-                tuf_config_name: OptionDebugStringProperty::<String>::None,
-                source: OptionDebugStringProperty::<String>::None,
-            },
-            experiments: {},
+        root: contains {
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {
@@ -96,10 +88,6 @@ async fn adding_repo_updates_inspect_state() {
                     mirrors: {}
                 }
             },
-            resolver_service: {
-                cache_fallbacks_due_to_not_found: 0u64,
-            },
-            blob_fetcher: {}
         }
     );
     env.stop().await;
@@ -128,18 +116,7 @@ async fn resolving_package_updates_inspect_state() {
 
     assert_inspect_tree!(
         env.pkg_resolver_inspect_hierarchy().await,
-        root:   {
-            rewrite_manager: {
-                dynamic_rules: {},
-                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("/data/rewrites.json"))),
-                static_rules: {},
-                generation: 0u64,
-            },
-            omaha_channel: {
-                tuf_config_name: OptionDebugStringProperty::<String>::None,
-                source: OptionDebugStringProperty::<String>::None,
-            },
-            experiments: {},
+        root: contains {
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {
@@ -187,18 +164,30 @@ async fn resolving_package_updates_inspect_state() {
                     },
                 },
             },
-            resolver_service: {
-                cache_fallbacks_due_to_not_found: 0u64,
-            },
-            blob_fetcher: {}
         }
     );
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn blob_fetcher() {
-    let env = TestEnvBuilder::new().build().await;
+async fn package_and_blob_queues() {
+    // active_package_resolves exports the original and rewritten pkg urls, so we use a rewrite rule
+    // and verify that the two exported urls are different.
+    let env = TestEnvBuilder::new()
+        .mounts(
+            MountsBuilder::new()
+                .dynamic_rewrite_rules(RuleConfig::Version1(vec![Rule::new(
+                    "original.example.com",
+                    "rewritten.example.com",
+                    "/",
+                    "/",
+                )
+                .unwrap()]))
+                .config(lib::Config { enable_dynamic_configuration: true })
+                .build(),
+        )
+        .build()
+        .await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
     let repo = Arc::new(
@@ -217,11 +206,19 @@ async fn blob_fetcher() {
 
     let served_repository =
         repo.server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
-    let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
-    let config = served_repository.make_repo_config(repo_url);
-    let () = env.proxies.repo_manager.add(config.clone().into()).await.unwrap().unwrap();
+    let () = env
+        .proxies
+        .repo_manager
+        .add(
+            served_repository
+                .make_repo_config("fuchsia-pkg://rewritten.example.com".parse().unwrap())
+                .into(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
 
-    let resolve_fut = env.resolve_package("fuchsia-pkg://example.com/just_meta_far");
+    let resolve_fut = env.resolve_package("fuchsia-pkg://original.example.com/just_meta_far");
     let unblocker = unblocking_closure_receiver.await.unwrap();
 
     assert_inspect_tree!(
@@ -236,6 +233,14 @@ async fn blob_fetcher() {
                     state: "read http body",
                     state_ts: AnyProperty,
                     bytes_written: 0u64,
+                }
+            },
+            resolver_service: contains {
+                active_package_resolves: {
+                    "fuchsia-pkg://original.example.com/just_meta_far": {
+                        resolve_ts: AnyProperty,
+                        rewritten_url: "fuchsia-pkg://rewritten.example.com/just_meta_far",
+                    }
                 }
             }
         }
