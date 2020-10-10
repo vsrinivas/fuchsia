@@ -1,20 +1,22 @@
-# Set up the emulator
+# Set up the Fuchsia emulator (FEMU)
 
 This document describes how to set up the
-Fuchsia emulator (FEMU). For more information on FEMU, see the
-[Fuchsia emulator overview](/docs/concepts/emulator/index.md).
+Fuchsia emulator (FEMU). For more information, see the
+[Fuchsia emulator (FEMU) overview](/docs/concepts/emulator/index.md).
 
 ## Prerequisites
 
 To run FEMU, you must have
 
- * [Fuchsia source installed and environment variables created](/docs/get-started/get_fuchsia_source.md).
+ * [Fuchsia source installed and environment variables created](/docs/get-started/get_fuchsia_source.md)
  * [Configured and built Fuchsia](/docs/get-started/build_fuchsia.md)
 
+Note: When you configure Fuchsia for an emulator, use the `fx set`
+command to set an emulator-specific board, either `qemu-x64` or `qemu-arm`.
 
 ## Configure network
 
-For Fuchsia's ephemeral software to work in the emulator, you need to configure
+For Fuchsia's ephemeral software to work with FEMU, you need to configure
 an IPv6 network.
 
   * [Linux configuration](#linux-config)
@@ -72,18 +74,16 @@ After installing TunTap, run the following command:
 sudo chown $USER /dev/tap0
 ```
 
-## Start the emulator
+## Start FEMU
 
-To start the emulator with networking enabled, run the following command:
+The most common way to run FEMU is with networking enabled, using the following command:
 
 ```posix-terminal
 fx emu -N
 ```
 
-Note: If you need to reach the internet from the emulator, configure IP
-forwarding and IPv4 support on the emulator TAP interface.
-
-## Next steps
-
-For next steps on using FEMU, see
+For more options on running FEMU, see
 [Running the Fuchsia Emulator](/docs/development/run/femu.md).
+
+Note: If you need to reach the internet from FEMU, configure IP
+forwarding and IPv4 support on the emulator TAP interface.

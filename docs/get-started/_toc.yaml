@@ -12,5 +12,5 @@ toc:
 - title: "Explore Fuchsia"
   path: /docs/get-started/explore_fuchsia.md
 - heading: "Set up a Fuchsia emulator"
-- title: "Set up and run FEMU"
+- title: "Set up the Fuchsia emulator (FEMU)"
   path: /docs/get-started/set_up_femu.md

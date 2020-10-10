@@ -7,18 +7,32 @@ Note: If you haven't set up your build environment, see
 
 ## Set build configuration
 
-To set your build configuration, run the following command:
+To set your build configuration for Fuchsia, run the following command:
+
+```posix-terminal
+fx set <var>product</var>.<var>board</var>
+```
+
+The `fx set` command takes <var>PRODUCT</var> and <var>BOARD</var> arguments,
+which define the
+[product and board](/docs/concepts/build_system/boards_and_products.md)
+configuration of your build. This configuration informs the build system what
+packages to build for your Fuchsia device. 
+
+For the core set of Fuchsia features, the build configuration is
 
 ```posix-terminal
 fx set core.x64
 ```
 
-The `fx set` command takes a `PRODUCT.BOARD` argument, which defines the
-[product and board](/docs/concepts/build_system/boards_and_products.md)
-configuration of your build. This configuration informs the build system what
-packages to build for your Fuchsia device. `core` is a product with a minimal
-feature set, which includes common network capabilities. `x64` refers to the x64
-architecture.
+where `core` is a product with a minimal feature set, which includes
+common network capabilities, and `x64` refers to the x64 architecture.
+
+For a Fuchsia emulator with the core set of Fuchsia features, the build configuration is
+
+```posix-terminal
+fx set core.qemu-x64
+```
 
 See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
 more options.
@@ -98,6 +112,7 @@ information.
 
 ## Next steps
 
-See
-[Explore Fuchsia](/docs/get-started/explore_fuchsia.md)
-in the getting started guide to learn more about how Fuchsia is structured.
+ * See [Explore Fuchsia](/docs/get-started/explore_fuchsia.md)
+   in the getting started guide to learn more about how Fuchsia is structured.
+ * See [Set up the Fuchsia emulator (FEMU)](/docs/get-started/set_up_femu.md)
+   to set up the Fuchsia emulator.

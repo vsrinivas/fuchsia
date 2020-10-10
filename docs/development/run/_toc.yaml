@@ -6,6 +6,6 @@ toc:
   path: /docs/development/run/femu.md
 - title: "Run an example component"
   path: /docs/development/run/run-examples.md
-- title: "Run components in a test"
-  path: /docs/development/run/run-components-in-a-test.md
+- title: "Run a test component"
+  path: /docs/development/run/run-test-component.md
 

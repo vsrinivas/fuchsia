@@ -12,19 +12,16 @@ For more information on FEMU, see the
 Before you run FEMU, you must:
 
  * [Install Fuchsia source and create environment variables](/docs/get-started/get_fuchsia_source.md)
- * [Configur and build Fuchsia](/docs/get-started/build_fuchsia.md)
+ * [Configure and build Fuchsia](/docs/get-started/build_fuchsia.md)
  * [Set up and configure FEMU](/docs/get-started/set_up_femu.md)
 
-## Run Fuchsia under FEMU
+## Run Fuchsia on FEMU
 
-First, set up and build Fuchsia, using `fx set`, and specying a `qemu`
-board and supported product (this example uses
-`workstation` product). 
+If you haven't already, set up and build Fuchsia, using `fx set`,
+specifying a `qemu` board and supported product. This example uses the `core` product:
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
-fx set workstation.qemu-x64 --release [--with=...]
+fx set core.qemu-x64 --release [--with=...]
 
 fx build
 ```
@@ -35,12 +32,8 @@ Note: More information on supported boards and products is in the
 Next, run FEMU with `ssh` access (with the `-N` flag):
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
 fx emu -N
 ```
-
-To exit FEMU, run `dm poweroff` in the FEMU terminal.
 
 ### Run FEMU without GUI support
 
@@ -49,8 +42,6 @@ you can run FEMU in headless mode by adding `--headless` argument to the
 `fx emu` command, for example:
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
 fx emu -N --headless
 ```
 
@@ -81,8 +72,6 @@ Fuchsia, and use the following command to run Fuchsia in the emulator inside
 your remote desktop session:
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
 fx emu
 ```
 
@@ -100,8 +89,6 @@ On the terminal of your local machine, type the following to build, fetch the
 artifacts and start the emulator with networking:
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
 fx emu-remote {{ '<var>REMOTE-WORKSTATION-NAME</var>' }}  -- -N
 ```
 
@@ -113,8 +100,6 @@ with networking on {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} and have the
 output forwarded using WebRTC to a Chrome tab on local machine:
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
 fx emu-remote --stream {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} -- -N
 ```
 
@@ -122,17 +107,19 @@ This by default uses software rendering and GPU acceleration is supported by
 using an existing X server on the remote machine with access to GPU hardware:
 
 ```posix-terminal
-cd $FUCHSIA_DIR
-
 fx emu-remote --stream --display :0 {{ '<var>REMOTE-WORKSTATION-NAME</var>' }} -- -N
 ```
 
 Any arguments after “--” will be passed to the fx emu invocation on the remote
 machine.
 
+## Exit FEMU
+
+To exit FEMU, run `dm poweroff` in the FEMU terminal.
+
 ## Next steps
 
-Once you are running Fuchsia on FEMU, you can: 
+Once you are running Fuchsia on FEMU, you can:
 
-*   [Test components](/docs/development/run/run-components-in-a-test.md)
+*   [Test components](/docs/development/run/run-test-component.md)
 *   [Run end-to-end tests](/docs/development/testing/run_an_end_to_end_test.md)

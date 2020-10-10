@@ -82,5 +82,5 @@ Then you can use FEMU to do the following:
 
 *   [Set up and configure FEMU](/docs/get-started/set_up_femu.md)
 *   [Run FEMU](/docs/development/run/femu.md)
-*   [Test components](/docs/development/run/run-components-in-a-test.md)
+*   [Test components](/docs/development/run/run-test-component.md)
 *   [Run end-to-end tests](/docs/development/testing/run_an_end_to_end_test.md)
