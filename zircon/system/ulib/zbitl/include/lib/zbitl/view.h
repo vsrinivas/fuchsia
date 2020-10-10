@@ -91,14 +91,63 @@ class View {
   }
 
   /// The API details of what Storage means are delegated to the StorageTraits
-  /// template; see <lib/zbitl/storage_traits.h>.
-  using Traits = StorageTraits<Storage>;
-  static_assert(std::is_default_constructible_v<typename Traits::error_type>);
-  static_assert(std::is_copy_constructible_v<typename Traits::error_type>);
-  static_assert(std::is_copy_assignable_v<typename Traits::error_type>);
-  static_assert(std::is_default_constructible_v<typename Traits::payload_type>);
-  static_assert(std::is_copy_constructible_v<typename Traits::payload_type>);
-  static_assert(std::is_copy_assignable_v<typename Traits::payload_type>);
+  /// template; see <lib/zbitl/storage_traits.h>. Traits is a thin wrapper that
+  /// provides static, constexpr, convenience accessors for determining whether
+  /// the traits support a particular optional method. This permits the library
+  /// (and similarly its users) to write things like
+  ///
+  /// ```
+  /// template<T = Traits, typename = std::enable_if_t<T::CanWrite()>, ...>
+  /// ```
+  /// template parameters to functions that only make sense in the context
+  /// of writable storage.
+  ///
+  /// TODO(mcgrathr, joshuaseaton): Figure out a straightforward means of
+  /// including `CreateResult` and `CloneResult` in Traits' namespace.
+  class Traits : public StorageTraits<Storage> {
+   public:
+    using Base = StorageTraits<Storage>;
+    using typename Base::error_type;
+    using typename Base::payload_type;
+
+    static_assert(std::is_default_constructible_v<error_type>);
+    static_assert(std::is_copy_constructible_v<error_type>);
+    static_assert(std::is_copy_assignable_v<error_type>);
+    static_assert(std::is_default_constructible_v<payload_type>);
+    static_assert(std::is_copy_constructible_v<payload_type>);
+    static_assert(std::is_copy_assignable_v<payload_type>);
+
+    // Whether Traits::Write() is defined.
+    static constexpr bool CanWrite() { return SfinaeWrite(0); }
+
+    // Whether Traits::Create() is defined.
+    static constexpr bool CanCreate() { return SfinaeCreate(0); }
+
+   private:
+    // Gives an 'example' storage_type& value that is meant for use only within
+    // a decltype context.
+    static storage_type& storage_value() {
+      return std::declval<std::reference_wrapper<storage_type>>().get();
+    }
+
+    // SFINAE check for a Traits::Write method.
+    template <typename T = Base, typename = decltype(T::Write(storage_value(), 0, ByteView{}))>
+    static constexpr bool SfinaeWrite(int ignored) {
+      return true;
+    }
+
+    // This overload is chosen only if SFINAE detected a missing Write method.
+    static constexpr bool SfinaeWrite(...) { return false; }
+
+    // SFINAE check for a Traits::Create method.
+    template <typename T = Base, typename = decltype(T::Create(storage_value(), 0))>
+    static constexpr bool SfinaeCreate(int ignored) {
+      return true;
+    }
+
+    // This overload is chosen only if SFINAE detected a missing Create method.
+    static constexpr bool SfinaeCreate(...) { return false; }
+  };
 
   /// The header is represented by an opaque type that can be dereferenced as
   /// if it were `const zbi_header_t*`, i.e. `*header` or `header->member`.
@@ -470,10 +519,7 @@ class View {
   //
   // This method is not available if zbitl::StorageTraits<storage_type>
   // doesn't support mutation.
-  template <  // SFINAE check for Traits::Write method.
-      typename T = Traits,
-      typename = std::void_t<decltype(
-          T::Write(std::declval<std::reference_wrapper<storage_type>>().get(), 0, ByteView{}))>>
+  template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
   fitx::result<typename Traits::error_type> EditHeader(const iterator& item, zbi_header_t header) {
     item.Assert(__func__);
     header = SanitizeHeader(header);
@@ -484,10 +530,7 @@ class View {
   // When the iterator is mutable and not a temporary, make the next
   // operator*() consistent with the new header if it worked.  For kReference
   // storage types, the change is reflected intrinsically.
-  template <  // SFINAE check for Traits::Write method.
-      typename T = Traits,
-      typename = std::void_t<decltype(
-          T::Write(std::declval<std::reference_wrapper<storage_type>>().get(), 0, ByteView{}))>>
+  template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
   fitx::result<typename Traits::error_type> EditHeader(iterator& item, zbi_header_t header) {
     auto result = EditHeader(const_cast<const iterator&>(item), header);
     if constexpr (header_type::kCopy) {
@@ -546,7 +589,7 @@ class View {
   }
 
   // Returns true if "copy to new storage" overloads below are available.
-  static constexpr bool CanCopyCreate() { return kCanCopyCreate; }
+  static constexpr bool CanCopyCreate() { return Traits::CanCreate(); }
 
   // Copy a range of the underlying storage into a freshly-created new piece of
   // storage (whatever that means for this storage type).  The Error return
@@ -689,19 +732,6 @@ class View {
                         "Fail in Unused: missing zbitl::View::StartIteration() call?");
     error_ = std::move(error);
   }
-
-  template <
-      // SFINAE check for Traits::Create method.
-      typename T = Traits, typename CreateResult = decltype(T::Create(
-                               std::declval<std::reference_wrapper<storage_type>>().get(), 0))>
-  static constexpr bool SfinaeCreate(Unused ignored) {
-    return true;
-  }
-
-  // This overload is chosen only if SFINAE detected a missing Create method.
-  static constexpr bool SfinaeCreate(...) { return false; }
-
-  static constexpr bool kCanCopyCreate = SfinaeCreate(Unused{});
 
   template <
       typename SlopCheck,
