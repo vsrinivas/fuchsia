@@ -26,8 +26,6 @@ if (!is_fuchsia) {
       "//third_party/rust_crates/transitional/rustyline",
     ]
 
-    non_rust_deps = [ "//src/lib/chunked-compression" ]
-
     test_deps = [
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:uuid",
