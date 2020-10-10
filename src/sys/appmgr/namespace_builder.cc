@@ -48,7 +48,8 @@ void NamespaceBuilder::AddPackage(zx::channel package) {
 void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::string& pkg_name) {
   for (const auto& feature : sandbox.features()) {
     if (feature == "config-data") {
-      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/" + pkg_name, "/config/data");
+      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/meta/data/" + pkg_name,
+                              "/config/data");
     }
   }
 }
@@ -154,7 +155,7 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/dev/class/goldfish-control");
       PushDirectoryFromPath("/dev/class/goldfish-pipe");
       PushDirectoryFromPath("/dev/class/gpu");
-      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/vulkan-icd/icd.d",
+      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/meta/data/vulkan-icd/icd.d",
                               "/config/vulkan/icd.d");
     } else if (feature == "isolated-cache-storage") {
       PushDirectoryFromPathAs(isolated_cache_path_factory().value(), "/cache");

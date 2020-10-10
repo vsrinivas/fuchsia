@@ -47,7 +47,7 @@
 
         // features: config-data
         {
-            directory: "/pkgfs/packages/config-data/0/data/setui_service",
+            directory: "/pkgfs/packages/config-data/0/meta/data/setui_service",
             from: "parent",
             as: "/config/data",
             rights: [ "r*" ],

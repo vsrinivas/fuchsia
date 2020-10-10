@@ -54,7 +54,7 @@ const uint64_t kMicrosInSec = 1000000UL;
 const uint64_t kNanosInSec = 1000000000UL;
 
 const std::string max_severity_config_path =
-    "/pkgfs/packages/config-data/0/data/run_test_component";
+    "/pkgfs/packages/config-data/0/meta/data/run_test_component";
 
 void PrintUsage() {
   fprintf(stderr, R"(

@@ -1,5 +1,5 @@
 // We need this cml so that we can transform paths from appmgr's namespace like
-//  "/pkgfs/packages/config-data/0/data" to "/config/data" and present them to test_manager.
+//  "/pkgfs/packages/config-data/0/meta/data" to "/config/data" and present them to test_manager.
 // TODO(56604): I don't think we need this component anymore?
 {
     children: [

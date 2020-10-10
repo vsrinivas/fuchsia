@@ -61,8 +61,12 @@ template("config_data") {
       }
       foreach(source, sources) {
         foreach(target, process_file_template([ source ], outputs)) {
-          config_package_entries += [ "data/" + for_pkg + "/" + target + "=" +
-                                      rebase_path(source, root_build_dir) ]
+          # Config files are usually small, so package them in meta/ so they're
+          # archived together rather than spread across individual blobs.
+          # See also: fxbug.dev/37055
+          config_package_entries +=
+              [ "meta/data/" + for_pkg + "/" + target + "=" +
+                rebase_path(source, root_build_dir) ]
         }
       }
     }

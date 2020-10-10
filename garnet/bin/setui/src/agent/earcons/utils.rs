@@ -22,12 +22,15 @@ fn resource_file(
     name: &str,
 ) -> Result<fidl::endpoints::ClientEnd<fidl_fuchsia_io::FileMarker>, Error> {
     // We try two paths here, because normal components see their config package data resources in
-    // /pkg/data and shell tools see them in /pkgfs/packages/config-data/0/data/<pkg>.
+    // /pkg/data and shell tools see them in /pkgfs/packages/config-data/0/meta/data/<pkg>.
     Ok(fidl::endpoints::ClientEnd::<fidl_fuchsia_io::FileMarker>::new(zx::Channel::from(
         fdio::transfer_fd(
             File::open(format!("/config/data/{}", name))
                 .or_else(|_| {
-                    File::open(format!("/pkgfs/packages/config-data/0/data/setui_service/{}", name))
+                    File::open(format!(
+                        "/pkgfs/packages/config-data/0/meta/data/setui_service/{}",
+                        name
+                    ))
                 })
                 .context("Opening package data file")?,
         )?,

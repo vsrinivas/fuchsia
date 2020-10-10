@@ -137,13 +137,13 @@
         },
         {
             // features: config-data for cast_agent
-            directory: "/pkgfs/packages/config-data/0/data/cast_agent",
+            directory: "/pkgfs/packages/config-data/0/meta/data/cast_agent",
 
             // There is an approved Component Framework design to support
             // offering subdirectories.
             //
             // WHEN AVAILABLE, THIS SHOULD BE CHANGED TO JUST:
-            //   directory: "/pkgfs/packages/config-data/0/data",
+            //   directory: "/pkgfs/packages/config-data/0/meta/data",
             //   as: "/pkgfs-config-data"
             // and then share "/pkgfs-config-data/cast_agent" with the
             // cast_agent component.
@@ -153,7 +153,7 @@
         },
         {
             // features: config-data for setui_service (see above)
-            directory: "/pkgfs/packages/config-data/0/data/setui_service",
+            directory: "/pkgfs/packages/config-data/0/meta/data/setui_service",
             from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],

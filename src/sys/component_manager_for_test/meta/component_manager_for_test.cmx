@@ -14,7 +14,7 @@
             "isolated-temp"
         ],
         "pkgfs": [
-            "packages/config-data/0/data"
+            "packages/config-data/0/meta/data"
         ],
         "services": [
             "fuchsia.boot.WriteOnlyLog",

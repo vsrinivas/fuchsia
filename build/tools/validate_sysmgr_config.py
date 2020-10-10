@@ -28,10 +28,10 @@ same "services" key. For example, it catches invalid configuration like this::
 The input provided to this tool is expected to be the config-data package
 manifest, formatted like this::
 
-  data/some_package/foo=../../src/somewhere/foo
-  data/sysmgr/services.config=../../src/sys/sysmgr/config/services.config
-  data/sysmgr/file1.config=../../src/bar/file1.config
-  data/other_package/baz=../../some/other/path/baz
+  meta/data/some_package/foo=../../src/somewhere/foo
+  meta/data/sysmgr/services.config=../../src/sys/sysmgr/config/services.config
+  meta/data/sysmgr/file1.config=../../src/bar/file1.config
+  meta/data/other_package/baz=../../some/other/path/baz
 
 where the path before the '=' is the destination path in the package, and the
 path after the '=' is the source file (rebased to the root build directory).
@@ -65,7 +65,9 @@ def main():
         lines = f.read().splitlines()
 
     # Build a list of all the source paths that contribute to sysmgr's config-data
-    sysmgr_lines = [line for line in lines if line.startswith('data/sysmgr/')]
+    sysmgr_lines = [
+        line for line in lines if line.startswith('meta/data/sysmgr/')
+    ]
     sysmgr_config_files = [line.split('=')[1] for line in sysmgr_lines]
 
     # Parse all config files.

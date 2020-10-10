@@ -8,7 +8,7 @@
             "isolated-temp"
         ],
         "pkgfs": [
-            "packages/config-data/0/data/appmgr"
+            "packages/config-data/0/meta/data/appmgr"
         ],
         "services": [
             "fuchsia.logger.LogSink",

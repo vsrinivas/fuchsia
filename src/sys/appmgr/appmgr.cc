@@ -66,7 +66,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   storage_watchdog_.Run(dispatcher);
 
   // 1. Create root realm.
-  fxl::UniqueFD appmgr_config_dir(open("/pkgfs/packages/config-data/0/data/appmgr", O_RDONLY));
+  fxl::UniqueFD appmgr_config_dir(open("/pkgfs/packages/config-data/0/meta/data/appmgr", O_RDONLY));
   fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error> component_id_index =
       ComponentIdIndex::CreateFromAppmgrConfigDir(appmgr_config_dir);
   FX_CHECK(component_id_index) << "Cannot read component ID Index. error = "

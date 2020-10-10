@@ -84,14 +84,16 @@ async fn main() -> Result<(), Error> {
                 },
                 "config-data" => pseudo_directory! {
                     "0" => pseudo_directory! {
-                        "data" => pseudo_directory! {
-                            "sysmgr" => pseudo_directory! {
-                                "services.config" => read_only_static(SYSMGR_SERVICES_CONFIG),
-                            },
-                            "appmgr" => pseudo_directory! {
-                                "scheme_map" => pseudo_directory! {
-                                    "default.config" => read_only_static(APPMGR_SCHEME_MAP),
-                                }
+                        "meta" => pseudo_directory! {
+                            "data" => pseudo_directory! {
+                                "sysmgr" => pseudo_directory! {
+                                    "services.config" => read_only_static(SYSMGR_SERVICES_CONFIG),
+                                },
+                                "appmgr" => pseudo_directory! {
+                                    "scheme_map" => pseudo_directory! {
+                                        "default.config" => read_only_static(APPMGR_SCHEME_MAP),
+                                    }
+                                },
                             },
                         },
                     },

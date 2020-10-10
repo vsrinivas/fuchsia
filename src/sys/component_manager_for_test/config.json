@@ -12,7 +12,7 @@
         {
             directory: "config-data",
             rights: [ "r*" ],
-            path: "/pkgfs/packages/config-data/0/data",
+            path: "/pkgfs/packages/config-data/0/meta/data",
         },
         {
             protocol: [

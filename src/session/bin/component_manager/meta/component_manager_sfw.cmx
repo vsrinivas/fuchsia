@@ -21,8 +21,8 @@
             "root-ssl-certificates"
         ],
         "pkgfs": [
-            "packages/config-data/0/data/cast_agent",
-            "packages/config-data/0/data/setui_service"
+            "packages/config-data/0/meta/data/cast_agent",
+            "packages/config-data/0/meta/data/setui_service"
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",

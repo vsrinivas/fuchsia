@@ -9,7 +9,7 @@
             directory: "config-data",
             from: "self",
             rights: [ "r*" ],
-            path: "/delayed/fs/pkgfs/packages/config-data/0/data",
+            path: "/delayed/fs/pkgfs/packages/config-data/0/meta/data",
         },
     ],
     use: [
@@ -107,7 +107,7 @@
             from: "self",
         },
         {
-            directory: "/delayed/fs/pkgfs/packages/config-data/0/data",
+            directory: "/delayed/fs/pkgfs/packages/config-data/0/meta/data",
             from: "self",
             as: "/config/data",
             rights: [ "r*" ],
