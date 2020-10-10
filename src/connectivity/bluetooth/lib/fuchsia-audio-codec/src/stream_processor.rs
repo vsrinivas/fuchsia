@@ -257,7 +257,7 @@ impl StreamProcessorInner {
     /// struct/Future
     fn create_buffer_collection(
         &mut self,
-        constraints: ValidStreamBufferConstraints,
+        _constraints: ValidStreamBufferConstraints,
         direction: StreamPort,
     ) -> Result<(), Error> {
         let (client_token, client_token_request) =
@@ -279,10 +279,6 @@ impl StreamProcessorInner {
 
         let mut collection_constraints = BUFFER_COLLECTION_CONSTRAINTS_DEFAULT;
 
-        collection_constraints.min_buffer_count =
-            constraints.default_settings.packet_count_for_client
-                + constraints.default_settings.packet_count_for_server;
-
         collection_constraints.has_buffer_memory_constraints = true;
         collection_constraints.buffer_memory_constraints.min_size_bytes = match direction {
             StreamPort::Input => MIN_INPUT_BUFFER_SIZE,
@@ -297,10 +293,8 @@ impl StreamProcessorInner {
         let settings = StreamBufferPartialSettings {
             buffer_lifetime_ordinal: Some(1),
             buffer_constraints_version_ordinal: Some(1),
-            single_buffer_mode: Some(constraints.default_settings.single_buffer_mode),
-            packet_count_for_server: Some(constraints.default_settings.packet_count_for_server),
-            packet_count_for_client: Some(constraints.default_settings.packet_count_for_client),
             sysmem_token: Some(codec_token),
+            ..StreamBufferPartialSettings::new_empty()
         };
 
         // Sync collection so server knows about duplicated token before we send it to stream

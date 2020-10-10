@@ -8,11 +8,17 @@
 #include <lib/trace/event.h>
 
 #include "chunk_input_stream.h"
+#include "lib/media/codec_impl/codec_port.h"
 #include "output_sink.h"
 
 namespace {
 
 constexpr char kAacMimeType[] = "audio/aac";
+
+constexpr size_t kServerPacketCount = 1;
+constexpr size_t kClientPacketCount = 1;
+constexpr uint32_t kInputMinBufferCountForCamping = 1;
+constexpr uint32_t kOutputMinBufferCountForCamping = 1;
 
 void PostTask(async_dispatcher_t* dispatcher, fit::closure task) {
   auto result = async::PostTask(dispatcher, std::move(task));
@@ -64,9 +70,14 @@ CodecAdapterAacEncoder::CoreCodecGetBufferCollectionConstraints(
     CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   auto constraints = fuchsia::sysmem::BufferCollectionConstraints{
-      .min_buffer_count_for_camping = partial_settings.packet_count_for_server(),
       .has_buffer_memory_constraints = true,
   };
+
+  if (port == kOutputPort) {
+    constraints.min_buffer_count_for_camping = kOutputMinBufferCountForCamping;
+  } else {
+    constraints.min_buffer_count_for_camping = kInputMinBufferCountForCamping;
+  }
 
   if (port == kOutputPort) {
     std::lock_guard<std::mutex> lock(lock_);
@@ -185,9 +196,6 @@ CodecAdapterAacEncoder::CoreCodecBuildNewOutputConstraints(
                         "it should have prepared the format configuration.");
     return format_configuration_->recommended_output_buffer_size;
   }();
-
-  constexpr size_t kServerPacketCount = 1;
-  constexpr size_t kClientPacketCount = 1;
 
   // These ceilings are arbitrary, but prevent the client from using this codec
   // to request unbounded memory from sysmem.

@@ -30,6 +30,9 @@ constexpr uint32_t kInputPacketCountForClientMin = 2;
 constexpr uint32_t kInputPacketCountForClientMax = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t kInputDefaultPacketCountForClient = 5;
 
+constexpr uint32_t kInputMinBufferCountForCamping = 1;
+constexpr uint32_t kInputMinBufferCountForDedicatedSlack = 2;
+
 constexpr bool kInputSingleBufferModeAllowed = false;
 constexpr bool kInputDefaultSingleBufferMode = false;
 
@@ -57,6 +60,9 @@ constexpr uint32_t kOutputDefaultPacketCountForServer = kOutputPacketCountForSer
 constexpr uint32_t kOutputPacketCountForClientMin = 2;
 constexpr uint32_t kOutputPacketCountForClientMax = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t kOutputDefaultPacketCountForClient = 5;
+
+constexpr uint32_t kOutputMinBufferCountForCamping = 1;
+constexpr uint32_t kOutputMinBufferCountForDedicatedSlack = 2;
 
 constexpr bool kOutputSingleBufferModeAllowed = false;
 constexpr bool kOutputDefaultSingleBufferMode = false;
@@ -147,15 +153,15 @@ DecryptorAdapter::CoreCodecGetBufferCollectionConstraints(
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-
-  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
-  // Some slack is nice overall, but avoid having each participant ask for
-  // dedicated slack.  Using sysmem the client will ask for it's own buffers for
-  // camping and any slack, so the codec doesn't need to ask for any extra on
-  // behalf of the client.
-  ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
+  // We also ask for some dedicated slack, since decryption involves some per-buffer process hops
+  // per buffer.  Some slack should help avoid falling behind.
+  if (port == kOutputPort) {
+    result.min_buffer_count_for_camping = kOutputMinBufferCountForCamping;
+    result.min_buffer_count_for_dedicated_slack = kOutputMinBufferCountForDedicatedSlack;
+  } else {
+    result.min_buffer_count_for_camping = kInputMinBufferCountForCamping;
+    result.min_buffer_count_for_dedicated_slack = kInputMinBufferCountForDedicatedSlack;
+  }
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
   ZX_DEBUG_ASSERT(result.max_buffer_count == 0);
 

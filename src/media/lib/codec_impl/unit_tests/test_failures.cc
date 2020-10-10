@@ -33,11 +33,10 @@ auto CreateStreamBufferPartialSettings(
 
   fuchsia::media::StreamBufferPartialSettings settings;
 
+  // We can leave single_buffer_mode un-set (implies false).  The packet_count_for_server and
+  // packet_count_for_client fields will be deprecated, so leave those un-set.
   settings.set_buffer_lifetime_ordinal(buffer_lifetime_ordinal)
       .set_buffer_constraints_version_ordinal(kBufferConstraintsVersionOrdinal)
-      .set_single_buffer_mode(constraints.default_settings().single_buffer_mode())
-      .set_packet_count_for_server(constraints.default_settings().packet_count_for_server())
-      .set_packet_count_for_client(constraints.default_settings().packet_count_for_client())
       .set_sysmem_token(std::move(token));
 
   return settings;

@@ -34,6 +34,11 @@ constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
 // This is an arbitrary cap for now.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
+// Arbitrary limit; specific value is historical.
+static constexpr uint32_t kMaxOutputBufferCount = 34;
+// Arbitrary limit.
+static constexpr uint32_t kMaxInputBufferCount = 256;
+
 }  // namespace
 
 CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(std::mutex& lock,
@@ -228,24 +233,14 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
 
   fuchsia::sysmem::BufferCollectionConstraints result;
 
-  // For now, we didn't report support for single_buffer_mode, and CodecImpl
+  // We reported single_buffer_mode_allowed false (or un-set), and CodecImpl
   // will have failed the codec already by this point if the client tried to
-  // use single_buffer_mode.
-  //
-  // TODO(dustingreen): Support single_buffer_mode on input (only).
+  // use single_buffer_mode true.
   ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
                   !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
-
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count =
-      partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
-
-  ZX_DEBUG_ASSERT(port != kOutputPort ||
-                  packet_count >= kMinOutputPacketCount && packet_count <= kMaxOutputPacketCount);
 
   // TODO(fxbug.dev/13531): plumb/permit range of buffer count from further down,
   // instead of single number frame_count, and set this to the actual
@@ -264,11 +259,15 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
   } else {
     result.min_buffer_count_for_camping = kMinInputBufferCountForCamping;
   }
+
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
-  // TODO: Uncap max_buffer_count, have both sides infer that packet count is
-  // at least as many as buffer_count.
-  result.max_buffer_count = packet_count;
+
+  if (port == kOutputPort) {
+    result.max_buffer_count = kMaxOutputBufferCount;
+  } else {
+    result.max_buffer_count = kMaxInputBufferCount;
+  }
 
   uint32_t per_packet_buffer_bytes_min;
   uint32_t per_packet_buffer_bytes_max;

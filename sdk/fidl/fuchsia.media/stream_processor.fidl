@@ -49,6 +49,8 @@ table StreamBufferConstraints {
     /// stale, so there would be no benefit to disallowing even values).
     1: uint64 buffer_constraints_version_ordinal;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// These settings are "default" settings, not "recommended" settings.
     ///
     /// These "default" settings can be passed to SetInputBufferSettings() /
@@ -80,19 +82,27 @@ table StreamBufferConstraints {
     /// StreamBufferSettings.buffer_lifetime_ordinal.
     2: StreamBufferSettings default_settings;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// If a client is using buffer per packet mode, each buffer must be at least
     /// this large.  If a client is using single-buffer mode, the one buffer must
     /// be at least per_packet_buffer_bytes_min * packet_count_for_server_min in
     /// size.
     3: uint32 per_packet_buffer_bytes_min;
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// Must be >= per_packet_buffer_bytes_min.  Delivering more than
     /// this per input packet might not perform any better, and in fact might
     /// perform worse.
     4: uint32 per_packet_buffer_bytes_recommended;
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// Must be >= per_packet_buffer_bytes_recommended.  Can be 0xFFFFFFFF if
     /// there is no explicitly-enforced limit.
     5: uint32 per_packet_buffer_bytes_max;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// Minimum number of packet_count_for_server.
     ///
     /// Re. input and output:
@@ -125,6 +135,8 @@ table StreamBufferConstraints {
     /// packet_count_for_server_min.
     6: uint32 packet_count_for_server_min;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// This must be at least packet_count_for_server_min and at most
     /// packet_count_for_server_recommended_max.
     ///
@@ -134,6 +146,8 @@ table StreamBufferConstraints {
     /// packet in this value.
     7: uint32 packet_count_for_server_recommended;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// This can be the same as packet_count_for_server_max or can be lower.
     /// Values above this value and <= packet_count_for_server_max are not
     /// recommended by the stream processor, but should still work given
@@ -141,17 +155,23 @@ table StreamBufferConstraints {
     /// processor.
     8: uint32 packet_count_for_server_recommended_max;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// This can be 0xFFFFFFFF if there's no stream processor-enforced max, but
     /// stream processors are encouraged to set a large but still
     /// plausibly-workable max, and clients are encouraged to request a number
     /// of packets that isn't excessively large for the client's scenario.
     9: uint32 packet_count_for_server_max;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// Normally this would be an implicit 0, but for now we have a min so we can
     /// force the total number of packets to be a specific number that we know
     /// works for the moment.
     10: uint32 packet_count_for_client_min;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// The client must set packet_count_for_client to be <=
     /// packet_count_for_client_max.
     ///
@@ -161,6 +181,9 @@ table StreamBufferConstraints {
     /// scenario.
     11: uint32 packet_count_for_client_max;
 
+    /// May be deprecated.  Ignore in client code.  Any new use of
+    /// single_buffer_mode should consult with OWNERS first.
+    ///
     /// `single_buffer_mode_allowed` false allows a stream processor that's not
     /// required to support single-buffer mode for a given input or output the
     /// ability to decline to support single-buffer mode on that input/output.
@@ -186,6 +209,8 @@ table StreamBufferConstraints {
     /// output, regardless of stream processor type.
     12: bool single_buffer_mode_allowed;
 
+    /// To be deprecated.  Ignore in client code.
+    ///
     /// If true, the buffers need to be physically contiguous pages, such as those
     /// allocated using zx_vmo_create_contiguous().
     13: bool is_physically_contiguous_required;
@@ -362,6 +387,8 @@ const uint32 kDefaultOutputPacketCountForClient = 2;
 const bool kDefaultInputIsSingleBufferMode = false;
 const bool kDefaultOutputIsSingleBufferMode = false;
 
+/// To be deprecated.  Do not use in client code.
+///
 /// See relevant corresponding constraints in StreamBufferConstraints.  The
 /// settings must satisfy the constraints.
 ///
@@ -507,6 +534,9 @@ resource table StreamBufferPartialSettings {
     /// buffers again using the same buffer_constraints_version_ordinal.
     2: uint64 buffer_constraints_version_ordinal;
 
+    /// To be deprecated.  Ignore in client code (leave un-set).  Any new use
+    /// of single_buffer_mode true should consult with ONWERS first.
+    ///
     /// If true, there is only one buffer, but still typically more than one
     /// packet.  If false, the # of packets == the number of buffers.
     ///
@@ -522,6 +552,8 @@ resource table StreamBufferPartialSettings {
     /// than one buffer gets allocated by sysmem.
     3: bool single_buffer_mode;
 
+    /// To be deprecated.  Ignore in client code (leave un-set).
+    ///
     /// When `single_buffer_mode` is false:
     ///
     /// The actual packet count will be
@@ -544,6 +576,8 @@ resource table StreamBufferPartialSettings {
     // TODO(fxbug.dev/7932): Default to 0.
     4: uint32 packet_count_for_server;
 
+    /// To be deprecated.  Ignore in client code (leave un-set).
+    ///
     // TODO(fxbug.dev/7932): Default to 0.
     5: uint32 packet_count_for_client;
 

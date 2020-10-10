@@ -152,8 +152,7 @@ class CodecClient {
 
   bool ConfigurePortBufferCollection(
       bool is_output, uint64_t new_buffer_lifetime_ordinal,
-      uint64_t buffer_constraints_version_ordinal, uint32_t packet_count_for_server,
-      uint32_t packet_count_for_client, uint32_t* out_packet_count,
+      uint64_t buffer_constraints_version_ordinal, uint32_t* out_packet_count,
       fuchsia::sysmem::BufferCollectionPtr* out_buffer_collection,
       fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
 

@@ -14,20 +14,14 @@
 
 namespace {
 
-// The client would like there to be at least this many input packets.  Using 1
-// or 2 here can help avoid short stalls while packets are in transit even if
-// the client doesn't actually need to hold any free input packets for any
-// significant duration for any client-specific reason.
-constexpr uint32_t kMinInputPacketsForClient = 1;
-
-// The client would like there to be at least this many output packets.
-//
-// The client _must_ use a non-zero value here if any output packets will be
-// held indefinitely (such as held until the next output packet is available),
-// since otherwise the Codec can become stuck, unable to continue processing due
-// to all output frames used as active reference frames and no free output
-// buffer to decode into.
-constexpr uint32_t kMinOutputPacketsForClient = 1;
+// The client would like there to be at least this many input buffers.  Despite
+// the client filling input buffers quickly, it's still non-zero duration, so
+// using 1 here can help avoid short stalls while an input buffer is being
+// filled.
+constexpr uint32_t kMinInputBufferCountForCamping = 1;
+// The client intends to hold onto this many output buffers for a non-transient
+// duration.
+constexpr uint32_t kMinOutputBufferCountForCamping = 1;
 
 // For input, this example doesn't re-configure input buffers, so there's only
 // one buffer_lifetime_ordinal.
@@ -156,24 +150,10 @@ void CodecClient::Start() {
   // We're not on the FIDL thread, so we need to async::PostTask() over to the
   // FIDL thread to send any FIDL message.
 
-  FX_CHECK(input_constraints_->has_packet_count_for_server_min());
-  FX_CHECK(input_constraints_->has_packet_count_for_server_recommended());
-  FX_CHECK(input_constraints_->has_packet_count_for_server_max());
-  uint32_t packet_count_for_client =
-      std::max(kMinInputPacketsForClient, input_constraints_->packet_count_for_client_min());
-  // Use min to make sure decode can proceed without getting stuck while using min.
-  uint32_t packet_count_for_server = input_constraints_->packet_count_for_server_min();
-  if (packet_count_for_client > input_constraints_->packet_count_for_client_max()) {
-    FX_LOGS(FATAL) << "server can't accomodate "
-                      "kMinExtraInputPacketsForClient - not "
-                      "using server - exiting";
-  }
-
   uint32_t input_packet_count;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
   if (!ConfigurePortBufferCollection(false, kInputBufferLifetimeOrdinal,
                                      input_constraints_->buffer_constraints_version_ordinal(),
-                                     packet_count_for_server, packet_count_for_client,
                                      &input_packet_count, &input_buffer_collection_,
                                      &buffer_collection_info)) {
     FX_LOGS(FATAL) << "ConfigurePortBufferCollection failed (input)";
@@ -683,23 +663,11 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     ZX_ASSERT(snapped_constraints->has_buffer_constraints());
     const fuchsia::media::StreamBufferConstraints& buffer_constraints =
         snapped_constraints->buffer_constraints();
-    ZX_ASSERT(buffer_constraints.has_packet_count_for_server_min());
-    ZX_ASSERT(buffer_constraints.has_packet_count_for_server_recommended());
-    // Use min; if decode gets stuck using min, we want to notice that.
-    uint32_t packet_count_for_server = buffer_constraints.packet_count_for_server_min();
-    uint32_t packet_count_for_client =
-        std::max(kMinOutputPacketsForClient, buffer_constraints.packet_count_for_client_min());
-    if (packet_count_for_client > buffer_constraints.packet_count_for_client_max()) {
-      FX_LOGS(FATAL) << "server can't accomodate "
-                        "kMinExtraOutputPacketsForClient - not "
-                        "using server - exiting";
-    }
 
     uint32_t packet_count;
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
     if (!ConfigurePortBufferCollection(true, new_output_buffer_lifetime_ordinal,
                                        buffer_constraints.buffer_constraints_version_ordinal(),
-                                       packet_count_for_server, packet_count_for_client,
                                        &packet_count, &output_buffer_collection_,
                                        &buffer_collection_info)) {
       FX_LOGS(FATAL) << "ConfigurePortBufferCollection failed (output)";
@@ -791,18 +759,12 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 
 bool CodecClient::ConfigurePortBufferCollection(
     bool is_output, uint64_t new_buffer_lifetime_ordinal,
-    uint64_t buffer_constraints_version_ordinal, uint32_t packet_count_for_server,
-    uint32_t packet_count_for_client, uint32_t* out_packet_count,
+    uint64_t buffer_constraints_version_ordinal, uint32_t* out_packet_count,
     fuchsia::sysmem::BufferCollectionPtr* out_buffer_collection,
     fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) {
-  uint32_t packet_count = packet_count_for_server + packet_count_for_client;
-
   fuchsia::media::StreamBufferPartialSettings settings;
   settings.set_buffer_lifetime_ordinal(new_buffer_lifetime_ordinal);
   settings.set_buffer_constraints_version_ordinal(buffer_constraints_version_ordinal);
-  settings.set_single_buffer_mode(false);
-  settings.set_packet_count_for_server(packet_count_for_server);
-  settings.set_packet_count_for_client(packet_count_for_client);
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> codec_sysmem_token;
@@ -829,7 +791,11 @@ bool CodecClient::ConfigurePortBufferCollection(
 
   // TODO(dustingreen): Make this more flexible once we're more flexible on
   // frame_count on output of decoder.
-  constraints.min_buffer_count_for_camping = packet_count_for_client;
+  if (is_output) {
+    constraints.min_buffer_count_for_camping = kMinInputBufferCountForCamping;
+  } else {
+    constraints.min_buffer_count_for_camping = kMinOutputBufferCountForCamping;
+  }
   ZX_DEBUG_ASSERT(constraints.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(constraints.min_buffer_count_for_shared_slack == 0);
 
@@ -898,8 +864,6 @@ bool CodecClient::ConfigurePortBufferCollection(
     return false;
   }
 
-  packet_count = std::max(packet_count, buffer_collection_info.buffer_count);
-
   if (!in_lax_mode_) {
     // We don't expect normal cases to go above kMaxExpectedBufferCount, but if
     // min_output_buffer_count_ forces higher buffer counts, that's fine.
@@ -926,7 +890,7 @@ bool CodecClient::ConfigurePortBufferCollection(
     return false;
   }
 
-  *out_packet_count = packet_count;
+  *out_packet_count = buffer_collection_info.buffer_count;
   *out_buffer_collection = std::move(buffer_collection_ptr);
   *out_buffer_collection_info = std::move(buffer_collection_info);
   return true;

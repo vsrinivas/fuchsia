@@ -7,6 +7,9 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/trace/event.h>
 
+#include "codec_adapter_sw.h"
+#include "lib/media/codec_impl/codec_port.h"
+
 namespace {
 
 // A client using the min shouldn't necessarily expect performance to be
@@ -97,16 +100,6 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count =
-      partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
-
-  // For now this is true - when we plumb more flexible buffer count range this
-  // will change to account for a range.
-  ZX_DEBUG_ASSERT(port != kOutputPort ||
-                  packet_count >= kMinOutputPacketCount && packet_count <= kMaxOutputPacketCount);
-
   // TODO(fxbug.dev/13531): plumb/permit range of buffer count from further down,
   // instead of single number frame_count, and set this to the actual
   // stream-required # of reference frames + # that can concurrently decode.
@@ -119,7 +112,11 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
   // be just the buffers needed for camping and maybe 1 for shared slack.  If
   // the client wants more buffers the client can demand buffers in its own
   // fuchsia::sysmem::BufferCollection::SetConstraints().
-  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
+  if (port == kOutputPort) {
+    result.min_buffer_count_for_camping = kMinOutputBufferCountForCamping;
+  } else {
+    result.min_buffer_count_for_camping = kMinInputBufferCountForCamping;
+  }
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
 

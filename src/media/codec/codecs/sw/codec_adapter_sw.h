@@ -42,9 +42,6 @@ static constexpr uint32_t kMinOutputPacketCount =
 
 static constexpr uint32_t kMinInputBufferCountForCamping = 1;
 
-static constexpr uint32_t kMaxOutputPacketCount =
-    kMaxOutputPacketCountForClient + kMaxOutputPacketCountForServer;
-
 template <typename LocalOutput>
 class CodecAdapterSW : public CodecAdapter {
  public:

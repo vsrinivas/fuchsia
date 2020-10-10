@@ -6,6 +6,7 @@
 
 use crate::{buffer_collection_constraints::*, Result};
 use anyhow::Context as _;
+use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::*;
@@ -162,11 +163,6 @@ impl BufferSetFactory {
             collection_constraints.min_buffer_count_for_camping, 0,
             "min_buffer_count_for_camping should default to 0 before we've set it"
         );
-        // TODO(afoxley) some codecs require buffer count to match packet count (h.264). Remove
-        // this constraint when that is no longer the case.
-        collection_constraints.min_buffer_count =
-            constraints.default_settings.packet_count_for_client
-                + constraints.default_settings.packet_count_for_server;
         collection_constraints.min_buffer_count_for_camping = MIN_BUFFER_COUNT_FOR_CAMPING;
 
         vlog!(3, "Our buffer collection constraints are: {:#?}", collection_constraints);
@@ -185,10 +181,8 @@ impl BufferSetFactory {
                 buffer_constraints_version_ordinal: Some(
                     constraints.buffer_constraints_version_ordinal,
                 ),
-                single_buffer_mode: Some(constraints.default_settings.single_buffer_mode),
-                packet_count_for_server: Some(constraints.default_settings.packet_count_for_server),
-                packet_count_for_client: Some(constraints.default_settings.packet_count_for_client),
                 sysmem_token: Some(codec_token),
+                ..StreamBufferPartialSettings::new_empty()
             },
         ))
     }

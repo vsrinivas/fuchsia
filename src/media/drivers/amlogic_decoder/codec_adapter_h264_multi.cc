@@ -44,6 +44,9 @@ constexpr uint32_t kInputPerPacketBufferBytesMax = 1 * 1024 * 1024;
 // TODO(fxbug.dev/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
 constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
 
+constexpr uint32_t kInputBufferCountForCodecMin = 1;
+constexpr uint32_t kInputBufferCountForCodecMax = 64;
+
 }  // namespace
 
 CodecAdapterH264Multi::CodecAdapterH264Multi(std::mutex& lock,
@@ -441,16 +444,11 @@ CodecAdapterH264Multi::CoreCodecGetBufferCollectionConstraints(
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
-  // The CodecImpl already checked that these are set and that they're
-  // consistent with packet count constraints.
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
-  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-
   if (port == kInputPort) {
     // We don't override CoreCodecBuildNewInputConstraints() for now, so pick these up from what was
     // set by default implementation of CoreCodecBuildNewInputConstraints().
-    min_buffer_count_[kInputPort] = stream_buffer_constraints.packet_count_for_server_min();
-    max_buffer_count_[kInputPort] = stream_buffer_constraints.packet_count_for_server_max();
+    min_buffer_count_[kInputPort] = kInputBufferCountForCodecMin;
+    max_buffer_count_[kInputPort] = kInputBufferCountForCodecMax;
   }
 
   ZX_DEBUG_ASSERT(min_buffer_count_[port] != 0);

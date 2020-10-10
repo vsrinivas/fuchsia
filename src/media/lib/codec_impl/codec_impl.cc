@@ -1448,14 +1448,6 @@ void CodecImpl::SetBufferSettingsCommon(
     FailLocked("partial_settings do not have buffer constraints version ordinal");
     return;
   }
-  if (!partial_settings->has_packet_count_for_server()) {
-    FailLocked("partial_settings missing packet_count_for_server");
-    return;
-  }
-  if (!partial_settings->has_packet_count_for_client()) {
-    FailLocked("partial_settings missing packet_count_for_client");
-    return;
-  }
   if (!partial_settings->has_sysmem_token() || !partial_settings->sysmem_token().is_valid()) {
     FailLocked("partial_settings missing valid sysmem_token");
     return;
@@ -1827,28 +1819,16 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   ZX_DEBUG_ASSERT(partial_settings.sysmem_token().is_valid());
   if (packet_count_needed) {
     if (!partial_settings.has_packet_count_for_server()) {
-      FailLocked("missing packet_count_for_server");
+      FailLocked("missing packet_count_for_server with single_buffer_mode true");
       return false;
     }
     if (!partial_settings.has_packet_count_for_client()) {
-      FailLocked("missing packet_count_for_client");
-      return false;
-    }
-  } else {
-    // If packet count isn't required, it can still be provided, but if it's
-    // provided, it should be provided in two parts like usual.
-    if (partial_settings.has_packet_count_for_server() !=
-        partial_settings.has_packet_count_for_client()) {
-      FailLocked("has_packet_count_for_server != has_packet_count_for_client");
+      FailLocked("missing packet_count_for_client with single_buffer_mode true");
       return false;
     }
   }
   // if needed or provided anyway
   if (partial_settings.has_packet_count_for_server()) {
-    if (partial_settings.packet_count_for_server() < constraints.packet_count_for_server_min()) {
-      FailLocked("packet_count_for_server < packet_count_for_server_min");
-      return false;
-    }
     if (partial_settings.packet_count_for_server() > constraints.packet_count_for_server_max()) {
       FailLocked("packet_count_for_server > packet_count_for_server_max");
       return false;
@@ -1856,10 +1836,6 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   }
   // if needed or provided anyway
   if (partial_settings.has_packet_count_for_client()) {
-    if (partial_settings.packet_count_for_client() < constraints.packet_count_for_client_min()) {
-      FailLocked("packet_count_for_client > packet_count_for_client_max");
-      return false;
-    }
     if (partial_settings.packet_count_for_client() > constraints.packet_count_for_client_max()) {
       FailLocked("packet_count_for_client > packet_count_for_client_max");
       return false;
@@ -2735,30 +2711,11 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
   bool is_single_buffer_mode =
       partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode();
 
-  uint32_t required_min_buffer_count_for_camping;
   if (is_single_buffer_mode) {
-    // This isn't especially meaningful for is_single_buffer_mode.
-    required_min_buffer_count_for_camping =
-        static_cast<uint32_t>(stream_buffer_constraints.packet_count_for_server_min() != 0);
-  } else {
-    required_min_buffer_count_for_camping = stream_buffer_constraints.packet_count_for_server_min();
-  }
-  if (buffer_collection_constraints->min_buffer_count_for_camping <
-      required_min_buffer_count_for_camping) {
-    FailLocked(
-        "Core codec set min_buffer_count_for_camping too low - "
-        "min_buffer_count_for_camping: %lu "
-        "required_min_buffer_count_for_camping: %lu",
-        buffer_collection_constraints->min_buffer_count_for_camping,
-        required_min_buffer_count_for_camping);
-    return false;
-  }
-
-  if (is_single_buffer_mode) {
-    if (buffer_collection_constraints->min_buffer_count_for_camping > 1) {
+    if (buffer_collection_constraints->min_buffer_count_for_camping != 0) {
       FailLocked(
-          "Core codec set min_buffer_count_for_camping too high for "
-          "single_buffer_mode - min_buffer_count_for_camping: %lu",
+          "Core codec set min_buffer_count_for_camping non-zero when single_buffer_mode true -- "
+          "min_buffer_count_for_camping: %lu ",
           buffer_collection_constraints->min_buffer_count_for_camping);
       return false;
     }
@@ -2774,6 +2731,11 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     }
     if (buffer_collection_constraints->max_buffer_count != 1) {
       FailLocked("Core codec must specify max_buffer_count 1 when single_buffer_mode");
+      return false;
+    }
+  } else {
+    if (buffer_collection_constraints->min_buffer_count_for_camping < 1) {
+      FailLocked("Core codec set min_buffer_count_for_camping to 0 when !single_buffer_mode.");
       return false;
     }
   }
@@ -3566,9 +3528,14 @@ uint32_t CodecImpl::PortSettings::packet_count() {
   // Asking before we have buffer_collection_info_ would potentially get the
   // wrong answer.
   ZX_DEBUG_ASSERT(buffer_collection_info_);
-  return std::max(
-      partial_settings_->packet_count_for_server() + partial_settings_->packet_count_for_client(),
-      buffer_collection_info_->buffer_count);
+  uint32_t packet_count_for_server = partial_settings_->has_packet_count_for_server()
+                                         ? partial_settings_->packet_count_for_server()
+                                         : 0;
+  uint32_t packet_count_for_client = partial_settings_->has_packet_count_for_client()
+                                         ? partial_settings_->packet_count_for_client()
+                                         : 0;
+  return std::max(packet_count_for_server + packet_count_for_client,
+                  buffer_collection_info_->buffer_count);
 }
 
 uint32_t CodecImpl::PortSettings::buffer_count() {
