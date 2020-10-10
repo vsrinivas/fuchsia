@@ -219,8 +219,13 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.resp_timeout()) {
+    // A timeout is acceptable for SD_SEND_IF_COND but not for MMC_SEND_EXT_CSD.
+    const bool is_sd_cmd8 =
+        req->cmd_idx == SD_SEND_IF_COND && req->cmd_flags == SD_SEND_IF_COND_FLAGS;
+    static_assert(SD_SEND_IF_COND == MMC_SEND_EXT_CSD &&
+                  (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
-    if (req->probe_tuning_cmd) {
+    if (req->probe_tuning_cmd || is_sd_cmd8) {
       AML_SDMMC_TRACE("No response received before time limit, cmd%d, status=0x%x", req->cmd_idx,
                       status_irq.reg_value());
     } else {
