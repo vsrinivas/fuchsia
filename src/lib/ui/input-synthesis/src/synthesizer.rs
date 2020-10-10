@@ -388,331 +388,358 @@ pub(crate) fn multi_finger_swipe(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        anyhow::Context,
-        fidl_fuchsia_ui_input::{
-            InputDeviceRequest, InputDeviceRequestStream, InputReport, KeyboardReport,
-            MediaButtonsReport, TouchscreenReport,
-        },
-        fuchsia_async as fasync,
-        futures::stream::StreamExt,
-    };
+    use {super::*, fuchsia_async as fasync};
 
-    // Like `InputReport`, but with the `Box`-ed items inlined.
-    struct InlineInputReport {
-        keyboard: Option<KeyboardReport>,
-        media_buttons: Option<MediaButtonsReport>,
-        touchscreen: Option<TouchscreenReport>,
-    }
+    mod event_synthesis {
+        use {
+            super::*,
+            anyhow::Context,
+            fidl_fuchsia_ui_input::{
+                InputDeviceRequest, InputDeviceRequestStream, InputReport, KeyboardReport,
+                MediaButtonsReport, TouchscreenReport,
+            },
+            futures::stream::StreamExt,
+        };
 
-    impl InlineInputReport {
-        fn new(input_report: InputReport) -> Self {
-            Self {
-                keyboard: input_report.keyboard.map(|boxed| *boxed),
-                media_buttons: input_report.media_buttons.map(|boxed| *boxed),
-                touchscreen: input_report.touchscreen.map(|boxed| *boxed),
+        // Like `InputReport`, but with the `Box`-ed items inlined.
+        struct InlineInputReport {
+            keyboard: Option<KeyboardReport>,
+            media_buttons: Option<MediaButtonsReport>,
+            touchscreen: Option<TouchscreenReport>,
+        }
+
+        impl InlineInputReport {
+            fn new(input_report: InputReport) -> Self {
+                Self {
+                    keyboard: input_report.keyboard.map(|boxed| *boxed),
+                    media_buttons: input_report.media_buttons.map(|boxed| *boxed),
+                    touchscreen: input_report.touchscreen.map(|boxed| *boxed),
+                }
             }
         }
-    }
-    struct TestConsumer {
-        event_stream: Option<InputDeviceRequestStream>,
-    }
+        struct TestConsumer {
+            event_stream: Option<InputDeviceRequestStream>,
+        }
 
-    impl ServerConsumer for TestConsumer {
-        fn consume(
-            &mut self,
-            _: &mut DeviceDescriptor,
-            server: ServerEnd<InputDeviceMarker>,
-        ) -> Result<(), Error> {
-            self.event_stream = Some(server.into_stream().context("converting server to stream")?);
+        impl ServerConsumer for TestConsumer {
+            fn consume(
+                &mut self,
+                _: &mut DeviceDescriptor,
+                server: ServerEnd<InputDeviceMarker>,
+            ) -> Result<(), Error> {
+                self.event_stream =
+                    Some(server.into_stream().context("converting server to stream")?);
+                Ok(())
+            }
+        }
+
+        impl TestConsumer {
+            fn new() -> Self {
+                Self { event_stream: None }
+            }
+
+            async fn get_events(self: Self) -> Vec<Result<InlineInputReport, String>> {
+                match self.event_stream {
+                    Some(event_stream) => {
+                        event_stream
+                            .map(|fidl_result| match fidl_result {
+                                Ok(InputDeviceRequest::DispatchReport { report, .. }) => {
+                                    Ok(InlineInputReport::new(report))
+                                }
+                                Err(fidl_error) => Err(format!("FIDL error: {}", fidl_error)),
+                            })
+                            .collect()
+                            .await
+                    }
+                    None => {
+                        vec![Err(format!("called get_events() on Consumer with no `event_stream`"))]
+                    }
+                }
+            }
+        }
+
+        /// Transforms an `IntoIterator<Item = Result<InlineInputReport, _>>` into a
+        /// `Vec<Result</* $field-specific-type */, _>>`, by projecting `$field` out of the
+        /// `InlineInputReport`s.
+        macro_rules! project {
+            ( $events:expr, $field:ident ) => {
+                $events
+                    .into_iter()
+                    .map(|result| result.map(|report| report.$field))
+                    .collect::<Vec<_>>()
+            };
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn media_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            media_button_event(true, false, true, false, true, &mut fake_event_listener)?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, media_buttons),
+                [Ok(Some(MediaButtonsReport {
+                    volume_up: true,
+                    volume_down: false,
+                    mic_mute: true,
+                    reset: false,
+                    pause: true,
+                }))]
+            );
             Ok(())
         }
-    }
 
-    impl TestConsumer {
-        fn new() -> Self {
-            Self { event_stream: None }
+        #[fasync::run_singlethreaded(test)]
+        async fn keyboard_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            keyboard_event(40, Duration::from_millis(0), &mut fake_event_listener)?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, keyboard),
+                [
+                    Ok(Some(KeyboardReport { pressed_keys: vec![40] })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![] }))
+                ]
+            );
+            Ok(())
         }
 
-        async fn get_events(self: Self) -> Vec<Result<InlineInputReport, String>> {
-            match self.event_stream {
-                Some(event_stream) => {
-                    event_stream
-                        .map(|fidl_result| match fidl_result {
-                            Ok(InputDeviceRequest::DispatchReport { report, .. }) => {
-                                Ok(InlineInputReport::new(report))
-                            }
-                            Err(fidl_error) => Err(format!("FIDL error: {}", fidl_error)),
-                        })
-                        .collect()
-                        .await
-                }
-                None => {
-                    vec![Err(format!("called get_events() on Consumer with no `event_stream`"))]
-                }
-            }
+        #[fasync::run_singlethreaded(test)]
+        async fn text_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            text("A".to_string(), Duration::from_millis(0), &mut fake_event_listener)?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, keyboard),
+                [
+                    Ok(Some(KeyboardReport { pressed_keys: vec![225] })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![4, 225] })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![] })),
+                ]
+            );
+            Ok(())
         }
-    }
 
-    /// Transforms an `IntoIterator<Item = Result<InlineInputReport, _>>` into a
-    /// `Vec<Result</* $field-specific-type */, _>>`, by projecting `$field` out of the
-    /// `InlineInputReport`s.
-    macro_rules! project {
-        ( $events:expr, $field:ident ) => {
-            $events.into_iter().map(|result| result.map(|report| report.$field)).collect::<Vec<_>>()
-        };
-    }
+        #[fasync::run_singlethreaded(test)]
+        async fn multi_finger_tap_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            let fingers = vec![
+                Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
+                Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+                Touch { finger_id: 3, x: 40, y: 40, width: 0, height: 0 },
+                Touch { finger_id: 4, x: 60, y: 60, width: 0, height: 0 },
+            ];
+            multi_finger_tap_event(
+                fingers,
+                1000,
+                1000,
+                1,
+                Duration::from_millis(0),
+                &mut fake_event_listener,
+            )?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 40, y: 40, width: 0, height: 0 },
+                            Touch { finger_id: 4, x: 60, y: 60, width: 0, height: 0 },
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn media_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        media_button_event(true, false, true, false, true, &mut fake_event_listener)?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, media_buttons),
-            [Ok(Some(MediaButtonsReport {
-                volume_up: true,
-                volume_down: false,
-                mic_mute: true,
-                reset: false,
-                pause: true,
-            }))]
-        );
-        Ok(())
-    }
+        #[fasync::run_singlethreaded(test)]
+        async fn tap_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            tap_event(10, 10, 1000, 1000, 1, Duration::from_millis(0), &mut fake_event_listener)?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 }]
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn keyboard_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        keyboard_event(40, Duration::from_millis(0), &mut fake_event_listener)?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, keyboard),
-            [
-                Ok(Some(KeyboardReport { pressed_keys: vec![40] })),
-                Ok(Some(KeyboardReport { pressed_keys: vec![] }))
-            ]
-        );
-        Ok(())
-    }
+        #[fasync::run_singlethreaded(test)]
+        async fn swipe_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            swipe(
+                10,
+                10,
+                100,
+                100,
+                1000,
+                1000,
+                2,
+                Duration::from_millis(0),
+                &mut fake_event_listener,
+            )?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 }],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 }],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 }],
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn text_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        text("A".to_string(), Duration::from_millis(0), &mut fake_event_listener)?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, keyboard),
-            [
-                Ok(Some(KeyboardReport { pressed_keys: vec![225] })),
-                Ok(Some(KeyboardReport { pressed_keys: vec![4, 225] })),
-                Ok(Some(KeyboardReport { pressed_keys: vec![] })),
-            ]
-        );
-        Ok(())
-    }
+        #[fasync::run_singlethreaded(test)]
+        async fn swipe_event_report_inverted() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            swipe(
+                100,
+                100,
+                10,
+                10,
+                1000,
+                1000,
+                2,
+                Duration::from_millis(0),
+                &mut fake_event_listener,
+            )?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 }],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 }],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 }],
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn multi_finger_tap_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        let fingers = vec![
-            Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
-            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
-            Touch { finger_id: 3, x: 40, y: 40, width: 0, height: 0 },
-            Touch { finger_id: 4, x: 60, y: 60, width: 0, height: 0 },
-        ];
-        multi_finger_tap_event(
-            fingers,
-            1000,
-            1000,
-            1,
-            Duration::from_millis(0),
-            &mut fake_event_listener,
-        )?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 40, y: 40, width: 0, height: 0 },
-                        Touch { finger_id: 4, x: 60, y: 60, width: 0, height: 0 },
-                    ],
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
-    }
+        #[fasync::run_singlethreaded(test)]
+        async fn multi_finger_swipe_event_report() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            multi_finger_swipe(
+                vec![(10, 10), (20, 20), (30, 30)],
+                vec![(100, 100), (120, 120), (150, 150)],
+                1000,
+                1000,
+                2,
+                Duration::from_millis(0),
+                &mut fake_event_listener,
+            )?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 30, y: 30, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 70, y: 70, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 90, y: 90, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 120, y: 120, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 150, y: 150, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn tap_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        tap_event(10, 10, 1000, 1000, 1, Duration::from_millis(0), &mut fake_event_listener)?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 }]
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
-    }
+        #[fasync::run_singlethreaded(test)]
+        async fn multi_finger_swipe_event_report_inverted() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            multi_finger_swipe(
+                vec![(100, 100), (120, 120), (150, 150)],
+                vec![(10, 10), (20, 20), (30, 30)],
+                1000,
+                1000,
+                2,
+                Duration::from_millis(0),
+                &mut fake_event_listener,
+            )?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 120, y: 120, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 150, y: 150, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 70, y: 70, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 90, y: 90, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 30, y: 30, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn swipe_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        swipe(10, 10, 100, 100, 1000, 1000, 2, Duration::from_millis(0), &mut fake_event_listener)?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 }],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 }],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 }],
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn swipe_event_report_inverted() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        swipe(100, 100, 10, 10, 1000, 1000, 2, Duration::from_millis(0), &mut fake_event_listener)?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 }],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 }],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 }],
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn multi_finger_swipe_event_report() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        multi_finger_swipe(
-            vec![(10, 10), (20, 20), (30, 30)],
-            vec![(100, 100), (120, 120), (150, 150)],
-            1000,
-            1000,
-            2,
-            Duration::from_millis(0),
-            &mut fake_event_listener,
-        )?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 30, y: 30, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 70, y: 70, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 90, y: 90, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 120, y: 120, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 150, y: 150, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn multi_finger_swipe_event_report_inverted() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        multi_finger_swipe(
-            vec![(100, 100), (120, 120), (150, 150)],
-            vec![(10, 10), (20, 20), (30, 30)],
-            1000,
-            1000,
-            2,
-            Duration::from_millis(0),
-            &mut fake_event_listener,
-        )?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 100, y: 100, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 120, y: 120, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 150, y: 150, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 55, y: 55, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 70, y: 70, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 90, y: 90, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 30, y: 30, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn multi_finger_swipe_event_zero_move_events() -> Result<(), Error> {
-        let mut fake_event_listener = TestConsumer::new();
-        multi_finger_swipe(
-            vec![(10, 10), (20, 20), (30, 30)],
-            vec![(100, 100), (120, 120), (150, 150)],
-            1000,
-            1000,
-            0,
-            Duration::from_millis(0),
-            &mut fake_event_listener,
-        )?;
-        assert_eq!(
-            project!(fake_event_listener.get_events().await, touchscreen),
-            [
-                Ok(Some(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 },
-                        Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
-                        Touch { finger_id: 3, x: 30, y: 30, width: 0, height: 0 }
-                    ],
-                })),
-                Ok(Some(TouchscreenReport { touches: vec![] })),
-            ]
-        );
-        Ok(())
+        #[fasync::run_singlethreaded(test)]
+        async fn multi_finger_swipe_event_zero_move_events() -> Result<(), Error> {
+            let mut fake_event_listener = TestConsumer::new();
+            multi_finger_swipe(
+                vec![(10, 10), (20, 20), (30, 30)],
+                vec![(100, 100), (120, 120), (150, 150)],
+                1000,
+                1000,
+                0,
+                Duration::from_millis(0),
+                &mut fake_event_listener,
+            )?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, touchscreen),
+                [
+                    Ok(Some(TouchscreenReport {
+                        touches: vec![
+                            Touch { finger_id: 1, x: 10, y: 10, width: 0, height: 0 },
+                            Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
+                            Touch { finger_id: 3, x: 30, y: 30, width: 0, height: 0 }
+                        ],
+                    })),
+                    Ok(Some(TouchscreenReport { touches: vec![] })),
+                ]
+            );
+            Ok(())
+        }
     }
 }
