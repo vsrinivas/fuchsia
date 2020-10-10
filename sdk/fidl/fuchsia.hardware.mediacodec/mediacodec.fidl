@@ -4,12 +4,18 @@
 
 library fuchsia.hardware.mediacodec;
 
+using fuchsia.io;
 using zx;
 
 [ForDeprecatedCBindings]
 protocol Device {
     /// This method connects the caller with a fuchsia.mediacodec.CodecFactory.
-    /// Ideally, we wouldn't have the intermediary, but it is necessary with the current
-    /// DDK APIs.
     GetCodecFactory(zx.handle:CHANNEL request);
+
+    /// This method hands a service directory to the codec.  Currently the only service available
+    /// via this service directory is fuchsia.cobalt.LoggerFactory.  Any services available via this
+    /// service directory are services we'd prefer to get via the DDK.  A device can simply close
+    /// this channel if the device doesn't need to use any services available via this service
+    /// directory.
+    SetAuxServiceDirectory(fuchsia.io.Directory service_directory);
 };
