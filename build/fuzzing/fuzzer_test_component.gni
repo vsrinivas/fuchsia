@@ -1,0 +1,77 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/generated_v1_manifest.gni")
+import("//src/sys/build/fuchsia_component.gni")
+
+# Defines a Fuchsia component for a fuzzer test.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# This template extends `fuchsia_component` by automatically generating a fuzzer test manifest to
+# act as the component manifest. These tests are generated for each accompanying fuzzer. Unlike the
+# fuzzers, they loop over only a small, fixed set of inputs.
+#
+# See also the closely related `fuzzer_component` template in //build/fuzzing/fuzzer_component.gni.
+#
+# Parameters:
+#
+#   fuzzer (required)
+#     [string] The name of the fuzzer being tested.
+#
+#   label (required)
+#     [label] The GN label of the associated fuzzer.
+#
+#   deps (required)
+#     [list of labels] Same meaning as for `fuchsia_component`, but required. This typically
+#       includes the fuzzer test binary. It should also include the fuzzer corpus, when present.
+#
+#   corpus (optional)
+#     [label] If present, includes program arguments in the component manifest
+#       to use the corpus when testing.
+#
+template("fuzzer_test_component") {
+  assert(defined(invoker.fuzzer),
+         "missing 'fuzzer' for fuzzer_test_component($target_name)")
+  assert(defined(invoker.label),
+         "missing 'label' for fuzzer_test_component($target_name)")
+  assert(defined(invoker.deps),
+         "missing 'deps' for fuzzer_test_component($target_name)")
+  fuzzer_test = "${invoker.fuzzer}_test"
+
+  manifest_target = "${target_name}_generated_v1_manifest"
+  manifest_output = "$target_gen_dir/${fuzzer_test}.cmx"
+  generated_v1_manifest(manifest_target) {
+    manifest = manifest_output
+    binary = "test/" + fuzzer_test
+    args = [ "-q" ]
+    if (defined(invoker.corpus)) {
+      corpus_path = get_label_info(invoker.corpus, "dir")
+      corpus_name = get_label_info(invoker.corpus, "name")
+      if (corpus_name != get_path_info(corpus_path, "file")) {
+        corpus_path += "/" + corpus_name
+      }
+      args += [ "pkg/data/" + rebase_path(corpus_path, "//") ]
+    }
+    args += [ "data/corpus" ]
+    services = [ "fuchsia.logger.LogSink" ]
+    features = [ "isolated-persistent-storage" ]
+    metadata = {
+      fuzz_spec = [
+        {
+          label = invoker.label
+          fuzzer_test = fuzzer_test
+          test_manifest = get_path_info(manifest_output, "file")
+        },
+      ]
+    }
+  }
+
+  fuchsia_component(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    component_name = fuzzer_test
+    testonly = true
+    deps = invoker.deps + [ ":$manifest_target" ]
+    manifest = manifest_output
+  }
+}

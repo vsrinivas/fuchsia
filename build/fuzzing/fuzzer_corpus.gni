@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Declares a fuzzer corpus.
+#
+# This template provides the fuzzer-specific metadata for a fuzzer corpus.
+#
+# This template is NOT typically used directly. Instead, use templates like `fuzzer` from
+# //build/fuzzing/fuzzer.gni
+#
+# Parameters:
+#
+#   label (required)
+#     [label] The GN label of the associated fuzzer.
+#
+#   corpus (required)
+#     [label] The GN label of the corpus. This is typically a `resource`. Use `fx fuzz update -h` to
+#       get more information on generating such targets.
+#
+template("fuzzer_corpus") {
+  assert(defined(invoker.label),
+         "missing 'label' for fuzzer_corpus($target_name)")
+  assert(defined(invoker.corpus),
+         "missing 'corpus' for fuzzer_corpus($target_name)")
+  group(target_name) {
+    deps = [ invoker.corpus ]
+    metadata = {
+      fuzz_spec = [
+        {
+          label = invoker.label
+          corpus = get_label_info(invoker.corpus, "label_no_toolchain")
+        },
+      ]
+    }
+  }
+}

@@ -1,0 +1,80 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/generated_v1_manifest.gni")
+import("//src/sys/build/fuchsia_component.gni")
+
+# Defines a Fuchsia component for a fuzzer.
+# See: https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# This template extends `fuchsia_component` by automatically generating a fuzzer manifest to act as
+# the component manifest. A fuzzer is a binary that generates and tests inputs in a (possibly open-
+# ended) loop, looking for evidence of defects (e.g. crashes, memory corruptions, hangs, etc.).
+#
+# This template is NOT typically used directly. Instead, use templates like `fuzzer` from
+# //build/fuzzing/fuzzer.gni
+#
+# Parameters:
+#
+#   fuzzer (required)
+#     [string] The name of the fuzzer.
+#
+#   label (required)
+#     [label] The GN label of the associated fuzzer.
+#
+#   deps (required)
+#     [list of labels] Same meaning as for `fuchsia_component`, but required. This typically
+#       includes the fuzzer binary. It may also include the fuzzer corpus and dictionary, when
+#       present.
+#
+#   options (optional)
+#     [list of strings] Key-value pairs representing libFuzzer options, e.g. "foo=bar". See
+#       See https://llvm.org/docs/LibFuzzer.html#options.
+#
+template("fuzzer_component") {
+  assert(defined(invoker.fuzzer),
+         "missing 'fuzzer' for fuzzer_component($target_name)")
+  assert(defined(invoker.label),
+         "missing 'label' for fuzzer_component($target_name)")
+  assert(defined(invoker.deps),
+         "missing 'deps' for fuzzer_component($target_name)")
+
+  manifest_target = "${target_name}_generated_v1_manifest"
+  manifest_output = "$target_gen_dir/${invoker.fuzzer}.cmx"
+  generated_v1_manifest(manifest_target) {
+    manifest = manifest_output
+    binary = "bin/" + invoker.fuzzer
+    if (defined(invoker.options)) {
+      args = []
+      foreach(option, invoker.options) {
+        args += [ "-$option" ]
+      }
+    }
+    services = [
+      "fuchsia.logger.LogSink",
+      "fuchsia.process.Launcher",
+    ]
+    features = [
+      "isolated-persistent-storage",
+      "isolated-temp",
+    ]
+    metadata = {
+      fuzz_spec = [
+        {
+          label = invoker.label
+          fuzzer = invoker.fuzzer
+          manifest = get_path_info(manifest_output, "file")
+        },
+      ]
+    }
+  }
+
+  fuchsia_component(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    component_name = invoker.fuzzer
+    testonly = true
+    deps = invoker.deps + [ ":$manifest_target" ]
+    manifest = manifest_output
+  }
+}

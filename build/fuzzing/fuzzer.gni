@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer_component.gni")
+import("//build/fuzzing/fuzzer_corpus.gni")
+import("//build/fuzzing/fuzzer_dictionary.gni")
+import("//build/fuzzing/fuzzer_test_component.gni")
 import("//build/test.gni")
 
 # TODO(fxbug.dev/60168): Consumers should import fuzzer_package explicitly. Remove once all are
@@ -22,19 +26,13 @@ import("//build/fuzzing/fuzzer_package.gni")
 #
 fuzzer_configs = [ "//build/config/fuzzer" ]
 
-# Instructs the linker to link against libFuzzer, see config documentation for details.
-fuzzer_engine_configs = [ "//build/config/fuzzer:engine" ]
-
 # Defines a fuzzer binary.
 #
 # The fuzzer template is used to create components containing binaries which leverage LLVM's
-# libFuzzer to perform fuzz testing.
+# libFuzzer to perform fuzz testing. It also creates a unit test that exercises the fuzzer code
+# without libFuzzer, simply trying each corpus element without mutation.
 #
 # Parameters are precisely those of an `executable`, along with:
-#
-#   cmx (optional)
-#     [file] If specified, a file containing a component manifest to start from when generating
-#       manifests for fuzzers.
 #
 #   corpus (optional)
 #     [path] If specified, a directory containing elements of a seed corpus. These should be a
@@ -46,225 +44,126 @@ fuzzer_engine_configs = [ "//build/config/fuzzer:engine" ]
 #     [file] If specified, a file containing quoted inputs, one per line, that the fuzzer will use
 #       to generate new mutations.
 #
-#
 #   options (optional)
 #     [list of strings] Each option is of the form "key=value" and indicates command line options
 #       that the fuzzer should be invoked with. Valid keys are libFuzzer options
 #       (https://llvm.org/docs/LibFuzzer.html#options).
 #
 template("fuzzer") {
-  _label = get_label_info(":$target_name", "label_no_toolchain")
-  base_output_name = target_name
+  # Dummy target to catch incorrect dependencies. If fuzzer_package is not used, the executable
+  # won't ever be built with proper instrumentation.
+  #
+  # If a GN error led you here, you probably have a group with a dep on a `fuzzer("...")` target.
+  # You should include those deps in a `fuzzer_package` instead, and depend on that. This will
+  # ensure things are built correctly when a supported fuzzing variant toolchain is selected.
+  #
+  # See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/build-a-fuzzer for more info.
+  group(target_name) {
+    visibility = []
+  }
+
+  # The component target names MUST match the deps of the package created by the `fuzzer_package`
+  # GN template in //build/fuzzing/fuzzer_package.gni. That template dispatches these targets to the
+  # correct toolchain variant, and references them by constructing these names.
+  component_target = "${target_name}_component"
+  component_deps = []
+  test_component_target = "${target_name}_test_component"
+  test_component_deps = []
+
   if (defined(invoker.output_name)) {
-    base_output_name = invoker.output_name
-  }
-
-  # Generate the component binary
-  executable(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "cmx",
-                             "corpus",
-                             "dictionary",
-                             "options",
-                             "visibility",
-                           ])
-
-    # Explicitly forward visibility for nested scopes.
-    forward_variables_from(invoker, [ "visibility" ])
-    testonly = true
-    variant_selector_target_type = "fuzzed_executable"
-
-    # TODO(fxbug.dev/27011): This shouldn't be necessary, but libzircon isn't currently
-    # linked into libFuzzer on Fuchsia.
-    if (is_fuchsia) {
-      if (configs + fuzzer_engine_configs - fuzzer_engine_configs != configs) {
-        if (!defined(deps)) {
-          deps = []
-        }
-        deps += [ "//src/zircon/lib/zircon" ]
-      }
-    }
-  }
-
-  # Generate the fuzzer component manifest
-  cmx_target = "${target_name}_cmx"
-  cmx_output = "$target_gen_dir/${base_output_name}.cmx"
-  generated_file(cmx_target) {
-    if (defined(invoker.cmx)) {
-      cmx = read_file(invoker.cmx, "json")
-    } else {
-      cmx = {
-        program = {
-        }
-        sandbox = {
-        }
-      }
-    }
-    contents = {
-      program = {
-        forward_variables_from(cmx.program, "*")
-        binary = "bin/$base_output_name"
-      }
-      sandbox = {
-        services = []
-        features = []
-        forward_variables_from(cmx.sandbox, "*")
-        services += [
-          "fuchsia.logger.LogSink",
-          "fuchsia.process.Launcher",
-        ]
-        features += [
-          "isolated-persistent-storage",
-          "isolated-temp",
-        ]
-      }
-      forward_variables_from(cmx,
-                             [
-                               "dev",
-                               "runner",
-                               "facets",
-                             ])
-    }
-    outputs = [ cmx_output ]
-    output_conversion = "json"
-    metadata = {
-      fuzz_spec = [
-        {
-          label = _label
-          fuzzer = base_output_name
-          manifest = get_path_info(cmx_output, "file")
-        },
-      ]
-    }
-  }
-
-  # Generate seed corpus. See https://llvm.org/docs/LibFuzzer.html#corpus
-  # TODO(fxbug.dev/58940): Move away from invoking add_corpus.py and towards using
-  # in-tree corpus manifests.
-  corpus_target = "${target_name}_corpus"
-  corpus_output = "${target_gen_dir}/${base_output_name}/corpus.manifest"
-  action(corpus_target) {
-    script = "//build/fuzzing/add_corpus.py"
-    depfile = "$corpus_output.d"
-    outputs = [ corpus_output ]
-    args = [
-      "--fuzzer",
-      base_output_name,
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
-      "--manifest",
-      rebase_path(corpus_output, root_build_dir),
-    ]
-    if (defined(invoker.corpus)) {
-      args += [
-        "--corpus",
-        rebase_path(invoker.corpus, root_build_dir),
-      ]
-      metadata = {
-        fuzz_spec = [
-          {
-            label = _label
-            corpus = get_label_info(invoker.corpus, "label_no_toolchain")
-          },
-        ]
-      }
-    }
-  }
-
-  # Generate dictionary. See https://llvm.org/docs/LibFuzzer.html#dictionaries
-  dictionary_target = "${target_name}_dictionary"
-  dictionary_output = "${target_gen_dir}/${base_output_name}/dictionary"
-  if (defined(invoker.dictionary)) {
-    copy(dictionary_target) {
-      sources = [ invoker.dictionary ]
-      outputs = [ dictionary_output ]
-    }
+    fuzzer_name = invoker.output_name
   } else {
-    generated_file(dictionary_target) {
-      contents = [ "# empty dictionary" ]
-      outputs = [ dictionary_output ]
+    fuzzer_name = target_name
+  }
+  fuzzer_label = get_label_info(":$target_name", "label_no_toolchain")
+
+  # Explicitly forward visibility for nested scopes. Visibility is forwarded for both components and
+  # binaries, as the latter may be copied directly as host tools.
+  exclude_from_mass_forwards = [
+    "corpus",
+    "dictionary",
+    "options",
+    "output_name",
+    "target_name",
+    "visibility",
+  ]
+
+  # Generate fuzzer resources with metadata.
+  if (defined(invoker.corpus)) {
+    corpus_target = "${target_name}_corpus"
+    fuzzer_corpus(corpus_target) {
+      label = fuzzer_label
+      corpus = invoker.corpus
     }
+    component_deps += [ ":$corpus_target" ]
+    test_component_deps += [ ":$corpus_target" ]
   }
 
-  # Generate options. See https://llvm.org/docs/LibFuzzer.html#options
-  options_target = "${target_name}_options"
-  options_output = "${target_gen_dir}/${base_output_name}/options"
-  generated_file(options_target) {
-    contents = []
-    if (defined(invoker.options)) {
-      contents = invoker.options
+  if (defined(invoker.dictionary)) {
+    dictionary_target = "${target_name}_dictionary"
+    fuzzer_dictionary(dictionary_target) {
+      label = fuzzer_label
+      fuzzer = fuzzer_name
+      dictionary = invoker.dictionary
     }
-    outputs = [ options_output ]
+    component_deps += [ ":$dictionary_target" ]
   }
 
-  # Generate a unit test for the fuzzer.
-  test_target = "${target_name}_test"
-  test_output = "${base_output_name}_test"
-  test(test_target) {
-    output_name = test_output
-    sources = []
+  # Generate the fuzzer binary and component.
+  executable_target = "${target_name}_executable"
+  executable_output = fuzzer_name
+  executable(executable_target) {
     deps = []
+    forward_variables_from(invoker, "*", exclude_from_mass_forwards)
+    forward_variables_from(invoker, [ "visibility" ])
+    variant_selector_target_type = "fuzzed_executable"
+    output_name = executable_output
+    testonly = true
+
+    # TODO(fxbug.dev/27011): This shouldn't be necessary, but libzircon isn't currently linked into
+    # libFuzzer on Fuchsia.
+    if (is_fuchsia) {
+      deps += [ "//src/zircon/lib/zircon" ]
+    }
+  }
+  component_deps += [ ":$executable_target" ]
+
+  fuzzer_component(component_target) {
     forward_variables_from(invoker,
-                           "*",
                            [
-                             "cmx",
-                             "corpus",
-                             "dictionary",
                              "options",
-                             "output_name",
-                             "target_name",
                              "visibility",
                            ])
-
-    # Explicitly forward visibility for nested scopes.
-    forward_variables_from(invoker, [ "visibility" ])
-    configs -= fuzzer_engine_configs
-    deps += [
-      ":$corpus_target",
-      "//sdk/lib/syslog/cpp:backend_legacy",
-      "//src/lib/fuzzing/cpp:fuzzer_test",
-    ]
+    fuzzer = fuzzer_name
+    label = fuzzer_label
+    deps = component_deps
   }
 
-  # Generate the fuzzer test component manifest
-  test_cmx_target = "${test_target}_cmx"
-  test_cmx_output = "$target_gen_dir/${test_output}.cmx"
-  generated_file(test_cmx_target) {
-    contents = {
-      program = {
-        binary = "test/$test_output"
-        args = [
-          # Suppress warnings about missing directories
-          "-q",
-
-          # Seed corpus
-          "pkg/data/${base_output_name}/corpus",
-
-          # Live corpus
-          "data/${base_output_name}/corpus",
-        ]
-      }
-      sandbox = {
-        services = [ "fuchsia.logger.LogSink" ]
-      }
-    }
-    outputs = [ test_cmx_output ]
-    output_conversion = "json"
+  # Generate the fuzzer test binary and component.
+  test_executable_target = "${target_name}_test_executable"
+  test_executable_output = "${fuzzer_name}_test"
+  test(test_executable_target) {
     deps = []
-    metadata = {
-      fuzz_spec = [
-        {
-          label = _label
-          fuzzer_test = test_output
-          test_manifest = get_path_info(test_cmx_output, "file")
-        },
-      ]
-    }
+    forward_variables_from(invoker, "*", exclude_from_mass_forwards)
+    forward_variables_from(invoker, [ "visibility" ])
+    output_name = test_executable_output
+    configs -= [ "//build/config/fuzzer:engine" ]
+    deps += [ "//src/lib/fuzzing/cpp:fuzzer_test" ]
+  }
+  test_component_deps += [ ":$test_executable_target" ]
+
+  fuzzer_test_component(test_component_target) {
+    forward_variables_from(invoker,
+                           [
+                             "corpus",
+                             "visibility",
+                           ])
+    fuzzer = fuzzer_name
+    label = fuzzer_label
+    deps = test_component_deps
   }
 }
 
 set_defaults("fuzzer") {
-  configs = default_executable_configs + fuzzer_engine_configs
+  configs = default_executable_configs + [ "//build/config/fuzzer:engine" ]
 }

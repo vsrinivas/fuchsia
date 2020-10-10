@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
+import("//build/testing/test_spec.gni")
+import("//src/sys/build/fuchsia_package.gni")
 
 # TODO(fxbug.dev/48118): Add LSan
 _cpp_sanitizers = [
@@ -19,25 +20,20 @@ _rust_sanitizers = [ "asan" ]
 
 # Defines a package of fuzzers
 #
-# The `fuzzers_package` template is used to bundle several fuzzers and their associated data into a
-# single Fuchsia package. See //examples/fuzzer/BUILD.gn for examples.
+# The `fuzzer_package` template is used to bundle several fuzzers and their associated data into a
+# single Fuchsia package. See //examples/fuzzers/BUILD.gn for examples.
 #
 # Parameters
-#   fuzz_host (optional)
-#     [boolean] Indicates whether to also build fuzzer binaries on host. Defaults to false.
 #
-#   host_only (optional)
-#     [boolean] Indicates whether to skip the Fuchsia fuzzers package. Implies `fuzz_host`.
-#     Defaults to false.
+#   package_name (optional)
+#     [string] The name of the package. Defaults to the target name.
 #
-#   fuzzers (optional)
 #   cpp_fuzzers (optional)
 #   go_fuzzers (optional)
 #   rust_fuzzers (optional)
 #     [list] A list of fuzzers for targets in the indicated language. Each list is asscoiated with
 #       the corresponding list of sanitizers, e.g. each label in `cpp_fuzzers` is built as a fuzzer
 #       when the toolchain variant selected for that label matches an element of `_cpp_sanitizers`.
-#       `fuzzers` (with no language prefix) imples C++, and is folded into `cpp_fuzzers`.
 #
 #       Each element of `fuzzers` is either a label or a scope. Label elements act as "shortcuts"
 #       that use default values for each field in a scope element. The scope elements can include
@@ -55,43 +51,32 @@ _rust_sanitizers = [ "asan" ]
 #           [list of strings] Overrides the default, per-language sanitizers. This should be omitted
 #           unless necessary.
 #
-#       fuzz_host (optional)
-#         [boolean] Overrides the value of `fuzz_host` in the outer scope.
+#         fuzz_host (optional)
+#           [boolean] Indicates whether to also build fuzzer binaries on host. Defaults to false.
 #
-#       host_only (optional)
-#         [boolean] Overrides the value of `host_only` in the outer scope.
+#         host_only (optional)
+#           [boolean] Indicates whether to omit this fuzzer from the Fuchsia fuzzers package.
+#             Implies `fuzz_host`. Defaults to false.
 #
-#   fuzzers_manifest (optional)
-#     [scope] Specifies how to read fuzzer names from a manifest file. This parameter is useful for
-#     including fuzzers from another build, e.g. pre-unification Zircon fuzzers. The scope has two
-#     fields:
+#   visibility (optional)
+#     [list] Usual meaning.
 #
-#        target (required)
-#           [label] The GN target that produces the manifest.
+# TODO(fxbug.dev/60168): Deprecated parameters. These will be removed when consumers have updated.
 #
-#        output (required)
-#           [path] The path to the generated manifest file.
+#   fuzzers (optional)
+#     [list] Same as `cpp_fuzzers`.
 #
-#   meta (optional)
-#   binaries (optional)
-#   components (optional)
-#   tests (optional)
-#   drivers (optional)
-#   loadable_modules (optional)
-#   resources (optional)
-#   extra (optional)
-#     Same meanings as in //build/package.gni
+#   fuzz_host (optional)
+#     [boolean] Sets `fuzz_host` for all fuzzer scopes, unless overridden.
 #
-#   deps (optional)
-#   public_deps (optional)
-#   data_deps (optional)
-#     Usual GN meanings.
-template("fuzzers_package") {
+#   host_only (optional)
+#     [boolean] Sets `host_only` for all fuzzer scopes, unless overridden.
+#
+template("fuzzer_package") {
   # This target will create a group with up to three parts: a package of fuzzers and/or fuzzer
   # tests, a set of host fuzzers treated as host tools, and a group of host fuzzer tests. Which
   # fuzzers are included in each part depends of the associated fuzzer profile and current
   # toolchain variant.
-  group_target_name = target_name
   group_deps = []
 
   # Step 1: Gather up lists of fuzzers by language, and associated them with that language's
@@ -99,6 +84,8 @@ template("fuzzers_package") {
   by_language = []
   invoker_fuzz_host = defined(invoker.fuzz_host) && invoker.fuzz_host
   invoker_host_only = defined(invoker.host_only) && invoker.host_only
+
+  # TODO(fxbug.dev/60168): Update consumers to use `cpp_fuzzers`, then drop `fuzzers`.
   if (defined(invoker.fuzzers)) {
     by_language += [
       {
@@ -237,124 +224,48 @@ template("fuzzers_package") {
     }
   }
 
-  # Fuzzers imported via manifest are always selected.
-  forward_variables_from(invoker, [ "fuzzers_manifest" ])
-  prebuilt_fuzzed = []
-  if (defined(fuzzers_manifest)) {
-    prebuilt_fuzzed += read_file(fuzzers_manifest.output, "json")
-  }
-
   # Step 4: Assemble a Fuchsia package of fuzzers and/or unit tests. Many of the package parameter
   # values need to match the '*_target' and '*_output' values in the `fuzzer` template above.
   # Ideally this would use `get_target_outputs` to only need the former, but fuzzers and packages
   # are not required to be defined in the same GN file.
-  if (fuzzed != [] || prebuilt_fuzzed != [] || tested != []) {
-    package_target_name = target_name + "_pkg"
-    package(package_target_name) {
-      package_name = group_target_name
+
+  # TODO(fxbug.dev/60168): Update consumers, then drop this automatic conversion.
+  if (fuzzed != [] || tested != []) {
+    if (defined(invoker.package_name)) {
+      _package_name = string_replace(invoker.package_name, "_", "-")
+    } else {
+      _package_name = string_replace(invoker.target_name, "_", "-")
+    }
+    _package_url = "fuchsia-pkg://fuchsia.com/$_package_name"
+
+    test_deps = []
+    foreach(fuzzer, tested) {
+      test_spec_target = "${target_name}_${fuzzer.name}_test_spec"
+      test_spec(test_spec_target) {
+        target = "${invoker.target_name}"
+        package_url = "$_package_url#meta/${fuzzer.output_name}_test.cmx"
+        if (is_fuchsia) {
+          # Fuzzer tests may produce errors so long as they do not crash.
+          log_settings = {
+            max_severity = "ERROR"
+          }
+        }
+      }
+      test_deps += [ ":$test_spec_target" ]
+    }
+
+    # The component names in this section MUST match those in `fuzzer`.
+    package_target_name = target_name + "-pkg"
+    fuchsia_package(package_target_name) {
       testonly = true
       visibility = [ ":*" ]
-
-      # Allow callers to set most package parameters.
-      meta = []
-      binaries = []
-      tests = []
-      resources = []
-      extra = []
-      deps = []
-      forward_variables_from(invoker,
-                             "*",
-                             [
-                               "fuzzers",
-                               "fuzzers_manifest",
-                               "fuzzer_profiles",
-                               "metadata",
-                               "sanitizers",
-                               "testonly",
-                               "visibility",
-                             ])
-
-      # Add selected fuzzers.
-      foreach(fuzzer, fuzzed) {
-        fuzzer_path = get_label_info(fuzzer.label, "target_gen_dir")
-        meta += [
-          {
-            path = "${fuzzer_path}/${fuzzer.output_name}.cmx"
-            dest = "${fuzzer.output_name}.cmx"
-          },
-        ]
-        binaries += [
-          {
-            name = "${fuzzer.output_name}"
-          },
-        ]
-        extra += [ "${fuzzer_path}/${fuzzer.output_name}/corpus.manifest" ]
-        resources += [
-          {
-            path = "${fuzzer_path}/${fuzzer.output_name}/dictionary"
-            dest = "${fuzzer.output_name}/dictionary"
-          },
-          {
-            path = "${fuzzer_path}/${fuzzer.output_name}/options"
-            dest = "${fuzzer.output_name}/options"
-          },
-        ]
-        deps += [
-          "${fuzzer.label}",
-          "${fuzzer.label}_cmx",
-          "${fuzzer.label}_corpus",
-          "${fuzzer.label}_dictionary",
-          "${fuzzer.label}_options",
-        ]
-      }
-
-      # Add fuzzer tests for those not selected.
+      package_name = _package_name
+      deps = test_deps
       foreach(fuzzer, tested) {
-        fuzzer_path = get_label_info(fuzzer.label, "target_gen_dir")
-        meta += [
-          {
-            path = "${fuzzer_path}/${fuzzer.output_name}_test.cmx"
-            dest = "${fuzzer.output_name}_test.cmx"
-          },
-        ]
-        tests += [
-          {
-            name = "${fuzzer.output_name}_test"
-
-            # Fuzzers may produce errors so long as they do not crash.
-            log_settings = {
-              max_severity = "ERROR"
-            }
-          },
-        ]
-        extra += [ "${fuzzer_path}/${fuzzer.output_name}/corpus.manifest" ]
-        deps += [
-          "${fuzzer.label}_corpus",
-          "${fuzzer.label}_test",
-          "${fuzzer.label}_test_cmx",
-        ]
+        deps += [ "${fuzzer.label}_test_component" ]
       }
-
-      if (defined(fuzzers_manifest)) {
-        deps += [ fuzzers_manifest.target ]
-        extra += get_target_outputs(fuzzers_manifest.target)
-      }
-
-      # This metadata will be used to generate out/default/fuzzers.json
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
-        }
-        fuzz_spec = []
-        foreach(fuzzer, fuzzed + tested + prebuilt_fuzzed) {
-          fuzz_spec += [
-            {
-              label = fuzzer.label
-              package = package_name
-              package_url = "fuchsia-pkg://fuchsia.com/$package_name"
-            },
-          ]
-        }
+      foreach(fuzzer, fuzzed) {
+        deps += [ "${fuzzer.label}_component" ]
       }
     }
     group_deps += [ ":$package_target_name" ]
@@ -371,10 +282,7 @@ template("fuzzers_package") {
       deps = []
       outputs = []
       foreach(fuzzer, host_fuzzed) {
-        deps += [
-          "${fuzzer.label}",
-          "${fuzzer.label}_corpus",
-        ]
+        deps += [ "${fuzzer.label}_executable" ]
         outputs += [ fuzzer.output_name ]
       }
     }
@@ -389,16 +297,40 @@ template("fuzzers_package") {
       visibility = [ ":*" ]
       deps = []
       foreach(fuzzer, host_tested) {
-        deps += [ "${fuzzer.label}_test($host_toolchain)" ]
+        deps += [ "${fuzzer.label}_test_executable($host_toolchain)" ]
       }
     }
     group_deps += [ ":$host_tests_target_name" ]
   }
 
   # Step 7: Include everything in the group
-  group(group_target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
+  group(target_name) {
     testonly = true
+    forward_variables_from(invoker, [ "visibility" ])
     deps = group_deps
+
+    # This metadata will be used to generate out/default/fuzzers.json
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
+      }
+      fuzz_spec = []
+      foreach(fuzzer, fuzzed + tested) {
+        fuzz_spec += [
+          {
+            label = fuzzer.label
+            package = _package_name
+            package_url = _package_url
+          },
+        ]
+      }
+    }
+  }
+}
+
+# TODO(fxbug.dev/60168): Update consumers to use `fuzzer_package` instead.
+template("fuzzers_package") {
+  fuzzer_package(target_name) {
+    forward_variables_from(invoker, "*")
   }
 }

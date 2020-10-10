@@ -1,0 +1,45 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+# Declares a fuzzer dictionary.
+#
+# This template generates a resource and provides the fuzzer-specific metadata for a fuzzer
+# dictionary.
+#
+# This template is NOT typically used directly. Instead, use templates like `fuzzer` from
+# //build/fuzzing/fuzzer.gni
+#
+# Parameters:
+#
+#   fuzzer (required)
+#     [string] The name of the fuzzer.
+#
+#   label (required)
+#     [label] The GN label of the associated fuzzer.
+#
+#   dictionary (required)
+#     [path] The path to the dictionary file.
+#
+template("fuzzer_dictionary") {
+  assert(defined(invoker.label),
+         "missing 'label' for fuzzer_dictionary($target_name)")
+  assert(defined(invoker.dictionary),
+         "missing 'dictionary' for fuzzer_dictionary($target_name)")
+  resource(target_name) {
+    testonly = true
+    visibility = [ ":*" ]
+    sources = [ invoker.dictionary ]
+    outputs = [ "data/${invoker.fuzzer}/dictionary" ]
+    metadata = {
+      fuzz_spec = [
+        {
+          label = invoker.label
+          dictionary = get_path_info(invoker.dictionary, "abspath")
+        },
+      ]
+    }
+  }
+}

@@ -1,0 +1,64 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a component.v1 manifest.
+#
+# This template will cause a v1 component manifest to be generated.
+#
+# This template is typically not used directly. Instead, use templates like `fuzzer`.
+#
+# Parameters:
+#   manifest (required)
+#     [file] This is the filename of the manifest to be generated. It must end in ".cmx" or ".cml".
+#
+#   binary (required)
+#     [string] Output name of the program binary invoked by this component manifest.
+#
+#   args (optional)
+#     [list of strings] Additional program arguments to pass to the program binary.
+#
+#   features (optional)
+#     [list of strings] Sandbox features requested by the component binary. Only valid if `manifest`
+#       ends in ".cmx", i.e. if a component.v1 manifest is requested. See also
+#       https://fuchsia.dev/fuchsia-src/concepts/components/v1/component_manifests#sandbox.
+#
+#   services (optional)
+#     [list of strings] Sandbox services requested by the component binary. Only valid if `manifest`
+#       ends in ".cmx", i.e. if a component.v1 manifest is requested. See also
+#       https://fuchsia.dev/fuchsia-src/concepts/components/v1/component_manifests#sandbox.
+#
+#   metadata (optional)
+#     [scope] Usual meaning.
+#
+template("generated_v1_manifest") {
+  # Validate the parameters.
+  assert(defined(invoker.manifest),
+         "missing 'manifest' for generated_v1_manifest($target_name)")
+  extension = get_path_info(invoker.manifest, "extension")
+  assert(extension == "cmx", "unknown manifest extension: $extension")
+
+  assert(defined(invoker.binary),
+         "binary 'manifest' for generated_v1_manifest($target_name)")
+
+  generated_file(target_name) {
+    visibility = [ ":*" ]
+    testonly = true
+    contents = {
+      program = {
+        binary = invoker.binary
+        forward_variables_from(invoker, [ "args" ])
+      }
+      sandbox = {
+        forward_variables_from(invoker,
+                               [
+                                 "features",
+                                 "services",
+                               ])
+      }
+    }
+    forward_variables_from(invoker, [ "metadata" ])
+    outputs = [ invoker.manifest ]
+    output_conversion = "json"
+  }
+}

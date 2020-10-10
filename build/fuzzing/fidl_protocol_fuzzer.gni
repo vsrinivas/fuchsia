@@ -77,7 +77,7 @@ template("fidl_protocol_fuzzer") {
                              "cflags_objcc",
                              "cflags",
                              "check_includes",
-                             "cmx",
+                             "manifest",
                              "configs",
                              "crate_name",
                              "crate_root",
