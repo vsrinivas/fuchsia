@@ -18,10 +18,10 @@ void arch_spin_lock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   __asm__ volatile(
       "sevl;"
       "1: wfe;"
-      "ldaxr   %[temp], [%[lock]];"
+      "2: ldaxr   %[temp], [%[lock]];"
       "cbnz    %[temp], 1b;"
       "stxr    %w[temp], %[val], [%[lock]];"
-      "cbnz    %w[temp], 1b;"
+      "cbnz    %w[temp], 2b;"
       : [temp] "=&r"(temp)
       : [lock] "r"(&lock->value), [val] "r"(val)
       : "cc", "memory");
