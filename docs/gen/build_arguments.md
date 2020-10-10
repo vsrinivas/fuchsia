@@ -2665,7 +2665,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/BUILD.gn:14
+From //src/chromium/BUILD.gn:15
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
