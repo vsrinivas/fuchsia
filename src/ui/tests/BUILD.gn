@@ -8,6 +8,5 @@ group("tests") {
   deps = [
     "e2e_flutter_tests",
     "e2e_input_tests",
-    "scenic-stress-tests",
   ]
 }
