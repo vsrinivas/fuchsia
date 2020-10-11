@@ -360,7 +360,7 @@ template("gidl_llcpp_benchmarks") {
 }
 
 template("gidl_walker_benchmarks") {
-  gidl_multiple_file_source_set(target_name) {
+  gidl_single_file_source_set(target_name) {
     type = "benchmark"
     language = "walker"
     bindings_suffix = "_llcpp"
