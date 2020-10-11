@@ -11,6 +11,7 @@ zx_library("lockup_detector") {
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
     "$zx/system/ulib/affine",
+    "tests",
   ]
   public_deps = [ "$zx/kernel/lib/ktl:headers" ]
 }

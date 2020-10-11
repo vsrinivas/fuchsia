@@ -10,6 +10,7 @@
 #include <lib/affine/ratio.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <zircon/time.h>
 
@@ -27,7 +28,7 @@ namespace {
 //
 // This value is expressed in units of ticks rather than nanoseconds because it is faster to read
 // the platform timer's tick count than to get current_time().
-zx_ticks_t threshold_ticks = 0;
+RelaxedAtomic<zx_ticks_t> threshold_ticks = 0;
 
 zx_duration_t TicksToDuration(zx_ticks_t ticks) {
   return platform_get_ticks_to_time_ratio().Scale(ticks);
@@ -46,32 +47,41 @@ void lockup_init() {
   constexpr uint64_t kDefaultThresholdMsec = 0;
   const zx_duration_t lockup_duration =
       ZX_MSEC(gCmdline.GetUInt64("kernel.lockup-detector.threshold-ms", kDefaultThresholdMsec));
-  threshold_ticks = DurationToTicks(lockup_duration);
+  const zx_ticks_t ticks = DurationToTicks(lockup_duration);
+  threshold_ticks.store(ticks);
 
   if constexpr (!DEBUG_ASSERT_IMPLEMENTED) {
     dprintf(INFO, "lockup_detector: disabled\n");
     return;
   }
 
-  if (threshold_ticks > 0) {
-    dprintf(INFO, "lockup_detector: threshold is %" PRId64 " ticks (%" PRId64 " ns)\n",
-            threshold_ticks, lockup_duration);
+  if (ticks > 0) {
+    dprintf(INFO, "lockup_detector: threshold is %" PRId64 " ticks (%" PRId64 " ns)\n", ticks,
+            lockup_duration);
   } else {
     dprintf(INFO, "lockup_detector: disabled by threshold\n");
   }
 }
 
-void lockup_begin() {
-  if (threshold_ticks == 0) {
-    // Lockup detector is disabled.
-    return;
-  }
+zx_ticks_t lockup_get_threshold_ticks() { return threshold_ticks.load(); }
 
+void lockup_set_threshold_ticks(zx_ticks_t ticks) { threshold_ticks.store(ticks); }
+
+void lockup_begin() {
   LockupDetectorState* state = &get_local_percpu()->lockup_detector_state;
+
+  // We must maintain the invariant that if a call to `lockup_begin()` increments the depth, the
+  // matching call to `lockup_end()` decrements it.  The most reliable way to accomplish that is to
+  // always increment and always decrement.
   state->critical_section_depth++;
   if (state->critical_section_depth != 1) {
     // We must be in a nested critical section.  Do nothing so that only the outermost critical
     // section is measured.
+    return;
+  }
+
+  if (threshold_ticks.load() == 0) {
+    // Lockup detector is disabled.
     return;
   }
 
@@ -80,22 +90,13 @@ void lockup_begin() {
 }
 
 void lockup_end() {
-  if (threshold_ticks == 0) {
-    // Lockup detector is disabled.
-    return;
-  }
-
   LockupDetectorState* state = &get_local_percpu()->lockup_detector_state;
-  const zx_ticks_t begin_ticks = state->begin_ticks.load(ktl::memory_order_relaxed);
-
-  // Was a begin time recorded?
-  if (begin_ticks == 0) {
-    // Nope, nothing to clear.
-    return;
-  }
 
   // Defer decrementing until the very end of this function to protect against reentrancy hazards
   // from the calls to `KERNEL_OOPS` and `Thread::Current::PrintBacktrace`.
+  //
+  // Every call to `lockup_end()` must decrement the depth because every call to `lockup_begin()` is
+  // guaranteed to increment it.
   auto cleanup = fbl::MakeAutoCall([state]() {
     DEBUG_ASSERT(state->critical_section_depth > 0);
     state->critical_section_depth--;
@@ -107,11 +108,27 @@ void lockup_end() {
     return;
   }
 
-  // Check and clear.  Was the threshold exceeded?
+  const zx_ticks_t begin_ticks = state->begin_ticks.load(ktl::memory_order_relaxed);
+  // Was a begin time recorded?
+  if (begin_ticks == 0) {
+    // Nope, nothing to clear.
+    return;
+  }
+
+  // Clear it.
+  state->begin_ticks.store(0, ktl::memory_order_relaxed);
+
+  // Do we have a threshold?
+  if (threshold_ticks.load() == 0) {
+    // Nope.  Lockup detector is disabled.
+    return;
+  }
+
+  // Was the threshold exceeded?
   const zx_ticks_t now = current_ticks();
   const zx_ticks_t ticks = (now - begin_ticks);
-  state->begin_ticks.store(0, ktl::memory_order_relaxed);
-  if (ticks < threshold_ticks) {
+  if (ticks < threshold_ticks.load()) {
+    // Nope.
     return;
   }
 
@@ -126,9 +143,9 @@ void lockup_end() {
 namespace {
 
 void lockup_status() {
-  printf("threshold is %" PRId64 " ticks (%" PRId64 " ns)\n", threshold_ticks,
-         TicksToDuration(threshold_ticks));
-  if (threshold_ticks == 0) {
+  const zx_ticks_t ticks = threshold_ticks.load();
+  printf("threshold is %" PRId64 " ticks (%" PRId64 " ns)\n", ticks, TicksToDuration(ticks));
+  if (ticks == 0) {
     // No threshold set, nothing else to print.
     return;
   }
