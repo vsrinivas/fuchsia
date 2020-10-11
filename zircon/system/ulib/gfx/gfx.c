@@ -120,8 +120,8 @@ void gfx_copylines(gfx_surface* dst, gfx_surface* src, unsigned srcy, unsigned d
   if ((dsty >= dst->height) || (dst->height - dsty) < height) {
     return;
   }
-  memcpy(dst->ptr + dsty * dst->stride * dst->pixelsize,
-         src->ptr + srcy * src->stride * src->pixelsize, height * src->stride * src->pixelsize);
+  memmove(dst->ptr + dsty * dst->stride * dst->pixelsize,
+          src->ptr + srcy * src->stride * src->pixelsize, height * src->stride * src->pixelsize);
 }
 
 /**
