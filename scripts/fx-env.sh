@@ -259,5 +259,20 @@ function __fx_env_main() {
   fi
 }
 
+# __fx_env_main uses function names that are non-compliant with POSIX, so
+# if this script is running in posix-compliant bash mode, we need to turn
+# it off temporarily otherwise it will fail.
+__fx_was_posix=0
+case :$SHELLOPTS: in
+  *:posix:*)
+    __fx_was_posix=1
+    set +o posix
+    ;;
+esac
+
 __fx_env_main "$@"
-unset __fx_env_main
+
+if [[ $__fx_was_posix -eq 1 ]]; then
+  set -o posix
+fi
+unset __fx_was_posix __fx_env_main
