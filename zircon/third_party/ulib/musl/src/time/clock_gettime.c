@@ -2,7 +2,10 @@
 #include <stdint.h>
 #include <time.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/utc.h>
+
+#include <runtime/thread.h>
 
 #include "libc.h"
 #include "threads_impl.h"
@@ -15,10 +18,6 @@ static int gettime_finish(zx_status_t syscall_status, zx_time_t now, struct time
   ts->tv_sec = now / ZX_SEC(1);
   ts->tv_nsec = now % ZX_SEC(1);
   return 0;
-}
-
-static int gettime_via_monotonic(struct timespec* ts) {
-  return gettime_finish(ZX_OK, zx_clock_get_monotonic(), ts);
 }
 
 static int gettime_via_get(zx_clock_t clock_id, struct timespec* ts) {
@@ -48,13 +47,19 @@ int __clock_gettime(clockid_t clk, struct timespec* ts) {
     case CLOCK_BOOTTIME:  // see fxbug.dev/38552
     case CLOCK_MONOTONIC:
     case CLOCK_MONOTONIC_RAW:
-      return gettime_via_monotonic(ts);
+      return gettime_finish(ZX_OK, _zx_clock_get_monotonic(), ts);
 
     case CLOCK_REALTIME:
       return gettime_via_utc(ts);
 
-    case CLOCK_THREAD_CPUTIME_ID:
-      return gettime_via_get(ZX_CLOCK_THREAD, ts);
+    case CLOCK_THREAD_CPUTIME_ID: {
+      zx_info_thread_stats_t info;
+      zx_status_t status;
+
+      status = _zx_object_get_info(zxr_thread_get_handle(&__pthread_self()->zxr_thread),
+                                   ZX_INFO_THREAD_STATS, &info, sizeof(info), NULL, NULL);
+      return gettime_finish(status, info.total_runtime, ts);
+    }
 
     default:
       errno = EINVAL;
