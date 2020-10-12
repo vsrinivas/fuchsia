@@ -9,11 +9,10 @@ use {
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::lock::Mutex,
     settings::agent::base::BlueprintHandle as AgentBlueprintHandle,
+    settings::config::base::{get_default_agent_types, AgentType},
     settings::config::default_settings::DefaultSetting,
-    settings::get_default_agent_types,
     settings::handler::device_storage::StashDeviceStorageFactory,
     settings::switchboard::base::get_default_setting_types,
-    settings::AgentType,
     settings::AgentConfiguration,
     settings::EnabledServicesConfiguration,
     settings::EnvironmentBuilder,
@@ -62,6 +61,6 @@ fn main() -> Result<(), Error> {
     // block here and therefore continue without waiting for the result.
     EnvironmentBuilder::new(Arc::new(Mutex::new(storage_factory)))
         .configuration(configuration)
-        .agent_mapping(<AgentBlueprintHandle as From<AgentType>>::from)
+        .agent_mapping(<Option<AgentBlueprintHandle> as From<AgentType>>::from)
         .spawn(executor)
 }

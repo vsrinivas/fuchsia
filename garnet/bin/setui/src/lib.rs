@@ -11,7 +11,7 @@ use {
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
-    crate::config::base::ControllerFlag,
+    crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
     crate::display::light_sensor_controller::LightSensorController,
@@ -103,36 +103,9 @@ enum Runtime {
     Nested(&'static str),
 }
 
-/// Represents each agent that can be run.
-#[derive(Eq, PartialEq, Hash, Debug, Copy, Clone, Deserialize)]
-pub enum AgentType {
-    /// Plays earcons in response to certain events. If MediaButtons is
-    /// enabled, then it will also handle some media buttons events.
-    Earcons,
-    /// Responsible for managing the connection to media buttons. It will
-    /// broadcast events to the controllers and agents.
-    MediaButtons,
-    /// Responsible for initializing all of the controllers.
-    Restore,
-}
-
-pub fn get_default_agent_types() -> HashSet<AgentType> {
-    return vec![AgentType::Restore].into_iter().collect();
-}
-
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct AgentConfiguration {
     pub agent_types: HashSet<AgentType>,
-}
-
-impl From<AgentType> for AgentBlueprintHandle {
-    fn from(agent_type: AgentType) -> AgentBlueprintHandle {
-        match agent_type {
-            AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
-            AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
-            AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
-        }
-    }
 }
 
 #[derive(PartialEq, Debug, Clone, Deserialize)]
@@ -199,7 +172,7 @@ impl Environment {
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
-    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
+    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> Option<AgentBlueprintHandle>>>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
@@ -290,7 +263,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub fn agent_mapping<F>(mut self, agent_mapping_func: F) -> EnvironmentBuilder<T>
     where
-        F: Fn(AgentType) -> AgentBlueprintHandle + 'static,
+        F: Fn(AgentType) -> Option<AgentBlueprintHandle> + 'static,
     {
         self.agent_mapping_func = Some(Box::new(agent_mapping_func));
         self
@@ -357,7 +330,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let agent_blueprints = self
             .agent_mapping_func
             .map(|agent_mapping_func| {
-                agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
+                agent_types
+                    .into_iter()
+                    .filter_map(|agent_type| (agent_mapping_func)(agent_type))
+                    .collect()
             })
             .unwrap_or(self.agent_blueprints);
 
