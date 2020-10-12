@@ -63,36 +63,39 @@ class TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (_) => _backgroundColor.value = _black,
-      child: AnimatedBuilder(
-          animation: _backgroundColor,
-          builder: (context, snapshot) {
-            return Container(
-              color: _backgroundColor.value,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 200,
-                    height: 200,
-                    child: ChildView(
-                      connection: connection,
-                      hitTestable: hitTestable,
-                      focusable: focusable,
-                    ),
-                  ),
-                  if (showOverlay)
-                    Container(
-                      margin: EdgeInsets.only(left: 200, bottom: 200),
+    return MediaQuery(
+      data: MediaQueryData.fromWindow(window),
+      child: Listener(
+        onPointerDown: (_) => _backgroundColor.value = _black,
+        child: AnimatedBuilder(
+            animation: _backgroundColor,
+            builder: (context, snapshot) {
+              return Container(
+                color: _backgroundColor.value,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
                       width: 200,
                       height: 200,
-                      color: Color.fromARGB(255, 0, 255, 0),
+                      child: ChildView(
+                        connection: connection,
+                        hitTestable: hitTestable,
+                        focusable: focusable,
+                      ),
                     ),
-                ],
-              ),
-            );
-          }),
+                    if (showOverlay)
+                      Container(
+                        margin: EdgeInsets.only(left: 200, bottom: 200),
+                        width: 200,
+                        height: 200,
+                        color: Color.fromARGB(255, 0, 255, 0),
+                      ),
+                  ],
+                ),
+              );
+            }),
+      ),
     );
   }
 }
