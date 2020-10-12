@@ -532,7 +532,7 @@ mod tests {
             futures::{
                 channel::oneshot,
                 task::{Context, Poll},
-                Future, FutureExt,
+                Future,
             },
             std::{
                 ops::Drop,

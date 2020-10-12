@@ -4,136 +4,110 @@
 
 import("//build/rust/rustc_library.gni")
 
-common_deps = [
-  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-  "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-  "//src/lib/fidl/rust/fidl",
-  "//src/lib/fuchsia-async",
-  "//src/lib/storage/pseudo-fs",
-  "//src/lib/storage/vfs/rust/macros",
-  "//src/lib/zircon/rust:fuchsia-zircon",
-  "//third_party/rust_crates:anyhow",
-  "//third_party/rust_crates:async-trait",
-  "//third_party/rust_crates:byteorder",
-  "//third_party/rust_crates:futures",
-  "//third_party/rust_crates:itertools",
-  "//third_party/rust_crates:libc",
-  "//third_party/rust_crates:parking_lot",
-  "//third_party/rust_crates:pin-project",
-  "//third_party/rust_crates:pin-utils",
-  "//third_party/rust_crates:slab",
-  "//third_party/rust_crates:static_assertions",
-  "//third_party/rust_crates:thiserror",
-  "//third_party/rust_crates:void",
-]
-
-# TODO(fxbug.dev/48539): Fix the leaks and remove this.
-common_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-common_sources = [
-  "src/common.rs",
-  "src/directory.rs",
-  "src/directory/common.rs",
-  "src/directory/connection.rs",
-  "src/directory/connection/io1.rs",
-  "src/directory/connection/util.rs",
-  "src/directory/dirents_sink.rs",
-  "src/directory/entry.rs",
-  "src/directory/entry_container.rs",
-  "src/directory/helper.rs",
-  "src/directory/immutable.rs",
-  "src/directory/immutable/connection.rs",
-  "src/directory/immutable/connection/io1.rs",
-  "src/directory/immutable/lazy.rs",
-  "src/directory/immutable/lazy/watchers_task.rs",
-  "src/directory/immutable/simple.rs",
-  "src/directory/mutable.rs",
-  "src/directory/mutable/connection.rs",
-  "src/directory/mutable/connection/io1.rs",
-  "src/directory/mutable/entry_constructor.rs",
-  "src/directory/mutable/simple.rs",
-  "src/directory/read_dirents.rs",
-  "src/directory/simple.rs",
-  "src/directory/test_utils.rs",
-  "src/directory/traversal_position.rs",
-  "src/directory/watchers.rs",
-  "src/directory/watchers/event_producers.rs",
-  "src/directory/watchers/watcher.rs",
-  "src/execution_scope.rs",
-  "src/file.rs",
-  "src/file/common.rs",
-  "src/file/connection.rs",
-  "src/file/connection/io1.rs",
-  "src/file/connection/util.rs",
-  "src/file/pcb.rs",
-  "src/file/pcb/asynchronous.rs",
-  "src/file/pcb/connection.rs",
-  "src/file/pcb/connection/io1.rs",
-  "src/file/test_utils.rs",
-  "src/file/vmo.rs",
-  "src/file/vmo/asynchronous.rs",
-  "src/file/vmo/asynchronous/test_utils.rs",
-  "src/file/vmo/connection.rs",
-  "src/file/vmo/connection/io1.rs",
-  "src/filesystem.rs",
-  "src/filesystem/simple.rs",
-  "src/lib.rs",
-  "src/path.rs",
-  "src/pseudo_directory.rs",
-  "src/registry.rs",
-  "src/registry/inode_registry.rs",
-  "src/registry/token_registry.rs",
-  "src/service.rs",
-  "src/service/common.rs",
-  "src/service/connection.rs",
-  "src/service/connection/io1.rs",
-  "src/test_utils.rs",
-  "src/test_utils/assertions.rs",
-  "src/test_utils/node.rs",
-  "src/test_utils/run.rs",
-  "src/tree_builder.rs",
-]
-
 rustc_library("vfs") {
   version = "0.1.0"
   edition = "2018"
-  deps = common_deps
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/storage/pseudo-fs",
+    "//src/lib/storage/vfs/rust/macros",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-project",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:static_assertions",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:void",
+  ]
 
-  sources = common_sources
-}
+  # TODO(fxbug.dev/48539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-# Suppress this lint for the whole compilation unit. Using source-level suppression doesn't work
-# because the lint occurs in a proc macro, where #![allow()] doesn't "reach" (and every attempt I
-# made to put it on the place where the lint fired failed). This may be a compiler bug; see the
-# issue below for more.
-#
-# TODO(fxbug.dev/49845): Remove this once the lints are re-enabled.
-config("suppress_lints") {
-  visibility = [ ":*" ]
-  rustflags = [ "-Aunused-imports" ]
-}
+  with_unit_tests = true
+  sources = [
+    "src/common.rs",
+    "src/directory.rs",
+    "src/directory/common.rs",
+    "src/directory/connection.rs",
+    "src/directory/connection/io1.rs",
+    "src/directory/connection/util.rs",
+    "src/directory/dirents_sink.rs",
+    "src/directory/entry.rs",
+    "src/directory/entry_container.rs",
+    "src/directory/helper.rs",
+    "src/directory/immutable.rs",
+    "src/directory/immutable/connection.rs",
+    "src/directory/immutable/connection/io1.rs",
+    "src/directory/immutable/lazy.rs",
+    "src/directory/immutable/lazy/tests.rs",
+    "src/directory/immutable/lazy/watchers_task.rs",
+    "src/directory/immutable/simple.rs",
+    "src/directory/immutable/simple/tests.rs",
+    "src/directory/mutable.rs",
+    "src/directory/mutable/connection.rs",
+    "src/directory/mutable/connection/io1.rs",
+    "src/directory/mutable/entry_constructor.rs",
+    "src/directory/mutable/simple.rs",
+    "src/directory/mutable/simple/tests.rs",
+    "src/directory/read_dirents.rs",
+    "src/directory/simple.rs",
+    "src/directory/test_utils.rs",
+    "src/directory/test_utils.rs",
+    "src/directory/traversal_position.rs",
+    "src/directory/watchers.rs",
+    "src/directory/watchers/event_producers.rs",
+    "src/directory/watchers/watcher.rs",
+    "src/execution_scope.rs",
+    "src/file.rs",
+    "src/file/common.rs",
+    "src/file/connection.rs",
+    "src/file/connection/io1.rs",
+    "src/file/connection/util.rs",
+    "src/file/pcb.rs",
+    "src/file/pcb/asynchronous.rs",
+    "src/file/pcb/asynchronous/tests.rs",
+    "src/file/pcb/connection.rs",
+    "src/file/pcb/connection/io1.rs",
+    "src/file/test_utils.rs",
+    "src/file/test_utils.rs",
+    "src/file/vmo.rs",
+    "src/file/vmo/asynchronous.rs",
+    "src/file/vmo/asynchronous/test_utils.rs",
+    "src/file/vmo/asynchronous/test_utils.rs",
+    "src/file/vmo/asynchronous/tests.rs",
+    "src/file/vmo/connection.rs",
+    "src/file/vmo/connection/io1.rs",
+    "src/filesystem.rs",
+    "src/filesystem/simple.rs",
+    "src/lib.rs",
+    "src/path.rs",
+    "src/pseudo_directory.rs",
+    "src/registry.rs",
+    "src/registry/inode_registry.rs",
+    "src/registry/token_registry.rs",
+    "src/service.rs",
+    "src/service/common.rs",
+    "src/service/connection.rs",
+    "src/service/connection/io1.rs",
+    "src/service/tests.rs",
+    "src/service/tests/direct_connection.rs",
+    "src/service/tests/node_reference.rs",
+    "src/test_utils.rs",
+    "src/test_utils/assertions.rs",
+    "src/test_utils/node.rs",
+    "src/test_utils/run.rs",
+    "src/tree_builder.rs",
+  ]
 
-rustc_test("vfs_test") {
-  name = "vfs_lib_test"
-  edition = "2018"
-
-  deps = common_deps + [ "//garnet/examples/fidl/services:echo-rustc" ]
-
-  # TODO(fxbug.dev/49845): Re-enable these lints.
-  # -Dwarnings seems to override -A options that come after it.
-  configs += [ ":suppress_lints" ]
-
-  sources = common_sources + [
-              "src/directory/test_utils.rs",
-              "src/directory/immutable/lazy/tests.rs",
-              "src/directory/mutable/simple/tests.rs",
-              "src/directory/immutable/simple/tests.rs",
-              "src/file/pcb/asynchronous/tests.rs",
-              "src/file/vmo/asynchronous/tests.rs",
-              "src/file/test_utils.rs",
-              "src/file/vmo/asynchronous/test_utils.rs",
-              "src/service/tests.rs",
-              "src/service/tests/direct_connection.rs",
-              "src/service/tests/node_reference.rs",
-            ]
+  test_deps = [ "//garnet/examples/fidl/services:echo-rustc" ]
 }

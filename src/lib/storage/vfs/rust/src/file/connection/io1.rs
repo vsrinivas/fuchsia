@@ -496,7 +496,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
-        futures::{future::BoxFuture, prelude::*},
+        futures::prelude::*,
         std::sync::Mutex,
     };
 

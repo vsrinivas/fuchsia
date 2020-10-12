@@ -326,7 +326,6 @@ mod tests {
             registry::token_registry,
         },
         async_trait::async_trait,
-        fidl::Channel,
         fidl_fuchsia_io::{
             DirectoryProxy, NodeAttributes, DIRENT_TYPE_DIRECTORY,
             NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,

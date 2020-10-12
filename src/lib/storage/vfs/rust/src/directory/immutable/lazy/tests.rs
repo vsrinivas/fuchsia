@@ -34,11 +34,7 @@ use {
     },
     fuchsia_async::Executor,
     fuchsia_zircon::Status,
-    futures::{
-        channel::mpsc,
-        future::{self, BoxFuture},
-        lock::Mutex,
-    },
+    futures::{channel::mpsc, lock::Mutex},
     std::{
         marker::{Send, Sync},
         sync::{
