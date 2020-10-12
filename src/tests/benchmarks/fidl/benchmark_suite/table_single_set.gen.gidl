@@ -6,7 +6,7 @@
 
 // Table with 1 field with the 1st field set
 benchmark("Table/SingleSet/1_of_1") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = Table1Struct{
         value: Table1{
             field1: 1,
@@ -16,7 +16,7 @@ benchmark("Table/SingleSet/1_of_1") {
 
 // Table with 16 fields with the 1st field set
 benchmark("Table/SingleSet/1_of_16") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = Table16Struct{
         value: Table16{
             field1: 1,
@@ -26,7 +26,7 @@ benchmark("Table/SingleSet/1_of_16") {
 
 // Table with 256 fields with the 1st field set
 benchmark("Table/SingleSet/1_of_256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field1: 1,
@@ -36,7 +36,7 @@ benchmark("Table/SingleSet/1_of_256") {
 
 // Table with 16 fields with the 16th field set
 benchmark("Table/SingleSet/16_of_16") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = Table16Struct{
         value: Table16{
             field16: 1,
@@ -46,7 +46,7 @@ benchmark("Table/SingleSet/16_of_16") {
 
 // Table with 256 fields with the 16th field set
 benchmark("Table/SingleSet/16_of_256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field16: 1,
@@ -56,7 +56,7 @@ benchmark("Table/SingleSet/16_of_256") {
 
 // Table with 256 fields with the 256th field set
 benchmark("Table/SingleSet/256_of_256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field256: 1,

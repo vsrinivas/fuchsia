@@ -16,9 +16,9 @@ import (
 
 	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
-	gidlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
 	gidlgolang "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang"
+	gidlhlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/hlcpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp"
 	gidlparser "go.fuchsia.dev/fuchsia/tools/fidl/gidl/parser"
@@ -37,7 +37,7 @@ type Generator func(gidlir.All, fidlir.Root, gidlconfig.GeneratorConfig) ([]byte
 var conformanceGenerators = map[string]Generator{
 	"go":    gidlgolang.GenerateConformanceTests,
 	"llcpp": gidlllcpp.GenerateConformanceTests,
-	"cpp":   gidlcpp.GenerateConformanceTests,
+	"hlcpp": gidlhlcpp.GenerateConformanceTests,
 	"dart":  gidldart.GenerateConformanceTests,
 	"rust":  gidlrust.GenerateConformanceTests,
 }
@@ -45,7 +45,7 @@ var conformanceGenerators = map[string]Generator{
 var benchmarkGenerators = map[string]Generator{
 	"go":        gidlgolang.GenerateBenchmarks,
 	"llcpp":     gidlllcpp.GenerateBenchmarks,
-	"cpp":       gidlcpp.GenerateBenchmarks,
+	"hlcpp":     gidlhlcpp.GenerateBenchmarks,
 	"rust":      gidlrust.GenerateBenchmarks,
 	"dart":      gidldart.GenerateBenchmarks,
 	"reference": gidlreference.GenerateBenchmarks,

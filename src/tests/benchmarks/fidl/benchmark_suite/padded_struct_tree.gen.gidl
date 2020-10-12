@@ -6,7 +6,7 @@
 
 // Binary tree with depth 8 (255 elements) with padding on leafs
 benchmark("PaddedStructTree/Depth8") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = PaddedStructTree8{
         left:PaddedStructTree7{
             left:PaddedStructTree6{

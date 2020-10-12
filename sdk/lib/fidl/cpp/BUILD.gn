@@ -170,7 +170,7 @@ fidl("fidl_test") {
   sources = [ "fidl_test.test.fidl" ]
 }
 
-gidl_cpp_conformance("conformance_test_sources") {
+gidl_hlcpp_conformance("conformance_test_sources") {
   testonly = true
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target

@@ -9,7 +9,7 @@
 
 // single byte, min: 0
 success("StringsValidCase1") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x00",
     },
@@ -28,7 +28,7 @@ success("StringsValidCase1") {
 
 // single byte, max: 127
 success("StringsValidCase2") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x7f",
     },
@@ -47,7 +47,7 @@ success("StringsValidCase2") {
 
 // two bytes,   min: 128
 success("StringsValidCase3") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xc2\x80",
     },
@@ -67,7 +67,7 @@ success("StringsValidCase3") {
 
 // two bytes,   max: 2047
 success("StringsValidCase4") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xdf\xbf",
     },
@@ -87,7 +87,7 @@ success("StringsValidCase4") {
 
 // three bytes, min: 2048
 success("StringsValidCase5") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe1\x80\x80",
     },
@@ -108,7 +108,7 @@ success("StringsValidCase5") {
 
 // three bytes, max: 65535
 success("StringsValidCase6") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xef\xbf\xbf",
     },
@@ -129,7 +129,7 @@ success("StringsValidCase6") {
 
 // four bytes,  min: 65536
 success("StringsValidCase7") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x90\x80\x80",
     },
@@ -151,7 +151,7 @@ success("StringsValidCase7") {
 
 // four bytes,  max: 1114111
 success("StringsValidCase8") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf4\x8f\xbf\xbf",
     },
@@ -173,7 +173,7 @@ success("StringsValidCase8") {
 
 // 1 above max single byte
 encode_failure("StringsInvalidCase1") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\x80",
     },
@@ -182,7 +182,7 @@ encode_failure("StringsInvalidCase1") {
 
 // 1 above max single byte
 decode_failure("StringsInvalidCase1") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -200,7 +200,7 @@ decode_failure("StringsInvalidCase1") {
 
 // 1 below min two bytes
 encode_failure("StringsInvalidCase2") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc2\x7f",
     },
@@ -209,7 +209,7 @@ encode_failure("StringsInvalidCase2") {
 
 // 1 below min two bytes
 decode_failure("StringsInvalidCase2") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -228,7 +228,7 @@ decode_failure("StringsInvalidCase2") {
 
 // 1 above max two bytes
 encode_failure("StringsInvalidCase3") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xdf\xc0",
     },
@@ -237,7 +237,7 @@ encode_failure("StringsInvalidCase3") {
 
 // 1 above max two bytes
 decode_failure("StringsInvalidCase3") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -256,7 +256,7 @@ decode_failure("StringsInvalidCase3") {
 
 // 1 below min three bytes
 encode_failure("StringsInvalidCase4") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe1\x80\x7f",
     },
@@ -265,7 +265,7 @@ encode_failure("StringsInvalidCase4") {
 
 // 1 below min three bytes
 decode_failure("StringsInvalidCase4") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -285,7 +285,7 @@ decode_failure("StringsInvalidCase4") {
 
 // 1 above max three bytes
 encode_failure("StringsInvalidCase5") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xef\xbf\xc0",
     },
@@ -294,7 +294,7 @@ encode_failure("StringsInvalidCase5") {
 
 // 1 above max three bytes
 decode_failure("StringsInvalidCase5") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -314,7 +314,7 @@ decode_failure("StringsInvalidCase5") {
 
 // 1 below min four bytes
 encode_failure("StringsInvalidCase6") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x80\x80\x80",
     },
@@ -323,7 +323,7 @@ encode_failure("StringsInvalidCase6") {
 
 // 1 below min four bytes
 decode_failure("StringsInvalidCase6") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -344,7 +344,7 @@ decode_failure("StringsInvalidCase6") {
 
 // 1 above max four bytes
 encode_failure("StringsInvalidCase7") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf7\xbf\xbf\xc0",
     },
@@ -353,7 +353,7 @@ encode_failure("StringsInvalidCase7") {
 
 // 1 above max four bytes
 decode_failure("StringsInvalidCase7") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -374,7 +374,7 @@ decode_failure("StringsInvalidCase7") {
 
 
 success("StringsValidCase9") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xc2\x80",
     },
@@ -394,7 +394,7 @@ success("StringsValidCase9") {
 
 // first byte following two byte value not starting with 0b10
 encode_failure("StringsInvalidCase8") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc2\x7f",
     },
@@ -403,7 +403,7 @@ encode_failure("StringsInvalidCase8") {
 
 // first byte following two byte value not starting with 0b10
 decode_failure("StringsInvalidCase8") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -422,7 +422,7 @@ decode_failure("StringsInvalidCase8") {
 
 // first byte following three byte value not starting with 0b10
 encode_failure("StringsInvalidCase9") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe1\x7f\x80",
     },
@@ -431,7 +431,7 @@ encode_failure("StringsInvalidCase9") {
 
 // first byte following three byte value not starting with 0b10
 decode_failure("StringsInvalidCase9") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -451,7 +451,7 @@ decode_failure("StringsInvalidCase9") {
 
 // second byte following three byte value not starting with 0b10
 encode_failure("StringsInvalidCase10") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe1\x80\x7f",
     },
@@ -460,7 +460,7 @@ encode_failure("StringsInvalidCase10") {
 
 // second byte following three byte value not starting with 0b10
 decode_failure("StringsInvalidCase10") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -480,7 +480,7 @@ decode_failure("StringsInvalidCase10") {
 
 
 success("StringsValidCase10") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x90\x80\x80",
     },
@@ -502,7 +502,7 @@ success("StringsValidCase10") {
 
 // first byte following four byte value not starting with 0b10
 encode_failure("StringsInvalidCase11") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x7f\x80\x80",
     },
@@ -511,7 +511,7 @@ encode_failure("StringsInvalidCase11") {
 
 // first byte following four byte value not starting with 0b10
 decode_failure("StringsInvalidCase11") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -532,7 +532,7 @@ decode_failure("StringsInvalidCase11") {
 
 // second byte following four byte value not starting with 0b10
 encode_failure("StringsInvalidCase12") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x90\x7f\x80",
     },
@@ -541,7 +541,7 @@ encode_failure("StringsInvalidCase12") {
 
 // second byte following four byte value not starting with 0b10
 decode_failure("StringsInvalidCase12") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -562,7 +562,7 @@ decode_failure("StringsInvalidCase12") {
 
 // third byte following four byte value not starting with 0b10
 encode_failure("StringsInvalidCase13") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x90\x80\x7f",
     },
@@ -571,7 +571,7 @@ encode_failure("StringsInvalidCase13") {
 
 // third byte following four byte value not starting with 0b10
 decode_failure("StringsInvalidCase13") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -592,7 +592,7 @@ decode_failure("StringsInvalidCase13") {
 
 // ascii slash
 success("StringsValidCase11") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x2f",
     },
@@ -611,7 +611,7 @@ success("StringsValidCase11") {
 
 // slash (2)
 encode_failure("StringsInvalidCase14") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc0\xaf",
     },
@@ -620,7 +620,7 @@ encode_failure("StringsInvalidCase14") {
 
 // slash (2)
 decode_failure("StringsInvalidCase14") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -639,7 +639,7 @@ decode_failure("StringsInvalidCase14") {
 
 // slash (3)
 encode_failure("StringsInvalidCase15") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe0\x80\xaf",
     },
@@ -648,7 +648,7 @@ encode_failure("StringsInvalidCase15") {
 
 // slash (3)
 decode_failure("StringsInvalidCase15") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -668,7 +668,7 @@ decode_failure("StringsInvalidCase15") {
 
 // slash (4)
 encode_failure("StringsInvalidCase16") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x80\x80\xaf",
     },
@@ -677,7 +677,7 @@ encode_failure("StringsInvalidCase16") {
 
 // slash (4)
 decode_failure("StringsInvalidCase16") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -698,7 +698,7 @@ decode_failure("StringsInvalidCase16") {
 
 // U+061D
 success("StringsValidCase12") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xd8\x9d",
     },
@@ -718,7 +718,7 @@ success("StringsValidCase12") {
 
 // U+05F6
 success("StringsValidCase13") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xd7\xb6",
     },
@@ -738,7 +738,7 @@ success("StringsValidCase13") {
 
 // U+0AF4
 success("StringsValidCase14") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe0\xab\xb4",
     },
@@ -759,7 +759,7 @@ success("StringsValidCase14") {
 
 // U+0C52
 success("StringsValidCase15") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe0\xb1\x92",
     },
@@ -780,7 +780,7 @@ success("StringsValidCase15") {
 
 // U+1E454
 success("StringsValidCase16") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x9e\x91\x94",
     },
@@ -802,7 +802,7 @@ success("StringsValidCase16") {
 
 // U+1F978
 success("StringsValidCase17") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf0\x9f\xa5\xb8",
     },
@@ -824,7 +824,7 @@ success("StringsValidCase17") {
 
 // empty string
 success("StringsValidCase18") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "",
     },
@@ -841,7 +841,7 @@ success("StringsValidCase18") {
 
 // simply the letter a
 success("StringsValidCase19") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x61",
     },
@@ -860,7 +860,7 @@ success("StringsValidCase19") {
 
 // euro sign, i.e \xe2\x82\xac
 success("StringsValidCase20") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe2\x82\xac",
     },
@@ -881,7 +881,7 @@ success("StringsValidCase20") {
 
 // mix and match from earlier cases
 success("StringsValidCase21") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80",
     },
@@ -911,7 +911,7 @@ success("StringsValidCase21") {
 
 // mix and match from earlier cases
 success("StringsValidCase22") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xdf\xbf\xef\xbf\xbf\xe1\x80\x80",
     },
@@ -957,7 +957,7 @@ success("StringsValidCase23") {
 
 // Partial UTF-8 BOM (1)
 encode_failure("StringsInvalidCase17") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xef",
     },
@@ -966,7 +966,7 @@ encode_failure("StringsInvalidCase17") {
 
 // Partial UTF-8 BOM (1)
 decode_failure("StringsInvalidCase17") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -984,7 +984,7 @@ decode_failure("StringsInvalidCase17") {
 
 // Partial UTF-8 BOM (2)
 encode_failure("StringsInvalidCase18") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xef\xbb",
     },
@@ -993,7 +993,7 @@ encode_failure("StringsInvalidCase18") {
 
 // Partial UTF-8 BOM (2)
 decode_failure("StringsInvalidCase18") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1012,7 +1012,7 @@ decode_failure("StringsInvalidCase18") {
 
 // invalid partial sequence
 encode_failure("StringsInvalidCase19") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xdf\x80\x80",
     },
@@ -1021,7 +1021,7 @@ encode_failure("StringsInvalidCase19") {
 
 // invalid partial sequence
 decode_failure("StringsInvalidCase19") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1041,7 +1041,7 @@ decode_failure("StringsInvalidCase19") {
 
 // long U+0000, non shortest form
 encode_failure("StringsInvalidCase20") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe0\x80\x80",
     },
@@ -1050,7 +1050,7 @@ encode_failure("StringsInvalidCase20") {
 
 // long U+0000, non shortest form
 decode_failure("StringsInvalidCase20") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1070,7 +1070,7 @@ decode_failure("StringsInvalidCase20") {
 
 
 success("StringsValidCase24") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe1\x80\x80",
     },
@@ -1091,7 +1091,7 @@ success("StringsValidCase24") {
 
 // invalid 2 octet sequence
 encode_failure("StringsInvalidCase21") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc3\x28",
     },
@@ -1100,7 +1100,7 @@ encode_failure("StringsInvalidCase21") {
 
 // invalid 2 octet sequence
 decode_failure("StringsInvalidCase21") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1119,7 +1119,7 @@ decode_failure("StringsInvalidCase21") {
 
 
 success("StringsValidCase25") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x0d",
     },
@@ -1138,7 +1138,7 @@ success("StringsValidCase25") {
 
 
 success("StringsValidCase26") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x0a",
     },
@@ -1157,7 +1157,7 @@ success("StringsValidCase26") {
 
 
 success("StringsValidCase27") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\x61",
     },
@@ -1176,7 +1176,7 @@ success("StringsValidCase27") {
 
 
 success("StringsValidCase28") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xc2\x81",
     },
@@ -1196,7 +1196,7 @@ success("StringsValidCase28") {
 
 
 success("StringsValidCase29") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xe1\x80\xbf",
     },
@@ -1217,7 +1217,7 @@ success("StringsValidCase29") {
 
 
 success("StringsValidCase30") {
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
     value = StringWrapper {
         str: "\xf1\x80\xa0\xbf",
     },
@@ -1260,7 +1260,7 @@ success("StringsValidCase31") {
 
 
 encode_failure("StringsInvalidCase22") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc0",
     },
@@ -1269,7 +1269,7 @@ encode_failure("StringsInvalidCase22") {
 
 
 decode_failure("StringsInvalidCase22") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1287,7 +1287,7 @@ decode_failure("StringsInvalidCase22") {
 
 
 encode_failure("StringsInvalidCase23") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc1",
     },
@@ -1296,7 +1296,7 @@ encode_failure("StringsInvalidCase23") {
 
 
 decode_failure("StringsInvalidCase23") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1314,7 +1314,7 @@ decode_failure("StringsInvalidCase23") {
 
 
 encode_failure("StringsInvalidCase24") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf5",
     },
@@ -1323,7 +1323,7 @@ encode_failure("StringsInvalidCase24") {
 
 
 decode_failure("StringsInvalidCase24") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1341,7 +1341,7 @@ decode_failure("StringsInvalidCase24") {
 
 
 encode_failure("StringsInvalidCase25") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf6",
     },
@@ -1350,7 +1350,7 @@ encode_failure("StringsInvalidCase25") {
 
 
 decode_failure("StringsInvalidCase25") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1368,7 +1368,7 @@ decode_failure("StringsInvalidCase25") {
 
 
 encode_failure("StringsInvalidCase26") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf7",
     },
@@ -1377,7 +1377,7 @@ encode_failure("StringsInvalidCase26") {
 
 
 decode_failure("StringsInvalidCase26") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1395,7 +1395,7 @@ decode_failure("StringsInvalidCase26") {
 
 
 encode_failure("StringsInvalidCase27") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf8",
     },
@@ -1404,7 +1404,7 @@ encode_failure("StringsInvalidCase27") {
 
 
 decode_failure("StringsInvalidCase27") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1422,7 +1422,7 @@ decode_failure("StringsInvalidCase27") {
 
 
 encode_failure("StringsInvalidCase28") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf9",
     },
@@ -1431,7 +1431,7 @@ encode_failure("StringsInvalidCase28") {
 
 
 decode_failure("StringsInvalidCase28") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1449,7 +1449,7 @@ decode_failure("StringsInvalidCase28") {
 
 
 encode_failure("StringsInvalidCase29") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfa",
     },
@@ -1458,7 +1458,7 @@ encode_failure("StringsInvalidCase29") {
 
 
 decode_failure("StringsInvalidCase29") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1476,7 +1476,7 @@ decode_failure("StringsInvalidCase29") {
 
 
 encode_failure("StringsInvalidCase30") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfb",
     },
@@ -1485,7 +1485,7 @@ encode_failure("StringsInvalidCase30") {
 
 
 decode_failure("StringsInvalidCase30") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1503,7 +1503,7 @@ decode_failure("StringsInvalidCase30") {
 
 
 encode_failure("StringsInvalidCase31") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfc",
     },
@@ -1512,7 +1512,7 @@ encode_failure("StringsInvalidCase31") {
 
 
 decode_failure("StringsInvalidCase31") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1530,7 +1530,7 @@ decode_failure("StringsInvalidCase31") {
 
 
 encode_failure("StringsInvalidCase32") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfd",
     },
@@ -1539,7 +1539,7 @@ encode_failure("StringsInvalidCase32") {
 
 
 decode_failure("StringsInvalidCase32") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1557,7 +1557,7 @@ decode_failure("StringsInvalidCase32") {
 
 
 encode_failure("StringsInvalidCase33") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfe",
     },
@@ -1566,7 +1566,7 @@ encode_failure("StringsInvalidCase33") {
 
 
 decode_failure("StringsInvalidCase33") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1584,7 +1584,7 @@ decode_failure("StringsInvalidCase33") {
 
 
 encode_failure("StringsInvalidCase34") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xff",
     },
@@ -1593,7 +1593,7 @@ encode_failure("StringsInvalidCase34") {
 
 
 decode_failure("StringsInvalidCase34") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1611,7 +1611,7 @@ decode_failure("StringsInvalidCase34") {
 
 // U+D800, high surrogate, first
 encode_failure("StringsInvalidCase35") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xed\xa0\x80",
     },
@@ -1620,7 +1620,7 @@ encode_failure("StringsInvalidCase35") {
 
 // U+D800, high surrogate, first
 decode_failure("StringsInvalidCase35") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1640,7 +1640,7 @@ decode_failure("StringsInvalidCase35") {
 
 // low surrogate, first
 encode_failure("StringsInvalidCase36") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xed\xb0\x80",
     },
@@ -1649,7 +1649,7 @@ encode_failure("StringsInvalidCase36") {
 
 // low surrogate, first
 decode_failure("StringsInvalidCase36") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1669,7 +1669,7 @@ decode_failure("StringsInvalidCase36") {
 
 // low surrogate, last
 encode_failure("StringsInvalidCase37") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xed\xbf\xbf",
     },
@@ -1678,7 +1678,7 @@ encode_failure("StringsInvalidCase37") {
 
 // low surrogate, last
 decode_failure("StringsInvalidCase37") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1698,7 +1698,7 @@ decode_failure("StringsInvalidCase37") {
 
 // U+0000
 encode_failure("StringsInvalidCase38") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc0\x80",
     },
@@ -1707,7 +1707,7 @@ encode_failure("StringsInvalidCase38") {
 
 // U+0000
 decode_failure("StringsInvalidCase38") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1726,7 +1726,7 @@ decode_failure("StringsInvalidCase38") {
 
 // "A"
 encode_failure("StringsInvalidCase39") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc1\x80",
     },
@@ -1735,7 +1735,7 @@ encode_failure("StringsInvalidCase39") {
 
 // "A"
 decode_failure("StringsInvalidCase39") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1754,7 +1754,7 @@ decode_failure("StringsInvalidCase39") {
 
 // "B"
 encode_failure("StringsInvalidCase40") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xc1\x81",
     },
@@ -1763,7 +1763,7 @@ encode_failure("StringsInvalidCase40") {
 
 // "B"
 decode_failure("StringsInvalidCase40") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1782,7 +1782,7 @@ decode_failure("StringsInvalidCase40") {
 
 // U+0000
 encode_failure("StringsInvalidCase41") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe0\x80\x80",
     },
@@ -1791,7 +1791,7 @@ encode_failure("StringsInvalidCase41") {
 
 // U+0000
 decode_failure("StringsInvalidCase41") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1811,7 +1811,7 @@ decode_failure("StringsInvalidCase41") {
 
 // U+0080
 encode_failure("StringsInvalidCase42") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe0\x82\x80",
     },
@@ -1820,7 +1820,7 @@ encode_failure("StringsInvalidCase42") {
 
 // U+0080
 decode_failure("StringsInvalidCase42") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1840,7 +1840,7 @@ decode_failure("StringsInvalidCase42") {
 
 // U+07ff
 encode_failure("StringsInvalidCase43") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xe0\x9f\xbf",
     },
@@ -1849,7 +1849,7 @@ encode_failure("StringsInvalidCase43") {
 
 // U+07ff
 decode_failure("StringsInvalidCase43") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1869,7 +1869,7 @@ decode_failure("StringsInvalidCase43") {
 
 // U+000D
 encode_failure("StringsInvalidCase44") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x80\x80\x8d",
     },
@@ -1878,7 +1878,7 @@ encode_failure("StringsInvalidCase44") {
 
 // U+000D
 decode_failure("StringsInvalidCase44") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1899,7 +1899,7 @@ decode_failure("StringsInvalidCase44") {
 
 // U+0091
 encode_failure("StringsInvalidCase45") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x80\x82\x91",
     },
@@ -1908,7 +1908,7 @@ encode_failure("StringsInvalidCase45") {
 
 // U+0091
 decode_failure("StringsInvalidCase45") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1929,7 +1929,7 @@ decode_failure("StringsInvalidCase45") {
 
 // U+0800
 encode_failure("StringsInvalidCase46") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x80\xa0\x80",
     },
@@ -1938,7 +1938,7 @@ encode_failure("StringsInvalidCase46") {
 
 // U+0800
 decode_failure("StringsInvalidCase46") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1959,7 +1959,7 @@ decode_failure("StringsInvalidCase46") {
 
 // U+FEFF (BOM)
 encode_failure("StringsInvalidCase47") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf0\x8f\xbb\xbf",
     },
@@ -1968,7 +1968,7 @@ encode_failure("StringsInvalidCase47") {
 
 // U+FEFF (BOM)
 decode_failure("StringsInvalidCase47") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -1989,7 +1989,7 @@ decode_failure("StringsInvalidCase47") {
 
 // U+003F
 encode_failure("StringsInvalidCase48") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf8\x80\x80\x80\xbf",
     },
@@ -1998,7 +1998,7 @@ encode_failure("StringsInvalidCase48") {
 
 // U+003F
 decode_failure("StringsInvalidCase48") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -2020,7 +2020,7 @@ decode_failure("StringsInvalidCase48") {
 
 
 encode_failure("StringsInvalidCase49") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfc\x80\x80\x80\xa0\xa5",
     },
@@ -2029,7 +2029,7 @@ encode_failure("StringsInvalidCase49") {
 
 
 decode_failure("StringsInvalidCase49") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -2052,7 +2052,7 @@ decode_failure("StringsInvalidCase49") {
 
 // U+110000
 encode_failure("StringsInvalidCase50") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf4\x90\x80\x80",
     },
@@ -2061,7 +2061,7 @@ encode_failure("StringsInvalidCase50") {
 
 // U+110000
 decode_failure("StringsInvalidCase50") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -2082,7 +2082,7 @@ decode_failure("StringsInvalidCase50") {
 
 // 5 bytes
 encode_failure("StringsInvalidCase51") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xf8\xa0\xbf\x80\xbf",
     },
@@ -2091,7 +2091,7 @@ encode_failure("StringsInvalidCase51") {
 
 // 5 bytes
 decode_failure("StringsInvalidCase51") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -2113,7 +2113,7 @@ decode_failure("StringsInvalidCase51") {
 
 // 6 bytes
 encode_failure("StringsInvalidCase52") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfc\x9c\xbf\x80\xbf\x80",
     },
@@ -2122,7 +2122,7 @@ encode_failure("StringsInvalidCase52") {
 
 // 6 bytes
 decode_failure("StringsInvalidCase52") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -2145,7 +2145,7 @@ decode_failure("StringsInvalidCase52") {
 
 // BOMs in UTF-16 BE
 encode_failure("StringsInvalidCase53") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xfe\xff",
     },
@@ -2154,7 +2154,7 @@ encode_failure("StringsInvalidCase53") {
 
 // BOMs in UTF-16 BE
 decode_failure("StringsInvalidCase53") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [
@@ -2173,7 +2173,7 @@ decode_failure("StringsInvalidCase53") {
 
 // BOMs in UTF-16 LE
 encode_failure("StringsInvalidCase54") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "\xff\xfe",
     },
@@ -2182,7 +2182,7 @@ encode_failure("StringsInvalidCase54") {
 
 // BOMs in UTF-16 LE
 decode_failure("StringsInvalidCase54") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [

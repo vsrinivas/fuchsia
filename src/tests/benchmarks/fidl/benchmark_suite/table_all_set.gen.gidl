@@ -6,7 +6,7 @@
 
 // Table with 1 field set
 benchmark("Table/AllSet/1") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = Table1Struct{
         value: Table1{
             field1: 1,
@@ -16,7 +16,7 @@ benchmark("Table/AllSet/1") {
 
 // Table with 16 fields set
 benchmark("Table/AllSet/16") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = Table16Struct{
         value: Table16{
             field1: 1,
@@ -41,7 +41,7 @@ benchmark("Table/AllSet/16") {
 
 // Table with 256 fields set
 benchmark("Table/AllSet/256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field1: 1,

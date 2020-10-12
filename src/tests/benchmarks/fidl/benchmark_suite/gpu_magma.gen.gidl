@@ -36,7 +36,7 @@ benchmark("GPUMagma/ExecuteImmediateCommandsRequest/CommandByte128/Semaphore8") 
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand
 // 1024 bytes command size appeared as a small cluster in a trace
 benchmark("GPUMagma/ExecuteImmediateCommandsRequest/CommandByte1024/Semaphore32") {
-    bindings_denylist = [llcpp, cpp],
+    bindings_denylist = [llcpp, hlcpp],
     value = ExecuteImmediateCommandsRequest{
         context_id: 1,
         command_data: [

@@ -1643,7 +1643,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 }
 
 func CompileHL(r types.Root) Root {
-	return compile(r.ForBindings("cpp"), formatNamespace)
+	return compile(r.ForBindings("hlcpp"), formatNamespace)
 }
 
 func CompileLL(r types.Root) Root {

@@ -11,7 +11,7 @@ import (
 type Binding string
 
 const (
-	HLCPP Binding = "cpp"
+	HLCPP Binding = "hlcpp"
 	LLCPP Binding = "llcpp"
 	Dart  Binding = "dart"
 	Rust  Binding = "rust"

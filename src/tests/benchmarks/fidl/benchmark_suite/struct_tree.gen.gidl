@@ -6,7 +6,7 @@
 
 // Binary tree with depth 8 (255 elements)
 benchmark("StructTree/Depth8") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
     value = StructTree8{
         left:StructTree7{
             left:StructTree6{

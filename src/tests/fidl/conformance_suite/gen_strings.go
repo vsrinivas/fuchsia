@@ -174,7 +174,7 @@ success("StringsValidCase{{ .index }}") {
 {{- if .overrideBindingsAllowlist }}
     bindings_allowlist = {{ .overrideBindingsAllowlist }},
 {{- else }}
-    bindings_allowlist = [go,rust,cpp,llcpp,dart,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
 {{- end }}
     value = StringWrapper {
         str: "{{ .escapedValue }}",
@@ -206,7 +206,7 @@ success("StringsValidCase{{ .index }}") {
 var decodeFailureTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 encode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,cpp,llcpp,],
+    bindings_allowlist = [go,hlcpp,llcpp,],
     value = StringWrapper {
         str: "{{ .escapedValue }}",
     },
@@ -215,7 +215,7 @@ encode_failure("StringsInvalidCase{{ .index }}") {
 
 {{ if .comment }}// {{ .comment }}{{ end }}
 decode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,rust,cpp,llcpp,],
+    bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
         v1 = [

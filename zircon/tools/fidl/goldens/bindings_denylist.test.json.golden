@@ -14,7 +14,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "cpp, dart, go, libfuzzer, llcpp, rust"
+          "value": "hlcpp, dart, go, libfuzzer, llcpp, rust"
         }
       ],
       "type": {
@@ -89,7 +89,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "cpp, go, libfuzzer, llcpp, rust, syzkaller"
+          "value": "hlcpp, go, libfuzzer, llcpp, rust, syzkaller"
         }
       ],
       "type": "uint32",
@@ -130,7 +130,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "cpp, dart, go, llcpp, rust, syzkaller"
+          "value": "hlcpp, dart, go, llcpp, rust, syzkaller"
         }
       ],
       "methods": [
@@ -203,7 +203,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "cpp, dart, libfuzzer, llcpp, rust, syzkaller"
+          "value": "hlcpp, dart, libfuzzer, llcpp, rust, syzkaller"
         }
       ],
       "members": [],
@@ -232,7 +232,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "cpp, dart, go, libfuzzer, llcpp, syzkaller"
+          "value": "hlcpp, dart, go, libfuzzer, llcpp, syzkaller"
         }
       ],
       "members": [],
@@ -262,7 +262,7 @@
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "cpp, dart, go, libfuzzer, rust, syzkaller"
+          "value": "hlcpp, dart, go, libfuzzer, rust, syzkaller"
         }
       ],
       "members": [

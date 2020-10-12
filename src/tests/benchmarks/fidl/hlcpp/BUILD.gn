@@ -9,7 +9,7 @@ import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 template("hlcpp_gidl_benchmark_suite") {
-  gidl_cpp_benchmarks(target_name) {
+  gidl_hlcpp_benchmarks(target_name) {
     testonly = true
     inputs = invoker.gidl
     fidl = invoker.fidl_target

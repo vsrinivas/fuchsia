@@ -119,10 +119,10 @@ template("gidl_source_set") {
   }
 }
 
-template("gidl_cpp_conformance") {
+template("gidl_hlcpp_conformance") {
   gidl_source_set(target_name) {
     type = "conformance"
-    language = "cpp"
+    language = "hlcpp"
     forward_variables_from(invoker, "*")
   }
 }
@@ -136,10 +136,10 @@ template("gidl_llcpp_conformance") {
   }
 }
 
-template("gidl_cpp_benchmarks") {
+template("gidl_hlcpp_benchmarks") {
   gidl_source_set(target_name) {
     type = "benchmark"
-    language = "cpp"
+    language = "hlcpp"
     forward_variables_from(invoker, "*")
   }
 }

@@ -12,7 +12,7 @@ import (
 
 	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
-	libcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
+	libhlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/hlcpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	libllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp/lib"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
@@ -82,7 +82,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 			Type:       llcppBenchmarkType(config.CppBenchmarksFidlLibrary, gidlBenchmark.Value),
 			ValueBuild: valBuild,
 			ValueVar:   valVar,
-			HandleDefs: libcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
+			HandleDefs: libhlcpp.BuildHandleDefs(gidlBenchmark.HandleDefs),
 		})
 	}
 	var buf bytes.Buffer

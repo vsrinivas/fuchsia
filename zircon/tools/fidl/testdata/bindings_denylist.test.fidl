@@ -9,30 +9,30 @@ library test.name;
 [BindingsDenylist = "there_are_no_bindings_with_this_name"]
 const uint32 AllBindings = 0;
 
-[BindingsDenylist = "cpp, dart, go, libfuzzer, llcpp, rust"]
+[BindingsDenylist = "hlcpp, dart, go, libfuzzer, llcpp, rust"]
 bits OnlySyzkaller {
     A = 1;
 };
 
-[BindingsDenylist = "cpp, go, libfuzzer, llcpp, rust, syzkaller"]
+[BindingsDenylist = "hlcpp, go, libfuzzer, llcpp, rust, syzkaller"]
 enum OnlyDart {
     A = 1;
 };
 
-[BindingsDenylist = "cpp, dart, libfuzzer, llcpp, rust, syzkaller"]
+[BindingsDenylist = "hlcpp, dart, libfuzzer, llcpp, rust, syzkaller"]
 struct OnlyGo {
 };
 
-[BindingsDenylist = "cpp, dart, go, libfuzzer, llcpp, syzkaller"]
+[BindingsDenylist = "hlcpp, dart, go, libfuzzer, llcpp, syzkaller"]
 table OnlyRust {
 };
 
-[BindingsDenylist = "cpp, dart, go, libfuzzer, rust, syzkaller"]
+[BindingsDenylist = "hlcpp, dart, go, libfuzzer, rust, syzkaller"]
 union OnlyLlcpp {
     1: uint32 x;
 };
 
-[BindingsDenylist = "cpp, dart, go, llcpp, rust, syzkaller"]
+[BindingsDenylist = "hlcpp, dart, go, llcpp, rust, syzkaller"]
 protocol OnlyLibfuzzer {
     LibfuzzerNeedsNonemptyProtocol() -> ();
 };
