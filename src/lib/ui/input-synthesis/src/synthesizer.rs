@@ -21,18 +21,18 @@ use fidl_fuchsia_ui_input::{
 use crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*, usages::Usages};
 use fuchsia_component as app;
 
-pub(crate) trait ServerConsumer {
-    fn consume(
+pub(crate) trait Injector {
+    fn register_device(
         &mut self,
         device: &mut DeviceDescriptor,
         server: ServerEnd<InputDeviceMarker>,
     ) -> Result<(), Error>;
 }
 
-pub(crate) struct RegistryServerConsumer;
+pub(crate) struct LegacyInjector;
 
-impl ServerConsumer for RegistryServerConsumer {
-    fn consume(
+impl Injector for LegacyInjector {
+    fn register_device(
         &mut self,
         device: &mut DeviceDescriptor,
         server: ServerEnd<InputDeviceMarker>,
@@ -45,7 +45,7 @@ impl ServerConsumer for RegistryServerConsumer {
 }
 
 macro_rules! register_device {
-    ( $consumer:expr , $field:ident : $value:expr ) => {{
+    ( $injector:expr , $field:ident : $value:expr ) => {{
         let mut device = DeviceDescriptor {
             device_info: None,
             keyboard: None,
@@ -59,19 +59,19 @@ macro_rules! register_device {
 
         let (input_device_client, input_device_server) =
             endpoints::create_endpoints::<InputDeviceMarker>()?;
-        $consumer.consume(&mut device, input_device_server)?;
+        $injector.register_device(&mut device, input_device_server)?;
 
         Ok(input_device_client.into_proxy()?)
     }};
 }
 
 fn register_touchscreen(
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
     width: u32,
     height: u32,
 ) -> Result<InputDeviceProxy, Error> {
     register_device! {
-        consumer,
+        injector,
         touchscreen: TouchscreenDescriptor {
             x: Axis {
                 range: Range { min: 0, max: width as i32 },
@@ -88,18 +88,18 @@ fn register_touchscreen(
     }
 }
 
-fn register_keyboard(consumer: &mut dyn ServerConsumer) -> Result<InputDeviceProxy, Error> {
+fn register_keyboard(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
     register_device! {
-        consumer,
+        injector,
         keyboard: KeyboardDescriptor {
             keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
         }
     }
 }
 
-fn register_media_buttons(consumer: &mut dyn ServerConsumer) -> Result<InputDeviceProxy, Error> {
+fn register_media_buttons(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
     register_device! {
-        consumer,
+        injector,
         media_buttons: MediaButtonsDescriptor {
             buttons: fidl_fuchsia_ui_input::MIC_MUTE
                 | fidl_fuchsia_ui_input::VOLUME_DOWN
@@ -136,9 +136,9 @@ pub(crate) fn media_button_event(
     mic_mute: bool,
     reset: bool,
     pause: bool,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_media_buttons(consumer)?;
+    let input_device = register_media_buttons(injector)?;
 
     input_device
         .dispatch_report(&mut media_buttons(
@@ -155,9 +155,9 @@ pub(crate) fn media_button_event(
 pub(crate) fn keyboard_event(
     usage: u32,
     duration: Duration,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_keyboard(consumer)?;
+    let input_device = register_keyboard(injector)?;
 
     repeat_with_delay(
         1,
@@ -180,9 +180,9 @@ pub(crate) fn keyboard_event(
 pub(crate) fn text(
     input: String,
     duration: Duration,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_keyboard(consumer)?;
+    let input_device = register_keyboard(injector)?;
     let key_sequence = InverseKeymap::new(keymaps::QWERTY_MAP)
         .derive_key_sequence(&input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
@@ -211,9 +211,9 @@ pub(crate) fn tap_event(
     height: u32,
     tap_event_count: usize,
     duration: Duration,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_touchscreen(consumer, width, height)?;
+    let input_device = register_touchscreen(injector, width, height)?;
     let tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -238,9 +238,9 @@ pub(crate) fn multi_finger_tap_event(
     height: u32,
     tap_event_count: usize,
     duration: Duration,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_touchscreen(consumer, width, height)?;
+    let input_device = register_touchscreen(injector, width, height)?;
     let multi_finger_tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -270,7 +270,7 @@ pub(crate) fn swipe(
     height: u32,
     move_event_count: usize,
     duration: Duration,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
     multi_finger_swipe(
         vec![(x0, y0)],
@@ -279,7 +279,7 @@ pub(crate) fn swipe(
         height,
         move_event_count,
         duration,
-        consumer,
+        injector,
     )
 }
 
@@ -290,7 +290,7 @@ pub(crate) fn multi_finger_swipe(
     height: u32,
     move_event_count: usize,
     duration: Duration,
-    consumer: &mut dyn ServerConsumer,
+    injector: &mut dyn Injector,
 ) -> Result<(), Error> {
     ensure!(
         start_fingers.len() == end_fingers.len(),
@@ -303,7 +303,7 @@ pub(crate) fn multi_finger_swipe(
         "fingers exceed capacity of `finger_id`!"
     );
 
-    let input_device = register_touchscreen(consumer, width, height)?;
+    let input_device = register_touchscreen(injector, width, height)?;
 
     // Note: coordinates are coverted to `f64` before subtraction, because u32 subtraction
     // would overflow when swiping from higher coordinates to lower coordinates.
@@ -417,12 +417,12 @@ mod tests {
                 }
             }
         }
-        struct TestConsumer {
+        struct FakeInjector {
             event_stream: Option<InputDeviceRequestStream>,
         }
 
-        impl ServerConsumer for TestConsumer {
-            fn consume(
+        impl Injector for FakeInjector {
+            fn register_device(
                 &mut self,
                 _: &mut DeviceDescriptor,
                 server: ServerEnd<InputDeviceMarker>,
@@ -433,7 +433,7 @@ mod tests {
             }
         }
 
-        impl TestConsumer {
+        impl FakeInjector {
             fn new() -> Self {
                 Self { event_stream: None }
             }
@@ -452,7 +452,7 @@ mod tests {
                             .await
                     }
                     None => {
-                        vec![Err(format!("called get_events() on Consumer with no `event_stream`"))]
+                        vec![Err(format!("called get_events() on Injector with no `event_stream`"))]
                     }
                 }
             }
@@ -472,7 +472,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn media_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             media_button_event(true, false, true, false, true, &mut fake_event_listener)?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, media_buttons),
@@ -489,7 +489,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn keyboard_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             keyboard_event(40, Duration::from_millis(0), &mut fake_event_listener)?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, keyboard),
@@ -503,7 +503,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn text_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             text("A".to_string(), Duration::from_millis(0), &mut fake_event_listener)?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, keyboard),
@@ -518,7 +518,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn multi_finger_tap_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             let fingers = vec![
                 Touch { finger_id: 1, x: 0, y: 0, width: 0, height: 0 },
                 Touch { finger_id: 2, x: 20, y: 20, width: 0, height: 0 },
@@ -552,7 +552,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn tap_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             tap_event(10, 10, 1000, 1000, 1, Duration::from_millis(0), &mut fake_event_listener)?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
@@ -568,7 +568,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn swipe_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             swipe(
                 10,
                 10,
@@ -600,7 +600,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn swipe_event_report_inverted() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             swipe(
                 100,
                 100,
@@ -632,7 +632,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn multi_finger_swipe_event_report() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             multi_finger_swipe(
                 vec![(10, 10), (20, 20), (30, 30)],
                 vec![(100, 100), (120, 120), (150, 150)],
@@ -674,7 +674,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn multi_finger_swipe_event_report_inverted() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             multi_finger_swipe(
                 vec![(100, 100), (120, 120), (150, 150)],
                 vec![(10, 10), (20, 20), (30, 30)],
@@ -716,7 +716,7 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn multi_finger_swipe_event_zero_move_events() -> Result<(), Error> {
-            let mut fake_event_listener = TestConsumer::new();
+            let mut fake_event_listener = FakeInjector::new();
             multi_finger_swipe(
                 vec![(10, 10), (20, 20), (30, 30)],
                 vec![(100, 100), (120, 120), (150, 150)],
