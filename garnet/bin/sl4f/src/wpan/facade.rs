@@ -4,9 +4,11 @@
 
 use crate::common_utils::lowpan_context::LowpanContext;
 use anyhow::Error;
+use fidl_fuchsia_lowpan::ConnectivityState as lowpan_ConnectivityState;
 use fidl_fuchsia_lowpan_device::{DeviceExtraProxy, DeviceProxy};
 use fidl_fuchsia_lowpan_test::DeviceTestProxy;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use serde::Serialize;
 
 /// Perform Wpan FIDL operations.
 ///
@@ -19,6 +21,17 @@ pub struct WpanFacade {
     device_test: RwLock<Option<DeviceTestProxy>>,
     /// The proxy to access the lowpan DeviceExtra service.
     device_extra: RwLock<Option<DeviceExtraProxy>>,
+}
+
+#[derive(Serialize)]
+pub enum ConnectivityState {
+    Inactive,
+    Ready,
+    Offline,
+    Attaching,
+    Attached,
+    Isolated,
+    Commissioning,
 }
 
 impl WpanFacade {
@@ -83,7 +96,7 @@ impl WpanFacade {
         Ok(ncp_rssi)
     }
 
-    ///Returns the factory mac address from the DeviceTest proxy service.
+    /// Returns the factory mac address from the DeviceTest proxy service.
     pub async fn get_weave_node_id(&self) -> Result<Vec<u8>, Error> {
         let factory_mac_address = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_factory_mac_address().await?,
@@ -92,7 +105,7 @@ impl WpanFacade {
         Ok(factory_mac_address)
     }
 
-    ///Returns the network name from the DeviceExtra proxy service.
+    /// Returns the network name from the DeviceExtra proxy service.
     pub async fn get_network_name(&self) -> Result<Vec<u8>, Error> {
         let raw_name = match self.device_extra.read().as_ref() {
             Some(device_extra) => device_extra.watch_identity().await?.raw_name,
@@ -104,7 +117,7 @@ impl WpanFacade {
         }
     }
 
-    ///Returns the partition id from the DeviceTest proxy service.
+    /// Returns the partition id from the DeviceTest proxy service.
     pub async fn get_partition_id(&self) -> Result<u32, Error> {
         let partition_id = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_partition_id().await?,
@@ -113,13 +126,37 @@ impl WpanFacade {
         Ok(partition_id)
     }
 
-    ///Returns the thread router id from the DeviceTest proxy service.
+    /// Returns the thread router id from the DeviceTest proxy service.
     pub async fn get_thread_router_id(&self) -> Result<u8, Error> {
         let router_id = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_thread_router_id().await?,
             _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
         };
         Ok(router_id)
+    }
+
+    /// Returns the connectivity state from the DeviceTest proxy service
+    pub async fn get_ncp_state(&self) -> Result<ConnectivityState, Error> {
+        let device_state = match self.device.read().as_ref() {
+            Some(device) => device.watch_device_state().await?.connectivity_state,
+            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+        };
+        match device_state {
+            Some(connectivity_state) => Ok(WpanFacade::to_connectivity_state(connectivity_state)),
+            None => bail!("Device state is not defined!"),
+        }
+    }
+
+    fn to_connectivity_state(connectivity_state: lowpan_ConnectivityState) -> ConnectivityState {
+        match connectivity_state {
+            lowpan_ConnectivityState::Inactive => ConnectivityState::Inactive,
+            lowpan_ConnectivityState::Ready => ConnectivityState::Ready,
+            lowpan_ConnectivityState::Offline => ConnectivityState::Offline,
+            lowpan_ConnectivityState::Attaching => ConnectivityState::Attaching,
+            lowpan_ConnectivityState::Attached => ConnectivityState::Attached,
+            lowpan_ConnectivityState::Isolated => ConnectivityState::Isolated,
+            lowpan_ConnectivityState::Commissioning => ConnectivityState::Commissioning,
+        }
     }
 }
 
@@ -251,5 +288,11 @@ mod tests {
     async fn test_get_thread_router_id() {
         let facade = MOCK_TESTER.create_facade_and_serve();
         MockTester::assert_wpan_fn(facade.0.get_thread_router_id(), facade.1).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_ncp_state() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_ncp_state(), facade.1).await;
     }
 }

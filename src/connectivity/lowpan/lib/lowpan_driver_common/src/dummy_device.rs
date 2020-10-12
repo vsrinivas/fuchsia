@@ -305,7 +305,8 @@ impl Driver for DummyDevice {
     fn watch_device_state(&self) -> BoxStream<'_, ZxResult<DeviceState>> {
         use futures::future::ready;
         use futures::stream::pending;
-        let initial = Ok(DeviceState { connectivity_state: None, role: None });
+        let initial =
+            Ok(DeviceState { connectivity_state: Some(ConnectivityState::Ready), role: None });
 
         ready(initial).into_stream().chain(pending()).boxed()
     }
