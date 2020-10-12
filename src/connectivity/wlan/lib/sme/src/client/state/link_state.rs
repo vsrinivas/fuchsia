@@ -22,7 +22,7 @@ use {
     fuchsia_zircon as zx,
     log::{error, warn},
     wlan_rsn::{
-        key::exchange::Key,
+        key::{exchange::Key, Tk},
         rsna::{self, SecAssocStatus, SecAssocUpdate},
     },
     wlan_statemachine::*,

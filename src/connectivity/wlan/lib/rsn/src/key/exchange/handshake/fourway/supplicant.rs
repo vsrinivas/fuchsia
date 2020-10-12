@@ -8,6 +8,7 @@ use crate::key::exchange::{compute_mic_from_buf, Key};
 use crate::key::gtk::Gtk;
 use crate::key::igtk::Igtk;
 use crate::key::ptk::Ptk;
+use crate::key::Tk;
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{
@@ -17,7 +18,6 @@ use crate::rsna::{
 use crate::Error;
 use crate::ProtectionInfo;
 use anyhow::{ensure, format_err};
-use crypto::util::fixed_time_eq;
 use eapol;
 use eapol::KeyFrameBuf;
 use log::error;
@@ -345,20 +345,22 @@ impl State {
                             // match with the original one Fuchsia drops the received message. This
                             // includes the case where no GTK has been set.
                             Ok((msg4, gtk, igtk)) => {
-                                let keys_unchanged = match (&gtk, expected_gtk) {
-                                    (Some(gtk), Some(expected_gtk)) => {
-                                        fixed_time_eq(&gtk.gtk[..], &expected_gtk.gtk[..])
-                                    }
+                                let gtk_unchanged = match (gtk, expected_gtk) {
                                     (None, None) => true,
-                                    _ => false,
-                                } && match (&igtk, expected_igtk) {
-                                    (Some(igtk), Some(expected_igtk)) => {
-                                        fixed_time_eq(&igtk.igtk[..], &expected_igtk.igtk[..])
+                                    (Some(ref gtk_val), Some(expected_gtk_val)) => {
+                                        gtk_val.eq_tk(expected_gtk_val)
                                     }
-                                    (None, None) => true,
                                     _ => false,
                                 };
-                                if keys_unchanged {
+                                let igtk_unchanged = match (igtk, expected_igtk) {
+                                    (None, None) => true,
+                                    (Some(ref igtk_val), Some(expected_igtk_val)) => {
+                                        igtk_val.eq_tk(expected_igtk_val)
+                                    }
+                                    _ => false,
+                                };
+
+                                if gtk_unchanged && igtk_unchanged {
                                     update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 } else {
                                     error!("error: GTK or IGTK differs in replayed 3rd message");

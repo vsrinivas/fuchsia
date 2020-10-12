@@ -7,6 +7,7 @@ use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFra
 use crate::key::exchange::{compute_mic_from_buf, Key};
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
+use crate::key::Tk;
 use crate::key_data::kde;
 use crate::rsna::{
     derive_key_descriptor_version, Dot11VerifiedKeyFrame, NegotiatedProtection, SecAssocUpdate,

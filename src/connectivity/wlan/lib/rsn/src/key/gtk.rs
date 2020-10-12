@@ -5,6 +5,7 @@
 // Remove once GtkProvider is used.
 #[allow(unused)]
 use crate::crypto_utils::prf;
+use crate::key::Tk;
 use crate::{rsn_ensure, Error};
 use mundane::bytes;
 use std::hash::{Hash, Hasher};
@@ -81,12 +82,14 @@ impl Gtk {
         Ok(Gtk { gtk: gtk_bytes, key_id, tk_len: (tk_bits / 8) as usize, cipher, rsc })
     }
 
-    pub fn tk(&self) -> &[u8] {
-        &self.gtk[0..self.tk_len]
-    }
-
     pub fn key_id(&self) -> u8 {
         self.key_id
+    }
+}
+
+impl Tk for Gtk {
+    fn tk(&self) -> &[u8] {
+        &self.gtk[0..self.tk_len]
     }
 }
 

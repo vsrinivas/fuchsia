@@ -21,7 +21,7 @@ use {
         ie::SupportedRate,
         mac::{Aid, CapabilityInfo},
     },
-    wlan_rsn::key::exchange::Key,
+    wlan_rsn::key::{exchange::Key, Tk},
 };
 
 pub struct RemoteClient {
