@@ -44,9 +44,8 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg, uint32_t* 
 // - Padding is zeroed in between struct fields and in between out of line values.
 // - The buffer is validated to match the requirements of the FIDL wire format.
 //
-// On failure, any handle that has been marked invalid in the original object will be closed.
-// Handles that have not yet been processed will be left unchanged in the original object and
-// are not the responsibility of fidl_linearize_and_encode to close.
+// On success, handles in the original object will be moved to the |out_handles| array.
+// On failure, handles in the original object will be closed.
 zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* out_bytes,
                                       uint32_t num_bytes, zx_handle_t* out_handles,
                                       uint32_t num_handles, uint32_t* out_num_actual_bytes,
