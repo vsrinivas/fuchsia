@@ -83,15 +83,16 @@ debug file).
 The markup format supports a restricted subset of ANSI X3.64 SGR (Select
 Graphic Rendition) control sequences.  These are unlike other markup
 elements:
- * They specify presentation details (**bold** or colors) rather than
-   semantic information.  The association of semantic meaning with color
-   (e.g. red for errors) is chosen by the code doing the logging, rather
-   than by the UI presentation of the symbolizing filter.  This is a
-   concession to existing code (e.g. LLVM sanitizer runtimes) that use
-   specific colors and would require substantial changes to generate
-   semantic markup instead.
- * A single control sequence changes "the state", rather than being an
-   hierarchical structure that surrounds affected text.
+
+* They specify presentation details (**bold** or colors) rather than
+  semantic information.  The association of semantic meaning with color
+  (e.g. red for errors) is chosen by the code doing the logging, rather
+  than by the UI presentation of the symbolizing filter.  This is a
+  concession to existing code (e.g. LLVM sanitizer runtimes) that use
+  specific colors and would require substantial changes to generate
+  semantic markup instead.
+* A single control sequence changes "the state", rather than being an
+  hierarchical structure that surrounds affected text.
 
 The filter processes ANSI SGR control sequences only within a single
 line.  If a control sequence to enter a **bold** or color state is
