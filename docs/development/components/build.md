@@ -1039,9 +1039,6 @@ package depends on them then at this time it cannot be migrated to the new
 templates. These unsupported features include:
 
 *   Legacy `shell` binaries (deprecated global `/bin` directory)
-*   Marking a test as disabled. This should instead be done for instance by
-    changing the test source code to disable specific test cases or the entire
-    test suite.
 *   Legacy `drivers` (deprecated global `/driver` directory)
 *   Legacy `loadable_modules` and `libraries` (deprecated global `/lib`
     directory)
