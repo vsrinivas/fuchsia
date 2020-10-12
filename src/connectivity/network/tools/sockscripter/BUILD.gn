@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -41,9 +42,14 @@ executable("sockscripter_test") {
   ]
 }
 
+install_host_tools("host") {
+  deps = [ ":bin" ]
+  outputs = [ "sockscripter" ]
+}
+
 group("sockscripter") {
   deps = [
-    ":bin($host_toolchain)",
+    ":host",
     ":package",
   ]
 }

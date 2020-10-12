@@ -183,11 +183,10 @@ const struct Command {
 };
 
 int print_socket_types() {
-  std::string socket_types_list;
   for (const auto& socket_type : socket_types) {
-    socket_types_list += std::string(socket_type.name) + " ";
+    std::cout << socket_type.name << " ";
   }
-  fprintf(stdout, "%s", socket_types_list.c_str());
+  std::cout << std::endl;
   return 0;
 }
 
@@ -205,8 +204,9 @@ int check_socket_type_has_proto(const char* stype) {
 
 int print_commands_list() {
   for (const auto& cmd : kCommands) {
-    std::cout << std::string(cmd.name) << " ";
+    std::cout << cmd.name << " ";
   }
+  std::cout << std::endl;
   return 0;
 }
 
