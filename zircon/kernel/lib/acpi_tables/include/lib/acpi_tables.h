@@ -31,15 +31,6 @@ struct AcpiNumaDomain {
 inline constexpr uint8_t kAcpiAddressSpaceMemory = 0;  // Memory/MMIO address.
 inline constexpr uint8_t kAcpiAddressSpaceIOPort = 1;  // I/O port address.
 
-// Describes a dedicated system debug port suitable for low-level
-// debugging and diagnostics.
-//
-// Currently, we only support a 16550-compatible UART using MMIO.
-struct AcpiDebugPortDescriptor {
-  // Physical address of the 16550 MMIO registers.
-  paddr_t address;
-};
-
 // Designed to read and parse APIC tables, other functions of the APIC
 // subsystem are out of scope of this class. This class can work before dynamic memory
 // allocation is available.
@@ -72,10 +63,6 @@ class AcpiTables {
 
   // Sets count equal to the number of overrides registered in the system.
   zx_status_t interrupt_source_overrides_count(uint32_t* count) const;
-
-  // Lookup low-level debug port information. Returns ZX_OK and
-  // populates info if successful, otherwise returns error.
-  zx_status_t debug_port(AcpiDebugPortDescriptor* desc) const;
 
   // Vists all pairs of cpu apic id and NumaRegion.
   // Visitor is expected to have the signature:

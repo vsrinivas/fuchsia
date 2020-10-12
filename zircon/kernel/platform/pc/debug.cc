@@ -8,7 +8,8 @@
 #include "debug.h"
 
 #include <bits.h>
-#include <lib/acpi_tables.h>
+#include <lib/acpi_lite.h>
+#include <lib/acpi_lite/debug_port.h>
 #include <lib/arch/intrin.h>
 #include <lib/cbuf.h>
 #include <lib/cmdline.h>
@@ -34,6 +35,7 @@
 #include <platform/console.h>
 #include <platform/debug.h>
 #include <platform/pc.h>
+#include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
 #include <vm/physmap.h>
 #include <vm/vm_aspace.h>
@@ -463,20 +465,20 @@ static bool handle_serial_zbi() {
 // Return "true" if a debug port was found.
 static bool handle_serial_acpi() {
   // Fetch ACPI debug port information, if present.
-  AcpiDebugPortDescriptor desc;
-  zx_status_t status = AcpiTables::Default().debug_port(&desc);
-  if (status != ZX_OK) {
+  zx::status<acpi_lite::AcpiDebugPortDescriptor> desc =
+      acpi_lite::GetDebugPort(GlobalAcpiLiteParser());
+  if (desc.is_error()) {
     dprintf(INFO, "UART: no DBG2 ACPI entry found, or unsupported port type.\n");
     return false;
   }
 
   // Allocate mapping to UART MMIO.
   void* ptr;
-  status = VmAspace::kernel_aspace()->AllocPhysical(
+  zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
       "debug_uart", /*size=*/PAGE_SIZE,
       /*ptr=*/&ptr,
       /*align_pow2=*/PAGE_SIZE_SHIFT,
-      /*paddr=*/(paddr_t)desc.address,
+      /*paddr=*/static_cast<paddr_t>(desc->address),
       /*vmm_flags=*/0,
       /*arch_mmu_flags=*/ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
           ARCH_MMU_FLAG_PERM_WRITE);
@@ -486,10 +488,10 @@ static bool handle_serial_acpi() {
   }
 
   // Initialise.
-  dprintf(INFO, "UART: found ACPI debug port at address %#08lx.\n", desc.address);
+  dprintf(INFO, "UART: found ACPI debug port at address %#08lx.\n", desc->address);
   DebugPort port;
   port.type = DebugPort::Type::Mmio;
-  port.phys_addr = desc.address;
+  port.phys_addr = desc->address;
   port.mem_addr = reinterpret_cast<vaddr_t>(ptr);
   port.irq = 0;
   setup_uart(port);

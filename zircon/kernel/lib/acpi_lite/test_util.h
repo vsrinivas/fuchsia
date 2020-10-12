@@ -7,6 +7,10 @@
 
 #include <lib/acpi_lite.h>
 
+#include <initializer_list>
+
+#include <fbl/vector.h>
+
 #include "test_data.h"
 
 namespace acpi_lite {
@@ -51,6 +55,52 @@ class FakePhysMemReader : public PhysMemReader {
 
  private:
   const AcpiTableSet* tables_;
+};
+
+// An empty AcpiParser.
+class EmptyAcpiParser final : public AcpiParserInterface {
+  size_t num_tables() const override { return 0u; }
+
+  const AcpiSdtHeader* GetTableAtIndex(size_t index) const override { return nullptr; }
+};
+
+// An AcpiParserInterface that provides a fixed set of tables.
+//
+// Input pointers must have valid |length| parameters. That is, each pointer |p|
+// must point to at least |p->length| bytes of memory.
+class FakeAcpiParser : public AcpiParserInterface {
+ public:
+  FakeAcpiParser(std::initializer_list<fbl::Span<const uint8_t>> tables) {
+    for (fbl::Span<const uint8_t> table : tables) {
+      ZX_ASSERT(table.size() >= sizeof(AcpiSdtHeader));
+      Add(reinterpret_cast<const AcpiSdtHeader*>(table.data()));
+    }
+  }
+
+  FakeAcpiParser(std::initializer_list<const AcpiSdtHeader*> tables) {
+    for (const AcpiSdtHeader* table : tables) {
+      Add(table);
+    }
+  }
+
+  void Add(const AcpiSdtHeader* table) {
+    ZX_ASSERT(table->length >= sizeof(AcpiSdtHeader));
+    fbl::AllocChecker ac;
+    tables_.push_back(table, &ac);
+    ZX_ASSERT(ac.check());
+  }
+
+  size_t num_tables() const override { return tables_.size(); }
+
+  const AcpiSdtHeader* GetTableAtIndex(size_t index) const override {
+    if (index >= tables_.size()) {
+      return nullptr;
+    }
+    return tables_[index];
+  }
+
+ private:
+  fbl::Vector<const AcpiSdtHeader*> tables_;
 };
 
 }  // namespace acpi_lite

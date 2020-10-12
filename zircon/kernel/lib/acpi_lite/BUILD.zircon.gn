@@ -10,9 +10,10 @@ import("$zx_build/public/gn/migrated_targets.gni")
 zx_library("acpi_lite") {
   sdk = "source"
   sdk_headers = [
+    "lib/acpi_lite.h",
+    "lib/acpi_lite/debug_port.h",
     "lib/acpi_lite/internal.h",
     "lib/acpi_lite/structures.h",
-    "lib/acpi_lite.h",
   ]
   sdk_migrated = true
   kernel = true
@@ -20,6 +21,7 @@ zx_library("acpi_lite") {
 
   sources = [
     "acpi_lite.cc",
+    "debug_port.cc",
     "structures.cc",
   ]
 
@@ -47,7 +49,11 @@ if (!is_kernel) {
 
   executable("acpi_lite_test") {
     testonly = true
-    sources = [ "acpi_lite_test.cc" ]
+    sources = [
+      "acpi_lite_test.cc",
+      "binary_reader_test.cc",
+      "debug_port_test.cc",
+    ]
     deps = [
       ":acpi_lite",
       "//src/lib/fxl/test:gtest_main",
@@ -65,8 +71,16 @@ if (!is_kernel) {
     deps = [ ":acpi_lite" ]
   }
 
+  fuzzer("debug_port_fuzztest") {
+    sources = [ "debug_port_fuzztest.cc" ]
+    deps = [ ":acpi_lite" ]
+  }
+
   fuzzers_package("acpi-lite-fuzzer") {
-    cpp_fuzzers = [ ":acpi_lite_fuzztest" ]
+    cpp_fuzzers = [
+      ":acpi_lite_fuzztest",
+      ":debug_port_fuzztest",
+    ]
   }
 
   group("tests") {

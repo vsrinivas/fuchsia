@@ -144,17 +144,6 @@ bool test_numa_2970wx() {
   END_TEST;
 }
 
-bool test_dbg2_parsing() {
-  BEGIN_TEST;
-
-  AcpiTables tables(&acpi_test_data::kAtlasDbg2TableProvider);
-  AcpiDebugPortDescriptor desc;
-  ASSERT_EQ(ZX_OK, tables.debug_port(&desc));
-  EXPECT_EQ(0xfe03'4000u, desc.address);
-
-  END_TEST;
-}
-
 UNITTEST_START_TESTCASE(acpi_tables_tests)
 UNITTEST("Enumerate cpus using pixelbook eve data", test_cpus_eve)
 UNITTEST("Enumerate cpus using HP z840 data.", test_cpus_z840)
@@ -162,5 +151,4 @@ UNITTEST("Enumerate io_apic_ids.", test_io)
 UNITTEST("Enumerate interrupt_source_overrides.", test_interrupt_source_overrides)
 UNITTEST("Enumerate NUMA regions using HP z840 data.", test_numa_z840)
 UNITTEST("Enumerate NUMA regions using Threadripper 2970 data.", test_numa_2970wx)
-UNITTEST("Parse DBG2 table entry.", test_dbg2_parsing)
 UNITTEST_END_TESTCASE(acpi_tables_tests, "acpi_tables", "Test parsing of acpi tables.")
