@@ -199,6 +199,7 @@ template("flutter_component") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "build_cfg",
                              "deps",
                              "main_dart",
                              "main_package",

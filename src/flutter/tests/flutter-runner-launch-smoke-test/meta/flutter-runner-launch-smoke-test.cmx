@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "bin/flutter_runner_launch_smoke_test_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.echo.EchoService",
+            "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

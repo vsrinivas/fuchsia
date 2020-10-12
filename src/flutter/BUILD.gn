@@ -41,3 +41,8 @@ foreach(type, runner_types) {
 group("flutter") {
   public_deps = all_flutter_runners
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}

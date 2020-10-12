@@ -1,0 +1,16 @@
+{
+    "program": {
+        "data": "data/pingable-flutter-component-debug-build-cfg"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

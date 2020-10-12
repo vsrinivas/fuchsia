@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_build_config.gni")
+import("//build/flutter/flutter_component.gni")
+import("//src/sys/build/components.gni")
+
+dart_library("lib") {
+  package_name = "pingable_flutter_component"
+  sources = [ "main.dart" ]
+  deps = [
+    "//src/flutter/tests/fidl",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_services",
+  ]
+}
+
+BUILD_CONFIGS = [
+  {
+    name = "debug"
+    build_cfg = flutter_debug_build_cfg
+  },
+  {
+    name = "profile"
+    build_cfg = flutter_profile_build_cfg
+  },
+  {
+    name = "release"
+    build_cfg = flutter_release_build_cfg
+  },
+]
+
+PINGABLE_FLUTTER_COMPONENTS = []
+foreach(cfg, BUILD_CONFIGS) {
+  _target_name = "pingable-flutter-component-${cfg.name}-build-cfg"
+  flutter_component(_target_name) {
+    manifest = "meta/pingable-flutter-component-${cfg.name}-build-cfg.cmx"
+    main_package = "pingable_flutter_component"
+    deps = [ ":lib" ]
+    build_cfg = cfg.build_cfg
+  }
+  PINGABLE_FLUTTER_COMPONENTS += [ ":$_target_name" ]
+}
+
+fuchsia_package("pingable-flutter-component") {
+  deps = PINGABLE_FLUTTER_COMPONENTS
+}
