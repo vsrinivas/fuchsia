@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde::Serialize;
-use serde_json;
-use std::fs::File;
-use std::io;
-use std::str;
-use tempfile::{self, TempDir};
+use {
+    serde::Serialize,
+    serde_json,
+    std::{fs::File, io, str},
+    tempfile::{self, TempDir},
+};
 
 pub(crate) fn create_dir<'a, T, S>(iter: T) -> TempDir
 where

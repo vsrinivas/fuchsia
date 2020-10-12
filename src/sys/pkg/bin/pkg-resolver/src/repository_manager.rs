@@ -341,7 +341,7 @@ pub struct UnsetCobaltSender;
 /// [RepositoryManagerBuilder] constructs a [RepositoryManager], optionally initializing it
 /// with [RepositoryConfig]s passed in directly or loaded out of the filesystem.
 #[derive(Clone, Debug)]
-pub struct RepositoryManagerBuilder<S, N> {
+pub struct RepositoryManagerBuilder<S = UnsetCobaltSender, N = UnsetInspectNode> {
     dynamic_configs_path: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
@@ -434,6 +434,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     {
         Self::new(dynamic_configs_path, Experiments::none())
     }
+
     /// Adds these static [RepoConfigs](RepoConfig) to the [RepositoryManager].
     #[cfg(test)]
     pub fn static_configs<I>(mut self, iter: I) -> Self
@@ -782,14 +783,113 @@ impl ToResolveStatus for GetPackageHashError {
 mod tests {
     use {
         super::*,
-        crate::test_util::create_dir,
         fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_url::pkg_url::RepoUrl,
         http::Uri,
         maplit::hashmap,
-        std::{borrow::Borrow, fs::File, io::Write},
+        std::{borrow::Borrow, fs::File, io::Write, path::Path},
     };
+
+    const DYNAMIC_CONFIG_NAME: &str = "dynamic-config.json";
+
+    struct TestEnvBuilder {
+        static_configs: Option<Vec<(String, RepositoryConfigs)>>,
+        dynamic_configs: Option<Option<RepositoryConfigs>>,
+    }
+
+    impl TestEnvBuilder {
+        fn add_static_config(self, name: &str, config: RepositoryConfig) -> Self {
+            self.add_static_configs(name, RepositoryConfigs::Version1(vec![config]))
+        }
+
+        fn add_static_configs(mut self, name: &str, configs: RepositoryConfigs) -> Self {
+            self.static_configs.get_or_insert_with(|| vec![]).push((name.into(), configs));
+            self
+        }
+
+        fn with_empty_dynamic_configs(mut self) -> Self {
+            self.dynamic_configs = Some(None);
+            self
+        }
+
+        fn add_dynamic_configs(mut self, configs: RepositoryConfigs) -> Self {
+            self.dynamic_configs = Some(Some(configs));
+            self
+        }
+
+        fn build(self) -> TestEnv {
+            let static_configs = self.static_configs.map(|static_configs| {
+                let dir = tempfile::tempdir().unwrap();
+
+                for (name, configs) in static_configs.into_iter() {
+                    let f = File::create(dir.path().join(name)).unwrap();
+                    serde_json::to_writer(io::BufWriter::new(f), &configs).unwrap();
+                }
+
+                dir
+            });
+
+            let dynamic_configs = self.dynamic_configs.map(|dynamic_configs| {
+                let dir = tempfile::tempdir().unwrap();
+                let path = dir.path().join(DYNAMIC_CONFIG_NAME);
+
+                if let Some(configs) = dynamic_configs {
+                    let f = File::create(&path).unwrap();
+                    serde_json::to_writer(io::BufWriter::new(f), &configs).unwrap();
+                }
+
+                (dir, path)
+            });
+
+            TestEnv { static_configs, dynamic_configs }
+        }
+    }
+
+    struct TestEnv {
+        static_configs: Option<tempfile::TempDir>,
+        dynamic_configs: Option<(tempfile::TempDir, PathBuf)>,
+    }
+
+    impl TestEnv {
+        fn builder() -> TestEnvBuilder {
+            TestEnvBuilder { static_configs: None, dynamic_configs: None }
+        }
+
+        fn new() -> Self {
+            Self::builder().build()
+        }
+
+        fn dynamic_configs_path(&self) -> Option<&Path> {
+            self.dynamic_configs.as_ref().map(|(_, p)| p.as_path())
+        }
+
+        fn repo_manager(&self) -> Result<RepositoryManager, TestError> {
+            let builder = self.repo_manager_builder().map_err(|(_, err)| err)?;
+            Ok(builder.build())
+        }
+
+        fn repo_manager_builder(
+            &self,
+        ) -> Result<RepositoryManagerBuilder, (RepositoryManagerBuilder, TestError)> {
+            let mut builder = RepositoryManagerBuilder::new_test(self.dynamic_configs_path())
+                .map_err(|(builder, err)| (builder, TestError::Constructor(err)))?;
+
+            if let Some(ref dir) = self.static_configs {
+                builder = builder
+                    .load_static_configs_dir(dir.path())
+                    .map_err(|(builder, errs)| (builder, TestError::LoadStaticConfigs(errs)))?;
+            }
+
+            Ok(builder)
+        }
+    }
+
+    #[derive(Debug)]
+    pub(crate) enum TestError {
+        Constructor(LoadError),
+        LoadStaticConfigs(Vec<LoadError>),
+    }
 
     fn assert_does_not_exist_error(err: &LoadError, missing_path: &Path) {
         match &err {
@@ -834,11 +934,12 @@ mod tests {
 
     #[test]
     fn test_insert_get_remove() {
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mut repomgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path)).unwrap().build();
-        assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path.clone()));
+        let env = TestEnv::builder().with_empty_dynamic_configs().build();
+        let mut repomgr = env.repo_manager().unwrap();
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
 
@@ -857,7 +958,10 @@ mod tests {
         );
 
         assert_eq!(repomgr.insert(Arc::clone(&config1)), Ok(None));
-        assert_eq!(dynamic_configs_path, dynamic_configs_path.clone());
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(
             repomgr.dynamic_configs,
@@ -865,7 +969,10 @@ mod tests {
         );
 
         assert_eq!(repomgr.insert(Arc::clone(&config2)), Ok(Some(config1)));
-        assert_eq!(dynamic_configs_path, dynamic_configs_path.clone());
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(
             repomgr.dynamic_configs,
@@ -895,18 +1002,12 @@ mod tests {
                 .build(),
         );
 
-        let static_dir = create_dir(vec![(
-            "fuchsia.com.json",
-            RepositoryConfigs::Version1(vec![(*fuchsia_config1).clone()]),
-        )]);
+        let env = TestEnv::builder()
+            .add_static_config("fuchsia.com.json", (*fuchsia_config1).clone())
+            .with_empty_dynamic_configs()
+            .build();
 
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let mut repomgr =
-            RepositoryManagerBuilder::new_test(Some(dynamic_dir.path().join("config")))
-                .unwrap()
-                .load_static_configs_dir(static_dir.path())
-                .unwrap()
-                .build();
+        let mut repomgr = env.repo_manager().unwrap();
 
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config1));
         assert_eq!(repomgr.insert(Arc::clone(&fuchsia_config2)), Ok(None));
@@ -925,19 +1026,12 @@ mod tests {
                 .build(),
         );
 
-        let static_dir = create_dir(vec![(
-            "fuchsia.com.json",
-            RepositoryConfigs::Version1(vec![(*fuchsia_config1).clone()]),
-        )]);
-
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-
-        let mut repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(static_dir.path())
-            .unwrap()
+        let env = TestEnv::builder()
+            .add_static_config("fuchsia.com.json", (*fuchsia_config1).clone())
+            .with_empty_dynamic_configs()
             .build();
+
+        let mut repomgr = env.repo_manager().unwrap();
 
         assert_eq!(repomgr.get(&fuchsia_url), Some(&fuchsia_config1));
         assert_eq!(repomgr.remove(&fuchsia_url), Err(RemoveError::CannotRemoveStaticRepositories));
@@ -1024,21 +1118,17 @@ mod tests {
         let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
         let example_config = RepositoryConfigBuilder::new(example_url.clone()).build();
 
-        let dir = create_dir(vec![
-            ("example.com.json", RepositoryConfigs::Version1(vec![example_config.clone()])),
-            ("fuchsia.com.json", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
-        ]);
-
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-
-        let repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(dir.path())
-            .unwrap()
+        let env = TestEnv::builder()
+            .add_static_config("example.com.json", example_config.clone())
+            .add_static_config("fuchsia.com.json", fuchsia_config.clone())
             .build();
 
-        assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
+        let repomgr = env.repo_manager_builder().unwrap().build();
+
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(
             repomgr.static_configs,
             to_inspectable_map(hashmap! {
@@ -1075,35 +1165,37 @@ mod tests {
 
         // Even though the example file comes first, the fuchsia repo should take priority over the
         // example file.
-        let dir = create_dir(vec![
-            ("fuchsia", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
-            ("fuchsia.com", RepositoryConfigs::Version1(vec![fuchsia_com_config.clone()])),
-            ("example.com.json", RepositoryConfigs::Version1(vec![example_config.clone()])),
-            (
+        let env = TestEnv::builder()
+            .add_static_config("fuchsia", fuchsia_config.clone())
+            .add_static_config("fuchsia.com", fuchsia_com_config.clone())
+            .add_static_config("example.com.json", example_config.clone())
+            .add_static_configs(
                 "fuchsia.com.json",
                 RepositoryConfigs::Version1(vec![
                     oem_config.clone(),
                     fuchsia_com_json_config.clone(),
                 ]),
-            ),
-        ]);
+            )
+            .build();
 
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-        let (builder, errors) = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(dir.path())
-            .unwrap_err();
-
-        assert_eq!(errors.len(), 4);
-        assert_overridden_error(&errors[0], &fuchsia_config);
-        assert_overridden_error(&errors[1], &fuchsia_com_config);
-        assert_overridden_error(&errors[2], &example_config);
-        assert_overridden_error(&errors[3], &oem_config);
+        let builder = match env.repo_manager_builder() {
+            Err((builder, TestError::LoadStaticConfigs(errors))) => {
+                assert_eq!(errors.len(), 4);
+                assert_overridden_error(&errors[0], &fuchsia_config);
+                assert_overridden_error(&errors[1], &fuchsia_com_config);
+                assert_overridden_error(&errors[2], &example_config);
+                assert_overridden_error(&errors[3], &oem_config);
+                builder
+            }
+            res => panic!("unexpected result: {:?}", res),
+        };
 
         let repomgr = builder.build();
 
-        assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(
             repomgr.static_configs,
             to_inspectable_map(hashmap! { fuchsia_url => fuchsia_com_json_config.into() })
@@ -1129,24 +1221,28 @@ mod tests {
 
         // Even though the example file comes first, the fuchsia repo should take priority over the
         // example file.
-        let dir = create_dir(vec![
-            ("1", RepositoryConfigs::Version1(vec![(*fuchsia_config1).clone()])),
-            ("2", RepositoryConfigs::Version1(vec![(*fuchsia_config2).clone()])),
-        ]);
+        let env = TestEnv::builder()
+            .add_static_config("1", (*fuchsia_config1).clone())
+            .add_static_config("2", (*fuchsia_config2).clone())
+            .build();
 
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-        let (builder, errors) = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(dir.path())
-            .unwrap_err();
-
-        assert_eq!(errors.len(), 1);
-        assert_overridden_error(&errors[0], &fuchsia_config2);
+        let builder = match env.repo_manager_builder() {
+            Err((builder, TestError::LoadStaticConfigs(errors))) => {
+                assert_eq!(errors.len(), 1);
+                assert_overridden_error(&errors[0], &fuchsia_config2);
+                builder
+            }
+            res => {
+                panic!("unexpected result: {:?}", res);
+            }
+        };
 
         let repomgr = builder.build();
 
-        assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(
             repomgr.static_configs,
             to_inspectable_map(hashmap! { fuchsia_url => fuchsia_config1 })
@@ -1195,14 +1291,15 @@ mod tests {
                 .build(),
         );
 
-        let dynamic_dir =
-            create_dir(vec![("config", RepositoryConfigs::Version1(vec![(*config).clone()]))]);
-        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let env = TestEnv::builder()
+            .add_dynamic_configs(RepositoryConfigs::Version1(vec![(*config).clone()]))
+            .build();
+        let repomgr = env.repo_manager().unwrap();
 
-        let repomgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path)).unwrap().build();
-
-        assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
+        assert_eq!(
+            repomgr.dynamic_configs_path.as_ref().map(|p| p.as_path()),
+            env.dynamic_configs_path()
+        );
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(repomgr.dynamic_configs, to_inspectable_map(hashmap! { fuchsia_url => config }));
     }
@@ -1214,8 +1311,6 @@ mod tests {
         let static_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
             .build();
-        let static_configs = RepositoryConfigs::Version1(vec![static_config.clone()]);
-        let static_dir = create_dir(vec![("config", static_configs.clone())]);
 
         let old_dynamic_config = Arc::new(
             RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -1223,14 +1318,14 @@ mod tests {
                 .build(),
         );
         let old_dynamic_configs = RepositoryConfigs::Version1(vec![(*old_dynamic_config).clone()]);
-        let dynamic_dir = create_dir(vec![("config", old_dynamic_configs.clone())]);
-        let dynamic_configs_path = dynamic_dir.path().join("config");
 
-        let mut repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(&static_dir)
-            .unwrap()
+        let env = TestEnv::builder()
+            .add_static_config("config", static_config.clone())
+            .add_dynamic_configs(old_dynamic_configs.clone())
             .build();
+        let dynamic_configs_path = env.dynamic_configs_path().unwrap();
+
+        let mut repomgr = env.repo_manager().unwrap();
 
         // make sure the dynamic config file didn't change just from opening it.
         let f = File::open(&dynamic_configs_path).unwrap();
@@ -1263,11 +1358,9 @@ mod tests {
 
     #[test]
     fn test_list_empty() {
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let env = TestEnv::new();
+        let repomgr = env.repo_manager().unwrap();
 
-        let repomgr =
-            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path)).unwrap().build();
         assert_eq!(repomgr.list().collect::<Vec<_>>(), Vec::<&RepositoryConfig>::new());
     }
 
@@ -1279,19 +1372,12 @@ mod tests {
         let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url).build();
 
-        let static_dir = create_dir(vec![
-            ("example.com", RepositoryConfigs::Version1(vec![example_config.clone()])),
-            ("fuchsia.com", RepositoryConfigs::Version1(vec![fuchsia_config.clone()])),
-        ]);
-
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-
-        let repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(static_dir.path())
-            .unwrap()
+        let env = TestEnv::builder()
+            .add_static_config("example.com", example_config.clone())
+            .add_static_config("fuchsia.com", fuchsia_config.clone())
             .build();
+
+        let repomgr = env.repo_manager().unwrap();
 
         assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![&example_config, &fuchsia_config,]);
     }
@@ -1324,29 +1410,25 @@ mod tests {
             RepoUrl::parse("fuchsia-pkg://a.invalid-dynamic.fuchsia.com").unwrap();
         let invalid_dynamic_config = RepositoryConfigBuilder::new(invalid_dynamic_url).build();
 
-        let static_dir = create_dir(vec![(
-            "config",
-            RepositoryConfigs::Version1(vec![
-                valid_static1_config.clone(),
-                valid_static2_config.clone(),
-                valid_static3_config.clone(),
-                invalid_static1_config,
-                invalid_static2_config,
-                invalid_static3_config,
-            ]),
-        )]);
-
-        let dynamic_dir = create_dir(vec![(
-            "config",
-            RepositoryConfigs::Version1(vec![valid_dynamic_config.clone(), invalid_dynamic_config]),
-        )]);
-        let dynamic_configs_path = dynamic_dir.path().join("config");
-
-        let repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(static_dir.path())
-            .unwrap()
+        let env = TestEnv::builder()
+            .add_static_configs(
+                "config",
+                RepositoryConfigs::Version1(vec![
+                    valid_static1_config.clone(),
+                    valid_static2_config.clone(),
+                    valid_static3_config.clone(),
+                    invalid_static1_config,
+                    invalid_static2_config,
+                    invalid_static3_config,
+                ]),
+            )
+            .add_dynamic_configs(RepositoryConfigs::Version1(vec![
+                valid_dynamic_config.clone(),
+                invalid_dynamic_config,
+            ]))
             .build();
+
+        let repomgr = env.repo_manager().unwrap();
 
         assert_eq!(
             repomgr.get_repo_for_channel("valid1").map(|r| &**r),
@@ -1441,17 +1523,15 @@ mod tests {
                 .add_mirror(mirror_config.clone())
                 .build(),
         );
-        let static_dir = create_dir(vec![(
-            "fuchsia.com.json",
-            RepositoryConfigs::Version1(vec![(*fuchsia_config).clone()]),
-        )]);
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
+
+        let env = TestEnv::builder()
+            .add_static_config("fuchsia.com.json", (*fuchsia_config).clone())
+            .build();
+
         let inspector = fuchsia_inspect::Inspector::new();
 
-        let repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
-            .unwrap()
-            .load_static_configs_dir(static_dir.path())
+        let _repomgr = env
+            .repo_manager_builder()
             .unwrap()
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
@@ -1460,7 +1540,7 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
+                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
                   dynamic_configs: {},
                   static_configs: {
                      "fuchsia.com": {
@@ -1488,11 +1568,12 @@ mod tests {
 
     #[test]
     fn test_building_repo_manager_with_no_static_configs_populates_inspect() {
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let env = TestEnv::builder().with_empty_dynamic_configs().build();
+
         let inspector = fuchsia_inspect::Inspector::new();
 
-        let repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
+        let _repomgr = env
+            .repo_manager_builder()
             .unwrap()
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
@@ -1501,7 +1582,7 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
+                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
                   dynamic_configs: {},
                   static_configs: {},
                   stats: {
@@ -1515,11 +1596,12 @@ mod tests {
 
     #[test]
     fn test_insert_remove_updates_inspect() {
-        let dynamic_dir = tempfile::tempdir().unwrap();
-        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let env = TestEnv::builder().with_empty_dynamic_configs().build();
+
         let inspector = fuchsia_inspect::Inspector::new();
 
-        let mut repomgr = RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path))
+        let mut repomgr = env
+            .repo_manager_builder()
             .unwrap()
             .inspect_node(inspector.root().create_child("repository_manager"))
             .build();
@@ -1528,7 +1610,7 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
+                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
                   dynamic_configs: {},
                   static_configs: {},
                   stats: {
@@ -1558,7 +1640,7 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
+                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
                   dynamic_configs: {
                     "fuchsia.com": {
                         root_keys: {
@@ -1589,7 +1671,7 @@ mod tests {
             inspector,
             root: {
                 repository_manager: {
-                  dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
+                  dynamic_configs_path: format!("{:?}", env.dynamic_configs_path()),
                   dynamic_configs: {},
                   static_configs: {},
                   stats: {
