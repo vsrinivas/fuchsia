@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/arch/intrin.h>
 #include <lib/cmdline.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <string.h>
@@ -306,3 +307,31 @@ extern "C" void arm64_secondary_entry() {
 
   lk_secondary_cpu_entry();
 }
+
+static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
+  auto usage = [cmd_name = argv[0].str]() -> int {
+    printf("usage:\n");
+    printf("%s sev                              : issue a SEV (Send Event) instruction\n",
+           cmd_name);
+    return ZX_ERR_INTERNAL;
+  };
+
+  if (argc < 2) {
+    printf("not enough arguments\n");
+    return usage();
+  }
+
+  if (!strcmp(argv[1].str, "sev")) {
+    __asm__ volatile("sev");
+    printf("done\n");
+  } else {
+    printf("unknown command\n");
+    return usage();
+  }
+
+  return ZX_OK;
+}
+
+STATIC_COMMAND_START
+STATIC_COMMAND("cpu", "cpu diagnostic commands", &cmd_cpu)
+STATIC_COMMAND_END(cpu)
