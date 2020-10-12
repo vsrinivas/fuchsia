@@ -11,7 +11,7 @@
       "pairing-code": {
         "description": "Pairing Code (PASE)",
         "type": "string",
-        "pattern": "^[A-F0-9]{8}$"
+        "pattern": "^[A-HJ-NPR-Y0-9]{6,16}$"
       }
     },
     "additionalProperties": false

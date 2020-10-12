@@ -106,6 +106,10 @@ bool ConfigurationManagerImpl::IsWoBLEAdvertisementEnabled() {
   return delegate_->IsWoBLEAdvertisementEnabled();
 }
 
+zx_status_t ConfigurationManagerImpl::GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) {
+  return delegate_->GetPrivateKeyForSigning(signing_key);
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

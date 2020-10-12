@@ -9,6 +9,7 @@
 
 #include <fuchsia/weave/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <Weave/Core/WeaveTLV.h>
@@ -69,6 +70,16 @@ constexpr uint8_t kTestSignedHash[] = {
     0x70, 0xf5, 0xa6, 0x50, 0xf1, 0x18, 0xb4, 0x42, 0x1a, 0x5a, 0x72, 0x68, 0xd0, 0x13, 0x0c, 0xd6,
     0xda, 0x02, 0x1c, 0x59, 0xba, 0x2d, 0x92, 0xc0, 0x49, 0x94, 0x22, 0xbd, 0xb2, 0x46, 0x8c, 0x78,
     0x8c, 0x44, 0x59, 0xd9, 0xbc, 0x13, 0xe6, 0x3a, 0x93, 0x85, 0x5c, 0xe9, 0x04, 0x53, 0xe7};
+
+// Using test-dev-18B4300000000000-key.pem from openweave.
+constexpr uint8_t kTestPrivateKey[] = {
+    0xD5, 0x00, 0x00, 0x04, 0x00, 0x02, 0x00, 0x26, 0x01, 0x25, 0x00, 0x5A, 0x23, 0x30, 0x02, 0x1C,
+    0x31, 0xBD, 0xA7, 0x6B, 0xDD, 0x92, 0x3C, 0xBB, 0x56, 0x80, 0xBA, 0x90, 0xF6, 0xDC, 0x49, 0xC8,
+    0x0B, 0x89, 0xC6, 0xCF, 0x7A, 0x54, 0x94, 0xB0, 0x8C, 0xED, 0x05, 0x5E, 0x30, 0x03, 0x39, 0x04,
+    0x15, 0xF7, 0xC7, 0xD3, 0xCF, 0xD4, 0xCE, 0x17, 0x71, 0x7C, 0x15, 0x4E, 0x62, 0xCA, 0xB0, 0x03,
+    0x0A, 0xE0, 0x7F, 0xA9, 0x86, 0x69, 0xA3, 0x94, 0x41, 0xFA, 0xAB, 0xF2, 0xED, 0x80, 0xDF, 0x69,
+    0x7C, 0x86, 0x91, 0xDC, 0x1B, 0xE9, 0x67, 0xD2, 0x3C, 0x10, 0x06, 0xD9, 0x6C, 0x03, 0xCC, 0xFE,
+    0x84, 0xE5, 0x49, 0x88, 0xA1, 0x35, 0x0C, 0xBC, 0x18 };
 
 // A dummy service configuration, provided by openweave-core. This is the
 // contents of the configuration after base64 decoding.
@@ -168,8 +179,22 @@ class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegate
 
   void SetDeviceDescriptor(WeaveDeviceDescriptor descriptor) { descriptor_ = descriptor; }
 
+  void UseLocalPrivateKey() {
+    use_local_private_key = true;
+  }
+
+  zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) override {
+    if (use_local_private_key) {
+      signing_key->resize(sizeof(kTestPrivateKey)+1);
+      std::copy(kTestPrivateKey, kTestPrivateKey+sizeof(kTestPrivateKey), signing_key->begin());
+      return ZX_OK;
+    }
+    return ZX_ERR_NOT_FOUND;
+  }
+
  private:
   WeaveDeviceDescriptor descriptor_;
+  bool use_local_private_key = false;
 };
 
 class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
@@ -510,7 +535,42 @@ TEST_F(PlatformCASEAuthDelegateTest, HandleValidationResult) {
   EXPECT_EQ(result, WEAVE_ERROR_CERT_USAGE_NOT_ALLOWED);
 }
 
-// TODO(fxbug.dev/51892): Add tests for intermediate CA certs.
+TEST_F(PlatformCASEAuthDelegateTest, GenerateNodeSignatureWithPrivateKey) {
+  BeginSessionContext context;
+  TLVWriter writer;
+
+  // Use local private key and invoke GenerateNodeSignature.
+  reinterpret_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate())->UseLocalPrivateKey();
+  PacketBuffer* buffer = PacketBuffer::New();
+  writer.Init(buffer);
+
+  EXPECT_EQ(platform_case_auth_delegate_->GenerateNodeSignature(
+                context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
+                TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
+
+  TLVReader reader;
+  reader.Init(buffer, WEAVE_SYSTEM_PACKETBUFFER_SIZE);
+  reader.ImplicitProfileId = kWeaveProfile_Security;
+
+  TLV::TLVType type;
+  EXPECT_EQ(reader.Next(kTLVType_Structure,
+                        TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(reader.EnterContainer(type), WEAVE_NO_ERROR);
+  EXPECT_EQ(reader.Next(kTLVType_ByteString, TLV::ContextTag(kTag_ECDSASignature_r)),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(reader.Next(kTLVType_ByteString, TLV::ContextTag(kTag_ECDSASignature_s)),
+            WEAVE_NO_ERROR);
+
+  EXPECT_EQ(reader.ExitContainer(type), WEAVE_NO_ERROR);
+  EXPECT_EQ(reader.VerifyEndOfContainer(), WEAVE_NO_ERROR);
+
+  PacketBuffer::Free(buffer);
+}
+
+// TODO(fxb/51892): Add tests for intermediate CA certs.
 
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

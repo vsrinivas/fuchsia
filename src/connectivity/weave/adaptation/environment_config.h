@@ -26,6 +26,7 @@ class EnvironmentConfig {
   static const Key kConfigKey_SerialNum;
   static const Key kConfigKey_MfrDeviceId;
   static const Key kConfigKey_MfrDeviceCert;
+  static const Key kConfigKey_MfrDeviceCertAllowLocal;
   static const Key kConfigKey_MfrDeviceICACerts;
   static const Key kConfigKey_MfrDevicePrivateKey;
   static const Key kConfigKey_ProductRevision;

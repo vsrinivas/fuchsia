@@ -18,6 +18,7 @@
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -25,6 +26,7 @@
 #include <lib/vfs/cpp/vmo_file.h>
 #include <net/ethernet.h>
 
+#include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "configuration_manager_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
@@ -50,6 +52,8 @@ constexpr char kExpectedPairingCode[] = "PAIRDUMMY123";
 constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
 constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
 constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
+const std::string kPkgDataPath = "/pkg/data/";
+const std::string kDataPath = "/data/";
 
 }  // namespace
 
@@ -60,7 +64,9 @@ class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
 
   void GetInfo(fuchsia::hwinfo::Device::GetInfoCallback callback) override {
     fuchsia::hwinfo::DeviceInfo device_info;
-    device_info.set_serial_number(kExpectedSerialNumber);
+    if (!disable_serial) {
+      device_info.set_serial_number(kExpectedSerialNumber);
+    }
     callback(std::move(device_info));
   }
 
@@ -72,9 +78,14 @@ class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
     };
   }
 
+  void DisableSerialNum() {
+    disable_serial = true;
+  }
+
  private:
   fidl::Binding<fuchsia::hwinfo::Device> binding_{this};
   async_dispatcher_t* dispatcher_;
+  bool disable_serial = false;
 };
 
 class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
@@ -239,6 +250,27 @@ class ConfigurationManagerTest : public WeaveTestFixture {
     WeaveTestFixture::TearDown();
   }
 
+  bool CopyFileFromPkgToData(std::string filename) {
+    std::string data;
+    bool result = files::ReadFileToString(kPkgDataPath + filename, &data);
+    int e = errno;
+    if (!result) {
+      FX_LOGS(ERROR) << "readfile failed for " << filename << ": " << strerror(e);
+      return result;
+    }
+    result = files::WriteFile(kDataPath + filename, data);
+    e = errno;
+    if (!result) {
+      FX_LOGS(ERROR) << "writefile failed for  " << filename << ": " << strerror(e);
+      return result;
+    }
+    return result;
+  }
+
+  void DisableHwInfoSerialNum() {
+    fake_hwinfo_.DisableSerialNum();
+  }
+
  protected:
   FakeHwinfo fake_hwinfo_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
@@ -383,6 +415,8 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
   size_t cert_len;
 
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_MfrDeviceCertAllowLocal, false), WEAVE_NO_ERROR);
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_mfr_cert_file, test_mfr_cert_data));
   fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
@@ -499,6 +533,60 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   thread_mgr->SetThreadProvisioned(true);
 
   EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
+}
+
+TEST_F(ConfigurationManagerTest, GetPrivateKey) {
+  std::vector<uint8_t> signing_key;
+  std::string expected("ABC123\n");
+  std::string filename("test_mfr_private_key");
+
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+
+  CopyFileFromPkgToData(filename);
+
+  EXPECT_EQ(ConfigurationMgrImpl().GetPrivateKeyForSigning(&signing_key), ZX_OK);
+  EXPECT_TRUE(std::equal(signing_key.begin(), signing_key.end(), expected.begin(), expected.end()));
+
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+}
+
+TEST_F(ConfigurationManagerTest, GetTestCert) {
+  std::string testdata("FAKECERT\n");
+  uint8_t mfr_cert_buf[testdata.size()+1];
+  size_t cert_len;
+
+  memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  std::string filename("test_mfr_cert");
+  CopyFileFromPkgToData(filename);
+
+  EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
+                                                                cert_len), WEAVE_NO_ERROR);
+  EXPECT_EQ(cert_len, testdata.size());
+  EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
+                         testdata.begin(), testdata.end()));
+}
+
+TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
+  char serial_num[kMaxSerialNumberSize];
+  size_t serial_num_len;
+  std::string expected_serial("ABCD1234");
+  DisableHwInfoSerialNum();
+  // Create a new context and set a new delegate so that
+  // the disablehwinwoserialnum takes effect.
+  sys::testing::ComponentContextProvider context_provider;
+  context_provider.service_directory_provider()->AddService(
+        fake_hwinfo_.GetHandler(dispatcher()));
+  context_provider.service_directory_provider()->AddService(
+        fake_weave_factory_data_manager_.GetHandler(dispatcher()));
+  context_provider.service_directory_provider()->AddService(
+        fake_weave_factory_store_provider_.GetHandler(dispatcher()));
+  PlatformMgrImpl().SetComponentContextForProcess(context_provider.TakeContext());
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
+            WEAVE_NO_ERROR);
+  EXPECT_STREQ(serial_num, expected_serial.c_str());
 }
 
 }  // namespace testing

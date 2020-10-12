@@ -11,6 +11,7 @@
 #include <sdk/lib/syslog/cpp/macros.h>
 
 #include "src/connectivity/weave/adaptation/weave_device_platform_error.h"
+#include "utils.h"
 
 namespace nl {
 namespace Weave {
@@ -108,6 +109,24 @@ WEAVE_ERROR PlatformCASEAuthDelegate::GenerateNodeSignature(const BeginSessionCo
   fuchsia::weave::Signer_SignHash_Result result;
   std::vector<uint8_t>* output;
   zx_status_t status;
+  std::vector<uint8_t> signing_key;
+
+  // Using a private key directly is intended only for test purposes.
+  status = ConfigurationMgrImpl().GetPrivateKeyForSigning(&signing_key);
+  if (status == ZX_OK) {
+    status = GenerateAndEncodeWeaveECDSASignature(writer, tag, msg_hash, msg_hash_len,
+                                                signing_key.data(), signing_key.size());
+    secure_memset(signing_key.data(), 0, signing_key.size());
+    signing_key.clear();
+    return status;
+  }
+
+  // If private key is not present, continue with the signer, else return the error
+  // encountered in reading the private key.
+  if (status != ZX_ERR_NOT_FOUND) {
+    FX_LOGS(ERROR) << "Failed reading private key:  " << zx_status_get_string(status);
+    return status;
+  }
 
   fuchsia::weave::SignerSyncPtr signer;
   if ((status = context_->svc()->Connect(signer.NewRequest())) != ZX_OK) {

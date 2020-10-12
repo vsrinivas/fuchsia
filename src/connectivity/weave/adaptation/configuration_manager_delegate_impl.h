@@ -48,6 +48,7 @@ class ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delega
   bool IsWoBLEEnabled() override;
   bool IsWoBLEAdvertisementEnabled() override;
   WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len) override;
+  zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) override;
 
  protected:
   // Read up to |buf_size| bytes from the file |path| in the factory partition

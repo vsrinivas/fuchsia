@@ -20,6 +20,7 @@ const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_MfrDeviceId = "mfr-de
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_MfrDeviceCert = "mfr-device-cert";
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_MfrDeviceICACerts = "mfr-device-ica-certs";
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_MfrDevicePrivateKey = "mfr-device-private-key";
+const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_MfrDeviceCertAllowLocal = "mfr-device-cert-allow-local";
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_ProductRevision = "product-revision";
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_ManufacturingDate = "manufacturing-date";
 const EnvironmentConfig::Key EnvironmentConfig::kConfigKey_PairingCode = "pairing-code";

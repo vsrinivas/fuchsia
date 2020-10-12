@@ -83,6 +83,14 @@ test_package("weavestack-adaptation-unittests") {
       path = rebase_path("testdata/invalid_default_store.json")
       dest = "invalid_default_store.json"
     },
+    {
+      path = rebase_path("testdata/test_mfr_private_key")
+      dest = "test_mfr_private_key"
+    },
+    {
+      path = rebase_path("testdata/test_mfr_cert")
+      dest = "test_mfr_cert"
+    },
   ]
 }
 

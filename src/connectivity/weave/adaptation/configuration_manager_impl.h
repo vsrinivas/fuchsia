@@ -134,6 +134,10 @@ class ConfigurationManagerImpl final
     virtual WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size,
                                                size_t& encoded_len) = 0;
 
+   // Retrieves test private key for signing test cert in |signing_key|,
+   // returns ZX_OK on success.
+    virtual zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) = 0;
+
    protected:
     ConfigurationManagerImpl* impl_;
   };
@@ -157,6 +161,10 @@ class ConfigurationManagerImpl final
 
   // Returns whether WoBLE advertisement is enabled on startup, see definition in delegate.
   bool IsWoBLEAdvertisementEnabled();
+
+  // Retrieves test private key for signing test cert in |signing_key|,
+  // returns ZX_OK on success.
+  zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key);
 
  private:
   using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;

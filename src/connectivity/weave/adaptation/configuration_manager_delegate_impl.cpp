@@ -19,8 +19,11 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
+
+#include <filesystem>
 
 namespace nl {
 namespace Weave {
@@ -42,7 +45,10 @@ constexpr char kDeviceInfoConfigKey_EnableWoBLE[] = "enable-woble";
 constexpr char kDeviceInfoConfigKey_EnableWoBLEAdvertisement[] = "enable-woble-advertisement";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_MfrDeviceCertPath[] = "mfr-device-cert-path";
+constexpr char kDeviceInfoConfigKey_MfrDeviceCertAllowLocal[] = "mfr-device-cert-allow-local";
+constexpr char kDeviceInfoConfigKey_PrivateKeyPath[] = "mfr-private-key-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
+constexpr char kDeviceInfoConfigKey_SerialNumber[] = "serial-number";
 constexpr char kDeviceInfoConfigKey_VendorId[] = "vendor-id";
 
 // Maximum number of chars in hex for a uint64_t.
@@ -50,6 +56,9 @@ constexpr int kWeaveDeviceIdMaxLength = 16;
 
 // Maximum size of Weave certificate.
 constexpr int kWeaveCertificateMaxLength = UINT16_MAX;
+
+// Storage path for data files.
+const std::string kDataPath = "/data/";
 
 }  // unnamed namespace
 
@@ -144,8 +153,7 @@ bool ConfigurationManagerDelegateImpl::IsFullyProvisioned() {
          // TODO(fxbug.dev/58252) Due to incomplete implementation of ThreadStackManager, this
          // predicate does not yet include the line `ConnectivityMgr().IsThreadProvisioned() &&`,
          // but should once complete.
-         ConfigurationMgr().IsPairedToAccount() &&
-         ConfigurationMgr().IsMemberOfFabric();
+         ConfigurationMgr().IsPairedToAccount() && ConfigurationMgr().IsMemberOfFabric();
 }
 
 bool ConfigurationManagerDelegateImpl::IsPairedToAccount() {
@@ -225,9 +233,17 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetDeviceDescriptorTLV(uint8_t* bu
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreHWInfo() {
   fuchsia::hwinfo::DeviceInfo device_info;
+  WEAVE_ERROR err;
+  char serial[ConfigurationManager::kMaxSerialNumberLength + 1];
+  size_t serial_size = 0;
   if (ZX_OK == hwinfo_device_->GetInfo(&device_info) && device_info.has_serial_number()) {
     return impl_->StoreSerialNumber(device_info.serial_number().c_str(),
                                     device_info.serial_number().length());
+  } else if ((err =
+                  device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_SerialNumber, serial,
+                                                   ConfigurationManager::kMaxSerialNumberLength + 1,
+                                                   &serial_size)) == WEAVE_NO_ERROR) {
+    return impl_->StoreSerialNumber(serial, serial_size);
   }
   return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
 }
@@ -267,10 +283,38 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStorePairingCode() {
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreMfrDeviceCert() {
   char path[PATH_MAX] = {'\0'};
   char mfr_cert[kWeaveCertificateMaxLength];
+  std::string cert;
   size_t out_size;
   zx_status_t status;
   WEAVE_ERROR err;
+  bool allow_local = false;
+  std::filesystem::path full_path(kDataPath);
 
+  // Check if a test cert was provided and read the same.
+  err = EnvironmentConfig::ReadConfigValue(EnvironmentConfig::kConfigKey_MfrDeviceCertAllowLocal,
+                                           allow_local);
+  if (err != WEAVE_NO_ERROR) {
+    device_info_->ReadConfigValue(kDeviceInfoConfigKey_MfrDeviceCertAllowLocal, &allow_local);
+  }
+  if (allow_local) {
+    err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_MfrDeviceCertPath, path,
+                                           sizeof(path), &out_size);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Local manufacturer cert path not found";
+      return err;
+    }
+
+    full_path.append(path);
+    if (!files::ReadFileToString(full_path.string(), &cert)) {
+      FX_LOGS(ERROR) << "failed reading " << path;
+      return ZX_ERR_INTERNAL;
+    }
+
+    return impl_->StoreManufacturerDeviceCertificate(reinterpret_cast<uint8_t*>(cert.data()),
+                                                     cert.size());
+  }
+
+  // Read file from factory.
   err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_MfrDeviceCertPath, path, sizeof(path),
                                          &out_size);
 
@@ -287,6 +331,25 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreMfrDeviceCert() {
   }
 
   return impl_->StoreManufacturerDeviceCertificate(reinterpret_cast<uint8_t*>(mfr_cert), out_size);
+}
+
+zx_status_t ConfigurationManagerDelegateImpl::GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) {
+  char path[PATH_MAX] = {'\0'};
+  std::filesystem::path full_path(kDataPath);
+  WEAVE_ERROR err;
+  size_t out_len;
+
+  err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_PrivateKeyPath, path, sizeof(path),
+                                         &out_len);
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(INFO) << "No private key found";
+    return ZX_ERR_NOT_FOUND;
+  }
+  full_path.append(path);
+  if (!files::ReadFileToVector(full_path.string(), signing_key)) {
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
 }
 
 zx_status_t ConfigurationManagerDelegateImpl::ReadFactoryFile(const char* path, char* buf,

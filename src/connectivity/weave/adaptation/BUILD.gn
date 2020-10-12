@@ -33,6 +33,7 @@ openweave_adaptation_layer("adaptation") {
     "thread_stack_manager_delegate_impl.h",
     "thread_stack_manager_impl.cpp",
     "thread_stack_manager_impl.h",
+    "utils.h",
     "warm_platform_config.h",
     "warm_support.cpp",
     "weave_config_manager.cpp",
