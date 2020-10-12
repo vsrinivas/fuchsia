@@ -282,7 +282,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   RunLoopUntil([&] { return delete_called; });
 }
 
-TEST_F(SessionShellTest, AttachesAndDetachesView) {
+TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
