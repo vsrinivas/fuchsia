@@ -10,7 +10,6 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/apic.h>
 #include <lib/acpi_lite/numa.h>
-#include <lib/acpi_tables.h>
 #include <lib/system-topology.h>
 #include <pow2.h>
 #include <stdio.h>

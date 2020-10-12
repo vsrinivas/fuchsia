@@ -8,7 +8,6 @@
 #include <err.h>
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/structures.h>
-#include <lib/acpi_tables.h>
 #include <lib/affine/ratio.h>
 #include <zircon/types.h>
 

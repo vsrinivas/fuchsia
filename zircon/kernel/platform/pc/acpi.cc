@@ -4,7 +4,6 @@
 
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/zircon.h>
-#include <lib/acpi_tables.h>
 #include <lib/console.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
@@ -44,10 +43,6 @@ void PlatformInitAcpi(zx_paddr_t acpi_rsdp) {
     return result.value();
   }();
   global_acpi_parser = &parser;
-
-  // Create AcpiTables data structure.
-  static const AcpiTables acpi_tables{&parser};
-  AcpiTables::SetDefault(&acpi_tables);
 }
 
 STATIC_COMMAND_START

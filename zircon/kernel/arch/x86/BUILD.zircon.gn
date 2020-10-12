@@ -174,13 +174,13 @@ if (zx == "/") {
       "$zx/kernel/dev/iommu/dummy",
       "$zx/kernel/dev/iommu/intel",
       "$zx/kernel/lib/acpi_lite",
-      "$zx/kernel/lib/acpi_tables",
       "$zx/kernel/lib/arch",
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/code_patching",
       "$zx/kernel/lib/console",
       "$zx/kernel/lib/counters",
       "$zx/kernel/lib/crashlog",
+      "$zx/kernel/lib/debuglog",
       "$zx/kernel/lib/fbl",
       "$zx/kernel/lib/init",
       "$zx/kernel/lib/instrumentation",
@@ -222,6 +222,9 @@ if (zx == "/") {
 
       # <arch/x86.h> has #include <lib/arch/intrin.h>.
       "$zx/kernel/lib/arch:headers",
+
+      # <arch/x86/system_topology.h> has #include <lib/acpi_lite.h>.
+      "$zx/kernel/lib/acpi_lite:headers",
     ]
   }
 
@@ -243,7 +246,6 @@ if (zx == "/") {
     ]
     deps = [
       ":headers",
-      "$zx/kernel/lib/acpi_tables:headers",
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console:headers",
       "$zx/kernel/lib/topology:headers",
