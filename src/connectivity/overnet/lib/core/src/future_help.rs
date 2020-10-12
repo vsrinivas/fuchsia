@@ -76,7 +76,7 @@ mod poll_mutex_test {
         time::Duration,
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn basics(run: usize) {
         let mutex = Mutex::new(run);
         let mut ctx = Context::from_waker(noop_waker_ref());
@@ -91,7 +91,7 @@ mod poll_mutex_test {
         assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn wakes_up(run: usize) -> Result<(), Error> {
         let mutex = Mutex::new(run);
         let (tx_saw_first_pending, rx_saw_first_pending) = oneshot::channel();
@@ -312,7 +312,7 @@ impl<T: Clone + std::fmt::Debug> futures::Stream for Observer<T> {
 mod test {
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn observable_basics() {
         let observable = Observable::new(1);
         let mut observer = observable.new_observer();

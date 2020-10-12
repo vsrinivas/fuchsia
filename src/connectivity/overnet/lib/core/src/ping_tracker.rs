@@ -335,7 +335,7 @@ mod test {
     use fuchsia_async::{Task, Timer};
     use futures::task::noop_waker;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn published_mean_updates(run: usize) {
         crate::test_util::init();
         let (pt, mut rtt_obs, _) = PingTracker::new();

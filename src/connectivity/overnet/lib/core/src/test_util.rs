@@ -10,8 +10,8 @@ use anyhow::Error;
 use std::sync::Arc;
 use std::sync::Once;
 
-const LOG_LEVEL: log::Level = log::Level::Error;
-const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Error;
+const LOG_LEVEL: log::Level = log::Level::Info;
+const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 struct Logger;
 

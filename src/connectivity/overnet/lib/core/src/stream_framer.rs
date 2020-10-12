@@ -665,7 +665,7 @@ mod test {
         a
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn simple_frame() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
         framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
@@ -678,7 +678,7 @@ mod test {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn simple_frame_lossy_binary() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) =
             new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
@@ -693,7 +693,7 @@ mod test {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn large_frame() -> Result<(), Error> {
         let big_slice = vec![0u8; 100000];
         let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
@@ -701,7 +701,7 @@ mod test {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn skip_junk_start_0() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) =
             new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
@@ -714,7 +714,7 @@ mod test {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn skip_junk_start_1() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) =
             new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);

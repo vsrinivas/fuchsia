@@ -25,7 +25,7 @@ use {
 ////////////////////////////////////////////////////////////////////////////////
 // Test scenarios
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn simple(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("simple", run);
@@ -35,7 +35,7 @@ async fn simple(run: usize) -> Result<(), Error> {
     run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn kilobyte(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("kilobyte", run);
@@ -46,7 +46,7 @@ async fn kilobyte(run: usize) -> Result<(), Error> {
         .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn quite_large(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("quite_large", run);
@@ -57,7 +57,7 @@ async fn quite_large(run: usize) -> Result<(), Error> {
         .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn quic(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("quic", run);
@@ -67,7 +67,7 @@ async fn quic(run: usize) -> Result<(), Error> {
     run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn interspersed_log_messages(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("interspersed_log_messages", run);

@@ -25,7 +25,7 @@ use {
 ////////////////////////////////////////////////////////////////////////////////
 // Test scenarios
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn simple_loop(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("simple_loop", run);
@@ -48,7 +48,7 @@ async fn simple_loop(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn simple_flat(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("simple_flat", run);
@@ -70,7 +70,7 @@ async fn simple_flat(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn full_transfer(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("full_transfer", run);
@@ -90,7 +90,7 @@ async fn full_transfer(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_to_separate_nodes", run);
@@ -125,7 +125,7 @@ async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn forwarded_twice_full_transfer(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_full_transfer", run);

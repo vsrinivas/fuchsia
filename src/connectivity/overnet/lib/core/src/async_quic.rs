@@ -847,7 +847,7 @@ mod test {
     use super::test_util::run_client_server;
     use super::StreamProperties;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn simple_send(run: usize) {
         run_client_server("simple_send", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
@@ -863,7 +863,7 @@ mod test {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn send_fin(run: usize) {
         run_client_server("send_fin", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
@@ -879,7 +879,7 @@ mod test {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn recv_before_send(run: usize) {
         run_client_server("recv_before_send", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();

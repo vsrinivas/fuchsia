@@ -33,7 +33,7 @@ impl LoggingFixture for SockFixture {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn fidl_socket_tests(run: usize) {
     crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_socket_tests", run);

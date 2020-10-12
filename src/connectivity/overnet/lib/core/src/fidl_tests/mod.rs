@@ -32,7 +32,7 @@ impl fidl_fuchsia_overnet::ServiceProviderProxyInterface for Service {
         let test_name = self.1.clone();
         log::info!("{} got connection {:?}", test_name, chan);
         let mut sender = self.0.clone();
-        Task::local(log_errors(
+        Task::spawn(log_errors(
             async move {
                 log::info!("{} sending the thing", test_name);
                 sender.send(chan).await?;
@@ -91,7 +91,7 @@ impl Fixture {
         let l1 = link(router1.clone(), router2.clone());
         let l2 = link(router2.clone(), router3.clone());
         let l3 = link(router3.clone(), router1.clone());
-        let service_task = Task::local(futures::future::join3(l1, l2, l3).map(drop));
+        let service_task = Task::spawn(futures::future::join3(l1, l2, l3).map(drop));
         let service = format!("distribute_handle_for_{}", test_name);
         let (send_handle, mut recv_handle) = futures::channel::mpsc::channel(1);
         log::info!("{} {} register 2", test_name, fixture_id);

@@ -1261,7 +1261,7 @@ mod tests {
     use super::*;
     use crate::test_util::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn no_op(run: usize) {
         crate::test_util::init();
 
@@ -1377,14 +1377,14 @@ mod tests {
         f(router1, router2).await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn no_op_env(run: usize) -> Result<(), Error> {
         crate::test_util::init();
 
         run_two_node("router::no_op_env", run, |_router1, _router2| async { Ok(()) }).await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn create_stream(run: usize) -> Result<(), Error> {
         crate::test_util::init();
 
@@ -1402,7 +1402,7 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn send_datagram_immediately(run: usize) -> Result<(), Error> {
         crate::test_util::init();
 
@@ -1433,7 +1433,7 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn ping_pong(run: usize) -> Result<(), Error> {
         run_two_node("ping_pong", run, |router1, router2| async move {
             crate::test_util::init();
@@ -1475,7 +1475,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn concurrent_list_peer_calls_will_error(run: usize) -> Result<(), Error> {
         crate::test_util::init();
 
@@ -1493,7 +1493,7 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn initial_greeting_packet(run: usize) -> Result<(), Error> {
         crate::test_util::init();
 
@@ -1537,7 +1537,7 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_async::run(1, test)]
     async fn attach_with_zero_bytes_per_second(run: usize) -> Result<(), Error> {
         crate::test_util::init();
         let mut node_id_gen = NodeIdGenerator::new("attach_with_zero_bytes_per_second", run);

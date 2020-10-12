@@ -16,7 +16,7 @@ use fuchsia_zircon_status as zx_status;
 use futures::prelude::*;
 use std::sync::Arc;
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn drop_connection_2node(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("drop_connection_2node", run);
@@ -29,7 +29,7 @@ async fn drop_connection_2node(run: usize) -> Result<(), Error> {
     run_drop_test(a, b).await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn drop_connection_3node(run: usize) -> Result<(), Error> {
     crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("drop_connection_3node", run);

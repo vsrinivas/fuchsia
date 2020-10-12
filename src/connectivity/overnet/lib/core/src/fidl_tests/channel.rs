@@ -43,7 +43,7 @@ impl LoggingFixture for ChanFixture {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn fidl_channel_tests_no_transfer(run: usize) {
     crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_no_transfer", run);
@@ -55,7 +55,7 @@ async fn fidl_channel_tests_no_transfer(run: usize) {
     channel::run(fixture).await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn fidl_channel_tests_all_to_b(run: usize) {
     crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_all_to_b", run);
@@ -63,7 +63,7 @@ async fn fidl_channel_tests_all_to_b(run: usize) {
     channel::run(fixture).await
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia_async::run(1, test)]
 async fn fidl_channel_tests_b_then_c(run: usize) {
     crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_b_then_c", run);
