@@ -10,6 +10,7 @@
 #include <lib/affine/ratio.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/counters.h>
 #include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <zircon/time.h>
@@ -18,7 +19,17 @@
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
+#include <ktl/array.h>
 #include <ktl/atomic.h>
+#include <ktl/iterator.h>
+
+// Counter for the number of lockups detected.
+KCOUNTER(counter_lockup_count, "lockup_detector.count")
+
+// Counters for number of lockups exceeding a given duration.
+KCOUNTER(counter_lockup_exceeding_10ms, "lockup_detector.exceeding_ms.10")
+KCOUNTER(counter_lockup_exceeding_1000ms, "lockup_detector.exceeding_ms.1000")
+KCOUNTER(counter_lockup_exceeding_100000ms, "lockup_detector.exceeding_ms.100000")
 
 namespace {
 
@@ -36,6 +47,27 @@ zx_duration_t TicksToDuration(zx_ticks_t ticks) {
 
 zx_ticks_t DurationToTicks(zx_duration_t duration) {
   return platform_get_ticks_to_time_ratio().Inverse().Scale(duration);
+}
+
+// Provides histogram-like kcounter functionality.
+struct CounterBucket {
+  const zx_duration_t exceeding;
+  const Counter* const counter;
+};
+constexpr const ktl::array<CounterBucket, 3> counter_buckets = {{
+    {ZX_MSEC(10), &counter_lockup_exceeding_10ms},
+    {ZX_MSEC(1000), &counter_lockup_exceeding_1000ms},
+    {ZX_MSEC(100000), &counter_lockup_exceeding_100000ms},
+}};
+
+void RecordCounters(zx_duration_t lockup_duration) {
+  kcounter_add(counter_lockup_count, 1);
+  for (auto iter = counter_buckets.rbegin(); iter != counter_buckets.rend(); iter++) {
+    if (lockup_duration >= iter->exceeding) {
+      kcounter_add(*iter->counter, 1);
+      break;
+    }
+  }
 }
 
 }  // namespace
@@ -135,6 +167,7 @@ void lockup_end() {
   // Threshold exceeded.
   const zx_duration_t duration = TicksToDuration(ticks);
   const cpu_num_t cpu = arch_curr_cpu_num();
+  RecordCounters(duration);
   KERNEL_OOPS("CPU-%u in critical section for %" PRId64 " ms, start=%" PRId64 " now=%" PRId64 "\n",
               cpu, duration / ZX_MSEC(1), begin_ticks, now);
   Thread::Current::PrintBacktrace();

@@ -10,6 +10,7 @@ zx_library("lockup_detector") {
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
     "$zx/system/ulib/affine",
     "tests",
   ]
