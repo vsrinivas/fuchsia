@@ -10,10 +10,25 @@
 #include <gtest/gtest.h>
 
 ssize_t fill_stream_send_buf(int fd, int peer_fd) {
-  // We're about to fill the send buffer; shrink it and the other side's receive buffer to the
-  // minimum allowed.
   {
-    const int bufsize = 1;
+#if defined(__Fuchsia__)
+    // In other systems we prefer to get the smallest possible buffer size, but that causes an
+    // unnecessarily large amount of writes to fill the send and receive buffers on Fuchsia because
+    // of the zircon socket attached to both the sender and the receiver. Each zircon socket will
+    // artificially add 256KB (its depth) to the sender's and receiver's buffers.
+    //
+    // We'll arbitrarily select a larger size which will allow us to fill both zircon sockets
+    // faster.
+    //
+    // TODO(fxbug.dev/60337): We can use the minimum buffer size once zircon sockets are not
+    // artificially increasing the buffer sizes.
+    constexpr int bufsize = 64 << 10;
+#else
+    // We're about to fill the send buffer; shrink it and the other side's receive buffer to the
+    // minimum allowed.
+    constexpr int bufsize = 1;
+#endif
+
     socklen_t optlen = sizeof(bufsize);
 
     EXPECT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsize, optlen), 0) << strerror(errno);
@@ -53,15 +68,15 @@ ssize_t fill_stream_send_buf(int fd, int peer_fd) {
 #endif
 
   ssize_t cnt = 0;
+  std::vector<uint8_t> buf(sndbuf_opt + rcvbuf_opt);
   // Clocks sometimes jump in infrastructure, which can cause the timeout set above to expire
   // prematurely. Fortunately such jumps are rarely seen in quick succession - if we repeatedly
   // reach the blocking condition we can be reasonably sure that the intended amount of time truly
   // did elapse. Care is taken to reset the counter if data is written, as we are looking for a
   // streak of blocking condition observances.
   for (int i = 0; i < 1 << 5; i++) {
-    char buf[sndbuf_opt + rcvbuf_opt];
     ssize_t size;
-    while ((size = write(fd, buf, sizeof(buf))) > 0) {
+    while ((size = write(fd, buf.data(), buf.size())) > 0) {
       cnt += size;
 
       i = 0;
