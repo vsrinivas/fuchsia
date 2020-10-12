@@ -34,6 +34,9 @@ const (
 
 	// The prefix added to the names of shards that run multiplied tests.
 	multipliedShardPrefix = "multiplied:"
+
+	// When multiplying a test to fill a shard, multiply the target duration by this.
+	multiplyShardTargetDurationFactor = 0.75
 )
 
 // MultiplyShards will return an error that unwraps to this if a multiplier's
@@ -133,6 +136,7 @@ func MultiplyShards(
 			return nil, fmt.Errorf("%w %q: %s", errInvalidMultiplierRegex, multiplier.Name, err)
 		}
 
+		safeTargetDuration := float64(targetDuration) * multiplyShardTargetDurationFactor
 		for _, shard := range shards {
 			for _, test := range shard.Tests {
 				// An empty OS matches all OSes.
@@ -152,12 +156,13 @@ func MultiplyShards(
 				if multiplier.TotalRuns > 0 {
 					match.test.Runs = multiplier.TotalRuns
 				} else if targetDuration > 0 {
+					// We both cap the number of runs and apply a safety factor because
+					// we want to keep the total runs to a reasonable number
+					// in case the test takes longer than expected. We're conservative because
+					// if a shard exceeds its timeout, it's really painful for users.
 					expectedDuration := testDurations.Get(test).MedianDuration
-					// We want to keep the total runs to a reasonable number
-					// in case test duration data is out of date and the
-					// test takes longer than expected.
 					match.test.Runs = min(
-						int(targetDuration)/int(expectedDuration),
+						int(safeTargetDuration/float64(expectedDuration)),
 						multipliedTestMaxRuns,
 					)
 				} else if targetTestCount > 0 {

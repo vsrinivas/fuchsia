@@ -59,6 +59,13 @@ func affectedShard(env build.Environment, os string, ids ...int) *Shard {
 	}
 }
 
+func applyMultiplyShardTargetDurationFactor(in float64) float64 {
+	// If we in-line this then the compiler treats the expression as a constant and complains
+	// about implicit type conversion when we cast the product to an int. Hence this stupidly
+	// simple function.
+	return in * multiplyShardTargetDurationFactor
+}
+
 func TestMultiplyShards(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
@@ -150,9 +157,8 @@ func TestMultiplyShards(t *testing.T) {
 			targetDuration: 3 * time.Second,
 			expected: []*Shard{
 				// The expected duration for this test is 1 second and our
-				// target duration is three seconds, so the test should be run
-				// three times.
-				multShard(env1, "fuchsia", 1, 3),
+				// target duration is three seconds.
+				multShard(env1, "fuchsia", 1, int(applyMultiplyShardTargetDurationFactor(3.0))),
 			},
 		},
 		{
@@ -191,7 +197,7 @@ func TestMultiplyShards(t *testing.T) {
 			testDurations: TestDurationsMap{
 				"*": {MedianDuration: time.Second},
 			},
-			targetDuration: (multipliedTestMaxRuns + 10) * time.Second,
+			targetDuration: (multipliedTestMaxRuns + 10) / multiplyShardTargetDurationFactor * time.Second,
 			expected: []*Shard{
 				multShard(env1, "fuchsia", 1, multipliedTestMaxRuns),
 			},
