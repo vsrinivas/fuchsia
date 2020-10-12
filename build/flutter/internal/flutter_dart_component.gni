@@ -198,7 +198,6 @@ template("flutter_dart_component") {
 
     forward_variables_from(invoker,
                            [
-                             "gen_bytecode",
                              "testonly",
                              "visibility",
                              "main_dart",
