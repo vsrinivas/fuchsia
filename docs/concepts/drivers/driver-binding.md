@@ -20,9 +20,9 @@ Not all drivers use this form of bind rules but a migration is under way to conv
 One thing to note about this stage of the migration is that there is no support for defining device
 property keys in bind libraries (see below). Instead, the keys from the old driver binding system
 ([ddk/binding.h](/src/lib/ddk/include/ddk/binding.h)) are available to be extended.
-These keys are hardcoded into the bind compiler and are available under the `deprecated` namespace.
-For example, the PCI vendor ID key is `deprecated.BIND_PCI_VID`. Eventually this namespace will be
-removed and all bind property keys will be defined in bind libraries.
+These keys are hardcoded into the bind compiler and are available under the `fuchsia` namespace.
+For example, the PCI vendor ID key is `fuchsia.BIND_PCI_VID`. Eventually the hardcoded keys will be
+removed from this namespace and all bind property keys will be defined in bind libraries.
 
 
 ## The compiler
@@ -31,7 +31,7 @@ The compiler takes a list of library sources, and one program source. For exampl
 
 ```
 fx bindc \
-  --include src/devices/bind/deprecated.usb/deprecated.usb.bind \
+  --include src/devices/bind/fuchsia.usb/fuchsia.usb.bind \
   --output tools/bindc/examples/gizmo.h \
   tools/bindc/examples/gizmo.bind
 ```
@@ -70,19 +70,19 @@ There are four kinds of statements:
 This example bind program can be found at [//tools/bindc/examples/gizmo.bind](/tools/bindc/examples/gizmo.bind).
 
 ```
-using deprecated.usb;
+using fuchsia.usb;
 
 // The device must be a USB device.
-deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
 
-if deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL {
+if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
   // If the device's vendor is Intel, the device class must be audio.
-  deprecated.BIND_USB_CLASS == deprecated.usb.BIND_USB_CLASS.AUDIO;
-} else if deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.REALTEK {
+  fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.AUDIO;
+} else if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK {
   // If the device's vendor is Realtek, the device class must be one of the following values:
-  accept deprecated.BIND_USB_CLASS {
-    deprecated.usb.BIND_USB_CLASS.COMM,
-    deprecated.usb.BIND_USB_CLASS.VIDEO,
+  accept fuchsia.BIND_USB_CLASS {
+    fuchsia.usb.BIND_USB_CLASS.COMM,
+    fuchsia.usb.BIND_USB_CLASS.VIDEO,
   }
 } else {
   // If the vendor is neither Intel or Realtek, do not bind.
@@ -190,9 +190,9 @@ device.
     "name": "Intel",
     "expected": "match",
     "device": {
-      "deprecated.BIND_PROTOCOL": "deprecated.usb.BIND_PROTOCOL.DEVICE",
-      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.INTEL",
-      "deprecated.BIND_USB_CLASS": "deprecated.usb.BIND_USB_CLASS.AUDIO"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.INTEL",
+      "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.AUDIO"
     }
   }
 ]
@@ -219,7 +219,7 @@ bind_rules("example_bind") {
   rules = "gizmo.bind"
   output = “gizmo_bind.h”
   tests = "tests.json"
-  deps = [ "//src/devices/bind/deprecated.usb" ]
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 ```
 
@@ -237,7 +237,7 @@ Otherwise you can run the bind tool directly. For example:
 fx bindc test \
   tools/bindc/examples/gizmo.bind \
   --test-spec tools/bindc/examples/tests.json \
-  --include src/devices/bind/deprecated.usb/deprecated.usb.bind
+  --include src/devices/bind/fuchsia.usb/fuchsia.usb.bind
 ```
 
 ## Bind libraries {#bind-libraries}
@@ -401,7 +401,7 @@ You can run the debugger with the `--debug` option in the bind compiler.
 
 ```
 fx bindc \
-  --include src/devices/bind/deprecated.usb/deprecated.usb.bind \
+  --include src/devices/bind/fuchsia.usb/fuchsia.usb.bind \
   --debug tools/bindc/examples/gizmo.dev \
   tools/bindc/examples/gizmo.bind
 ```
@@ -426,10 +426,10 @@ This example device specification can be found at
 [//tools/bindc/examples/gizmo.dev](/tools/bindc/examples/gizmo.dev).
 
 ```
-deprecated.BIND_PROTOCOL = deprecated.usb.BIND_PROTOCOL.DEVICE
-deprecated.BIND_USB_VID = deprecated.usb.BIND_USB_VID.REALTEK
-deprecated.BIND_USB_CLASS = deprecated.usb.BIND_USB_CLASS.VIDEO
-deprecated.BIND_USB_SUBCLASS = deprecated.usb.BIND_USB_SUBCLASS.VIDEO_CONTROL
+fuchsia.BIND_PROTOCOL = fuchsia.usb.BIND_PROTOCOL.DEVICE
+fuchsia.BIND_USB_VID = fuchsia.usb.BIND_USB_VID.REALTEK
+fuchsia.BIND_USB_CLASS = fuchsia.usb.BIND_USB_CLASS.VIDEO
+fuchsia.BIND_USB_SUBCLASS = fuchsia.usb.BIND_USB_SUBCLASS.VIDEO_CONTROL
 ```
 
 ##### Grammar
@@ -532,12 +532,12 @@ The output of the debugger when running the host tool command
 [above](#running-the-debugger-host) is:
 
 ```
-Line 4: Condition statement succeeded: deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
-Line 6: If statement condition failed: deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL
-    Actual value of `deprecated.BIND_USB_VID` was `deprecated.usb.BIND_USB_VID.REALTEK` [0xbda].
-Line 9: If statement condition succeeded: deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.REALTEK
+Line 4: Condition statement succeeded: fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
+Line 6: If statement condition failed: fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL
+    Actual value of `fuchsia.BIND_USB_VID` was `fuchsia.usb.BIND_USB_VID.REALTEK` [0xbda].
+Line 9: If statement condition succeeded: fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK
 Line 11: Accept statement succeeded.
-    Value of `deprecated.BIND_USB_CLASS` was `deprecated.usb.BIND_USB_CLASS.VIDEO` [0xe].
+    Value of `fuchsia.BIND_USB_CLASS` was `fuchsia.usb.BIND_USB_CLASS.VIDEO` [0xe].
 Driver binds to device.
 ```
 
