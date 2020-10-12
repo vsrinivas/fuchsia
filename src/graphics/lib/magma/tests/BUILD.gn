@@ -29,7 +29,6 @@ group("tests") {
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-dev",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
-    "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
     "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:magma-dev",
   ]
   if (target_cpu == "x64") {
@@ -42,6 +41,7 @@ group("tests") {
   # Ensure the test MSDs are built even when not deployed
   public_deps += [
     "//src/graphics/drivers/msd-arm-mali:msd_arm_test",
+    "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
     "//src/graphics/drivers/msd-intel-gen:msd_intel_test",
     "//src/graphics/drivers/msd-vsi-vip:msd_vsi_test",
   ]

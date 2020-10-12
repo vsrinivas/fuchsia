@@ -58,16 +58,19 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
 }
 
 test_package("msd_img_rgx_integration_tests") {
-  deps = [
-    ":msd_img_rgx_integration_tests_executable",
-    ":msd_img_rgx_no_hardware_integration_tests_executable",
-  ]
+  deps = [ ":msd_img_rgx_integration_tests_executable" ]
 
   tests = [
     {
       name = "msd_img_rgx_integration_tests"
       disabled = true
     },
+  ]
+}
+
+test_package("msd-img-rgx-no-hardware-integration-tests") {
+  deps = [ ":msd_img_rgx_no_hardware_integration_tests_executable" ]
+  tests = [
     {
       name = "msd_img_rgx_no_hardware_integration_tests"
 
