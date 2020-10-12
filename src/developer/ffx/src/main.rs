@@ -28,9 +28,8 @@ lazy_static! {
 // This could get called multiple times by the plugin system via multiple threads - so make sure
 // the spawning only happens one thread at a time.
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
-    if !is_daemon_running().await {
+    {
         let _guard = SPAWN_GUARD.lock().unwrap();
-        // check again now that we have the guard.
         if !is_daemon_running().await {
             spawn_daemon().await?;
         }

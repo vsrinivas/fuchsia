@@ -158,13 +158,35 @@ pub async fn is_daemon_running() -> bool {
     // Try to connect directly to the socket. This will fail if nothing is listening on the other side
     // (even if the path exists).
     let path = get_socket().await;
-    let sock = match std::os::unix::net::UnixDatagram::unbound() {
-        Ok(s) => s,
-        Err(_) => return false,
-    };
-    match sock.connect(path) {
-        Ok(_) => sock.peer_addr().is_ok(),
-        Err(_) => false,
+
+    // Not strictly necessary check, but improves log output for diagnostics
+    match std::fs::metadata(&path) {
+        Ok(_) => {}
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+            log::info!("no daemon found at {}", &path);
+            return false;
+        }
+        Err(e) => {
+            log::info!("error stating {}: {}", &path, e);
+            // speculatively carry on
+        }
+    }
+
+    match std::os::unix::net::UnixStream::connect(&path) {
+        Ok(sock) => match sock.peer_addr() {
+            Ok(_) => {
+                log::info!("found running daemon at {}", &path);
+                true
+            }
+            Err(err) => {
+                log::info!("found daemon socket at {} but could not see peer: {}", &path, err);
+                false
+            }
+        },
+        Err(err) => {
+            log::info!("failed to connect to daemon at {}: {}", &path, err);
+            false
+        }
     }
 }
 
