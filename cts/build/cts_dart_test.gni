@@ -1,0 +1,39 @@
+import("//build/dart/test.gni")
+import("//cts/build/cts_element.gni")
+import("//cts/build/cts_vars.gni")
+
+template("cts_dart_test") {
+  invoker_deps = []
+  if (defined(invoker.deps)) {
+    invoker_deps += invoker.deps
+  }
+  if (defined(invoker.non_dart_deps)) {
+    invoker_deps += invoker.non_dart_deps
+  }
+
+  if (invoker_deps != []) {
+    cts_element("${target_name}_verify_deps") {
+      deps = invoker_deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
+    }
+  }
+
+  dart_test(target_name) {
+    forward_variables_from(invoker, "*")
+
+    if (invoker_deps != []) {
+      if (defined(non_dart_deps)) {
+        non_dart_deps += [ ":${target_name}_verify_deps" ]
+      } else {
+        non_dart_deps = [ ":${target_name}_verify_deps" ]
+      }
+    }
+  }
+
+  # Creates a file to enable other CTS targets to depend on this target.
+  target_build_dir = get_label_info(":$target_name", "dir")
+  target_build_dir = string_replace(target_build_dir, "//", "/")
+  write_file(
+      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
+      true)
+}

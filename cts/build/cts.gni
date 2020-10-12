@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//cts/build/cts_component.gni")
+import("//cts/build/cts_dart_test.gni")
 import("//cts/build/cts_executable.gni")
-import("//cts/build/cts_resource.gni")
+import("//cts/build/cts_host_test_data.gni")
 import("//cts/build/cts_source_set.gni")
 import("//cts/build/cts_test_package.gni")
