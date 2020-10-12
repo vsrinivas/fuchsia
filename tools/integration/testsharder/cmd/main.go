@@ -30,10 +30,6 @@ var (
 	// Tags are keys on which to filter environments, which are labeled.
 	tags flagmisc.StringsValue
 
-	// The path to the json manifest file containing the tests to mutiply.
-	// TODO(ihuh): Remove when we've switched to using modifiersPath instead.
-	multipliersPath string
-
 	// The path to the json manifest file containing the tests to modify.
 	modifiersPath string
 
@@ -61,8 +57,6 @@ func init() {
 	flag.StringVar(&outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
 	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
-	// TODO(ihuh): Remove when we've switched to using `modifiers` instead.
-	flag.StringVar(&multipliersPath, "multipliers", "", "path to the json manifest containing tests to multiply")
 	flag.StringVar(&modifiersPath, "modifiers", "", "path to the json manifest containing tests to modify")
 	flag.IntVar(&targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
 	flag.IntVar(&maxShardsPerEnvironment, "max-shards-per-env", 8, "maximum shards allowed per environment. If <= 0, no max will be set")
@@ -110,9 +104,6 @@ func execute() error {
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
 
 	var modifiers []testsharder.TestModifier
-	if modifiersPath == "" {
-		modifiersPath = multipliersPath
-	}
 	if modifiersPath != "" {
 		modifiers, err = testsharder.LoadTestModifiers(modifiersPath)
 		if err != nil {
