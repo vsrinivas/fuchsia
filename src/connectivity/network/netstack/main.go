@@ -259,11 +259,6 @@ func Main() {
 		},
 		HandleLocal: true,
 
-		// Enable use of the neighbor cache as part of the staged rollout
-		// (fxbug.dev/61723) for Neighbor Unreachability Detection. This enables
-		// inspection and modification of entries in the neighbor cache.
-		UseNeighborCache: true,
-
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
