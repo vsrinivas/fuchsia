@@ -11,7 +11,8 @@ updated atomically as part of a system update.
 Component: A unit of execution started by the component framework which
 constructs its sandbox environment.
 
-Package: A unit of distribution in Fuchsia which is a collection of files. See [the Fuchsia package manager](/src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package){:.external}.
+Package: A unit of distribution in Fuchsia which is a collection of files.
+See [the Fuchsia package manager](/src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package){:.external}.
 
 ## Scope
 
@@ -58,24 +59,28 @@ configuration data to anything finer than a package.
 ### Supplying Configuration
 
 If you want your package to insert configuration data into another package,
-you should create a `config_data` rule. The rule has a `for_pkg` attribute
-which should be the package for which this configuration is intended. The
-outputs and sources are an order-matched set of inputs and outputs. If no outputs
-set is specified the file(s) will be given the same name as appears in sources.
-If the outputs list is supplied it must contain exactly one item. Multiple build
-rules may not supply the same output file for the same package, doing so will
-result in a build failure. For this reason it makes sense to consider namespacing
-the output either by file name or directory conventions for each component.
+you need to create a `config_data` rule and use the `for_pkg` attribute to
+indicate the target package.
+
+The following parameters are supported:
+
+*   **`for_pkg`** (Required): Indicates the name of the package for which this
+    configuration is intended.
+*   **`sources`** (Required): Zero or more files to include in the
+    configuration.
+*   **`outputs`** (Optional): If provided, a list containing exactly one
+    pattern to indicate the output file name(s).
+    If a single source is provided, then the pattern can be a simple file name.
+    If multiple sources are provided, then the pattern should use
+    [GN placeholders][gn-placeholders] syntax.
 
 ```
 config_data("tennis_sysmgr_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "tennis.config",
-  ]
-  sources = [
-    "tennis_sysmgr.config",
-  ]
+  # The file "tennis_sysmgr.config" must be present in the same directory.
+  sources = [ "tennis_sysmgr.config" ]
+  # The file will be available at runtime as "tennis.config".
+  outputs = [ "tennis.config" ]
 }
 ```
 
@@ -100,3 +105,5 @@ in its component manifest, which might look something like the below.
 
 The component consuming the configuration can look in its `/config/data`
 directory to see all the configuration files supplied to it.
+
+[gn-placeholders]: https://gn.googlesource.com/gn/+/master/docs/reference.md#placeholders
