@@ -444,8 +444,13 @@ pub const ZX_SOCKET_SHUTDOWN_WRITE: u32 = 1;
 pub const ZX_SOCKET_SHUTDOWN_READ: u32 = 1 << 1;
 
 // VM Object clone flags
-pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1 << 4;
+pub const ZX_VMO_CHILD_SNAPSHOT: u32 = 1 << 0;
+pub const ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE: u32 = 1 << 4;
 pub const ZX_VMO_CHILD_RESIZABLE: u32 = 1 << 2;
+pub const ZX_VMO_CHILD_SLICE: u32 = 1 << 3;
+pub const ZX_VMO_CHILD_NO_WRITE: u32 = 1 << 5;
+// Old clone flags that are on the path to deprecation.
+pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1 << 4;
 pub const ZX_VMO_CHILD_PRIVATE_PAGER_COPY: u32 = 1 << 4;
 
 // channel write size constants

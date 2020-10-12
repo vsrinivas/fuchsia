@@ -193,8 +193,14 @@ bitflags! {
     /// Options that may be used when creating a `Vmo` child.
     #[repr(transparent)]
     pub struct VmoChildOptions: u32 {
-        const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
+        const SNAPSHOT = sys::ZX_VMO_CHILD_SNAPSHOT;
+        const SNAPSHOT_AT_LEAST_ON_WRITE = sys::ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
         const RESIZABLE = sys::ZX_VMO_CHILD_RESIZABLE;
+        const SLICE = sys::ZX_VMO_CHILD_SLICE;
+        const NO_WRITE = sys::ZX_VMO_CHILD_NO_WRITE;
+
+        // Old clone flags that are on the path to deprecation.
+        const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
         const PRIVATE_PAGER_COPY = sys::ZX_VMO_CHILD_PRIVATE_PAGER_COPY;
     }
 }
@@ -229,6 +235,15 @@ mod tests {
     use crate::Rights;
 
     #[test]
+    fn vmo_deprecated_flags() {
+        assert_eq!(VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, VmoChildOptions::COPY_ON_WRITE);
+        assert_eq!(
+            VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE,
+            VmoChildOptions::PRIVATE_PAGER_COPY
+        );
+    }
+
+    #[test]
     fn vmo_get_size() {
         let size = 16 * 1024 * 1024;
         let vmo = Vmo::create(size).unwrap();
@@ -260,9 +275,20 @@ mod tests {
     fn vmo_get_child_info() {
         let size = 4096;
         let vmo = Vmo::create(size).unwrap();
-        let child = vmo.create_child(VmoChildOptions::COPY_ON_WRITE, 0, 512).unwrap();
+        let info = vmo.info().unwrap();
+        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() == 0);
+
+        let child = vmo.create_child(VmoChildOptions::SNAPSHOT, 0, 512).unwrap();
         let info = child.info().unwrap();
         assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() != 0);
+
+        let child = vmo.create_child(VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, 512).unwrap();
+        let info = child.info().unwrap();
+        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() != 0);
+
+        let child = vmo.create_child(VmoChildOptions::SLICE, 0, 512).unwrap();
+        let info = child.info().unwrap();
+        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() == 0);
     }
 
     #[test]
@@ -293,6 +319,70 @@ mod tests {
     }
 
     #[test]
+    fn vmo_child_snapshot() {
+        let size = 4096 * 2;
+        let vmo = Vmo::create(size).unwrap();
+
+        vmo.write(&[1; 4096], 0).unwrap();
+        vmo.write(&[2; 4096], 4096).unwrap();
+
+        let child = vmo.create_child(VmoChildOptions::SNAPSHOT, 0, size).unwrap();
+
+        child.write(&[3; 4096], 0).unwrap();
+
+        vmo.write(&[4; 4096], 0).unwrap();
+        vmo.write(&[5; 4096], 4096).unwrap();
+
+        let mut page = [0; 4096];
+
+        // SNAPSHOT child observes no further changes to parent VMO.
+        child.read(&mut page[..], 0).unwrap();
+        assert_eq!(&page[..], &[3; 4096][..]);
+        child.read(&mut page[..], 4096).unwrap();
+        assert_eq!(&page[..], &[2; 4096][..]);
+    }
+
+    #[test]
+    fn vmo_child_snapshot_at_least_on_write() {
+        let size = 4096 * 2;
+        let vmo = Vmo::create(size).unwrap();
+
+        vmo.write(&[1; 4096], 0).unwrap();
+        vmo.write(&[2; 4096], 4096).unwrap();
+
+        let child = vmo.create_child(VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, size).unwrap();
+
+        child.write(&[3; 4096], 0).unwrap();
+
+        vmo.write(&[4; 4096], 0).unwrap();
+        vmo.write(&[5; 4096], 4096).unwrap();
+
+        let mut page = [0; 4096];
+
+        // SNAPSHOT_AT_LEAST_ON_WRITE child may observe changes to pages it has not yet written to,
+        // but such behavior is not guaranteed.
+        child.read(&mut page[..], 0).unwrap();
+        assert_eq!(&page[..], &[3; 4096][..]);
+        child.read(&mut page[..], 4096).unwrap();
+        assert!(
+            &page[..] == &[2; 4096][..] || &page[..] == &[5; 4096][..],
+            "expected page of 2 or 5, got {:?}",
+            &page[..]
+        );
+    }
+
+    #[test]
+    fn vmo_child_no_write() {
+        let size = 4096;
+        let vmo = Vmo::create(size).unwrap();
+        vmo.write(&[1; 4096], 0).unwrap();
+
+        let child =
+            vmo.create_child(VmoChildOptions::SLICE | VmoChildOptions::NO_WRITE, 0, size).unwrap();
+        assert_eq!(child.write(&[3; 4096], 0), Err(Status::ACCESS_DENIED));
+    }
+
+    #[test]
     fn vmo_op_range_unsupported() {
         let vmo = Vmo::create(12).unwrap();
         assert_eq!(vmo.op_range(VmoOp::LOCK, 0, 1), Err(Status::NOT_SUPPORTED));
@@ -316,7 +406,8 @@ mod tests {
         assert!(original.write(b"one", 0).is_ok());
 
         // Clone the VMO, and make sure it contains what we expect.
-        let clone = original.create_child(VmoChildOptions::COPY_ON_WRITE, 0, 16).unwrap();
+        let clone =
+            original.create_child(VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, 16).unwrap();
         let mut read_buffer = vec![0; 16];
         assert!(clone.read(&mut read_buffer, 0).is_ok());
         assert_eq!(&read_buffer[0..3], b"one");
