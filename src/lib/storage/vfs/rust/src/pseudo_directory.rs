@@ -35,11 +35,7 @@ pub fn unwrap_add_entry_span(entry: &str, location: &str, res: Result<(), Status
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_io::MAX_FILENAME;
-    use proc_macro_hack::proc_macro_hack;
-
-    #[proc_macro_hack]
-    use vfs_macros::pseudo_directory_max_filename;
+    use {fidl_fuchsia_io::MAX_FILENAME, vfs_macros::pseudo_directory_max_filename};
 
     #[test]
     fn macros_max_filename_constant() {

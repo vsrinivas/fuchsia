@@ -44,20 +44,13 @@ use {
     },
     futures::future,
     libc::{S_IRUSR, S_IWUSR},
-    proc_macro_hack::proc_macro_hack,
     static_assertions::assert_eq_size,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
+    vfs_macros::pseudo_directory,
 };
-
-// Create level import of this macro does not affect nested modules.  And as attributes can
-// only be applied to the whole "use" directive, this need to be present here and need to be
-// separate form the above.  "use crate::pseudo_directory" generates a warning referring to
-// "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
-#[proc_macro_hack(support_nested)]
-use vfs_macros::pseudo_directory;
 
 #[test]
 fn empty_directory() {

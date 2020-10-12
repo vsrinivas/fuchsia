@@ -13,7 +13,6 @@ extern crate proc_macro;
 
 use {
     proc_macro2::{Span, TokenStream},
-    proc_macro_hack::proc_macro_hack,
     quote::{quote, quote_spanned, ToTokens},
     std::collections::HashSet,
     syn::{
@@ -41,7 +40,7 @@ use {
 // TODO Unfortunately there are no tests for error cases in there.  We should add several test
 // cases into this crate directly, to make sure we report errors and report them in the right
 // locations, with proper error messages, etc.
-#[proc_macro_hack]
+#[proc_macro]
 pub fn pseudo_directory(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // In order to be able to unit tests the macro implementation we switch to
     // `proc_macro2::TokenStream`.  `proc_macro::TokenStream` can not be easily constructed from an
@@ -50,7 +49,7 @@ pub fn pseudo_directory(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     pseudo_directory_impl(false, input.into()).into()
 }
 
-#[proc_macro_hack]
+#[proc_macro]
 pub fn mut_pseudo_directory(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // In order to be able to unit tests the macro implementation we switch to
     // `proc_macro2::TokenStream`.  `proc_macro::TokenStream` can not be easily constructed from an
@@ -66,7 +65,7 @@ const MAX_FILENAME: u64 = 255;
 
 /// A helper macro to expose the [`MAX_FILENAME`] value to tests in the [`fuchsia_vfs_pseudo_fs`]
 /// crate.
-#[proc_macro_hack]
+#[proc_macro]
 pub fn pseudo_directory_max_filename(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let res = if !input.is_empty() {
         let span = TokenBuffer::new(input).begin().span();

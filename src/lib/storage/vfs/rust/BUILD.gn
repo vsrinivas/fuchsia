@@ -21,8 +21,6 @@ common_deps = [
   "//third_party/rust_crates:parking_lot",
   "//third_party/rust_crates:pin-project",
   "//third_party/rust_crates:pin-utils",
-  "//third_party/rust_crates:proc-macro-hack",
-  "//third_party/rust_crates:proc-macro-nested",
   "//third_party/rust_crates:slab",
   "//third_party/rust_crates:static_assertions",
   "//third_party/rust_crates:thiserror",

@@ -9,8 +9,6 @@
 // This crate doesn't comply with all 2018 idioms
 #![allow(rust_2018_idioms)]
 
-use proc_macro_hack::proc_macro_hack;
-
 pub mod test_utils;
 
 pub mod common;
@@ -101,14 +99,12 @@ pub mod pseudo_directory;
 ///     },
 /// };
 /// ```
-#[proc_macro_hack(support_nested)]
 pub use vfs_macros::pseudo_directory;
 
 /// This macro is identical to [`pseudo_directory!`], except that it constructs instances of
 /// [`directory::mutable::simple()`], allowing the clients connected over the FIDL connection to
 /// modify this directory.  Clients operations are still checked against specific connection
 /// permissions as specified in the `io.fidl` protocol.
-#[proc_macro_hack(support_nested)]
 pub use vfs_macros::mut_pseudo_directory;
 
 // This allows the pseudo_directory! macro to use absolute paths within this crate to refer to the

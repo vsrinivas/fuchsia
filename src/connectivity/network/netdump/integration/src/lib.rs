@@ -288,7 +288,7 @@ impl TestEnvironment {
                NETDUMP_DUMPFILE_NAME => vfs::file::pcb::write_only(
                   DUMPFILE_BUFFER_LEN,
                   move |content| {
-                      let mut content = content.to_owned();
+                      let content = content.to_owned();
                       let mut outer = dump_contents.lock().unwrap();
                       let _old_content = std::mem::replace(outer.as_mut(), content.to_owned());
                       futures::future::ok(())

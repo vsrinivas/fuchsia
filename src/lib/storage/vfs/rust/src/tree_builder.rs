@@ -366,15 +366,8 @@ mod tests {
 
     use {
         fidl_fuchsia_io::{MAX_FILENAME, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
-        proc_macro_hack::proc_macro_hack,
+        vfs_macros::pseudo_directory,
     };
-
-    // Create level import of this macro does not affect nested modules.  And as attributes can
-    // only be applied to the whole "use" directive, this need to be present here and need to be
-    // separate form the above.  "use crate::pseudo_directory" generates a warning referring to
-    // "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
-    #[proc_macro_hack(support_nested)]
-    use vfs_macros::pseudo_directory;
 
     #[test]
     fn two_files() {
