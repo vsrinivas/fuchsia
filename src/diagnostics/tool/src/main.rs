@@ -185,7 +185,7 @@ fn filter_json_schema_by_selectors(
 ) -> Option<InspectData> {
     // A failure here implies a malformed snapshot. We want to panic.
     let moniker = selectors::parse_path_to_moniker(&schema.moniker)
-        .expect("Bugreport contained an unparsable path.");
+        .expect("Snapshot contained an unparsable path.");
 
     if schema.payload.is_none() {
         schema.payload = Some(NodeHierarchy::new(
@@ -276,7 +276,7 @@ fn filter_data_to_lines(
             .cloned()
             .filter(|schema| {
                 let moniker = selectors::parse_path_to_moniker(&schema.moniker)
-                    .expect("Bugreport contained an unparsable path.");
+                    .expect("Snapshot contained an unparsable path.");
                 let component_name = moniker
                     .last()
                     .expect("Monikers in provided data dumps are required to be non-empty.");
@@ -360,7 +360,7 @@ fn generate_selectors<'a>(
         .into_iter()
         .filter_map(|schema| {
             let moniker = selectors::parse_path_to_moniker(&schema.moniker)
-                .expect("Bugreport contained an unparsable moniker.");
+                .expect("Snapshot contained an unparsable moniker.");
 
             let component_name_matches = component_name.is_none()
                 || component_name.as_ref().unwrap()
