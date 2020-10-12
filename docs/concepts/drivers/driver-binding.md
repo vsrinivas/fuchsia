@@ -203,7 +203,7 @@ device.
 Define a test build target like so
 
 ```
-bind_test("bind_test") {
+bind_test("example_bind_test") {
   rules = <bind rules filename>
   tests = <test specification filename>
   deps = [ <list of bind library targets> ]
@@ -215,7 +215,7 @@ test target. It’s name will be the original target’s name plus `_test`. For 
 would generate `example_bind_test`.
 
 ```
-bind_rules("example_test") {
+bind_rules("example_bind") {
   rules = "gizmo.bind"
   output = “gizmo_bind.h”
   tests = "tests.json"
