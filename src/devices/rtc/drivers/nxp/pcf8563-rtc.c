@@ -56,12 +56,13 @@ static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* r
   }
 
   int year = rtc->year;
-  int century = (year < 2000) ? 0 : 1;
+  uint8_t century = (year < 2000) ? 0 : 0x80;
   if (century) {
     year -= 2000;
   } else {
     year -= 1900;
   }
+  ZX_DEBUG_ASSERT(year < 100);
 
   uint8_t write_buf[] = {0x02,
                          to_bcd(rtc->seconds),
@@ -69,8 +70,8 @@ static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* r
                          to_bcd(rtc->hours),
                          to_bcd(rtc->day),
                          0,  // day of week
-                         (century << 7) | to_bcd(rtc->month),
-                         to_bcd(year)};
+                         century | to_bcd(rtc->month),
+                         to_bcd((uint8_t)year)};
 
   pcf8563_context* context = ctx;
   zx_status_t err = i2c_write_read_sync(&context->i2c, write_buf, sizeof write_buf, NULL, 0);

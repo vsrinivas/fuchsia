@@ -11,7 +11,6 @@
 #include <hw/reg.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
-#include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
 #include "vim3.h"
