@@ -10,13 +10,14 @@ use {
     anyhow::{Context, Error},
     archivist_lib::{archivist, configs, diagnostics, logs},
     argh::FromArgs,
+    fidl_fuchsia_diagnostics_internal::LogStatsControllerMarker,
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
-    log::{debug, info, warn},
+    log::{debug, error, info, warn},
     std::path::PathBuf,
 };
 
@@ -47,6 +48,10 @@ pub struct Args {
     /// serve fuchsia.diagnostics.test.Controller
     #[argh(switch)]
     install_controller: bool,
+
+    /// connect to fuchsia.diagnostics.internal.LogStatsController
+    #[argh(switch)]
+    connect_to_log_stats: bool,
 
     /// path to a JSON configuration file
     #[argh(option)]
@@ -121,6 +126,15 @@ fn main() -> Result<(), Error> {
             .run_singlethreaded(logs::KernelDebugLog::new())
             .context("Failed to read kernel logs")?;
         fasync::Task::spawn(archivist.log_manager().clone().drain_debuglog(debuglog)).detach();
+    }
+
+    let _stats;
+    if opt.connect_to_log_stats {
+        info!("Starting log stats service.");
+        _stats = connect_to_service::<LogStatsControllerMarker>();
+        if let Err(e) = &_stats {
+            error!("Couldn't connect to log stats: {}", e);
+        }
     }
 
     let startup_handle =

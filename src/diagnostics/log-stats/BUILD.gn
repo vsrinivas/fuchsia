@@ -7,7 +7,10 @@ import("//src/sys/build/components.gni")
 
 group("log-stats") {
   testonly = true
-  deps = [ ":tests" ]
+  deps = [
+    ":package",
+    ":tests",
+  ]
 }
 
 group("tests") {
@@ -21,6 +24,11 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+fuchsia_package("package") {
+  package_name = "log-stats"
+  deps = [ ":component" ]
+}
+
 fuchsia_component("component-v1") {
   component_name = "log-stats"
   manifest = "meta/log-stats.cmx"
@@ -32,6 +40,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "fidl:controller-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/diagnostics/archivist:lib",
     "//src/lib/diagnostics/inspect/derive",

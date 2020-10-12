@@ -134,6 +134,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/lib/selectors",
+    "//src/diagnostics/log-stats/fidl:controller-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

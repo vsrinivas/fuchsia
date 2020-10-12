@@ -9,8 +9,7 @@ void withLongTimeout(void Function() tests) {
   group('(long timeout)', tests, timeout: Timeout(Duration(minutes: 10)));
 }
 
-// Return all matched inspect properties as a list.
-Future<List<dynamic>> getInspectValues(
+Future<List<dynamic>> getInspect(
   sl4f.Inspect inspect,
   String selector, {
   sl4f.InspectPipeline pipeline = sl4f.InspectPipeline.none,
@@ -25,7 +24,16 @@ Future<List<dynamic>> getInspectValues(
     print('inspect selector $selector does not exist');
     return [];
   }
+  return top;
+}
 
+// Return all matched inspect properties as a list.
+Future<List<dynamic>> getInspectValues(
+  sl4f.Inspect inspect,
+  String selector, {
+  sl4f.InspectPipeline pipeline = sl4f.InspectPipeline.none,
+}) async {
+  var top = await getInspect(inspect, selector, pipeline: pipeline);
   List<dynamic> out = [];
 
   for (final component in top) {
@@ -54,6 +62,38 @@ Future<List<dynamic>> getInspectValues(
         }
       } else {
         // If the value is not a map, add it to the output.
+        out.add(cur);
+      }
+    }
+  }
+
+  return out;
+}
+
+Future<List<dynamic>> getInspectTree(
+  sl4f.Inspect inspect,
+  String selector, {
+  sl4f.InspectPipeline pipeline = sl4f.InspectPipeline.none,
+}) async {
+  var top = await getInspect(inspect, selector, pipeline: pipeline);
+
+  List<dynamic> out = [];
+
+  for (final component in top) {
+    if (component['errors']?.isNotEmpty ?? false) {
+      for (var e in component['errors']) {
+        print('Error: $e');
+      }
+    }
+    List<dynamic> next = [component['payload']['root']];
+
+    while (next.isNotEmpty) {
+      var cur = next.removeLast();
+
+      if (cur == null) {
+        // Skip nulls
+        continue;
+      } else {
         out.add(cur);
       }
     }

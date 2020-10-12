@@ -15,6 +15,10 @@
         // children above it are expected to be present on all configs that include core.cml)
         // TODO(fxbug.dev/48215): Decide how to make it easier to understand which children aren't present.
         {
+            name: "log-stats",
+            url: "fuchsia-pkg://fuchsia.com/log-stats#meta/log-stats.cm",
+        },
+        {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
         },
@@ -48,6 +52,12 @@
             ],
             from: "parent",
             to: [ "#debug_serial" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.diagnostics.internal.LogStatsController" ],
+            from: "#log-stats",
+            to: [ "#archivist" ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: "/svc/fuchsia.hardware.serial.NewDeviceProxy",
@@ -128,7 +138,10 @@
                 "/svc/fuchsia.logger.Log",
             ],
             from: "#archivist",
-            to: [ "#appmgr" ],
+            to: [
+                "#appmgr",
+                "#log-stats",
+            ],
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
@@ -136,6 +149,7 @@
             to: [
                 "#debug_serial",
                 "#font_provider",
+                "#log-stats",
                 "#remote-control",
                 "#test_manager",
             ],
