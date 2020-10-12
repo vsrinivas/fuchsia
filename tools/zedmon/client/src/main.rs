@@ -79,10 +79,15 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
         Some("-") => (Box::new(std::io::stdout()), "stdout"),
         Some(filename) => (Box::new(File::create(filename)?), filename),
     };
+    let dest_name = dest_name.to_string();
 
     let zedmon = lib::zedmon();
 
-    // TODO(fxbug.dev/45835): Print time offset.
+    // TODO(fxbug.dev/61471): Consider incorporating the time offset directly into report
+    // timestamps.
+    let (offset, uncertainty) = zedmon.get_time_offset_nanos()?;
+    println!("Time offset: {}ns ± {}ns\n", offset, uncertainty);
+
     println!("Recording to {}. Press ENTER to stop.", dest_name);
     zedmon.read_reports(output, StdinStopper::new())
 }

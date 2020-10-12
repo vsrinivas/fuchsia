@@ -10,6 +10,7 @@ use {
         collections::HashMap,
         io::{Read, Write},
         os::raw::{c_uchar, c_ushort},
+        time::SystemTime,
     },
     usb_bulk::InterfaceInfo,
 };
@@ -49,7 +50,7 @@ fn report_to_string(
     };
 
     let power = v_bus * v_shunt / shunt_resistance;
-    format!("{},{},{},{}\n", report.timestamp, v_shunt, v_bus, power)
+    format!("{},{},{},{}\n", report.timestamp_micros, v_shunt, v_bus, power)
 }
 
 /// Interface to a Zedmon device.
@@ -264,6 +265,73 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         output_thread.join().unwrap().unwrap();
         Ok(())
     }
+
+    /// Number of timestamp query round trips used to determine time offset.
+    const TIME_OFFSET_NUM_QUERIES: u32 = 10;
+
+    /// Returns a tuple consisting of:
+    ///   - An estimate of the offset between the Zedmon clock and the host clock, in nanoseconds.
+    ///     The offset is defined such that, in the absence of drift,
+    ///         `zedmon_clock + offset = host_time`.
+    ///     It is typically, but not necessarily, positive. (Note that: (1) the signedness prevents
+    ///     std::time::Duration from being a valid return type, and (2) i64 will suffice to
+    ///     represent an offset of over 290 years in nanoseconds.)
+    ///   - An estimate of the uncertainty in the offset, in nanoseconds. In the absence of clock
+    ///     drift, the offset is accurate within ±uncertainty.
+    // TODO(fxbug.dev/61471): Consider using microseconds instead, in correspondence with Zedmon
+    // timestamp units.
+    pub fn get_time_offset_nanos(&self) -> Result<(i64, i64), Error> {
+        let mut interface = self.interface.borrow_mut();
+
+        // For each query, we estimate that the retrieved timestamp reflects Zedmon's clock halfway
+        // between the duration spanned by our QueryTime request and Zedmon's Timestamp response.
+        // That allows us to estimate the offset between the host clock and Zedmon's.
+        //
+        // We run `TIME_OFFSET_NUM_QUERIES` queries and keep the estimate corresponding to the
+        // shortest query duration. That provides some guarding against transient sources of
+        // latency.
+        //
+        // Note: Unlike other methods that interact with the USB interface, this method does not
+        // separate out a "get_timestamp" function to keep the parsing time from contributing to
+        // transit time.
+        let mut best_offset_nanos = 0;
+        let mut best_query_duration_nanos = i64::MAX;
+
+        for _ in 0..Self::TIME_OFFSET_NUM_QUERIES {
+            let request = protocol::encode_query_time();
+            let mut response = [0u8; MAX_PACKET_SIZE];
+
+            let host_clock_at_start = SystemTime::now();
+            interface.write(&request)?;
+            let len = interface.read(&mut response)?;
+
+            // `elapsed` could return an error if the host clock moved backwards. That should be
+            // rare, but if it does occur, throw out this query. (Note, however, that the offset
+            // would be invalidated by future jumps in the system clock.)
+            let query_duration_nanos = match host_clock_at_start.elapsed() {
+                Ok(duration) => duration.as_nanos() as i64,
+                Err(_) => continue,
+            };
+
+            if query_duration_nanos < best_query_duration_nanos {
+                let timestamp_micros = protocol::parse_timestamp_micros(&response[..len])? as i64;
+                let host_nanos_at_timestamp =
+                    host_clock_at_start.duration_since(SystemTime::UNIX_EPOCH)?.as_nanos() as i64
+                        + query_duration_nanos / 2;
+                best_offset_nanos = host_nanos_at_timestamp - timestamp_micros * 1_000;
+                best_query_duration_nanos = query_duration_nanos;
+            }
+        }
+
+        // Uncertainty comes from two sources:
+        //  - Mapping a microsecond Zedmon timestamp to nanoseconds. In the worst case, the
+        //    timestamp is 999ns stale.
+        //  - Estimating the instant of the timestamp in the query interval. Since we used the
+        //    midpoint, at worst we're off by one half the query duration.
+        let uncertainty_nanos = 999 + best_query_duration_nanos / 2 + best_query_duration_nanos % 2;
+
+        Ok((best_offset_nanos, uncertainty_nanos))
+    }
 }
 
 /// Lists the serial numbers of all connected Zedmons.
@@ -435,15 +503,12 @@ mod tests {
     // not have direct access to ZedmonClient's FakeZedmonInterface instance.
     //
     // This module allows communication between the test and FakeZedmonInterface through a static
-    // instance of the Coordinator struct. For reporting, the process is as follows:
-    //  - The test calls `init` to populate the static COORDINATOR, passing in a DeviceConfiguration
-    //    and a queue of Vec<Report> that FakeZedmonInterface will stream to zedmon. The test
-    //    receives a CoordinatorHandle that will destroy COORDINATOR when it goes out of scope.
-    //  - The test calls ZedmonClient::read_reports with a stop signal provided by the
-    //    CoorinatorHandle.
-    //  - Each time Zedmon reads a report packet, FakeZedmonInterface will provide it with a
-    //    serialized Vec<Report> from the COORDINATOR's queue.
-    //  - When the queue is exhausted, COORDINATOR triggers the stop signal, ending reporting.
+    // instance of the Coordinator struct. Each test will create a CoordinatorBuilder, configure it
+    // appropriately, and call the build() method to populate the static COORDINATOR. The test
+    // receives a CoordinatorHandle that will destroy COORDINATOR when it goes out of scope. The
+    // test then uses ZedmonClient::<fake_device::FakeZedmonInterface>::new() to create a new
+    // ZedmonClient. ZedmonClient accesses COORDINATOR implicitly through its FakeZedmonInterface,
+    // which in turn uses `coordinator_get_*` functions.
     mod fake_device {
         use {
             super::*,
@@ -463,15 +528,36 @@ mod tests {
             }
         }
 
-        // Coordinates interactions between FakeZedmonInterface and a test.
+        // Coordinates interactions between FakeZedmonInterface and a test See module-level comments
+        // for high-level access patterns.
         //
-        // There is meant to be only one instance of this struct, the static COORDINATOR. Within
-        // this module, COORDINATOR is accessed by a number of helper functions. Outside of this
-        // module (i.e. in a test), COORDINATOR is accessed in RAII fashion via a CoordinatorHandle.
+        // To test ZedmonClient::read_reports:
+        //  - Use CoordinatorBuilder::with_report_queue to populate the `report_queue` field. Each
+        //    entry in the queue is a Vec<Report> that will be serialized into a single packet. The
+        //    caller will need to ensure that reports are written to an accessible location.
+        //  - Use CoordinatorHandle::get_stopper to build a Stopper for `read_reports` that will
+        //    end reporting when the report queue is exhausted.
+        //
+        // To test ZedmonClient::get_time_offset_nanos, use CoordinatorBuilder::with_offset_time to
+        // populate `offset_time`. Timestamps will be reported as `host_time - offset_time`; the
+        // fake Zedmon's clock will run perfectly in parallel to the host clock. Note that only
+        // timestamps reported in Timestamp packets are affected by `offset_time`; timestamps in
+        // Report packets are directly specified by the test, via `report_queue`.
         struct Coordinator {
+            // Constants that define the fake device.
             device_config: DeviceConfiguration,
-            report_queue: VecDeque<Vec<Report>>,
+
+            // See struct comment.
+            report_queue: Option<VecDeque<Vec<Report>>>,
+
+            // Signal to trigger the end of reporting. Initialized to `false`, and set to `true`
+            // when `report_queue` is exhausted.
             stop_signal: Arc<AtomicBool>,
+
+            // Offset between the fake Zedmon's clock and host clock, such that `zedmon_time +
+            // offset_time = host_time`. Only used for Timestamp packets; the timestamps in
+            // Reports are set by the test when populating `report_queue`.
+            offset_time: Option<Duration>,
         }
 
         // Constants that are inherent to a Zedmon device.
@@ -488,7 +574,7 @@ mod tests {
         impl CoordinatorHandle {
             pub fn get_stopper(&self) -> Stopper {
                 let lock = COORDINATOR.read().unwrap();
-                let coordinator = lock.as_ref().unwrap();
+                let coordinator = lock.as_ref().expect("Coordinator not initialized");
                 Stopper { signal: coordinator.stop_signal.clone() }
             }
         }
@@ -508,46 +594,84 @@ mod tests {
             static ref COORDINATOR: RwLock<Option<Coordinator>> = RwLock::new(None);
         }
 
-        // Entry point for tests. Populates COORDINATOR and returns a CoordinatorHandle used to
-        // access it.
-        pub fn init(
+        // Entry point for tests. Populates the static COORDINATOR instance, via `build()`.
+        pub struct CoordinatorBuilder {
             device_config: DeviceConfiguration,
-            report_queue: VecDeque<Vec<Report>>,
-        ) -> CoordinatorHandle {
-            let stop_signal = Arc::new(AtomicBool::new(false));
-            let mut lock = COORDINATOR.write().unwrap();
+            report_queue: Option<VecDeque<Vec<Report>>>,
+            offset_time: Option<Duration>,
+        }
 
-            assert!(
-                lock.is_none(),
-                "COORDINATOR was not properly cleared; this should happen automatically."
-            );
+        impl CoordinatorBuilder {
+            pub fn new(device_config: DeviceConfiguration) -> Self {
+                CoordinatorBuilder { device_config, report_queue: None, offset_time: None }
+            }
 
-            lock.replace(Coordinator { device_config, report_queue, stop_signal });
-            CoordinatorHandle {}
+            pub fn with_report_queue(mut self, report_queue: VecDeque<Vec<Report>>) -> Self {
+                self.report_queue.replace(report_queue);
+                self
+            }
+
+            pub fn with_offset_time(mut self, offset_time: Duration) -> Self {
+                self.offset_time.replace(offset_time);
+                self
+            }
+
+            pub fn build(self) -> CoordinatorHandle {
+                let stop_signal = Arc::new(AtomicBool::new(false));
+                let mut lock = COORDINATOR.write().unwrap();
+
+                assert!(
+                    lock.is_none(),
+                    "COORDINATOR was not properly cleared; this should happen automatically."
+                );
+
+                lock.replace(Coordinator {
+                    device_config: self.device_config,
+                    report_queue: self.report_queue,
+                    offset_time: self.offset_time,
+                    stop_signal,
+                });
+                CoordinatorHandle {}
+            }
         }
 
         // Gets COORDINATOR's device_config.
-        fn device_config() -> DeviceConfiguration {
+        fn coordinator_get_device_config() -> DeviceConfiguration {
             let lock = COORDINATOR.read().unwrap();
-            let coordinator = lock.as_ref().unwrap();
+            let coordinator = lock.as_ref().expect("Coordinator not initialized");
             coordinator.device_config.clone()
         }
 
         // Gets the next packet's worth of Reports from COORDINATOR.
-        fn get_reports_for_packet() -> Vec<Report> {
+        fn coordinator_get_reports_for_packet() -> Vec<Report> {
             let mut lock = COORDINATOR.write().unwrap();
-            let coordinator = lock.as_mut().unwrap();
-            assert!(coordinator.report_queue.len() > 0, "No reports left in queue");
-            if coordinator.report_queue.len() == 1 {
+            let coordinator = lock.as_mut().expect("Coordinator not initialized");
+            let report_queue = coordinator.report_queue.as_mut().expect("report_queue not set");
+
+            assert!(report_queue.len() > 0, "No reports left in queue");
+            if report_queue.len() == 1 {
                 coordinator.stop_signal.store(true, Ordering::SeqCst);
             }
-            coordinator.report_queue.pop_front().unwrap()
+            report_queue.pop_front().unwrap()
         }
+
+        // Retrieves a timestamp in microseconds to fill a Timestamp packet.
+        fn coordinator_get_timestamp_micros() -> u64 {
+            let lock = COORDINATOR.read().unwrap();
+            let coordinator = lock.as_ref().expect("Coordinator not initialized");
+            let offset_time = coordinator.offset_time.expect("offset_time not set");
+
+            let zedmon_now = SystemTime::now() - offset_time;
+            let timestamp = zedmon_now.duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            timestamp.as_micros() as u64
+        }
+
         // Indicates the contents of the next read from FakeZedmonInterface.
         enum NextRead {
             ParameterValue(u8),
             ReportFormat(u8),
             Report,
+            Timestamp,
         }
 
         // Interface that provides fakes for testing interactions with a Zedmon device.
@@ -572,7 +696,7 @@ mod tests {
                     0 => serialize_parameter_value(
                         ParameterValue {
                             name: "shunt_resistance".to_string(),
-                            value: Value::F32(device_config().shunt_resistance),
+                            value: Value::F32(coordinator_get_device_config().shunt_resistance),
                         },
                         buffer,
                     ),
@@ -592,7 +716,7 @@ mod tests {
                             index,
                             field_type: ScalarType::I16,
                             unit: Unit::Volts,
-                            scale: device_config().v_shunt_scale,
+                            scale: coordinator_get_device_config().v_shunt_scale,
                             name: "v_shunt".to_string(),
                         },
                         buffer,
@@ -602,7 +726,7 @@ mod tests {
                             index,
                             field_type: ScalarType::I16,
                             unit: Unit::Volts,
-                            scale: device_config().v_bus_scale,
+                            scale: coordinator_get_device_config().v_bus_scale,
                             name: "v_bus".to_string(),
                         },
                         buffer,
@@ -623,8 +747,14 @@ mod tests {
 
             // Populates a Report packet.
             fn read_reports(&mut self, buffer: &mut [u8]) -> usize {
-                let reports = get_reports_for_packet();
+                let reports = coordinator_get_reports_for_packet();
                 serialize_reports(&reports, buffer)
+            }
+
+            // Populates a Timestamp packet.
+            fn read_timestamp(&mut self, buffer: &mut [u8]) -> usize {
+                buffer[0] = PacketType::Timestamp as u8;
+                serialize_timestamp_micros(coordinator_get_timestamp_micros(), buffer)
             }
         }
 
@@ -637,6 +767,7 @@ mod tests {
                         self.next_read = Some(NextRead::Report);
                         self.read_reports(buffer)
                     }
+                    NextRead::Timestamp => self.read_timestamp(buffer),
                 };
                 Ok(bytes_read)
             }
@@ -654,6 +785,7 @@ mod tests {
                     PacketType::QueryReportFormat => {
                         self.next_read = Some(NextRead::ReportFormat(data[1]))
                     }
+                    PacketType::QueryTime => self.next_read = Some(NextRead::Timestamp),
                     _ => panic!("Not a valid host-to-target packet"),
                 }
                 Ok(data.len())
@@ -666,7 +798,7 @@ mod tests {
 
     // Helper struct for testing ZedmonClient::record.
     struct ZedmonRecordRunner {
-        // Maps time in nanoseconds to (v_shunt, v_bus).
+        // Maps time in microseconds to (v_shunt, v_bus).
         voltage_function: Box<dyn Fn(u64) -> (f32, f32)>,
 
         shunt_resistance: f32,
@@ -701,9 +833,9 @@ mod tests {
                         break;
                     }
 
-                    let (v_shunt, v_bus) = (self.voltage_function)(elapsed.as_nanos() as u64);
+                    let (v_shunt, v_bus) = (self.voltage_function)(elapsed.as_micros() as u64);
                     reports.push(Report {
-                        timestamp: elapsed.as_nanos() as u64,
+                        timestamp_micros: elapsed.as_micros() as u64,
                         values: vec![
                             Value::I16((v_shunt / self.v_shunt_scale) as i16),
                             Value::I16((v_bus / self.v_bus_scale) as i16),
@@ -715,7 +847,9 @@ mod tests {
                 }
             }
 
-            let coordinator = fake_device::init(device_config, report_queue);
+            let builder =
+                fake_device::CoordinatorBuilder::new(device_config).with_report_queue(report_queue);
+            let handle = builder.build();
             let zedmon = ZedmonClient::<fake_device::FakeZedmonInterface>::new()?;
 
             // Implements Write by sending bytes over a channel. The holder of the channel's
@@ -741,7 +875,7 @@ mod tests {
 
             let (sender, receiver) = mpsc::channel();
             let writer = Box::new(ChannelWriter { sender, buffer: Vec::new() });
-            zedmon.read_reports(writer, coordinator.get_stopper())?;
+            zedmon.read_reports(writer, handle.get_stopper())?;
 
             let output = receiver.recv()?;
             Ok(String::from_utf8(output)?)
@@ -752,8 +886,8 @@ mod tests {
     fn test_read_reports() -> Result<(), Error> {
         // The voltages used are simply time-dependent signals that, combined with shunt_resistance
         // below, yield power on the order of a few Watts.
-        fn get_voltages(nanos: u64) -> (f32, f32) {
-            let seconds = nanos as f32 / 1e9;
+        fn get_voltages(micros: u64) -> (f32, f32) {
+            let seconds = micros as f32 / 1e6;
             let v_shunt = 1e-3 + 2e-4 * (std::f32::consts::PI * seconds).cos();
             let v_bus = 20.0 + 3.0 * (std::f32::consts::PI * seconds).sin();
             (v_shunt, v_bus)
@@ -794,6 +928,29 @@ mod tests {
         }
 
         assert_eq!(num_lines, 10000);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_time_offset_nanos() -> Result<(), Error> {
+        // This instant is effectively Zedmon's zero timestamp.
+        let zedmon_offset = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+
+        // Values are not used by this test.
+        let device_config = fake_device::DeviceConfiguration {
+            shunt_resistance: 0.0,
+            v_shunt_scale: 0.0,
+            v_bus_scale: 0.0,
+        };
+
+        let builder =
+            fake_device::CoordinatorBuilder::new(device_config).with_offset_time(zedmon_offset);
+        let _handle = builder.build();
+        let zedmon = ZedmonClient::<fake_device::FakeZedmonInterface>::new()?;
+
+        let (reported_offset, uncertainty) = zedmon.get_time_offset_nanos()?;
+        assert_near!(zedmon_offset.as_nanos() as i64, reported_offset, uncertainty);
 
         Ok(())
     }

@@ -96,9 +96,11 @@ pub const REPORT_FORMAT_INDEX_END: u8 = 0xff;
 /// Report of measured data at a timepoint.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Report {
-    /// Timestamp in nanoseconds since the Zedmon device started.
-    // TODO(fxbug.dev/60030): Use power_manager's Nanoseconds newtype.
-    pub timestamp: u64,
+    /// Timestamp, in microseconds, in Zedmon's clock domain.
+    ///
+    /// At time of writing the timestamp is zero when Zedmon boots, but that is not a guarantee.
+    // TODO(fxbug.dev/60030): Use one of power_manager's newtypes, or similar.
+    pub timestamp_micros: u64,
 
     /// Reported values for this sample.
     pub values: Vec<Value>,
@@ -272,7 +274,7 @@ pub fn parse_report_format<T: AsRef<[u8]> + ?Sized>(packet: &T) -> Result<Report
     Ok(ReportFormat { index, field_type, unit, scale, name })
 }
 
-pub fn parse_timestamp<T: AsRef<[u8]> + ?Sized>(packet: &T) -> Result<u64> {
+pub fn parse_timestamp_micros<T: AsRef<[u8]> + ?Sized>(packet: &T) -> Result<u64> {
     let mut cursor = validate_packet(packet, 9, PacketType::Timestamp)?;
     Ok(cursor.read_u64::<LE>()?)
 }
@@ -429,7 +431,7 @@ impl ReportParser {
                 };
                 values.push(value);
             }
-            reports.push(Report { timestamp, values });
+            reports.push(Report { timestamp_micros: timestamp, values });
         }
         Ok(reports)
     }
@@ -531,7 +533,7 @@ pub mod tests {
 
         buffer.write_u8(PacketType::Report as u8).unwrap();
         for report in reports {
-            buffer.write_u64::<LE>(report.timestamp).unwrap();
+            buffer.write_u64::<LE>(report.timestamp_micros).unwrap();
             for (value, field_type) in report.values.iter().zip(field_types.iter()) {
                 assert_eq!(
                     get_scalar_type(value),
@@ -559,7 +561,7 @@ pub mod tests {
     }
 
     /// Serializes a timestamp into a buffer, returning the number of bytes written.
-    pub fn serialize_timestamp(timestamp: u64, mut buffer: &mut [u8]) -> usize {
+    pub fn serialize_timestamp_micros(timestamp: u64, mut buffer: &mut [u8]) -> usize {
         buffer.write_u8(PacketType::Timestamp as u8).unwrap();
         buffer.write_u64::<LE>(timestamp).unwrap();
         9
@@ -709,17 +711,17 @@ pub mod tests {
     }
 
     #[test]
-    fn test_parse_timestamp() {
+    fn test_parse_timestamp_micros() {
         let mut base_packet = [0; 9];
-        serialize_timestamp(1234567, &mut base_packet);
+        serialize_timestamp_micros(1234567, &mut base_packet);
 
         // Base packet parses successfully
-        assert_eq!(parse_timestamp(&base_packet), Ok(1234567));
+        assert_eq!(parse_timestamp_micros(&base_packet), Ok(1234567));
 
         let mut packet = base_packet.clone();
         packet[0] = PacketType::ParameterValue as u8;
         assert_eq!(
-            parse_timestamp(&packet),
+            parse_timestamp_micros(&packet),
             Err(Error::WrongPacketType {
                 expected: PacketType::Timestamp,
                 received: PacketType::ParameterValue,
@@ -770,7 +772,7 @@ pub mod tests {
         ]);
         let parser = ReportParser::new(&format)?;
         let reports_in = vec![Report {
-            timestamp: 1000,
+            timestamp_micros: 1000,
             values: vec![
                 Value::U8(u8::MAX),
                 Value::U16(u16::MAX),
@@ -796,7 +798,7 @@ pub mod tests {
         ]);
         let parser = ReportParser::new(&format)?;
         let reports_in = vec![Report {
-            timestamp: 1000,
+            timestamp_micros: 1000,
             values: vec![
                 Value::U8(u8::MAX),
                 Value::U16(u16::MAX),
@@ -806,7 +808,7 @@ pub mod tests {
         }];
         let reports_out = serialize_and_parse(&reports_in, &parser)?;
         let expected = vec![Report {
-            timestamp: 1000,
+            timestamp_micros: 1000,
             values: vec![
                 Value::F32(u8::MAX as f32 * 0.1),
                 Value::F32(u16::MAX as f32 * 0.2),
@@ -820,10 +822,10 @@ pub mod tests {
         let format = make_format([(0, ScalarType::U8, 0.0), (1, ScalarType::I16, 0.0)]);
         let parser = ReportParser::new(&format)?;
         let reports_in = vec![
-            Report { timestamp: 1000, values: vec![Value::U8(1), Value::I16(-1)] },
-            Report { timestamp: 2000, values: vec![Value::U8(2), Value::I16(-2)] },
-            Report { timestamp: 3000, values: vec![Value::U8(3), Value::I16(-3)] },
-            Report { timestamp: 4000, values: vec![Value::U8(4), Value::I16(-4)] },
+            Report { timestamp_micros: 1000, values: vec![Value::U8(1), Value::I16(-1)] },
+            Report { timestamp_micros: 2000, values: vec![Value::U8(2), Value::I16(-2)] },
+            Report { timestamp_micros: 3000, values: vec![Value::U8(3), Value::I16(-3)] },
+            Report { timestamp_micros: 4000, values: vec![Value::U8(4), Value::I16(-4)] },
         ];
         let reports_out = serialize_and_parse(&reports_in, &parser)?;
         assert_eq!(reports_in, reports_out);
@@ -836,7 +838,7 @@ pub mod tests {
         ]);
         let parser = ReportParser::new(&format)?;
         let reports_in = vec![Report {
-            timestamp: 1000,
+            timestamp_micros: 1000,
             values: vec![Value::U8(u8::MAX), Value::I16(i16::MIN), Value::F32(f32::MIN)],
         }];
         let reports_out = serialize_and_parse(&reports_in, &parser)?;
