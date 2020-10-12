@@ -2,10 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("ethernet_bind") {
+  rules = "ethernet.bind"
+  output = "ethernet-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.ethernet" ]
+}
 
 driver_module("ethernet") {
   configs += [
@@ -19,6 +27,7 @@ driver_module("ethernet") {
   ]
   sources = [ "ethernet.cc" ]
   deps = [
+    ":ethernet_bind",
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//src/devices/lib/dev-operation",
@@ -43,6 +52,7 @@ test("ethernet-unittest") {
     "ethernet.cc",
   ]
   deps = [
+    ":ethernet_bind",
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//src/devices/lib/dev-operation",
@@ -103,5 +113,6 @@ group("tests") {
   deps = [
     ":ethernet-integration-test",
     ":ethernet-unittest-package",
+    ":ethernet_bind_test",
   ]
 }

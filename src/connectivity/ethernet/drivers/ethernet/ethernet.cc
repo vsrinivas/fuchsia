@@ -9,7 +9,7 @@
 #include <memory>
 #include <type_traits>
 
-#include "zircon/errors.h"
+#include "src/connectivity/ethernet/drivers/ethernet/ethernet-bind.h"
 
 namespace eth {
 
@@ -1033,8 +1033,4 @@ static constexpr zx_driver_ops_t eth_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERNET_IMPL)
-ZIRCON_DRIVER_END(ethernet)
-// clang-format on
+ZIRCON_DRIVER(ethernet, eth_driver_ops, "zircon", "0.1")
