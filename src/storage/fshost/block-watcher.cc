@@ -347,19 +347,10 @@ void BlockDeviceWatcher(std::unique_ptr<FsManager> fshost, BlockWatcherOptions o
   watcher = nullptr;
 }
 
-fbl::RefPtr<fs::Service> BlockWatcherServer::Create(devmgr::FsManager* fs_manager,
-                                                    async_dispatcher* dispatcher) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, fs_manager](zx::channel chan) mutable {
-    zx::event event;
-    zx_status_t status = fs_manager->event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
-    if (status != ZX_OK) {
-      std::cerr << "fshost: failed to duplicate event handle for admin service: "
-                << zx_status_get_string(status) << std::endl;
-      return status;
-    }
-
-    status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
-                                          std::make_unique<BlockWatcherServer>());
+fbl::RefPtr<fs::Service> BlockWatcherServer::Create(async_dispatcher* dispatcher) {
+  return fbl::MakeRefCounted<fs::Service>([dispatcher](zx::channel chan) mutable {
+    zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
+                                                      std::make_unique<BlockWatcherServer>());
     if (status != ZX_OK) {
       std::cerr << "fshost: failed to bind admin service:" << zx_status_get_string(status)
                 << std::endl;

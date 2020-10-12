@@ -31,8 +31,7 @@ class BlockWatcherServer final : public llcpp::fuchsia::fshost::BlockWatcher::In
 
   // Creates a new fs::Service backed by a new BlockWatcherServer, to be inserted into
   // a pseudo fs.
-  static fbl::RefPtr<fs::Service> Create(devmgr::FsManager* fs_manager,
-                                         async_dispatcher* dispatcher);
+  static fbl::RefPtr<fs::Service> Create(async_dispatcher* dispatcher);
 
   void Pause(PauseCompleter::Sync& completer) override;
   void Resume(ResumeCompleter::Sync& completer) override;

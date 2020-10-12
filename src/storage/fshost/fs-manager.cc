@@ -130,7 +130,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
                     AdminServer::Create(this, global_loop_->dispatcher()));
 
   svc_dir->AddEntry(llcpp::fuchsia::fshost::BlockWatcher::Name,
-                    BlockWatcherServer::Create(this, global_loop_->dispatcher()));
+                    BlockWatcherServer::Create(global_loop_->dispatcher()));
 
   outgoing_dir->AddEntry("svc", std::move(svc_dir));
 
