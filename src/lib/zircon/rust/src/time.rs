@@ -273,6 +273,15 @@ impl Time {
         }
     }
 
+    /// Get the current monotonic time.
+    ///
+    /// Wraps the
+    /// [zx_clock_get_monotonic](https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get_monotonic.md)
+    /// syscall.
+    pub fn get_monotonic() -> Time {
+        unsafe { Time(sys::zx_clock_get_monotonic()) }
+    }
+
     /// Compute a deadline for the time in the future that is the given `Duration` away.
     ///
     /// Wraps the
