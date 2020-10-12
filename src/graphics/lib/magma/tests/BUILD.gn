@@ -47,6 +47,15 @@ group("tests") {
   ]
 }
 
+# This group must only be referenced from a *_system_image_deps arg, since it contains drivers that
+# go into the system image.
+group("test-drivers") {
+  testonly = true
+
+  # TODO(fxbug.dev/61705): Move test drivers here.
+  deps = []
+}
+
 # Tests that require a working libvulkan to run.
 group("vulkan-tests") {
   testonly = true

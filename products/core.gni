@@ -20,6 +20,11 @@ meta_package_labels += [
 
 product_system_image_deps = [
   "//src/connectivity/bluetooth:core-system",
+
+  # Test drivers will only be loaded as tests require. They should be removed from production
+  # products that have limited storage.
+  # TODO(fxbug.dev/3150): Move to a regular package.
+  "//src/graphics/lib/magma/tests:test-drivers",
   "//src/sys/pkg:pkgfs-disable-executability-restrictions",
 ]
 
