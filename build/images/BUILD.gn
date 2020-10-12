@@ -211,10 +211,6 @@ action("cache_index") {
   ]
 }
 
-# The /boot and /system manifests have to be generated in concert.  Things
-# like drivers going into /system can affect what needs to go into /boot.
-boot_manifest = "$target_out_dir/boot.manifest"
-
 system_image_manifest_args = "system_image.manifest_args"
 system_image_manifest_args_path = target_gen_dir + "/system_image.manifest_args"
 
@@ -234,15 +230,6 @@ generated_file(system_image_manifest_args) {
 generate_manifest("system_image.manifest") {
   visibility = [ ":*" ]
   testonly = true
-
-  # Create the /boot manifest that gets packed into BOOTFS in the ZBI.
-  # /system manifest files can assume that the /boot files are visible at
-  # runtime, so dependencies already in /boot won't be copied into /system.
-  bootfs_manifest = boot_manifest
-  bootfs_zircon_groups = "all"
-
-  # Collect whatever we want from Zircon that didn't go into /boot.
-  zircon_groups = ""
 
   # Now each package() target in the build contributes manifest entries.
   # For system_image packages, these contain binaries that need their
@@ -277,7 +264,6 @@ generate_manifest("system_image.manifest") {
             rebase_path(pkgfs_packages_allowlist, root_build_dir) ]
 }
 system_manifest_outputs = get_target_outputs(":system_image.manifest")
-assert(boot_manifest == system_manifest_outputs[1])
 
 # The prime version of the system_image has an extra "dummy" file.
 # The prime images are used to have an alternate known-compatible OTA
@@ -483,18 +469,6 @@ action("devmgr_config.txt") {
   foreach(entry, devmgr_config) {
     args += [ "--entry=$entry" ]
   }
-
-  # If there were any ASan drivers in the build, bin/devhost.asan
-  # should have been brought into the boot manifest.  devmgr needs to
-  # be told to use it in case there are ASan drivers in /system but
-  # none in /boot.  If there were any non-ASan drivers in the build,
-  # bin/devhost.asan will load them and needs to know to moderate the
-  # checking for interacting with uninstrumented code.
-  sources += [ boot_manifest ]
-  args += [
-    "--include=bin/devhost",
-    "--manifest=" + rebase_path(boot_manifest, root_build_dir),
-  ]
 }
 
 devmgr_config("devmgr_config") {
