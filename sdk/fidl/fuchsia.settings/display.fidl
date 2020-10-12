@@ -69,6 +69,8 @@ table DisplaySettings {
     4: LowLightMode low_light_mode;
     /// Whether the screen is enabled.
     5: bool screen_enabled;
+    /// Theme to be used for the device's user interface.
+    6: Theme theme;
 };
 
 table LightSensorData {
@@ -79,6 +81,11 @@ table LightSensorData {
     2: fuchsia.ui.types.ColorRgb color;
 };
 
+table Theme {
+    // theme_type will be absent if no theme has been set.
+    1: ThemeType theme_type;
+};
+
 enum LowLightMode {
     /// Device should not be in low-light mode.
     DISABLE = 0;
@@ -87,4 +94,12 @@ enum LowLightMode {
     DISABLE_IMMEDIATELY = 1;
     /// Device should be in low-light mode.
     ENABLE = 2;
+};
+
+enum ThemeType {
+    DEFAULT = 0;
+    LIGHT = 1;
+    DARK = 2;
+    /// Product can choose a theme based on ambient cues.
+    AUTO = 3;
 };

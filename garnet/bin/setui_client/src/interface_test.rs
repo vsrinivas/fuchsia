@@ -386,6 +386,7 @@ async fn validate_display(
                 user_brightness_offset: Some(0.5),
                 low_light_mode: Some(LowLightMode::Disable),
                 screen_enabled: Some(true),
+                theme: Some(Theme{theme_type: Some(ThemeType::Default)}),
             })?;
         }
     );
