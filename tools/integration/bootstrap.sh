@@ -23,6 +23,9 @@ readonly GO_DEPS=(
   "github.com/golang/protobuf"
   "${FUCHSIA_ROOT}/third_party/golibs/github.com/golang/protobuf"
 
+  "github.com/google/subcommands"
+  "${FUCHSIA_ROOT}/third_party/golibs/github.com/google/subcommands"
+
   "google.golang.org/protobuf"
   "${FUCHSIA_ROOT}/third_party/golibs/github.com/protocolbuffers/protobuf-go"
 )

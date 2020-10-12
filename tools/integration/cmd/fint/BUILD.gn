@@ -15,21 +15,19 @@ go_library("fint_lib") {
   deps = [
     ":proto",
     "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//tools/lib/color",
+    "//tools/lib/command",
+    "//tools/lib/logger",
   ]
 }
 
 go_binary("fint") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint"
-  deps = [
-    ":fint_lib",
-    "//third_party/golibs:github.com/golang/protobuf",
-  ]
+  deps = [ ":fint_lib" ]
 }
 
 go_test("fint_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/cmd/fint" ]
-  deps = [
-    ":fint_lib",
-    "//third_party/golibs:github.com/golang/protobuf",
-  ]
+  deps = [ ":fint_lib" ]
 }

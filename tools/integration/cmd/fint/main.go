@@ -5,34 +5,39 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
-	"io/ioutil"
 	"os"
+	"syscall"
+
+	"github.com/google/subcommands"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-func mainImpl() error {
-	static := flag.String("static", "", "path to a static .textproto")
+var (
+	colors   = color.ColorAuto
+	logLevel = logger.DebugLevel
+)
 
-	flag.Parse()
-
-	fmt.Println("static:", *static)
-
-	bytes, err := ioutil.ReadFile(*static)
-	if err != nil {
-		return err
-	}
-
-	if _, err := parseStatic(string(bytes)); err != nil {
-		return err
-	}
-
-	return nil
+func init() {
+	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
+	flag.Var(&logLevel, "log-level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 }
 
 func main() {
-	if err := mainImpl(); err != nil {
-		fmt.Fprintf(os.Stderr, "fint: %s\n", err)
-		os.Exit(1)
-	}
+	subcommands.Register(subcommands.HelpCommand(), "")
+	subcommands.Register(subcommands.CommandsCommand(), "")
+	subcommands.Register(subcommands.FlagsCommand(), "")
+	subcommands.Register(&SetCommand{}, "")
+
+	flag.Parse()
+
+	l := logger.NewLogger(logLevel, color.NewColor(colors), os.Stdout, os.Stderr, "fint ")
+	l.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
+	ctx := logger.WithLogger(context.Background(), l)
+
+	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
+	os.Exit(int(subcommands.Execute(ctx)))
 }
