@@ -9,6 +9,7 @@
 
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
@@ -314,9 +315,16 @@ void EngineRenderer::WarmPipelineCache(std::set<vk::Format> framebuffer_formats)
     const std::vector<vk::Format> immutable_sampler_formats{vk::Format::eG8B8G8R8422Unorm,
                                                             vk::Format::eG8B8R82Plane420Unorm,
                                                             vk::Format::eG8B8R83Plane420Unorm};
+    const auto vk_physical_device = escher_->vk_physical_device();
     for (auto fmt : immutable_sampler_formats) {
-      immutable_samplers.push_back(
-          escher_->sampler_cache()->ObtainYuvSampler(fmt, vk::Filter::eLinear));
+      if (escher::impl::IsYuvConversionSupported(vk_physical_device, fmt)) {
+        vk::Filter filter = vk::Filter::eNearest;
+        if (vk_physical_device.getFormatProperties(fmt).optimalTilingFeatures &
+            vk::FormatFeatureFlagBits::eSampledImageFilterLinear) {
+          filter = vk::Filter::eLinear;
+        }
+        immutable_samplers.push_back(escher_->sampler_cache()->ObtainYuvSampler(fmt, filter));
+      }
     }
   }
 

@@ -4,6 +4,7 @@
 
 #include "src/ui/lib/escher/renderer/sampler_cache.h"
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 
@@ -20,6 +21,11 @@ SamplerPtr SamplerCache::ObtainSampler(vk::Filter filter, bool use_unnormalized_
 SamplerPtr SamplerCache::ObtainYuvSampler(vk::Format format, vk::Filter filter,
                                           bool use_unnormalized_coordinates) {
   FX_DCHECK(image_utils::IsYuvFormat(format));
+
+  const vk::PhysicalDevice& physical_device = resource_recycler_->vulkan_context().physical_device;
+  FX_DCHECK(physical_device);
+  FX_DCHECK(impl::IsYuvConversionSupported(physical_device, format));
+
   Key key{format, filter, use_unnormalized_coordinates};
   return ObtainSampler(key);
 }

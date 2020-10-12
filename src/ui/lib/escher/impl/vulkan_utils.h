@@ -75,6 +75,10 @@ vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count);
 // Clip |clippee| so that it is completely contained within |clipper|.
 void ClipToRect(vk::Rect2D* clippee, const vk::Rect2D& clipper);
 
+// Check if an Ycbcr format can be used to create VkSamplerYcbcrConversion
+// using the Vulkan physical device.
+bool IsYuvConversionSupported(vk::PhysicalDevice device, vk::Format format);
+
 }  // namespace impl
 }  // namespace escher
 

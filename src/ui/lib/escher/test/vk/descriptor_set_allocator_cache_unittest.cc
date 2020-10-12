@@ -5,11 +5,34 @@
 #include "src/ui/lib/escher/vk/impl/descriptor_set_allocator_cache.h"
 
 #include "gtest/gtest.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 
 namespace {
 using namespace escher;
 using namespace escher::impl;
+
+namespace {
+
+// Select a proper format and filter pair supported by physical device.
+std::pair<vk::Format, vk::Filter> SelectSupportedFormatAndFilter(Escher* escher) {
+  // We use eNearest as filter since it doesn't depend on any format
+  // features specific to physical devices.
+  const auto kFilter = vk::Filter::eNearest;
+
+  // For formats, we prefer YUV formats if any of them are supported; otherwise
+  // we just choose a normal RGB format.
+  const vk::Format kYuvFormats[] = {vk::Format::eG8B8G8R8422Unorm,
+                                    vk::Format::eG8B8R82Plane420Unorm,
+                                    vk::Format::eG8B8R83Plane420Unorm};
+  for (const auto yuv_format : kYuvFormats) {
+    if (impl::IsYuvConversionSupported(escher->vk_physical_device(), yuv_format)) {
+      return {yuv_format, kFilter};
+    }
+  }
+  return {vk::Format::eR8G8B8Srgb, kFilter};
+}
+}  // namespace
 
 VK_TEST(DescriptorSetAllocatorCache, LazyCaching) {
   auto escher = escher::test::GetEscher();
@@ -32,8 +55,8 @@ VK_TEST(DescriptorSetAllocatorCache, LazyCaching) {
   EXPECT_NE(a1, a3);
   EXPECT_EQ(2U, cache.size());
 
-  auto sampler = fxl::MakeRefCounted<Sampler>(
-      escher->resource_recycler(), vk::Format::eG8B8G8R8422Unorm, vk::Filter::eLinear, true);
+  auto [format, filter] = SelectSupportedFormatAndFilter(escher);
+  auto sampler = fxl::MakeRefCounted<Sampler>(escher->resource_recycler(), format, filter, true);
   auto a4 = cache.ObtainDescriptorSetAllocator(layout1, sampler);
   auto a5 = cache.ObtainDescriptorSetAllocator(layout1, sampler);
   EXPECT_NE(a1, a4);

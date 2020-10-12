@@ -23,6 +23,10 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
   if (image_utils::IsYuvFormat(format)) {
     FX_DCHECK(resource_recycler->caps().allow_ycbcr);
 
+    // Check chroma filter support.
+    auto physical_device = resource_recycler->vulkan_context().physical_device;
+    auto format_properties = physical_device.getFormatProperties(format);
+
     vk::SamplerYcbcrConversionCreateInfo ycbcr_create_info;
     ycbcr_create_info.pNext = nullptr;
     ycbcr_create_info.format = format;
@@ -34,9 +38,30 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
         VK_COMPONENT_SWIZZLE_IDENTITY,  // B
         VK_COMPONENT_SWIZZLE_IDENTITY,  // A
     };
-    ycbcr_create_info.xChromaOffset = vk::ChromaLocation::eCositedEven;
-    ycbcr_create_info.yChromaOffset = vk::ChromaLocation::eCositedEven;
-    ycbcr_create_info.chromaFilter = filter;
+    if (format_properties.optimalTilingFeatures &
+        vk::FormatFeatureFlagBits::eCositedChromaSamples) {
+      ycbcr_create_info.xChromaOffset = vk::ChromaLocation::eCositedEven;
+      ycbcr_create_info.yChromaOffset = vk::ChromaLocation::eCositedEven;
+    } else if (format_properties.optimalTilingFeatures &
+               vk::FormatFeatureFlagBits::eMidpointChromaSamples) {
+      ycbcr_create_info.xChromaOffset = vk::ChromaLocation::eMidpoint;
+      ycbcr_create_info.yChromaOffset = vk::ChromaLocation::eMidpoint;
+    } else {
+      FX_LOGS(ERROR) << "The potential features of format [" << vk::to_string(format) << "] don't "
+                     << "support eCositedChromaSamples or eMidpointChromaSamples!";
+      FX_NOTREACHED();
+    }
+
+    // If the chroma filter is not supported by the device, we would like to
+    // make it fall back to eNearest for YUV images only, while still keeping
+    // the choice of filter in VkSamplerCreateInfo for non-YUV images.
+    if (filter == vk::Filter::eLinear &&
+        !(format_properties.optimalTilingFeatures &
+          vk::FormatFeatureFlagBits::eSampledImageYcbcrConversionLinearFilter)) {
+      ycbcr_create_info.chromaFilter = vk::Filter::eNearest;
+    } else {
+      ycbcr_create_info.chromaFilter = filter;
+    }
     ycbcr_create_info.forceExplicitReconstruction = VK_FALSE;
 
     ycbcr_conversion_ = ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversionKHR(

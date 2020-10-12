@@ -185,5 +185,20 @@ vk::BufferImageCopy GetDefaultBufferImageCopy(size_t width, size_t height) {
   return result;
 }
 
+bool IsYuvConversionSupported(vk::PhysicalDevice device, vk::Format format) {
+  auto properties = device.getFormatProperties(format);
+
+  // Vulkan specs requires that:
+  // The potential format features of the sampler YCbCr conversion must
+  // support VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT or
+  // VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT.
+  if (!(properties.optimalTilingFeatures & (vk::FormatFeatureFlagBits::eCositedChromaSamples |
+                                            vk::FormatFeatureFlagBits::eMidpointChromaSamples))) {
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace impl
 }  // namespace escher
