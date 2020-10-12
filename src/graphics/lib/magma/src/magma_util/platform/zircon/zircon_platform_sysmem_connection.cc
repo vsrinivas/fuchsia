@@ -8,6 +8,7 @@
 #include <lib/zx/channel.h>
 
 #include <limits>
+#include <unordered_set>
 
 #include "magma_common_defs.h"
 #include "magma_util/macros.h"
@@ -166,17 +167,13 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 
   Status SetImageFormatConstraints(
       uint32_t index, const magma_image_format_constraints_t* format_constraints) override {
-    if (index >= constraints_.image_format_constraints.size())
-      return DRET(MAGMA_STATUS_INVALID_ARGS);
-    if (index > constraints_.image_format_constraints_count)
-      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraint gaps not allowed");
+    if (index != raw_image_constraints_.size())
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraint gaps or changes not allowed");
+    if (merge_result_)
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                      "Setting format constraints on merged constraints.");
 
-    constraints_.image_format_constraints_count =
-        std::max(constraints_.image_format_constraints_count, index + 1);
-    auto& constraints = constraints_.image_format_constraints[index];
-    // Initialize to default, since the array constructor initializes to 0
-    // normally.
-    constraints = llcpp::fuchsia::sysmem::ImageFormatConstraints();
+    llcpp::fuchsia::sysmem::ImageFormatConstraints constraints;
     constraints.min_coded_width = 0u;
     constraints.max_coded_width = 16384;
     constraints.min_coded_height = 0u;
@@ -239,19 +236,21 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     }
     constraints.layers = format_constraints->layers;
     constraints.bytes_per_row_divisor = format_constraints->bytes_per_row_divisor;
+    raw_image_constraints_.push_back(constraints);
+
     return MAGMA_STATUS_OK;
   }
 
   magma::Status SetColorSpaces(uint32_t index, uint32_t color_space_count,
                                const uint32_t* color_spaces) override {
-    if (index >= constraints_.image_format_constraints_count) {
+    if (index >= raw_image_constraints_.size()) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Format constraints must be set first");
     }
     if (color_space_count >
         llcpp::fuchsia::sysmem::MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES) {
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Too many color spaces: %d", color_space_count);
     }
-    auto& constraints = constraints_.image_format_constraints[index];
+    auto& constraints = raw_image_constraints_[index];
     for (uint32_t i = 0; i < color_space_count; i++) {
       constraints.color_space[i].type =
           static_cast<llcpp::fuchsia::sysmem::ColorSpaceType>(color_spaces[i]);
@@ -269,10 +268,83 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     return MAGMA_STATUS_OK;
   }
 
-  const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints() { return constraints_; }
+  // Merge image format constraints with identical pixel formats, since sysmem can't handle
+  // duplicate pixel formats in this list.
+  bool MergeRawConstraints() {
+    if (merge_result_)
+      return *merge_result_;
+    for (uint32_t i = 0; i < raw_image_constraints_.size(); i++) {
+      auto& in_constraints = raw_image_constraints_[i];
+      uint32_t j = 0;
+      for (; j < constraints_.image_format_constraints_count; j++) {
+        auto& out_constraints = constraints_.image_format_constraints[j];
+        if (in_constraints.pixel_format.type == out_constraints.pixel_format.type &&
+            in_constraints.pixel_format.has_format_modifier ==
+                out_constraints.pixel_format.has_format_modifier &&
+            in_constraints.pixel_format.format_modifier.value ==
+                out_constraints.pixel_format.format_modifier.value) {
+          break;
+        }
+      }
+      if (j == constraints_.image_format_constraints_count) {
+        if (constraints_.image_format_constraints_count >=
+            std::size(constraints_.image_format_constraints)) {
+          merge_result_.emplace(false);
+          return DRETF(false, "Too many input image format constraints to merge");
+        }
+        constraints_.image_format_constraints[constraints_.image_format_constraints_count++] =
+            in_constraints;
+        continue;
+      }
+      auto& out_constraints = constraints_.image_format_constraints[j];
+      // In these constraints we generally want the most restrictive option, because being more
+      // restrictive won't generally cause the allocation to fail, it will just cause it to be a bit
+      // bigger than necessary.
+      out_constraints.min_bytes_per_row =
+          std::max(out_constraints.min_bytes_per_row, in_constraints.min_bytes_per_row);
+      out_constraints.required_max_coded_width = std::max(in_constraints.required_max_coded_width,
+                                                          out_constraints.required_max_coded_width);
+      out_constraints.required_max_coded_width = std::max(in_constraints.required_max_coded_width,
+                                                          out_constraints.required_max_coded_width);
+      out_constraints.bytes_per_row_divisor =
+          std::max(in_constraints.bytes_per_row_divisor, out_constraints.bytes_per_row_divisor);
+
+      // Union the sets of color spaces to ensure that they're all still legal.
+      std::unordered_set<llcpp::fuchsia::sysmem::ColorSpaceType> color_spaces;
+      for (uint32_t j = 0; j < out_constraints.color_spaces_count; j++) {
+        color_spaces.insert(out_constraints.color_space[j].type);
+      }
+      for (uint32_t j = 0; j < in_constraints.color_spaces_count; j++) {
+        color_spaces.insert(in_constraints.color_space[j].type);
+      }
+      if (color_spaces.size() > std::size(out_constraints.color_space)) {
+        merge_result_.emplace(false);
+        return DRETF(false, "Too many input color spaces to merge");
+      }
+
+      out_constraints.color_spaces_count = 0;
+      for (auto color_space : color_spaces) {
+        out_constraints.color_space[out_constraints.color_spaces_count++].type = color_space;
+      }
+    }
+    merge_result_.emplace(true);
+    return true;
+  }
+
+  const llcpp::fuchsia::sysmem::BufferCollectionConstraints& constraints() {
+    DASSERT(merge_result_);
+    DASSERT(*merge_result_);
+    return constraints_;
+  }
+
+  const std::vector<llcpp::fuchsia::sysmem::ImageFormatConstraints>& raw_image_constraints() {
+    return raw_image_constraints_;
+  }
 
  private:
+  std::optional<bool> merge_result_;
   llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints_ = {};
+  std::vector<llcpp::fuchsia::sysmem::ImageFormatConstraints> raw_image_constraints_;
 };
 
 class ZirconPlatformBufferCollection : public PlatformBufferCollection {
@@ -305,8 +377,10 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   }
 
   Status SetConstraints(PlatformBufferConstraints* constraints) override {
-    auto llcpp_constraints =
-        static_cast<ZirconPlatformBufferConstraints*>(constraints)->constraints();
+    auto platform_constraints = static_cast<ZirconPlatformBufferConstraints*>(constraints);
+    if (!platform_constraints->MergeRawConstraints())
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Merging constraints failed.");
+    auto llcpp_constraints = platform_constraints->constraints();
 
     const char* buffer_name = llcpp_constraints.buffer_memory_constraints.secure_required
                                   ? "MagmaProtectedSysmemShared"
@@ -576,10 +650,10 @@ bool ZirconPlatformBufferDescription::GetFormatIndex(PlatformBufferConstraints* 
                                                      uint32_t format_valid_count) {
   auto* zircon_constraints = static_cast<ZirconPlatformBufferConstraints*>(constraints);
 
-  const auto& llcpp_constraints = zircon_constraints->constraints();
-  if (format_valid_count < llcpp_constraints.image_format_constraints_count) {
-    return DRETF(false, "format_valid_count %d < image_format_constraints_count %d",
-                 format_valid_count, llcpp_constraints.image_format_constraints_count);
+  const auto& llcpp_constraints = zircon_constraints->raw_image_constraints();
+  if (format_valid_count < llcpp_constraints.size()) {
+    return DRETF(false, "format_valid_count %d < image_format_constraints_count %ld",
+                 format_valid_count, llcpp_constraints.size());
   }
   for (uint32_t i = 0; i < format_valid_count; i++) {
     format_valid_out[i] = false;
@@ -589,8 +663,8 @@ bool ZirconPlatformBufferDescription::GetFormatIndex(PlatformBufferConstraints* 
   }
   const auto& out = settings_.image_format_constraints;
 
-  for (uint32_t i = 0; i < llcpp_constraints.image_format_constraints_count; ++i) {
-    const auto& in = llcpp_constraints.image_format_constraints[i];
+  for (uint32_t i = 0; i < llcpp_constraints.size(); ++i) {
+    const auto& in = llcpp_constraints[i];
     // These checks are sorted in order of how often they're expected to mismatch, from most likely
     // to least likely. They aren't always equality comparisons, since sysmem may change some values
     // in compatible ways on behalf of the other participants.

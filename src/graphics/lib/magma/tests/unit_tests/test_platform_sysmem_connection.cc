@@ -359,6 +359,84 @@ class TestPlatformSysmemConnection {
     EXPECT_NE(static_cast<bool>(format_valid[0]), static_cast<bool>(format_valid[1]));
   }
 
+  // Check that setting > 32 format indices fails in SetConstraints.
+  static void TestTooManyFormats() {
+    auto connection = CreateConnection();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints = get_standard_buffer_constraints();
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    for (uint32_t i = 0; i < 64; i++) {
+      // Create a set of basic 512x512 RGBA image constraints.
+      magma_image_format_constraints_t image_constraints{};
+      image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
+      image_constraints.has_format_modifier = true;
+      image_constraints.format_modifier = i;
+      image_constraints.width = 512;
+      image_constraints.height = 512;
+      image_constraints.layers = 1;
+      image_constraints.bytes_per_row_divisor = 1;
+      image_constraints.min_bytes_per_row = 0;
+
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                constraints->SetImageFormatConstraints(i, &image_constraints).get());
+    }
+    EXPECT_NE(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+  }
+
+  // Check that setting > 32 format indices succeeds if they're all identical.
+  static void TestDedupFormats() {
+    auto connection = CreateConnection();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints = get_standard_buffer_constraints();
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    constexpr uint32_t kImageWidth = 16;
+    constexpr uint32_t kImageHeight = 16;
+    for (uint32_t i = 0; i <= 64; i++) {
+      magma_image_format_constraints_t image_constraints{};
+      image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
+      image_constraints.has_format_modifier = false;
+      image_constraints.format_modifier = 0;
+      image_constraints.width = kImageWidth;
+      image_constraints.height = kImageHeight;
+      image_constraints.layers = 1;
+      image_constraints.bytes_per_row_divisor = 1 << (i / 8);
+      image_constraints.min_bytes_per_row = 0;
+
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                constraints->SetImageFormatConstraints(i, &image_constraints).get());
+    }
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+
+    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
+    magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
+    EXPECT_TRUE(description->GetPlanes(kImageWidth, kImageHeight, planes));
+    // The largest bytes per row divisor (1 << (64 / 8)) should be used.
+    EXPECT_EQ(planes[0].bytes_per_row, 1u << 8);
+  }
+
  private:
   static std::unique_ptr<magma_sysmem::PlatformSysmemConnection> CreateConnection() {
     zx::channel client_end, server_end;
@@ -405,3 +483,9 @@ TEST(PlatformSysmemConnection, ProtectedBufferBadConstraints) {
 TEST(PlatformSysmemConnection, GetFormatIndex) {
   TestPlatformSysmemConnection::TestGetFormatIndex();
 }
+
+TEST(PlatformSysmemConnection, TooManyFormats) {
+  TestPlatformSysmemConnection::TestTooManyFormats();
+}
+
+TEST(PlatformSysmemConnection, DedupFormats) { TestPlatformSysmemConnection::TestDedupFormats(); }
