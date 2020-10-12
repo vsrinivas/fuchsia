@@ -8,6 +8,10 @@ import("//build/dart/dart_tool.gni")
 dart_library("flutter_tools") {
   package_name = "flutter_tools"
 
+  # Specify the pubspec so we can infer the language version at build time.
+  pubspec =
+      "//third_party/dart-pkg/git/flutter/packages/flutter_tools/pubspec.yaml"
+
   # Can be left empty as analysis is disabled.
   sources = []
 
