@@ -13,6 +13,7 @@ fidl("fuchsia.kernel") {
     "kernel-debug.fidl",
     "kernel-mexec.fidl",
     "kernel-stats.fidl",
+    "mmio-resource.fidl",
   ]
 
   public_deps = [

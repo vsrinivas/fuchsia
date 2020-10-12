@@ -69,6 +69,7 @@ rustc_binary("root_job_test_runner") {
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

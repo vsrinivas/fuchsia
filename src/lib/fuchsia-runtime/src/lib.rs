@@ -152,6 +152,11 @@ pub enum HandleType {
     /// Equivalent to PA_CLOCK_UTC.
     ClockUtc = 0x40,
 
+    /// A Handle to an MMIO resource object.
+    ///
+    /// Equivalent to PA_MMIO_RESOURCE.
+    MmioResource = 0x50,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.

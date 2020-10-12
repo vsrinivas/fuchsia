@@ -22,7 +22,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fidl_examples_echo::EchoMarker,
-    fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
@@ -49,6 +49,11 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
     let root_resource_path = PathBuf::from(format!("/svc/{}", fboot::RootResourceMarker::NAME));
     if root_resource_path.exists() {
         fs.add_proxy_service::<fboot::RootResourceMarker, _>();
+    }
+
+    let mmio_resource_path = PathBuf::from(format!("/svc/{}", fkernel::MmioResourceMarker::NAME));
+    if mmio_resource_path.exists() {
+        fs.add_proxy_service::<fkernel::MmioResourceMarker, _>();
     }
 
     let (client, server) = zx::Channel::create().expect("Failed to create channel");

@@ -44,6 +44,7 @@ class PolicyChecker final {
   bool CheckFactoryData(const FuchsiaPkgUrl& pkg_url);
   bool CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url);
   bool CheckHub(const FuchsiaPkgUrl& pkg_url);
+  bool CheckMmioResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageResolver(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageCache(const FuchsiaPkgUrl& pkg_url);
   bool CheckPkgFsVersions(const FuchsiaPkgUrl& pkg_url);
@@ -54,6 +55,7 @@ class PolicyChecker final {
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyPresent);
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyAbsent);
   FRIEND_TEST(PolicyCheckerTest, HubPolicy);
+  FRIEND_TEST(PolicyCheckerTest, MmioResourcePolicy);
   FRIEND_TEST(PolicyCheckerTest, PackageResolverPolicy);
   FRIEND_TEST(PolicyCheckerTest, PackageCachePolicy);
   FRIEND_TEST(PolicyCheckerTest, PkgFsVersionsPolicy);

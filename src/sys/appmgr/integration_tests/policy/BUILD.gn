@@ -58,6 +58,14 @@ test_package("policy-integration-tests") {
       dest = "root_job_allowed.cmx"
     },
     {
+      path = "meta/mmio_resource.cmx"
+      dest = "mmio_resource_denied.cmx"
+    },
+    {
+      path = "meta/mmio_resource.cmx"
+      dest = "mmio_resource_allowed.cmx"
+    },
+    {
       path = "meta/root_resource.cmx"
       dest = "root_resource_denied.cmx"
     },

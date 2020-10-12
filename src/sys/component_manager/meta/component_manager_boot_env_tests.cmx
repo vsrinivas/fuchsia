@@ -3,7 +3,8 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.boot.RootJob",
-                "fuchsia.boot.RootResource"
+                "fuchsia.boot.RootResource",
+                "fuchsia.kernel.MmioResource"
             ]
         }
     },
@@ -26,6 +27,7 @@
             "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
             "fuchsia.io.Directory",
+            "fuchsia.kernel.MmioResource",
             "fuchsia.process.Launcher"
         ]
     }

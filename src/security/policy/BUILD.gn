@@ -14,6 +14,7 @@ group("appmgr_policy_eng") {
     ":appmgr_durable_data_allowlist_eng",
     ":appmgr_factory_data_allowlist_eng",
     ":appmgr_hub_allowlist_eng",
+    ":appmgr_mmio_resource_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",
     ":appmgr_package_resolver_allowlist_eng",
     ":appmgr_pkgfs_versions_allowlist_eng",
@@ -94,6 +95,12 @@ config_data("appmgr_root_job_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "root_job_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_job.txt" ]
+}
+
+config_data("appmgr_mmio_resource_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "mmio_resource_allowlist_eng.txt" ]
+  outputs = [ "allowlist/mmio_resource.txt" ]
 }
 
 config_data("appmgr_root_resource_allowlist_eng") {

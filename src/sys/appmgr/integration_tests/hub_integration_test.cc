@@ -122,6 +122,7 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.hardware.pty.Device",
                                                "fuchsia.kernel.Counter",
                                                "fuchsia.kernel.DebugBroker",
+                                               "fuchsia.kernel.MmioResource",
                                                "fuchsia.kernel.Stats",
                                                "fuchsia.tracing.kernel.Controller",
                                                "fuchsia.tracing.kernel.Reader",

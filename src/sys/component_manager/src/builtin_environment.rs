@@ -9,6 +9,7 @@ use {
             capability::BuiltinCapability,
             kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
+            mmio_resource::MmioResource,
             process_launcher::ProcessLauncher,
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
@@ -349,6 +350,7 @@ pub struct BuiltinEnvironment {
     pub root_job_for_inspect: Arc<RootJob>,
     pub read_only_log: Option<Arc<ReadOnlyLog>>,
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
+    pub mmio_resource: Option<Arc<MmioResource>>,
     pub root_resource: Option<Arc<RootResource>>,
     pub system_controller: Arc<SystemController>,
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
@@ -412,6 +414,9 @@ impl BuiltinEnvironment {
         );
         model.root_realm.hooks.install(root_job_for_inspect.hooks()).await;
 
+        let mmio_resource_handle =
+            take_startup_handle(HandleType::MmioResource.into()).map(zx::Resource::from);
+
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
 
@@ -470,6 +475,12 @@ impl BuiltinEnvironment {
         });
         if let Some(vmex_service) = vmex_service.as_ref() {
             model.root_realm.hooks.install(vmex_service.hooks()).await;
+        }
+
+        // Set up the MmioResource service.
+        let mmio_resource = mmio_resource_handle.map(MmioResource::new);
+        if let Some(mmio_resource) = mmio_resource.as_ref() {
+            model.root_realm.hooks.install(mmio_resource.hooks()).await;
         }
 
         // Set up RootResource service.
@@ -545,6 +556,7 @@ impl BuiltinEnvironment {
             kernel_stats,
             read_only_log,
             write_only_log,
+            mmio_resource,
             root_resource,
             system_controller,
             utc_time_maintainer,

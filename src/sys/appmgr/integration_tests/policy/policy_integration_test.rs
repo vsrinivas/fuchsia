@@ -23,6 +23,8 @@ lazy_static! {
     static ref PACKAGE_RESOLVER_ALLOWED_URL: String = policy_url!("package_resolver_allowed.cmx");
     static ref ROOT_JOB_DENIED_URL: String = policy_url!("root_job_denied.cmx");
     static ref ROOT_JOB_ALLOWED_URL: String = policy_url!("root_job_allowed.cmx");
+    static ref MMIO_RESOURCE_DENIED_URL: String = policy_url!("mmio_resource_denied.cmx");
+    static ref MMIO_RESOURCE_ALLOWED_URL: String = policy_url!("mmio_resource_allowed.cmx");
     static ref ROOT_RESOURCE_DENIED_URL: String = policy_url!("root_resource_denied.cmx");
     static ref ROOT_RESOURCE_ALLOWED_URL: String = policy_url!("root_resource_allowed.cmx");
     static ref VMEX_RESOURCE_DENIED_URL: String = policy_url!("vmex_resource_denied.cmx");
@@ -95,6 +97,18 @@ async fn root_job_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn root_job_denied() -> Result<(), Error> {
     assert_launch_denied(&ROOT_JOB_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn mmio_resource_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&MMIO_RESOURCE_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn mmio_resource_denied() -> Result<(), Error> {
+    assert_launch_denied(&MMIO_RESOURCE_DENIED_URL).await;
     Ok(())
 }
 

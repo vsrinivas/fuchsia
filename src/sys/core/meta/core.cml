@@ -42,7 +42,10 @@
     ],
     offer: [
         {
-            protocol: [ "/svc/fuchsia.boot.RootResource" ],
+            protocol: [
+                "/svc/fuchsia.boot.RootResource",
+                "/svc/fuchsia.kernel.MmioResource",
+            ],
             from: "parent",
             to: [ "#debug_serial" ],
         },
@@ -76,6 +79,7 @@
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
+                "/svc/fuchsia.kernel.MmioResource",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.process.Launcher",

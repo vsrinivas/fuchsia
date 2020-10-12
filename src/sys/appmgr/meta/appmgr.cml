@@ -105,6 +105,10 @@
             as: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
         },
         {
+            protocol: "/svc/fuchsia.kernel.MmioResource",
+            as: "/svc_for_sys/fuchsia.kernel.MmioResource",
+        },
+        {
             protocol: "/svc/fuchsia.kernel.Stats",
             as: "/svc_for_sys/fuchsia.kernel.Stats",
         },

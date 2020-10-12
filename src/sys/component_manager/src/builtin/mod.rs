@@ -6,6 +6,7 @@ pub mod arguments;
 pub mod capability;
 pub mod kernel_stats;
 pub mod log;
+pub mod mmio_resource;
 pub mod process_launcher;
 pub mod root_job;
 pub mod root_resource;

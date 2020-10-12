@@ -79,6 +79,7 @@ template("component_manager") {
     "src/builtin/capability.rs",
     "src/builtin/kernel_stats.rs",
     "src/builtin/log.rs",
+    "src/builtin/mmio_resource.rs",
     "src/builtin/mod.rs",
     "src/builtin/process_launcher.rs",
     "src/builtin/root_job.rs",
