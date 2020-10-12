@@ -32,9 +32,10 @@ use self::service::{RegistrationHandle, ServiceSet};
 use crate::profile::{build_l2cap_descriptor, parse_service_definitions};
 use crate::types::{Psm, ServiceRecord};
 
-/// Default SDU size the peer is capable of accepting. This is chosen as the minimum
-/// size documented in [`fuchsia.bluetooth.bredr.Channel`].
-const DEFAULT_TX_SDU_SIZE: usize = 48;
+/// Default SDU size the peer is capable of accepting. This is chosen as the default
+/// max size of the underlying fuchsia_bluetooth::Channel, as this is sufficient for
+/// audio streaming.
+const DEFAULT_TX_SDU_SIZE: usize = Channel::DEFAULT_MAX_TX;
 
 /// The unique identifier for a launched profile. This is used for internal bookkeeping
 /// and has no meaning outside of this context.
