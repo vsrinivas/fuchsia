@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
@@ -25,11 +25,12 @@ using sys::testing::TestWithEnvironment;
 using PowerAdmin = fuchsia::hardware::power::statecontrol::Admin;
 using fuchsia::hardware::power::statecontrol::Admin_Reboot_Result;
 using fuchsia::hardware::power::statecontrol::RebootReason;
+using fuchsia::hardware::power::statecontrol::testing::Admin_TestBase;
 
 namespace component {
 namespace {
 
-class MockPowerAdmin : public PowerAdmin {
+class MockPowerAdmin : public Admin_TestBase {
  public:
   MockPowerAdmin() = default;
   ~MockPowerAdmin() override = default;
@@ -43,6 +44,9 @@ class MockPowerAdmin : public PowerAdmin {
     reboot_reason_ = reason;
     cb(Admin_Reboot_Result::WithResponse({}));
   }
+
+  // Admin_TestBase implementation
+  void NotImplemented_(const std::string& name) final {}
 
  private:
   fidl::BindingSet<PowerAdmin> bindings_;

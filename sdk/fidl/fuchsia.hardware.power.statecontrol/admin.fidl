@@ -52,30 +52,23 @@ const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 [Discoverable]
 protocol Admin {
     /// Asks the device to enter a fully on state.
-    [Transitional]
     PowerFullyOn() -> () error zx.status;
 
     /// Asks the device to reboot.
-    [Transitional]
     Reboot(RebootReason reason) -> () error zx.status;
 
     /// Asks the device to reboot into the bootloader.
-    [Transitional]
     RebootToBootloader() -> () error zx.status;
 
     /// Asks the device to reboot into the recovery partition.
-    [Transitional]
     RebootToRecovery() -> () error zx.status;
 
     /// Asks all devices to enter a powered off state.
-    [Transitional]
     Poweroff() -> () error zx.status;
 
     /// Performs a kernel mexec.
-    [Transitional]
     Mexec() -> () error zx.status;
 
-    [Transitional]
     SuspendToRam() -> () error zx.status;
 };
 
