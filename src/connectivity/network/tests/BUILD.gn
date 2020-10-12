@@ -218,7 +218,7 @@ config_data("netcfg-netemul-config") {
   outputs = [ "netcfg/empty.json" ]
 }
 
-# This target contains the test package netstack_integration_tests and the
+# This target contains the test package netstack-integration-tests and the
 # package dependencies needed in the image/universe to run the tests within it.
 # We can remove this once all the dependencies move to the new build templates
 # so we can include dependent components in the test package. Note, there's

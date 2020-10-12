@@ -546,19 +546,23 @@ async fn add_address_for_dad<
 ///
 /// If no remote node has any interest in an address the netstack is attempting to assign to
 /// an interface, DAD should succeed.
-// TODO(fxbug.dev/53644): Reenable when we figure out how to handle timing issues in CQ when the address
-// may resolve before the netstack processes the NA/NS messagee.
-#[allow(unused)]
+#[variants_test]
 async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result {
     /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
     /// DAD resolution time.
     async fn check_address_failed_dad(iface: &netemul::TestInterface<'_>) -> Result {
-        let () = fasync::Timer::new(fasync::Time::after(
-            EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
-                + ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
-        ))
-        .fuse()
-        .await;
+        // Clocks sometimes jump in infrastructure, which can cause a timer to expire prematurely.
+        // Fortunately such jumps are rarely seen in quick succession - if we repeatedly wait for
+        // shorter durations we can be reasonably sure that the intended amount of time truly did
+        // elapse. It is expected that at most one timer worth of time may be lost.
+        const STEP: zx::Duration = zx::Duration::from_millis(10);
+        let duration = EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
+            + ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT;
+        let iterations =
+            (duration + STEP - zx::Duration::from_nanos(1)).into_micros() / STEP.into_micros();
+        for _ in 0..iterations {
+            let () = fasync::Timer::new(fasync::Time::after(STEP)).await;
+        }
 
         let addr = net::Subnet {
             addr: net::IpAddress::Ipv6(net::Ipv6Address {
