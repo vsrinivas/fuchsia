@@ -450,7 +450,7 @@ void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
 #ifdef __Fuchsia__
   if (handles) {
     // Return value intentionally ignored. This is best-effort cleanup.
-    zx_handle_close_many(handles, max_idx);
+    FidlHandleCloseMany(handles, max_idx);
   }
 #endif
 }
@@ -458,12 +458,8 @@ void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
 void close_handle_infos_op(const zx_handle_info_t* handle_infos, uint32_t max_idx) {
 #ifdef __Fuchsia__
   if (handle_infos) {
-    zx_handle_t* handles = reinterpret_cast<zx_handle_t*>(alloca(sizeof(zx_handle_t) * max_idx));
-    for (uint32_t i = 0; i < max_idx; i++) {
-      handles[i] = handle_infos[i].handle;
-    }
     // Return value intentionally ignored. This is best-effort cleanup.
-    zx_handle_close_many(handles, max_idx);
+    FidlHandleCloseMany(handle_infos, max_idx);
   }
 #endif
 }

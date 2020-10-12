@@ -9,12 +9,28 @@
 #include <lib/fidl/coding.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
+
+#ifdef __Fuchsia__
+#ifdef __cplusplus
+#include <zircon/syscalls.h>
+#endif
+#endif
 
 #ifdef __cplusplus
 #include <type_traits>
 #endif  // __cplusplus
+
+#ifdef __Fuchsia__
+#ifdef __cplusplus
+zx_status_t FidlHandleCloseMany(const zx_handle_t* handles, size_t num_handles);
+zx_status_t FidlHandleCloseMany(const zx_handle_disposition_t* handle_dispositions,
+                                size_t num_handles);
+zx_status_t FidlHandleCloseMany(const zx_handle_info_t* handle_infos, size_t num_handles);
+#endif  // __cplusplus
+#endif  // __Fuchsia__
 
 __BEGIN_CDECLS
 
@@ -37,7 +53,8 @@ typedef bool FidlStrictness;
 static const bool kFidlStrictness_Flexible = false;
 static const bool kFidlStrictness_Strict = true;
 
-// TODO(fxbug.dev/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in zircon/fidl.h.
+// TODO(fxbug.dev/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in
+// zircon/fidl.h.
 // clang-format off
 #ifdef __cplusplus
 constexpr
@@ -390,8 +407,8 @@ struct FidlCodedString FIDL_INTERNAL_INHERIT_TYPE_T {
 };
 
 // Note that |max_count * element_size| is guaranteed to fit into a uint32_t. Unlike other types,
-// the |element| pointer may be null. This occurs when the element type contains no interesting bits
-// (i.e. pointers or handles).
+// the |element| pointer may be null. This occurs when the element type contains no interesting
+// bits (i.e. pointers or handles).
 struct FidlCodedVector FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
   const FidlNullability nullable;

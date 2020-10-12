@@ -44,6 +44,7 @@ zx_library("fidl_base") {
     "decoding_and_validating.cc",
     "encoding.cc",
     "formatting.cc",
+    "handle_close_many.cc",
     "internal.c",
     "message.cc",
     "message_buffer.cc",
