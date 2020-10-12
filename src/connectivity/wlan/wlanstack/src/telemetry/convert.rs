@@ -76,6 +76,18 @@ pub(super) fn convert_rssi(rssi: i8) -> metrics::ConnectionResultPerRssiMetricDi
     }
 }
 
+pub(super) fn convert_snr(snr: i8) -> metrics::ConnectionResultPerSnrMetricDimensionSnr {
+    use metrics::ConnectionResultPerSnrMetricDimensionSnr::*;
+    match snr {
+        1..=10 => From1To10,
+        11..=15 => From11To15,
+        16..=25 => From16To25,
+        26..=40 => From26To40,
+        41..=127 => MoreThan40,
+        _ => _0,
+    }
+}
+
 pub(super) fn convert_bool_dim(
     value: bool,
 ) -> metrics::ConnectionSuccessWithAttemptsBreakdownMetricDimensionIsMultiBss {
@@ -225,5 +237,16 @@ mod tests {
         assert_eq!(convert_rssi(-127), From127To90);
         assert_eq!(convert_rssi(-1), From50To1);
         assert_eq!(convert_rssi(0), _0);
+    }
+
+    #[test]
+    fn convert_snr_must_not_underflow() {
+        use metrics::ConnectionResultPerSnrMetricDimensionSnr::*;
+        assert_eq!(convert_snr(127), MoreThan40);
+        assert_eq!(convert_snr(28), From26To40);
+        assert_eq!(convert_snr(1), From1To10);
+        assert_eq!(convert_snr(0), _0);
+        assert_eq!(convert_snr(-1), _0);
+        assert_eq!(convert_snr(-128), _0);
     }
 }

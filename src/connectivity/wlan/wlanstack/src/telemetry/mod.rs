@@ -365,6 +365,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
     let protection_dim = convert_protection(&bss.get_protection());
     let channel_band_dim = convert_channel_band(bss.chan.primary);
     let rssi_dim = convert_rssi(bss.rssi_dbm);
+    let snr_dim = convert_snr(bss.snr_db);
     sender.with_component().log_event_count(
         metrics::CONNECTION_RESULT_POST_NETWORK_SELECTION_METRIC_ID,
         [
@@ -380,6 +381,13 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
     sender.with_component().log_event_count(
         metrics::CONNECTION_RESULT_PER_RSSI_METRIC_ID,
         [result_dim as u32, rssi_dim as u32],
+        oui.clone(),
+        0,
+        1,
+    );
+    sender.with_component().log_event_count(
+        metrics::CONNECTION_RESULT_PER_SNR_METRIC_ID,
+        [result_dim as u32, snr_dim as u32],
         oui.clone(),
         0,
         1,
@@ -729,6 +737,7 @@ mod tests {
             metrics::CONNECTION_RESULT_METRIC_ID,
             metrics::CONNECTION_RESULT_POST_NETWORK_SELECTION_METRIC_ID,
             metrics::CONNECTION_RESULT_PER_RSSI_METRIC_ID,
+            metrics::CONNECTION_RESULT_PER_SNR_METRIC_ID,
             metrics::SCAN_RESULT_METRIC_ID,
             metrics::CONNECTION_SETUP_TIME_METRIC_ID,
             metrics::CONNECTION_SETUP_TIME_PER_RESULT_METRIC_ID,
