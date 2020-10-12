@@ -41,6 +41,7 @@ executable("semantics_tests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/bin/a11y_manager/tests/util",

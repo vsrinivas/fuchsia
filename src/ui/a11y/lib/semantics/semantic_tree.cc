@@ -169,6 +169,15 @@ SemanticTree::SemanticTree(inspect::Node inspect_node)
          fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {};
 
   semantics_event_callback_ = [](SemanticsEventType event) {};
+
+  // The first argument to |CreateLazyValues| is the name of the lazy node, and
+  // will only be displayed if the callback used to generate the node's content
+  // fails. Therefore, we use an error message for this node name.
+  inspect_node_tree_dump_ = inspect_node_.CreateLazyValues(kTreeDumpFailedError, [this]() {
+    inspect::Inspector inspector;
+    inspector.GetRoot().CreateString(kTreeDumpInspectPropertyName, this->ToString(), &inspector);
+    return fit::make_ok_promise(std::move(inspector));
+  });
 }
 
 const Node* SemanticTree::GetNode(const uint32_t node_id) const {

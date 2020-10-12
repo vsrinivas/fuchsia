@@ -22,6 +22,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/files/file.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
@@ -33,6 +34,8 @@ namespace {
 using ::a11y::SemanticTree;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
+using ::inspect::Inspector;
+using ::testing::HasSubstr;
 
 // Valid tree paths.
 const std::string kSemanticTreeSingleNodePath = "/pkg/data/semantic_tree_single_node.json";
@@ -468,11 +471,12 @@ TEST_F(SemanticTreeTest, GetPreviousNodeForNonexistentId) {
   EXPECT_EQ(next_node, nullptr);
 }
 
-TEST_F(SemanticTreeTest, InspectUpdateCount) {
+TEST_F(SemanticTreeTest, InspectOutput) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_->Update(std::move(updates)));
 
   fit::result<inspect::Hierarchy> hierarchy;
+  ASSERT_FALSE(hierarchy.is_ok());
   RunPromiseToCompletion(
       inspect::ReadFromInspector(*inspector_).then([&](fit::result<inspect::Hierarchy>& result) {
         hierarchy = std::move(result);
@@ -480,11 +484,23 @@ TEST_F(SemanticTreeTest, InspectUpdateCount) {
   ASSERT_TRUE(hierarchy.is_ok());
 
   auto* test_inspect_hierarchy = hierarchy.value().GetByPath({kInspectNodeName});
-  ASSERT_TRUE(test_inspect_hierarchy);
-  auto* invalid_tree_update_count =
-      test_inspect_hierarchy->node().get_property<inspect::UintPropertyValue>(
-          SemanticTree::kUpdateCountInspectNodeName);
-  ASSERT_EQ(invalid_tree_update_count->value(), 7u);
+
+  // TODO(fxb/61828): Refactor to use Inspect node matchers.
+  // Verify that inspect has recorded the correct number of tree updates.
+  auto* tree_update_count = test_inspect_hierarchy->node().get_property<inspect::UintPropertyValue>(
+      SemanticTree::kUpdateCountInspectNodeName);
+  ASSERT_TRUE(tree_update_count);
+  EXPECT_EQ(tree_update_count->value(), 7u);
+
+  // Verify that inspect has recorded the correct state of the semantic tree.
+  // Assuming that SemanticTree::ToString() is working correctly, we just need
+  // verifying that one of the nodes is present in the dump should be
+  // sufficient.
+  auto* tree_dump = test_inspect_hierarchy->node().get_property<inspect::StringPropertyValue>(
+      SemanticTree::kTreeDumpInspectPropertyName);
+  ASSERT_TRUE(tree_dump);
+
+  EXPECT_THAT(tree_dump->value(), HasSubstr("Label:Node-0"));
 }
 
 }  // namespace

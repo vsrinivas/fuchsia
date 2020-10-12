@@ -68,6 +68,8 @@ class SemanticTree {
   using SemanticsEventCallback = fit::function<void(SemanticsEventType event_type)>;
 
   static constexpr char kUpdateCountInspectNodeName[] = "tree_update_count";
+  static constexpr char kTreeDumpInspectPropertyName[] = "semantic_tree";
+  static constexpr char kTreeDumpFailedError[] = "tree_dump_failed";
 
   // A SemanticTree object is normally maintained by a semantics provider while
   // being consumed by a semantics consumer (such as a screen reader).
@@ -198,6 +200,9 @@ class SemanticTree {
 
   // Inspect property to store the number of updates received.
   inspect::UintProperty inspect_property_update_count_;
+
+  // Inspect node to store a dump of the semantic tree.
+  inspect::LazyNode inspect_node_tree_dump_;
 };
 
 }  // namespace a11y
