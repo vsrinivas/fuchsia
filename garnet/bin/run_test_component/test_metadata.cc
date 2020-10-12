@@ -67,6 +67,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::kernel::Counter::Name_,
     fuchsia::kernel::MmioResource::Name_,
     fuchsia::kernel::Stats::Name_,
+    fuchsia::media::Audio::Name_,
     fuchsia::media::AudioCore::Name_,
     fuchsia::media::ProfileProvider::Name_,
     fuchsia::scheduler::ProfileProvider::Name_,
