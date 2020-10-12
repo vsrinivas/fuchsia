@@ -22,10 +22,13 @@
 #include <kernel/thread.h>
 #include <lk/init.h>
 #include <platform/pc.h>
+#include <platform/pc/acpi.h>
 #include <platform/pic.h>
 
 #include "dev/interrupt.h"
 #include "interrupt_manager.h"
+#include "lib/acpi_lite/apic.h"
+#include "lib/acpi_lite/structures.h"
 #include "platform_p.h"
 
 namespace {
@@ -58,47 +61,93 @@ class IoApic {
 // platform_init_apic().
 InterruptManager<IoApic> kInterruptManager;
 
+// Convert an ACPI entry into the format required by the platform's APIC code.
+io_apic_isa_override ParseIsaOverride(const acpi_lite::AcpiMadtIntSourceOverrideEntry* record) {
+  // 0 means ISA, ISOs are only ever for ISA IRQs
+  if (record->bus != 0) {
+    panic("Invalid bus for IO APIC interrupt override.\n");
+  }
+
+  // "Conforms" below means conforms to the bus spec: edge triggered and active high.
+  const uint32_t flags = record->flags;
+  const interrupt_polarity polarity = [flags]() {
+    uint32_t polarity = flags & ACPI_MADT_FLAG_POLARITY_MASK;
+    switch (polarity) {
+      case ACPI_MADT_FLAG_POLARITY_CONFORMS:
+      case ACPI_MADT_FLAG_POLARITY_HIGH:
+        return IRQ_POLARITY_ACTIVE_HIGH;
+      case ACPI_MADT_FLAG_POLARITY_LOW:
+        return IRQ_POLARITY_ACTIVE_LOW;
+      default:
+        panic("Unknown IRQ polarity in override: %u\n", polarity);
+    }
+  }();
+
+  const interrupt_trigger_mode trigger_mode = [flags]() {
+    uint32_t trigger = flags & ACPI_MADT_FLAG_TRIGGER_MASK;
+    switch (trigger) {
+      case ACPI_MADT_FLAG_TRIGGER_CONFORMS:
+      case ACPI_MADT_FLAG_TRIGGER_EDGE:
+        return IRQ_TRIGGER_MODE_EDGE;
+        break;
+      case ACPI_MADT_FLAG_TRIGGER_LEVEL:
+        return IRQ_TRIGGER_MODE_LEVEL;
+      default:
+        panic("Unknown IRQ trigger in override: %u\n", trigger);
+    }
+  }();
+
+  return io_apic_isa_override {
+      .isa_irq = record->source,
+      .remapped = true,
+      .tm = trigger_mode,
+      .pol = polarity,
+      .global_irq = record->global_sys_interrupt,
+  };
+
+}
+
 }  // namespace
 
 static void platform_init_apic(uint level) {
   pic_map(PIC1_BASE, PIC2_BASE);
   pic_disable();
 
-  const AcpiTables& acpi_tables = AcpiTables::Default();
+  acpi_lite::AcpiParser& parser = GlobalAcpiLiteParser();
 
   // Enumerate the IO APICs
-  uint32_t num_io_apics;
-  zx_status_t status = acpi_tables.io_apic_count(&num_io_apics);
-  // TODO: If we want to support x86 without IO APICs, we should do something
-  // better here.
-  ASSERT(status == ZX_OK);
-  io_apic_descriptor* io_apics =
-      static_cast<io_apic_descriptor*>(calloc(num_io_apics, sizeof(*io_apics)));
-  ASSERT(io_apics != NULL);
-  uint32_t num_found = 0;
-  status = acpi_tables.io_apics(io_apics, num_io_apics, &num_found);
-  ASSERT(status == ZX_OK);
-  ASSERT(num_io_apics == num_found);
+  fbl::Vector<io_apic_descriptor> descriptors;
+  zx_status_t status = acpi_lite::EnumerateIoApics(
+      parser, [&descriptors](const acpi_lite::AcpiMadtIoApicEntry& descriptor) {
+        fbl::AllocChecker ac;
+        descriptors.push_back(
+            io_apic_descriptor{
+                .apic_id = descriptor.io_apic_id,
+                .global_irq_base = descriptor.global_system_interrupt_base,
+                .paddr = descriptor.io_apic_address,
+            },
+            &ac);
+        return ac.check() ? ZX_OK : ZX_ERR_NO_MEMORY;
+      });
+  if (status != ZX_OK) {
+    panic("Could not get IO APIC details: %d\n", status);
+  }
 
-  // Enumerate the IO APICs
-  uint32_t num_isos;
-  status = acpi_tables.interrupt_source_overrides_count(&num_isos);
-  ASSERT(status == ZX_OK);
-  io_apic_isa_override* isos = NULL;
-  if (num_isos > 0) {
-    isos = static_cast<io_apic_isa_override*>(calloc(num_isos, sizeof(*isos)));
-    ASSERT(isos != NULL);
-    status = acpi_tables.interrupt_source_overrides(isos, num_isos, &num_found);
-    ASSERT(status == ZX_OK);
-    ASSERT(num_isos == num_found);
+  // Enumerate interrupt source overrides.
+  fbl::Vector<io_apic_isa_override> overrides;
+  status = acpi_lite::EnumerateIoApicIsaOverrides(
+      parser, [&overrides](const acpi_lite::AcpiMadtIntSourceOverrideEntry& isa_override) {
+        fbl::AllocChecker ac;
+        overrides.push_back(ParseIsaOverride(&isa_override), &ac);
+        return ac.check() ? ZX_OK : ZX_ERR_NO_MEMORY;
+      });
+  if (status != ZX_OK) {
+    panic("Could not get interrupt source overrides: %d\n", status);
   }
 
   apic_vm_init();
   apic_local_init();
-  apic_io_init(io_apics, num_io_apics, isos, num_isos);
-
-  free(io_apics);
-  free(isos);
+  apic_io_init(descriptors.data(), descriptors.size(), overrides.data(), overrides.size());
 
   ASSERT(arch_ints_disabled());
 

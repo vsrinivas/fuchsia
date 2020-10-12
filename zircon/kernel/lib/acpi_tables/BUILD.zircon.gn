@@ -19,17 +19,4 @@ zx_library("acpi_tables") {
     "$zx/kernel/lib/acpi_lite",
     "$zx/kernel/lib/init",
   ]
-
-  # TODO: testonly
-  deps += [ ":test" ]
-}
-
-source_set("test") {
-  # TODO: testonly = true
-  sources = [ "acpi_tables_test.cc" ]
-  deps = [
-    ":acpi_tables.headers",
-    "$zx/kernel/lib/acpi_lite:headers",
-    "$zx/kernel/lib/unittest",
-  ]
 }

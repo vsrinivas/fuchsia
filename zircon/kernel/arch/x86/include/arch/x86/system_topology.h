@@ -17,7 +17,7 @@ namespace x86 {
 // Generates the system topology.
 // Exposed for testing.
 zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid,
-                                 const acpi_lite::AcpiParserInterface& acpi_tables,
+                                 const acpi_lite::AcpiParserInterface& parser,
                                  fbl::Vector<zbi_topology_node_t>* topology);
 
 }  // namespace x86

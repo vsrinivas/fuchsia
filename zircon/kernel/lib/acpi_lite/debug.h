@@ -13,10 +13,12 @@
 #include <debug.h>
 #define LOG_INFO(x...) dprintf(INFO, x)
 #define LOG_DEBUG(x...) dprintf(SPEW, x)
+#define LOG_ERROR(x...) dprintf(CRITICAL, x)
 #else
 #include <stdio.h>
 #define LOG_INFO(x...) printf(x)
 #define LOG_DEBUG(x...) printf(x)
+#define LOG_ERROR(x...) printf(x)
 #endif
 
 #endif  // ZIRCON_KERNEL_LIB_ACPI_LITE_DEBUG_H_

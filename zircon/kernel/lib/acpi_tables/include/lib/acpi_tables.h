@@ -19,33 +19,7 @@
 // allocation is available.
 class AcpiTables {
  public:
-  explicit AcpiTables(const acpi_lite::AcpiParserInterface* tables) : tables_(tables) {}
-
-  // Sets count equal to the number of cpus in the system.
-  zx_status_t cpu_count(uint32_t* count) const;
-
-  // Populates the apic_ids array with the apic ids of all cpus in the system.
-  // Sets apic_id_count equal to the number of ids written to the array and is
-  // bounded by array_size.
-  zx_status_t cpu_apic_ids(uint32_t* apic_ids, uint32_t array_size, uint32_t* apic_id_count) const;
-
-  // Sets count equal to the number of IO APICs in the system.
-  zx_status_t io_apic_count(uint32_t* count) const;
-
-  // Populates the io_apics array with data about the IO APICS in the system,
-  // bounded by array_size. io_apics_count will contain how many io_apics were
-  // populated in the array.
-  zx_status_t io_apics(io_apic_descriptor* io_apics, uint32_t array_size,
-                       uint32_t* io_apics_count) const;
-
-  // Populates overrides with data on all overrides, bounded by array_size.
-  // override_count will contain the number of overrides populated in the
-  // array.
-  zx_status_t interrupt_source_overrides(io_apic_isa_override* overrides, uint32_t array_size,
-                                         uint32_t* override_count) const;
-
-  // Sets count equal to the number of overrides registered in the system.
-  zx_status_t interrupt_source_overrides_count(uint32_t* count) const;
+  explicit AcpiTables(const acpi_lite::AcpiParserInterface* tables) {}
 
   // Set / get a default instance of AcpiTables.
   //
@@ -60,20 +34,6 @@ class AcpiTables {
   // Initialise a default instance using the acpi_lite library.
 
  private:
-  zx_status_t NumInMadt(uint8_t type, uint32_t* count) const;
-
-  // For each subtable of type run visitor.
-  // We can't take a std::function for the visitor because that can use dynamic
-  // memory.
-  template <typename V>
-  zx_status_t ForEachInMadt(uint8_t type, V visitor) const;
-
-  // Set start and end to the first and last (respectively) records in the
-  // MADT table.
-  zx_status_t GetMadtRecordLimits(uintptr_t* start, uintptr_t* end) const;
-
-  const acpi_lite::AcpiParserInterface* const tables_;
-
   inline static const AcpiTables* default_ = nullptr;
 };
 

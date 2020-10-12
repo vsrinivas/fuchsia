@@ -8,6 +8,7 @@
 
 #include <debug.h>
 #include <lib/acpi_lite.h>
+#include <lib/acpi_lite/apic.h>
 #include <lib/acpi_lite/numa.h>
 #include <lib/acpi_tables.h>
 #include <lib/system-topology.h>
@@ -252,46 +253,30 @@ class ApicDecoder {
   const uint8_t cache_shift_;
 };
 
-zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tables,
-                         const ApicDecoder& decoder, fbl::Vector<ktl::unique_ptr<Die>>* dies) {
-  uint32_t cpu_count = 0;
-  auto status = acpi_tables.cpu_count(&cpu_count);
-  if (status != ZX_OK) {
-    return status;
+// Process the given APIC entry, adding it to the list of
+class DieList {
+ public:
+  DieList(const cpu_id::CpuId& cpuid, const ApicDecoder& decoder) : decoder_(decoder) {
+    // APIC of this processor, we will ensure it has logical_id 0;
+    primary_apic_id_ = cpuid.ReadProcessorId().local_apic_id();
   }
 
-  fbl::AllocChecker checker;
-  ktl::unique_ptr<uint32_t[]> apic_ids(new (&checker) uint32_t[cpu_count]);
-  if (!checker.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+  zx_status_t Add(const acpi_lite::AcpiMadtLocalApicEntry& entry) {
+    uint32_t apic_id = entry.apic_id;
+    const bool is_primary = primary_apic_id_ == apic_id;
 
-  uint32_t apic_ids_count = 0;
-  status = acpi_tables.cpu_apic_ids(apic_ids.get(), cpu_count, &apic_ids_count);
-  if (status != ZX_OK) {
-    return status;
-  }
-  DEBUG_ASSERT(apic_ids_count == cpu_count);
+    const uint32_t die_id = decoder_.die_id(apic_id);
+    const uint32_t smt_id = decoder_.smt_id(apic_id);
 
-  // APIC of this processor, we will ensure it has logical_id 0;
-  const uint32_t primary_apic_id = cpuid.ReadProcessorId().local_apic_id();
-
-  uint16_t next_logical_id = 1;
-  for (size_t i = 0; i < apic_ids_count; i++) {
-    const auto apic_id = apic_ids[i];
-    const bool is_primary = primary_apic_id == apic_id;
-
-    const uint32_t die_id = decoder.die_id(apic_id);
-    const uint32_t smt_id = decoder.smt_id(apic_id);
-
-    if (die_id >= dies->size()) {
-      status = GrowVector(die_id + 1, dies);
+    if (die_id >= dies_.size()) {
+      zx_status_t status = GrowVector(die_id + 1, &dies_);
       if (status != ZX_OK) {
         return status;
       }
     }
-    auto& die = (*dies)[die_id];
+    auto& die = dies_[die_id];
     if (!die) {
+      fbl::AllocChecker checker;
       die.reset(new (&checker) Die());
       if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -299,31 +284,53 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
     }
 
     SharedCache* cache = nullptr;
-    if (decoder.has_cache_info()) {
-      status = die->GetCache(decoder.cache_id(apic_id), &cache);
+    if (decoder_.has_cache_info()) {
+      zx_status_t status = die->GetCache(decoder_.cache_id(apic_id), &cache);
       if (status != ZX_OK) {
         return status;
       }
     }
     if (cache) {
-      cache->SetCacheId(decoder.cache_id(apic_id));
+      cache->SetCacheId(decoder_.cache_id(apic_id));
     }
 
     Core* core = nullptr;
-    status = (cache != nullptr) ? cache->GetCore(decoder.core_id(apic_id), &core)
-                                : die->GetCore(decoder.core_id(apic_id), &core);
+    zx_status_t status = (cache != nullptr) ? cache->GetCore(decoder_.core_id(apic_id), &core)
+                                            : die->GetCore(decoder_.core_id(apic_id), &core);
     if (status != ZX_OK) {
       return status;
     }
 
-    const uint16_t logical_id = (is_primary) ? 0 : next_logical_id++;
+    const uint16_t logical_id = is_primary ? 0 : next_logical_id_++;
     core->SetPrimary(is_primary);
     core->AddThread(logical_id, apic_id);
 
     dprintf(INFO, "apic: %#4x logical: %3u die: %u cache: %u core: %u thread: %u \n", apic_id,
-            logical_id, die_id, decoder.cache_id(apic_id), decoder.core_id(apic_id), smt_id);
+            logical_id, die_id, decoder_.cache_id(apic_id), decoder_.core_id(apic_id), smt_id);
+    return ZX_OK;
   }
 
+  fbl::Vector<ktl::unique_ptr<Die>>& dies() { return dies_; }
+
+ private:
+  fbl::Vector<ktl::unique_ptr<Die>> dies_;
+  uint32_t primary_apic_id_;
+  const ApicDecoder& decoder_;
+  uint16_t next_logical_id_ = 1;
+};
+
+zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const acpi_lite::AcpiParserInterface& parser,
+                         const ApicDecoder& decoder, fbl::Vector<ktl::unique_ptr<Die>>* dies) {
+  // Get a list of all the APIC IDs in the system.
+  DieList die_list(cpuid, decoder);
+  zx_status_t status = acpi_lite::EnumerateProcessorLocalApics(
+      parser,
+      [&die_list](const acpi_lite::AcpiMadtLocalApicEntry& value) { return die_list.Add(value); });
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *dies = ktl::move(die_list.dies());
   return ZX_OK;
 }
 
@@ -476,7 +483,7 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid,
 
   const auto& decoder = *decoder_opt;
   fbl::Vector<ktl::unique_ptr<Die>> dies;
-  auto status = GenerateTree(cpuid, AcpiTables(&parser), decoder, &dies);
+  auto status = GenerateTree(cpuid, parser, decoder, &dies);
   if (status != ZX_OK) {
     return status;
   }
