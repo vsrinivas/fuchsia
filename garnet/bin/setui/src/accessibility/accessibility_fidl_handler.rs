@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use futures::future::LocalBoxFuture;
-use futures::FutureExt;
 
 use fidl_fuchsia_settings::{
     AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatch2Responder,
@@ -18,7 +16,6 @@ use crate::switchboard::accessibility_types::{
     AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
 };
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
-use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(
     AccessibilityMarker,
@@ -92,7 +89,7 @@ async fn process_request(
                     settings.into(),
                     Ok(()),
                     Err(fidl_fuchsia_settings::Error::Failed),
-                    AccessibilityMarker::DEBUG_NAME
+                    AccessibilityMarker
                 );
             })
             .detach();

@@ -6,16 +6,16 @@ use {
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
-    crate::switchboard::base::{LowLightMode, SettingRequest, SettingResponse, SettingType},
-    crate::switchboard::hanging_get_handler::Sender,
+    crate::switchboard::base::{
+        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType,
+    },
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
         DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
         Error, LightSensorData, LowLightMode as FidlLowLightMode,
     },
     fuchsia_async as fasync,
-    futures::future::LocalBoxFuture,
-    futures::prelude::*,
 };
 
 fidl_hanging_get_responder!(
@@ -121,7 +121,7 @@ async fn process_request(
                         request,
                         Ok(()),
                         Err(Error::Unsupported),
-                        DisplayMarker::DEBUG_NAME
+                        DisplayMarker
                     );
                 })
                 .detach();

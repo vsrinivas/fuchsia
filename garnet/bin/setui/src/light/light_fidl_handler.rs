@@ -10,8 +10,6 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
-use futures::future::LocalBoxFuture;
-use futures::FutureExt;
 
 use crate::fidl_process_full;
 use crate::fidl_processor::settings::RequestContext;

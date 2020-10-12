@@ -21,13 +21,24 @@ use std::hash::Hash;
 /// Convenience macro to make a switchboard request and send the result to a responder.
 #[macro_export]
 macro_rules! request_respond {
-    ($context:ident, $responder:ident, $setting_type:expr, $request:expr, $success:expr, $error:expr, $marker:expr) => {
+    (
+        $context:ident,
+        $responder:ident,
+        $setting_type:expr,
+        $request:expr,
+        $success:expr,
+        $error:expr,
+        $marker:ty $(,)?
+    ) => {{
+        use ::fidl::endpoints::ServiceMarker;
+        use $crate::switchboard::base::FidlResponseErrorLogger;
+
         match $context.request($setting_type, $request).await {
             Ok(_) => $responder.send(&mut $success),
             _ => $responder.send(&mut $error),
         }
-        .log_fidl_response_error($marker);
-    };
+        .log_fidl_response_error(<$marker as ServiceMarker>::DEBUG_NAME);
+    }};
 }
 
 /// `RequestCallback` closures are handed a request and the surrounding

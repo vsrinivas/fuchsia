@@ -8,14 +8,11 @@ use fidl_fuchsia_settings::{
     PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
-use futures::future::LocalBoxFuture;
-use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
 use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
-use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(
     PrivacyMarker,
@@ -66,7 +63,7 @@ async fn process_request(
                     settings.into(),
                     Ok(()),
                     Err(Error::Failed),
-                    PrivacyMarker::DEBUG_NAME
+                    PrivacyMarker
                 );
             })
             .detach();

@@ -7,10 +7,7 @@ use {
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_settings::{DeviceMarker, DeviceRequest, DeviceSettings, DeviceWatchResponder},
-    futures::future::LocalBoxFuture,
-    futures::FutureExt,
 };
 
 fidl_hanging_get_responder!(DeviceMarker, DeviceSettings, DeviceWatchResponder);

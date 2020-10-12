@@ -1,11 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
-use futures::FutureExt;
-
-use futures::future::LocalBoxFuture;
 
 use fidl_fuchsia_settings::{
     Error, NightModeMarker, NightModeRequest, NightModeSettings, NightModeWatchResponder,
@@ -13,9 +8,10 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 
 use crate::fidl_hanging_get_responder;
+use crate::fidl_process;
+use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{NightModeInfo, SettingRequest, SettingResponse, SettingType};
-use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(NightModeMarker, NightModeSettings, NightModeWatchResponder,);
 
@@ -56,7 +52,7 @@ async fn process_request(
                     settings.into(),
                     Ok(()),
                     Err(Error::Failed),
-                    NightModeMarker::DEBUG_NAME
+                    NightModeMarker
                 );
             })
             .detach();

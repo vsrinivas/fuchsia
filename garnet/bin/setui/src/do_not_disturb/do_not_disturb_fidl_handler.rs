@@ -8,14 +8,12 @@ use {
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::Sender,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbSettings, DoNotDisturbWatchResponder,
         Error,
     },
     fuchsia_async as fasync,
-    futures::future::LocalBoxFuture,
-    futures::FutureExt,
 };
 
 fidl_hanging_get_responder!(DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder,);
@@ -59,7 +57,7 @@ async fn process_request(
                         request,
                         Ok(()),
                         Err(Error::Failed),
-                        DoNotDisturbMarker::DEBUG_NAME
+                        DoNotDisturbMarker
                     );
                 })
                 .detach();

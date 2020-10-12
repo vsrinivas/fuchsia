@@ -9,10 +9,7 @@ use crate::fidl_processor::settings::RequestContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
 };
-use crate::switchboard::hanging_get_handler::Sender;
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
-use futures::future::LocalBoxFuture;
-use futures::FutureExt;
 use std::convert::TryFrom;
 
 fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);

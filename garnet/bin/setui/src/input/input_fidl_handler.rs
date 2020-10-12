@@ -6,14 +6,14 @@ use {
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
-    crate::switchboard::base::{SettingRequest, SettingResponse, SettingType},
-    crate::switchboard::hanging_get_handler::Sender,
+    crate::switchboard::base::{
+        FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType,
+    },
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         Error, InputDeviceSettings, InputMarker, InputRequest, InputWatchResponder, Microphone,
     },
     fuchsia_async as fasync,
-    futures::future::LocalBoxFuture,
-    futures::prelude::*,
 };
 
 fidl_hanging_get_responder!(InputMarker, InputDeviceSettings, InputWatchResponder);
@@ -60,7 +60,7 @@ async fn process_request(
                         request,
                         Ok(()),
                         Err(fidl_fuchsia_settings::Error::Failed),
-                        InputMarker::DEBUG_NAME
+                        InputMarker
                     );
                 })
                 .detach();

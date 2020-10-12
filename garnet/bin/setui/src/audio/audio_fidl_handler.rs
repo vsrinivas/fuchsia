@@ -1,24 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
-        AudioSettingSource, AudioStream, AudioStreamType, SettingRequest, SettingResponse,
-        SettingType,
+        AudioSettingSource, AudioStream, AudioStreamType, FidlResponseErrorLogger, SettingRequest,
+        SettingResponse, SettingType,
     },
-    crate::switchboard::hanging_get_handler::Sender,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
         AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
         AudioStreamSettings, AudioWatch2Responder, AudioWatchResponder, Error, Volume,
     },
     fuchsia_async as fasync,
-    futures::future::LocalBoxFuture,
-    futures::prelude::*,
 };
 
 fidl_hanging_get_responder!(
@@ -153,7 +152,7 @@ async fn process_request(
                         request,
                         Ok(()),
                         Err(fidl_fuchsia_settings::Error::Failed),
-                        AudioMarker::DEBUG_NAME
+                        AudioMarker
                     );
                 })
                 .detach();

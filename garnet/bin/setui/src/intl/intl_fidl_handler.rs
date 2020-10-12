@@ -5,15 +5,12 @@ use fidl_fuchsia_settings::{
     IntlMarker, IntlRequest, IntlSettings, IntlWatch2Responder, IntlWatchResponder,
 };
 use fuchsia_async as fasync;
-use futures::future::LocalBoxFuture;
-use futures::FutureExt;
 
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
-use crate::switchboard::hanging_get_handler::Sender;
 
 fidl_hanging_get_responder!(
     IntlMarker,
@@ -65,7 +62,7 @@ async fn process_request(
                     settings.into(),
                     Ok(()),
                     Err(fidl_fuchsia_settings::Error::Failed),
-                    IntlMarker::DEBUG_NAME
+                    IntlMarker
                 );
             })
             .detach();
