@@ -88,6 +88,7 @@ constexpr uint8_t I2C_AUDIO_CODEC_ADDR_P2 = (0x2D);  // For Nelson P2.
 constexpr uint8_t I2C_GOODIX_TOUCH_ADDR = (0x5d);
 constexpr uint8_t I2C_TI_INA231_MLB_ADDR = (0x49);
 constexpr uint8_t I2C_TI_INA231_SPEAKERS_ADDR = (0x40);
+constexpr uint8_t I2C_SHTV3_ADDR = (0x70);
 
 class Nelson;
 using NelsonType = ddk::Device<Nelson>;

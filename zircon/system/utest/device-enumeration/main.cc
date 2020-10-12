@@ -366,6 +366,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/dsi-base/000",
       "ti-ina231-mlb/ti-ina231",
       "ti-ina231-speakers/ti-ina231",
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

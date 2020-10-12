@@ -61,7 +61,7 @@ void Shtv3Device::DdkRelease() { delete this; }
 
 void Shtv3Device::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   const zx::status<float> status = ReadTemperature();
-  completer.Reply(status.error_value(), status.value_or(0.0f));
+  completer.Reply(status.is_error() ? status.error_value() : ZX_OK, status.value_or(0.0f));
 }
 
 zx_status_t Shtv3Device::Init() {
@@ -130,5 +130,5 @@ static constexpr zx_driver_ops_t shtv3_driver_ops = []() {
 ZIRCON_DRIVER_BEGIN(shtv3, temperature::shtv3_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SENSIRION),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_DID_SENSIRION_SHTV3),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SENSIRION_SHTV3),
 ZIRCON_DRIVER_END(shtv3)

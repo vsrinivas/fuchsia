@@ -93,6 +93,13 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+    {
+        .bus_id = NELSON_I2C_A0_0,
+        .address = I2C_SHTV3_ADDR,
+        .vid = PDEV_VID_SENSIRION,
+        .pid = 0,
+        .did = PDEV_DID_SENSIRION_SHTV3,
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {
