@@ -6,12 +6,13 @@
 
 #include <stdio.h>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_lock.h>
 #include <intel-hda/codec-utils/stream-base.h>
+
+#include "src/media/audio/drivers/intel-hda/codecs/hdmi/hdmi_ihda_codec-bind.h"
 
 namespace audio {
 namespace intel_hda {
@@ -52,10 +53,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace intel_hda
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(hdmi_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_IHDA_CODEC),
-    BI_ABORT_IF(NE, BIND_IHDA_CODEC_VID, 0x8086),  // Intel
-    BI_MATCH_IF(EQ, BIND_IHDA_CODEC_DID, 0x280b),  // Intel Display Audio
-ZIRCON_DRIVER_END(hdmi_ihda_codec)
-    // clang-format on
+ZIRCON_DRIVER(hdmi_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1")

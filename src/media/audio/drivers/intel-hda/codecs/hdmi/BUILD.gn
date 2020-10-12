@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("ihda_codecs_hdmi_bind") {
+  rules = "hdmi_ihda_codec.bind"
+  output = "hdmi_ihda_codec-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.intel_hda" ]
+  tests = "bind_test.json"
+}
 
 group("hdmi") {
   deps = [ ":hdmi-audio-codec" ]
@@ -20,6 +28,7 @@ driver_module("hdmi-audio-codec") {
   ]
   sources = [ "hdmi-codec.cc" ]
   deps = [
+    ":ihda_codecs_hdmi_bind",
     "//sdk/banjo/ddk.protocol.intelhda.codec",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
@@ -31,4 +40,10 @@ driver_module("hdmi-audio-codec") {
     "//zircon/system/ulib/dispatcher-pool",
     "//zircon/system/ulib/intel-hda",
   ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":ihda_codecs_hdmi_bind_test" ]
 }

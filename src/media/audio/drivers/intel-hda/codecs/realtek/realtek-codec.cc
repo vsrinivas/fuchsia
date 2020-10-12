@@ -4,7 +4,6 @@
 
 #include "realtek-codec.h"
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
@@ -12,6 +11,7 @@
 
 #include "debug-logging.h"
 #include "realtek-stream.h"
+#include "src/media/audio/drivers/intel-hda/codecs/realtek/realtek_ihda_codec-bind.h"
 
 namespace audio {
 namespace intel_hda {
@@ -404,11 +404,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace intel_hda
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(realtek_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_IHDA_CODEC),
-    BI_ABORT_IF(NE, BIND_IHDA_CODEC_VID, 0x10ec),   // Realtek
-    BI_MATCH_IF(EQ, BIND_IHDA_CODEC_DID, 0x0255),   // ALC255
-    BI_MATCH_IF(EQ, BIND_IHDA_CODEC_DID, 0x0283),   // ALC283
-ZIRCON_DRIVER_END(realtek_ihda_codec)
-    // clang-format on
+ZIRCON_DRIVER(realtek_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1")

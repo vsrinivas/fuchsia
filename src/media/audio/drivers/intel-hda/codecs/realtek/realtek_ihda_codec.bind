@@ -1,0 +1,13 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.intel_hda;
+
+fuchsia.BIND_PROTOCOL == fuchsia.intel_hda.BIND_PROTOCOL.IHDA_CODEC;
+fuchsia.BIND_IHDA_CODEC_VID == fuchsia.intel_hda.BIND_IHDA_CODEC_VID.REALTEK;
+
+accept fuchsia.BIND_IHDA_CODEC_DID {
+  0x0255,  // ALC255
+  0x0283,  // ALC283
+}

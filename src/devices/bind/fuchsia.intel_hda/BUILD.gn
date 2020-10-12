@@ -2,11 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
+import("//build/bind/bind.gni")
 
-  deps = [
-    "codecs:tests",
-    "controller:tests",
-  ]
+bind_library("fuchsia.intel_hda") {
+  source = "fuchsia.intel_hda.bind"
 }

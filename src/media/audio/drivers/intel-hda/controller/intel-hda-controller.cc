@@ -12,7 +12,6 @@
 #include <atomic>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -26,6 +25,7 @@
 #include "codec-connection.h"
 #include "debug-logging.h"
 #include "device-ids.h"
+#include "src/media/audio/drivers/intel-hda/controller/intel_hda-bind.h"
 #include "utils.h"
 
 namespace audio {
@@ -395,15 +395,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace intel_hda
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(intel_hda, audio::intel_hda::driver_ops, "zircon", "0.1", 8)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_HDA_PCI_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_STANDARD),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_BROADWELL),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_100_C230),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_200_C400),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_SKYLAKE),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_KABYLAKE),
-ZIRCON_DRIVER_END(intel_hda)
-    // clang-format on
+ZIRCON_DRIVER(intel_hda, audio::intel_hda::driver_ops, "zircon", "0.1")

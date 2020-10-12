@@ -2,11 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/unification/firmware.gni")
+
+bind_rules("ihda_controller_bind") {
+  rules = "intel_hda.bind"
+  output = "intel_hda-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+  tests = "bind_test.json"
+}
 
 # All non-test targets.
 group("controller") {
@@ -55,6 +63,7 @@ source_set("src") {
     "utils.h",
   ]
   deps = [
+    ":ihda_controller_bind",
     "//sdk/banjo/ddk.protocol.intelhda.codec",
     "//src/devices/lib/driver",
     "//zircon/system/ulib/audio-driver-proto",
@@ -86,15 +95,12 @@ firmware("firmware") {
 }
 
 driver_module("intel-hda") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   deps = [ ":src" ]
   data_deps = [ ":firmware" ]
 }
@@ -159,6 +165,7 @@ fuzzers_package("intel-hda-controller-fuzzers") {
 group("tests") {
   testonly = true
   deps = [
+    ":ihda_controller_bind_test",
     ":intel-hda-controller-fuzzers",
     ":intel-hda-controller-test",
   ]
