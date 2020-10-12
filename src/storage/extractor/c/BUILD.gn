@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_staticlib.gni")
+import("//src/sys/build/components.gni")
+
+rustc_staticlib("disk_extractor") {
+  name = "disk_extractor"
+  edition = "2018"
+  public = [ "extractor.h" ]
+  with_unit_tests = true
+
+  deps = [ "//src/storage/extractor:disk_extractor_lib" ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+  sources = [
+    "src/extractor.rs",
+    "src/lib.rs",
+  ]
+}
+
+fuchsia_component("c-lib-test-component") {
+  manifest = "meta/c-lib-unit-tests.cmx"
+
+  deps = [
+    ":disk_extractor_test",
+    "//src/storage/extractor:disk_extractor_lib",
+  ]
+  testonly = true
+}
+
+fuchsia_test_package("disk-extractor-c-lib-unit-test") {
+  test_components = [ ":c-lib-test-component" ]
+}
