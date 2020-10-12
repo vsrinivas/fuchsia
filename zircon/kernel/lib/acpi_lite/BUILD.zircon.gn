@@ -37,6 +37,9 @@ zx_library("acpi_lite") {
     sdk_headers += [ "lib/acpi_lite/zircon.h" ]
     sources += [
       "zircon.cc",
+
+      # TODO: These should be test-only.
+      "test_data.cc",
       "zircon_test.cc",
     ]
     deps += [ "$zx/kernel/lib/unittest" ]
@@ -53,6 +56,7 @@ if (!is_kernel) {
       "acpi_lite_test.cc",
       "binary_reader_test.cc",
       "debug_port_test.cc",
+      "test_data.cc",
     ]
     deps = [
       ":acpi_lite",

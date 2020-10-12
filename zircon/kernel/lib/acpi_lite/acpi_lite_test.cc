@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/acpi_lite.h>
+#include <lib/acpi_lite/testing/test_data.h>
+#include <lib/acpi_lite/testing/test_util.h>
 #include <lib/zx/status.h>
 #include <string.h>
 
@@ -13,10 +15,7 @@
 
 #include <gtest/gtest.h>
 
-#include "test_data.h"
-#include "test_util.h"
-
-namespace acpi_lite {
+namespace acpi_lite::testing {
 namespace {
 
 TEST(AcpiParser, NoRsdp) {
@@ -47,8 +46,8 @@ void VerifyTableExists(const AcpiParser& parser, const char* signature) {
 }
 
 TEST(AcpiParser, ParseQemuTables) {
-  FakePhysMemReader reader(&kQemuTables);
-  AcpiParser result = AcpiParser::Init(reader, kQemuTables.rsdp).value();
+  FakePhysMemReader reader = QemuPhysMemReader();
+  AcpiParser result = AcpiParser::Init(reader, reader.rsdp()).value();
   ASSERT_EQ(4u, result.num_tables());
 
   // Ensure we can read the HPET table.
@@ -57,23 +56,23 @@ TEST(AcpiParser, ParseQemuTables) {
 
 TEST(AcpiParser, ParseIntelNucTables) {
   // Parse the QEMU tables.
-  FakePhysMemReader reader(&kIntelNuc7i5dnTables);
-  AcpiParser result = AcpiParser::Init(reader, kIntelNuc7i5dnTables.rsdp).value();
+  FakePhysMemReader reader = IntelNuc7i5dnPhysMemReader();
+  AcpiParser result = AcpiParser::Init(reader, reader.rsdp()).value();
   EXPECT_EQ(28u, result.num_tables());
   VerifyTableExists(result, "HPET");
   VerifyTableExists(result, "DBG2");
 }
 
 TEST(AcpiParser, ParseFuchsiaHypervisor) {
-  FakePhysMemReader reader(&kFuchsiaHypervisor);
-  AcpiParser result = AcpiParser::Init(reader, kFuchsiaHypervisor.rsdp).value();
+  FakePhysMemReader reader = FuchsiaHypervisorPhysMemReader();
+  AcpiParser result = AcpiParser::Init(reader, reader.rsdp()).value();
   EXPECT_EQ(result.num_tables(), 3u);
 }
 
 TEST(AcpiParser, ReadMissingTable) {
   // Parse the QEMU tables.
-  FakePhysMemReader reader(&kQemuTables);
-  AcpiParser result = AcpiParser::Init(reader, kQemuTables.rsdp).value();
+  FakePhysMemReader reader = QemuPhysMemReader();
+  AcpiParser result = AcpiParser::Init(reader, reader.rsdp()).value();
 
   // Read a missing table.
   EXPECT_EQ(GetTableBySignature(result, AcpiSignature("AAAA")), nullptr);
@@ -122,26 +121,22 @@ TEST(AcpiParser, RsdtInvalidLengths) {
   bad_rsdt.header.checksum = AcpiChecksum(&bad_rsdt, bad_rsdt.header.length);
 
   // Add the bad RSDT to a table set.
-  AcpiTableSet::Table table = {
+  FakePhysMemReader::Region region[] = {{
       .phys_addr = 0x1000,
       .data =
           fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&bad_rsdt), sizeof(AcpiRsdt)),
-  };
-  AcpiTableSet table_set = {
-      .tables = fbl::Span(&table, 1),
-      .rsdp = 0,
-  };
+  }};
 
   // Attempt to parse the bad RSDT. Ensure we get an error.
-  FakePhysMemReader reader(&table_set);
+  FakePhysMemReader reader(/*rsdp=*/0, region);
   size_t num_tables;
   EXPECT_TRUE(ValidateRsdt(reader, 0x1000, &num_tables).is_error());
 }
 
 TEST(AcpiParser, DumpTables) {
   // Parse the QEMU tables.
-  FakePhysMemReader reader(&kQemuTables);
-  zx::status<AcpiParser> result = AcpiParser::Init(reader, kQemuTables.rsdp);
+  FakePhysMemReader reader = QemuPhysMemReader();
+  zx::status<AcpiParser> result = AcpiParser::Init(reader, reader.rsdp());
   ASSERT_FALSE(result.is_error());
 
   // Dump the (relatively short) QEMU tables.
@@ -151,15 +146,16 @@ TEST(AcpiParser, DumpTables) {
 // A PhysMemReader that emulates the BIOS read-only area between 0xe'0000 and 0xf'ffff.
 class BiosAreaPhysMemReader : public PhysMemReader {
  public:
-  explicit BiosAreaPhysMemReader(const AcpiTableSet* tables) : fallback_(tables) {
+  explicit BiosAreaPhysMemReader(fbl::Span<const FakePhysMemReader::Region> regions)
+      : fallback_(0, regions) {
     // Create a fake BIOS area.
     bios_area_ = std::make_unique<uint8_t[]>(kBiosReadOnlyAreaLength);
 
     // Copy any tables into the fake BIOS area.
-    for (const auto& table : tables->tables) {
-      if (table.phys_addr >= kBiosReadOnlyAreaStart && table.phys_addr < kBiosReadOnlyAreaEnd) {
-        memcpy(bios_area_.get() + table.phys_addr - kBiosReadOnlyAreaStart, table.data.data(),
-               std::min(table.data.size_bytes(), kBiosReadOnlyAreaEnd - table.phys_addr));
+    for (const auto& region : regions) {
+      if (region.phys_addr >= kBiosReadOnlyAreaStart && region.phys_addr < kBiosReadOnlyAreaEnd) {
+        memcpy(bios_area_.get() + region.phys_addr - kBiosReadOnlyAreaStart, region.data.data(),
+               std::min(region.data.size_bytes(), kBiosReadOnlyAreaEnd - region.phys_addr));
       }
     }
   }
@@ -199,7 +195,8 @@ TEST(AcpiParser, AcpiSignatureWriteToBuffer) {
 // aread.
 #if defined(__x86_64__)
 TEST(AcpiParser, RsdPtrAutodetect) {
-  BiosAreaPhysMemReader reader(&kQemuTables);
+  BiosAreaPhysMemReader reader(
+      {QemuPhysMemReader().regions().data(), QemuPhysMemReader().regions().size()});
   zx::status<AcpiParser> result = AcpiParser::Init(reader, /*rsdp_pa=*/0);
   ASSERT_TRUE(!result.is_error());
   EXPECT_EQ(4u, result->num_tables());
@@ -207,7 +204,7 @@ TEST(AcpiParser, RsdPtrAutodetect) {
 #endif
 
 TEST(GetTableByType, NothingFound) {
-  EmptyAcpiParser parser;
+  FakeAcpiParser parser;
   EXPECT_EQ(nullptr, GetTableByType<AcpiHpetTable>(parser));
 }
 
@@ -244,4 +241,4 @@ TEST(GetTableByType, ShortEntry) {
 }
 
 }  // namespace
-}  // namespace acpi_lite
+}  // namespace acpi_lite::testing

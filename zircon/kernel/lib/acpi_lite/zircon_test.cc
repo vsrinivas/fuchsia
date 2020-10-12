@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/acpi_lite.h>
+#include <lib/acpi_lite/testing/test_data.h>
+#include <lib/acpi_lite/testing/test_util.h>
 #include <lib/acpi_lite/zircon.h>
 #include <lib/unittest/unittest.h>
 
@@ -12,10 +14,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-#include "test_data.h"
-#include "test_util.h"
-
-namespace acpi_lite {
+namespace acpi_lite::testing {
 namespace {
 
 // Parse test QEMU tables.
@@ -25,8 +24,8 @@ namespace {
 bool TestBasicParse() {
   BEGIN_TEST;
 
-  FakePhysMemReader reader(&kQemuTables);
-  AcpiParser parser = AcpiParser::Init(reader, kQemuTables.rsdp).value();
+  FakePhysMemReader reader = QemuPhysMemReader();
+  AcpiParser parser = AcpiParser::Init(reader, reader.rsdp()).value();
   ASSERT_EQ(4u, parser.num_tables());
 
   // Ensure we can read the HPET table.
@@ -85,10 +84,10 @@ bool TestParseSystem() {
 }
 
 }  // namespace
-}  // namespace acpi_lite
+}  // namespace acpi_lite::testing
 
 UNITTEST_START_TESTCASE(acpi_lite_tests)
-UNITTEST("Basic Parse", acpi_lite::TestBasicParse)
-UNITTEST("ZirconPhysmemReader", acpi_lite::TestZirconPhysmemReader)
-UNITTEST("ParseSystem", acpi_lite::TestParseSystem)
+UNITTEST("Basic Parse", acpi_lite::testing::TestBasicParse)
+UNITTEST("ZirconPhysmemReader", acpi_lite::testing::TestZirconPhysmemReader)
+UNITTEST("ParseSystem", acpi_lite::testing::TestParseSystem)
 UNITTEST_END_TESTCASE(acpi_lite_tests, "acpi_lite", "Test ACPI parsing.")
