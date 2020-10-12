@@ -44,10 +44,7 @@ impl<T: StoreAccessorCompatible> StoreAccessor<T> {
 
     async fn read_or_create_file(&mut self) -> T {
         match fs::read_to_string(&self.file_path) {
-            Ok(value) => serde_json::from_str(&value).unwrap_or_else(|_| {
-                fx_log_info!("unable to deserialize setting value");
-                T::default_value()
-            }),
+            Ok(value) => T::deserialize_from(&value),
             Err(_) => {
                 fx_log_info!("store file doesn't exist, creating file");
                 if let Err(e) = self.set_value(&T::default_value()).await {
@@ -70,7 +67,6 @@ impl<T: StoreAccessorCompatible> StoreAccessor<T> {
         // To prevent corrupted writes, create and write to a temporary file. After that,
         // replace the data file with the temporary one.
         let temp_file_path = self.file_path.with_extension("tmp");
-        let serialized = serde_json::to_string(new_value).unwrap();
 
         let mut file = match fs::OpenOptions::new()
             .write(true)
@@ -84,7 +80,7 @@ impl<T: StoreAccessorCompatible> StoreAccessor<T> {
                 return Err(format_err!("unable to write to storage"));
             }
         };
-        if let Err(e) = file.write_all(serialized.as_bytes()) {
+        if let Err(e) = file.write_all(new_value.serialize_to().as_bytes()) {
             fx_log_err!("unable to write to file {}, {}", temp_file_path.to_str().unwrap(), e);
             return Err(format_err!("unable to write to storage"));
         }
@@ -132,7 +128,7 @@ pub mod testing {
         let data_file_path = tmp_dir.path().join(&TestData::FILE_NAME);
         assert!(data_file_path.exists());
         assert_eq!(
-            serde_json::to_string(&TestData::default_value()).unwrap(),
+            TestData::default_value().serialize_to(),
             fs::read_to_string(&data_file_path).expect("should read in file")
         );
 
@@ -143,7 +139,7 @@ pub mod testing {
 
         // Check that the file is written.
         assert_eq!(
-            serde_json::to_string(&new_val).unwrap(),
+            new_val.serialize_to(),
             fs::read_to_string(&data_file_path).expect("should read in file")
         );
     }

@@ -32,6 +32,18 @@ pub struct DeviceStorage<T: DeviceStorageCompatible> {
 /// removing fields, renaming fields, or adding non-optional fields are.
 pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + PartialEq {
     fn default_value() -> Self;
+
+    fn deserialize_from(value: &String) -> Self {
+        serde_json::from_str(&value).unwrap_or_else(|_| {
+            fx_log_err!("unable to deserialize setting value");
+            Self::default_value()
+        })
+    }
+
+    fn serialize_to(&self) -> String {
+        serde_json::to_string(self).expect("value should serialize")
+    }
+
     const KEY: &'static str;
 }
 
@@ -51,7 +63,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
 
     pub async fn write(&mut self, new_value: &T, flush: bool) -> Result<(), Error> {
         if self.current_data.as_ref() != Some(new_value) {
-            let mut serialized = Value::Stringval(serde_json::to_string(new_value).unwrap());
+            let mut serialized = Value::Stringval(new_value.serialize_to());
             self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
             if flush {
                 if self.stash_proxy.flush().await.is_err() {
@@ -72,15 +84,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
             if let Some(stash_value) = self.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
             {
                 if let Value::Stringval(string_value) = &*stash_value {
-                    let data = match serde_json::from_str(&string_value) {
-                        Ok(val) => val,
-                        Err(e) => {
-                            fx_log_err!("Failed to serialize value from stash, returning default");
-                            fx_log_err!("{}", e);
-                            T::default_value()
-                        }
-                    };
-                    self.current_data = Some(data);
+                    self.current_data = Some(T::deserialize_from(&string_value));
                 } else {
                     panic!("Unexpected type for key found in stash");
                 }
@@ -320,8 +324,7 @@ mod tests {
                 match req {
                     StoreAccessorRequest::GetValue { key, responder } => {
                         assert_eq!(key, "settings_testkey");
-                        let mut response =
-                            Value::Stringval(serde_json::to_string(&value_to_get).unwrap());
+                        let mut response = Value::Stringval(value_to_get.serialize_to());
 
                         responder.send(Some(&mut response)).unwrap();
                     }
@@ -403,7 +406,7 @@ mod tests {
             Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
                 assert_eq!(key, "settings_testkey");
                 if let Value::Stringval(string_value) = val {
-                    let input_value: TestStruct = serde_json::from_str(&string_value).unwrap();
+                    let input_value = TestStruct::deserialize_from(&string_value);
                     assert_eq!(input_value.value, VALUE2);
                 } else {
                     panic!("Unexpected type for key found in stash");
@@ -429,7 +432,7 @@ mod tests {
                 Ok(StoreAccessorRequest::SetValue { key, val, control_handle: _ }) => {
                     assert_eq!(key, "settings_testkey");
                     if let Value::Stringval(string_value) = val {
-                        let input_value: TestStruct = serde_json::from_str(&string_value).unwrap();
+                        let input_value = TestStruct::deserialize_from(&string_value);
                         assert_eq!(input_value.value, VALUE2);
                     } else {
                         panic!("Unexpected type for key found in stash");
