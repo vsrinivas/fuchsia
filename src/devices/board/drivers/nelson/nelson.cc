@@ -175,6 +175,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "BacklightInit failed: %d", status);
   }
 
+  if ((status = PowerInit()) != ZX_OK) {
+    zxlogf(ERROR, "PowerInit failed: %d", status);
+  }
+
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {

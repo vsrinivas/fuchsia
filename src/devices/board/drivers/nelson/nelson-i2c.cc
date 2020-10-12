@@ -78,6 +78,21 @@ static const i2c_channel_t i2c_channels[] = {
         .bus_id = NELSON_I2C_3, .address = I2C_AUDIO_CODEC_ADDR_P2, .vid = 0, .pid = 0, .did = 0,
         // binds as composite device
     },
+    // Power sensors
+    {
+        .bus_id = NELSON_I2C_3,
+        .address = I2C_TI_INA231_MLB_ADDR,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    {
+        .bus_id = NELSON_I2C_3,
+        .address = I2C_TI_INA231_SPEAKERS_ADDR,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

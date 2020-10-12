@@ -29,6 +29,7 @@ driver_module("nelson") {
     "nelson-i2c.cc",
     "nelson-light.cc",
     "nelson-mali.cc",
+    "nelson-power.cc",
     "nelson-pwm.cc",
     "nelson-sdio.cc",
     "nelson-securemem.cc",

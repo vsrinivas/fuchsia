@@ -364,6 +364,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller",
       "class/dsi-base/000",
+      "ti-ina231-mlb/ti-ina231",
+      "ti-ina231-speakers/ti-ina231",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

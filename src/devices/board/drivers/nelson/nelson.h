@@ -86,6 +86,8 @@ constexpr uint8_t I2C_AMBIENTLIGHT_ADDR = (0x39);
 constexpr uint8_t I2C_AUDIO_CODEC_ADDR = (0x31);     // For Nelson P1.
 constexpr uint8_t I2C_AUDIO_CODEC_ADDR_P2 = (0x2D);  // For Nelson P2.
 constexpr uint8_t I2C_GOODIX_TOUCH_ADDR = (0x5d);
+constexpr uint8_t I2C_TI_INA231_MLB_ADDR = (0x49);
+constexpr uint8_t I2C_TI_INA231_SPEAKERS_ADDR = (0x40);
 
 class Nelson;
 using NelsonType = ddk::Device<Nelson>;
@@ -116,6 +118,7 @@ class Nelson : public NelsonType {
   zx_status_t I2cInit();
   zx_status_t LightInit();
   zx_status_t MaliInit();
+  zx_status_t PowerInit();
   zx_status_t PwmInit();
   zx_status_t SdioInit();
   zx_status_t Start();
