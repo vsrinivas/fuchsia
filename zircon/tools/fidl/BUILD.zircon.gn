@@ -76,9 +76,6 @@ zx_library("fidl") {
     assert_no_deps = [ "//zircon/system/public" ]
   }
   configs += [ ":fidlc_config" ]
-
-  # TODO(fxbug.dev/60442): remove this once UB in fidl is fixed
-  configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("json_schema") {
