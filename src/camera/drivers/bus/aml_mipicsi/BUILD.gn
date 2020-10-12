@@ -8,7 +8,7 @@ import("//build/driver_package.gni")
 
 bind_rules("aml_mipi_bind") {
   rules = "aml_mipi.bind"
-  output = "aml_mipi-bind.h"
+  output = "aml_mipi_bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
@@ -18,14 +18,14 @@ group("tests") {
   deps = [ ":aml_mipi_bind_test" ]
 }
 
-driver_module("aml-mipicsi-driver") {
-  output_name = "aml-mipicsi"
+driver_module("aml_mipicsi_driver") {
+  output_name = "aml_mipicsi"
   sources = [
-    "aml-mipi-adap.cc",
-    "aml-mipi-debug.cc",
-    "aml-mipi-regs.h",
-    "aml-mipi.cc",
-    "aml-mipi.h",
+    "aml_mipi.cc",
+    "aml_mipi.h",
+    "aml_mipi_adap.cc",
+    "aml_mipi_debug.cc",
+    "aml_mipi_regs.h",
   ]
   deps = [
     ":aml_mipi_bind",
@@ -48,12 +48,17 @@ driver_module("aml-mipicsi-driver") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_package("aml-mipicsi") {
-  deps = [ ":aml-mipicsi-driver" ]
+driver_package("driver_package") {
+  package_name = "aml-mipicsi"
+  deps = [ ":aml_mipicsi_driver" ]
 
   drivers = [
     {
-      name = "aml-mipicsi.so"
+      name = "aml_mipicsi.so"
     },
   ]
+}
+
+group("aml_mipicsi") {
+  deps = [ ":driver_package" ]
 }

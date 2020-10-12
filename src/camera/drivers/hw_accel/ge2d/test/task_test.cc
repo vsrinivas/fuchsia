@@ -25,7 +25,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
-#include "src/camera/drivers/test_utils/fake-buffer-collection.h"
+#include "src/camera/drivers/test_utils/fake_buffer_collection.h"
 
 namespace ge2d {
 namespace {

@@ -627,7 +627,7 @@ config("Wno-conversion") {
     "//src/camera/bin/device/*",
     "//src/camera/bin/factory/*",
     "//src/camera/bin/factory_cli/*",
-    "//src/camera/drivers/bus/aml-mipicsi/*",
+    "//src/camera/drivers/bus/aml_mipicsi/*",
     "//src/camera/drivers/controller/*",
     "//src/camera/drivers/hw_accel/gdc/*",
     "//src/camera/drivers/hw_accel/ge2d/*",

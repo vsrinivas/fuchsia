@@ -299,7 +299,7 @@ load along with environmental factors like temperature.
     sync_completion_reset(&event_);
     ```
 
-    This code sample was adapted from [task-test.cc](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task-test.cc#48).
+    This code sample was adapted from [task_test.cc](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task_test.cc#48).
 
 ### Regression tests for race conditions
 

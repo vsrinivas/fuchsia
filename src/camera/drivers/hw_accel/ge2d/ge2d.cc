@@ -20,7 +20,7 @@
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <fbl/auto_lock.h>
 
-#include "src/camera/drivers/hw_accel/ge2d/ge2d-regs.h"
+#include "src/camera/drivers/hw_accel/ge2d/ge2d_regs.h"
 
 namespace ge2d {
 

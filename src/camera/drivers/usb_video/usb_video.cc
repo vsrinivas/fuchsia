@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/usb_video/usb-video.h"
+#include "src/camera/drivers/usb_video/usb_video.h"
 
 #include <stdlib.h>
 #include <zircon/hw/usb/video.h>
@@ -15,8 +15,8 @@
 #include <fbl/vector.h>
 #include <usb/usb.h>
 
-#include "src/camera/drivers/usb_video/usb-video-stream.h"
-#include "src/camera/drivers/usb_video/usb_video-bind.h"
+#include "src/camera/drivers/usb_video/usb_video_bind.h"
+#include "src/camera/drivers/usb_video/usb_video_stream.h"
 #include "src/camera/drivers/usb_video/uvc_format.h"
 
 namespace {

@@ -4,8 +4,8 @@
 
 source_set("device_test") {
   sources = [
-    "ge2d-on-device-test.cc",
-    "ge2d-on-device-test.h",
+    "ge2d_on_device_test.cc",
+    "ge2d_on_device_test.h",
   ]
   deps = [
     "//src/camera/drivers/hw_accel/ge2d:lib",
@@ -26,7 +26,7 @@ source_set("device_test") {
 executable("test") {
   output_name = "ge2d-test"
   testonly = true
-  sources = [ "task-test.cc" ]
+  sources = [ "task_test.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.amlogiccanvas",
     "//sdk/banjo/ddk.protocol.ge2d",

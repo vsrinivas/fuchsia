@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi.h"
+#include "src/camera/drivers/bus/aml_mipicsi/aml_mipi.h"
 
 #include <stdint.h>
 #include <threads.h>
@@ -12,8 +12,8 @@
 
 #include <ddk/debug.h>
 
-#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi-regs.h"
-#include "src/camera/drivers/bus/aml-mipicsi/aml_mipi-bind.h"
+#include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_bind.h"
+#include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_regs.h"
 
 // NOTE: A lot of magic numbers, they come from vendor
 //       source code.

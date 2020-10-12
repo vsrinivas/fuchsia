@@ -25,7 +25,7 @@
 #include <threads.h>
 
 namespace camera {
-// |AmlMipiDevice| is spawned by the driver in |aml-mipi.cc|
+// |AmlMipiDevice| is spawned by the driver in |aml_mipi.cc|
 // to which the IMX 277 Sensor driver binds to.
 // This class provides the ZX_PROTOCOL_MIPICSI ops for all of it's
 // children.

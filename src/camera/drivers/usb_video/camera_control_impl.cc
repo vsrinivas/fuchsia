@@ -8,7 +8,7 @@
 
 #include <ddk/debug.h>
 
-#include "src/camera/drivers/usb_video/usb-video-stream.h"
+#include "src/camera/drivers/usb_video/usb_video_stream.h"
 
 namespace camera {
 

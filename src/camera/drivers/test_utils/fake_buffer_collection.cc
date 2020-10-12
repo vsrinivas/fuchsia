@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake-buffer-collection.h"
+#include "fake_buffer_collection.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/image-format/image_format.h>

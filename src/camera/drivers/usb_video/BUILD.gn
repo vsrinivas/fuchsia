@@ -10,7 +10,7 @@ import("//build/test/test_package.gni")
 
 bind_rules("usb_video_bind") {
   rules = "usb_video.bind"
-  output = "usb_video-bind.h"
+  output = "usb_video_bind.h"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
@@ -21,14 +21,14 @@ driver_module("usb_video_driver") {
   sources = [
     "camera_control_impl.cc",
     "camera_control_impl.h",
-    "usb-video-stream.cc",
-    "usb-video-stream.h",
-    "usb-video.cc",
-    "usb-video.h",
+    "usb_video.cc",
+    "usb_video.h",
+    "usb_video_stream.cc",
+    "usb_video_stream.h",
     "uvc_format.cc",
     "uvc_format.h",
-    "video-util.c",
-    "video-util.h",
+    "video_util.c",
+    "video_util.h",
   ]
 
   deps = [
@@ -71,9 +71,9 @@ driver_package("usb_video") {
   ]
 }
 
-test("usb-video-test") {
+test("usb_video_test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "usb-video-test"
+  output_name = "usb_video_test"
   sources = [
     "uvc_format.cc",
     "uvc_format_test.cc",
@@ -100,13 +100,13 @@ test("usb-video-test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-unittest_package("usb-video-test-package") {
+unittest_package("usb_video_test_package") {
   package_name = "usb-video-test"
-  deps = [ ":usb-video-test" ]
+  deps = [ ":usb_video_test" ]
 
   tests = [
     {
-      name = "usb-video-test"
+      name = "usb_video_test"
       environments = basic_envs
     },
   ]
@@ -115,7 +115,7 @@ unittest_package("usb-video-test-package") {
 group("tests") {
   testonly = true
   deps = [
-    ":usb-video-test-package",
     ":usb_video_bind_test",
+    ":usb_video_test_package",
   ]
 }

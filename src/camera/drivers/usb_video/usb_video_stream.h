@@ -23,7 +23,7 @@
 #include <usb/usb.h>
 
 #include "src/camera/drivers/usb_video/camera_control_impl.h"
-#include "src/camera/drivers/usb_video/usb-video.h"
+#include "src/camera/drivers/usb_video/usb_video.h"
 #include "src/camera/drivers/usb_video/uvc_format.h"
 
 namespace video {

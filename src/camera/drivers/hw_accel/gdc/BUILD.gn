@@ -27,8 +27,8 @@ source_set("source") {
   visibility = [ "../*" ]
 
   sources = [
-    "gdc-task.cc",
     "gdc.cc",
+    "gdc_task.cc",
   ]
 
   public_deps = [

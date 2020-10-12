@@ -6,7 +6,7 @@ group("test_utils") {
   public_deps = [
     ":button_checker",
     ":ddk_mock_operators",
-    ":fake-buffer-collection",
+    ":fake_buffer_collection",
   ]
   public_configs = [ ":test_utils_config" ]
 }
@@ -16,9 +16,13 @@ config("test_utils_config") {
   include_dirs = [ "." ]
 }
 
-source_set("fake-buffer-collection") {
+source_set("fake_buffer_collection") {
   visibility = [ ":*" ]
-  sources = [ "fake-buffer-collection.cc" ]
+  sources = [
+    "fake-buffer-collection.h",
+    "fake_buffer_collection.cc",
+    "fake_buffer_collection.h",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/lib/ddk",
@@ -35,7 +39,10 @@ source_set("fake-buffer-collection") {
 
 source_set("button_checker") {
   visibility = [ ":*" ]
-  sources = [ "button_checker.cc" ]
+  sources = [
+    "button_checker.cc",
+    "button_checker.h",
+  ]
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",

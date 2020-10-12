@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 group("bus") {
-  deps = [ "aml-mipicsi" ]
+  deps = [ "aml_mipicsi" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "aml-mipicsi:tests" ]
+  deps = [ "aml_mipicsi:tests" ]
 }

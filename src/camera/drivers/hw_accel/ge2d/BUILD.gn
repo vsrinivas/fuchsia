@@ -23,11 +23,11 @@ group("tests") {
 
 source_set("lib") {
   sources = [
-    "ge2d-regs.h",
-    "ge2d-task.cc",
-    "ge2d-task.h",
     "ge2d.cc",
     "ge2d.h",
+    "ge2d_regs.h",
+    "ge2d_task.cc",
+    "ge2d_task.h",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.amlogiccanvas",

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "../fake_buffer_collection.h"
+
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
@@ -11,8 +13,6 @@
 
 #include <ddk/debug.h>
 #include <gtest/gtest.h>
-
-#include "../fake-buffer-collection.h"
 
 namespace camera {
 namespace {

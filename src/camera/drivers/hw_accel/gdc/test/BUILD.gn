@@ -6,7 +6,7 @@ executable("test") {
   output_name = "gdc-test"
   testonly = true
 
-  sources = [ "task-test.cc" ]
+  sources = [ "task_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",

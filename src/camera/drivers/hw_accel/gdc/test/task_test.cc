@@ -24,9 +24,9 @@
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
-#include "src/camera/drivers/hw_accel/gdc/gdc-regs.h"
 #include "src/camera/drivers/hw_accel/gdc/gdc.h"
-#include "src/camera/drivers/test_utils/fake-buffer-collection.h"
+#include "src/camera/drivers/hw_accel/gdc/gdc_regs.h"
+#include "src/camera/drivers/test_utils/fake_buffer_collection.h"
 
 namespace gdc {
 namespace {

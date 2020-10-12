@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/usb_video/video-util.h"
+#include "src/camera/drivers/usb_video/video_util.h"
 
 #include <string.h>
 

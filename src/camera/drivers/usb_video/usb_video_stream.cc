@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/usb_video/usb-video-stream.h"
+#include "src/camera/drivers/usb_video/usb_video_stream.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
@@ -23,7 +23,7 @@
 #include <usb/usb-request.h>
 
 #include "src/camera/drivers/usb_video/camera_control_impl.h"
-#include "src/camera/drivers/usb_video/video-util.h"
+#include "src/camera/drivers/usb_video/video_util.h"
 
 namespace video {
 namespace usb {

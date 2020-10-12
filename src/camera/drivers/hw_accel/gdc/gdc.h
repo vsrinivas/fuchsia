@@ -27,7 +27,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
-#include "gdc-task.h"
+#include "gdc_task.h"
 
 namespace gdc {
 // |GdcDevice| is spawned by the driver in |gdc.cc|

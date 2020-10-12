@@ -8,8 +8,8 @@
 
 #include <ddk/debug.h>
 
-#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi-regs.h"
-#include "src/camera/drivers/bus/aml-mipicsi/aml-mipi.h"
+#include "src/camera/drivers/bus/aml_mipicsi/aml_mipi.h"
+#include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_regs.h"
 
 // NOTE: A lot of magic numbers, they come from vendor
 //       source code.

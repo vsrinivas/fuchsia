@@ -30,7 +30,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
-#include "src/camera/drivers/hw_accel/ge2d/ge2d-task.h"
+#include "src/camera/drivers/hw_accel/ge2d/ge2d_task.h"
 
 namespace ge2d {
 // |Ge2dDevice| is spawned by the driver in |ge2d.cc|
@@ -77,7 +77,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
                                  const hw_accel_remove_task_callback_t* task_remove_callback,
                                  uint32_t* out_task_index);
 
-  // See ge2d-task.h for description of args.
+  // See ge2d_task.h for description of args.
   zx_status_t Ge2dInitTaskWaterMark(const buffer_collection_info_2_t* input_buffer_collection,
                                     const buffer_collection_info_2_t* output_buffer_collection,
                                     const water_mark_info_t* info_list, size_t info_count,
@@ -88,7 +88,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
                                     const hw_accel_remove_task_callback_t* task_remove_callback,
                                     uint32_t* out_task_index);
 
-  // See ge2d-task.h for description of args.
+  // See ge2d_task.h for description of args.
   zx_status_t Ge2dInitTaskInPlaceWaterMark(
       const buffer_collection_info_2_t* buffer_collection, const water_mark_info_t* info_list,
       size_t info_count, const image_format_2_t* image_format_table_list,

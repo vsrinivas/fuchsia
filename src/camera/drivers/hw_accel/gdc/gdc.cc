@@ -21,7 +21,7 @@
 #include <hw/reg.h>
 
 #include "src/camera/drivers/hw_accel/gdc/gdc-bind.h"
-#include "src/camera/drivers/hw_accel/gdc/gdc-regs.h"
+#include "src/camera/drivers/hw_accel/gdc/gdc_regs.h"
 
 namespace gdc {
 
