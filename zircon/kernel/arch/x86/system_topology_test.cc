@@ -26,8 +26,8 @@ bool test_cpus_z840() {
   BEGIN_TEST;
 
   fbl::Vector<zbi_topology_node_t> flat_topology;
-  auto status = x86::GenerateFlatTopology(
-      cpu_id::kCpuIdXeon2690v4, AcpiTables(&acpi_test_data::kZ840TableProvider), &flat_topology);
+  auto status = x86::GenerateFlatTopology(cpu_id::kCpuIdXeon2690v4,
+                                          acpi_test_data::kZ840TableProvider, &flat_topology);
   ASSERT_EQ(ZX_OK, status);
 
   int numa_count = 0;
@@ -83,9 +83,8 @@ bool test_cpus_2970wx_x399() {
   BEGIN_TEST;
 
   fbl::Vector<zbi_topology_node_t> flat_topology;
-  auto status =
-      x86::GenerateFlatTopology(cpu_id::kCpuIdThreadRipper2970wx,
-                                AcpiTables(&acpi_test_data::k2970wxTableProvider), &flat_topology);
+  auto status = x86::GenerateFlatTopology(cpu_id::kCpuIdThreadRipper2970wx,
+                                          acpi_test_data::k2970wxTableProvider, &flat_topology);
   ASSERT_EQ(ZX_OK, status);
 
   int numa_count = 0;
@@ -159,9 +158,8 @@ bool test_cpus_fallback() {
   };
 
   fbl::Vector<zbi_topology_node_t> flat_topology;
-  auto status =
-      x86::GenerateFlatTopology(cpu_id::FakeCpuId(fallback_cpuid_data),
-                                AcpiTables(&acpi_test_data::kEveTableProvider), &flat_topology);
+  auto status = x86::GenerateFlatTopology(cpu_id::FakeCpuId(fallback_cpuid_data),
+                                          acpi_test_data::kEveTableProvider, &flat_topology);
   ASSERT_EQ(ZX_OK, status);
 
   int numa_count = 0;

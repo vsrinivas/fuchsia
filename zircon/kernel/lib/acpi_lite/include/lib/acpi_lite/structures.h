@@ -162,6 +162,8 @@ static_assert(sizeof(AcpiMadtTable) == 44);
 struct AcpiSubTableHeader {
   uint8_t type;
   uint8_t length;
+
+  size_t size() const { return length; }
 } __PACKED;
 static_assert(sizeof(AcpiSubTableHeader) == 2);
 
@@ -207,6 +209,7 @@ struct AcpiSratProcessorAffinityEntry {
   uint8_t proximity_domain_high[3];
   uint32_t clock_domain;
 
+  uint32_t proximity_domain() const;
   size_t size() const { return header.length; }
 } __PACKED;
 static_assert(sizeof(AcpiSratProcessorAffinityEntry) == 16);

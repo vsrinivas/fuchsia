@@ -109,6 +109,22 @@ class BinaryReader {
   fbl::Span<const uint8_t> buffer_;
 };
 
+// Convert a pointer to type |Src| to a pointer of type |Dest|, ensuring that the size of |Src|
+// is valid.
+//
+// We require that the type |Dest| has a field |header| at offset 0 of type |Src|.
+template <typename Dest, typename Src>
+const Dest* Downcast(const Src* src) {
+  static_assert(offsetof(Dest, header) == 0,
+                "Expected field |header| to be first field in struct.");
+  static_assert(std::is_same_v<decltype(Dest::header), Src>,
+                "Expected |Dest::header| type to match |Src|.");
+  if (src->size() < sizeof(Dest)) {
+    return nullptr;
+  }
+  return reinterpret_cast<const Dest*>(src);
+}
+
 // A "packed" type wraps a plain type, but instructs the compiler to treat it as unaligned data.
 template <typename T>
 struct Packed {

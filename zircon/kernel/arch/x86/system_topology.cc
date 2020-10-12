@@ -7,6 +7,9 @@
 #include "arch/x86/system_topology.h"
 
 #include <debug.h>
+#include <lib/acpi_lite.h>
+#include <lib/acpi_lite/numa.h>
+#include <lib/acpi_tables.h>
 #include <lib/system-topology.h>
 #include <pow2.h>
 #include <stdio.h>
@@ -17,6 +20,7 @@
 #include <fbl/alloc_checker.h>
 #include <kernel/topology.h>
 #include <ktl/unique_ptr.h>
+#include <platform/pc/acpi.h>
 
 #define LOCAL_TRACE 0
 
@@ -159,15 +163,15 @@ class Die {
 
   fbl::Vector<ktl::unique_ptr<Core>>& cores() { return cores_; }
 
-  void SetNuma(const AcpiNumaDomain& numa) { numa_ = {numa}; }
+  void SetNuma(const acpi_lite::AcpiNumaDomain& numa) { numa_ = {numa}; }
 
-  const ktl::optional<AcpiNumaDomain>& numa() const { return numa_; }
+  const ktl::optional<acpi_lite::AcpiNumaDomain>& numa() const { return numa_; }
 
  private:
   zbi_topology_node_t node_;
   fbl::Vector<ktl::unique_ptr<SharedCache>> caches_;
   fbl::Vector<ktl::unique_ptr<Core>> cores_;
-  ktl::optional<AcpiNumaDomain> numa_;
+  ktl::optional<acpi_lite::AcpiNumaDomain> numa_;
 };
 
 class ApicDecoder {
@@ -323,10 +327,11 @@ zx_status_t GenerateTree(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tabl
   return ZX_OK;
 }
 
-zx_status_t AttachNumaInformation(const AcpiTables& acpi_tables, const ApicDecoder& decoder,
+zx_status_t AttachNumaInformation(const acpi_lite::AcpiParserInterface& parser,
+                                  const ApicDecoder& decoder,
                                   fbl::Vector<ktl::unique_ptr<Die>>* dies) {
-  return acpi_tables.VisitCpuNumaPairs(
-      [&decoder, dies](const AcpiNumaDomain& domain, uint32_t apic_id) {
+  return acpi_lite::EnumerateCpuNumaPairs(
+      parser, [&decoder, dies](const acpi_lite::AcpiNumaDomain& domain, uint32_t apic_id) {
         auto& die = (*dies)[decoder.die_id(apic_id)];
         if (die && !die->numa()) {
           die->SetNuma(domain);
@@ -334,7 +339,7 @@ zx_status_t AttachNumaInformation(const AcpiTables& acpi_tables, const ApicDecod
       });
 }
 
-zbi_topology_node_t ToFlatNode(const AcpiNumaDomain& numa) {
+zbi_topology_node_t ToFlatNode(const acpi_lite::AcpiNumaDomain& numa) {
   zbi_topology_node_t flat;
   flat.entity_type = ZBI_TOPOLOGY_ENTITY_NUMA_REGION;
   flat.parent_index = ZBI_TOPOLOGY_NO_PARENT;
@@ -444,10 +449,10 @@ static constexpr zbi_topology_node_t kFallbackTopology = {
 };
 // clang-format on
 
-zx_status_t GenerateAndInitSystemTopology() {
+zx_status_t GenerateAndInitSystemTopology(const acpi_lite::AcpiParserInterface& parser) {
   fbl::Vector<zbi_topology_node_t> topology;
 
-  const auto status = x86::GenerateFlatTopology(cpu_id::CpuId(), AcpiTables::Default(), &topology);
+  const auto status = x86::GenerateFlatTopology(cpu_id::CpuId(), parser, &topology);
   if (status != ZX_OK) {
     dprintf(CRITICAL, "ERROR: failed to generate flat topology from cpuid and acpi data! : %d\n",
             status);
@@ -461,7 +466,8 @@ zx_status_t GenerateAndInitSystemTopology() {
 
 namespace x86 {
 
-zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& acpi_tables,
+zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid,
+                                 const acpi_lite::AcpiParserInterface& parser,
                                  fbl::Vector<zbi_topology_node_t>* topology) {
   const auto decoder_opt = ApicDecoder::From(cpuid);
   if (!decoder_opt) {
@@ -470,12 +476,12 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 
   const auto& decoder = *decoder_opt;
   fbl::Vector<ktl::unique_ptr<Die>> dies;
-  auto status = GenerateTree(cpuid, acpi_tables, decoder, &dies);
+  auto status = GenerateTree(cpuid, AcpiTables(&parser), decoder, &dies);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = AttachNumaInformation(acpi_tables, decoder, &dies);
+  status = AttachNumaInformation(parser, decoder, &dies);
   if (status == ZX_ERR_NOT_FOUND) {
     // This is not a critical error. Systems, such as qemu, may not have the
     // tables present to enumerate NUMA information.
@@ -490,7 +496,7 @@ zx_status_t GenerateFlatTopology(const cpu_id::CpuId& cpuid, const AcpiTables& a
 }  // namespace x86
 
 void topology_init() {
-  auto status = GenerateAndInitSystemTopology();
+  auto status = GenerateAndInitSystemTopology(GlobalAcpiLiteParser());
   if (status != ZX_OK) {
     dprintf(CRITICAL,
             "ERROR: Auto topology generation failed, falling back to only boot core! status: %d\n",

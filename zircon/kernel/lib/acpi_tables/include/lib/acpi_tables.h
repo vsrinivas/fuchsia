@@ -14,23 +14,6 @@
 #include <arch/x86/apic.h>
 #include <fbl/function.h>
 
-constexpr uint8_t kAcpiMaxNumaRegions = 5;
-
-struct AcpiNumaRegion {
-  uint64_t base_address;
-  uint64_t length;
-};
-
-struct AcpiNumaDomain {
-  uint32_t domain = 0xFF;
-  AcpiNumaRegion memory[kAcpiMaxNumaRegions];
-  uint8_t memory_count = 0;
-};
-
-// ACPI constants.
-inline constexpr uint8_t kAcpiAddressSpaceMemory = 0;  // Memory/MMIO address.
-inline constexpr uint8_t kAcpiAddressSpaceIOPort = 1;  // I/O port address.
-
 // Designed to read and parse APIC tables, other functions of the APIC
 // subsystem are out of scope of this class. This class can work before dynamic memory
 // allocation is available.
@@ -63,11 +46,6 @@ class AcpiTables {
 
   // Sets count equal to the number of overrides registered in the system.
   zx_status_t interrupt_source_overrides_count(uint32_t* count) const;
-
-  // Vists all pairs of cpu apic id and NumaRegion.
-  // Visitor is expected to have the signature:
-  // void(const AcpiNumaRegion&, uint32_t)
-  zx_status_t VisitCpuNumaPairs(fbl::Function<void(const AcpiNumaDomain&, uint32_t)> visitor) const;
 
   // Set / get a default instance of AcpiTables.
   //

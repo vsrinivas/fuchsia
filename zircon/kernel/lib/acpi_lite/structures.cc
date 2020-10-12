@@ -21,4 +21,12 @@ void AcpiSignature::WriteToBuffer(char* buffer) const {
   buffer[sizeof(AcpiSignature)] = 0;
 }
 
+uint32_t AcpiSratProcessorAffinityEntry::proximity_domain() const {
+  uint32_t domain = proximity_domain_low;
+  domain |= proximity_domain_high[0] << 8;
+  domain |= proximity_domain_high[1] << 16;
+  domain |= proximity_domain_high[2] << 24;
+  return domain;
+}
+
 }  // namespace acpi_lite
