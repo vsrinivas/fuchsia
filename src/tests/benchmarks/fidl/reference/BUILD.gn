@@ -8,7 +8,14 @@ import("//tools/fidl/gidl/gidl.gni")
 
 gidl_reference_benchmarks("benchmark_suite_reference") {
   testonly = true
-  inputs = benchmark_suite_gidl_files
+  inputs = [
+    "//src/tests/benchmarks/fidl/benchmark_suite/byte_vector.gen.gidl",
+    "//src/tests/benchmarks/fidl/benchmark_suite/padded_struct_tree.gen.gidl",
+    "//src/tests/benchmarks/fidl/benchmark_suite/struct_tree.gen.gidl",
+    "//src/tests/benchmarks/fidl/benchmark_suite/table_all_set.gen.gidl",
+    "//src/tests/benchmarks/fidl/benchmark_suite/table_all_unset.gen.gidl",
+    "//src/tests/benchmarks/fidl/benchmark_suite/table_single_set.gen.gidl",
+  ]
   fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
   deps = [
     "//zircon/public/lib/fbl",

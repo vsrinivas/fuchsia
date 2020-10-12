@@ -23,45 +23,51 @@ var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 
 namespace benchmark_suite {
 
+{{ range .Benchmarks }}
 [[maybe_unused]] {{ .Type }} Build_{{ .Name }}() {
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
 	return obj;
 }
+{{ end }}
 
 } // namespace benchmark_suite
 `))
 
-type benchmarkTmplInput struct {
+type benchmark struct {
 	Path, Name, Type     string
 	ValueBuild, ValueVar string
 }
 
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
+type benchmarkTmplInput struct {
+	Benchmarks []benchmark
+}
+
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
-	files := map[string][]byte{}
+	tmplInput := benchmarkTmplInput{}
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
-			return nil, nil, fmt.Errorf("reference benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("reference benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
 		valBuild, valVar := libllcpp.BuildValueHeap(gidlBenchmark.Value, decl)
-		var buf bytes.Buffer
-		if err := benchmarkTmpl.Execute(&buf, benchmarkTmplInput{
+		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
 			Path:       gidlBenchmark.Name,
 			Name:       benchmarkName(gidlBenchmark.Name),
 			Type:       llcppBenchmarkType(gidlBenchmark.Value),
 			ValueBuild: valBuild,
 			ValueVar:   valVar,
-		}); err != nil {
-			return nil, nil, err
-		}
-		files[benchmarkName("_"+gidlBenchmark.Name)] = buf.Bytes()
+		})
 	}
-	return nil, files, nil
+	var buf bytes.Buffer
+	if err := benchmarkTmpl.Execute(&buf, tmplInput); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func llcppBenchmarkType(value gidlir.Value) string {

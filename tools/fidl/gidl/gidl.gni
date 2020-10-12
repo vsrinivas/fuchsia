@@ -27,48 +27,23 @@ import("//build/fidl/toolchain.gni")
 #      Path of the output file to generate (in the case of 1 output). In the case of multiple
 #      outputs, this is the name of an output file used to generate all output file names.
 #      e.g. a.cc, a2.cc, a3.cc...
-#
-#    num_output_files (optional)
-#      Number of output files to generate. The same number of outputs are always generated
-#      to allow consistent dependencies in GN. If there are too many outputs, blank files will
-#      be written. This is used for C++ to shared the generated files for build performance
-#      reasons.
-#
-#    all_outputs (optional)
-#      In the case of multiple outputs, this is the name of all generated output files.
 
 template("gidl") {
   assert(defined(invoker.language))
 
   # Output filename used to generate the output paths in the gidl tool.
-  assert(defined(invoker.output) || defined(invoker.all_outputs))
+  assert(defined(invoker.output))
   assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
-  num_extra_output_files = "0"
-  if (defined(invoker.num_extra_output_files)) {
-    num_extra_output_files = invoker.num_extra_output_files
-  }
   extra_args = []
   if (defined(invoker.extra_args)) {
     extra_args += invoker.extra_args
   }
 
   # All output targets.
-  all_outputs = []
   output_args = []
-  if (defined(invoker.all_outputs)) {
-    # Extra file pattern is a string including "[NUM]" that will be replaced with
-    # a file number when generating multiple files
-    assert(defined(invoker.extra_file_pattern))
-    all_outputs = invoker.all_outputs
-    output_args += [
-      "-extra-file-pattern",
-      rebase_path(invoker.extra_file_pattern),
-    ]
-  }
   if (defined(invoker.output)) {
-    all_outputs += [ invoker.output ]
     output_args += [
       "-out",
       rebase_path(invoker.output),
@@ -89,19 +64,15 @@ template("gidl") {
              invoker.language,
              "-json",
              rebase_path(json_file),
-
-             # TODO(fxbug.dev/52371) It should not be necessary to specify number of generated files.
-             "-num-extra-output-files",
-             num_extra_output_files,
            ] + extra_args + rebase_path(invoker.inputs)
     inputs = invoker.inputs
-    outputs = all_outputs
+    outputs = [ invoker.output ]
     deps = [ fidl_target ]
     forward_variables_from(invoker, [ "testonly" ])
   }
 }
 
-template("gidl_single_file_source_set") {
+template("gidl_source_set") {
   assert(defined(invoker.type))
   assert(defined(invoker.fidl))
   assert(defined(invoker.inputs))
@@ -148,185 +119,8 @@ template("gidl_single_file_source_set") {
   }
 }
 
-template("gidl_multiple_file_source_set") {
-  assert(defined(invoker.type))
-  assert(defined(invoker.fidl))
-  assert(defined(invoker.inputs))
-  assert(defined(invoker.language))
-  assert(!defined(invoker.sources))
-
-  # TODO(fxbug.dev/52371) Generate output filename list on the fly.
-  source_files = [
-    "${target_gen_dir}/gidl_generated_${target_name}1.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}2.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}3.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}4.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}5.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}6.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}7.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}8.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}9.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}10.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}11.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}12.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}13.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}14.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}15.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}16.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}17.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}18.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}19.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}20.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}21.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}22.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}23.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}24.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}25.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}26.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}27.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}28.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}29.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}30.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}31.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}32.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}33.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}34.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}35.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}36.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}37.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}38.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}39.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}40.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}41.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}42.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}43.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}44.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}45.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}46.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}47.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}48.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}49.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}50.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}51.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}52.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}53.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}54.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}55.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}56.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}57.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}58.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}59.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}60.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}61.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}62.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}63.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}64.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}65.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}66.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}67.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}68.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}69.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}70.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}71.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}72.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}73.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}74.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}75.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}76.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}77.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}78.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}79.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}80.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}81.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}82.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}83.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}84.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}85.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}86.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}87.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}88.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}89.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}90.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}91.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}92.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}93.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}94.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}95.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}96.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}97.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}98.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}99.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}100.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}101.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}102.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}103.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}104.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}105.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}106.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}107.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}108.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}109.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}110.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}111.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}112.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}113.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}114.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}115.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}116.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}117.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}118.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}119.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}120.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}121.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}122.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}123.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}124.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}125.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}126.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}127.cc",
-    "${target_gen_dir}/gidl_generated_${target_name}128.cc",
-  ]
-
-  fidl_bindings = get_label_info(invoker.fidl, "dir") + ":" +
-                  get_label_info(invoker.fidl, "name")
-  if (defined(invoker.bindings_suffix)) {
-    fidl_bindings = fidl_bindings + invoker.bindings_suffix
-  }
-
-  extra_file_pattern = "${target_gen_dir}/gidl_generated_${target_name}[NUM].cc"
-
-  gidl_target = "${target_name}_gidl"
-  gidl(gidl_target) {
-    type = invoker.type
-    language = invoker.language
-    all_outputs = source_files
-    fidl = invoker.fidl
-    inputs = invoker.inputs
-    num_extra_output_files = "128"
-    extra_file_pattern = extra_file_pattern
-    forward_variables_from(invoker, [ "testonly" ])
-  }
-
-  source_set(target_name) {
-    sources = source_files
-    deps = [
-      ":${gidl_target}",
-      fidl_bindings,
-    ]
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "fidl",
-                             "deps",
-                           ])
-  }
-}
-
 template("gidl_cpp_conformance") {
-  gidl_single_file_source_set(target_name) {
+  gidl_source_set(target_name) {
     type = "conformance"
     language = "cpp"
     forward_variables_from(invoker, "*")
@@ -334,7 +128,7 @@ template("gidl_cpp_conformance") {
 }
 
 template("gidl_llcpp_conformance") {
-  gidl_single_file_source_set(target_name) {
+  gidl_source_set(target_name) {
     type = "conformance"
     language = "llcpp"
     bindings_suffix = "_llcpp"
@@ -343,7 +137,7 @@ template("gidl_llcpp_conformance") {
 }
 
 template("gidl_cpp_benchmarks") {
-  gidl_single_file_source_set(target_name) {
+  gidl_source_set(target_name) {
     type = "benchmark"
     language = "cpp"
     forward_variables_from(invoker, "*")
@@ -351,7 +145,7 @@ template("gidl_cpp_benchmarks") {
 }
 
 template("gidl_llcpp_benchmarks") {
-  gidl_single_file_source_set(target_name) {
+  gidl_source_set(target_name) {
     type = "benchmark"
     language = "llcpp"
     bindings_suffix = "_llcpp"
@@ -360,7 +154,7 @@ template("gidl_llcpp_benchmarks") {
 }
 
 template("gidl_walker_benchmarks") {
-  gidl_single_file_source_set(target_name) {
+  gidl_source_set(target_name) {
     type = "benchmark"
     language = "walker"
     bindings_suffix = "_llcpp"
@@ -369,7 +163,7 @@ template("gidl_walker_benchmarks") {
 }
 
 template("gidl_reference_benchmarks") {
-  gidl_multiple_file_source_set(target_name) {
+  gidl_source_set(target_name) {
     type = "benchmark"
     language = "reference"
     bindings_suffix = "_llcpp"

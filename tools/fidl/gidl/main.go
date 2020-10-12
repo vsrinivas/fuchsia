@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -33,7 +32,7 @@ import (
 // added as a suffix to the name of the file before the extension
 // (e.g. my_file.go -> my_file_test_name.go).
 // The first file is the "main output file".
-type Generator func(gidlir.All, fidlir.Root, gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error)
+type Generator func(gidlir.All, fidlir.Root, gidlconfig.GeneratorConfig) ([]byte, error)
 
 var conformanceGenerators = map[string]Generator{
 	"go":    gidlgolang.GenerateConformanceTests,
@@ -93,7 +92,6 @@ type GIDLFlags struct {
 	Type     *string
 	// TODO(fxbug.dev/52371) It should not be necessary to specify the number of generated files.
 	NumOutputFiles            *int
-	MultipleFilePattern       *string
 	Out                       *string
 	RustBenchmarksFidlLibrary *string
 	CppBenchmarksFidlLibrary  *string
@@ -110,14 +108,7 @@ var flags = GIDLFlags{
 	Language: flag.String("language", "",
 		fmt.Sprintf("target language (%s)", strings.Join(allLanguages, "/"))),
 	Type: flag.String("type", "", fmt.Sprintf("output type (%s)", strings.Join(allGeneratorTypes, "/"))),
-	NumOutputFiles: flag.Int("num-extra-output-files", 0,
-		`Upper bound on number of extra output files when there are multiple files.
-	Used to split C++ outputs to multiple files.
-	Must be at least as large as the actual number of outputs.`),
-	MultipleFilePattern: flag.String("extra-file-pattern", "",
-		`String including a [NUM] substring to be replaced with a number.
-This is used for generating output filenames when there are multiple files`),
-	Out: flag.String("out", "", "optional path to write output to"),
+	Out:  flag.String("out", "", "path to write output to"),
 	RustBenchmarksFidlLibrary: flag.String("rust-benchmarks-fidl-library", "",
 		"name for the fidl library used in the rust benchmarks"),
 	CppBenchmarksFidlLibrary: flag.String("cpp-benchmarks-fidl-library", "",
@@ -211,61 +202,15 @@ func main() {
 		log.Fatalf("unknown language for %s: %s", *flags.Type, language)
 	}
 
-	mainFile, otherFiles, err := generator(gidl, fidl, config)
+	mainFile, err := generator(gidl, fidl, config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if mainFile != nil {
-		if *flags.Out == "" {
-			log.Fatalf("no -out path specified for main file")
-		}
-		if err := ioutil.WriteFile(*flags.Out, mainFile, 0666); err != nil {
-			log.Fatal(err)
-		}
+	if *flags.Out == "" {
+		log.Fatalf("no -out path specified for main file")
 	}
-
-	if len(otherFiles) > *flags.NumOutputFiles {
-		log.Fatalf("more generated gidl outputs than the number of output files")
-	}
-	if *flags.MultipleFilePattern == "" {
-		if *flags.NumOutputFiles != 0 {
-			log.Fatalf("no pattern specified for multiple output files")
-		}
-		return
-	}
-
-	os.Remove(filepath.Dir(*flags.MultipleFilePattern)) // clear any existing directory
-	if err := os.MkdirAll(filepath.Dir(*flags.MultipleFilePattern), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(*flags.Out, mainFile, 0666); err != nil {
 		log.Fatal(err)
 	}
-
-	// TODO(fxbug.dev/52371) Until these files are named based on their `type`, they need to be
-	// generated in a deterministic order.
-	fileNum := 1
-	keys := make([]string, 0, len(otherFiles))
-	for k := range otherFiles {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		if err := ioutil.WriteFile(outputFilepath(*flags.MultipleFilePattern, fileNum), otherFiles[k], 0666); err != nil {
-			log.Fatal(err)
-		}
-		fileNum++
-	}
-	// Fill unused output files with empty files to have a consistent set of source dependencies
-	// in GN.
-	// TODO(fxbug.dev/52371) The empty file doesn't work for some languages, like go that require a
-	// package to be declared.
-	for ; fileNum <= *flags.NumOutputFiles; fileNum++ {
-		if err := ioutil.WriteFile(outputFilepath(*flags.MultipleFilePattern, fileNum), []byte{}, 0666); err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
-// x/y/abc[NUM].test.go -> x/y/abc123.test.go
-func outputFilepath(inputFilepath string, fileNum int) string {
-	return strings.ReplaceAll(inputFilepath, "[NUM]", fmt.Sprintf("%d", fileNum))
 }

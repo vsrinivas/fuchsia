@@ -120,7 +120,7 @@ type benchmarkTmplInput struct {
 }
 
 // Generate generates High-Level C++ benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	tmplInput := benchmarkTmplInput{
 		FidlLibrary: libraryName(config.CppBenchmarksFidlLibrary),
@@ -128,7 +128,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
-			return nil, nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
@@ -151,9 +151,9 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 	}
 	var buf bytes.Buffer
 	if err := benchmarkTmpl.Execute(&buf, tmplInput); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return buf.Bytes(), nil, nil
+	return buf.Bytes(), nil
 }
 
 func libraryName(librarySuffix string) string {

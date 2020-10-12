@@ -200,13 +200,13 @@ type benchmark struct {
 }
 
 // GenerateBenchmarks generates Go benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
 		if err != nil {
-			return nil, nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
+			return nil, fmt.Errorf("benchmark %s: %s", gidlBenchmark.Name, err)
 		}
 		value := visit(gidlBenchmark.Value, decl)
 		benchmarks = append(benchmarks, benchmark{
@@ -223,7 +223,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.Gen
 	}
 	var buf bytes.Buffer
 	err := withGoFmt{benchmarkTmpl}.Execute(&buf, input)
-	return buf.Bytes(), nil, err
+	return buf.Bytes(), err
 }
 
 func goBenchmarkName(gidlName string) string {
