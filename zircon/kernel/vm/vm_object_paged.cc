@@ -392,7 +392,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
         }
         return ZX_ERR_NEXT;
       },
-      0, UINT64_MAX);
+      0, VmObjectPaged::MAX_SIZE);
 
   if (reclaim && count > 0) {
     IncrementHierarchyGenerationCountLocked();
