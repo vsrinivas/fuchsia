@@ -12,7 +12,7 @@
                 ]
             },
             "system-services": [
-                "fuchsia.boot.RootJob"
+                "fuchsia.kernel.RootJob"
             ]
         }
     },
@@ -25,7 +25,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
+            "fuchsia.kernel.RootJob",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",

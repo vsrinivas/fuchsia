@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <task-utils/walker.h>
-
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include <fuchsia/boot/c/fidl.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <task-utils/walker.h>
 
 // Immutable state of a specific call to walk_job_tree, passed along
 // to most helper functions.
@@ -305,15 +304,15 @@ zx_status_t walk_root_job_tree(task_callback_t job_callback, task_callback_t pro
     return status;
   }
 
-  status = fdio_service_connect("/svc/fuchsia.boot.RootJob", remote.release());
+  status = fdio_service_connect("/svc/fuchsia.kernel.RootJob", remote.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "task-utils/walker: cannot open fuchsia.boot.RootJob: %s\n",
+    fprintf(stderr, "task-utils/walker: cannot open fuchsia.kernel.RootJob: %s\n",
             zx_status_get_string(status));
     return status;
   }
 
   zx_handle_t root_job;
-  zx_status_t fidl_status = fuchsia_boot_RootJobGet(local.get(), &root_job);
+  zx_status_t fidl_status = fuchsia_kernel_RootJobGet(local.get(), &root_job);
 
   if (fidl_status != ZX_OK) {
     fprintf(stderr, "task-utils/walker: cannot obtain root job\n");

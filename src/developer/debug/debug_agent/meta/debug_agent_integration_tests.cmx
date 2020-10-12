@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootJob"
+                "fuchsia.kernel.RootJob"
             ]
         }
     },
@@ -11,8 +11,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.exception.ProcessLimbo",
+            "fuchsia.kernel.RootJob",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]

@@ -12,7 +12,6 @@ fidl("fuchsia.boot") {
     "factory-items.fidl",
     "items.fidl",
     "log.fidl",
-    "root-job.fidl",
     "root-resource.fidl",
   ]
 

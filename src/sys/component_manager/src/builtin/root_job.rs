@@ -7,7 +7,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
-    fidl_fuchsia_boot as fboot,
+    fidl_fuchsia_kernel as fkernel,
     fuchsia_runtime::job_default,
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -16,12 +16,12 @@ use {
 };
 
 lazy_static! {
-    pub static ref ROOT_JOB_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.RootJob".into();
+    pub static ref ROOT_JOB_CAPABILITY_NAME: CapabilityName = "fuchsia.kernel.RootJob".into();
     pub static ref ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME: CapabilityName =
-        "fuchsia.boot.RootJobForInspect".into();
+        "fuchsia.kernel.RootJobForInspect".into();
 }
 
-/// An implementation of the `fuchsia.boot.RootJob` protocol.
+/// An implementation of the `fuchsia.kernel.RootJob` protocol.
 pub struct RootJob {
     capability_name: &'static CapabilityName,
     rights: zx::Rights,
@@ -36,11 +36,14 @@ impl RootJob {
 #[async_trait]
 impl BuiltinCapability for RootJob {
     const NAME: &'static str = "RootJob";
-    type Marker = fboot::RootJobMarker;
+    type Marker = fkernel::RootJobMarker;
 
-    async fn serve(self: Arc<Self>, mut stream: fboot::RootJobRequestStream) -> Result<(), Error> {
+    async fn serve(
+        self: Arc<Self>,
+        mut stream: fkernel::RootJobRequestStream,
+    ) -> Result<(), Error> {
         let job = job_default();
-        while let Some(fboot::RootJobRequest::Get { responder }) = stream.try_next().await? {
+        while let Some(fkernel::RootJobRequest::Get { responder }) = stream.try_next().await? {
             responder.send(job.duplicate(self.rights)?)?;
         }
         Ok(())
@@ -71,7 +74,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn has_correct_rights() -> Result<(), Error> {
         let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::TRANSFER);
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fboot::RootJobMarker>()?;
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fkernel::RootJobMarker>()?;
         fasync::Task::local(
             root_job.serve(stream).unwrap_or_else(|err| panic!("Error serving root job: {}", err)),
         )
@@ -108,7 +111,7 @@ mod tests {
             provider.open(0, 0, PathBuf::new(), &mut server).await?;
         }
 
-        let client = ClientEnd::<fboot::RootJobMarker>::new(client)
+        let client = ClientEnd::<fkernel::RootJobMarker>::new(client)
             .into_proxy()
             .expect("Failed to create proxy");
         let handle = client.get().await?;

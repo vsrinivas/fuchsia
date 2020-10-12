@@ -47,6 +47,7 @@ zx_library("devmgr-integration-test") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",

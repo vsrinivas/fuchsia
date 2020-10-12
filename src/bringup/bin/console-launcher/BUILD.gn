@@ -28,6 +28,7 @@ source_set("lib") {
   deps = [
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

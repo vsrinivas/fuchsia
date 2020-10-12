@@ -15,7 +15,7 @@
         {
             protocol: [
                 "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.boot.RootJob",
+                "/svc/fuchsia.kernel.RootJob",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",
                 "/svc/fuchsia.sys.Launcher",

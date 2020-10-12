@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
@@ -27,8 +28,8 @@ constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kProfileProviderPath[] = "/svc/" fuchsia_scheduler_ProfileProvider_Name;
 constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
-constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
-constexpr char kRootJobForInspectPath[] = "/svc/" fuchsia_boot_RootJobForInspect_Name;
+constexpr char kRootJobPath[] = "/svc/" fuchsia_kernel_RootJob_Name;
+constexpr char kRootJobForInspectPath[] = "/svc/" fuchsia_kernel_RootJobForInspect_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
@@ -123,8 +124,8 @@ TEST(SvchostTest, FuchsiaRootJobPresent) {
   ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 
   zx::job job;
-  status = fuchsia_boot_RootJobGet(client.get(), job.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobGet failed");
+  status = fuchsia_kernel_RootJobGet(client.get(), job.reset_and_get_address());
+  ASSERT_EQ(ZX_OK, status, "fuchsia_kernel_RootJobGet failed");
 }
 
 TEST(SvchostTest, FuchsiaRootJobForInspectPresent) {
@@ -136,8 +137,8 @@ TEST(SvchostTest, FuchsiaRootJobForInspectPresent) {
   ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 
   zx::job job;
-  status = fuchsia_boot_RootJobForInspectGet(client.get(), job.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobForInspectGet failed");
+  status = fuchsia_kernel_RootJobForInspectGet(client.get(), job.reset_and_get_address());
+  ASSERT_EQ(ZX_OK, status, "fuchsia_kernel_RootJobForInspectGet failed");
   ASSERT_TRUE(job.is_valid());
   zx_info_handle_basic_t info;
   status =

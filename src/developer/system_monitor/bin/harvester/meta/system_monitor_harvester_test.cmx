@@ -2,9 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootJob",
-                "fuchsia.boot.RootJobForInspect",
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats"
             ]
         }
@@ -17,9 +17,9 @@
             "hub"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
-            "fuchsia.boot.RootJobForInspect",
             "fuchsia.boot.RootResource",
+            "fuchsia.kernel.RootJob",
+            "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats"
         ]
     }

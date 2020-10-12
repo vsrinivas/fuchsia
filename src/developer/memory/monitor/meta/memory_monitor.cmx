@@ -10,9 +10,9 @@
             "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.boot.RootJobForInspect",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.CrashReporter",
+            "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",

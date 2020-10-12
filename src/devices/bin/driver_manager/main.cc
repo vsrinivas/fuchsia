@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -77,13 +78,13 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
           bool_resp->values[3], bool_resp->values[4], bool_resp->values[5]};
 }
 
-static const std::string kRootJobPath = "/svc/" + std::string(fuchsia::boot::RootJob::Name_);
+static const std::string kRootJobPath = "/svc/" + std::string(fuchsia::kernel::RootJob::Name_);
 static const std::string kRootResourcePath =
     "/svc/" + std::string(fuchsia::boot::RootResource::Name_);
 
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
-  fuchsia::boot::RootJobSyncPtr root_job_ptr;
+  fuchsia::kernel::RootJobSyncPtr root_job_ptr;
   zx_status_t status =
       fdio_service_connect(kRootJobPath.c_str(), root_job_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {

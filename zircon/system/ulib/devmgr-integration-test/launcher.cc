@@ -5,6 +5,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/exception/llcpp/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -66,10 +67,10 @@ zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
   if (status != ZX_OK) {
     return status;
   }
-  return fuchsia_boot_RootJobGet_reply(txn, job.release());
+  return fuchsia_kernel_RootJobGet_reply(txn, job.release());
 }
 
-constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
+constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
 
@@ -266,8 +267,8 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
                     svc_loop_state_->loop.dispatcher(), items_dispatch,
                     &svc_loop_state_->get_boot_item, &kItemsOps);
 
-  auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
-  CreateFakeService(svc_loop_state_->root, fuchsia_boot_RootJob_Name,
+  auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_kernel_RootJob_dispatch);
+  CreateFakeService(svc_loop_state_->root, fuchsia_kernel_RootJob_Name,
                     svc_loop_state_->loop.dispatcher(), root_job_dispatch, &job_, &kRootJobOps);
 
   CreateFakeCppService(svc_loop_state_->root, llcpp::fuchsia::boot::Arguments::Name,

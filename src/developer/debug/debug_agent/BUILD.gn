@@ -100,8 +100,8 @@ static_library("lib") {
 
   public_deps = [
     "//garnet/lib/process",
-    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.exception",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/syslog/cpp",
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/ipc:client",

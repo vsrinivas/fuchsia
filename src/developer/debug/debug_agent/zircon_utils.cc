@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 
-#include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
@@ -49,10 +49,10 @@ std::string NameForObject(const zx::object_base& object) {
 
 zx::job GetRootJob() {
   zx::job root_job;
-  fuchsia::boot::RootJobSyncPtr root_job_ptr;
+  fuchsia::kernel::RootJobSyncPtr root_job_ptr;
 
   std::string root_job_path("/svc/");
-  root_job_path.append(fuchsia::boot::RootJob::Name_);
+  root_job_path.append(fuchsia::kernel::RootJob::Name_);
 
   zx_status_t status = fdio_service_connect(root_job_path.c_str(),
                                             root_job_ptr.NewRequest().TakeChannel().release());

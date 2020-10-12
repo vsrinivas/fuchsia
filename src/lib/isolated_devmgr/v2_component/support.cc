@@ -4,8 +4,9 @@
 
 // To get drivermanager to run in a test environment, we need to fake boot-arguments & root-job.
 
-#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -25,10 +26,10 @@ static zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
   if (status != ZX_OK) {
     return status;
   }
-  return fuchsia_boot_RootJobGet_reply(txn, out);
+  return fuchsia_kernel_RootJobGet_reply(txn, out);
 }
 
-constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
+constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
 
@@ -47,10 +48,11 @@ int main(void) {
 
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([](zx::channel request, async_dispatcher_t* dispatcher) {
-        auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
+        auto root_job_dispatch =
+            reinterpret_cast<fidl_dispatch_t*>(fuchsia_kernel_RootJob_dispatch);
         fidl_bind(dispatcher, request.release(), root_job_dispatch, nullptr, &kRootJobOps);
       }),
-      llcpp::fuchsia::boot::RootJob::Name);
+      llcpp::fuchsia::kernel::RootJob::Name);
 
   loop.Run();
   return 0;

@@ -59,7 +59,7 @@ mod tests {
         },
         cm_rust::CapabilityNameOrPath,
         fidl::endpoints::ClientEnd,
-        fuchsia_async as fasync,
+        fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
         futures::lock::Mutex,
         std::path::PathBuf,
     };
@@ -93,7 +93,7 @@ mod tests {
         // which would cause a PEER_CLOSED failure. We passed an invalid handle
         // to RootResource because you need a Resource to create another one,
         // which we do not have.
-        ClientEnd::<fboot::RootJobMarker>::new(client)
+        ClientEnd::<fkernel::RootJobMarker>::new(client)
             .into_proxy()
             .expect("Failed to create proxy");
         Ok(())

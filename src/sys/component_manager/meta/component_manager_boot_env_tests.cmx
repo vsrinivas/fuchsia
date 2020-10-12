@@ -2,9 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootJob",
                 "fuchsia.boot.RootResource",
-                "fuchsia.kernel.MmioResource"
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.RootJob"
             ]
         }
     },
@@ -24,10 +24,10 @@
         ],
         "services": [
             "fidl.examples.echo.Echo",
-            "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
             "fuchsia.io.Directory",
             "fuchsia.kernel.MmioResource",
+            "fuchsia.kernel.RootJob",
             "fuchsia.process.Launcher"
         ]
     }

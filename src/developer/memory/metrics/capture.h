@@ -75,10 +75,10 @@ class Capture {
   // the Capture instance to other systems (such as a Digest).
   //
   // Tip: This may require services (in your .cmx file) for
-  //   fuchsia.boot.RootJobForInspect and fuchsia.kernel.Stats, e.g.:
+  //   fuchsia.kernel.RootJobForInspect and fuchsia.kernel.Stats, e.g.:
   //   "sandbox": {
   //       "services": [
-  //           "fuchsia.boot.RootJobForInspect",
+  //           "fuchsia.kernel.RootJobForInspect",
   //           "fuchsia.kernel.Stats",
   //           ...
   static zx_status_t GetCapture(

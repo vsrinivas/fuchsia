@@ -25,7 +25,7 @@ zx_library("task-utils") {
     "walker.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
   ]

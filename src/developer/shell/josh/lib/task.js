@@ -6,7 +6,7 @@
  * @fileoverview Utilities for manipulating and introspecting into tasks.
  */
 
-fidl.loadLibrary('fuchsia.boot');
+fidl.loadLibrary('fuchsia.kernel');
 
 /**
  * Walks the tree of tasks (excluding threads) from a given zx.Job.
@@ -103,7 +103,7 @@ function psJob(rootJob) {
  * and the value is its children.  The root task is in the map with value root.
  */
 async function ps() {
-  let rootJobResult = await svc.fuchsia_boot_RootJob.Get();
+  let rootJobResult = await svc.fuchsia_kernel_RootJob.Get();
   return psJob(rootJobResult['job']);
 }
 
@@ -112,7 +112,7 @@ async function ps() {
  * @param {Number} taskToKillId the task koid
  */
 async function kill(taskToKillId) {
-  let rootJobResult = await svc.fuchsia_boot_RootJob.Get();
+  let rootJobResult = await svc.fuchsia_kernel_RootJob.Get();
   // handle to the task to kill. An array so we can modify it in the callback.
   let killedTask = false;
   walkJobTree(rootJobResult['job'], (o) => {}, (task) => {
@@ -132,7 +132,7 @@ async function kill(taskToKillId) {
  * @param {String} options defaults to empty string, can be 'r' to interpret task name as regex
  */
 async function killall(taskName, options = '') {
-  let rootJobResult = await svc.fuchsia_boot_RootJob.Get();
+  let rootJobResult = await svc.fuchsia_kernel_RootJob.Get();
   // handle to the task to kill. An array so we can modify it in the callback.
   let killedTask = false;
   let matchAsRegex = options.includes('r');

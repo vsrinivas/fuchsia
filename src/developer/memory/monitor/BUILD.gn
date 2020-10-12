@@ -33,7 +33,7 @@ source_set("lib") {
   ]
   deps = [
     ":memory_metrics_registry",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//src/devices/lib/amlogic",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",

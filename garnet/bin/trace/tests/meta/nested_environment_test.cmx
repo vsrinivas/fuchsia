@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootJob"
+                "fuchsia.kernel.RootJob"
             ]
         }
     },
@@ -15,7 +15,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
+            "fuchsia.kernel.RootJob",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry"
         ]

@@ -14,7 +14,7 @@
 //! supported with this flag.
 //!
 //! This approach is a temporary hack. It relies on the fact that the root job is available on
-//! certain builds and to v1 test components through the fuchsia.boot.RootJob service.
+//! certain builds and to v1 test components through the fuchsia.kernel.RootJob service.
 //!
 //! TODO: Figure out a better way to run these tests.
 
@@ -120,9 +120,9 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn get_root_job() -> Result<zx::Job, Error> {
-    let (proxy, server_end) = fidl::endpoints::create_proxy::<fboot::RootJobMarker>()?;
-    fdio::service_connect("/svc/fuchsia.boot.RootJob", server_end.into_channel())
-        .context("Failed to connect to fuchsia.boot.RootJob service")?;
+    let (proxy, server_end) = fidl::endpoints::create_proxy::<fkernel::RootJobMarker>()?;
+    fdio::service_connect("/svc/fuchsia.kernel.RootJob", server_end.into_channel())
+        .context("Failed to connect to fuchsia.kernel.RootJob service")?;
 
     let job = proxy.get().await?;
     Ok(job)

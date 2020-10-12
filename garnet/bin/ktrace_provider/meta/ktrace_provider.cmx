@@ -5,7 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.boot.ReadOnlyLog",
-            "fuchsia.boot.RootJob",
+            "fuchsia.kernel.RootJob",
             "fuchsia.logger.LogSink",
             "fuchsia.tracing.kernel.Controller",
             "fuchsia.tracing.kernel.Reader",

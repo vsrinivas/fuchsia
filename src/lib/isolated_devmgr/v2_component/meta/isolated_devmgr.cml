@@ -24,7 +24,7 @@
         {
             protocol: [
                 "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.boot.RootJob",
+                "/svc/fuchsia.kernel.RootJob",
             ],
             from: "self",
             to: [ "#driver_manager_test" ],

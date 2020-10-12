@@ -54,6 +54,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/syslog/cpp",
     "//src/developer/memory/metrics",
     "//src/developer/system_monitor/lib/dockyard:lib",

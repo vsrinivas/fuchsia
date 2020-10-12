@@ -4,7 +4,7 @@
 
 #include "task_tree.h"
 
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -19,8 +19,9 @@ namespace harvester {
 const size_t kNumInitialKoids = 128;
 const size_t kNumExtraKoids = 10;
 
-zx_status_t TaskTree::GatherChildKoids(zx_handle_t parent, zx_koid_t parent_koid,
-                                       int children_kind, const char* kind_name,
+zx_status_t TaskTree::GatherChildKoids(zx_handle_t parent,
+                                       zx_koid_t parent_koid, int children_kind,
+                                       const char* kind_name,
                                        std::vector<zx_koid_t>& child_koids) {
   size_t actual = 0;
   size_t available = 0;
@@ -35,8 +36,9 @@ zx_status_t TaskTree::GatherChildKoids(zx_handle_t parent, zx_koid_t parent_koid
                                 &available);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
-                     << kind_name << ", ...) failed: "
-                     << zx_status_get_string(status) << " (" << status << ")";
+                     << kind_name
+                     << ", ...) failed: " << zx_status_get_string(status)
+                     << " (" << status << ")";
       // On error, empty child_koids so we don't pass through invalid
       // information.
       child_koids.clear();
@@ -51,7 +53,7 @@ zx_status_t TaskTree::GatherChildKoids(zx_handle_t parent, zx_koid_t parent_koid
 
   // If we're still too small at least warn the user.
   if (actual < available) {
-    FX_LOGS(WARNING) <<  "zx_object_get_info(" << parent_koid << ", "
+    FX_LOGS(WARNING) << "zx_object_get_info(" << parent_koid << ", "
                      << kind_name << ", ...) truncated " << (available - actual)
                      << "/" << available << " results";
   }
@@ -77,8 +79,9 @@ zx_status_t TaskTree::GetHandleForChildKoid(zx_koid_t child_koid,
                                            ZX_RIGHT_SAME_RIGHTS, child_handle);
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "zx_object_get_child(" << parent_koid << ", (job)"
-                     << child_koid << ", ...) failed: "
-                     << zx_status_get_string(status) << " (" << status << ")";
+                     << child_koid
+                     << ", ...) failed: " << zx_status_get_string(status)
+                     << " (" << status << ")";
   } else {
     koids_to_handles_.insert(
         std::pair<zx_koid_t, zx_handle_t>(child_koid, *child_handle));
@@ -105,8 +108,8 @@ void TaskTree::GatherThreadsForProcess(zx_handle_t parent_process,
   for (zx_koid_t koid : koids) {
     zx_handle_t next_thread_handle;
 
-     status = GetHandleForChildKoid(koid, parent_process, parent_process_koid,
-                                    &next_thread_handle);
+    status = GetHandleForChildKoid(koid, parent_process, parent_process_koid,
+                                   &next_thread_handle);
 
     if (status == ZX_OK) {
       // Store the thread / koid / parent process triple.
@@ -163,9 +166,8 @@ void TaskTree::GatherProcessesAndJobsForJob(zx_handle_t parent_job,
   for (zx_koid_t koid : koids) {
     zx_handle_t child_job_handle;
 
-    status =
-        GetHandleForChildKoid(koid, parent_job, parent_job_koid,
-                              &child_job_handle);
+    status = GetHandleForChildKoid(koid, parent_job, parent_job_koid,
+                                   &child_job_handle);
 
     if (status == ZX_OK) {
       // Store the child job / koid / parent job triple.
@@ -185,9 +187,11 @@ void TaskTree::GatherJobs() {
     return;
   }
 
-  status = fdio_service_connect("/svc/fuchsia.boot.RootJob", remote.release());
+  status =
+      fdio_service_connect("/svc/fuchsia.kernel.RootJob", remote.release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot open fuchsia.boot.RootJob: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cannot open fuchsia.kernel.RootJob: "
+                   << zx_status_get_string(status);
     return;
   }
 
@@ -198,7 +202,7 @@ void TaskTree::GatherJobs() {
   if (it != koids_to_handles_.end()) {
     root_job = it->second;
   } else {
-    zx_status_t fidl_status = fuchsia_boot_RootJobGet(local.get(), &root_job);
+    zx_status_t fidl_status = fuchsia_kernel_RootJobGet(local.get(), &root_job);
     if (fidl_status != ZX_OK) {
       FX_LOGS(ERROR) << "Cannot obtain root job";
       return;

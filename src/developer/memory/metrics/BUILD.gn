@@ -22,7 +22,7 @@ source_set("metrics") {
   public_deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/task-utils",

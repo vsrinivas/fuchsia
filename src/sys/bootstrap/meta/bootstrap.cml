@@ -73,8 +73,8 @@
             protocol: [
                 "/svc/fuchsia.boot.FactoryItems",
                 "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.boot.RootJob",
-                "/svc/fuchsia.boot.RootJobForInspect",
+                "/svc/fuchsia.kernel.RootJob",
+                "/svc/fuchsia.kernel.RootJobForInspect",
             ],
             from: "parent",
             to: [

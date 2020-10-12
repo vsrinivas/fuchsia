@@ -5,6 +5,7 @@
 #include "system_instance.h"
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -19,6 +20,7 @@
 #include <zxtest/zxtest.h>
 
 namespace fboot = ::llcpp::fuchsia::boot;
+namespace fkernel = ::llcpp::fuchsia::kernel;
 
 namespace {
 
@@ -30,12 +32,12 @@ zx_status_t get_root_job(zx::job* root_job) {
     return status;
   }
 
-  status = fdio_service_connect("/svc/fuchsia.boot.RootJob", remote.release());
+  status = fdio_service_connect("/svc/fuchsia.kernel.RootJob", remote.release());
   if (status != ZX_OK) {
     return status;
   }
 
-  fboot::RootJob::SyncClient client{std::move(local)};
+  fkernel::RootJob::SyncClient client{std::move(local)};
   auto result = client.Get();
   if (!result.ok()) {
     return result.status();

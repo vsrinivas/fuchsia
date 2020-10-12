@@ -87,9 +87,9 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "pkgfs/versions. go/no-pkgfs-versions";
     return std::nullopt;
   }
-  if (sandbox.HasService("fuchsia.boot.RootJob") && !CheckRootJob(pkg_url)) {
+  if (sandbox.HasService("fuchsia.kernel.RootJob") && !CheckRootJob(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "fuchsia.boot.RootJob";
+                   << "fuchsia.kernel.RootJob";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.boot.RootResource") && !CheckRootResource(pkg_url)) {

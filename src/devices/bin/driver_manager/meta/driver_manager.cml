@@ -84,8 +84,6 @@
                 "/svc/fuchsia.boot.FactoryItems",
                 "/svc/fuchsia.boot.Items",
                 "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.boot.RootJob",
-                "/svc/fuchsia.boot.RootJobForInspect",
                 "/svc/fuchsia.boot.RootResource",
                 "/svc/fuchsia.boot.WriteOnlyLog",
 
@@ -108,6 +106,8 @@
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Counter",
+                "/svc/fuchsia.kernel.RootJob",
+                "/svc/fuchsia.kernel.RootJobForInspect",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.logger.LogSink",

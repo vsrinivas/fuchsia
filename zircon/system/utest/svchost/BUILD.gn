@@ -21,6 +21,7 @@ test("svchost") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",

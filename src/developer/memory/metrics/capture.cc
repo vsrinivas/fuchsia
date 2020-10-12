@@ -5,7 +5,7 @@
 #include "src/developer/memory/metrics/capture.h"
 
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -52,14 +52,14 @@ class OSImpl : public OS, public TaskEnumerator {
     if (status != ZX_OK) {
       return status;
     }
-    const char* root_job_svc = "/svc/fuchsia.boot.RootJobForInspect";
+    const char* root_job_svc = "/svc/fuchsia.kernel.RootJobForInspect";
     status = fdio_service_connect(root_job_svc, remote.release());
     if (status != ZX_OK) {
       return status;
     }
 
     zx::job root_job;
-    status = fuchsia_boot_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
+    status = fuchsia_kernel_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }

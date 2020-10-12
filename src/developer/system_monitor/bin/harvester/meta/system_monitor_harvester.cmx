@@ -7,9 +7,9 @@
             "hub"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
-            "fuchsia.boot.RootJobForInspect",
             "fuchsia.boot.RootResource",
+            "fuchsia.kernel.RootJob",
+            "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",

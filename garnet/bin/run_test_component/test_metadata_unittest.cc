@@ -237,12 +237,12 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
       "system-services": [
         "fuchsia.boot.FactoryItems",
         "fuchsia.boot.ReadOnlyLog",
-        "fuchsia.boot.RootJob",
         "fuchsia.boot.RootResource",
         "fuchsia.boot.WriteOnlyLog",
         "fuchsia.device.NameProvider",
         "fuchsia.kernel.Counter",
         "fuchsia.kernel.MmioResource",
+        "fuchsia.kernel.RootJob",
         "fuchsia.scheduler.ProfileProvider",
         "fuchsia.sys.test.CacheControl",
         "fuchsia.sysmem.Allocator",
@@ -260,9 +260,9 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
         tm.system_services(),
         ::testing::ElementsAre(
             fuchsia::boot::FactoryItems::Name_, fuchsia::boot::ReadOnlyLog::Name_,
-            fuchsia::boot::RootJob::Name_, fuchsia::boot::RootResource::Name_,
-            fuchsia::boot::WriteOnlyLog::Name_, fuchsia::device::NameProvider::Name_,
-            fuchsia::kernel::Counter::Name_, fuchsia::kernel::MmioResource::Name_,
+            fuchsia::boot::RootResource::Name_, fuchsia::boot::WriteOnlyLog::Name_,
+            fuchsia::device::NameProvider::Name_, fuchsia::kernel::Counter::Name_,
+            fuchsia::kernel::MmioResource::Name_, fuchsia::kernel::RootJob::Name_,
             fuchsia::scheduler::ProfileProvider::Name_, fuchsia::sys::test::CacheControl::Name_,
             fuchsia::sysmem::Allocator::Name_, fuchsia::ui::scenic::Scenic::Name_,
             fuchsia::ui::policy::Presenter::Name_, fuchsia::vulkan::loader::Loader::Name_));

@@ -10,8 +10,8 @@
             "shell-commands"
         ],
         "services": [
-            "fuchsia.boot.RootJob",
             "fuchsia.exception.ProcessLimbo",
+            "fuchsia.kernel.RootJob",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",

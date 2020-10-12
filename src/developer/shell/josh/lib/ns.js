@@ -190,16 +190,16 @@ async function ls(pathString) {
         const svc = {};
         const svcNames = [];
         for (const service of svcDir) {
-          // serviceName looks like "fuchsia.boot.RootJob"
+          // serviceName looks like "fuchsia.kernel.RootJob"
           const serviceName = service.name;
           // Mangle service names to be valid JS identifiers
-          // proxyName looks like "fuchsia_boot_RootJob"
+          // proxyName looks like "fuchsia_kernel_RootJob"
           const proxyName = serviceName.replace(/\./g, '_');
           svcNames.push(proxyName);
           const idx = serviceName.lastIndexOf('.');
           // name looks like "RootJob"
           const name = serviceName.substr(idx + 1);
-          // libraryName looks like "fuchsia.boot"
+          // libraryName looks like "fuchsia.kernel"
           const libraryName = serviceName.substr(0, idx);
           // Define a getter that connects to the service
           // TODO: should this cache connections until their handles close?

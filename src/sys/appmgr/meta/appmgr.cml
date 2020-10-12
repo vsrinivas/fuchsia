@@ -85,12 +85,12 @@
             as: "/svc_for_sys/fuchsia.boot.ReadOnlyLog",
         },
         {
-            protocol: "/svc/fuchsia.boot.RootJob",
-            as: "/svc_for_sys/fuchsia.boot.RootJob",
+            protocol: "/svc/fuchsia.kernel.RootJob",
+            as: "/svc_for_sys/fuchsia.kernel.RootJob",
         },
         {
-            protocol: "/svc/fuchsia.boot.RootJobForInspect",
-            as: "/svc_for_sys/fuchsia.boot.RootJobForInspect",
+            protocol: "/svc/fuchsia.kernel.RootJobForInspect",
+            as: "/svc_for_sys/fuchsia.kernel.RootJobForInspect",
         },
         {
             protocol: "/svc/fuchsia.boot.RootResource",

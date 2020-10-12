@@ -64,8 +64,8 @@ TEST_F(TaskTest, Kill) {
   // get root job, to create a subprocess of it, that will be dicoverable in the job tree
   js_std_loop(ctx_->Get());
   std::string test_string0 = R"(
-      fidl.loadLibrary('fuchsia.boot');
-      let promiseRootJobResult = svc.fuchsia_boot_RootJob.Get();
+      fidl.loadLibrary('fuchsia.kernel');
+      let promiseRootJobResult = svc.fuchsia_kernel_RootJob.Get();
       promiseRootJobResult.
               then((result) => {
                   globalThis.resultOne = result; })
@@ -129,8 +129,8 @@ TEST_F(TaskTest, KillAll) {
   // get root job, to create a subprocess of it, that will be dicoverable in the job tree
   js_std_loop(ctx_->Get());
   std::string test_string0 = R"(
-      fidl.loadLibrary('fuchsia.boot');
-      let promiseRootJobResult = svc.fuchsia_boot_RootJob.Get();
+      fidl.loadLibrary('fuchsia.kernel');
+      let promiseRootJobResult = svc.fuchsia_kernel_RootJob.Get();
       promiseRootJobResult.
               then((result) => {
                   globalThis.resultOne = result; })

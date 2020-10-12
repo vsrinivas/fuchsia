@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
@@ -26,7 +27,7 @@ namespace {
 // Get the root job from the root job service.
 zx_status_t GetRootJob(zx::job* root_job) {
   auto svc_dir = sys::ServiceDirectory::CreateFromNamespace();
-  fuchsia::boot::RootJobSyncPtr root_job_ptr;
+  fuchsia::kernel::RootJobSyncPtr root_job_ptr;
   zx_status_t status = svc_dir->Connect(root_job_ptr.NewRequest());
   if (status != ZX_OK) {
     return status;

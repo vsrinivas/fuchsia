@@ -4,7 +4,7 @@
 
 #include "src/developer/memory/monitor/pressure_observer.h"
 
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -45,7 +45,7 @@ zx_status_t PressureObserver::InitMemPressureEvents() {
     FX_LOGS(ERROR) << "zx::channel::create returned " << zx_status_get_string(status);
     return status;
   }
-  const char* root_job_svc = "/svc/fuchsia.boot.RootJobForInspect";
+  const char* root_job_svc = "/svc/fuchsia.kernel.RootJobForInspect";
   status = fdio_service_connect(root_job_svc, remote.release());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "fdio_service_connect returned " << zx_status_get_string(status);
@@ -53,9 +53,10 @@ zx_status_t PressureObserver::InitMemPressureEvents() {
   }
 
   zx::job root_job;
-  status = fuchsia_boot_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
+  status = fuchsia_kernel_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "fuchsia_boot_RootJobForInspectGet returned " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "fuchsia_kernel_RootJobForInspectGet returned "
+                   << zx_status_get_string(status);
     return status;
   }
 
