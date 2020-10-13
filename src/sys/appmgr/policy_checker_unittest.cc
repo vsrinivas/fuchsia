@@ -384,6 +384,40 @@ TEST_F(PolicyCheckerTest, RootResourcePolicy) {
   EXPECT_FALSE(policy_checker.CheckRootResource(fp));
 }
 
+TEST_F(PolicyCheckerTest, SystemUpdaterPolicy) {
+  static constexpr char kFile[] = R"F(
+  fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
+  )F";
+
+  // Stub out a dispatcher.  We won't actually run anything on it, but some
+  // things in PolicyChecker assert they can grab the implicit default eventloop, so
+  // keep them happy.
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+
+  // Add the allowlist.
+  ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
+  auto filename = NewFile(dir, "allowlist/system_updater.txt", kFile);
+
+  FuchsiaPkgUrl fp;
+  PolicyChecker policy_checker(std::move(dirfd));
+
+  // "Vanilla" package url, without variant or hash
+  fp.Parse("fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx");
+  EXPECT_TRUE(policy_checker.CheckSystemUpdater(fp));
+
+  // Variants and hashes should be thrown away
+  fp.Parse("fuchsia-pkg://fuchsia.com/system-update-checker/0?hash=123#meta/system-update-checker.cmx");
+  EXPECT_TRUE(policy_checker.CheckSystemUpdater(fp));
+
+  // Check exclusion
+  fp.Parse("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx");
+  EXPECT_FALSE(policy_checker.CheckSystemUpdater(fp));
+}
+
 TEST_F(PolicyCheckerTest, VmexResourcePolicy) {
   static constexpr char kFile[] = R"F(
   fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx

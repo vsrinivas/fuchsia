@@ -22,6 +22,7 @@ constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
 constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
 constexpr char kRootJobAllowList[] = "allowlist/root_job.txt";
 constexpr char kRootResourceAllowList[] = "allowlist/root_resource.txt";
+constexpr char kSystemUpdaterAllowList[] = "allowlist/system_updater.txt";
 constexpr char kVmexResourceAllowList[] = "allowlist/vmex_resource.txt";
 
 }  // end of namespace.
@@ -80,6 +81,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasService("fuchsia.pkg.PackageCache") && !CheckPackageCache(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.pkg.PackageCache. go/no-package-cache";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.update.installer.Installer") && !CheckSystemUpdater(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.update.installer.Installer.";
     return std::nullopt;
   }
   if (sandbox.HasPkgFsPath("versions") && !CheckPkgFsVersions(pkg_url)) {
@@ -163,6 +169,11 @@ bool PolicyChecker::CheckRootJob(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckRootResource(const FuchsiaPkgUrl& pkg_url) {
   AllowList root_resource_allowlist(config_, kRootResourceAllowList);
   return root_resource_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckSystemUpdater(const FuchsiaPkgUrl& pkg_url) {
+  AllowList system_updater_allowlist(config_, kSystemUpdaterAllowList);
+  return system_updater_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckVmexResource(const FuchsiaPkgUrl& pkg_url) {
