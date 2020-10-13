@@ -128,7 +128,7 @@ mod tests {
             let shared_data = EventMetadata {
                 component_id: MONIKER_ID.clone(),
                 component_url: LEGACY_URL.clone(),
-                timestamp: zx::Time::get(zx::ClockId::Monotonic),
+                timestamp: zx::Time::get_monotonic(),
             };
 
             sender
@@ -156,7 +156,7 @@ mod tests {
             let shared_data = EventMetadata {
                 component_id: LEGACY_ID.clone(),
                 component_url: LEGACY_URL.clone(),
-                timestamp: zx::Time::get(zx::ClockId::Monotonic),
+                timestamp: zx::Time::get_monotonic(),
             };
 
             sender

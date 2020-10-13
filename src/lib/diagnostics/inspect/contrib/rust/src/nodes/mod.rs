@@ -19,7 +19,7 @@ pub trait NodeExt {
 
 impl NodeExt for Node {
     fn create_time(&self, name: impl AsRef<str>) -> TimeProperty {
-        let now = zx::Time::get(zx::ClockId::Monotonic);
+        let now = zx::Time::get_monotonic();
         self.create_time_at(name, now)
     }
 
@@ -34,7 +34,7 @@ pub struct TimeProperty {
 
 impl TimeProperty {
     pub fn update(&self) {
-        let now = zx::Time::get(zx::ClockId::Monotonic);
+        let now = zx::Time::get_monotonic();
         self.set_at(now);
     }
 

@@ -1129,7 +1129,7 @@ impl Inner {
 
     fn now(&self) -> Time {
         match &self.time {
-            ExecutorTime::RealTime => Time::from_zx(zx::Time::get(zx::ClockId::Monotonic)),
+            ExecutorTime::RealTime => Time::from_zx(zx::Time::get_monotonic()),
             ExecutorTime::FakeTime(t) => Time::from_nanos(t.load(Ordering::Relaxed)),
         }
     }

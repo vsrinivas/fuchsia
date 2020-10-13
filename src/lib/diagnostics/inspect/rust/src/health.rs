@@ -129,7 +129,7 @@ impl Node {
     /// Creates a new health checking node as a child of `parent`.  The initial observed state
     /// is `STARTING_UP`, and remains so until the programs call one of `set_ok` or `set_unhealthy`.
     pub fn new(parent: &super::Node) -> Self {
-        Self::new_internal(parent, zx::Time::get(zx::ClockId::Monotonic))
+        Self::new_internal(parent, zx::Time::get_monotonic())
     }
 
     // Creates a health node using a specified timestamp. Useful for tests.

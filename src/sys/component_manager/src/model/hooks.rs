@@ -381,7 +381,7 @@ pub struct Event {
 
 impl Event {
     pub fn new(realm: &Arc<Realm>, result: EventResult) -> Self {
-        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        let timestamp = zx::Time::get_monotonic();
         Self::new_with_timestamp(realm, result, timestamp)
     }
 
@@ -403,7 +403,7 @@ impl Event {
         target_moniker: AbsoluteMoniker,
         component_url: impl Into<String>,
     ) -> Self {
-        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
             target_moniker,
             component_url.into(),
@@ -418,7 +418,7 @@ impl Event {
         component_url: impl Into<String>,
         result: EventResult,
     ) -> Self {
-        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        let timestamp = zx::Time::get_monotonic();
         Self::new_internal(target_moniker, component_url.into(), timestamp, result)
     }
 

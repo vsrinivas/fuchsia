@@ -976,7 +976,7 @@ impl Runtime {
         exposed_dir: ExposedDir,
         controller: Option<fcrunner::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
-        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        let timestamp = zx::Time::get_monotonic();
         Ok(Runtime {
             resolved_url,
             namespace,

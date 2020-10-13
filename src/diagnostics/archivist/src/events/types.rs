@@ -143,7 +143,7 @@ impl TryFrom<SourceIdentity> for EventMetadata {
         Ok(EventMetadata {
             component_id,
             component_url: component.component_url,
-            timestamp: zx::Time::get(zx::ClockId::Monotonic),
+            timestamp: zx::Time::get_monotonic(),
         })
     }
 }

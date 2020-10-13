@@ -103,7 +103,7 @@ impl Message {
             data: LogsData::for_logs(
                 EMPTY_IDENTITY.moniker(),
                 Some(LogsHierarchy::new_root()), // payload
-                zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                zx::Time::get_monotonic().into_nanos(),
                 EMPTY_IDENTITY.url(),
                 Severity::Warn,
                 0, // size_bytes

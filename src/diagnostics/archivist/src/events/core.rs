@@ -100,7 +100,7 @@ pub mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                 }),
-                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
+                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send started event ok");
@@ -116,7 +116,7 @@ pub mod tests {
                 event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
                     fsys::RunningPayload { started_timestamp: Some(0) },
                 ))),
-                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
+                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send running event ok");
@@ -136,7 +136,7 @@ pub mod tests {
                         node: Some(node),
                     }),
                 )),
-                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
+                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send diagnostics ready event ok");
@@ -149,7 +149,7 @@ pub mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                 }),
-                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
+                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send stopped event ok");
@@ -159,7 +159,7 @@ pub mod tests {
         let shared_data = EventMetadata {
             component_id: expected_component_id.clone(),
             component_url: "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string(),
-            timestamp: zx::Time::get(zx::ClockId::Monotonic),
+            timestamp: zx::Time::get_monotonic(),
         };
         // Assert the first received event was a Start event.
         let event = event_stream.next().await.unwrap();
