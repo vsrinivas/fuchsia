@@ -62,6 +62,8 @@ template("_banjo_library_sdk") {
 
     inputs = sdk_metas
 
+    sources = sdk_sources
+
     outputs = [ meta_file ]
 
     args = [
@@ -258,7 +260,11 @@ template("banjo_library") {
     output = target[4]
 
     compiled_action(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "sources",
+                               "testonly",
+                             ])
 
       visibility = [ ":*" ]
 
