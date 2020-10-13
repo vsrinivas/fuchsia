@@ -168,8 +168,7 @@ mod tests {
     use super::*;
 
     use crate::rfcomm::{
-        frame::Encodable,
-        session::tests::make_sabm_command,
+        frame::{Encodable, Frame},
         types::{Role, DLCI},
     };
 
@@ -278,7 +277,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut remote_fut).is_pending());
 
         // Remote device requests to start up session multiplexer.
-        let sabm = make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        let sabm = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
         let mut buf = vec![0; sabm.encoded_len()];
         assert!(sabm.encode(&mut buf[..]).is_ok());
         assert!(remote.as_ref().write(&buf).is_ok());
@@ -289,7 +288,7 @@ mod tests {
         // Remote device requests to open up an RFCOMM channel. The DLCI is the ServerChannel
         // tagged with a direction bit = 0 (since we are responder role).
         let user_dlci = DLCI::try_from(first_channel.0 << 1).unwrap();
-        let user_sabm = make_sabm_command(Role::Initiator, user_dlci);
+        let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
         let mut buf = vec![0; sabm.encoded_len()];
         assert!(user_sabm.encode(&mut buf[..]).is_ok());
         assert!(remote.as_ref().write(&buf).is_ok());

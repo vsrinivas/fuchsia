@@ -14,7 +14,7 @@ use {
         Future, FutureExt, SinkExt, StreamExt,
     },
     log::{error, info, trace, warn},
-    std::{collections::HashMap, convert::TryInto},
+    std::{collections::hash_map::Entry, collections::HashMap, convert::TryInto},
 };
 
 use crate::rfcomm::channel::SessionChannel;
@@ -279,6 +279,9 @@ pub struct SessionInner {
     /// RFCOMM channels.
     multiplexer: SessionMultiplexer,
 
+    /// Outstanding frames that have been sent to the remote peer and are awaiting responses.
+    outstanding_frames: HashMap<DLCI, Frame>,
+
     /// Sender used to relay outgoing frames to be sent to the remote peer.
     outgoing_frame_sender: mpsc::Sender<Frame>,
 
@@ -300,6 +303,7 @@ impl SessionInner {
     ) -> impl Future<Output = Result<(), Error>> {
         let session = Self {
             multiplexer: SessionMultiplexer::create(),
+            outstanding_frames: HashMap::new(),
             outgoing_frame_sender,
             channel_opened_fn,
         };
@@ -365,6 +369,23 @@ impl SessionInner {
             .map_err(|e| format_err!("{:?}", e).into())
     }
 
+    /// Attempts to initiate multiplexer startup by sending an SABM command over the
+    /// Mux Control DLCI.
+    // TODO(fxbug.dev/59585): Remove this when full initiator role is supported.
+    #[cfg(test)]
+    async fn start_multiplexer(&mut self) -> Result<(), RfcommError> {
+        if self.multiplexer().started() || self.role() == Role::Negotiating {
+            warn!("StartMultiplexer request when multiplexer has role: {:?}", self.role());
+            return Err(RfcommError::MultiplexerAlreadyStarted);
+        }
+        self.multiplexer().set_role(Role::Negotiating);
+
+        // Send an SABM command to initiate mux startup with the remote peer.
+        let sabm_command = Frame::make_sabm_command(self.role(), DLCI::MUX_CONTROL_DLCI);
+        self.send_frame(sabm_command).await;
+        Ok(())
+    }
+
     /// Handles an SABM command over the given `dlci` and sends a response frame to the remote peer.
     ///
     /// There are two important cases:
@@ -389,7 +410,7 @@ impl SessionInner {
                     // We're currently negotiating the multiplexer role. We should send a DM, and
                     // attempt to restart the multiplexer after a random interval. See RFCOMM 5.2.1
                     self.send_dm_response(dlci).await
-                    // TODO(fxbug.dev/59585): When we support the INT role, we should attempt to
+                    // TODO(fxbug.dev/61852): When we support the INT role, we should attempt to
                     // restart the multiplexer.
                 }
                 _role => {
@@ -511,6 +532,34 @@ impl SessionInner {
         }
     }
 
+    /// Handles an UnnumberedAcknowledgement response over the provided `dlci`.
+    fn handle_ua_response(&mut self, dlci: DLCI) {
+        match self.outstanding_frames.remove(&dlci) {
+            Some(frame) => {
+                match frame.data {
+                    FrameData::SetAsynchronousBalancedMode if dlci.is_mux_control() => {
+                        // If we are not negotiating anymore, mux startup was either canceled
+                        // or completed. No need to do anything.
+                        if self.role() != Role::Negotiating {
+                            trace!("Received response when mux startup was either canceled or completed: {:?}", self.role());
+                            return;
+                        }
+                        // Otherwise, assume the initiator role and complete startup.
+                        if let Err(e) = self.multiplexer().start(Role::Initiator) {
+                            warn!("Mux startup failed with error: {:?}", e);
+                        }
+                    }
+                    _frame_type => {
+                        // TODO(fxbug.dev/59585): Handle UA response for other frame types.
+                    }
+                }
+            }
+            None => {
+                warn!("Received unexpected UA response over DLCI: {:?}", dlci);
+            }
+        }
+    }
+
     /// Handles an incoming Frame received from the peer. Returns a flag indicating whether
     /// the session should terminate, or an error if the frame was unable to be handled.
     async fn handle_frame(&mut self, frame: Frame) -> Result<bool, RfcommError> {
@@ -518,8 +567,11 @@ impl SessionInner {
             FrameData::SetAsynchronousBalancedMode => {
                 self.handle_sabm_command(frame.dlci).await;
             }
-            FrameData::UnnumberedAcknowledgement | FrameData::DisconnectedMode => {
-                // TODO(fxbug.dev/59585): Handle UA and DM responses when the initiator role is
+            FrameData::UnnumberedAcknowledgement => {
+                self.handle_ua_response(frame.dlci);
+            }
+            FrameData::DisconnectedMode => {
+                // TODO(fxbug.dev/59585): Handle DM response when the initiator role is
                 // supported.
                 return Err(RfcommError::NotImplemented);
             }
@@ -570,6 +622,19 @@ impl SessionInner {
 
     /// Sends the `frame` to the remote peer using the `outgoing_frame_sender`.
     async fn send_frame(&mut self, frame: Frame) {
+        // There can only be one outstanding command frame with P/F = 1 per DLCI. See GSM 5.4.4.1.
+        if frame.command_response == CommandResponse::Command && frame.poll_final {
+            match self.outstanding_frames.entry(frame.dlci) {
+                Entry::Occupied(_) => {
+                    // TODO(fxbug.dev/60900): Our implementation should never try to send more
+                    // than one command frame on the same DLCI. However, it may make sense to
+                    // queue the frame to be sent later.
+                    error!("Attempting to send frame when outstanding frame exists.");
+                    return;
+                }
+                Entry::Vacant(entry) => entry.insert(frame.clone()),
+            };
+        }
         // Result of this send doesn't matter since failure indicates
         // peer disconnection.
         let _ = self.outgoing_frame_sender.send(frame).await;
@@ -729,7 +794,7 @@ impl Session {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::*;
 
     use fuchsia_async as fasync;
@@ -738,17 +803,6 @@ pub(crate) mod tests {
     use std::convert::TryFrom;
 
     use crate::rfcomm::frame::{mux_commands::*, FrameTypeMarker};
-
-    pub(crate) fn make_sabm_command(role: Role, dlci: DLCI) -> Frame {
-        Frame {
-            role,
-            dlci,
-            data: FrameData::SetAsynchronousBalancedMode,
-            poll_final: true,
-            command_response: CommandResponse::Command,
-            credits: None,
-        }
-    }
 
     /// Makes a DLC PN frame with arbitrary command parameters.
     /// `command_response` indicates whether the frame should be a command or response.
@@ -801,6 +855,7 @@ pub(crate) mod tests {
         let (outgoing_frame_sender, outgoing_frames) = mpsc::channel(0);
         let session = SessionInner {
             multiplexer: SessionMultiplexer::create(),
+            outstanding_frames: HashMap::new(),
             outgoing_frame_sender,
             channel_opened_fn,
         };
@@ -894,7 +949,7 @@ pub(crate) mod tests {
         assert_eq!(session.role(), Role::Unassigned);
 
         // Expect a DM response due to user DLCI SABM before Mux DLCI SABM.
-        let sabm = make_sabm_command(Role::Initiator, DLCI::try_from(3).unwrap());
+        let sabm = Frame::make_sabm_command(Role::Initiator, DLCI::try_from(3).unwrap());
         handle_and_expect_frame(
             &mut exec,
             &mut session,
@@ -911,7 +966,7 @@ pub(crate) mod tests {
         let (mut session, mut outgoing_frames) = setup_session();
 
         // Remote sends us an SABM command - expect a positive UA response.
-        let sabm = make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        let sabm = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
         handle_and_expect_frame(
             &mut exec,
             &mut session,
@@ -934,7 +989,7 @@ pub(crate) mod tests {
 
         // Remote sends us a SABM command on the Mux Control DLCI after the multiplexer has
         // already started. We expect to reject this with a DM response.
-        let sabm = make_sabm_command(Role::Initiator, DLCI::MUX_CONTROL_DLCI);
+        let sabm = Frame::make_sabm_command(Role::Initiator, DLCI::MUX_CONTROL_DLCI);
         handle_and_expect_frame(
             &mut exec,
             &mut session,
@@ -1025,7 +1080,7 @@ pub(crate) mod tests {
         // Remote peer sends SABM over a user DLCI - this will establish the DLCI.
         let generic_dlci = 6;
         let user_dlci = DLCI::try_from(generic_dlci).unwrap();
-        let user_sabm = make_sabm_command(Role::Initiator, user_dlci);
+        let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
         let _channel = {
             let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
             let mut handle_fut = Box::pin(session.handle_frame(user_sabm));
@@ -1073,7 +1128,7 @@ pub(crate) mod tests {
         // Remote peer sends SABM over a user DLCI - we expect a UA response.
         let random_dlci = 8;
         let user_dlci = DLCI::try_from(random_dlci).unwrap();
-        let user_sabm = make_sabm_command(Role::Initiator, user_dlci);
+        let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
         {
             let mut handle_fut = Box::pin(session.handle_frame(user_sabm));
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
@@ -1106,7 +1161,7 @@ pub(crate) mod tests {
         // Remote peer sends SABM over a user DLCI - this should be rejected with a
         // DM response frame because channel delivery failed.
         let user_dlci = DLCI::try_from(6).unwrap();
-        let user_sabm = make_sabm_command(Role::Initiator, user_dlci);
+        let user_sabm = Frame::make_sabm_command(Role::Initiator, user_dlci);
         handle_and_expect_frame(
             &mut exec,
             &mut session,
@@ -1264,7 +1319,7 @@ pub(crate) mod tests {
         assert!(exec.run_until_stalled(&mut remote_closed_fut).is_pending());
 
         // Remote sends SABM to start up session multiplexer.
-        let sabm = make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        let sabm = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
         let mut buf = vec![0; sabm.encoded_len()];
         assert!(sabm.encode(&mut buf).is_ok());
         remote.as_ref().write(&buf).expect("Should send");
@@ -1280,5 +1335,48 @@ pub(crate) mod tests {
         assert!(exec.run_until_stalled(&mut session_fut).is_ready());
         // Remote should be closed, since the session has terminated.
         assert!(exec.run_until_stalled(&mut remote_closed_fut).is_ready());
+    }
+
+    #[test]
+    fn test_start_multiplexer() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (mut session, mut outgoing_frames) = setup_session();
+        assert!(!session.multiplexer().started());
+        let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
+
+        // Initiate multiplexer startup - we expect to send a SABM frame.
+        {
+            let mut start_mux_fut = Box::pin(session.start_multiplexer());
+            assert!(exec.run_until_stalled(&mut start_mux_fut).is_pending());
+            // The outgoing frame should be an SABM.
+            match exec.run_until_stalled(&mut expected_outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_eq!(frame.data, FrameData::SetAsynchronousBalancedMode);
+                    assert_eq!(frame.dlci, DLCI::MUX_CONTROL_DLCI);
+                }
+                x => panic!("Expected frame but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut start_mux_fut), Poll::Ready(Ok(_)));
+        }
+
+        // Attempting to start the multiplexer while it's already starting should fail.
+        {
+            let mut start_mux_fut = Box::pin(session.start_multiplexer());
+            assert_matches!(exec.run_until_stalled(&mut start_mux_fut), Poll::Ready(Err(_)));
+        }
+
+        // Simulate peer responding positively with a UA - this should complete startup.
+        {
+            let mut handle_fut =
+                Box::pin(session.handle_frame(Frame::make_ua_response(
+                    Role::Unassigned,
+                    DLCI::MUX_CONTROL_DLCI,
+                )));
+            assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
+        }
+        // Multiplexer startup should finish with the initiator role.
+        assert!(session.multiplexer().started());
+        assert_eq!(session.role(), Role::Initiator);
     }
 }

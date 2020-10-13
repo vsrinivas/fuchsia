@@ -448,6 +448,19 @@ impl Frame {
         Ok(Self { role, dlci, data, poll_final, command_response, credits })
     }
 
+    // TODO(fxbug.dev/59585): Remove this when full initiator role is supported.
+    #[cfg(test)]
+    pub fn make_sabm_command(role: Role, dlci: DLCI) -> Self {
+        Self {
+            role,
+            dlci,
+            data: FrameData::SetAsynchronousBalancedMode,
+            poll_final: true, // Always set for SABM.
+            command_response: CommandResponse::Command,
+            credits: None,
+        }
+    }
+
     pub fn make_dm_response(role: Role, dlci: DLCI) -> Self {
         Self {
             role,
