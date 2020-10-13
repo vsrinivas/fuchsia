@@ -4,7 +4,58 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
-### Scrutiny security auditing toolkit
+### An extensible security auditing framework and toolkit for Fuchsia.
+
+## Scrutiny provides a plugin-based architecture for building custom analyzers for
+## Fuchsia. Launching fx scrutiny and typing the help command will list all of the
+## available commands. The set of available commands changes based on which plugins
+## are loaded.
+##
+## USAGE:
+## scrutiny [OPTIONS]
+##
+## FLAGS:
+##   -h, --help       Prints help information
+##   -V, --version    Prints version information
+##
+## OPTIONS:
+##   -c <command>           Run a single command
+##   -l <log>               Path to output scrutiny.log [default: /tmp/scrutiny.log]
+##   -m <model>             The uri of the data model. [default: /tmp/scrutiny/]
+##   -p <port>              The port to run the scrutiny service on. [default: 8080]
+##   -v <verbosity>         The verbosity level of logging [default: info]  [possible values: off, error, warn, info, debug, trace]
+##   -i <visualizer>        The root path (relative to $FUCHSIA_DIR) for the visualizer interface. .html, .css, and .json
+##                          files relative to this root path will be served relative to the scrutiny service root.
+##                          [default: /scripts/scrutiny]
+##
+## EXAMPLES:
+## To run these examples first launch scrutiny with fx scrutiny from the cmdline. The
+## command line interface supports tab completion and history. Alternatively commands
+## can be run directly from the parent shell using fx scrutiny -c "command".
+##
+## help
+##   - Lists all the commands and their basic help information.
+## help packages
+##   - Lists help information specifically for the packages command.
+## packages
+##   - Lists all of the packages in the current build.
+## search.packages --files libcrypto
+##   - Lists all packages that have a file named libcrypto in the current build.
+## tool.package.extract --url fuchsia-pkg://fuchsia.com/vim --output /tmp/vim
+##   - Outputs the contents of package vim to /tmp/vim based on your current build.
+## zbi.cmdline
+##   - Extracts the cmdline arguments set in the Zircon Boot Image (ZBI).
+## tool.zbi.extract --input fuchsia.zbi --output /tmp/zbi
+##   - Extracts a ZBI and its sections to /tmp/zbi.
+## tool.fvm.extract --input fvm.blk --ouput /tmp/fvm
+##   - Extracts the internal filesystems from a Fuchsia Volume Manager block 
+## engine.plugin.list
+##   - Lists the currently loaded Scrutiny plugins.
+##
+## VISUALIZER:
+## The visualizer by default will run at 127.0.0.1:8080 when you launch scrutiny.
+## This small webserver provides access to a component graph visualization along
+## with some basic UIs for searching package contents.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
