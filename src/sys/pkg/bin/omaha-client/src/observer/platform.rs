@@ -4,7 +4,7 @@
 
 use bounded_node::BoundedNode;
 use fuchsia_inspect::Node;
-use fuchsia_zircon::{ClockId::Monotonic, Time};
+use fuchsia_zircon::Time;
 
 #[derive(Debug)]
 pub enum Event<'a> {
@@ -19,7 +19,7 @@ pub enum Event<'a> {
 
 impl Event<'_> {
     fn write_to_inspect(&self, node: &Node, session_id: u64) {
-        node.record_int("ts", Time::get(Monotonic).into_nanos());
+        node.record_int("ts", Time::get_monotonic().into_nanos());
         node.record_uint("session-id", session_id);
         match self {
             Self::CheckingForUpdates => {

@@ -12,7 +12,7 @@ use {
 };
 
 fn now_monotonic_nanos() -> i64 {
-    zx::Time::get(zx::ClockId::Monotonic).into_nanos()
+    zx::Time::get_monotonic().into_nanos()
 }
 
 /// Creates Inspect wrappers for individual blob fetches.

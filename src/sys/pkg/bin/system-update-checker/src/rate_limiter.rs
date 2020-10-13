@@ -12,7 +12,7 @@ pub(crate) struct Monotonic;
 
 impl Clock for Monotonic {
     fn now(&self) -> zx::Time {
-        zx::Time::get(zx::ClockId::Monotonic)
+        zx::Time::get_monotonic()
     }
 }
 

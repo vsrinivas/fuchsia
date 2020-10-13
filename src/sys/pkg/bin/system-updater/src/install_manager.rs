@@ -85,10 +85,8 @@ async fn run<N, U, E>(
 
         // Set up inspect nodes.
         let mut status_node = node.create_child(INSPECT_STATUS_NODE_NAME);
-        let _time_property = node.create_int(
-            "start_timestamp_nanos",
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
-        );
+        let _time_property =
+            node.create_int("start_timestamp_nanos", zx::Time::get_monotonic().into_nanos());
 
         // Don't forget to add the first monitor to the queue and respond to StartUpdate :)
         if let Err(e) = monitor_queue.add_client(monitor).await {
