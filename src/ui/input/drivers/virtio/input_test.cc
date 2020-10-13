@@ -151,6 +151,12 @@ TEST_F(VirtioInputTest, KeyboardTest) {
   event.code = 30;  // KEY_A
   hid_keyboard.ReceiveEvent(&event);
 
+  event.code = 100;  // KEY_RIGHTALT
+  hid_keyboard.ReceiveEvent(&event);
+
+  event.code = 108;  // KEY_DOWN
+  hid_keyboard.ReceiveEvent(&event);
+
   // Parse the HID report.
   size_t report_size;
   const uint8_t* report = hid_keyboard.GetReport(&report_size);
@@ -163,9 +169,11 @@ TEST_F(VirtioInputTest, KeyboardTest) {
             keyboard.ParseInputReport(report, report_size, &report_allocator, &report_builder));
   hid_input_report::fuchsia_input_report::InputReport input_report = report_builder.build();
 
-  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 2U);
+  ASSERT_EQ(input_report.keyboard().pressed_keys().count(), 4U);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
   EXPECT_EQ(input_report.keyboard().pressed_keys()[1], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[2], llcpp::fuchsia::ui::input2::Key::RIGHT_ALT);
+  EXPECT_EQ(input_report.keyboard().pressed_keys()[3], llcpp::fuchsia::ui::input2::Key::DOWN);
 }
 
 }  // namespace virtio

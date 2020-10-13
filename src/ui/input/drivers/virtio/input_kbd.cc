@@ -18,6 +18,8 @@ namespace virtio {
 
 // clang-format off
 
+// These are Linux input event codes:
+// https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
 const uint8_t kEventCodeMap[] = {
     0,                                  // KEY_RESERVED (0)
     41,                                 // KEY_ESC (1)
@@ -103,10 +105,18 @@ const uint8_t kEventCodeMap[] = {
     91,                                 // KEY_KP3 (81)
     98,                                 // KEY_KP0 (82)
     99,                                 // KEY_KPDOT (83)
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Unsupported
+    0, 0, 0, 0, 0, 0,                   // Unsupported
+    0, 0, 0, 0, 0, 0, 0,                // Unsupported
     228,                                // KEY_RIGHTCTRL (97)
     0, 0,                               // Unsupported
     230,                                // KEY_RIGHTALT (100)
+    0, 0,                               // Unsupported
+    82,                                 // KEY_UP (103)
+    0,                                  // Unsupported
+    80,                                 // KEY_LEFT (105)
+    79,                                 // KEY_RIGHT (106)
+    0,                                  // Unsupported
+    81,                                 // KEY_DOWN (108)
 };
 
 static const uint8_t kbd_hid_report_desc[] = {
