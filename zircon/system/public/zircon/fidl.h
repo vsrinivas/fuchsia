@@ -399,6 +399,10 @@ typedef struct fidl_msg {
   uint32_t num_handles;
 } fidl_msg_t;
 
+// TODO(fxb/61909) Replace with struct definitions.
+typedef fidl_msg_t fidl_incoming_msg_t;
+typedef fidl_msg_t fidl_outgoing_msg_t;
+
 // An outstanding FIDL transaction.
 typedef struct fidl_txn fidl_txn_t;
 struct fidl_txn {
