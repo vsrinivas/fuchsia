@@ -60,7 +60,7 @@ test("virtio-gpu-test") {
     "//src/devices/bus/lib/virtio",
     "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

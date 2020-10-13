@@ -88,7 +88,7 @@ test("amlogic-display-test") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/mmio",
     "//src/devices/sysmem/testing/mock-sysmem",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
     "//src/lib/ddktl",
