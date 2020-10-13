@@ -2330,8 +2330,9 @@ TEST_F(FvmTest, TestCorruptionOk) {
 
   // Corrupt the (backup) metadata and rebind.
   // The 'primary' was the last one written, so it'll be used.
-  constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
-  off_t off = fvm::BackupStart(kDiskSize, kSliceSize);
+  fvm::Header header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
+  off_t off = header.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
   uint8_t buf[fvm::kBlockSize];
   ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
   ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
@@ -2497,8 +2498,10 @@ TEST_F(FvmTest, TestCorruptionUnrecoverable) {
   buf[128]++;
   ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
   ASSERT_EQ(write(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
-  constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
-  off = fvm::BackupStart(kDiskSize, kSliceSize);
+
+  fvm::Header header =
+      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
+  off = header.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
   ASSERT_EQ(lseek(ramdisk_fd.get(), off, SEEK_SET), off);
   ASSERT_EQ(read(ramdisk_fd.get(), buf, sizeof(buf)), sizeof(buf));
   buf[128]++;

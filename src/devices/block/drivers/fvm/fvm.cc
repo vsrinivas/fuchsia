@@ -266,7 +266,7 @@ zx_status_t VPartitionManager::Load() {
     return ZX_ERR_BAD_STATE;
   }
 
-  size_t required_alloc_table_len = AllocTableLengthForUsableSliceCount(sb.pslice_count);
+  size_t required_alloc_table_len = AllocTableByteSizeForUsableSliceCount(sb.pslice_count);
   if (sb.allocation_table_size > kMaxAllocationTableByteSize ||
       sb.allocation_table_size % kBlockSize != 0 ||
       sb.allocation_table_size < required_alloc_table_len) {

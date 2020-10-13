@@ -103,16 +103,6 @@ struct Partition {
   void GeneratePath(char* dir) { sprintf(path, "%s%s_%s.bin", dir, FsTypeName(), GuidTypeName()); }
 };
 
-size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
-  // Make use of the CalculateDiskSize() method to compute the required data size.
-  // The required data size is one that does not include the header size and extended part.
-  size_t minimal_disk_size = container->CalculateDiskSize();
-  fvm::Header header =
-      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, minimal_disk_size, kDefaultSliceSize);
-  // TODO(jfsulliv) Use MetadataBuffer::BytesNeeded() when available.
-  return minimal_disk_size - header->GetDataStartOffset();
-}
-
 class FvmHostTest : public zxtest::Test {
  public:
   void SetUp() override {
@@ -572,10 +562,13 @@ class FvmHostTest : public zxtest::Test {
     ASSERT_NOT_OK(container->CheckDiskSize(expected_size - 1));
   }
 
-  // Creates a fvm container and adds partitions to it. When should succeed is false,
-  // the function surfaces the error in adding partition to caller without asserting.
-  void CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
-                 bool enable_data = true, std::unique_ptr<FvmContainer>* out = nullptr) {
+  // Creates a fvm container and adds partitions to it. When should succeed is false, the function
+  // surfaces the error in adding partition to caller without asserting.
+  //
+  // Returns the Header corresponding to the configuration used to create FVM for tests to access
+  // the partition information.
+  fvm::Header CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
+                        bool enable_data = true, std::unique_ptr<FvmContainer>* out = nullptr) {
     off_t length = 0;
     if (create_before) {
       CreateFile(fvm_path, kContainerSize);
@@ -592,6 +585,8 @@ class FvmHostTest : public zxtest::Test {
     if (out) {
       *out = std::move(fvmContainer);
     }
+
+    return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, length - offset, slice_size);
   }
 
   void CreateFvmEnsure(bool create_before, off_t offset, size_t slice_size,
@@ -768,9 +763,8 @@ TEST_F(FvmHostTest, TestCreateWithResizeImageFileToFit) {
 
   std::unique_ptr<FvmContainer> container;
   ASSERT_OK(FvmContainer::CreateExisting(fvm_path, offset, &container));
-  auto required_data_size = ComputeRequiredDataSize(container);
-  size_t expected_size = offset + required_data_size +
-                         2 * fvm::MetadataSizeForDiskSize(kContainerSize, kDefaultSliceSize);
+
+  size_t expected_size = offset + container->CalculateDiskSize();
   off_t current_size;
   StatFile(fvm_path, &current_size);
   ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
@@ -784,9 +778,8 @@ TEST_F(FvmHostTest, TestResizeImageFileToFitAfterExtend) {
   ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &container));
   ASSERT_OK(container->Extend(kContainerSize * 2));
   ASSERT_OK(container->ResizeImageFileToFit());
-  auto required_data_size = ComputeRequiredDataSize(container);
-  size_t expected_size =
-      required_data_size + 2 * fvm::MetadataSizeForDiskSize(2 * kContainerSize, kDefaultSliceSize);
+
+  size_t expected_size = container->CalculateDiskSize();
 
   off_t current_size;
   StatFile(fvm_path, &current_size);
@@ -859,16 +852,17 @@ TEST_F(FvmHostTest, ConverToAndroidSparseFormat) {
   uint8_t block_data[kAndroidSparseBlockSize];
 
   std::unique_ptr<FvmContainer> out;
-  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
+  fvm::Header header = CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true, &out);
   size_t disk_size = out->GetDiskSize();
   size_t roundup_disk_size = fbl::round_up(disk_size, kAndroidSparseBlockSize);
-  size_t superblock_size = 2 * fvm::MetadataSizeForDiskSize(disk_size, out->SliceSize());
+  size_t metadata_size = header.GetDataStartOffset();
+
   out.reset();
   // Modify the created fvm by writing custom data to test sparse image conversion logic.
   fbl::unique_fd fd(open(fvm_path, O_RDWR, 0644));
   ASSERT_TRUE(fd);
   // Avoid modifying the superblock. Otherwise it cannot be loaded.
-  size_t roundup_super_block_size = fbl::round_up(superblock_size, kAndroidSparseBlockSize);
+  size_t roundup_super_block_size = fbl::round_up(metadata_size, kAndroidSparseBlockSize);
   // Make sure the fvm size is block aligned.
   ASSERT_EQ(ftruncate(fd.get(), roundup_disk_size), 0);
   // Write some new content

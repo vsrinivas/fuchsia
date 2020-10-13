@@ -36,9 +36,10 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
           sb->GetPartitionTableByteSize());
   xprintf("fvm_init: Atable offset: %zu, length: %zu\n", sb->GetAllocationTableOffset(),
           sb->GetAllocationTableAllocatedByteSize());
-  xprintf("fvm_init: Backup meta starts at: %zu\n", fvm::BackupStart(disk_size, slice_size));
-  xprintf("fvm_init: Slices start at %zu, there are %zu of them\n",
-          fvm::SlicesStart(disk_size, slice_size), sb->GetAllocationTableAllocatedEntryCount());
+  xprintf("fvm_init: Backup meta starts at: %zu\n",
+          header.GetSuperblockOffset(SuperblockType::kSecondary));
+  xprintf("fvm_init: Slices start at %zu, there are %zu of them\n", header.GetDataStartOffset(),
+          sb->GetAllocationTableAllocatedEntryCount());
 
   return ZX_OK;
 }

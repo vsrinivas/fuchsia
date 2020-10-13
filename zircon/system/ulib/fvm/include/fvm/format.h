@@ -395,11 +395,6 @@ static_assert(internal::is_persistable<SliceEntry>::value,
 static_assert(!internal::block_alignment<SliceEntry>::may_cross_boundary,
               "VSliceEntry must not cross block boundary.");
 
-constexpr size_t PartitionTableOffset() {
-  // The partition table starts at the first block after the header.
-  return kBlockSize;
-}
-
 // Due to the way partitions are counted, the total partition entries (the input to this function)
 // is one larger than the number of usable partitions because the 0th entry is not used. This
 // function may generate a larger-than-needed partition table to ensure it's block-aligned.
@@ -409,42 +404,9 @@ constexpr size_t PartitionTableLength(size_t total_partition_entries) {
   return fbl::round_up(sizeof(VPartitionEntry) * total_partition_entries, kBlockSize);
 }
 
-// Returns the size in bytes of the partition table given the number of usable partitions.
-// See PartitionTableLength() which counts the total entries.
-constexpr size_t PartitionTableByteSizeForUsablePartitions(size_t usable_partitions) {
-  // TODO(fxb/59980): Partition table is 1-indexed, which means that the 0th entry is unused, hence
-  // the +1. Remove this once the table uses the 0th entry.
-  return PartitionTableLength(usable_partitions + 1);
-}
-
-constexpr size_t AllocTableOffset() {
-  // TODO(fxb/40192): Allow a variable partition table size.
-  return PartitionTableOffset() + PartitionTableLength(kMaxVPartitions);
-}
-
-constexpr size_t AllocTableLengthForUsableSliceCount(size_t slice_count) {
+constexpr size_t AllocTableByteSizeForUsableSliceCount(size_t slice_count) {
   // Reserve the 0th table entry so need +1 to get the usable slices.
   return fbl::round_up(sizeof(SliceEntry) * (slice_count + 1), fvm::kBlockSize);
-}
-constexpr size_t AllocTableLengthForDiskSize(size_t disk_size, size_t slice_size) {
-  // This will be an over-estimate in some cases. The usable disk size will not include the FVM
-  // metadata, so for some specific ranges, subtracting the metadata might mean we actually need a
-  // smaller allocation table. But to keep things simple we ignore this small difference.
-  return AllocTableLengthForUsableSliceCount(disk_size / slice_size);
-}
-
-// TODO(fxb/40192): Remove in preference of MetadataSizeForUsableEntries() which takes a partition
-// table size.
-constexpr size_t MetadataSizeForDiskSize(size_t total_size, size_t slice_size) {
-  return AllocTableOffset() + AllocTableLengthForDiskSize(total_size, slice_size);
-}
-
-constexpr size_t BackupStart(size_t total_size, size_t slice_size) {
-  return MetadataSizeForDiskSize(total_size, slice_size);
-}
-
-constexpr size_t SlicesStart(size_t total_size, size_t slice_size) {
-  return 2 * MetadataSizeForDiskSize(total_size, slice_size);
 }
 
 constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t block_count) {
@@ -476,7 +438,7 @@ inline void Header::SetSliceCount(size_t usable_slices) {
 
 inline size_t Header::GetPartitionTableOffset() const {
   // The partition table starts at the first block after the header.
-  return ::fvm::PartitionTableOffset();
+  return kBlockSize;
 }
 
 inline size_t Header::GetPartitionTableEntryCount() const {
