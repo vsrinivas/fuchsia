@@ -10,17 +10,15 @@
 #include <lib/operation/ethernet.h>
 #include <stdio.h>
 #include <string.h>
-#include <zircon/compiler.h>
 
 #include <memory>
-#include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
+
+#include "src/connectivity/ethernet/drivers/ethertap/ethertap-bind.h"
 
 // This macro allows for per-device tracing rather than enabling tracing for the whole driver
 #define ethertap_trace(args...)                  \
@@ -432,8 +430,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace eth
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(tapctl, eth::driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-ZIRCON_DRIVER_END(tapctl)
-    // clang-format on
+ZIRCON_DRIVER(tapctl, eth::driver_ops, "zircon", "0.1")

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Protocol Match",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.test.BIND_PROTOCOL.PARENT"
+    }
+  },
+  {
+    "name": "Protocol Mismatch",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.test.BIND_PROTOCOL.DEVICE"
+    }
+  }
+]
