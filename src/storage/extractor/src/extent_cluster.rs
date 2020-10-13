@@ -56,7 +56,7 @@ impl ExtentCluster {
     //  * create a list of all affected extents by this insertion.
     //  * for each extent in affected extents, split/merge with current extents.
     //  * replace affected and current extent with the new split/merged extents list.
-    fn insert_extent(&mut self, mut current_extent: Extent) -> Result<(), Error> {
+    fn insert_extent(&mut self, current_extent: Extent) -> Result<(), Error> {
         let mut affected_extents = vec![];
 
         // Get all extents that may be affected by this extent insertion.
@@ -82,15 +82,17 @@ impl ExtentCluster {
         let mut remaining = Some(current_extent.clone());
         for (i, ext) in affected_extents.iter().enumerate() {
             assert!(current_extent.overlaps(&ext) || current_extent.is_adjacent(&ext));
-            match current_extent.split_or_merge(&ext, &mut new_extents) {
-                Some(x) => {
-                    current_extent = x.clone();
-                    remaining = Some(x);
-                }
-
-                None => {
-                    assert_eq!(affected_extents.len() - 1, i);
-                    remaining = None;
+            // If remaining extent is completely consumed then iterate over the rest of affected
+            // extents and just add them.
+            // Ex. say we have already inserted extents [2, 5), [5, 8), and [8, 12) all having
+            // different priorities. Now the current extent is [5, 8) with lower
+            // priority than all the the extents then we may end up consuming current
+            // entirely before we parse all of affected_extents.
+            match remaining {
+                None => new_extents.push(ext.clone()),
+                Some(remaining_extent) => {
+                    remaining = remaining_extent.split_or_merge(&ext, &mut new_extents);
+                    assert!(remaining.is_some() || (i >= affected_extents.len() - 2));
                 }
             }
         }
@@ -409,6 +411,35 @@ mod test {
         .unwrap();
         cluster.add_extent(&m).unwrap();
         expected_extents.push(m);
+        verify(file!(), line!(), &cluster, &expected_extents);
+    }
+
+    #[test]
+    fn test_add_adjacent_on_both_sides_overlapping_in_middle() {
+        let (mut cluster, mut expected_extents) = setup_extent_cluster();
+        // Adjacent to left
+        let mut m = Extent::new(
+            INSERTED_ADDRESS_START - 10..INSERTED_ADDRESS_START,
+            LOW_PRIORITY_PROPERTIES,
+            None,
+        )
+        .unwrap();
+        cluster.add_extent(&m).unwrap();
+        expected_extents.push(m.clone());
+        m.set_start(INSERTED_ADDRESS_END);
+        m.set_end(INSERTED_ADDRESS_END + 10);
+        cluster.add_extent(&m).unwrap();
+        expected_extents.push(m.clone());
+
+        verify(file!(), line!(), &cluster, &expected_extents);
+
+        let m = Extent::new(
+            INSERTED_ADDRESS_START..INSERTED_ADDRESS_END,
+            LOW_PRIORITY_PROPERTIES,
+            None,
+        )
+        .unwrap();
+        cluster.add_extent(&m).unwrap();
         verify(file!(), line!(), &cluster, &expected_extents);
     }
 

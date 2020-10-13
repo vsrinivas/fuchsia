@@ -57,6 +57,7 @@ impl<T: Copy + std::cmp::Ord + std::ops::Sub<Output = T>> RangeOps<T> for Range<
     }
 
     fn length(&self) -> T {
+        assert!(self.start < self.end);
         self.end - self.start
     }
 }
