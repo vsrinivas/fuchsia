@@ -71,10 +71,10 @@ class StreamImpl {
   void SendFrames();
 
   // Posts a task from the client with the given id to change the resolution of the stream.
-  void PostSetResolution(uint32_t id, fuchsia::math::Size coded_size);
+  void PostSetResolution(uint64_t id, fuchsia::math::Size coded_size);
 
   // Posts a task from the client with the given id to change the crop region of the stream.
-  void PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::RectF> region);
+  void PostSetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region);
 
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {

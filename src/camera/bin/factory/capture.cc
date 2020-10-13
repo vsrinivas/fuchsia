@@ -134,7 +134,7 @@ zx_status_t Capture::WriteImage(FILE* fp, WriteFlags flags, Crop& crop) {
   if ((flags & WriteFlags::MOD_UNPROCESSED) != WriteFlags::NONE) {
     // unprocessed means return whole frame, even it it's non-image data
     iformat.coded_width = iformat.bytes_per_row;
-    iformat.coded_height = image_->size() / iformat.bytes_per_row;
+    iformat.coded_height = static_cast<uint32_t>(image_->size() / iformat.bytes_per_row);
   }
 
   IntersectCrop(crop, flags);
@@ -276,16 +276,17 @@ void Capture::YUVToRGB(ImageIter plane[2], Crop& crop, std::vector<uint8_t>& row
     int32_t u = uvpos[(j / 2) * 2];
     int32_t v = uvpos[(j / 2) * 2 + 1];
     // android algorithm
-    int rTmp = y + (1.370705 * (v - 128));
-    int gTmp = y - (0.698001 * (v - 128)) - (0.337633 * (u - 128));
-    int bTmp = y + (1.732446 * (u - 128));
+    int rTmp = y + (static_cast<int>(1.370705) * (v - 128));
+    int gTmp =
+        y - (static_cast<int>(0.698001) * (v - 128)) - (static_cast<int>(0.337633) * (u - 128));
+    int bTmp = y + (static_cast<int>(1.732446) * (u - 128));
 #define CLIP(x) ((x) < 0 ? 0 : (x) > 255 ? 255 : (x))
     uint32_t r = CLIP(rTmp);
     uint32_t g = CLIP(gTmp);
     uint32_t b = CLIP(bTmp);
-    row[j * 3 + 0] = r;
-    row[j * 3 + 1] = g;
-    row[j * 3 + 2] = b;
+    row[j * 3 + 0] = static_cast<uint8_t>(r);
+    row[j * 3 + 1] = static_cast<uint8_t>(g);
+    row[j * 3 + 2] = static_cast<uint8_t>(b);
   }
 }
 

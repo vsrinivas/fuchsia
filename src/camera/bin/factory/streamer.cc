@@ -76,7 +76,7 @@ void Streamer::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEv
             config_count_ = 0;
             connected_config_index_ = 0;
             configurations_ = std::move(configurations);
-            config_count_ = configurations.size();
+            config_count_ = static_cast<uint32_t>(configurations.size());
             FX_LOGS(INFO) << "configurations available: " << config_count_;
             // Once we have the known camera configurations, default to the first configuration
             // index. This is automatically chosen in the driver, so we do not need to ask for it.
@@ -167,7 +167,8 @@ void Streamer::WaitForBuffersAllocatedCallback(uint32_t stream_index, zx_status_
   connected_stream_count_++;
 
   // BEGIN: Daisy-chain work around for fxbug.dev/42241
-  const uint32_t stream_count = configurations_[connected_config_index_].streams.size();
+  const uint32_t stream_count =
+      static_cast<uint32_t>(configurations_[connected_config_index_].streams.size());
   if (connected_stream_count_ < stream_count) {
     ConnectToStream(connected_config_index_, connected_stream_count_);
   }

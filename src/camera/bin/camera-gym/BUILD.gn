@@ -58,9 +58,6 @@ source_set("lib") {
   } else {
     defines += [ "CAMERA_GYM_ENABLE_ROOT_PRESENTER=(false)" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {

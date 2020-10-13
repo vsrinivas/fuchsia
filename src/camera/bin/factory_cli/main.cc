@@ -123,7 +123,7 @@ zx_status_t RunCommand(fuchsia::factory::camera::ControllerPtr& controller,
     case GET_SENSOR_TEMPERATURE:
       isp->GetSensorTemperature(
           [success_cb = std::move(exit_on_success_cb), failure_cb = std::move(exit_on_failure_cb)](
-              zx_status_t get_sensor_temperature_status, uint16_t temperature) {
+              zx_status_t get_sensor_temperature_status, int32_t temperature) {
             if (get_sensor_temperature_status != ZX_OK) {
               failure_cb(get_sensor_temperature_status, std::string{kCommand5});
               return;
@@ -166,27 +166,27 @@ zx_status_t RunCommand(fuchsia::factory::camera::ControllerPtr& controller,
         FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS) << "Accepts exactly one arg";
         return ZX_ERR_INVALID_ARGS;
       }
-      isp->SetSensorMode(std::stoi(args[0]), [success_cb = std::move(exit_on_success_cb)]() {
-        success_cb(std::string{kCommand9});
-      });
+      isp->SetSensorMode(
+          static_cast<uint16_t>(std::stoul(args[0])),
+          [success_cb = std::move(exit_on_success_cb)]() { success_cb(std::string{kCommand9}); });
       break;
     case SET_TEST_PATTERN_MODE:
       if (args.size() != 1) {
         FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS) << "Accepts exactly one arg";
         return ZX_ERR_INVALID_ARGS;
       }
-      isp->SetTestPatternMode(std::stoi(args[0]), [success_cb = std::move(exit_on_success_cb)]() {
-        success_cb(std::string{kCommand10});
-      });
+      isp->SetTestPatternMode(
+          static_cast<uint16_t>(std::stoul(args[0])),
+          [success_cb = std::move(exit_on_success_cb)]() { success_cb(std::string{kCommand10}); });
       break;
     case SET_BYPASS_MODE:
       if (args.size() != 1) {
         FX_PLOGS(ERROR, ZX_ERR_INVALID_ARGS) << "Accepts exactly one arg";
         return ZX_ERR_INVALID_ARGS;
       }
-      isp->SetBypassMode(std::stoi(args[0]), [success_cb = std::move(exit_on_success_cb)]() {
-        success_cb(std::string{kCommand11});
-      });
+      isp->SetBypassMode(
+          static_cast<uint16_t>(std::stoul(args[0])),
+          [success_cb = std::move(exit_on_success_cb)]() { success_cb(std::string{kCommand11}); });
       break;
     default:
       return ZX_ERR_INVALID_ARGS;

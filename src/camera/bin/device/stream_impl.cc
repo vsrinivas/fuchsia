@@ -219,7 +219,7 @@ void StreamImpl::PostSetBufferCollection(
         // Duplicate and send each client a token.
         fuchsia::sysmem::BufferCollectionTokenPtr token;
         token.Bind(std::move(token_handle), loop_.dispatcher());
-        std::map<uint32_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
+        std::map<uint64_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
         for (auto& client : clients_) {
           if (client.second->Participant()) {
             token->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_tokens[client.first].NewRequest());
@@ -269,7 +269,7 @@ void StreamImpl::SendFrames() {
   }
 }
 
-void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) {
+void StreamImpl::PostSetResolution(uint64_t id, fuchsia::math::Size coded_size) {
   auto nonce = TRACE_NONCE();
   TRACE_DURATION("camera", "StreamImpl::PostSetResolution");
   TRACE_FLOW_BEGIN("camera", "post_set_resolution", nonce);
@@ -332,7 +332,7 @@ void StreamImpl::PostSetResolution(uint32_t id, fuchsia::math::Size coded_size) 
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-void StreamImpl::PostSetCropRegion(uint32_t id, std::unique_ptr<fuchsia::math::RectF> region) {
+void StreamImpl::PostSetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region) {
   auto nonce = TRACE_NONCE();
   TRACE_DURATION("camera", "StreamImpl::PostSetCropRegion");
   TRACE_FLOW_BEGIN("camera", "post_set_crop_region", nonce);

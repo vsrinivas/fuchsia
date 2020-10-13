@@ -8,37 +8,36 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
+#include <png.h>
 #include <stdio.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <png.h>
-
 namespace camera {
 
 enum class WriteFlags : uint32_t {
-  NONE =         0,
+  NONE = 0,
 
   // specify 1 input format
-  IN_DEFAULT =      1 <<  0,  // use PixelFormatType in frame
-  IN_NV12 =         1 <<  1,  // ouverride, assume 8-bit YUV in 2 planes
-  IN_BAYER8 =       1 <<  2,  // override, assume 8-bit gray bayer
-  IN_BAYER16 =      1 <<  3,  // override, assume 16-bit gray, RGRGRGRG... GBGBGBGB...
+  IN_DEFAULT = 1 << 0,  // use PixelFormatType in frame
+  IN_NV12 = 1 << 1,     // ouverride, assume 8-bit YUV in 2 planes
+  IN_BAYER8 = 1 << 2,   // override, assume 8-bit gray bayer
+  IN_BAYER16 = 1 << 3,  // override, assume 16-bit gray, RGRGRGRG... GBGBGBGB...
 
   // specify 1 output format
-  OUT_RAW =         1 <<  8,  // 16-bit grayscale, possibly byte swapped, no header
-  OUT_PGM =         1 <<  9,  // 16-bit grayscale pgm
-  OUT_PNG_GRAY =    1 << 10,  // png, 16-bit gray
-  OUT_PPM =         1 << 11,  // 8-bit RGB ppm
-  OUT_PNG_RGB =     1 << 12,  // 8-bit RGB png
+  OUT_RAW = 1 << 8,        // 16-bit grayscale, possibly byte swapped, no header
+  OUT_PGM = 1 << 9,        // 16-bit grayscale pgm
+  OUT_PNG_GRAY = 1 << 10,  // png, 16-bit gray
+  OUT_PPM = 1 << 11,       // 8-bit RGB ppm
+  OUT_PNG_RGB = 1 << 12,   // 8-bit RGB png
 
   // specify 0 or more modifications
-  MOD_SWAP =        1 << 16,  // when writing 16-bit gray, swap bytes
-  MOD_CENTER =      1 << 17,  // ignore crop x, y, align on center of image
+  MOD_SWAP = 1 << 16,         // when writing 16-bit gray, swap bytes
+  MOD_CENTER = 1 << 17,       // ignore crop x, y, align on center of image
   MOD_UNPROCESSED = 1 << 18,  // do not do any image
-  MOD_BAYER8HACK =  1 << 19,  // tweak properties to match what ISP sends
+  MOD_BAYER8HACK = 1 << 19,   // tweak properties to match what ISP sends
 };
 
 constexpr inline WriteFlags operator|(WriteFlags _lhs, WriteFlags _rhs) {
@@ -49,8 +48,8 @@ constexpr inline WriteFlags operator&(WriteFlags _lhs, WriteFlags _rhs) {
   return static_cast<WriteFlags>(static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
 }
 
-const auto kInMask = (WriteFlags::IN_DEFAULT | WriteFlags::IN_NV12 | WriteFlags::IN_BAYER16 |
-                      WriteFlags::IN_BAYER8);
+const auto kInMask =
+    (WriteFlags::IN_DEFAULT | WriteFlags::IN_NV12 | WriteFlags::IN_BAYER16 | WriteFlags::IN_BAYER8);
 const auto kOutMask = (WriteFlags::OUT_RAW | WriteFlags::OUT_PGM | WriteFlags::OUT_PNG_GRAY |
                        WriteFlags::OUT_PPM | WriteFlags::OUT_PNG_RGB);
 const auto kModMask = (WriteFlags::MOD_SWAP | WriteFlags::MOD_CENTER | WriteFlags::MOD_UNPROCESSED);
@@ -76,7 +75,7 @@ struct ImageIter {
 
 class Capture;
 using CaptureResponse = fit::function<void(zx_status_t, std::unique_ptr<Capture>)>;
-using ConversionMethod = void(Capture::*)(ImageIter[2], Crop&, std::vector<uint8_t>&);
+using ConversionMethod = void (Capture::*)(ImageIter[2], Crop&, std::vector<uint8_t>&);
 
 class Capture {
  public:
@@ -133,7 +132,6 @@ class Capture {
 
   png_structp png_ptr_ = nullptr;
   png_infop png_info_ = nullptr;
-
 };
 
 }  // namespace camera

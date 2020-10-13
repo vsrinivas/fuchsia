@@ -51,7 +51,8 @@ void WebUI::Listen(int port) {
     return;
   }
   const struct sockaddr_in6 saddr {
-    .sin6_family = AF_INET6, .sin6_port = htons(port), .sin6_addr = in6addr_any,
+    .sin6_family = AF_INET6, .sin6_port = htons(static_cast<uint16_t>(port)),
+    .sin6_addr = in6addr_any,
   };
   int enable = 1;
   if (setsockopt(listen_sock_, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof enable) < 0) {
