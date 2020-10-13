@@ -36,6 +36,7 @@ enum HandleIndex : uint32_t {
   kRootJob,
   kRootResource,
   kMmioResource,
+  kIrqResource,
 
   // Essential VMO handles.
   kZbi,

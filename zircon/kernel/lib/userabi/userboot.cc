@@ -314,6 +314,8 @@ void userboot_init(uint) {
   ASSERT(handles[userboot::kRootResource]);
   handles[userboot::kMmioResource] = get_resource_handle(ZX_RSRC_KIND_MMIO).release();
   ASSERT(handles[userboot::kMmioResource]);
+  handles[userboot::kIrqResource] = get_resource_handle(ZX_RSRC_KIND_IRQ).release();
+  ASSERT(handles[userboot::kIrqResource]);
   handles[userboot::kRootJob] = get_job_handle().release();
   ASSERT(handles[userboot::kRootJob]);
 
