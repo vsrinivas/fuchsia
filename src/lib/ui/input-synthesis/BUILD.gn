@@ -19,6 +19,7 @@ rustc_library("input-synthesis") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
   ]
 

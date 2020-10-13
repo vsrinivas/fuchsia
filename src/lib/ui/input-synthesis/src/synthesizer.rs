@@ -388,12 +388,11 @@ pub(crate) fn multi_finger_swipe(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use {super::*, anyhow::Context, fuchsia_async as fasync};
 
     mod event_synthesis {
         use {
             super::*,
-            anyhow::Context,
             fidl_fuchsia_ui_input::{
                 InputDeviceRequest, InputDeviceRequestStream, InputReport, KeyboardReport,
                 MediaButtonsReport, TouchscreenReport,
@@ -738,6 +737,125 @@ mod tests {
                     })),
                     Ok(Some(TouchscreenReport { touches: vec![] })),
                 ]
+            );
+            Ok(())
+        }
+    }
+
+    mod device_registration {
+        use {
+            super::*,
+            fidl_fuchsia_ui_input::{DeviceDescriptor, InputDeviceMarker},
+            matches::assert_matches,
+        };
+
+        struct FakeInjector {
+            device_descriptors: Vec<DeviceDescriptor>,
+            // The injector needs to keep the `ServerEnd`s around so that the synthesizer can inject
+            // input events to the devices. Otherwise, the zx::Channel is closed, and the FIDL call
+            // to inject the event will fail.
+            device_handles: Vec<ServerEnd<InputDeviceMarker>>,
+        }
+
+        impl Injector for FakeInjector {
+            fn register_device(
+                &mut self,
+                device: &mut DeviceDescriptor,
+                server: ServerEnd<InputDeviceMarker>,
+            ) -> Result<(), Error> {
+                self.device_descriptors.push(device.clone());
+                self.device_handles.push(server);
+                Ok(())
+            }
+        }
+
+        impl FakeInjector {
+            fn new() -> Self {
+                Self { device_descriptors: vec![], device_handles: vec![] }
+            }
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn media_button_event_registers_media_buttons_device() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            media_button_event(false, false, false, false, false, &mut injector)?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { media_buttons: Some(..), .. }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn keyboard_event_registers_keyboard() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            keyboard_event(40, Duration::from_millis(0), &mut injector)?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { keyboard: Some(..), .. }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn text_event_registers_keyboard() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            text("A".to_string(), Duration::from_millis(0), &mut injector)?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { keyboard: Some(..), .. }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_tap_event_registers_touchscreen() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            multi_finger_tap_event(vec![], 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { touchscreen: Some(..), .. }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn tap_event_registers_touchscreen() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            tap_event(0, 0, 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { touchscreen: Some(..), .. }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn swipe_registers_touchscreen() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            swipe(0, 0, 1, 1, 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { touchscreen: Some(..), .. }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn multi_finger_swipe_registers_touchscreen() -> Result<(), Error> {
+            let mut injector = FakeInjector::new();
+            multi_finger_swipe(
+                vec![],
+                vec![],
+                1000,
+                1000,
+                1,
+                Duration::from_millis(0),
+                &mut injector,
+            )?;
+            assert_matches!(
+                injector.device_descriptors.as_slice(),
+                [DeviceDescriptor { touchscreen: Some(..), .. }]
             );
             Ok(())
         }
