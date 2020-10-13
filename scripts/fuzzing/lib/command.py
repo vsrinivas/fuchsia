@@ -186,3 +186,9 @@ def run_e2e_test(args, factory):
     fuzzer = factory.create_fuzzer(args)
     sys.argv[sys.argv.index(args.name)] = str(fuzzer)
     _run_tests('test_e2e.py', factory)
+
+
+def measure_coverage(args, factory):
+    """Generates a coverage report of specified fuzzers."""
+    fuzzer = factory.create_fuzzer(args, include_tests=True)
+    fuzzer.generate_coverage_report()

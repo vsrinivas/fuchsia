@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import sys
 import unittest
 
@@ -182,6 +183,13 @@ class TestCaseWithFactory(TestCaseWithIO):
             cmd += ['-build-id-dir', build_id_dir]
         return cmd
 
+    def infra_testrunner_cmd(self, out_dir, test_file):
+        cmd = [os.path.join(self.buildenv.build_dir, 'host_x64', 'testrunner')] \
+            + ['-out-dir', out_dir] \
+            + ['-use-runtests', '-per-test-timeout', '600s'] \
+            + [test_file]
+        return cmd
+
     # Unit test assertions
 
     def assertLogged(self, *logs):
@@ -251,7 +259,7 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
     def create_fuzzer(self, *args, **kwargs):
         resolve = kwargs.pop('resolve', True)
         include_tests = kwargs.pop('include_tests', False)
-        assert not kwargs, 'Unexpected keyword argument(s): {}'.format(kwarg)
+        assert not kwargs, 'Unexpected keyword argument(s): {}'.format(kwargs)
         args = self.parse_args(*args)
         self._fuzzer = self.factory.create_fuzzer(
             args, include_tests=include_tests)

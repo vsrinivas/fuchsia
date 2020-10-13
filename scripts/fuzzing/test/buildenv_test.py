@@ -36,7 +36,7 @@ class BuildEnvTest(TestCaseWithFactory):
             'Invalid symbolizer executable: {}'.format(symbolizer_exec))
         self.host.touch(symbolizer_exec)
 
-        # No $FUCHSIA_DIR/out/default/host_x64/symbolize
+        # No $FUCHSIA_DIR/prebuild/third_party/clang/bin/llvm-symbolizer
         clang_dir = os.path.join(
             fuchsia_dir, 'prebuilt', 'third_party', 'clang', self.host.platform)
         llvm_symbolizer = os.path.join(clang_dir, 'bin', 'llvm-symbolizer')
@@ -58,6 +58,20 @@ class BuildEnvTest(TestCaseWithFactory):
                 'Invalid build ID directory: {}'.format(srcpath),
             )
             self.host.mkdir(build_id_dir)
+
+        # No $FUCHSIA_DIR/prebuild/third_party/clang/bin/llvm-cov
+        llvm_cov = os.path.join(clang_dir, 'bin', 'llvm-cov')
+        self.assertError(
+            lambda: buildenv.configure(build_dir),
+            'Invalid LLVM cov: {}'.format(llvm_cov))
+        self.host.touch(llvm_cov)
+
+        # No $FUCHSIA_DIR/prebuild/third_party/clang/bin/llvm-profdata
+        llvm_profdata = os.path.join(clang_dir, 'bin', 'llvm-profdata')
+        self.assertError(
+            lambda: buildenv.configure(build_dir),
+            'Invalid LLVM profdata: {}'.format(llvm_profdata))
+        self.host.touch(llvm_profdata)
 
         buildenv.configure(build_dir)
         clang_dir = '//prebuilt/third_party/clang/' + self.host.platform
@@ -239,6 +253,188 @@ class BuildEnvTest(TestCaseWithFactory):
                 'Symbolized line 2',
                 'Symbolized line 3',
             ])
+
+    def test_testsharder(self):
+        # Prerequisites
+        fuzzer = self.buildenv.fuzzers()[0]
+
+        # Capture the testsharder command
+        testsharder_out_file = os.path.join(
+            fuzzer.output, 'testsharder_out.json')
+        cmd = [os.path.join(self.buildenv.build_dir, 'host_x64', 'testsharder')] \
+            + ['-build-dir', self.buildenv.build_dir] \
+            + ['-max-shards-per-env', '1'] \
+            + ['-output-file', testsharder_out_file]
+        self.set_outputs(cmd, [], returncode=0, reset=True)
+
+        # Write a sharder out with > 1 shards
+        with self.host.open(testsharder_out_file, 'w') as f:
+            json.dump(
+                [
+                    {
+                        'name': 'AEMU-unittest',
+                        'tests': [],
+                    }, {
+                        'name': 'AEMU-unittest-2',
+                        'tests': [],
+                    }
+                ], f)
+        self.assertError(
+            lambda: self.buildenv.testsharder(
+                fuzzer.executable_url, fuzzer.output),
+            'Expected a single shard, but got 2.')
+
+        # Write a sharder out without any AEMU shards
+        with self.host.open(testsharder_out_file, 'w') as f:
+            json.dump([{
+                'name': 'not-AEMU',
+                'tests': [],
+            }], f)
+        self.assertError(
+            lambda: self.buildenv.testsharder(
+                fuzzer.executable_url, fuzzer.output),
+            'Unable to find any tests for AEMU shards.')
+
+        # Write a sharder out with tests that does not have any matching tests.
+        tests = [{
+            'name': 'not-a-url',
+            'meta': 'baz',
+            'meta1': 'bam',
+        }]
+        with self.host.open(testsharder_out_file, 'w') as f:
+            json.dump([{
+                'name': 'AEMU-unittest',
+                'tests': tests,
+            }], f)
+        self.assertError(
+            lambda: self.buildenv.testsharder(
+                fuzzer.executable_url, fuzzer.output),
+            'Found no matching tests to run.')
+
+        # Write a good sharder out
+        tests = [
+            {
+                'name': fuzzer.executable_url,
+                'meta': 'foo',
+                'meta1': 'bar',
+            }, {
+                'name': 'not-a-url',
+                'meta': 'baz',
+                'meta1': 'bam',
+            }
+        ]
+        with self.host.open(testsharder_out_file, 'w') as f:
+            json.dump([{'name': 'AEMU-unittest', 'tests': tests}], f)
+
+        # Assert that the output is only the fuzzer test descriptor
+        out_file = self.buildenv.testsharder(
+            fuzzer.executable_url, fuzzer.output)
+        self.assertRan(*cmd)
+        with self.host.open(out_file) as f:
+            self.assertEqual(json.loads(f.read()), [tests[0]])
+
+    def test_testrunner(self):
+        # Prerequisites
+        fuzzer = self.buildenv.fuzzers()[0]
+        shard_file = os.path.join(fuzzer.output, 'fake_shard_tests.json')
+
+        # Assert that a missing shard file causes an error
+        self.assertError(
+            lambda: self.buildenv.testrunner(
+                shard_file, fuzzer.output, self.device),
+            'Unable to find sharded test file at {}.'.format(shard_file))
+
+        # Create the missing shard file
+        self.host.touch(shard_file)
+
+        # Capture testrunner command
+        runner_out_dir = os.path.join(fuzzer.output, 'testrunner_out/')
+        cmd = self.infra_testrunner_cmd(runner_out_dir, shard_file)
+
+        # Set an output that does not contain any valid pids lines
+        self.set_outputs(
+            cmd, ['[1.2][3] not a valid pid line'], returncode=0, reset=True)
+        self.assertError(
+            lambda: self.buildenv.testrunner(
+                shard_file, fuzzer.output, self.device),
+            'Unable to find a matching test fuzzer pid.')
+
+        # Set an output that contains a valid pid line
+        fake_pid = 101
+        self.set_outputs(
+            cmd, [
+                '[123.456][{}][102][foo.cmx] INFO: [fuzzer_test.cc(35)] Fuzzer built as test: foo/bar'
+                .format(fake_pid)
+            ],
+            returncode=0,
+            reset=True)
+
+        # Capture device dumplog
+        cmd_2 = [
+            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--pid',
+            str(fake_pid)
+        ]
+        raw_log_dump = [
+            'Cupcake ipsum dolor sit amet cake pastry sesame snaps.',
+            'Jujubes chocolate cake lemon drops cotton candy lemon drops.',
+            'Oat cake souffle sugar plum pastry biscuit muffin.'
+        ]
+        self.set_outputs(
+            cmd_2, raw_log_dump, returncode=0, ssh=True, reset=True)
+
+        # Assert that we pulled the correct logs out.
+        ret_runner_out_dir, log_dump_out = self.buildenv.testrunner(
+            shard_file, fuzzer.output, self.device)
+        self.assertRan(*cmd)
+        self.assertSsh(*cmd_2)
+        with self.host.open(log_dump_out) as f:
+            # File format is a joined log dump with a trailing newline
+            expected_log_dump = raw_log_dump[:]
+            expected_log_dump.append('')
+            self.assertEqual(f.read(), '\n'.join(expected_log_dump))
+        self.assertEqual(ret_runner_out_dir, runner_out_dir)
+
+    def test_covargs(self):
+        #Prerequisites
+        fuzzer = self.buildenv.fuzzers()[0]
+        testrunner_dir = os.path.join(fuzzer.output, 'testrunner_out')
+        summary_json_file = os.path.join(testrunner_dir, 'summary.json')
+        symbolize_file = os.path.join(fuzzer.output, 'fake_symbolize.json')
+
+        # Assert that a missing summary.json file causes an error
+        self.assertError(
+            lambda: self.buildenv.covargs(
+                testrunner_dir, symbolize_file, fuzzer.output),
+            'Unable to find summary.json file at {}.'.format(summary_json_file))
+
+        # Create summary json file
+        self.host.touch(summary_json_file)
+
+        # Assert that a missing symbolize output file causes an error
+        self.assertError(
+            lambda: self.buildenv.covargs(
+                testrunner_dir, symbolize_file, fuzzer.output),
+            'Unable to find symbolize file at {}.'.format(symbolize_file))
+
+        # Create symbolize output file
+        self.host.touch(symbolize_file)
+
+        # Capture covargs command
+        coverage_out_dir = os.path.join(fuzzer.output, 'covargs_out')
+        cmd = [os.path.join(self.buildenv.build_dir, 'host_x64', 'covargs')] \
+            + ['-llvm-cov', self.buildenv.llvm_cov] \
+            + ['-llvm-profdata', self.buildenv.llvm_profdata] \
+            + ['-summary', summary_json_file] \
+            + ['-symbolize-dump', symbolize_file] \
+            + ['-output-dir', coverage_out_dir]
+        for build_id_dir in self.buildenv.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+        self.set_outputs(cmd, [], returncode=0, reset=True)
+
+        ret_coverage_out_dir = self.buildenv.covargs(
+            testrunner_dir, symbolize_file, fuzzer.output)
+        self.assertRan(*cmd)
+        self.assertEqual(ret_coverage_out_dir, coverage_out_dir)
 
 
 if __name__ == '__main__':

@@ -199,6 +199,20 @@ class ArgParser(argparse.ArgumentParser):
         e2e_test_parser.help = 'Run the end-to-end test for this tool.'
         e2e_test_parser.set_defaults(command=command.run_e2e_test)
 
+        # TODO(fxb/24828) Once this is ready, merge with analyze or another tool
+        coverage_parser = self._add_parser('coverage')
+        coverage_parser.description = [
+            '[EXPERIMENTAL] Generates a coverage report for a set of tests.',
+            'Requires --variant profile to be set via fx set to generate the',
+            'necessary symbols. It is suggested to run with --no-goma in order',
+            'to preserve linking to files in the report.',
+        ]
+        coverage_parser._add_verbose_flag()
+        coverage_parser._add_name_argument(required=True)
+        coverage_parser._add_output_option()
+        coverage_parser.help = 'Generate a coverage report for a test.'
+        coverage_parser.set_defaults(command=command.measure_coverage)
+
         self.epilog = [
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
             'See also "fx help fuzz" for global "fx" options.',

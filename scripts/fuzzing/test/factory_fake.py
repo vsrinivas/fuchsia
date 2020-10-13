@@ -51,6 +51,12 @@ class FakeFactory(Factory):
         self.host.mkdir(
             '{}/prebuilt/third_party/clang/{}/lib/debug/.build-id'.format(
                 fuchsia_dir, self.host.platform))
+        self.host.touch(
+            '{}/prebuilt/third_party/clang/{}/bin/llvm-cov'.format(
+                fuchsia_dir, self.host.platform))
+        self.host.touch(
+            '{}/prebuilt/third_party/clang/{}/bin/llvm-profdata'.format(
+                fuchsia_dir, self.host.platform))
         self.host.mkdir(build_dir + '/.build-id')
         self.host.mkdir(build_dir + '.zircon/.build-id')
         self.host.touch(build_dir + '/ssh-keys/ssh_config')

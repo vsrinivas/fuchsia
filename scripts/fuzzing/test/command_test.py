@@ -308,6 +308,16 @@ class CommandTest(TestCaseWithFuzzer):
             'Added:', '  bar', '',
             '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
 
+    def test_measure_coverage(self):
+        fuzzer = self.create_fuzzer('1/1')
+        output_dir = 'my/dir'
+        self.host.mkdir(output_dir)
+        args = self.parse_args('coverage', '-o', output_dir, str(fuzzer))
+        self.assertError(
+            lambda: command.measure_coverage(args, self.factory),
+            'FUCHSIA_SSH_KEY not set, by default this should be the private key in ~/.ssh/'
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

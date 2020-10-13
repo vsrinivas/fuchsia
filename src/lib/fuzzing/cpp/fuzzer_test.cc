@@ -21,6 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 namespace fuzzing {
 
 static std::vector<std::string> gTestInputs;
+static std::string gArgv0;
 
 TEST(LlvmFuzzerTest, OneInput) {
   // Should work with null
@@ -29,6 +30,10 @@ TEST(LlvmFuzzerTest, OneInput) {
   //  Should work with non-null but zero size
   uint8_t ignored;
   EXPECT_EQ(0, LLVMFuzzerTestOneInput(&ignored, 0));
+
+#if defined(__Fuchsia__)
+  FX_LOGS(INFO) << "Fuzzer built as test: " << gArgv0;
+#endif
 
   // Should work with any files in directories specified on the command line.
   for (const auto &pathname : gTestInputs) {
@@ -84,5 +89,8 @@ int main(int argc, char **argv) {
   } else {
     FX_LOGS(INFO) << "Testing with " << ::fuzzing::gTestInputs.size() << " inputs." << std::endl;
   }
+
+  ::fuzzing::gArgv0 = argv[0];
+
   return RUN_ALL_TESTS();
 }

@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import datetime
+import json
 import os
 import re
 import subprocess
@@ -564,3 +565,43 @@ class Fuzzer(object):
             self.host.echo(
                 'Unable to find \'{}\' in {}'.format(fuzzer_target, build_gn))
             return False
+
+    def generate_coverage_report(self):
+        """Replicates the steps in the fuchsia/coverage infra build recipe and
+        runs them locally in order to build a more targetted coverage report."""
+
+        if not self.host.getenv('FUCHSIA_SSH_KEY'):
+            self.host.error(
+                'FUCHSIA_SSH_KEY not set, by default this should be the private key in ~/.ssh/'
+            )
+        if not self.host.getenv('FUCHSIA_DEVICE_ADDR'):
+            self.host.error(
+                'FUCHSIA_DEVICE_ADDR not set, `fx list-devices` can be used to get the ' \
+                'device address'
+            )
+
+        # TODO fxb/60971
+        args_json_file = os.path.join(self.buildenv.build_dir, 'args.json')
+        with self.host.open(args_json_file) as f:
+            args = json.load(f)
+            if (not 'select_variant' in args) or (not 'profile'
+                                                  in args['select_variant']):
+                self.host.error('Not built with profile variant.')
+
+        # Ensure the output directory is created.
+        self.host.mkdir(self.output)
+
+        # Since the fuzzer is built as test, turn it back into the test form for testsharder
+        test_executable_url = re.sub(r'.cmx', '_test.cmx', self.executable_url)
+        shard_file = self.buildenv.testsharder(test_executable_url, self.output)
+        runner_dir, log_dump_file = self.buildenv.testrunner(
+            shard_file, self.output, self.device)
+        symbolize_out_file = os.path.join(self.output, 'symbolize_out')
+        with self.host.open(log_dump_file) as f:
+            self.buildenv.symbolize(f.read(), json_output=symbolize_out_file)
+
+        coverage_dir = self.buildenv.covargs(
+            runner_dir, symbolize_out_file, self.output)
+        self.host.echo(
+            'Generated coverage report, viewable at {}.'.format(
+                '{}/index.html'.format(coverage_dir)))

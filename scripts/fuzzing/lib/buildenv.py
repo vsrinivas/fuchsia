@@ -27,6 +27,8 @@ class BuildEnv(object):
       llvm_symbolizer:  Path to the LLVM/Clang symbolizer library.
       build_id_dirs:    List of paths to symbolizer debug symbols.
       gsutil:           Path to the Google Cloud Storage utility.
+      llvm_cov:         Path to the LLVM/Clang coverage tool.
+      llvm_prodata:     Path to the LLVM/Clang profile data tool.
   """
 
     def __init__(self, factory):
@@ -42,6 +44,8 @@ class BuildEnv(object):
         self._llvm_symbolizer = None
         self._build_id_dirs = None
         self._gsutil = None
+        self._llvm_cov = None
+        self._llvm_profdata = None
         self._fuzzers = []
 
     @property
@@ -119,6 +123,30 @@ class BuildEnv(object):
             self.host.error('Invalid GS utility: {}'.format(abspath))
         self._gsutil = abspath
 
+    @property
+    def llvm_cov(self):
+        assert self._llvm_cov, 'LLVM cov not set.'
+        return self._llvm_cov
+
+    @llvm_cov.setter
+    def llvm_cov(self, llvm_cov):
+        llvm_cov = self.abspath(llvm_cov)
+        if not self.host.isfile(llvm_cov):
+            self.host.error('Invalid LLVM cov: {}'.format(llvm_cov))
+        self._llvm_cov = llvm_cov
+
+    @property
+    def llvm_profdata(self):
+        assert self._llvm_profdata, 'LLVM profdata not set.'
+        return self._llvm_profdata
+
+    @llvm_profdata.setter
+    def llvm_profdata(self, llvm_profdata):
+        llvm_profdata = self.abspath(llvm_profdata)
+        if not self.host.isfile(llvm_profdata):
+            self.host.error('Invalid LLVM profdata: {}'.format(llvm_profdata))
+        self._llvm_profdata = llvm_profdata
+
     # Initialization routines
 
     def configure(self, build_dir):
@@ -132,6 +160,8 @@ class BuildEnv(object):
             build_dir + '/.build-id',
             build_dir + '.zircon/.build-id',
         ]
+        self.llvm_cov = clang_dir + '/bin/llvm-cov'
+        self.llvm_profdata = clang_dir + '/bin/llvm-profdata'
 
     def read_fuzzers(self, pathname):
         """Parses the available fuzzers from an fuzzers.json pathname."""
@@ -297,11 +327,12 @@ class BuildEnv(object):
             self.host.error('Multiple devices found.', 'Try "fx set-device".')
         return addrs[0]
 
-    def symbolize(self, raw):
+    def symbolize(self, raw, json_output=None):
         """Symbolizes backtraces in a log file using the current build.
 
         Attributes:
             raw: Bytes representing unsymbolized lines.
+            json_output: If present, outputs trigger information to the specified file.
 
         Returns:
             Bytes representing symbolized lines.
@@ -309,6 +340,8 @@ class BuildEnv(object):
         cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
         for build_id_dir in self.build_id_dirs:
             cmd += ['-build-id-dir', build_id_dir]
+        if json_output:
+            cmd += ['-json-output', json_output]
         process = self.host.create_process(cmd)
         process.stdin = subprocess.PIPE
         process.stdout = subprocess.PIPE
@@ -317,3 +350,130 @@ class BuildEnv(object):
         if popened.returncode != 0:
             out = ''
         return re.sub(r'[0-9\[\]\.]*\[klog\] INFO: ', '', out)
+
+    def testsharder(self, executable_url, out_dir):
+        """Shards the available tests into _one_ test shard per environment for
+        use by testrunner.
+
+        Attributes:
+            executable_url: The fuchsia pkg url of the test to generate coverage for.
+            out_dir: The output directory into which to write the sharded tests file.
+
+        Returns:
+            The path to a generated file containing exactly _one_ test definition
+            as extracted from the tests.json file by testsharder.
+        """
+        sharder_out = os.path.join(out_dir, 'testsharder_out.json')
+        # Generate the tests but force 1 shard maximum
+        cmd = [os.path.join(self.build_dir, 'host_x64', 'testsharder')] \
+            + ['-build-dir', self.build_dir] \
+            + ['-max-shards-per-env', '1'] \
+            + ['-output-file', sharder_out]
+        self.host.create_process(cmd).check_call()
+        with self.host.open(sharder_out) as f:
+            sharded = json.load(f)
+
+        if len(sharded) != 1:
+            self.host.error(
+                'Expected a single shard, but got {}.'.format(len(sharded)))
+
+        shard = sharded[0]
+        if shard['name'].startswith('AEMU'):
+            test_out = os.path.join(
+                out_dir, 'shard_{}_tests.json'.format(shard['name']))
+            all_tests = [
+                t for t in shard['tests'] if t.get('name') == executable_url
+            ]
+
+            if not all_tests:
+                self.host.error('Found no matching tests to run.')
+
+            self.host.echo(
+                'Found {} tests to generate coverage report for.'.format(
+                    len(all_tests)))
+
+            with self.host.open(test_out, 'w') as out_file:
+                json.dump(all_tests, out_file)
+            return test_out
+
+        self.host.error('Unable to find any tests for AEMU shards.')
+
+    def testrunner(self, shard_file, out_dir, device):
+        """Runs testrunner over a file of tests generated by testsharder which
+        generates the artifacts used for SBCC.
+        Additionally, dumps logs of associated pids to an output file for symbolizing.
+
+        Attributes:
+            shard_file: A fully qualified path to the sharded tests file.
+            out_dir: The output directory into which to write the log dump.
+            device: Reference to the device to get logs from.
+
+        Returns:
+            The path to the testrunner output.
+            The path to the log dump file.
+        """
+        if not self.host.isfile(shard_file):
+            self.host.error(
+                'Unable to find sharded test file at {}.'.format(shard_file))
+
+        runner_out_dir = os.path.join(out_dir, 'testrunner_out/')
+        cmd = [os.path.join(self.build_dir, 'host_x64', 'testrunner')] \
+            + ['-out-dir', runner_out_dir] \
+            + ['-use-runtests', '-per-test-timeout', '600s'] \
+            + [shard_file]
+        out = self.host.create_process(cmd).check_output()
+
+        # Look for the marker log in the testrunner output
+        pids = []
+        for line in out.splitlines():
+            if 'Fuzzer built as test' in line:
+                parts = line.split('][')
+                if len(parts) > 2:
+                    pids.append(int(parts[1]))
+        if len(pids) < 1:
+            self.host.error('Unable to find a matching test fuzzer pid.')
+        raw = device.dump_log('--pid', str(pids[0]))
+
+        self.host.mkdir(os.path.join(out_dir, 'log_dumps'))
+        # Strip the .json suffix from the end of the shard_file name.
+        shard_file_basename = os.path.basename(shard_file)[:-5]
+        log_dump_out = os.path.join(
+            out_dir, 'log_dumps', 'dump_{}'.format(shard_file_basename))
+        with self.host.open(log_dump_out, 'w') as out_file:
+            out_file.write(raw)
+
+        return runner_out_dir, log_dump_out
+
+    def covargs(self, runner_dir, symbolize_file, out_dir):
+        """Runs covargs to generate a SBCC given a testrunner output and symbolize file.
+
+        Attributes:
+            runner_dir: The path to the testrunner output which contains a summary.json file.
+            symbolize_file: The path to the symbolized profile json output.
+            out_dir: The output directory into which to write the coverage report
+
+        Returns:
+            The path to the generated coverage report.
+        """
+        summary_json_file = os.path.join(runner_dir, 'summary.json')
+        if not self.host.isfile(summary_json_file):
+            self.host.error(
+                'Unable to find summary.json file at {}.'.format(
+                    summary_json_file))
+        if not self.host.isfile(symbolize_file):
+            self.host.error(
+                'Unable to find symbolize file at {}.'.format(symbolize_file))
+
+        coverage_path = os.path.join(out_dir, 'covargs_out')
+        cmd = [os.path.join(self.build_dir, 'host_x64', 'covargs')] \
+            + ['-llvm-cov', self.llvm_cov] \
+            + ['-llvm-profdata', self.llvm_profdata] \
+            + ['-summary', summary_json_file] \
+            + ['-symbolize-dump', symbolize_file] \
+            + ['-output-dir', coverage_path]
+        for build_id_dir in self.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+
+        self.host.create_process(cmd).check_call()
+
+        return coverage_path

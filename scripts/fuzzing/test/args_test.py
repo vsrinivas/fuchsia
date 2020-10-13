@@ -42,6 +42,7 @@ class ArgsTest(TestCaseWithFactory):
             'Subcommands:',
             '  analyze             Report coverage info for a given corpus and/or dictionary.',
             '  check               Check on the status of one or more fuzzers.',
+            '  coverage            Generate a coverage report for a test.',
             '  e2etest             Run the end-to-end test for this tool.',
             '  help                Print this message and exit.',
             '  list                List available fuzzers in the current build.',
@@ -591,6 +592,40 @@ class ArgsTest(TestCaseWithFactory):
                 '  -v,--verbose        Display additional output.',
                 '',
             ])
+
+    def test_coverage_parser(self):
+        self.assertParseHelp(
+            ['help', 'coverage'], [
+                '',
+                'Usage: fx fuzz coverage [OPTIONS] NAME',
+                '',
+                '[EXPERIMENTAL] Generates a coverage report for a set of tests.',
+                'Requires --variant profile to be set via fx set to generate the',
+                'necessary symbols. It is suggested to run with --no-goma in order',
+                'to preserve linking to files in the report.',
+                '',
+                'Arguments:',
+                '  NAME                Fuzzer name to match.  This can be part of the package',
+                '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
+                '                      match "foo_package/bar_target".',
+                '',
+                'Options:',
+                '  -v,--verbose        Display additional output.',
+                '  -o,--output OUTPUT  Path under which to store results.',
+                '',
+            ])
+
+        self.assertParseFails(['coverage'], 'Too few arguments.')
+
+        self.assertParse(
+            [
+                'coverage',
+                '--output=foo',
+                'name',
+            ],
+            command=command.measure_coverage,
+            output='foo',
+            name='name')
 
 
 if __name__ == '__main__':
