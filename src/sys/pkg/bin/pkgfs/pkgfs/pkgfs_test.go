@@ -8,6 +8,7 @@ package pkgfs
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -485,6 +486,31 @@ func TestSync(t *testing.T) {
 		t.Fatal(err)
 	}
 	d.Close()
+}
+
+func TestMetaFileGetFlags(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+
+	ioFile := (*zxio.FileWithCtxInterface)(fdioFile.Node.NodeWithCtxInterface)
+
+	status, flags, err := ioFile.GetFlags(context.Background())
+	if err != nil || status != int32(zx.ErrOk) {
+		t.Fatal("Could not get flags:", err, status)
+	}
+
+	if flags != syscall.FsRightReadable {
+		t.Fatalf("got %v, want %v", flags, syscall.FsRightReadable)
+	}
 }
 
 func TestMapFileForRead(t *testing.T) {

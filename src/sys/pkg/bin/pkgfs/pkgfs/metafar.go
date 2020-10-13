@@ -162,7 +162,7 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 
 	for _, lname := range contents {
 		if name == lname {
-			mff, err := newMetaFarFile(d.blob, d.fs, name)
+			mff, err := newMetaFarFile(d.blob, d.fs, name, flags)
 			return mff, nil, nil, err
 		}
 	}
@@ -227,8 +227,9 @@ type metaFarFile struct {
 	fr *far.Reader
 	er *far.EntryReader
 
-	off  int64
-	path string
+	off   int64
+	path  string
+	flags fs.OpenFlags
 	// VMO representing this file's view of the archive.
 	vmo *zx.VMO
 
@@ -239,7 +240,7 @@ type metaFarFile struct {
 	backingBlobVMO *zx.VMO
 }
 
-func newMetaFarFile(blob string, fs *Filesystem, path string) (*metaFarFile, error) {
+func newMetaFarFile(blob string, fs *Filesystem, path string, flags fs.OpenFlags) (*metaFarFile, error) {
 	mf := newMetaFar(blob, fs)
 	fr, err := mf.open()
 	if err != nil {
@@ -258,6 +259,7 @@ func newMetaFarFile(blob string, fs *Filesystem, path string) (*metaFarFile, err
 		er,
 		0,
 		path,
+		flags,
 		nil,
 		nil,
 	}, nil
@@ -272,6 +274,10 @@ func (f *metaFarFile) Close() error {
 	}
 	f.fr.Close()
 	return nil
+}
+
+func (f *metaFarFile) GetOpenFlags() fs.OpenFlags {
+	return f.flags
 }
 
 func (f *metaFarFile) Dup() (fs.File, error) {
@@ -292,6 +298,7 @@ func (f *metaFarFile) Dup() (fs.File, error) {
 		er,
 		0,
 		f.path,
+		f.flags,
 		nil,
 		nil,
 	}, nil
