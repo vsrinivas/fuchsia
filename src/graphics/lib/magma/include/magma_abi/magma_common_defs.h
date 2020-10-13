@@ -260,6 +260,7 @@ typedef struct {
 } magma_buffer_format_constraints_t;
 
 typedef struct {
+  uint32_t max_buffer_count;
   uint32_t min_buffer_count_for_camping;
   uint32_t min_buffer_count_for_dedicated_slack;
   uint32_t min_buffer_count_for_shared_slack;

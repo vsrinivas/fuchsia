@@ -437,6 +437,40 @@ class TestPlatformSysmemConnection {
     EXPECT_EQ(planes[0].bytes_per_row, 1u << 8);
   }
 
+  static void TestAdditionalConstraints() {
+    auto connection = CreateConnection();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints{};
+    buffer_constraints.count = 2;
+    buffer_constraints.usage = 0;
+    buffer_constraints.secure_permitted = false;
+    buffer_constraints.secure_required = false;
+    buffer_constraints.ram_domain_supported = true;
+    buffer_constraints.min_size_bytes = 1024;
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    magma_buffer_format_additional_constraints_t additional_constraints{};
+    additional_constraints.max_buffer_count = 1;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              constraints->AddAdditionalConstraints(&additional_constraints).get());
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+
+    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+    magma_status_t status = collection->GetBufferDescription(&description).get();
+    // Buffer count 2 is larger than max_buffer_count.
+    EXPECT_EQ(MAGMA_STATUS_INTERNAL_ERROR, status);
+  }
+
  private:
   static std::unique_ptr<magma_sysmem::PlatformSysmemConnection> CreateConnection() {
     zx::channel client_end, server_end;
@@ -489,3 +523,7 @@ TEST(PlatformSysmemConnection, TooManyFormats) {
 }
 
 TEST(PlatformSysmemConnection, DedupFormats) { TestPlatformSysmemConnection::TestDedupFormats(); }
+
+TEST(PlatformSysmemConnection, AdditionalConstraints) {
+  TestPlatformSysmemConnection::TestAdditionalConstraints();
+}

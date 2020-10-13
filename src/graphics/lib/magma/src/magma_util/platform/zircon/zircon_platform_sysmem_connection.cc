@@ -261,6 +261,7 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
 
   magma::Status AddAdditionalConstraints(
       const magma_buffer_format_additional_constraints_t* additional) override {
+    constraints_.max_buffer_count = additional->max_buffer_count;
     constraints_.min_buffer_count_for_camping = additional->min_buffer_count_for_camping;
     constraints_.min_buffer_count_for_dedicated_slack =
         additional->min_buffer_count_for_dedicated_slack;
