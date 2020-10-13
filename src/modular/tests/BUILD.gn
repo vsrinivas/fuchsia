@@ -16,6 +16,9 @@ group("tests") {
     # (all of the tests below). Add it here so that an fx set --with
     # //src/modular/tests includes it.
     "//src/cobalt/bin/testing/mock_cobalt",
+
+    # Used for intl testing.
+    "//src/intl/intl_services:pkg_small",
     "//src/modular/bin/modular_test_harness",
   ]
 }
@@ -140,22 +143,6 @@ executable("intents_test") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-  ]
-}
-
-executable("intl_property_provider_test") {
-  testonly = true
-  sources = [ "intl_property_provider_test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/app_driver/cpp:module_driver",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
   ]
 }
@@ -336,10 +323,6 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "intl_property_provider_test"
-      environments = basic_envs
-    },
-    {
       name = "module_context_test"
       environments = basic_envs
     },
@@ -372,7 +355,6 @@ test_package("modular_integration_tests") {
     ":component_context_test",
     ":inspect_session_test",
     ":intents_test",
-    ":intl_property_provider_test",
     ":module_context_test",
     ":session_shell_test",
     ":sessionctl_test",

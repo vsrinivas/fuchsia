@@ -14,7 +14,6 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -28,7 +27,6 @@ namespace modular {
 static constexpr auto kSessionLauncherComponentTimeout = zx::sec(1);
 
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
-using intl::IntlPropertyProviderImpl;
 
 // Implementation of the |fuchsia::modular::session::Launcher| protocol.
 class LauncherImpl : public fuchsia::modular::session::Launcher {
@@ -105,9 +103,6 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
       executor_(async_get_default_dispatcher()) {
-  intl_property_provider_ = IntlPropertyProviderImpl::Create(component_context_services_);
-
-  outgoing_services_->AddPublicService(intl_property_provider_->GetHandler());
   outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
       lifecycle_bindings_.GetHandler(this));
   outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
@@ -244,7 +239,7 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
 
   session_provider_.reset(new SessionProvider(
       /* delegate= */ this, launcher_.get(), device_administrator_.get(), config_accessor,
-      intl_property_provider_.get(), std::move(services_from_session_launcher),
+      std::move(services_from_session_launcher),
       /* on_zero_sessions= */
       [this] {
         if (state_ == State::SHUTTING_DOWN) {

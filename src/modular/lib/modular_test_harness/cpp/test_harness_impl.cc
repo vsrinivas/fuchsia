@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/stash/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -174,6 +175,8 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
   // The default set of component-provided services are all basemgr's hard
   // dependencies. A map of service name => component URL providing the service.
   std::map<std::string, std::string> default_svcs = {
+      {fuchsia::intl::PropertyProvider::Name_,
+       "fuchsia-pkg://fuchsia.com/intl-services-small#meta/intl_services.cmx"},
       {fuchsia::settings::Intl::Name_,
        "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"},
       {fuchsia::stash::Store::Name_, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"},

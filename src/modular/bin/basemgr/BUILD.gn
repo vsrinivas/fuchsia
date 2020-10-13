@@ -112,7 +112,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
-    "//src/lib/intl/intl_property_provider_impl",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:environment",

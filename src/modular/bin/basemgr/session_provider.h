@@ -14,7 +14,6 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
-#include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/bin/basemgr/session_context_impl.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -42,7 +41,6 @@ class SessionProvider {
   SessionProvider(Delegate* delegate, fuchsia::sys::Launcher* launcher,
                   fuchsia::hardware::power::statecontrol::Admin* administrator,
                   const modular::ModularConfigAccessor* config_accessor,
-                  intl::IntlPropertyProviderImpl* intl_property_provider,
                   fuchsia::sys::ServiceList services_from_session_launcher,
                   fit::function<void()> on_zero_sessions);
 
@@ -76,13 +74,11 @@ class SessionProvider {
   fuchsia::sys::Launcher* const launcher_;                              // Not owned.
   fuchsia::hardware::power::statecontrol::Admin* const administrator_;  // Not owned.
   const modular::ModularConfigAccessor* const config_accessor_;         // Not owned.
-  intl::IntlPropertyProviderImpl* const intl_property_provider_;        // Not owned.
   fit::function<void()> on_zero_sessions_;
 
   std::unique_ptr<SessionContextImpl> session_context_;
 
-  // Service directory from which |fuchsia.intl.PropertyProvider| and others will be served
-  // to child |sessionmgr|s.
+  // Service directory from which services will be served to child |sessionmgr|s.
   vfs::PseudoDir sessionmgr_service_dir_;
 
   // Names of services passed by session launcher.

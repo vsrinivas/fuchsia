@@ -144,7 +144,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Retained to be used in creating a `SessionProvider`.
   const std::shared_ptr<sys::ServiceDirectory> component_context_services_;
 
-  // Used to export protocols like IntlPropertyProviderImpl and Lifecycle
+  // Used to export protocols like Lifecycle
   const std::shared_ptr<sys::OutgoingDirectory> outgoing_services_;
 
   // Used to launch component instances.
@@ -166,8 +166,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
   AsyncHolder<SessionProvider> session_provider_;
-
-  std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider_;
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_launcher_component_app_;
 
