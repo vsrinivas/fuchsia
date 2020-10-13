@@ -711,6 +711,7 @@ zx_status_t SystemInstance::InitializeDriverHostSvcDir() {
   }
   driver_host_svc_.emplace(loop_.dispatcher());
   const char* kAllowedServices[] = {
+      "fuchsia.logger.LogSink",
       "fuchsia.scheduler.ProfileProvider",
       "fuchsia.tracing.provider.Registry",
   };

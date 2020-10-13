@@ -47,13 +47,14 @@ class EnvironmentTest : public zxtest::Test {
 TEST_F(EnvironmentTest, GetServiceList) {
   auto result = TestDevice::Call::GetServiceList(zx::unowned(chan_));
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->services.count(), 2);
+  ASSERT_EQ(result->services.count(), 3);
 
   std::unordered_set<std::string> actual;
   for (const auto& service : result->services) {
     actual.emplace(service.data(), service.size());
   }
   std::unordered_set<std::string> kExpectedServices = {
+      "/svc/fuchsia.logger.LogSink",
       "/svc/fuchsia.scheduler.ProfileProvider",
       "/svc/fuchsia.tracing.provider.Registry",
   };

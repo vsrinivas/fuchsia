@@ -196,6 +196,16 @@ fuchsia_unittest_component("minfs-unit-test") {
 }
 
 fuchsia_test_package("minfs-tests") {
+  if (is_fuchsia) {
+    # TODO(fxbug.dev/61773): Remove this once minfs-integration-test no longer
+    # produces ERROR logs.
+    test_specs = {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+  }
+
   test_components = [
     ":minfs-integration-test",
     ":minfs-power-test",
