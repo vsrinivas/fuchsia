@@ -15,7 +15,8 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::{cmp, mem};
 
 /// A low-overhead metrics collection type intended for use by an async executor.
-#[derive(Default)]
+// TODO(fxbug.dev/58578): Impl debug with Ordering::Acquire, instead of the SeqCst derived impl.
+#[derive(Default, Debug)]
 pub struct Collector {
     tasks_created: AtomicUsize,
     tasks_completed: AtomicUsize,
@@ -52,24 +53,6 @@ impl Collector {
             last_ticks: zx::ticks_get(),
             polls: 0,
             tasks_pending_max: 0, // Loading not necessary, handled by first update with same cost
-        }
-    }
-
-    #[allow(dead_code)]
-    /// Create a snapshot of the currently collected metrics. If the executor is running
-    /// in multi-threaded mode, the snapshot is non-atomic. That said, the following
-    /// invariant will hold: tasks_pending_max and tasks_completed <= tasks_created.
-    pub fn snapshot(&self) -> Snapshot {
-        Snapshot {
-            tasks_pending_max: self.tasks_pending_max.load(Ordering::Acquire),
-            tasks_completed: self.tasks_completed.load(Ordering::Acquire),
-            tasks_created: self.tasks_created.load(Ordering::Acquire),
-            polls: self.polls.load(Ordering::Acquire),
-            wakeups_io: self.wakeups_io.load(Ordering::Acquire),
-            wakeups_deadline: self.wakeups_deadline.load(Ordering::Acquire),
-            wakeups_notification: self.wakeups_notification.load(Ordering::Acquire),
-            ticks_awake: self.ticks_awake.load(Ordering::Acquire),
-            ticks_asleep: self.ticks_asleep.load(Ordering::Acquire),
         }
     }
 }
@@ -157,20 +140,6 @@ pub enum WakeupReason {
     Notification,
 }
 
-/// A snapshot of all metrics collected at a specific point in time.
-#[derive(Debug)]
-pub struct Snapshot {
-    pub tasks_created: usize,
-    pub tasks_completed: usize,
-    pub tasks_pending_max: usize,
-    pub polls: usize,
-    pub wakeups_io: usize,
-    pub wakeups_deadline: usize,
-    pub wakeups_notification: usize,
-    pub ticks_awake: u64,
-    pub ticks_asleep: u64,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn debug_snapshot() {
+    fn debug_str() {
         let collector = Collector {
             tasks_created: 10.into(),
             tasks_completed: 9.into(),
@@ -213,11 +182,10 @@ mod tests {
             ticks_awake: 100000.into(),
             ticks_asleep: 200000.into(),
         };
-
         assert_eq!(
-            format!("{:?}", collector.snapshot()),
+            format!("{:?}", collector),
             "\
-        Snapshot { tasks_created: 10, tasks_completed: 9, tasks_pending_max: 3, \
+        Collector { tasks_created: 10, tasks_completed: 9, tasks_pending_max: 3, \
         polls: 1000, wakeups_io: 123, wakeups_deadline: 456, wakeups_notification: 789, \
         ticks_awake: 100000, ticks_asleep: 200000 }"
         );

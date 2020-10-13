@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 pub mod executor;
-mod instrumentation;
 pub mod task;
 pub mod timer;
+
+// TODO(fxbug.dev/58578): Remove this annotation
+#[allow(dead_code)]
+mod instrumentation;
