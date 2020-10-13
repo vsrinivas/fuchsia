@@ -6,6 +6,10 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("rust") {
+  deps = [ ":syslog" ]
+}
+
 rustc_library("syslog") {
   assert(is_fuchsia)
   name = "fuchsia_syslog"

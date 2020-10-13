@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/logs_from_crash"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

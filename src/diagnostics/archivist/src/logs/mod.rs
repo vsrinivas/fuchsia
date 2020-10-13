@@ -527,6 +527,8 @@ mod tests {
             fourth_packet,
             fifth_packet,
         ]);
+        drop(stream);
+
         let log_stats_tree = harness
             .filter_test(
                 vec![first_message, second_message, third_message, fourth_message, fifth_message],
@@ -594,6 +596,8 @@ mod tests {
 
         let mut bar_stream = harness.create_stream_from_log_reader(log_reader2.clone());
         bar_stream.write_packet(&mut packet2);
+        drop((foo_stream, bar_stream));
+
         let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
 
         assert_inspect_tree!(
@@ -756,6 +760,7 @@ mod tests {
 
         let mut bar_stream = harness.create_stream_from_log_reader(log_reader2.clone());
         bar_stream.write_packet(&mut packet2);
+        drop((foo_stream, bar_stream));
         let log_stats_tree = harness.filter_test(vec![message, message2], None).await;
 
         assert_inspect_tree!(
@@ -864,6 +869,7 @@ mod tests {
         let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2]);
+        drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
@@ -895,6 +901,7 @@ mod tests {
         let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2]);
+        drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
@@ -933,6 +940,7 @@ mod tests {
         let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2, p3, p4, p5]);
+        drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
@@ -967,6 +975,7 @@ mod tests {
         let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2, p3]);
+        drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
@@ -975,14 +984,14 @@ mod tests {
         let mut p = setup_default_packet();
         let mut p2 = p.clone();
         // p tags - "DDDDD"
-        memset(&mut p.data[..], 1, 68, 5);
+        p.fill_data(1..6, 68);
 
         p2.metadata.pid = 0;
         p2.metadata.tid = 0;
         p2.data[6] = 5;
         // p2 tag - "AAAAA", "BBBBB"
         // p2 msg - "CCCCC"
-        memset(&mut p2.data[..], 13, 67, 5);
+        p2.fill_data(13..18, 67);
 
         let lm1 = LogMessage {
             pid: p.metadata.pid,
@@ -1015,6 +1024,7 @@ mod tests {
         let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2]);
+        drop(stream);
         harness.filter_test(vec![lm1, lm2], Some(options)).await;
     }
 
@@ -1095,6 +1105,7 @@ mod tests {
         let mut harness = TestHarness::new();
         let mut stream = harness.create_structured_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(logs);
+        drop(stream);
         harness.filter_test(expected_logs, None).await;
     }
 

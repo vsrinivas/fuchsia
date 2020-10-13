@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/logs_then_crashes"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

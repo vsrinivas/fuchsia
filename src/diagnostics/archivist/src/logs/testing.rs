@@ -104,10 +104,15 @@ impl TestHarness {
         EventStreamLogReader::new(self.log_manager.clone(), target_moniker, target_url)
     }
 
-    /// Check to make sure all `TestStream`s have been dropped.
+    /// Check to make sure all `TestStream`s have been dropped. This ensures that we repeatedly test
+    /// the case where a socket's write half is dropped before the socket is drained.
     fn check_pending_streams(&mut self) {
-        // TODO(fxbug.dev/56418) panic if the test hasn't dropped/closed pending streams
         self.pending_streams.retain(|w| w.upgrade().is_some());
+        assert_eq!(
+            self.pending_streams.len(),
+            0,
+            "drop all test streams before filter_test() to test crashed writer behavior"
+        );
     }
 
     /// Run a filter test, returning the Inspector to check Inspect output.
@@ -134,7 +139,6 @@ impl TestHarness {
         };
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
-        // TODO(fxbug.dev/56418) drop this stream before validating
         let mut stream = self.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packet(&mut p);
 
@@ -146,6 +150,7 @@ impl TestHarness {
         p.metadata.pid = 2;
         lm3.pid = 2;
         stream.write_packet(&mut p);
+        drop(stream);
         self.check_pending_streams();
         if test_dump_logs {
             validate_log_dump(vec![lm1, lm2, lm3], self.log_proxy, None).await;
@@ -226,7 +231,7 @@ impl LogWriter for LogPacketWriter {
     }
 
     fn write(sin: &zx::Socket, packet: &fx_log_packet_t) {
-        sin.write(to_u8_slice(packet)).unwrap();
+        sin.write(packet.as_bytes()).unwrap();
     }
 }
 
@@ -374,8 +379,8 @@ pub fn setup_default_packet() -> fx_log_packet_t {
     p.metadata.severity = LogLevelFilter::Warn.into_primitive().into();
     p.metadata.dropped_logs = 2;
     p.data[0] = 5;
-    memset(&mut p.data[..], 1, 65, 5);
-    memset(&mut p.data[..], 7, 66, 5);
+    p.fill_data(1..6, 65);
+    p.fill_data(7..12, 66);
     return p;
 }
 
@@ -389,24 +394,6 @@ pub fn copy_log_message(log_message: &LogMessage) -> LogMessage {
         tags: log_message.tags.clone(),
         msg: log_message.msg.clone(),
     }
-}
-
-/// Function to convert fx_log_packet_t to &[u8].
-/// This function is safe as it works on `fx_log_packet_t` which
-/// doesn't have any uninitialized padding bits.
-pub fn to_u8_slice(p: &fx_log_packet_t) -> &[u8] {
-    // This code just converts to &[u8] so no need to explicity drop it as memory
-    // location would be freed as soon as p is dropped.
-    unsafe {
-        ::std::slice::from_raw_parts(
-            (p as *const fx_log_packet_t) as *const u8,
-            ::std::mem::size_of::<fx_log_packet_t>(),
-        )
-    }
-}
-
-pub fn memset<T: Copy>(x: &mut [T], offset: usize, value: T, size: usize) {
-    x[offset..(offset + size)].iter_mut().for_each(|x| *x = value);
 }
 
 /// A fake reader that returns enqueued responses on read.
