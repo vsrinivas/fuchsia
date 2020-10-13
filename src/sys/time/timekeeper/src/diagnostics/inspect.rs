@@ -3,17 +3,25 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{Diagnostics, Event},
-    crate::enums::{InitializeRtcOutcome, Track, WriteRtcOutcome},
-    fuchsia_inspect::{
-        health::Reporter, Inspector, IntProperty, Node, NumericProperty, Property, UintProperty,
+    crate::{
+        diagnostics::{Diagnostics, Event},
+        enums::{
+            InitializeRtcOutcome, Role, SampleValidationError, TimeSourceError, Track,
+            WriteRtcOutcome,
+        },
+        MonitorTrack, PrimaryTrack, TimeSource,
     },
-    fuchsia_zircon as zx,
+    fidl_fuchsia_time_external::Status,
+    fuchsia_inspect::{
+        health::Reporter, Inspector, IntProperty, Node, NumericProperty, Property, StringProperty,
+        UintProperty,
+    },
+    fuchsia_zircon::{self as zx, HandleBased as _},
     futures::FutureExt,
     lazy_static::lazy_static,
     log::warn,
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::{collections::HashMap, sync::Arc},
 };
 
 const ONE_MILLION: u32 = 1_000_000;
@@ -186,10 +194,70 @@ impl RealTimeClockNode {
     }
 }
 
+/// An inspect `Node` and properties used to describe the health of a time source.
+struct TimeSourceNode {
+    /// The most recent status of the time source.
+    status: StringProperty,
+    /// The monotonic time at which the time source last changed.
+    status_change: IntProperty,
+    /// The number of time source failures for each failure mode.
+    failure_counters: HashMap<TimeSourceError, UintProperty>,
+    /// The number of sample validation failutes for each rejection mode.
+    rejection_counters: HashMap<SampleValidationError, UintProperty>,
+    /// The inspect Node these fields are exported to.
+    node: Node,
+}
+
+impl TimeSourceNode {
+    /// Constructs a new `TimeSourceNode`, recording the initial state.
+    pub fn new<T: TimeSource>(node: Node, time_source: &T) -> Self {
+        node.record_string("component", format!("{:?}", time_source));
+        TimeSourceNode {
+            status: node.create_string("status", "Launched"),
+            status_change: node.create_int("status_change_monotonic", monotonic_time()),
+            failure_counters: HashMap::new(),
+            rejection_counters: HashMap::new(),
+            node: node,
+        }
+    }
+
+    /// Records a change in status of the time source.
+    pub fn status(&mut self, status: Status) {
+        self.status.set(&format!("{:?}", &status));
+        self.status_change.set(monotonic_time());
+    }
+
+    /// Records a failure of the time source.
+    pub fn failure(&mut self, error: TimeSourceError) {
+        self.status.set(&format!("Failed({:?})", error));
+        self.status_change.set(monotonic_time());
+        match self.failure_counters.get_mut(&error) {
+            Some(field) => field.add(1),
+            None => {
+                let property = self.node.create_uint(&format!("failure_count_{:?}", &error), 1);
+                self.failure_counters.insert(error, property);
+            }
+        }
+    }
+
+    /// Records a rejection of a sample produced by the time source.
+    pub fn sample_rejection(&mut self, error: SampleValidationError) {
+        match self.rejection_counters.get_mut(&error) {
+            Some(field) => field.add(1),
+            None => {
+                let property = self.node.create_uint(&format!("rejection_count_{:?}", &error), 1);
+                self.rejection_counters.insert(error, property);
+            }
+        }
+    }
+}
+
 /// The complete set of Timekeeper information exported through Inspect.
 pub struct InspectDiagnostics {
     /// The monotonic time at which the network became available, in nanoseconds.
     network_available_monotonic: Mutex<Option<IntProperty>>,
+    /// Details of the health of time sources.
+    time_sources: Mutex<HashMap<Role, TimeSourceNode>>,
     /// Details of interactions with the real time clock.
     rtc: Mutex<Option<RealTimeClockNode>>,
     /// The details of the most recent update to the UTC zx::Clock.
@@ -205,28 +273,49 @@ pub struct InspectDiagnostics {
 impl InspectDiagnostics {
     /// Construct a new `InspectDiagnostics` exporting at the supplied `Node` using data from
     /// the supplied clock.
-    pub fn new(node: &Node, clock: zx::Clock) -> Self {
-        // Record fixed data directly into the node without retaining any references.
-        node.record_child("initialization", |child| TimeSet::now(&clock).record(child));
-        node.record_int(
-            "backstop",
-            clock.get_details().map_or(FAILED_TIME, |details| details.backstop.into_nanos()),
-        );
-
+    pub(crate) fn new<T: TimeSource>(
+        node: &Node,
+        primary: &PrimaryTrack<T>,
+        optional_monitor: &Option<MonitorTrack<T>>,
+    ) -> Self {
         // Arc-wrapping the clock is necessary to support the potential multiple invocations of the
         // lazy child node.
-        let arc_clock = Arc::new(clock);
+        let clock = Arc::new(
+            primary
+                .clock
+                .duplicate_handle(zx::Rights::READ)
+                .expect("failed to duplicate UTC clock"),
+        );
+
+        // Record fixed data directly into the node without retaining any references.
+        node.record_child("initialization", |child| TimeSet::now(&clock).record(child));
+        let backstop = clock.get_details().expect("failed to get clock details").backstop;
+        node.record_int("backstop", backstop.into_nanos());
+
+        let mut time_sources_hashmap = HashMap::new();
+        time_sources_hashmap.insert(
+            Role::Primary,
+            TimeSourceNode::new(node.create_child("primary_time_source"), &primary.time_source),
+        );
+        if let Some(monitor) = optional_monitor {
+            time_sources_hashmap.insert(
+                Role::Monitor,
+                TimeSourceNode::new(node.create_child("monitor_time_source"), &monitor.time_source),
+            );
+        }
+
         let diagnostics = InspectDiagnostics {
             network_available_monotonic: Mutex::new(None),
+            time_sources: Mutex::new(time_sources_hashmap),
             rtc: Mutex::new(None),
             last_update: Mutex::new(None),
-            clock: Arc::clone(&arc_clock),
+            clock: Arc::clone(&clock),
             node: node.clone_weak(),
             health: Mutex::new(fuchsia_inspect::health::Node::new(node)),
         };
         diagnostics.health.lock().set_starting_up();
         node.record_lazy_child("current", move || {
-            let clock_clone = Arc::clone(&arc_clock);
+            let clock_clone = Arc::clone(&clock);
             async move {
                 let inspector = Inspector::new();
                 TimeSet::now(&clock_clone).record(inspector.root());
@@ -276,9 +365,18 @@ impl Diagnostics for InspectDiagnostics {
                     RealTimeClockNode::new(self.node.create_child("real_time_clock"), outcome, time)
                 });
             }
-            Event::TimeSourceFailed { .. } => { /* TODO(jsankey): Add implementation */ }
-            Event::TimeSourceStatus { .. } => { /* TODO(jsankey): Add implementation */ }
-            Event::SampleRejected { .. } => { /* TODO(jsankey): Add implementation */ }
+            Event::TimeSourceFailed { role, error } => {
+                self.time_sources.lock().get_mut(&role).map(|source| source.failure(error));
+            }
+            Event::TimeSourceStatus { role, status } => {
+                self.time_sources.lock().get_mut(&role).map(|source| source.status(status));
+            }
+            Event::SampleRejected { role, error } => {
+                self.time_sources
+                    .lock()
+                    .get_mut(&role)
+                    .map(|source| source.sample_rejection(error));
+            }
             Event::WriteRtc { outcome } => {
                 if let Some(ref mut rtc_node) = *self.rtc.lock() {
                     rtc_node.write(outcome);
@@ -295,8 +393,13 @@ impl Diagnostics for InspectDiagnostics {
 mod tests {
     use {
         super::*,
+        crate::{
+            enums::{SampleValidationError as SVE, TimeSourceError as TSE},
+            time_source::FakeTimeSource,
+            Notifier,
+        },
+        fidl_fuchsia_time as ftime,
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
-        fuchsia_zircon::HandleBased as _,
     };
 
     const BACKSTOP_TIME: i64 = 111111111;
@@ -336,6 +439,27 @@ mod tests {
             .unwrap()
     }
 
+    /// Creates a new `InspectDiagnostics` object recording to the root of the supplied inspector,
+    /// returning a tuple of the object and the primary clock it is using.
+    fn create_test_object(
+        inspector: &Inspector,
+        include_monitor: bool,
+    ) -> (InspectDiagnostics, zx::Clock) {
+        let primary = PrimaryTrack {
+            time_source: FakeTimeSource::failing(),
+            clock: create_clock(),
+            notifier: Notifier::new(ftime::UtcSource::Backstop),
+        };
+        let monitor = match include_monitor {
+            true => {
+                Some(MonitorTrack { time_source: FakeTimeSource::failing(), clock: create_clock() })
+            }
+            false => None,
+        };
+
+        (InspectDiagnostics::new(inspector.root(), &primary, &monitor), primary.clock)
+    }
+
     #[test]
     fn valid_clock_details_conversion() {
         let details = ClockDetails::from(zx::ClockDetails::from(VALID_DETAILS));
@@ -362,7 +486,7 @@ mod tests {
     #[test]
     fn after_initialization() {
         let inspector = &Inspector::new();
-        let _inspect_diagnostics = InspectDiagnostics::new(inspector.root(), create_clock());
+        let (_inspect_diagnostics, _) = create_test_object(&inspector, false);
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -377,6 +501,11 @@ mod tests {
                     kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
                 },
+                primary_time_source: contains {
+                    component: "FakeTimeSource",
+                    status: "Launched",
+                    status_change_monotonic: AnyProperty,
+                },
                 "fuchsia.inspect.Health": contains {
                     status: "STARTING_UP",
                 }
@@ -386,10 +515,8 @@ mod tests {
 
     #[test]
     fn after_update() {
-        let clock = create_clock();
-        let clock_duplicate = clock.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
         let inspector = &Inspector::new();
-        let inspect_diagnostics = InspectDiagnostics::new(inspector.root(), clock_duplicate);
+        let (inspect_diagnostics, clock) = create_test_object(&inspector, false);
 
         // Record the time at which the network became available.
         inspect_diagnostics.record(Event::NetworkAvailable);
@@ -446,7 +573,7 @@ mod tests {
     #[test]
     fn real_time_clock() {
         let inspector = &Inspector::new();
-        let inspect_diagnostics = InspectDiagnostics::new(inspector.root(), create_clock());
+        let (inspect_diagnostics, _) = create_test_object(&inspector, false);
         inspect_diagnostics.record(Event::InitializeRtc {
             outcome: InitializeRtcOutcome::Succeeded,
             time: Some(zx::Time::from_nanos(RTC_INITIAL_TIME)),
@@ -480,9 +607,56 @@ mod tests {
     }
 
     #[test]
+    fn time_sources() {
+        let inspector = &Inspector::new();
+        let (test, _) = create_test_object(&inspector, true);
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                primary_time_source: contains {
+                    component: "FakeTimeSource",
+                    status: "Launched",
+                    status_change_monotonic: AnyProperty,
+                },
+                monitor_time_source: contains {
+                    component: "FakeTimeSource",
+                    status: "Launched",
+                    status_change_monotonic: AnyProperty,
+                }
+            }
+        );
+
+        test.record(Event::TimeSourceFailed { role: Role::Primary, error: TSE::LaunchFailed });
+        test.record(Event::TimeSourceFailed { role: Role::Primary, error: TSE::CallFailed });
+        test.record(Event::TimeSourceStatus { role: Role::Primary, status: Status::Ok });
+        test.record(Event::SampleRejected { role: Role::Primary, error: SVE::BeforeBackstop });
+        test.record(Event::TimeSourceFailed { role: Role::Primary, error: TSE::CallFailed });
+        test.record(Event::TimeSourceStatus { role: Role::Monitor, status: Status::Network });
+
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                primary_time_source: contains {
+                    component: "FakeTimeSource",
+                    status: "Failed(CallFailed)",
+                    status_change_monotonic: AnyProperty,
+                    failure_count_LaunchFailed: 1u64,
+                    failure_count_CallFailed: 2u64,
+                    rejection_count_BeforeBackstop: 1u64,
+                },
+                monitor_time_source: contains {
+                    component: "FakeTimeSource",
+                    status: "Network",
+                    status_change_monotonic: AnyProperty,
+                }
+            }
+        );
+    }
+
+    #[test]
     fn health() {
         let inspector = &Inspector::new();
-        let _inspect_diagnostics = InspectDiagnostics::new(inspector.root(), create_clock());
+        let _inspect_diagnostics = create_test_object(&inspector, false);
         assert_inspect_tree!(
             inspector,
             root: contains {

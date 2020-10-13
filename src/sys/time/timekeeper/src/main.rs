@@ -34,7 +34,7 @@ use {
     fidl_fuchsia_net_interfaces as finterfaces, fidl_fuchsia_time as ftime,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_zircon::{self as zx, HandleBased as _},
+    fuchsia_zircon as zx,
     futures::{
         future::{self, OptionFuture},
         StreamExt as _,
@@ -101,9 +101,6 @@ async fn main() -> Result<(), Error> {
             .await
             .context("failed to get UTC clock from maintainer")?,
     );
-    let duplicate_utc_clock = utc_clock
-        .duplicate_handle(zx::Rights::SAME_RIGHTS)
-        .context("failed to duplicate UTC clock")?;
 
     info!("constructing time sources");
     let notifier = Notifier::new(match initial_clock_state(&utc_clock) {
@@ -126,7 +123,7 @@ async fn main() -> Result<(), Error> {
 
     info!("initializing diagnostics and serving inspect on servicefs");
     let diagnostics = Arc::new(CompositeDiagnostics::new(
-        InspectDiagnostics::new(diagnostics::INSPECTOR.root(), duplicate_utc_clock),
+        InspectDiagnostics::new(diagnostics::INSPECTOR.root(), &primary_track, &monitor_track),
         CobaltDiagnostics::new(),
     ));
     let mut fs = ServiceFs::new();
@@ -346,6 +343,7 @@ mod tests {
             time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
         },
         fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
+        fuchsia_zircon::HandleBased as _,
         futures::FutureExt,
         lazy_static::lazy_static,
         std::task::Poll,
