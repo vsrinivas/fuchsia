@@ -343,7 +343,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
-    args.path_prefix = "/pkg/";
+
     args.board_name = board_name;
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
@@ -1047,7 +1047,7 @@ class FixedDevicePartitionerTests : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
-    args.path_prefix = "/pkg/";
+
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;
@@ -1702,7 +1702,7 @@ class As370PartitionerTests : public zxtest::Test {
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
     args.board_name = "visalia";
-    args.path_prefix = "/pkg/";
+
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;

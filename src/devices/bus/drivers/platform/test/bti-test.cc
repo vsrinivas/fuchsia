@@ -80,7 +80,6 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.get_boot_item = GetBootItem;
-  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -98,8 +97,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
     koid1 = result->koid;
   }
 
-  fd.reset(
-      openat(devmgr.devfs_root().get(), kParentPath, O_DIRECTORY | O_RDONLY));
+  fd.reset(openat(devmgr.devfs_root().get(), kParentPath, O_DIRECTORY | O_RDONLY));
   std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd), &watcher));
 

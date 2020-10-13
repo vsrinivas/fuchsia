@@ -22,7 +22,6 @@ TEST(LauncherTest, DriverSearchPath) {
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
-  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -36,7 +35,6 @@ TEST(LauncherTest, LoadDrivers) {
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back("/boot/driver/test.so");
   args.load_drivers.push_back(IsolatedDevmgr::kSysdevDriver);
-  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -50,7 +48,6 @@ TEST(LauncherTest, Namespace) {
   args.sys_device_driver = "/test_drivers/test/sysdev.so";
   args.driver_search_paths.push_back("/test_drivers");
   args.driver_search_paths.push_back("/test_drivers/test");
-  args.path_prefix = "/pkg/";
 
   zx::channel bootfs_client, bootfs_server;
   ASSERT_OK(zx::channel::create(0, &bootfs_client, &bootfs_server));
@@ -70,7 +67,6 @@ TEST(LauncherTest, OutgoingServices) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.driver_search_paths.push_back("/boot/driver/test");
-  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -109,7 +105,7 @@ TEST(LauncherTest, ExposeDevfsToHub) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.driver_search_paths.push_back("/boot/driver/test");
-  args.path_prefix = "/pkg/";
+
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 

@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.driver_search_paths.push_back("/boot/driver");
   args.load_drivers.push_back("/boot/driver/ram-nand.so");
-  args.path_prefix = "/pkg/";
+
   args.disable_block_watcher = true;
 
   driver_integration_test::IsolatedDevmgr devmgr;

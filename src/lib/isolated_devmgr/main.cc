@@ -128,8 +128,6 @@ int main(int argc, const char** argv) {
       wait.push_back(opt.value);
     } else if (opt.name == "add_namespace") {
       namespaces.push_back(opt.value);
-    } else if (opt.name == "path_prefix") {
-      args.path_prefix = opt.value;
     } else if (opt.name == "device_vid_pid_did") {
       int status = process_device_ids(opt.value.c_str(), device_list_unique_ptr.get());
       if (status != 0) {

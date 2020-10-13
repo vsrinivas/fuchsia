@@ -38,7 +38,7 @@ class FsRecoveryTest : public zxtest::Test {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
+
     return IsolatedDevmgr::Create(std::move(args), &devmgr_);
   }
 

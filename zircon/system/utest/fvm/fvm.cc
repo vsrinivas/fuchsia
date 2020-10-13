@@ -91,7 +91,7 @@ class FvmTest : public zxtest::Test {
     args.disable_block_watcher = true;
     args.disable_netsvc = true;
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
+
     ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
     ASSERT_OK(
         wait_for_device_at(devfs_root().get(), "misc/ramctl", zx::duration::infinite().get()));

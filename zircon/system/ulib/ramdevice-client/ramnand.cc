@@ -60,13 +60,6 @@ __EXPORT
 zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.driver_search_paths.push_back("/boot/driver");
-  // Conditionally add /pkg if we are in a packaged test. Similar to below the user of the lib
-  // should be creating the isolated devmgr rather than having this lib do it to avoid these sorts
-  // of hacks.
-  struct stat unused;
-  if (stat("/pkg/driver", &unused) == 0) {
-    args.path_prefix = "/pkg/";
-  }
   args.disable_block_watcher = true;
   // TODO(surajmalhotra): Remove creation of isolated devmgr from this lib so that caller can choose
   // their creation parameters.

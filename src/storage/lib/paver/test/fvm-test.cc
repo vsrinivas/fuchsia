@@ -42,7 +42,7 @@ class FvmTest : public zxtest::Test {
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
-    args.path_prefix = "/pkg/";
+
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     fbl::unique_fd ctl;

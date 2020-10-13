@@ -84,7 +84,6 @@ TEST(PbusTest, Enumeration) {
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.get_boot_item = GetBootItem;
-  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -167,7 +166,6 @@ TEST(PbusTest, BoardInfo) {
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.get_boot_item = GetBootItem;
-  args.path_prefix = "/pkg/";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

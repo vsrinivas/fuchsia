@@ -20,7 +20,7 @@ using devmgr_integration_test::IsolatedDevmgr;
 TEST(BindFailTest, BindFail) {
   const char kDriver[] = "/boot/driver/bind-fail-test.so";
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
+
   args.driver_search_paths.push_back("/boot/driver");
 
   IsolatedDevmgr devmgr;

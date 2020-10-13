@@ -47,8 +47,6 @@ class IsolatedDevmgr {
     bool disable_netsvc = true;
 
     bool no_exit_after_suspend = true;
-    // Where to look for driver_manager, fshost, driver_host, and drivers.
-    std::string path_prefix = "/boot/";
   };
 
   // Notifies if driver manager job has an exception.

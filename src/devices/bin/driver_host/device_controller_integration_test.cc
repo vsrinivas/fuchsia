@@ -54,7 +54,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
 TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
+
   args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   args.driver_search_paths.push_back("/boot/driver");
@@ -92,7 +92,6 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
 TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -129,7 +128,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
   dev.pid = PDEV_PID_DEVHOST_TEST;
   dev.did = 0;
   args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
 
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
   ASSERT_OK(status);
@@ -176,7 +174,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   dev.pid = PDEV_PID_DEVHOST_TEST;
   dev.did = 0;
   args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 
@@ -223,7 +220,6 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
   dev.pid = PDEV_PID_DEVHOST_TEST;
   dev.did = 0;
   args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 
@@ -251,7 +247,6 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
 TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -288,7 +283,6 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   args.boot_args.emplace("driver.tests.enable", "true");
 
@@ -315,7 +309,6 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   args.boot_args.emplace("driver.tests.enable", "true");
 
@@ -343,7 +336,6 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
 TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   args.boot_args.emplace("driver.unit_test_fail.tests.enable", "true");
 
@@ -370,7 +362,6 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
 TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -396,7 +387,6 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
 TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
 
   args.boot_args.emplace("driver.tests.enable", "true");
   args.boot_args.emplace("driver.unit_test_fail.tests.enable", "false");
@@ -435,7 +425,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   dev.pid = PDEV_PID_DEVHOST_TEST;
   dev.did = 0;
   args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 
@@ -479,7 +468,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   dev.pid = PDEV_PID_DEVHOST_TEST;
   dev.did = 0;
   args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 

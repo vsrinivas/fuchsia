@@ -38,7 +38,7 @@ class PowerTestCase : public zxtest::Test {
     IsolatedDevmgr::Args args;
     args.load_drivers.push_back("/boot/driver/ddk-power-test.so");
     args.load_drivers.push_back("/boot/driver/ddk-power-test-child.so");
-    args.path_prefix = "/pkg/";
+
     args.no_exit_after_suspend = true;
 
     board_test::DeviceEntry dev = {};

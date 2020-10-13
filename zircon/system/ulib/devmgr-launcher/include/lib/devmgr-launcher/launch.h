@@ -59,9 +59,6 @@ struct Args {
 
   // Map of boot arguments
   std::map<std::string, std::string> boot_args;
-
-  // Where to look for driver_manager, fshost, driver_host, and drivers.
-  std::string path_prefix = "/boot/";
 };
 
 // Launches an isolated devmgr, passing the given |args| to it and providing the given |svc_client|

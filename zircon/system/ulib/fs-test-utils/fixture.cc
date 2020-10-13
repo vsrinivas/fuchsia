@@ -340,7 +340,7 @@ zx_status_t Fixture::SetUpTestCase() {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
+
     result = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_);
 
     if (result != ZX_OK) {

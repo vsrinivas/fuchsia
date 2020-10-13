@@ -934,7 +934,6 @@ int main(int argc, char** argv) {
   auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
   args.driver_search_paths.push_back("/boot/driver");
   args.load_drivers.push_back("/boot/driver/ethertap.so");
-  args.path_prefix = "/pkg/";
 
   devmgr_integration_test::IsolatedDevmgr devmgr;
   zx_status_t status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);

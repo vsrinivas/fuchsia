@@ -221,7 +221,6 @@ void Environment::CreateDevmgr() {
   args.disable_netsvc = true;
   args.driver_search_paths.push_back("/boot/driver");
   if (config_.is_packaged) {
-    args.path_prefix = "/pkg/";
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   }

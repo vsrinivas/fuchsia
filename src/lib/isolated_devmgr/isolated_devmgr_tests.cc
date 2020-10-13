@@ -46,7 +46,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     devmgr_launcher::Args args;
     IsolatedDevmgr::ExtraArgs extra_args;
     args.sys_device_driver = kSysdevDriver;
-    args.path_prefix = "/pkg/";
+
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.load_drivers.push_back("/boot/driver/ethernet.so");
     args.load_drivers.push_back("/boot/driver/ethertap.so");
@@ -60,7 +60,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     auto device_list_ptr = std::unique_ptr<fbl::Vector<board_test::DeviceEntry>>(
         new fbl::Vector<board_test::DeviceEntry>());
     args.sys_device_driver = kPlatformDriver;
-    args.path_prefix = "/pkg/";
+
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");

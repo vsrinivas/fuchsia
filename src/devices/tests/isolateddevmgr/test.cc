@@ -55,7 +55,6 @@ TEST_F(IsolatedDevMgrTest, MetadataOneDriverTest) {
   IsolatedDevmgr::Args args;
   args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry1);
-  args.path_prefix = "/pkg/";
 
   // Create the isolated Devmgr.
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);
@@ -95,7 +94,6 @@ TEST_F(IsolatedDevMgrTest, MetadataTwoDriverTest) {
   args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry1);
   args.device_list.push_back(kDeviceEntry2);
-  args.path_prefix = "/pkg/";
 
   // Create the isolated Devmgr.
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);

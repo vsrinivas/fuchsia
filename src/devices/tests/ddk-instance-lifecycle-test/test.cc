@@ -26,7 +26,6 @@ class InstanceLifecycleTest : public zxtest::Test {
   ~InstanceLifecycleTest() override = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.path_prefix = "/pkg/";
 
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;

@@ -63,7 +63,6 @@ template("isolated_devmgr_component") {
   if (defined(invoker.args)) {
     devmgr_args = invoker.args
   }
-  devmgr_args += [ "--path_prefix=/pkg/" ]
 
   manifest_name = "${component_name}.cmx"
   generated_file(manifest_name) {

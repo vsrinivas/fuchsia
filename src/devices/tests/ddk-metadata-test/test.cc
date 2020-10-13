@@ -16,7 +16,7 @@ using devmgr_integration_test::IsolatedDevmgr;
 TEST(MetadataTest, RunTests) {
   const char kDriver[] = "/boot/driver/ddk-metadata-test.so";
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.path_prefix = "/pkg/";
+
   args.driver_search_paths.push_back("/boot/driver");
 
   IsolatedDevmgr devmgr;

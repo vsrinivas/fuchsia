@@ -39,7 +39,7 @@ class FallbackRTCTest : public zxtest::Test {
     fbl::unique_fd rtc_fd;
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
+
     args.device_list.push_back(kDeviceEntry);
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 

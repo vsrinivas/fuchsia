@@ -16,7 +16,7 @@ void LaunchIsolateDevMgr(devmgr_integration_test::IsolatedDevmgr* isolated_devmg
   devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
   args.disable_block_watcher = true;
   args.disable_netsvc = true;
-  args.path_prefix = "/pkg/";
+
   args.driver_search_paths.push_back("/boot/driver");
   ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), isolated_devmgr));
   ASSERT_OK(wait_for_device_at(isolated_devmgr->devfs_root().get(), "misc/ramctl",

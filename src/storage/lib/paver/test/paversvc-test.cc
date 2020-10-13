@@ -1669,7 +1669,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
-    args.path_prefix = "/pkg/";
+
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     // Forward the block watcher FIDL interface from the devmgr.
@@ -1780,7 +1780,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     driver_integration_test::IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
-    args.path_prefix = "/pkg/";
+
     args.board_name = board_name;
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
 

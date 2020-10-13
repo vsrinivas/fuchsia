@@ -69,7 +69,7 @@ class BlockDeviceHarness : public zxtest::Test {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
+
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
     fbl::unique_fd ctl;
     ASSERT_EQ(

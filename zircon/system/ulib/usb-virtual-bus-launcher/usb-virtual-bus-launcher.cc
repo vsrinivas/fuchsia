@@ -33,11 +33,6 @@ USBVirtualBusBase::USBVirtualBusBase() {
   args_.driver_search_paths.push_back("/boot/driver");
   args_.driver_search_paths.push_back("/boot/driver/test");
 
-  struct stat st;
-  if (stat("/pkg", &st) == 0) {
-    args_.path_prefix = "/pkg/";
-  }
-
   board_test::DeviceEntry dev = {};
   dev.did = 0;
   dev.vid = PDEV_VID_TEST;

@@ -878,7 +878,7 @@ class BlockWatcherTest : public zxtest::Test {
     // Launch the isolated devmgr.
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
+
     args.disable_block_watcher = false;
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 

@@ -26,7 +26,7 @@ class BindDebuggerTest : public testing::Test {
  protected:
   void SetUp() override {
     auto args = IsolatedDevmgr::DefaultArgs();
-    args.path_prefix = "/pkg/";
+
     args.driver_search_paths.push_back("/boot/driver");
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);

@@ -50,7 +50,7 @@ class PciDriverTests : public zxtest::Test {
 //       \---------------> Fuchsia.Device.Test <-------------/
 TEST_F(PciDriverTests, TestRunner) {
   IsolatedDevmgr::Args args;
-  args.path_prefix = "/pkg/";
+
   args.driver_search_paths.push_back("/boot/driver");
   args.device_list.push_back(kDeviceEntry);
   args.disable_block_watcher = true;

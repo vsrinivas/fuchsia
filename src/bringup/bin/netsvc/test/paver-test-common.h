@@ -380,7 +380,6 @@ class FakeDev {
   FakeDev() {
     driver_integration_test::IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
-    args.path_prefix = "/pkg/";
 
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
     fbl::unique_fd fd;
