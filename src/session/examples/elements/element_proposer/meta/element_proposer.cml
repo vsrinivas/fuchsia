@@ -4,6 +4,6 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.session.ElementManager" },
+        { protocol: "fuchsia.session.ElementManager" },
     ],
 }

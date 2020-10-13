@@ -9,14 +9,18 @@
     program: {
         binary: "bin/{{PROJECT_NAME}}_test",
     },
+    capabilities: [
+        // This protocol needs to be defined here so it can be exposed from self below.
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "gtest_runner" },
     ],
     expose: [
-        // The Test Runner Framework expects this service to be exposed
-        // from the test component. The gtest_runner provides this service.
+        // The Test Runner Framework expects this protocol to be exposed
+        // from the test component. The gtest_runner provides this protocol.
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

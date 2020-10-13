@@ -15,21 +15,29 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.session.ElementManager",
+                "fuchsia.session.examples.ElementPing",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.session.examples.ElementPing",
+            protocol: "fuchsia.session.examples.ElementPing",
             from: "self",
             to: [ "#elements" ],
         },
         {
-            protocol: "/svc/fuchsia.session.ElementManager",
+            protocol: "fuchsia.session.ElementManager",
             from: "self",
             to: [ "#element_proposer" ],
         },
@@ -37,8 +45,8 @@
     expose: [
         {
             protocol: [
-                "/svc/fuchsia.session.ElementManager",
-                "/svc/fuchsia.session.examples.ElementPing",
+                "fuchsia.session.ElementManager",
+                "fuchsia.session.examples.ElementPing",
             ],
             from: "self",
         },

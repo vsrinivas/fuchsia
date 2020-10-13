@@ -12,7 +12,7 @@ use {
     io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
 };
 
-pub fn connect_to_harness() -> Result<io_test::Io1HarnessProxy, Error> {
+pub async fn connect_to_harness() -> Result<io_test::Io1HarnessProxy, Error> {
     // Connect to the realm to get acccess to the outgoing directory for the harness.
     let (client, server) = zx::Channel::create()?;
     fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
@@ -29,9 +29,10 @@ pub fn connect_to_harness() -> Result<io_test::Io1HarnessProxy, Error> {
         .map_err(|e| format_err!("Failed to bind to child: {:#?}", e))?;
 
     let exposed_dir = io::DirectoryProxy::new(fidl::AsyncChannel::from_channel(client)?);
-    let proxy = fuchsia_component::client::connect_to_protocol_at_dir_svc::<
+    let proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<
         io_test::Io1HarnessMarker,
-    >(&exposed_dir)?;
+    >(&exposed_dir)
+    .await?;
     Ok(proxy)
 }
 
@@ -124,7 +125,7 @@ fn file(name: &str, flags: u32, contents: Vec<u8>) -> io_test::DirectoryEntry {
 // remote mount point, the server forwards the request to the remote correctly.
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_test() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let config = harness.get_config().await.expect("Could not get config from harness.");
     if config.no_remote_dir.unwrap_or_default() {
@@ -171,7 +172,7 @@ async fn open_remote_directory_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_sufficient_rights() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -197,7 +198,7 @@ async fn file_read_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_insufficient_rights() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -223,7 +224,7 @@ async fn file_read_with_insufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_sufficient_rights() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -249,7 +250,7 @@ async fn file_read_at_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_insufficient_rights() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -275,7 +276,7 @@ async fn file_read_at_with_insufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_sufficient_rights() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -301,7 +302,7 @@ async fn file_write_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_insufficient_rights() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let filename = "testing.txt";
 
@@ -327,7 +328,7 @@ async fn file_write_with_insufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_in_subdirectory() {
-    let harness = connect_to_harness().expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
 
     let constant_flags = [io::OPEN_RIGHT_READABLE];
     let variable_flags = [io::OPEN_RIGHT_WRITABLE];

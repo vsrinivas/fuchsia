@@ -18,9 +18,9 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.sys.Launcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: [
@@ -29,7 +29,7 @@
             ],
         },
         {
-            directory: "/dev",
+            directory: "dev",
             from: "#isolated_devmgr",
             to: [ "#mounter" ],
         },

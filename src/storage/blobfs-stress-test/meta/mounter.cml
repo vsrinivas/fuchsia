@@ -6,14 +6,15 @@
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.sys.Launcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
             ],
         },
         {
-            directory: "/dev",
+            directory: "dev",
             rights: [ "rw*" ],
+            path: "/dev",
         },
     ],
 }

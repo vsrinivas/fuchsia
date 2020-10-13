@@ -2,24 +2,28 @@
     program: {
         binary: "test/remote_control_lib_test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            directory: "/tmp",
+            directory: "tmp",
             from: "parent",
             rights: [ "rw*" ],
+            path: "/tmp",
         },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.sys.Launcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Launcher",
             ],
             from: "parent",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

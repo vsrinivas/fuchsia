@@ -98,7 +98,7 @@ async fn run_root(args: startup::Arguments) -> Result<(), Error> {
         test_helpers::list_directory(&expose_dir_proxy).await
     );
 
-    // bind expose/svc to out/svc of this v1 component.
+    // bind expose/ to out/svc of this v1 component.
     let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
     fs.add_remote("svc", expose_dir_proxy);
 

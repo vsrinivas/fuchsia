@@ -2,17 +2,19 @@
     program: {
         binary: "test/graphical_session_bin_test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
-        {
-            // The Scenic service allows the session to display images.
-            protocol: "/svc/fuchsia.ui.scenic.Scenic",
-        },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+
+        // The Scenic service allows the session to display images.
+        { protocol: "fuchsia.ui.scenic.Scenic" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

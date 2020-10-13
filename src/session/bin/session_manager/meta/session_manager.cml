@@ -10,27 +10,97 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.Launcher",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             // The Realm service allows session_manager to start components.
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {
             protocol: [
-                "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
             ],
             from: "parent",
         },
         {
-            directory: "/config/data",
+            directory: "component-manager-config-data",
             from: "parent",
             rights: [ "r*" ],
+            path: "/config/data",
         },
     ],
     offer: [
+        // TODO(56604): Stop offering path-based capabilities once all sessions have
+        // converted to name-based.
+        {
+            protocol: [
+                "fuchsia.accessibility.SettingsManager",
+                "fuchsia.bluetooth.control.Control",
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.castauth.CastKeySigner",
+                "fuchsia.castconfig.Provider",
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.device.NameProvider",
+                "fuchsia.devicesettings.DeviceSettingsManager",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.DataProvider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.media.audio.VolumeControl",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+                "fuchsia.media.sounds.Player",
+                "fuchsia.media.UsageReporter",
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+                "fuchsia.net.NameLookup",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+                "fuchsia.stash.Store",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher", // so that the session can launch cmx components
+                "fuchsia.sys2.Realm",
+                "fuchsia.timezone.Timezone",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input2.Keyboard",
+                "fuchsia.ui.lifecycle.LifecycleController", // to kill scenic if restarting
+                "fuchsia.ui.scenic.Scenic", // sessions use Scenic to display images
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.wlan.service.Wlan",
+            ],
+            from: "parent",
+            to: [ "#session" ],
+        },
         {
             protocol: [
                 "/svc/fuchsia.accessibility.SettingsManager",
@@ -90,26 +160,52 @@
             from: "parent",
             to: [ "#session" ],
         },
+
+        // features: build-info
         {
-            // features: build-info
+            directory: "config-build-info",
+            from: "parent",
+            to: [ "#session" ],
+        },
+        {
             directory: "/config/build-info",
             from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
+
+        // features: root-ssl-certificates
         {
-            // features: root-ssl-certificates
-            directory: "/config/ssl",
+            directory: "config-ssl",
             from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
         },
         {
-            // features: isolated-persistent-storage
+            directory: "/config/ssl",
+            from: "parent",
+            to: [ "#session" ],
+            rights: [ "r*" ],
+        },
+
+        // features: isolated-persistent-storage
+        {
+            directory: "data",
+            from: "parent",
+            to: [ "#session" ],
+        },
+        {
             directory: "/data",
             from: "parent",
             to: [ "#session" ],
             rights: [ "rw*" ],
+        },
+
+        // devices
+        {
+            directory: "dev-input",
+            from: "parent",
+            to: [ "#session" ],
         },
         {
             directory: "/dev/class/input",
@@ -118,10 +214,20 @@
             rights: [ "r*" ],
         },
         {
+            directory: "dev-input-report",
+            from: "parent",
+            to: [ "#session" ],
+        },
+        {
             directory: "/dev/class/input-report",
             from: "parent",
             to: [ "#session" ],
             rights: [ "r*" ],
+        },
+        {
+            directory: "dev-null",
+            from: "parent",
+            to: [ "#session" ],
         },
         {
             directory: "/dev/null",
@@ -130,10 +236,22 @@
             rights: [ "rw*" ],
         },
         {
+            directory: "dev-zero",
+            from: "parent",
+            to: [ "#session" ],
+        },
+        {
             directory: "/dev/zero",
             from: "parent",
             to: [ "#session" ],
             rights: [ "rw*" ],
+        },
+
+        // features: config-data
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#session" ],
         },
         {
             // features: config-data for cast_agent
@@ -158,8 +276,14 @@
             to: [ "#session" ],
             rights: [ "r*" ],
         },
+
+        // features: isolated-temp
         {
-            // features: isolated-temp
+            directory: "tmp",
+            from: "parent",
+            to: [ "#session" ],
+        },
+        {
             directory: "/tmp",
             from: "parent",
             to: [ "#session" ],
@@ -168,11 +292,10 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.session.Launcher",
-            from: "self",
-        },
-        {
-            protocol: "/svc/fuchsia.input.injection.InputDeviceRegistry",
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.Launcher",
+            ],
             from: "self",
         },
     ],

@@ -8,19 +8,22 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
             protocol: [
-                "/svc/fuchsia.sys2.BlockingEventSource",
-                "/svc/fuchsia.sys2.Realm",
+                "fuchsia.sys2.BlockingEventSource",
+                "fuchsia.sys2.Realm",
             ],
             from: "framework",
         },
         {
             protocol: [
-                "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
             ],
         },
         {
@@ -30,14 +33,14 @@
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.session.Launcher",
+            protocol: "fuchsia.session.Launcher",
             from: "parent",
             to: [ "#session" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

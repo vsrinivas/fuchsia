@@ -2,17 +2,17 @@
     program: {
         binary: "bin/graphical_session",
     },
+    capabilities: [
+        { protocol: "fuchsia.ui.app.ViewProvider" },
+    ],
     use: [
         { runner: "elf" },
-        {
-            // The Scenic service allows the session to display images.
-            protocol: "/svc/fuchsia.ui.scenic.Scenic",
-        },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.ui.scenic.Scenic" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.ui.app.ViewProvider",
+            protocol: "fuchsia.ui.app.ViewProvider",
             from: "self",
         },
     ],

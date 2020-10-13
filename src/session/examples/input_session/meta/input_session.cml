@@ -5,12 +5,13 @@
     use: [
         { runner: "elf" },
         {
-            directory: "/dev/class/input-report",
+            directory: "dev-class-input-report",
             from: "parent",
             rights: [ "r*" ],
+            path: "/dev/class/input-report",
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
         },
     ],

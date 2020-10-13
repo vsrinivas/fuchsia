@@ -8,23 +8,31 @@
             url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/driver_manager_test.cm",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.kernel.RootJob",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
     ],
     offer: [
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.sys.Launcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: [ "#driver_manager_test" ],
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.kernel.RootJob",
+                "fuchsia.boot.Arguments",
+                "fuchsia.kernel.RootJob",
             ],
             from: "self",
             to: [ "#driver_manager_test" ],
@@ -32,9 +40,8 @@
     ],
     expose: [
         {
-            directory: "/dev",
+            directory: "dev",
             from: "#driver_manager_test",
-            rights: [ "rw*" ],
         },
     ],
 }

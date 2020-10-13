@@ -11,20 +11,19 @@
     ],
     offer: [
         {
-            directory: "/tmp",
+            directory: "tmp",
             from: "parent",
             to: [ "#test-driver" ],
-            rights: [ "rw*" ],
         },
         {
-            protocol: "/svc/fuchsia.sys.Launcher",
+            protocol: "fuchsia.sys.Launcher",
             from: "#sys-launcher",
             to: [ "#test-driver" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#test-driver",
         },
     ],

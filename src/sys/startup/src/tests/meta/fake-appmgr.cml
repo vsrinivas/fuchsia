@@ -1,9 +1,6 @@
 {
     capabilities: [
-        {
-            protocol: "fuchsia.appmgr.Startup",
-            path: "/svc/fuchsia.appmgr.Startup",
-        },
+        { protocol: "fuchsia.appmgr.Startup" },
     ],
     expose: [
         {

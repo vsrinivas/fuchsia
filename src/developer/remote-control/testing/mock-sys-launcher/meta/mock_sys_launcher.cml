@@ -2,19 +2,22 @@
     program: {
         binary: "bin/mock_sys_launcher",
     },
+    capabilities: [
+        { protocol: "fuchsia.sys.Launcher" },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
             ],
             from: "parent",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.sys.Launcher",
+            protocol: "fuchsia.sys.Launcher",
             from: "self",
         },
     ],

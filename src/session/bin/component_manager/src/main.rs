@@ -110,7 +110,7 @@ async fn main() -> Result<(), Error> {
     // List the services exposed by the root component (i.e., the session manager).
     let expose_dir_proxy = io_util::open_directory(
         &hub_proxy,
-        &PathBuf::from("exec/expose/svc"),
+        &PathBuf::from("exec/expose"),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
@@ -121,7 +121,7 @@ async fn main() -> Result<(), Error> {
         test_helpers::list_directory(&expose_dir_proxy).await
     );
 
-    // Bind the session manager's expose/svc to out/svc of this component, so sysmgr can find it and
+    // Bind the session manager's expose/ to out/svc of this component, so sysmgr can find it and
     // route service connections to it.
     let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
     fs.add_remote("svc", expose_dir_proxy);

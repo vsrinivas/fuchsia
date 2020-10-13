@@ -13,15 +13,19 @@
     program: {
         binary: "bin/my_component_v2_rust_bin_test",
     },
+    capabilities: [
+        // This protocol needs to be defined here so it can be exposed from self below.
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
         { runner: "rust_test_runner" },
     ],
     expose: [
-        // The Test Runner Framework expects this service to be exposed
-        // from the test component. The Rust test adapter provides this service.
+        // The Test Runner Framework expects this protocol to be exposed
+        // from the test component. The Rust test adapter provides this protocol.
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

@@ -11,10 +11,11 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
+
+        // Needed to instantiate dynamic components.
         {
-            // Needed to instantiate dynamic components.
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {

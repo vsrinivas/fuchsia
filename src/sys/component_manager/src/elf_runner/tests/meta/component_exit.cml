@@ -24,11 +24,8 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-
-                // TODO(fxbug.dev/56604): Convert to name-based once we support name-based capabilities from
-                // component manager's namespace.
-                "/svc/fuchsia.sys2.BlockingEventSource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.BlockingEventSource",
             ],
         },
         {
@@ -42,7 +39,7 @@
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#test-collection" ],
         },

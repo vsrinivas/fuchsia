@@ -10,23 +10,29 @@
             "/pkg/bin/driver",
         ],
     },
+    capabilities: [
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.kernel.RootJob",
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.sys.Launcher",
+                "fuchsia.boot.Arguments",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
             ],
         },
     ],
     expose: [
         {
-            directory: "/dev",
+            directory: "dev",
             from: "self",
-            rights: [ "rw*" ],
         },
     ],
 }

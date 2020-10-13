@@ -8,24 +8,27 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        { protocol: "test.componentmanager.stresstests.ChildRealm" },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#children" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/test.componentmanager.stresstests.ChildRealm",
+            protocol: "test.componentmanager.stresstests.ChildRealm",
             from: "self",
         },
     ],

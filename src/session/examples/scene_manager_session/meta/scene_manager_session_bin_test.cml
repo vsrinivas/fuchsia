@@ -2,18 +2,22 @@
     program: {
         binary: "test/scene_manager_session_bin_test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            directory: "/dev/class/input-report",
+            directory: "dev-class-input-report",
             from: "parent",
             rights: [ "r*" ],
+            path: "/dev/class/input-report",
         },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

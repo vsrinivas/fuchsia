@@ -6,8 +6,8 @@
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
                 "fidl.test.components.Trigger",
+                "fuchsia.logger.LogSink",
             ],
         },
     ],

@@ -21,6 +21,6 @@
         { runner: "elf" },
 
         // List your component's dependencies here, ex:
-        // { protocol: "/svc/fuchsia.logger.Log" }
+        // { protocol: "fuchsia.logger.Log" }
     ],
 }

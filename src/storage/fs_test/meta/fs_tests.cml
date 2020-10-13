@@ -9,29 +9,33 @@
             startup: "eager",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "gtest_runner" },
         {
-            protocol: [ "/svc/fuchsia.process.Launcher" ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {
-            directory: "/tmp",
+            directory: "tmp",
             rights: [
                 "admin",
                 "rw*",
             ],
+            path: "/tmp",
         },
     ],
     offer: [
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.sys.Launcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: [ "#isolated_devmgr" ],
@@ -39,7 +43,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],
