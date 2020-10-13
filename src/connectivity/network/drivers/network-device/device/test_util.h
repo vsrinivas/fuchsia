@@ -240,6 +240,11 @@ class RxReturnTransaction {
     buffers_.push_back(std::move(buffer));
   }
 
+  void EnqueueWithSize(std::unique_ptr<RxBuffer> buffer, uint64_t return_length) {
+    buffer->return_buffer().total_length = return_length;
+    Enqueue(std::move(buffer));
+  }
+
   void Commit() {
     client_.CompleteRx(return_buffers_, count_);
     count_ = 0;

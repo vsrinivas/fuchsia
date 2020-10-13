@@ -393,6 +393,7 @@ void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
   *out_info = device_info_t{
       .tx_depth = kFifoDepth,
       .rx_depth = kFifoDepth,
+      .rx_threshold = kFifoDepth / 2,
       .device_class = static_cast<uint8_t>(llcpp::fuchsia::hardware::network::DeviceClass::PPP),
       .rx_types_list = kRxFrameTypes,
       .rx_types_count = sizeof(kRxFrameTypes) / sizeof(uint8_t),

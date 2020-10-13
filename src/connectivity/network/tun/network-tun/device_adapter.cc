@@ -317,6 +317,7 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
       device_info_(device_info_t{
           .tx_depth = kFifoDepth,
           .rx_depth = kFifoDepth,
+          .rx_threshold = kFifoDepth / 2,
           .device_class = static_cast<uint8_t>(fuchsia::hardware::network::DeviceClass::UNKNOWN),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = parent->config().rx_types().size(),

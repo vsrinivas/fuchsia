@@ -96,6 +96,11 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
                parent_name);
     return ZX_ERR_NOT_SUPPORTED;
   }
+  if (device_info_.rx_threshold > device_info_.rx_depth) {
+    LOGF_ERROR("network-device: bind: device'%s' reports rx_threshold = %d larger than rx_depth %d",
+               parent_name, device_info_.rx_threshold, device_info_.rx_depth);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   // Copy the vectors of supported Rx and Tx types.
   std::copy_n(device_info_.rx_types_list, device_info_.rx_types_count, supported_rx_.begin());
   device_info_.rx_types_list = supported_rx_.data();

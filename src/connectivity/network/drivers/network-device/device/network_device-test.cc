@@ -29,7 +29,7 @@ class NetworkDeviceTest : public zxtest::Test {
  public:
   void SetUp() override {
     fx_logger_config_t log_cfg = {
-        .min_severity = -2,
+        .min_severity = FX_LOG_TRACE,
         .console_fd = dup(STDOUT_FILENO),
         .log_service_channel = ZX_HANDLE_INVALID,
         .tags = nullptr,
@@ -52,21 +52,33 @@ class NetworkDeviceTest : public zxtest::Test {
     }
   }
 
-  zx_status_t WaitEvents(zx_signals_t signals) {
-    zx_status_t status = impl_.events().wait_one(signals, TEST_DEADLINE, nullptr);
-    impl_.events().signal(signals, 0);
+  zx_status_t WaitEvents(zx_signals_t signals, zx::time deadline) {
+    zx_status_t status = impl_.events().wait_one(signals, deadline, nullptr);
+    if (status == ZX_OK) {
+      impl_.events().signal(signals, 0);
+    }
     return status;
   }
 
-  [[nodiscard]] zx_status_t WaitStart() { return WaitEvents(kEventStart); }
+  [[nodiscard]] zx_status_t WaitStart(zx::time deadline = TEST_DEADLINE) {
+    return WaitEvents(kEventStart, deadline);
+  }
 
-  [[nodiscard]] zx_status_t WaitStop() { return WaitEvents(kEventStop); }
+  [[nodiscard]] zx_status_t WaitStop(zx::time deadline = TEST_DEADLINE) {
+    return WaitEvents(kEventStop, deadline);
+  }
 
-  [[nodiscard]] zx_status_t WaitSessionStarted() { return WaitEvents(kEventSessionStarted); }
+  [[nodiscard]] zx_status_t WaitSessionStarted(zx::time deadline = TEST_DEADLINE) {
+    return WaitEvents(kEventSessionStarted, deadline);
+  }
 
-  [[nodiscard]] zx_status_t WaitTx() { return WaitEvents(kEventTx); }
+  [[nodiscard]] zx_status_t WaitTx(zx::time deadline = TEST_DEADLINE) {
+    return WaitEvents(kEventTx, deadline);
+  }
 
-  [[nodiscard]] zx_status_t WaitRxAvailable() { return WaitEvents(kEventRxAvailable); }
+  [[nodiscard]] zx_status_t WaitRxAvailable(zx::time deadline = TEST_DEADLINE) {
+    return WaitEvents(kEventRxAvailable, deadline);
+  }
 
   async_dispatcher_t* dispatcher() {
     if (!loop_) {
@@ -160,6 +172,12 @@ TEST_F(NetworkDeviceTest, GetInfo) {
 TEST_F(NetworkDeviceTest, MinReportedBufferAlignment) {
   // Tests that device creation is rejected with an invalid buffer_alignment value.
   impl_.info().buffer_alignment = 0;
+  ASSERT_STATUS(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(NetworkDeviceTest, InvalidRxThreshold) {
+  // Tests that device creation is rejected with an invalid rx_threshold value.
+  impl_.info().rx_threshold = impl_.info().rx_depth + 1;
   ASSERT_STATUS(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -645,8 +663,7 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
   ASSERT_OK(session_a.SetPaused(true));
 
   // As soon as we call TriggerStart, stop must be called, but not before
-  ASSERT_EQ(impl_.events().wait_one(kEventStop, zx::deadline_after(zx::msec(20)), nullptr),
-            ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(WaitStop(zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
   ASSERT_TRUE(impl_.TriggerStart());
   ASSERT_OK(WaitStop());
 }
@@ -667,8 +684,7 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
   ASSERT_OK(session_a.SetPaused(false));
   ASSERT_OK(WaitSessionStarted());
   // As soon as we call TriggerStop, start must be called, but not before
-  ASSERT_EQ(impl_.events().wait_one(kEventStart, zx::deadline_after(zx::msec(20)), nullptr),
-            ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(WaitStart(zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
   ASSERT_TRUE(impl_.TriggerStop());
   ASSERT_OK(WaitStart());
 
@@ -966,6 +982,61 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
   ASSERT_TRUE(impl_.tx_buffers().is_empty());
+}
+
+TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
+  constexpr uint64_t kReturnBufferSize = 1;
+  ASSERT_OK(CreateDevice());
+  auto connection = OpenConnection();
+  TestSession session;
+  uint16_t descriptor_count = impl_.info().rx_depth * 2;
+  ASSERT_OK(OpenSession(&session, netdev::SessionFlags::PRIMARY, descriptor_count));
+
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+
+  std::vector<uint16_t> descriptors;
+  descriptors.reserve(descriptor_count);
+  for (uint16_t i = 0; i < descriptor_count; i++) {
+    session.ResetDescriptor(i);
+    descriptors.push_back(i);
+  }
+
+  // Fill up to half depth one buffer at a time, waiting for each one to be observed by the device
+  // driver implementation. The slow dripping of buffers will force the Rx queue to enter
+  // steady-state so we're not racing the return buffer signals with the session started and device
+  // started ones.
+  uint16_t half_depth = impl_.info().rx_depth / 2;
+  for (uint16_t i = 0; i < half_depth; i++) {
+    ASSERT_OK(session.SendRx(descriptors[i]));
+    ASSERT_OK(WaitRxAvailable());
+    ASSERT_EQ(impl_.rx_buffers().size_slow(), i + 1);
+  }
+  // Send the rest of the buffers.
+  size_t actual;
+  ASSERT_OK(
+      session.SendRx(descriptors.data() + half_depth, descriptors.size() - half_depth, &actual));
+  ASSERT_EQ(actual, descriptors.size() - half_depth);
+  ASSERT_OK(WaitRxAvailable());
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), impl_.info().rx_depth);
+
+  // Return the maximum number of buffers that we can return without hitting the threshold.
+  for (uint16_t i = impl_.info().rx_depth - impl_.info().rx_threshold - 1; i != 0; i--) {
+    RxReturnTransaction return_session(&impl_);
+    return_session.EnqueueWithSize(impl_.rx_buffers().pop_front(), kReturnBufferSize);
+    return_session.Commit();
+    // Check that no more buffers are enqueued.
+    ASSERT_STATUS(WaitRxAvailable(zx::time::infinite_past()), ZX_ERR_TIMED_OUT, "remaining=%d", i);
+  }
+  // Check again with some time slack for the last buffer.
+  ASSERT_STATUS(WaitRxAvailable(zx::deadline_after(zx::msec(10))), ZX_ERR_TIMED_OUT);
+
+  // Return one more buffer to cross the threshold.
+  RxReturnTransaction return_session(&impl_);
+  return_session.EnqueueWithSize(impl_.rx_buffers().pop_front(), kReturnBufferSize);
+  return_session.Commit();
+  ASSERT_OK(WaitRxAvailable());
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), impl_.info().rx_depth);
 }
 
 }  // namespace testing

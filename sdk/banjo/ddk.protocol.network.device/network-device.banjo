@@ -258,6 +258,17 @@ struct DeviceInfo {
   uint16 tx_depth;
   /// Maximum number of rx frames in a device's incoming queue.
   uint16 rx_depth;
+  /// Rx depth threshold at which the device should be fed new rx buffers.
+  ///
+  /// New buffer notifications from [`NetworkDeviceIfc`] may be skipped while the number of rx
+  /// buffers held by the implementation is larger than `rx_threshold`. It is invalid to provide a
+  /// value larger than `rx_depth`. `rx_threshold = rx_depth` is functionally equivalent to
+  /// `rx_threshold = rx_depth - 1`.
+  ///
+  /// A large value (close to `rx_depth`) may cause considerable CPU thrash for small rx completion
+  /// transaction sizes, while a small value may cause the implementation to be starved of buffers.
+  /// The typical choice of value is `rx_depth / 2`.
+  uint16 rx_threshold;
   /// Device class, as defined in [`fuchsia.hardware.network/DeviceClass`].
   uint8 device_class;
   /// Supported rx frame types, as defined by [`fuchsia.hardware.network/FrameType`].

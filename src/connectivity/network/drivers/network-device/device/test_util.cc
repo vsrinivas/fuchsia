@@ -56,6 +56,7 @@ FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
       info_(device_info_t{
           .tx_depth = kTxDepth,
           .rx_depth = kRxDepth,
+          .rx_threshold = kRxDepth / 2,
           .device_class = static_cast<uint8_t>(netdev::DeviceClass::ETHERNET),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = 1,

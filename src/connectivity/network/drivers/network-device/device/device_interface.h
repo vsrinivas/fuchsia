@@ -45,14 +45,10 @@ class DeviceInterface : public netdev::Device::Interface,
 
   uint16_t rx_fifo_depth() const;
   uint16_t tx_fifo_depth() const;
-  // Returns the device-onwed buffers count threshold at which we should trigger RxQueue work. If
-  // the number of buffers on device is less than or equal to the threshold, we should attempt to
-  // fetch more buffers.
-  uint32_t rx_notify_threshold() const {
-    // TODO(fxbug.dev/44835): This threshold should be negotiated as part of the device info in the
-    // banjo protocol.
-    return device_info_.rx_depth / 2;
-  }
+  // Returns the device-owned buffer count threshold at which we should trigger RxQueue work. If the
+  // number of buffers on device is less than or equal to the threshold, we should attempt to fetch
+  // more buffers.
+  uint16_t rx_notify_threshold() const { return device_info_.rx_threshold; }
 
   TxQueue& tx_queue() { return *tx_queue_; }
 
