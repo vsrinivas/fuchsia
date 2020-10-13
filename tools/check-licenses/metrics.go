@@ -4,12 +4,17 @@
 
 package checklicenses
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 // Metrics is used for instrumentation
 type Metrics struct {
 	values map[string]uint
 	order  []string
+
+	sync.RWMutex
 }
 
 func (metrics *Metrics) Init() {
@@ -31,10 +36,13 @@ func (metrics *Metrics) Init() {
 }
 
 func (metrics *Metrics) increment(key string) {
+
+	metrics.Lock()
 	if _, found := metrics.values[key]; !found {
 		fmt.Printf("error: metric key (%s) not found\n", key)
 	}
 	metrics.values[key]++
+	metrics.Unlock()
 }
 
 func (metrics *Metrics) print() {

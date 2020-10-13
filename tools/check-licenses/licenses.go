@@ -5,7 +5,6 @@
 package checklicenses
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -86,9 +85,11 @@ func (licenses *Licenses) Init(root string, prohibitedLicenseTypes []string) err
 			regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
 		}
 		licenses.add(&License{
-			pattern:   regexp.MustCompile(regex),
-			category:  info.Name(),
-			validType: licenses.isLicenseAValidType(prohibitedLicenseTypes, info.Name()),
+			pattern:      regexp.MustCompile(regex),
+			category:     info.Name(),
+			validType:    licenses.isLicenseAValidType(prohibitedLicenseTypes, info.Name()),
+			matches:      make(map[string]*Match),
+			matchChannel: make(chan *Match, 10),
 		})
 		return nil
 	})
@@ -137,7 +138,9 @@ func (licenses *Licenses) MatchSingleLicenseFile(data []byte, base string, metri
 			metrics.increment("num_single_license_file_match")
 			path := strings.TrimSpace(file_tree.getPath() + base)
 			licenses.MatchAuthors(matched, data, path, license)
+			file_tree.Lock()
 			file_tree.singleLicenseFiles[base] = append(file_tree.singleLicenseFiles[base], license)
+			file_tree.Unlock()
 		}
 	}
 }
@@ -212,18 +215,13 @@ func (licenses *Licenses) MatchAuthors(matched []byte, data []byte, path string,
 	// Replace < and > so that it doesn't cause special character highlights.
 	authors = strings.ReplaceAll(authors, "<", "&lt")
 	authors = strings.ReplaceAll(authors, ">", "&gt")
-	if len(lic.matches) == 0 {
-		lic.matches = make(map[string]*Match)
-	}
-	_, f := lic.matches[authors]
-	if !f {
-		// Replace < and > so that it doesn't cause special character highlights.
-		matched = bytes.ReplaceAll(matched, []byte("<"), []byte("&lt"))
-		matched = bytes.ReplaceAll(matched, []byte(">"), []byte("&gt"))
 
-		lic.matches[authors] = &Match{value: matched}
+	newMatch := &Match{
+		authors: authors,
+		value:   matched,
+		files:   []string{path},
 	}
-	lic.matches[authors].files = append(lic.matches[authors].files, path)
+	lic.AddMatch(newMatch)
 }
 
 // MatchFile returns true if any License matches input data

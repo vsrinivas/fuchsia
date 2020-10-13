@@ -5,6 +5,7 @@
 package checklicenses
 
 import (
+	"bytes"
 	"regexp"
 	"strings"
 	"sync"
@@ -16,13 +17,17 @@ type License struct {
 	matches   map[string]*Match
 	category  string
 	validType bool
+
+	matchChannel chan *Match
+	sync.RWMutex
 }
 
 // Match is used to store a single match result alongside the License along with a list of all matching files
 type Match struct {
 	// TODO(solomonkinard) value should be byte, not []byte since only one result is stored
-	value []byte
-	files []string
+	authors string
+	value   []byte
+	files   []string
 }
 
 // LicenseFindMatch runs concurrently for all licenses, synchronizing result production for subsequent consumption
@@ -46,16 +51,42 @@ func (license *License) append(path string) {
 	// Replace < and > so that it doesn't cause special character highlights.
 	authorName = strings.ReplaceAll(authorName, "<", "&lt")
 	authorName = strings.ReplaceAll(authorName, ">", "&gt")
-	if len(license.matches) == 0 {
-		license.matches = make(map[string]*Match)
+
+	pattern := license.pattern.String()
+	// Replace < and > so that it doesn't cause special character highlights.
+	pattern = strings.ReplaceAll(pattern, "<", "&lt")
+	pattern = strings.ReplaceAll(pattern, ">", "&gt")
+
+	newMatch := &Match{
+		authors: strings.TrimSpace(authorName),
+		value:   []byte(pattern),
+		files:   []string{path},
 	}
-	_, f := license.matches[authorName]
-	if !f {
-		pattern := license.pattern.String()
-		// Replace < and > so that it doesn't cause special character highlights.
-		pattern = strings.ReplaceAll(pattern, "<", "&lt")
-		pattern = strings.ReplaceAll(pattern, ">", "&gt")
-		license.matches[authorName] = &Match{value: []byte(pattern)}
+
+	license.AddMatch(newMatch)
+}
+
+func (l *License) AddMatch(m *Match) {
+	l.matchChannel <- m
+}
+
+func (l *License) MatchChannelWorker(wg *sync.WaitGroup) {
+	defer wg.Done()
+	for m := range l.matchChannel {
+
+		if m == nil {
+			break
+		}
+		l.Lock()
+		if l.matches[m.authors] == nil {
+			// Replace < and > so that it doesn't cause special character highlights.
+			m.value = bytes.ReplaceAll(m.value, []byte("<"), []byte("&lt"))
+			m.value = bytes.ReplaceAll(m.value, []byte(">"), []byte("&gt"))
+
+			l.matches[m.authors] = m
+		} else {
+			l.matches[m.authors].files = append(l.matches[m.authors].files, m.files...)
+		}
+		l.Unlock()
 	}
-	license.matches[authorName].files = append(license.matches[authorName].files, path)
 }

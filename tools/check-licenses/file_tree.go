@@ -9,66 +9,100 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // NewFileTree returns an instance of FileTree, given the input configuration file.
 func NewFileTree(config *Config, metrics *Metrics) *FileTree {
+	var eg errgroup.Group
+	var recursiveHelper func(string) error
 	var file_tree FileTree
 	file_tree.Init()
 	var root string
 	if config.Target == "all" {
 		root = config.BaseDir
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf("error walking the path %q: %v\n", root, err)
-				return err
-			}
-			if info.IsDir() {
-				// TODO regex instead of exact match
-				for _, skipDir := range config.SkipDirs {
-					if info.Name() == skipDir || path == skipDir {
-						fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
+
+		recursiveHelper = func(root string) error {
+			err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					fmt.Printf("error walking the path %q: %v\n", root, err)
+					return err
+				}
+				if info.IsDir() {
+					for _, skipDir := range config.SkipDirs {
+						if info.Name() == skipDir || path == skipDir {
+							fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
+							return filepath.SkipDir
+						}
+					}
+
+					for _, customProjectLicense := range config.CustomProjectLicenses {
+						if path == customProjectLicense.ProjectRoot {
+							metrics.increment("num_single_license_files")
+							// TODO(omerlevran): Fix the directory and file_root having to repeat a
+							// directory.
+							file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
+							break
+						}
+					}
+
+					// Instead of using filepath.Walk to traverse the directory tree,
+					// we will instead call this same function recursively on each
+					// subtree, and return "filepath.SkipDir" to prevent filepath.Walk
+					// from entering the child directories. This allows us to parallelize
+					// the walk procedure.
+					//
+					// Special case: In the first loop, root == path.
+					// Returning filepath.SkipDir on that loop would cancel the entire
+					// walk procedure, and no files would be processed.
+					if root != path {
+						func(path string) {
+							eg.Go(func() error {
+								return recursiveHelper(path)
+							})
+						}(path)
 						return filepath.SkipDir
 					}
-				}
-
-				for _, customProjectLicense := range config.CustomProjectLicenses {
-					if path == customProjectLicense.ProjectRoot {
-						metrics.increment("num_single_license_files")
-						// TODO(omerlevran): Fix the directory and file_root having to repeat a
-						// directory.
-						file_tree.addSingleLicenseFile(path, customProjectLicense.LicenseLocation)
-						return nil
-					}
-				}
-
-				return nil
-			} else {
-				for _, skipFile := range config.SkipFiles {
-					if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
-						fmt.Printf("skipping a file without errors: %+v \n", info.Name())
-						return nil
-					}
-				}
-			}
-			if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
-				metrics.increment("num_single_license_files")
-				file_tree.addSingleLicenseFile(path, filepath.Base(path))
-			} else {
-				if isValidExtension(path, config) {
-					metrics.increment("num_non_single_license_files")
-					file_tree.addFile(path)
+					return nil
 				} else {
-					metrics.increment("num_extensions_excluded")
+					for _, skipFile := range config.SkipFiles {
+						if strings.ToLower(info.Name()) == strings.ToLower(skipFile) {
+							fmt.Printf("skipping a file without errors: %+v \n", info.Name())
+							return nil
+						}
+					}
 				}
+				if isSingleLicenseFile(info.Name(), config.SingleLicenseFiles) {
+					metrics.increment("num_single_license_files")
+					file_tree.addSingleLicenseFile(path, filepath.Base(path))
+				} else {
+					if isValidExtension(path, config) {
+						metrics.increment("num_non_single_license_files")
+						file_tree.addFile(path)
+					} else {
+						metrics.increment("num_extensions_excluded")
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				fmt.Println(err.Error())
 			}
 			return nil
-		})
-		if err != nil {
-			fmt.Println(err.Error())
 		}
 	} else {
 		// TODO(solomonkinard) target specific file tree
+	}
+
+	eg.Go(func() error {
+		return recursiveHelper(root)
+	})
+
+	if err := eg.Wait(); err != nil {
+		fmt.Printf("error while traversing directory '%v", err)
+		return nil
 	}
 
 	return &file_tree
@@ -81,6 +115,8 @@ type FileTree struct {
 	files              []string
 	singleLicenseFiles map[string][]*License
 	parent             *FileTree
+
+	sync.RWMutex
 }
 
 func (license_file_tree *FileTree) Init() {
@@ -91,6 +127,8 @@ func (license_file_tree *FileTree) Init() {
 func (file_tree *FileTree) getSetCurr(path string) *FileTree {
 	children := strings.Split(filepath.Dir(path), "/")
 	curr := file_tree
+	currBkp := curr
+	curr.Lock()
 	for _, child := range children {
 		if _, found := curr.children[child]; !found {
 			curr.children[child] = &FileTree{name: child, parent: curr}
@@ -98,6 +136,7 @@ func (file_tree *FileTree) getSetCurr(path string) *FileTree {
 		}
 		curr = curr.children[child]
 	}
+	currBkp.Unlock()
 	return curr
 }
 
@@ -119,10 +158,14 @@ func (file_tree *FileTree) getProjectLicense(path string) *FileTree {
 		if len(curr.singleLicenseFiles) > 0 {
 			gold = curr
 		}
+		curr.RLock()
 		if _, found := curr.children[piece]; !found {
+			curr.RUnlock()
 			break
 		}
-		curr = curr.children[piece]
+		currNext := curr.children[piece]
+		curr.RUnlock()
+		curr = currNext
 	}
 	if len(pieces) > 1 && len(curr.singleLicenseFiles) > 0 {
 		gold = curr
@@ -189,9 +232,11 @@ func (file_tree *FileTree) getSingleLicenseFileIterator() <-chan *FileTree {
 			if len(curr.singleLicenseFiles) > 0 {
 				ch <- curr
 			}
+			curr.RLock()
 			for _, child := range curr.children {
 				q = append(q, child)
 			}
+			curr.RUnlock()
 		}
 		close(ch)
 	}()
@@ -213,9 +258,11 @@ func (file_tree *FileTree) getFileIterator() <-chan string {
 			for _, file := range curr.files {
 				ch <- base + file
 			}
+			curr.RLock()
 			for _, child := range curr.children {
 				q = append(q, child)
 			}
+			curr.RUnlock()
 		}
 		close(ch)
 	}()

@@ -30,6 +30,7 @@ go_library("templates") {
 go_library("lib") {
   deps = [
     ":templates",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/lib/logger",
   ]
 }
