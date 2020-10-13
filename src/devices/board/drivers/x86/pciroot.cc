@@ -57,13 +57,13 @@ zx_status_t x64Pciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti
   return pciroot_op_get_bti(nullptr, bdf, index, bti->reset_and_get_address());
 }
 
-zx_status_t x64Pciroot::PcirootConnectSysmem(zx::handle handle) {
+zx_status_t x64Pciroot::PcirootConnectSysmem(zx::channel connection) {
   sysmem_protocol_t sysmem;
   zx_status_t status = device_get_protocol(context_.platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
   if (status != ZX_OK) {
     return status;
   }
-  return sysmem_connect(&sysmem, handle.release());
+  return sysmem_connect(&sysmem, connection.release());
 }
 
 zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {

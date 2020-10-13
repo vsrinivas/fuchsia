@@ -67,6 +67,11 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
     return pciroot().GetBti(device->packed_addr(), index, bti);
   }
 
+  zx_status_t ConnectSysmem(zx::channel channel) __TA_EXCLUDES(devices_lock_) final {
+    fbl::AutoLock devices_lock(&devices_lock_);
+    return pciroot().ConnectSysmem(std::move(channel));
+  }
+
   // All methods related to the fuchsia.hardware.pci service.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   virtual void GetDevices(GetDevicesCompleter::Sync& completer) final;

@@ -5,11 +5,14 @@
 #include "device_proxy.h"
 
 #include <lib/zx/bti.h>
+#include <zircon/types.h>
 
 #include <cstring>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/protocol/pci.h>
+#include <ddk/protocol/sysmem.h>
 
 #include "common.h"
 
@@ -28,18 +31,23 @@ zx_status_t DeviceProxy::Create(zx_device_t* parent, zx_handle_t rpcch, const ch
   return dp->DdkAdd(name);
 }
 
-zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* handle, PciRpcMsg* req,
-                                    PciRpcMsg* resp) {
+zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, zx_handle_t* wr_handle,
+                                    PciRpcMsg* req, PciRpcMsg* resp) {
   if (rpcch_ == ZX_HANDLE_INVALID) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint32_t handle_cnt = 0;
-  if (handle) {
+  uint32_t rd_handle_cnt = 0;
+  if (rd_handle) {
     // Since only the caller knows if they expected a valid handle back, make
     // sure the handle is invalid if we didn't get one.
-    *handle = ZX_HANDLE_INVALID;
-    handle_cnt = 1;
+    *rd_handle = ZX_HANDLE_INVALID;
+    rd_handle_cnt = 1;
+  }
+
+  uint32_t wr_handle_cnt = 0;
+  if (wr_handle) {
+    wr_handle_cnt = 1;
   }
 
   req->op = op;
@@ -48,10 +56,10 @@ zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* handle, PciRpcMsg*
   cc_args.wr_num_bytes = sizeof(*req);
   cc_args.rd_bytes = resp;
   cc_args.rd_num_bytes = sizeof(*resp);
-  cc_args.rd_handles = handle;
-  cc_args.rd_num_handles = handle_cnt;
-  cc_args.wr_handles = nullptr;
-  cc_args.wr_num_handles = 0;
+  cc_args.rd_handles = rd_handle;
+  cc_args.rd_num_handles = rd_handle_cnt;
+  cc_args.wr_handles = wr_handle;
+  cc_args.wr_num_handles = wr_handle_cnt;
 
   uint32_t actual_bytes;
   uint32_t actual_handles;
@@ -69,11 +77,19 @@ zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* handle, PciRpcMsg*
 }
 
 zx_status_t DeviceProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
-  if (proto_id == ZX_PROTOCOL_PCI) {
-    auto proto = static_cast<pci_protocol_t*>(out);
-    proto->ctx = this;
-    proto->ops = &pci_protocol_ops_;
-    return ZX_OK;
+  switch (proto_id) {
+    case ZX_PROTOCOL_PCI: {
+      auto proto = static_cast<pci_protocol_t*>(out);
+      proto->ctx = this;
+      proto->ops = &pci_protocol_ops_;
+      return ZX_OK;
+    }
+    case ZX_PROTOCOL_SYSMEM: {
+      auto proto = static_cast<sysmem_protocol_t*>(out);
+      proto->ctx = this;
+      proto->ops = &sysmem_protocol_ops_;
+      return ZX_OK;
+    }
   }
 
   return ZX_ERR_NOT_SUPPORTED;
@@ -87,7 +103,8 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
   zx_handle_t handle;
 
   req.bar.id = bar_id;
-  zx_status_t st = RpcRequest(PCI_OP_GET_BAR, &handle, &req, &resp);
+  zx_status_t st =
+      RpcRequest(PCI_OP_GET_BAR, /*rd_handle=*/&handle, /*wr_handle=*/nullptr, &req, &resp);
   // |st| is the channel operation status, |resp.ret| is the RPC status.
   if (st != ZX_OK) {
     return st;
@@ -138,7 +155,8 @@ zx_status_t DeviceProxy::PciEnableBusMaster(bool enable) {
   PciRpcMsg resp = {};
 
   req.enable = enable;
-  return RpcRequest(PCI_OP_ENABLE_BUS_MASTER, nullptr, &req, &resp);
+  return RpcRequest(PCI_OP_ENABLE_BUS_MASTER, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req,
+                    &resp);
 }
 
 zx_status_t DeviceProxy::PciResetDevice() { DEVICE_PROXY_UNIMPLEMENTED; }
@@ -149,7 +167,8 @@ zx_status_t DeviceProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_
 
   req.irq.which_irq = which_irq;
   zx_handle_t irq_handle;
-  zx_status_t st = RpcRequest(PCI_OP_MAP_INTERRUPT, &irq_handle, &req, &resp);
+  zx_status_t st = RpcRequest(PCI_OP_MAP_INTERRUPT, /*rd_handle=*/&irq_handle,
+                              /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     out_handle->reset(irq_handle);
   }
@@ -162,7 +181,8 @@ zx_status_t DeviceProxy::PciConfigureIrqMode(uint32_t requested_irq_count) {
   PciRpcMsg resp = {};
 
   req.irq.requested_irqs = requested_irq_count;
-  return RpcRequest(PCI_OP_CONFIGURE_IRQ_MODE, nullptr, &req, &resp);
+  return RpcRequest(PCI_OP_CONFIGURE_IRQ_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req,
+                    &resp);
 }
 
 zx_status_t DeviceProxy::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
@@ -171,7 +191,8 @@ zx_status_t DeviceProxy::PciQueryIrqMode(zx_pci_irq_mode_t mode, uint32_t* out_m
 
   req.irq.mode = mode;
   resp.irq.mode = mode;
-  zx_status_t st = RpcRequest(PCI_OP_QUERY_IRQ_MODE, nullptr, &req, &resp);
+  zx_status_t st =
+      RpcRequest(PCI_OP_QUERY_IRQ_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_max_irqs = resp.irq.max_irqs;
   }
@@ -184,14 +205,15 @@ zx_status_t DeviceProxy::PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requeste
 
   req.irq.mode = mode;
   req.irq.requested_irqs = requested_irq_count;
-  return RpcRequest(PCI_OP_SET_IRQ_MODE, nullptr, &req, &resp);
+  return RpcRequest(PCI_OP_SET_IRQ_MODE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
 }
 
 zx_status_t DeviceProxy::PciGetDeviceInfo(zx_pcie_device_info_t* out_info) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};
 
-  zx_status_t st = RpcRequest(PCI_OP_GET_DEVICE_INFO, nullptr, &req, &resp);
+  zx_status_t st =
+      RpcRequest(PCI_OP_GET_DEVICE_INFO, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_info = resp.info;
   }
@@ -205,7 +227,8 @@ zx_status_t DeviceProxy::PciConfigRead(uint16_t offset, T* out_value) {
 
   req.cfg.offset = offset;
   req.cfg.width = static_cast<uint16_t>(sizeof(T));
-  zx_status_t st = RpcRequest(PCI_OP_CONFIG_READ, nullptr, &req, &resp);
+  zx_status_t st =
+      RpcRequest(PCI_OP_CONFIG_READ, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_value = static_cast<T>(resp.cfg.value);
   }
@@ -232,7 +255,7 @@ zx_status_t DeviceProxy::PciConfigWrite(uint16_t offset, T value) {
   req.cfg.offset = offset;
   req.cfg.width = static_cast<uint16_t>(sizeof(T));
   req.cfg.value = value;
-  return RpcRequest(PCI_OP_CONFIG_WRITE, nullptr, &req, &resp);
+  return RpcRequest(PCI_OP_CONFIG_WRITE, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr, &req, &resp);
 }
 
 zx_status_t DeviceProxy::PciConfigWrite8(uint16_t offset, uint8_t value) {
@@ -268,7 +291,8 @@ zx_status_t DeviceProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, ui
 
   PciRpcMsg resp;
   memset(&resp, 0, sizeof(resp));
-  zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, nullptr, &req, &resp);
+  zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, /*rd_handle=*/nullptr,
+                              /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_offset = static_cast<uint8_t>(resp.cap.offset);
   }
@@ -298,7 +322,8 @@ zx_status_t DeviceProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t 
 
   PciRpcMsg resp;
   memset(&resp, 0, sizeof(resp));
-  zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, nullptr, &req, &resp);
+  zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, /*rd_handle=*/nullptr,
+                              /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     *out_offset = resp.cap.offset;
   }
@@ -310,11 +335,20 @@ zx_status_t DeviceProxy::PciGetBti(uint32_t index, zx::bti* out_bti) {
   PciRpcMsg resp = {};
   req.bti_index = index;
   zx_handle_t handle;
-  zx_status_t st = RpcRequest(PCI_OP_GET_BTI, &handle, &req, &resp);
+  zx_status_t st =
+      RpcRequest(PCI_OP_GET_BTI, /*rd_handle=*/&handle, /*wr_handle=*/nullptr, &req, &resp);
   if (st == ZX_OK) {
     out_bti->reset(handle);
   }
   return st;
+}
+
+zx_status_t DeviceProxy::SysmemConnect(zx::channel allocator_request) {
+  PciRpcMsg req = {};
+  PciRpcMsg resp = {};
+  zx_handle_t handle = allocator_request.release();
+  return RpcRequest(PCI_OP_CONNECT_SYSMEM, /*rd_handle=*/nullptr, /*wr_handle=*/&handle, &req,
+                    &resp);
 }
 
 }  // namespace pci

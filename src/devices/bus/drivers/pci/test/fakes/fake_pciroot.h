@@ -40,7 +40,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PcirootConnectSysmem(zx::handle handle) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PcirootConnectSysmem(zx::channel connection) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
   bool PcirootDriverShouldProxyConfig(void) { return false; }
   zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) {

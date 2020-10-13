@@ -24,6 +24,7 @@ class BusDeviceInterface {
   virtual ~BusDeviceInterface() = default;
   virtual zx_status_t GetBti(const pci::Device* device, uint32_t index, zx::bti* bti) = 0;
   virtual zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) = 0;
+  virtual zx_status_t ConnectSysmem(zx::channel channel) = 0;
   virtual void LinkDevice(fbl::RefPtr<pci::Device> device) = 0;
   virtual void UnlinkDevice(pci::Device* device) = 0;
 };

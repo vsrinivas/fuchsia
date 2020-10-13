@@ -49,26 +49,20 @@ class x64Pciroot : public PcirootBase {
 
   static zx_status_t Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
                             const char* name);
-  virtual zx_status_t PcirootConnectSysmem(zx::handle handle) final;
-  virtual zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
-  virtual zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
-  virtual zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
-                                         uint8_t* value) final;
-  virtual zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
-                                          uint16_t* value) final;
-  virtual zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset,
-                                          uint32_t* value) final;
-  virtual zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset,
-                                          uint8_t value) final;
-  virtual zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset,
-                                           uint16_t value) final;
-  virtual zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset,
-                                           uint32_t value) final;
+  zx_status_t PcirootConnectSysmem(zx::channel connection) final;
+  zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
+  zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
+  zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) final;
+  zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset, uint16_t* value) final;
+  zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset, uint32_t* value) final;
+  zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset, uint8_t value) final;
+  zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset, uint16_t value) final;
+  zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset, uint32_t value) final;
 
  private:
   Context context_;
   x64Pciroot(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent, const char* name)
-      : PcirootBase(root_host, parent, name), context_(std::move(ctx)) {}
+      : PcirootBase(root_host, parent, name), context_(ctx) {}
 };
 
 __END_CDECLS

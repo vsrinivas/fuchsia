@@ -28,7 +28,7 @@ enum PciAddressSpace : uint8 {
 protocol Pciroot {
     /// Legacy methods
     /// Create a sysmem connection - used to implement ddk.protocol.sysmem.
-    ConnectSysmem(handle connection) -> (zx.status s);
+    ConnectSysmem(handle<channel> connection) -> (zx.status s);
     GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
     /// Get the platform information structure from the pciroot protocol to be used for bus init.
     GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);

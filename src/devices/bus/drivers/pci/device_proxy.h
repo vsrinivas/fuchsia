@@ -7,9 +7,11 @@
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <zircon/errors.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/pci.h>
+#include <ddktl/protocol/sysmem.h>
 
 namespace pci {
 
@@ -96,12 +98,15 @@ static_assert(sizeof(PciRpcMsg) <= ZX_PAGE_SIZE);
 
 class DeviceProxy;
 using PciDeviceProxyType = ddk::Device<pci::DeviceProxy, ddk::GetProtocolable>;
-class DeviceProxy : public PciDeviceProxyType, public ddk::PciProtocol<pci::DeviceProxy> {
+class DeviceProxy : public PciDeviceProxyType,
+                    public ddk::PciProtocol<pci::DeviceProxy>,
+                    public ddk::SysmemProtocol<pci::DeviceProxy> {
  public:
   DeviceProxy(zx_device_t* parent, zx_handle_t rpcch) : PciDeviceProxyType(parent), rpcch_(rpcch) {}
   static zx_status_t Create(zx_device_t* parent, zx_handle_t rpcch, const char* name);
   // A helper method to reduce the complexity of each individual PciProtocol method.
-  zx_status_t RpcRequest(PciRpcOp op, zx_handle_t* handle, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, zx_handle_t* wr_handle,
+                         PciRpcMsg* req, PciRpcMsg* resp);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease() { delete this; }
 
@@ -125,6 +130,16 @@ class DeviceProxy : public PciDeviceProxyType, public ddk::PciProtocol<pci::Devi
   zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
   zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+
+  // ddk::Sysmem stubs
+  zx_status_t SysmemConnect(zx::channel allocator_request);
+  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
 
  private:
   // Helpers to marshal config-based RPC.
