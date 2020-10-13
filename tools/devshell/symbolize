@@ -19,6 +19,8 @@
 ##                            symbol servers for symbols that cannot be resolved
 ##                            locally.
 ##
+##    --auth                  (C++ symbolizer) start the authentication process.
+##
 ##   Converts sybmolizer markup found in stdin to human readable using
 ##   local symbols (and remote if the --remote-symbols option is used).
 ##   This command is usually used on log output from either zx_log or syslog.
@@ -43,9 +45,7 @@
 ##
 ##   When using the C++ implementation, failed or missing authentication will be
 ##   silent. To authenticate, run:
-##      `fx zxdb --no-agent` and then `auth`
-
-# TODO(fxb/61413): update the authentication command above to `fx symbolizer --auth`.
+##      `fx symbolize --experimental --auth`
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
@@ -95,6 +95,9 @@ function cpp_symbolizer {
       "--symbol-server" "gs://fuchsia-artifacts-release/debug"
     )
   fi
+  if [[ "${auth_mode}" -eq 1 ]]; then
+    extra_args+=(--auth)
+  fi
   "${symbolizer}" "${extra_args[@]}"
 }
 
@@ -110,6 +113,7 @@ function exit-with-warning {
 
 declare ids_txt=()
 declare is_remote=0
+declare auth_mode=0
 # TODO(fxb/58309): change the default to experimental.
 declare use_experimental=0
 
@@ -124,6 +128,9 @@ while [[ $# -ne 0 ]]; do
     ;;
   --legacy)
     use_experimental=0
+    ;;
+  --auth)
+    auth_mode=1
     ;;
   -i)
     if [[ $# -lt 2 ]]; then

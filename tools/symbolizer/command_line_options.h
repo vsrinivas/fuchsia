@@ -21,6 +21,8 @@ struct CommandLineOptions {
   std::vector<std::string> symbol_servers;
   std::optional<std::string> symbol_cache;
   std::vector<std::string> build_dirs;
+
+  bool auth_mode = false;
 };
 
 // Parses the command line into options.
