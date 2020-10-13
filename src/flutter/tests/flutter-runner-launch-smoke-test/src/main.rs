@@ -27,22 +27,30 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_launch_debug_build_cfg() -> Result<(), Error> {
         syslog::init_with_tags(&["can_launch_debug_build_cfg"]).context("Can't init logger")?;
-        check_launching_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-debug-build-cfg.cmx").await
+        launch_and_ping_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-debug-build-cfg.cmx").await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_launch_profile_build_cfg() -> Result<(), Error> {
         syslog::init_with_tags(&["can_launch_profile_build_cfg"]).context("Can't init logger")?;
-        check_launching_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-profile-build-cfg.cmx").await
+        launch_and_ping_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-profile-build-cfg.cmx").await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_launch_release_build_cfg() -> Result<(), Error> {
         syslog::init_with_tags(&["can_launch_release_build_cfg"]).context("Can't init logger")?;
-        check_launching_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-release-build-cfg.cmx").await
+        launch_and_ping_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-release-build-cfg.cmx").await
     }
 
-    async fn check_launching_component(component_url: &str) -> Result<(), Error> {
+    #[fasync::run_singlethreaded(test)]
+    async fn can_launch_null_safe_build() -> Result<(), Error> {
+        syslog::init_with_tags(&["can_launch_release_build_cfg"]).context("Can't init logger")?;
+        let mut app = launch_and_connect_view_service("fuchsia-pkg://fuchsia.com/null-safe-enabled-flutter#meta/null-safe-enabled-flutter.cmx").await?;
+        app.kill()?;
+        Ok(())
+    }
+
+    async fn launch_and_connect_view_service(component_url: &str) -> Result<client::App, Error> {
         fx_log_info!("Attempting to launch {}", component_url);
 
         let launcher = client::launcher().context("Failed to get the launcher")?;
@@ -63,6 +71,12 @@ mod tests {
             &mut viewref_pair.control_ref,
             &mut viewref_pair.view_ref,
         )?;
+
+        Ok(app)
+    }
+
+    async fn launch_and_ping_component(component_url: &str) -> Result<(), Error> {
+        let app = launch_and_connect_view_service(component_url).await?;
 
         // To ensure that we have launched and can receive messages we connect
         // to the ping service to try to communicate with the component.

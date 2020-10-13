@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+import("//src/sys/build/components.gni")
+
+dart_library("lib") {
+  package_name = "null_safe_enabled_flutter"
+  sources = [ "main.dart" ]
+  deps = [
+    "//src/flutter/tests/packages/null-enabled-adder",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
+}
+
+flutter_component("component") {
+  manifest = "meta/null-safe-enabled-flutter.cmx"
+  main_package = "null_safe_enabled_flutter"
+  deps = [ ":lib" ]
+}
+
+fuchsia_package("null-safe-enabled-flutter") {
+  deps = [ ":component" ]
+}

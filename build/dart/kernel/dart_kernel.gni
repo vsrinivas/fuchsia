@@ -209,6 +209,8 @@ template("dart_kernel2") {
 
     script = _gen_kernel_path
     args += [
+      "--enable-experiment=non-nullable",
+      "--no-sound-null-safety",
       "--target",
       invoker.platform_name,
       "--platform",

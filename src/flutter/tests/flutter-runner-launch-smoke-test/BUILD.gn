@@ -50,6 +50,7 @@ fuchsia_unittest_package("flutter-runner-launch-smoke-test-unittests") {
   manifest = "meta/flutter-runner-launch-smoke-test.cmx"
   deps = [
     ":bin_test",
+    "//src/flutter/tests/bin/null-safe-enabled-flutter",
     "//src/flutter/tests/bin/pingable-flutter-component",
   ]
 }

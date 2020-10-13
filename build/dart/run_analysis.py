@@ -78,6 +78,8 @@ def main():
         '--fatal-warnings',
         '--fatal-hints',
         '--fatal-lints',
+        '--enable-experiment',
+        'non-nullable',
     ] + sources
 
     # Call Dart anaylzer.

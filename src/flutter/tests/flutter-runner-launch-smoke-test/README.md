@@ -1,25 +1,13 @@
-# simple-flutter-component-test-harness
+# flutter-runner-launch-smoke-test
 
-TODO: Brief overview of the component.
+Provides a test harness for launching flutter runner components to verify that
+they can run. The harness is written in rust to isolate the flutter logic to the
+component under test.
 
-## Building
-
-To add this component to your build, append
-`--with src/flutter/tests/simple-flutter-component-test-harness`
-to the `fx set` invocation.
-
-## Running
-
-```
-$ fx shell run fuchsia-pkg://fuchsia.com/simple-flutter-component-test-harness#meta/simple-flutter-component-test-harness.cmx
-```
 
 ## Testing
 
-Unit tests for simple-flutter-component-test-harness are available in the `simple-flutter-component-test-harness-tests`
-package.
-
 ```
-$ fx test simple-flutter-component-test-harness-tests
+$ fx test flutter-runner-launch-smoke-test-unittests
 ```
 

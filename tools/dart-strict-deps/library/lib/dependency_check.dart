@@ -30,7 +30,9 @@ Set<String> collectKnownPackagesFromDirectDeps({BuildInfo buildInfo}) =>
 Optional<CompilationUnit> parseCompilationUnit(String filePath) {
   try {
     return Optional.of(analyzer
-        .parseFile(path: filePath, featureSet: FeatureSet.fromEnableFlags([]))
+        .parseFile(
+            path: filePath,
+            featureSet: FeatureSet.fromEnableFlags(["non-nullable"]))
         .unit);
   } on FileSystemException {
     return Optional.absent();

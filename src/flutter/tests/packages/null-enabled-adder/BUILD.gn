@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+
+dart_library("null-enabled-adder") {
+  package_name = "null_enabled_adder"
+  language_version = "2.10"
+
+  sources = [ "adder.dart" ]
+
+  # Do not take any deps since we just want to test that the null-safety will
+  # compile without any dependencies needing to be migrated
+  deps = []
+}
