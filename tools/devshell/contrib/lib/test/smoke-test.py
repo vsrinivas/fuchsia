@@ -24,9 +24,6 @@ def main():
         "--out-dir", required=True, help="Path to the Fuchsia build directory")
     args = parser.parse_args()
 
-    print("WARNING! `fx smoke-test` is currently broken.")
-    print("fxbug.dev/61759")
-
     # Find all modified files
     upstream = (
         subprocess.run(
@@ -66,16 +63,15 @@ def main():
     # Index tests.json
     with open(os.path.join(args.out_dir, "tests.json")) as tests_json:
         tests = json.load(tests_json)
-    stamp_to_test_label = {
-        "touch " + os.path.join(
-            # Transform GN label to stamp file path, for example:
-            # //my/gn:path($my_toolchain) -> obj/my/gn/path.stamp
-            "obj",
-            label[2:].partition("(")[0].replace(":", "/") + ".stamp"): label
+    ninja_line_to_test_label = {
+        # Transform GN label to Ninja rule name, for example:
+        # //my/gn:path($my_toolchain) -> phony/my/gn/path
+        "ninja explain: phony/" +
+        label[2:].partition("(")[0].replace(":", "/") + " is dirty": label
         for label in (entry["test"]["label"] for entry in tests)
     }
 
-    # Touch all modified files so they're newer than any stamps
+    # Touch all modified files so they're newer than any rules
     git_base = subprocess.check_output(
         ["git", "rev-parse", "--show-toplevel"], encoding="UTF-8").strip()
     for path in modified.splitlines():
@@ -83,19 +79,25 @@ def main():
         if p.exists() and not path.endswith("BUILD.gn"):
             p.touch()
 
-    # Find all stale stamps
+    # Find all stale rules
     ninja = []
     for buildtype in ("", ".zircon"):
         ninja += subprocess.check_output(
-            ["fx", "ninja", "-C", args.out_dir + buildtype, "-n", "-v"],
+            [
+                "fx",
+                "ninja",
+                "-C",
+                args.out_dir + buildtype,
+                "-d",
+                "explain",
+                "-n",
+            ],
             encoding="UTF-8",
+            stderr=subprocess.STDOUT,
         ).splitlines()
-    stale_stamps = [line.partition("] ")[2] for line in ninja]
 
-    # Check stale stamps against test labels
-    affected_labels = {
-        stamp_to_test_label.get(stamp, None) for stamp in stale_stamps if stamp
-    }
+    # Check stale rules against test labels
+    affected_labels = {ninja_line_to_test_label.get(line, None) for line in ninja}
     affected_labels.discard(None)
     if not affected_labels:
         if args.verbose:
