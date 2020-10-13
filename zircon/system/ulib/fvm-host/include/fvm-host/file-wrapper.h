@@ -25,7 +25,7 @@ class FileWrapper {
  public:
   virtual ~FileWrapper() {}
   virtual ssize_t Read(void* buffer, size_t count) = 0;
-  virtual ssize_t Write(void* buffer, size_t count) = 0;
+  virtual ssize_t Write(const void* buffer, size_t count) = 0;
   virtual ssize_t Seek(off_t offset, int whence) = 0;
   virtual ssize_t Size() = 0;
   virtual ssize_t Tell() = 0;
@@ -47,7 +47,7 @@ class FdWrapper : public FileWrapper {
   FdWrapper(int fd) : fd_(fd) {}
 
   ssize_t Read(void* buffer, size_t count) override;
-  ssize_t Write(void* buffer, size_t count) override;
+  ssize_t Write(const void* buffer, size_t count) override;
   ssize_t Seek(off_t offset, int whence) override;
   ssize_t Size() override;
   ssize_t Tell() override;
@@ -70,7 +70,7 @@ class UniqueFdWrapper : public FileWrapper {
   UniqueFdWrapper(fbl::unique_fd fd) : fd_(std::move(fd)) {}
 
   ssize_t Read(void* buffer, size_t count) override;
-  ssize_t Write(void* buffer, size_t count) override;
+  ssize_t Write(const void* buffer, size_t count) override;
   ssize_t Seek(off_t offset, int whence) override;
   ssize_t Size() override;
   ssize_t Tell() override;

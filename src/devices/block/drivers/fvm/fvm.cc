@@ -232,6 +232,8 @@ zx_status_t VPartitionManager::Load() {
   if (status != ZX_OK) {
     return status;
   }
+  // Cancelled before we return ZX_OK at the end of Load().
+  auto dump_header = fbl::MakeAutoCall([&sb]() { zxlogf(ERROR, "%s\n", sb.ToString().c_str()); });
 
   slice_size_ = sb.slice_size;
 
@@ -296,6 +298,8 @@ zx_status_t VPartitionManager::Load() {
         ZX_OK) {
       return status;
     }
+
+    dump_header.cancel();
 
     *out_mapping = std::move(mapper);
     return ZX_OK;

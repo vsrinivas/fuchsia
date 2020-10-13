@@ -80,7 +80,7 @@ std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
   const Header* secondary_header = static_cast<const Header*>(secondary_metadata);
   size_t secondary_metadata_size = secondary_header->GetMetadataUsedBytes();
 
-  auto check_value_consitency = [metadata_size](const Header& header) {
+  auto check_value_consistency = [metadata_size](const Header& header) {
     // Check header signature and version.
     if (header.magic != kMagic) {
       fprintf(stderr, "fvm: Bad magic\n");
@@ -118,6 +118,13 @@ std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
       return false;
     }
 
+    // Check metadata allocated size is greater than used size.
+    if (header.GetMetadataUsedBytes() > header.GetMetadataAllocatedBytes()) {
+      fprintf(stderr, "fvm: Reported metadata size of %zu is greater than allocated size %lu.\n",
+              header.GetMetadataUsedBytes(), header.GetMetadataAllocatedBytes());
+      return false;
+    }
+
     // Check bounds of slice size and partition.
     if (header.fvm_partition_size < 2 * header.GetMetadataAllocatedBytes()) {
       fprintf(stderr,
@@ -128,12 +135,13 @@ std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
 
     // Check that addressable slices fit in the partition.
     if (header.GetDataStartOffset() +
-            header.GetAllocationTableUsedEntryCount() * header.slice_size >
+            (header.GetAllocationTableUsedEntryCount() * header.slice_size) >
         header.fvm_partition_size) {
-      fprintf(
-          stderr,
-          "fvm: Slice count %zu Slice Size %" PRIu64 " out of range for partition %" PRIu64 ".\n",
-          header.GetAllocationTableUsedEntryCount(), header.slice_size, header.fvm_partition_size);
+      fprintf(stderr,
+              "fvm: Slice count %zu Slice Size %" PRIu64 " out of range for partition sz %" PRIu64
+              ".\n",
+              header.GetAllocationTableUsedEntryCount(), header.slice_size,
+              header.fvm_partition_size);
       return false;
     }
 
@@ -144,13 +152,25 @@ std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
   // than metadata buffer size(|metadata_size|. If this is the case, then check that the contents
   // from [start, reported_size] are valid.
   // The metadata size should always be at least the size of the header.
-  bool primary_valid =
-      check_value_consitency(*primary_header) && CheckHash(primary_metadata, primary_metadata_size);
+  bool primary_valid = false;
+  if (check_value_consistency(*primary_header)) {
+    if (CheckHash(primary_metadata, primary_metadata_size)) {
+      primary_valid = true;
+    } else {
+      fprintf(stderr, "fvm: Primary metadata has invalid content hash\n");
+    }
+  }
   if (!primary_valid) {
     fprintf(stderr, "fvm: Primary metadata invalid\n");
   }
-  bool secondary_valid = check_value_consitency(*secondary_header) &&
-                         CheckHash(secondary_metadata, secondary_metadata_size);
+  bool secondary_valid = false;
+  if (check_value_consistency(*secondary_header)) {
+    if (CheckHash(secondary_metadata, secondary_metadata_size)) {
+      secondary_valid = true;
+    } else {
+      fprintf(stderr, "fvm: Secondary metadata has invalid content hash\n");
+    }
+  }
   if (!secondary_valid) {
     fprintf(stderr, "fvm: Secondary metadata invalid\n");
   }

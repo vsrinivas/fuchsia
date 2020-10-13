@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FTL_MTD_FTL_VOLUME_WRAPPER_H_
+#define FTL_MTD_FTL_VOLUME_WRAPPER_H_
 
+#include <lib/ftl/volume.h>
 #include <sys/types.h>
 
 #include <memory>
 
 #include <fvm-host/file-wrapper.h>
-#include <lib/ftl/volume.h>
 
 namespace ftl_mtd {
 
@@ -20,7 +21,7 @@ class FtlVolumeWrapper : public ftl::FtlInstance, public fvm::host::FileWrapper 
 
   // Contructs an FtlVolumeWrapper with the given |volume| instance.
   // Used for testing.
-  FtlVolumeWrapper(std::unique_ptr<ftl::Volume> volume) : volume_(std::move(volume)) {}
+  explicit FtlVolumeWrapper(std::unique_ptr<ftl::Volume> volume) : volume_(std::move(volume)) {}
 
   // Initializes the FtlVolumeWrapper. Must be called before any operation is performed
   // with the FtlVolumeWrapper.
@@ -34,7 +35,7 @@ class FtlVolumeWrapper : public ftl::FtlInstance, public fvm::host::FileWrapper 
 
   // FileWrapper interface:
   ssize_t Read(void* buffer, size_t count) override;
-  ssize_t Write(void* buffer, size_t count) override;
+  ssize_t Write(const void* buffer, size_t count) override;
   ssize_t Seek(off_t offset, int whence) override;
   ssize_t Size() override;
   ssize_t Tell() override;
@@ -51,3 +52,5 @@ class FtlVolumeWrapper : public ftl::FtlInstance, public fvm::host::FileWrapper 
 };
 
 }  // namespace ftl_mtd
+
+#endif  // FTL_MTD_FTL_VOLUME_WRAPPER_H_

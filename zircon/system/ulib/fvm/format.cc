@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <cstring>
+#include <sstream>
+#include <string>
 
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -117,6 +119,20 @@ Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_u
   result.SetSliceCount(initial_usable_slices);
 
   return result;
+}
+
+std::string Header::ToString() const {
+  std::stringstream ss;
+  ss << "FVM Header" << std::endl;
+  ss << "  magic: " << std::to_string(magic) << std::endl;
+  ss << "  version: " << std::to_string(version) << std::endl;
+  ss << "  pslice_count: " << std::to_string(pslice_count) << std::endl;
+  ss << "  slice_size: " << std::to_string(slice_size) << std::endl;
+  ss << "  fvm_partition_size: " << std::to_string(fvm_partition_size) << std::endl;
+  ss << "  vpartition_table_size: " << std::to_string(vpartition_table_size) << std::endl;
+  ss << "  allocation_table_size: " << std::to_string(allocation_table_size) << std::endl;
+  ss << "  generation: " << std::to_string(generation) << std::endl;
+  return ss.str();
 }
 
 VPartitionEntry VPartitionEntry::Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,

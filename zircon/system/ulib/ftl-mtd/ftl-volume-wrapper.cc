@@ -38,7 +38,7 @@ ssize_t FtlVolumeWrapper::Read(void* buffer, size_t count) {
   return count;
 }
 
-ssize_t FtlVolumeWrapper::Write(void* buffer, size_t count) {
+ssize_t FtlVolumeWrapper::Write(const void* buffer, size_t count) {
   if (page_ >= num_pages_) {
     return 0;
   }

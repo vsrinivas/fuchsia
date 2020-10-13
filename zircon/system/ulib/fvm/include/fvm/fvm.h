@@ -25,6 +25,7 @@ void UpdateHash(void* metadata, size_t metadata_size);
 //
 // On success, the superblock type which is valid is returned. If both copies are invalid, a null
 // optional is returned.
+// TODO(jfsulliv): Remove this once all uses are ported to Metadata.
 std::optional<SuperblockType> ValidateHeader(const void* primary_metadata,
                                              const void* secondary_metadata, size_t metadata_size);
 

@@ -10,7 +10,7 @@ namespace fvm::host {
 
 ssize_t FdWrapper::Read(void* buffer, size_t count) { return read(fd_, buffer, count); }
 
-ssize_t FdWrapper::Write(void* buffer, size_t count) { return write(fd_, buffer, count); }
+ssize_t FdWrapper::Write(const void* buffer, size_t count) { return write(fd_, buffer, count); }
 
 ssize_t FdWrapper::Seek(off_t offset, int whence) { return lseek(fd_, offset, whence); }
 
@@ -40,7 +40,7 @@ zx_status_t UniqueFdWrapper::Open(const char* path, int flags, mode_t mode,
 
 ssize_t UniqueFdWrapper::Read(void* buffer, size_t count) { return read(fd_.get(), buffer, count); }
 
-ssize_t UniqueFdWrapper::Write(void* buffer, size_t count) {
+ssize_t UniqueFdWrapper::Write(const void* buffer, size_t count) {
   return write(fd_.get(), buffer, count);
 }
 

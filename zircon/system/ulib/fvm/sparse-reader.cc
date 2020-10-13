@@ -120,7 +120,9 @@ zx_status_t SparseReader::ReadMetadata() {
 
   // Verify the header.
   if (image.magic != fvm::kSparseFormatMagic) {
-    fprintf(stderr, "SparseReader: Bad magic\n");
+    if (verbose_) {
+      fprintf(stderr, "SparseReader: Bad magic (got %" PRIx64 ")\n", image.magic);
+    }
     return ZX_ERR_BAD_STATE;
   } else if (image.version != fvm::kSparseFormatVersion) {
     fprintf(stderr, "SparseReader: Unexpected sparse file version\n");

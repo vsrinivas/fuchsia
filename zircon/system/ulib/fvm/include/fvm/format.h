@@ -215,6 +215,9 @@ struct Header {
   // GetSliceEntryOffset().
   size_t GetSliceDataOffset(size_t pslice) const;
 
+  // Returns a stringified representation of the header, useful for debugging.
+  std::string ToString() const;
+
   // Data ------------------------------------------------------------------------------------------
 
   // Unique identifier for this format type. Expected to be kMagic.
@@ -447,7 +450,11 @@ constexpr size_t SlicesStart(size_t total_size, size_t slice_size) {
 }
 
 constexpr size_t UsableSlicesCount(size_t total_size, size_t slice_size) {
-  return (total_size - SlicesStart(total_size, slice_size)) / slice_size;
+  size_t slices_start = SlicesStart(total_size, slice_size);
+  if (total_size < slices_start) {
+    return 0;
+  }
+  return (total_size - slices_start) / slice_size;
 }
 
 constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t block_count) {

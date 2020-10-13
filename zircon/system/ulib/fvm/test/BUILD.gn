@@ -28,6 +28,7 @@ test("fvm-unit") {
   sources = [
     "format-test.cc",
     "integrity-validation-test.cc",
+    "metadata-test.cc",
     "partition-entry-test.cc",
     "slice-entry-test.cc",
   ]

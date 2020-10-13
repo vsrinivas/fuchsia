@@ -9,13 +9,15 @@
 
 #include <fbl/unique_fd.h>
 #include <fvm-host/file-wrapper.h>
+#include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
+#include <fvm/metadata.h>
 
 // Wrapper around FVM metadata which attempts to read existing metadata from disk, allows
 // new partitions and slices to be allocated, and writes updated metadata back to disk.
 class FvmInfo {
  public:
-  FvmInfo() : valid_(false), dirty_(false), metadata_size_(0), vpart_hint_(1), pslice_hint_(1) {}
+  FvmInfo() : valid_(false), dirty_(false), vpart_hint_(1), pslice_hint_(1) {}
 
   // Resets the metadata to default values.
   zx_status_t Reset(size_t disk_size, size_t slice_size);
@@ -24,11 +26,13 @@ class FvmInfo {
   // returned, but valid_ is marked false.
   zx_status_t Load(fvm::host::FileWrapper* file, uint64_t disk_offset, uint64_t disk_size);
 
-  // Validates the loaded metadata.
-  zx_status_t Validate() const;
+  // Validates the loaded contents.
+  bool Validate() const;
 
-  // Grows in-memory metadata representation to the specified size.
-  zx_status_t Grow(size_t metadata_size);
+  // Grows in-memory metadata representation to accomodate an FVM partition with dimensions
+  // described by |dimensions|. (The contents of |dimensions| are not copied, they are only used to
+  // decide how large the metadata ought to be.)
+  zx_status_t Grow(const fvm::Header& dimensions);
 
   // Grows in-memory metadata representation to account for |slice_count| additional slices.
   zx_status_t GrowForSlices(size_t slice_count);
@@ -48,28 +52,29 @@ class FvmInfo {
   zx_status_t GetPartition(size_t index, fvm::VPartitionEntry** out) const;
   zx_status_t GetSlice(size_t index, fvm::SliceEntry** out) const;
 
-  fvm::Header* SuperBlock() const;
-  size_t MetadataSize() const { return metadata_size_; }
-  size_t DiskSize() const { return SuperBlock()->fvm_partition_size; }
-  size_t SliceSize() const { return SuperBlock()->slice_size; }
+  const fvm::Header& SuperBlock() const;
+  size_t MetadataSize() const { return metadata_.UnsafeGetRaw()->size(); }
+  size_t DiskSize() const { return SuperBlock().fvm_partition_size; }
+  size_t SliceSize() const { return SuperBlock().slice_size; }
 
   // Returns true if the in-memory metadata has been changed from the original values (i.e.
   // partitions/slices have been allocated since initialization).
   bool IsDirty() const { return dirty_; }
 
-  // Returns true if metadata_ contains valid FVM metadata.
+  // Returns true if the initial value that metadata_ was loaded with was valid.
+  // |CheckValidity| performs an actual verification of the state of metadata_ after all
+  // modifications.
   bool IsValid() const { return valid_; }
 
-  // Checks whether the metadata is valid, and immediately exits the process if it isn't.
+  // Checks whether IsValid(), and immediately exits the process if it isn't.
   void CheckValid() const;
 
  private:
   bool valid_;
   bool dirty_;
-  size_t metadata_size_;
   uint32_t vpart_hint_;
   uint32_t pslice_hint_;
-  std::unique_ptr<uint8_t[]> metadata_;
+  fvm::Metadata metadata_;
 };
 
 #endif  // FVM_HOST_FVM_INFO_H_

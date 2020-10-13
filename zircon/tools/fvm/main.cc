@@ -276,8 +276,8 @@ int add_partitions(Container* container, int argc, char** argv) {
 
     FvmReservation reserve(inodes, data, total_bytes);
     zx_status_t status = container->AddPartition(partition_path, partition_type, &reserve);
-    if (status == ZX_ERR_BUFFER_TOO_SMALL) {
-      fprintf(stderr, "Failed to add partition\n");
+    if (status != ZX_OK) {
+      fprintf(stderr, "Failed to add partition: %d\n", status);
       reserve.Dump(stderr);
       return -1;
     }
@@ -757,6 +757,7 @@ int main(int argc, char** argv) {
 
     std::unique_ptr<FvmContainer> fvmContainer;
     if (FvmContainer::CreateNew(path, slice_size, offset, length, &fvmContainer) != ZX_OK) {
+      fprintf(stderr, "Failed to create FVM container\n");
       return -1;
     }
 
@@ -849,12 +850,14 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "verify")) {
-    std::unique_ptr<Container> containerData;
-    if (Container::Create(path, offset, flags, &containerData) != ZX_OK) {
+    std::unique_ptr<Container> container_data;
+    if (Container::Create(path, offset, flags, &container_data) != ZX_OK) {
       return -1;
     }
 
-    if (containerData->Verify() != ZX_OK) {
+    zx_status_t status = container_data->Verify();
+    if (status != ZX_OK) {
+      fprintf(stderr, "Verification failed: %d\n", status);
       return -1;
     }
   } else if (!strcmp(command, "decompress")) {

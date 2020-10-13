@@ -20,15 +20,17 @@ zx_library("fvm") {
     "fvm/sparse-reader.h",
     "fvm/client.h",
     "fvm/format.h",
-    "fvm/fvm-sparse.h",
     "fvm/fvm-check.h",
+    "fvm/fvm-sparse.h",
     "fvm/fvm.h",
+    "fvm/metadata.h",
   ]
   host = true
   sources = [
     "format.cc",
     "fvm-check.cc",
     "fvm.cc",
+    "metadata.cc",
     "sparse-reader.cc",
   ]
   deps = [
@@ -37,15 +39,12 @@ zx_library("fvm") {
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/digest",
     "//zircon/third_party/ulib/lz4",
+    "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
-    # <fvm/fvm.h> has #include <digest/digest.h>.
+    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/digest",
-
-    # <fvm/fvm.h> has #include <gpt/gpt.h>.
     "//zircon/system/ulib/gpt",
-
-    # <fvm/sparse-reader.h> has #include <lz4/lz4frame.h>.
     "//zircon/third_party/ulib/lz4",
   ]
   if (is_fuchsia) {
