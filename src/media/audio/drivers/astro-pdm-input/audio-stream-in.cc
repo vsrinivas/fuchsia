@@ -9,10 +9,11 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+
+#include "src/media/audio/drivers/astro-pdm-input/aml_pdm-bind.h"
 
 namespace audio {
 namespace astro {
@@ -277,12 +278,6 @@ static constexpr zx_driver_ops_t aml_pdm_driver_ops = []() {
   ops.bind = pdm_audio_bind;
   return ops;
 }();
+__END_CDECLS
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_pdm, aml_pdm_driver_ops, "aml-pdm-in", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_PDM),
-ZIRCON_DRIVER_END(aml_pdm)
-    // clang-format on
-    __END_CDECLS
+ZIRCON_DRIVER(aml_pdm, aml_pdm_driver_ops, "aml-pdm-in", "0.1")

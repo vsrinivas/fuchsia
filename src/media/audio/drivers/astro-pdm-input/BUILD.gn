@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("aml_pdm-bind") {
+  rules = "aml_pdm.bind"
+  output = "aml_pdm-bind.h"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("astro-pdm-input") {
   configs += [
@@ -17,6 +25,7 @@ driver_module("astro-pdm-input") {
   sources = [ "audio-stream-in.cc" ]
 
   deps = [
+    ":aml_pdm-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.i2c",

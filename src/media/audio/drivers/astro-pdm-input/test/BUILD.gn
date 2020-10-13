@@ -13,6 +13,7 @@ test("astro-audio-in-test") {
     "test.cc",
   ]
   deps = [
+    "../:aml_pdm-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
@@ -36,7 +37,10 @@ test("astro-audio-in-test") {
 
 unittest_package("astro-audio-in-test-manifest") {
   package_name = "astro-audio-in-test"
-  deps = [ ":astro-audio-in-test" ]
+  deps = [
+    ":astro-audio-in-test",
+    "../:aml_pdm-bind_test",
+  ]
 
   tests = [
     {
