@@ -3,12 +3,22 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Context,
     anyhow::Error,
     argh::FromArgs,
+    diagnostics_stream::parse::parse_record as parse,
     fidl_fuchsia_diagnostics::Severity,
     fidl_fuchsia_diagnostics_stream::{Argument, Record, Value},
+    fidl_fuchsia_logger::LogSinkRequest,
+    fidl_fuchsia_logger::LogSinkRequestStream,
     fidl_fuchsia_validate_logs, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
+    fuchsia_component::server::ServiceFs,
+    futures::channel::mpsc::channel,
+    futures::channel::mpsc::Receiver,
+    futures::channel::mpsc::Sender,
+    futures::prelude::*,
+    log::*,
     pretty_assertions::assert_eq,
     std::convert::TryInto,
 };
@@ -20,6 +30,9 @@ struct Opt {
     /// required arg: The URL of the puppet
     #[argh(option, long = "url")]
     puppet_url: String,
+    /// required arg: Whether or not to test the log sink
+    #[argh(switch)]
+    test_log_sink: bool,
 }
 
 type TestCase = (&'static str, Record, Vec<u8>);
@@ -260,14 +273,85 @@ fn test_multiple_args() -> TestCase {
     ("test_multiple_args", record, expected_result)
 }
 
+async fn test_socket(s: &fasync::Socket, puppet_url: String) {
+    let mut buf: Vec<u8> = vec![];
+    // TODO(fxbug.dev/61495): Validate that this is in fact a datagram socket.
+    let bytes_read = s.read_datagram(&mut buf).await.unwrap();
+    let result = parse(&buf[0..bytes_read]).unwrap();
+    assert_eq!(result.0.arguments[0].name, "pid");
+    assert_eq!(result.0.arguments[1].name, "tid");
+    assert_eq!(result.0.arguments[2].name, "tag");
+    assert!(
+        matches!(&result.0.arguments[2].value, diagnostics_stream::Value::Text(v) if *v == puppet_url.rsplit('/').next().unwrap())
+    );
+    // TODO(fxbug.dev/61538) validate we can log arbitrary messages
+    assert_eq!(result.0.arguments[3].name, "tag");
+    assert!(
+        matches!(&result.0.arguments[3].value, diagnostics_stream::Value::Text(v) if *v == "test_log")
+    );
+    assert_eq!(result.0.arguments[4].name, "foo");
+    assert!(
+        matches!(&result.0.arguments[4].value, diagnostics_stream::Value::Text(v) if *v == "bar")
+    );
+}
+
+enum IncomingRequest {
+    LogProviderRequest(LogSinkRequestStream),
+}
+
+async fn retrieve_sockets_from_logsink(
+    mut stream: LogSinkRequestStream,
+    mut channel: Sender<fidl::Socket>,
+) -> Result<(), Error> {
+    let request = stream.next().await;
+    match request {
+        Some(Ok(LogSinkRequest::Connect { socket: _, control_handle: _ })) => {
+            panic!("shouldn't ever receive legacy connections");
+        }
+        Some(Ok(LogSinkRequest::ConnectStructured { socket, control_handle: _ })) => {
+            info!("This happened! We got a structured connection.");
+            channel.send(socket).await?;
+        }
+        None => (),
+        Some(Err(e)) => panic!("log sink request failure: {:?}", e),
+    }
+
+    Ok(())
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
-    let Opt { puppet_url } = argh::from_env();
+    let Opt { puppet_url, test_log_sink } = argh::from_env();
+    let (tx, mut rx): (Sender<fidl::Socket>, Receiver<fidl::Socket>) = channel(1);
 
-    let launcher = launcher().unwrap();
-    let app = launch(&launcher, puppet_url.to_string(), None).unwrap();
-
+    let (_env, app) = if test_log_sink {
+        let mut fs = ServiceFs::new();
+        fs.add_fidl_service(IncomingRequest::LogProviderRequest);
+        let (_env, app) = fs
+            .launch_component_in_nested_environment(
+                puppet_url.clone(),
+                None,
+                "log_validator_puppet",
+            )
+            .unwrap();
+        // Wait for the puppet to connect to our fake log service
+        fs.take_and_serve_directory_handle()?;
+        let _future = fasync::Task::spawn(async move {
+            while let Some(IncomingRequest::LogProviderRequest(stream)) = fs.next().await {
+                let tx_local = tx.clone();
+                retrieve_sockets_from_logsink(stream, tx_local)
+                    .await
+                    .context("couldn't retrieve sockets")
+                    .unwrap();
+            }
+        });
+        (Some((_env, _future)), app)
+    } else {
+        let launcher = launcher().unwrap();
+        let app = launch(&launcher, puppet_url.to_string(), None)?;
+        (None, app)
+    };
     let proxy = app.connect_to_service::<fidl_fuchsia_validate_logs::ValidateMarker>()?;
 
     let arr: Vec<&dyn Fn() -> TestCase> = vec![
@@ -298,6 +382,13 @@ async fn main() -> Result<(), Error> {
         actual.push((test_name, buffer));
     }
     assert_eq!(expected, actual);
+
+    if test_log_sink {
+        info!("We're running the log sink test!");
+        let socket = fasync::Socket::from_socket(rx.next().await.unwrap()).unwrap();
+
+        test_socket(&socket, puppet_url).await;
+    }
     log::info!("Ran {:?} tests successfully", arr.len());
     Ok(())
 }

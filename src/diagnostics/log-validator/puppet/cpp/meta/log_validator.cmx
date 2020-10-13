@@ -2,7 +2,8 @@
     "program": {
         "args": [
             "--url",
-            "fuchsia-pkg://fuchsia.com/log-validator-test-cpp#meta/log_validator_cpp_puppet.cmx"
+            "fuchsia-pkg://fuchsia.com/log-validator-test-cpp#meta/log_validator_cpp_puppet.cmx",
+            "--test-log-sink"
         ],
         "binary": "test/log_validator"
     },
@@ -10,7 +11,8 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

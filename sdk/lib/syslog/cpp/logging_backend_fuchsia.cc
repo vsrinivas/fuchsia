@@ -67,13 +67,13 @@ void WriteValueToRecordWithKey(::fuchsia::diagnostics::stream::Record* record,
   }
 
   if (auto string_value = value.string_value()) {
-    message.value.WithText(std::string(*string_value));
+    message.value = message.value.WithText(std::string(*string_value));
   } else if (auto int_value = value.int_value()) {
-    message.value.WithSignedInt(int64_t(*int_value));
+    message.value = message.value.WithSignedInt(int64_t(*int_value));
   } else {
     // TODO(fxbug.dev/57571): LogValue also supports lists and nested objects, which Record doesn't.
     // It does NOT support unsigned values, or floats, which Record does.
-    message.value.WithText(value.ToString());
+    message.value = message.value.WithText(value.ToString());
   }
 }
 
@@ -84,7 +84,7 @@ template <>
 void WriteMessageToRecord(::fuchsia::diagnostics::stream::Record* record, const std::string& msg) {
   auto& message = record->arguments.emplace_back();
   message.name = kMessageFieldName;
-  message.value.WithText(std::string(msg));
+  message.value = message.value.WithText(std::string(msg));
 }
 
 template <>
@@ -144,41 +144,41 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
 
   auto& pid_arg = record.arguments.emplace_back();
   pid_arg.name = kPidFieldName;
-  pid_arg.value.WithUnsignedInt(uint64_t(pid));
+  pid_arg.value = pid_arg.value.WithUnsignedInt(uint64_t(pid));
 
   auto& tid_arg = record.arguments.emplace_back();
   tid_arg.name = kTidFieldName;
-  tid_arg.value.WithUnsignedInt(uint64_t(tid));
+  tid_arg.value = tid_arg.value.WithUnsignedInt(uint64_t(tid));
 
   auto dropped_count = GetAndResetDropped();
 
   if (dropped_count) {
     auto& dropped = record.arguments.emplace_back();
     dropped.name = kDroppedLogsFieldName;
-    dropped.value.WithUnsignedInt(dropped_count);
+    dropped.value = dropped.value.WithUnsignedInt(dropped_count);
   }
 
   for (size_t i = 0; i < num_tags_; i++) {
     auto& tag_arg = record.arguments.emplace_back();
     tag_arg.name = kTagFieldName;
-    tag_arg.value.WithText(std::string(tags_[i]));
+    tag_arg.value = tag_arg.value.WithText(std::string(tags_[i]));
   }
 
   if (tag) {
     auto& tag_arg = record.arguments.emplace_back();
     tag_arg.name = kTagFieldName;
-    tag_arg.value.WithText(tag);
+    tag_arg.value = tag_arg.value.WithText(tag);
   }
 
   // TODO(fxbug.dev/56051): Enable this everywhere once doing so won't spam everything.
   if (severity >= syslog::LOG_ERROR) {
     auto& file = record.arguments.emplace_back();
     file.name = kFileFieldName;
-    file.value.WithText(std::string(file_name));
+    file.value = file.value.WithText(std::string(file_name));
 
     auto& line_arg = record.arguments.emplace_back();
     line_arg.name = kLineFieldName;
-    line_arg.value.WithUnsignedInt(uint64_t(line));
+    line_arg.value = line_arg.value.WithUnsignedInt(uint64_t(line));
   }
 
   WriteMessageToRecord(&record, msg);

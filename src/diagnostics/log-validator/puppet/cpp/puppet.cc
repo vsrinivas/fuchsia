@@ -8,12 +8,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <string>
 
 #include <sdk/lib/syslog/streams/cpp/encode.h>
-
-#include "src/lib/fsl/vmo/vector.h"
 
 class Puppet : public fuchsia::validate::logs::Validate {
  public:
@@ -25,7 +24,9 @@ class Puppet : public fuchsia::validate::logs::Validate {
     std::vector<uint8_t> buffer;
     streams::log_record(record, &buffer);
     fuchsia::mem::Buffer read_buffer;
-    fsl::VmoFromVector(buffer, &read_buffer);
+    zx::vmo::create(buffer.size(), 0, &read_buffer.vmo);
+    read_buffer.vmo.write(buffer.data(), 0, buffer.size());
+    read_buffer.size = buffer.size();
     fuchsia::validate::logs::Validate_Log_Result result;
     fuchsia::validate::logs::Validate_Log_Response response{std::move(read_buffer)};
     result.set_response(std::move(response));
@@ -40,5 +41,6 @@ class Puppet : public fuchsia::validate::logs::Validate {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   Puppet puppet(sys::ComponentContext::CreateAndServeOutgoingDirectory());
+  FX_SLOG(WARNING)("test_log", {syslog::LogKey("foo") = "bar"});
   loop.Run();
 }

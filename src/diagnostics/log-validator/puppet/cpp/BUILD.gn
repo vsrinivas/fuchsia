@@ -14,10 +14,11 @@ executable("log_validator_cpp_puppet_bin") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:cpp",
     "//sdk/lib/syslog/streams/cpp:streams",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
     "//src/diagnostics/log-validator/fidl:validate",
-    "//src/lib/fsl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
