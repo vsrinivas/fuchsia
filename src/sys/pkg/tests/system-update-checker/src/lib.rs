@@ -4,9 +4,7 @@
 
 #![cfg(test)]
 use {
-    fidl_fuchsia_paver::{
-        BootManagerRequest, BootManagerRequestStream, PaverRequest, PaverRequestStream,
-    },
+    fidl_fuchsia_paver::PaverRequestStream,
     fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, State},
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_async as fasync,
@@ -16,7 +14,7 @@ use {
     },
     fuchsia_zircon::Status,
     futures::{channel::mpsc, prelude::*},
-    parking_lot::Mutex,
+    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
     std::{fs::File, sync::Arc},
     tempfile::TempDir,
 };
@@ -28,7 +26,8 @@ struct Mounts {
 }
 
 struct Proxies {
-    paver: Arc<MockPaver>,
+    _paver: Arc<MockPaverService>,
+    paver_events: mpsc::UnboundedReceiver<PaverEvent>,
     channel_provider: ProviderProxy,
     update_manager: ManagerProxy,
 }
@@ -47,7 +46,17 @@ struct TestEnv {
 }
 
 impl TestEnv {
-    fn new(paver: MockPaver) -> Self {
+    fn new<F>(paver_init: F) -> Self
+    where
+        F: FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder,
+    {
+        let (events_tx, events_rx) = mpsc::unbounded();
+        let paver_builder = MockPaverServiceBuilder::new().event_hook(move |event| {
+            events_tx.unbounded_send(event.to_owned()).expect("to write to events channel")
+        });
+
+        let paver = paver_init(paver_builder).build();
+
         let mounts = Mounts::new();
 
         let mut fs = ServiceFs::new();
@@ -56,7 +65,12 @@ impl TestEnv {
         let paver = Arc::new(paver);
         let paver_clone = Arc::clone(&paver);
         fs.add_fidl_service(move |stream: PaverRequestStream| {
-            fasync::Task::spawn(Arc::clone(&paver_clone).run_service(stream)).detach();
+            fasync::Task::spawn(
+                Arc::clone(&paver_clone)
+                    .run_paver_service(stream)
+                    .unwrap_or_else(|e| panic!("Failed to run paver: {:?}", e)),
+            )
+            .detach();
         });
 
         let env = fs
@@ -77,7 +91,8 @@ impl TestEnv {
             _env: env,
             _mounts: mounts,
             proxies: Proxies {
-                paver,
+                _paver: paver,
+                paver_events: events_rx,
                 channel_provider: system_update_checker
                     .connect_to_service::<ProviderMarker>()
                     .expect("connect to channel provider"),
@@ -90,74 +105,25 @@ impl TestEnv {
     }
 }
 
-struct MockPaver {
-    response: Status,
-    set_active_configuration_healthy_was_called_sender: mpsc::UnboundedSender<()>,
-    set_active_configuration_healthy_was_called: Mutex<mpsc::UnboundedReceiver<()>>,
-}
-
-impl MockPaver {
-    fn new(response: Status) -> Self {
-        let (
-            set_active_configuration_healthy_was_called_sender,
-            set_active_configuration_healthy_was_called,
-        ) = mpsc::unbounded();
-        Self {
-            response,
-            set_active_configuration_healthy_was_called_sender,
-            set_active_configuration_healthy_was_called: Mutex::new(
-                set_active_configuration_healthy_was_called,
-            ),
-        }
-    }
-    async fn run_service(self: Arc<Self>, mut stream: PaverRequestStream) {
-        while let Some(req) = stream.try_next().await.unwrap() {
-            match req {
-                PaverRequest::FindBootManager { boot_manager, .. } => {
-                    let mock_paver_clone = self.clone();
-                    fasync::Task::spawn(
-                        mock_paver_clone
-                            .run_boot_manager_service(boot_manager.into_stream().unwrap()),
-                    )
-                    .detach();
-                }
-                req => println!("mock Paver ignoring request: {:?}", req),
-            }
-        }
-    }
-    async fn run_boot_manager_service(self: Arc<Self>, mut stream: BootManagerRequestStream) {
-        while let Some(req) = stream.try_next().await.unwrap() {
-            match req {
-                BootManagerRequest::SetActiveConfigurationHealthy { responder } => {
-                    self.set_active_configuration_healthy_was_called_sender
-                        .unbounded_send(())
-                        .expect("mpsc send");
-                    responder.send(self.response.clone().into_raw()).expect("send ok");
-                }
-                req => println!("mock Paver ignoring request: {:?}", req),
-            }
-        }
-    }
-}
-
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_calls_paver_service() {
-    let env = TestEnv::new(MockPaver::new(Status::OK));
-
-    let mut set_active_configuration_healthy_was_called =
-        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
-    assert_eq!(set_active_configuration_healthy_was_called.next().await, Some(()));
+    let mut env = TestEnv::new(|p| p);
+    assert_eq!(
+        env.proxies.paver_events.next().await,
+        Some(PaverEvent::SetActiveConfigurationHealthy)
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_channel_provider_get_current_works_after_paver_service_fails() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
+    let mut env = TestEnv::new(|p| p.call_hook(|_| Status::INTERNAL));
 
-    let mut set_active_configuration_healthy_was_called =
-        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
-    set_active_configuration_healthy_was_called.next().await;
+    assert_eq!(
+        env.proxies.paver_events.next().await,
+        Some(PaverEvent::SetActiveConfigurationHealthy)
+    );
 
     assert_eq!(
         env.proxies.channel_provider.get_current().await.expect("get_current"),
@@ -168,11 +134,12 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_update_manager_check_now_works_after_paver_service_fails() {
-    let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
+    let mut env = TestEnv::new(|p| p.call_hook(|_| Status::INTERNAL));
 
-    let mut set_active_configuration_healthy_was_called =
-        env.proxies.paver.set_active_configuration_healthy_was_called.lock();
-    set_active_configuration_healthy_was_called.next().await;
+    assert_eq!(
+        env.proxies.paver_events.next().await,
+        Some(PaverEvent::SetActiveConfigurationHealthy)
+    );
 
     let (client_end, request_stream) =
         fidl::endpoints::create_request_stream().expect("create_request_stream");
