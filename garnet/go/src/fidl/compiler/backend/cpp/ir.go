@@ -326,6 +326,7 @@ type Struct struct {
 	InlineSize    int
 	MaxHandles    int
 	MaxOutOfLine  int
+	MaxSentSize   int
 	HasPadding    bool
 	IsResultValue bool
 	HasPointer    bool
@@ -1341,6 +1342,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 		InlineSize:   val.TypeShapeV1.InlineSize,
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
+		MaxSentSize:  val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPadding:   val.TypeShapeV1.HasPadding,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
 		IsResource:   val.TypeShapeV1.IsResource,

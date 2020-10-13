@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -77,6 +77,15 @@ class super final {
         auto& _response = *new (_response_buffer) fooResponse(y);
         message_.LinearizeAndEncode<fooResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             fooResponse* response)
+          : message_(bytes, byte_size, sizeof(fooResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<fooResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -97,6 +106,12 @@ class super final {
      public:
       explicit OwnedOutgoingMessage(int64_t y)
           : message_(bytes_, sizeof(bytes_), y) {}
+      explicit OwnedOutgoingMessage(fooResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -110,7 +125,7 @@ class super final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -149,6 +164,15 @@ class super final {
         FIDL_ALIGNDECL fooRequest _request(_txid, s);
         message_.LinearizeAndEncode<fooRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             fooRequest* request)
+          : message_(bytes, byte_size, sizeof(fooRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<fooRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -172,6 +196,14 @@ class super final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+      explicit OwnedOutgoingMessage(fooRequest* request)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -432,6 +464,15 @@ class sub final {
         auto& _response = *new (_response_buffer) fooResponse(y);
         message_.LinearizeAndEncode<fooResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             fooResponse* response)
+          : message_(bytes, byte_size, sizeof(fooResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<fooResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -452,6 +493,12 @@ class sub final {
      public:
       explicit OwnedOutgoingMessage(int64_t y)
           : message_(bytes_, sizeof(bytes_), y) {}
+      explicit OwnedOutgoingMessage(fooResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -465,7 +512,7 @@ class sub final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[fooResponse::PrimarySize + fooResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -504,6 +551,15 @@ class sub final {
         FIDL_ALIGNDECL fooRequest _request(_txid, s);
         message_.LinearizeAndEncode<fooRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             fooRequest* request)
+          : message_(bytes, byte_size, sizeof(fooRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<fooRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -527,6 +583,14 @@ class sub final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, s) {}
+      explicit OwnedOutgoingMessage(fooRequest* request)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }

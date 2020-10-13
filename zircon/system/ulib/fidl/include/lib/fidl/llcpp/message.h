@@ -6,7 +6,9 @@
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
 #include <lib/fidl/cpp/message_part.h>
+#ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_base.h>
+#endif
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
@@ -62,6 +64,7 @@ class OutgoingMessage final : public ::fidl::Result {
     LinearizeAndEncode(FidlType::Type, data);
   }
 
+#ifdef __Fuchsia__
   // Uses zx_channel_write to write the linearized message.
   // Before calling Write, LinearizeAndEncode must be called.
   void Write(zx_handle_t channel);
@@ -78,6 +81,7 @@ class OutgoingMessage final : public ::fidl::Result {
   // For asynchronous clients, writes a request.
   ::fidl::Result Write(::fidl::internal::ClientBase* client,
                        ::fidl::internal::ResponseContext* context);
+#endif
 
  private:
   // Linearizes and encodes a message. |data| is a pointer to a buffer which holds the source
@@ -94,11 +98,13 @@ class OutgoingMessage final : public ::fidl::Result {
   // and the rest will be closed.
   void LinearizeAndEncode(const fidl_type_t* message_type, void* data);
 
+#ifdef __Fuchsia__
   // For requests with a response, uses zx_channel_call to write the linearized message.
   // Before calling Call, LinearizeAndEncode must be called.
   // If the call succeed, |result_bytes| contains the decoded linearized result.
   void Call(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
             uint32_t result_capacity, zx_time_t deadline);
+#endif
 
   fidl_msg_t message_;
   uint32_t byte_capacity_;
@@ -158,6 +164,12 @@ class IncomingMessage final : public ::fidl::Result {
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;
 };
+
+template <typename FidlType>
+using OwnedOutgoingMessage = typename FidlType::OwnedOutgoingMessage;
+
+template <typename FidlType>
+using UnownedOutgoingMessage = typename FidlType::UnownedOutgoingMessage;
 
 }  // namespace fidl
 

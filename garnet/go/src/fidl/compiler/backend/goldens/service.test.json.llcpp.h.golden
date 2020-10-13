@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -81,6 +81,16 @@ class SecondProtocol final {
         auto& _request = *new (_request_buffer) MethodOnSecondRequest(_txid);
         message_.LinearizeAndEncode<MethodOnSecondRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MethodOnSecondRequest* request)
+          : message_(bytes, byte_size, sizeof(MethodOnSecondRequest), nullptr,
+                     0, 0) {
+        message_.LinearizeAndEncode<MethodOnSecondRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -101,6 +111,12 @@ class SecondProtocol final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(MethodOnSecondRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -114,8 +130,7 @@ class SecondProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[MethodOnSecondRequest::PrimarySize +
-                     MethodOnSecondRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -277,6 +292,16 @@ class FirstProtocol final {
         auto& _request = *new (_request_buffer) MethodOnFirstRequest(_txid);
         message_.LinearizeAndEncode<MethodOnFirstRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MethodOnFirstRequest* request)
+          : message_(bytes, byte_size, sizeof(MethodOnFirstRequest), nullptr, 0,
+                     0) {
+        message_.LinearizeAndEncode<MethodOnFirstRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -297,6 +322,12 @@ class FirstProtocol final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(MethodOnFirstRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -310,8 +341,7 @@ class FirstProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[MethodOnFirstRequest::PrimarySize +
-                     MethodOnFirstRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 

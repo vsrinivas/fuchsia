@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -461,6 +461,55 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
 
   int64_t c = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           WithErrorSyntax_ResponseAsStruct_Response* value)
+        : message_(bytes, byte_size,
+                   sizeof(WithErrorSyntax_ResponseAsStruct_Response), nullptr,
+                   0, 0) {
+      message_.LinearizeAndEncode<WithErrorSyntax_ResponseAsStruct_Response>(
+          value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(
+        WithErrorSyntax_ResponseAsStruct_Response* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t
@@ -477,6 +526,55 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
 
   uint8_t __reserved = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           WithErrorSyntax_ErrorAsPrimitive_Response* value)
+        : message_(bytes, byte_size,
+                   sizeof(WithErrorSyntax_ErrorAsPrimitive_Response), nullptr,
+                   0, 0) {
+      message_.LinearizeAndEncode<WithErrorSyntax_ErrorAsPrimitive_Response>(
+          value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(
+        WithErrorSyntax_ErrorAsPrimitive_Response* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t
@@ -493,6 +591,53 @@ struct WithErrorSyntax_ErrorAsEnum_Response {
 
   uint8_t __reserved = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           WithErrorSyntax_ErrorAsEnum_Response* value)
+        : message_(bytes, byte_size,
+                   sizeof(WithErrorSyntax_ErrorAsEnum_Response), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<WithErrorSyntax_ErrorAsEnum_Response>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(WithErrorSyntax_ErrorAsEnum_Response* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t test_name_TransitionalRequestRequestTable;
@@ -535,6 +680,15 @@ class Transitional final {
         auto& _response = *new (_response_buffer) RequestResponse(y);
         message_.LinearizeAndEncode<RequestResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             RequestResponse* response)
+          : message_(bytes, byte_size, sizeof(RequestResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<RequestResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -555,6 +709,12 @@ class Transitional final {
      public:
       explicit OwnedOutgoingMessage(int64_t y)
           : message_(bytes_, sizeof(bytes_), y) {}
+      explicit OwnedOutgoingMessage(RequestResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -568,8 +728,7 @@ class Transitional final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[RequestResponse::PrimarySize + RequestResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -611,6 +770,15 @@ class Transitional final {
         auto& _request = *new (_request_buffer) RequestRequest(_txid, x);
         message_.LinearizeAndEncode<RequestRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             RequestRequest* request)
+          : message_(bytes, byte_size, sizeof(RequestRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<RequestRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -631,6 +799,12 @@ class Transitional final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, int64_t x)
           : message_(bytes_, sizeof(bytes_), _txid, x) {}
+      explicit OwnedOutgoingMessage(RequestRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -644,8 +818,7 @@ class Transitional final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[RequestRequest::PrimarySize + RequestRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -686,6 +859,15 @@ class Transitional final {
         auto& _request = *new (_request_buffer) OneWayRequest(_txid, x);
         message_.LinearizeAndEncode<OneWayRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             OneWayRequest* request)
+          : message_(bytes, byte_size, sizeof(OneWayRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<OneWayRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -706,6 +888,12 @@ class Transitional final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, int64_t x)
           : message_(bytes_, sizeof(bytes_), _txid, x) {}
+      explicit OwnedOutgoingMessage(OneWayRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -719,7 +907,7 @@ class Transitional final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[OneWayRequest::PrimarySize + OneWayRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -755,6 +943,15 @@ class Transitional final {
         auto& _response = *new (_response_buffer) EventResponse(x);
         message_.LinearizeAndEncode<EventResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             EventResponse* response)
+          : message_(bytes, byte_size, sizeof(EventResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<EventResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -775,6 +972,12 @@ class Transitional final {
      public:
       explicit OwnedOutgoingMessage(int64_t x)
           : message_(bytes_, sizeof(bytes_), x) {}
+      explicit OwnedOutgoingMessage(EventResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -788,7 +991,7 @@ class Transitional final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[EventResponse::PrimarySize + EventResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -1143,6 +1346,15 @@ class ChannelProtocol final {
         auto& _request = *new (_request_buffer) MethodARequest(_txid, a, b);
         message_.LinearizeAndEncode<MethodARequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MethodARequest* request)
+          : message_(bytes, byte_size, sizeof(MethodARequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<MethodARequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -1163,6 +1375,12 @@ class ChannelProtocol final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, int64_t a, int64_t b)
           : message_(bytes_, sizeof(bytes_), _txid, a, b) {}
+      explicit OwnedOutgoingMessage(MethodARequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -1176,8 +1394,7 @@ class ChannelProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[MethodARequest::PrimarySize + MethodARequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -1218,6 +1435,15 @@ class ChannelProtocol final {
         auto& _response = *new (_response_buffer) EventAResponse(a, b);
         message_.LinearizeAndEncode<EventAResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             EventAResponse* response)
+          : message_(bytes, byte_size, sizeof(EventAResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<EventAResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -1238,6 +1464,12 @@ class ChannelProtocol final {
      public:
       explicit OwnedOutgoingMessage(int64_t a, int64_t b)
           : message_(bytes_, sizeof(bytes_), a, b) {}
+      explicit OwnedOutgoingMessage(EventAResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -1251,8 +1483,7 @@ class ChannelProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[EventAResponse::PrimarySize + EventAResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -1289,6 +1520,15 @@ class ChannelProtocol final {
         auto& _response = *new (_response_buffer) MethodBResponse(result);
         message_.LinearizeAndEncode<MethodBResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MethodBResponse* response)
+          : message_(bytes, byte_size, sizeof(MethodBResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<MethodBResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -1309,6 +1549,12 @@ class ChannelProtocol final {
      public:
       explicit OwnedOutgoingMessage(int64_t result)
           : message_(bytes_, sizeof(bytes_), result) {}
+      explicit OwnedOutgoingMessage(MethodBResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -1322,8 +1568,7 @@ class ChannelProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -1367,6 +1612,15 @@ class ChannelProtocol final {
         auto& _request = *new (_request_buffer) MethodBRequest(_txid, a, b);
         message_.LinearizeAndEncode<MethodBRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MethodBRequest* request)
+          : message_(bytes, byte_size, sizeof(MethodBRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<MethodBRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -1387,6 +1641,12 @@ class ChannelProtocol final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, int64_t a, int64_t b)
           : message_(bytes_, sizeof(bytes_), _txid, a, b) {}
+      explicit OwnedOutgoingMessage(MethodBRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -1400,8 +1660,7 @@ class ChannelProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[MethodBRequest::PrimarySize + MethodBRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -1435,15 +1694,23 @@ class ChannelProtocol final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              ::zx::socket& b)
           : message_(_bytes, _byte_size, sizeof(MutateSocketResponse), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                              MutateSocketResponse::MaxNumHandles),
-                     0) {
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
         FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(MutateSocketResponse)];
         auto& _response = *new (_response_buffer) MutateSocketResponse(b);
         message_.LinearizeAndEncode<MutateSocketResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MutateSocketResponse* response)
+          : message_(bytes, byte_size, sizeof(MutateSocketResponse), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<MutateSocketResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -1457,8 +1724,7 @@ class ChannelProtocol final {
       MutateSocketResponse& Message() {
         return *reinterpret_cast<MutateSocketResponse*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                    MutateSocketResponse::MaxNumHandles)];
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -1466,6 +1732,12 @@ class ChannelProtocol final {
      public:
       explicit OwnedOutgoingMessage(::zx::socket& b)
           : message_(bytes_, sizeof(bytes_), b) {}
+      explicit OwnedOutgoingMessage(MutateSocketResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -1479,8 +1751,7 @@ class ChannelProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[MutateSocketResponse::PrimarySize +
-                     MutateSocketResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -1516,15 +1787,23 @@ class ChannelProtocol final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid, ::zx::socket& a)
           : message_(_bytes, _byte_size, sizeof(MutateSocketRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                              MutateSocketRequest::MaxNumHandles),
-                     0) {
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
         FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MutateSocketRequest)];
         auto& _request = *new (_request_buffer) MutateSocketRequest(_txid, a);
         message_.LinearizeAndEncode<MutateSocketRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             MutateSocketRequest* request)
+          : message_(bytes, byte_size, sizeof(MutateSocketRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<MutateSocketRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -1538,8 +1817,7 @@ class ChannelProtocol final {
       MutateSocketRequest& Message() {
         return *reinterpret_cast<MutateSocketRequest*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                    MutateSocketRequest::MaxNumHandles)];
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -1547,6 +1825,12 @@ class ChannelProtocol final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::socket& a)
           : message_(bytes_, sizeof(bytes_), _txid, a) {}
+      explicit OwnedOutgoingMessage(MutateSocketRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -1560,8 +1844,7 @@ class ChannelProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[MutateSocketRequest::PrimarySize +
-                     MutateSocketRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2075,6 +2358,16 @@ class WithAndWithoutRequestResponse final {
             *new (_request_buffer) NoRequestNoResponseRequest(_txid);
         message_.LinearizeAndEncode<NoRequestNoResponseRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             NoRequestNoResponseRequest* request)
+          : message_(bytes, byte_size, sizeof(NoRequestNoResponseRequest),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<NoRequestNoResponseRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2095,6 +2388,12 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(NoRequestNoResponseRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2108,8 +2407,7 @@ class WithAndWithoutRequestResponse final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[NoRequestNoResponseRequest::PrimarySize +
-                     NoRequestNoResponseRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2146,6 +2444,16 @@ class WithAndWithoutRequestResponse final {
             *new (_response_buffer) NoRequestEmptyResponseResponse();
         message_.LinearizeAndEncode<NoRequestEmptyResponseResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             NoRequestEmptyResponseResponse* response)
+          : message_(bytes, byte_size, sizeof(NoRequestEmptyResponseResponse),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<NoRequestEmptyResponseResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2166,6 +2474,12 @@ class WithAndWithoutRequestResponse final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage() : message_(bytes_, sizeof(bytes_)) {}
+      explicit OwnedOutgoingMessage(NoRequestEmptyResponseResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2179,8 +2493,7 @@ class WithAndWithoutRequestResponse final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[NoRequestEmptyResponseResponse::PrimarySize +
-                     NoRequestEmptyResponseResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2221,6 +2534,16 @@ class WithAndWithoutRequestResponse final {
             *new (_request_buffer) NoRequestEmptyResponseRequest(_txid);
         message_.LinearizeAndEncode<NoRequestEmptyResponseRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             NoRequestEmptyResponseRequest* request)
+          : message_(bytes, byte_size, sizeof(NoRequestEmptyResponseRequest),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<NoRequestEmptyResponseRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2242,6 +2565,12 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(NoRequestEmptyResponseRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2255,8 +2584,7 @@ class WithAndWithoutRequestResponse final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[NoRequestEmptyResponseRequest::PrimarySize +
-                     NoRequestEmptyResponseRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2294,6 +2622,16 @@ class WithAndWithoutRequestResponse final {
         FIDL_ALIGNDECL NoRequestWithResponseResponse _response(ret);
         message_.LinearizeAndEncode<NoRequestWithResponseResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             NoRequestWithResponseResponse* response)
+          : message_(bytes, byte_size, sizeof(NoRequestWithResponseResponse),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<NoRequestWithResponseResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2317,6 +2655,14 @@ class WithAndWithoutRequestResponse final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, ret) {}
+      explicit OwnedOutgoingMessage(NoRequestWithResponseResponse* response)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2372,6 +2718,16 @@ class WithAndWithoutRequestResponse final {
             *new (_request_buffer) NoRequestWithResponseRequest(_txid);
         message_.LinearizeAndEncode<NoRequestWithResponseRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             NoRequestWithResponseRequest* request)
+          : message_(bytes, byte_size, sizeof(NoRequestWithResponseRequest),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<NoRequestWithResponseRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2393,6 +2749,12 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(NoRequestWithResponseRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2406,8 +2768,7 @@ class WithAndWithoutRequestResponse final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[NoRequestWithResponseRequest::PrimarySize +
-                     NoRequestWithResponseRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2450,6 +2811,16 @@ class WithAndWithoutRequestResponse final {
         FIDL_ALIGNDECL WithRequestNoResponseRequest _request(_txid, arg);
         message_.LinearizeAndEncode<WithRequestNoResponseRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             WithRequestNoResponseRequest* request)
+          : message_(bytes, byte_size, sizeof(WithRequestNoResponseRequest),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<WithRequestNoResponseRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2474,6 +2845,14 @@ class WithAndWithoutRequestResponse final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, arg) {}
+      explicit OwnedOutgoingMessage(WithRequestNoResponseRequest* request)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2525,6 +2904,16 @@ class WithAndWithoutRequestResponse final {
         message_.LinearizeAndEncode<WithRequestEmptyResponseResponse>(
             &_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             WithRequestEmptyResponseResponse* response)
+          : message_(bytes, byte_size, sizeof(WithRequestEmptyResponseResponse),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<WithRequestEmptyResponseResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2545,6 +2934,12 @@ class WithAndWithoutRequestResponse final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage() : message_(bytes_, sizeof(bytes_)) {}
+      explicit OwnedOutgoingMessage(WithRequestEmptyResponseResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2558,8 +2953,7 @@ class WithAndWithoutRequestResponse final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[WithRequestEmptyResponseResponse::PrimarySize +
-                     WithRequestEmptyResponseResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2601,6 +2995,16 @@ class WithAndWithoutRequestResponse final {
         FIDL_ALIGNDECL WithRequestEmptyResponseRequest _request(_txid, arg);
         message_.LinearizeAndEncode<WithRequestEmptyResponseRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             WithRequestEmptyResponseRequest* request)
+          : message_(bytes, byte_size, sizeof(WithRequestEmptyResponseRequest),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<WithRequestEmptyResponseRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2625,6 +3029,14 @@ class WithAndWithoutRequestResponse final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, arg) {}
+      explicit OwnedOutgoingMessage(WithRequestEmptyResponseRequest* request)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2677,6 +3089,16 @@ class WithAndWithoutRequestResponse final {
         message_.LinearizeAndEncode<WithRequestWithResponseResponse>(
             &_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             WithRequestWithResponseResponse* response)
+          : message_(bytes, byte_size, sizeof(WithRequestWithResponseResponse),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<WithRequestWithResponseResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2700,6 +3122,14 @@ class WithAndWithoutRequestResponse final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, ret) {}
+      explicit OwnedOutgoingMessage(WithRequestWithResponseResponse* response)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2756,6 +3186,16 @@ class WithAndWithoutRequestResponse final {
         FIDL_ALIGNDECL WithRequestWithResponseRequest _request(_txid, arg);
         message_.LinearizeAndEncode<WithRequestWithResponseRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             WithRequestWithResponseRequest* request)
+          : message_(bytes, byte_size, sizeof(WithRequestWithResponseRequest),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<WithRequestWithResponseRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2780,6 +3220,14 @@ class WithAndWithoutRequestResponse final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, _txid, arg) {}
+      explicit OwnedOutgoingMessage(WithRequestWithResponseRequest* request)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2829,6 +3277,16 @@ class WithAndWithoutRequestResponse final {
         auto& _response = *new (_response_buffer) OnEmptyResponseResponse();
         message_.LinearizeAndEncode<OnEmptyResponseResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             OnEmptyResponseResponse* response)
+          : message_(bytes, byte_size, sizeof(OnEmptyResponseResponse), nullptr,
+                     0, 0) {
+        message_.LinearizeAndEncode<OnEmptyResponseResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2848,6 +3306,12 @@ class WithAndWithoutRequestResponse final {
     class OwnedOutgoingMessage final {
      public:
       explicit OwnedOutgoingMessage() : message_(bytes_, sizeof(bytes_)) {}
+      explicit OwnedOutgoingMessage(OnEmptyResponseResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -2861,8 +3325,7 @@ class WithAndWithoutRequestResponse final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[OnEmptyResponseResponse::PrimarySize +
-                     OnEmptyResponseResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -2899,6 +3362,16 @@ class WithAndWithoutRequestResponse final {
         FIDL_ALIGNDECL OnWithResponseResponse _response(ret);
         message_.LinearizeAndEncode<OnWithResponseResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             OnWithResponseResponse* response)
+          : message_(bytes, byte_size, sizeof(OnWithResponseResponse), nullptr,
+                     0, 0) {
+        message_.LinearizeAndEncode<OnWithResponseResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -2921,6 +3394,14 @@ class WithAndWithoutRequestResponse final {
           : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
                        ZX_CHANNEL_MAX_MSG_BYTES>>()),
             message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, ret) {}
+      explicit OwnedOutgoingMessage(OnWithResponseResponse* response)
+          : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<
+                       ZX_CHANNEL_MAX_MSG_BYTES>>()),
+            message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -3756,6 +4237,16 @@ class WithErrorSyntax final {
         FIDL_ALIGNDECL ResponseAsStructResponse _response(result);
         message_.LinearizeAndEncode<ResponseAsStructResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             ResponseAsStructResponse* response)
+          : message_(bytes, byte_size, sizeof(ResponseAsStructResponse),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<ResponseAsStructResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -3777,6 +4268,12 @@ class WithErrorSyntax final {
       explicit OwnedOutgoingMessage(
           ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
+      explicit OwnedOutgoingMessage(ResponseAsStructResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -3790,8 +4287,7 @@ class WithErrorSyntax final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[ResponseAsStructResponse::PrimarySize +
-                     ResponseAsStructResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -3829,6 +4325,16 @@ class WithErrorSyntax final {
         auto& _request = *new (_request_buffer) ResponseAsStructRequest(_txid);
         message_.LinearizeAndEncode<ResponseAsStructRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             ResponseAsStructRequest* request)
+          : message_(bytes, byte_size, sizeof(ResponseAsStructRequest), nullptr,
+                     0, 0) {
+        message_.LinearizeAndEncode<ResponseAsStructRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -3849,6 +4355,12 @@ class WithErrorSyntax final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(ResponseAsStructRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -3862,8 +4374,7 @@ class WithErrorSyntax final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[ResponseAsStructRequest::PrimarySize +
-                     ResponseAsStructRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -3903,6 +4414,16 @@ class WithErrorSyntax final {
         FIDL_ALIGNDECL ErrorAsPrimitiveResponse _response(result);
         message_.LinearizeAndEncode<ErrorAsPrimitiveResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             ErrorAsPrimitiveResponse* response)
+          : message_(bytes, byte_size, sizeof(ErrorAsPrimitiveResponse),
+                     nullptr, 0, 0) {
+        message_.LinearizeAndEncode<ErrorAsPrimitiveResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -3924,6 +4445,12 @@ class WithErrorSyntax final {
       explicit OwnedOutgoingMessage(
           ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
+      explicit OwnedOutgoingMessage(ErrorAsPrimitiveResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -3937,8 +4464,7 @@ class WithErrorSyntax final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[ErrorAsPrimitiveResponse::PrimarySize +
-                     ErrorAsPrimitiveResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -3976,6 +4502,16 @@ class WithErrorSyntax final {
         auto& _request = *new (_request_buffer) ErrorAsPrimitiveRequest(_txid);
         message_.LinearizeAndEncode<ErrorAsPrimitiveRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             ErrorAsPrimitiveRequest* request)
+          : message_(bytes, byte_size, sizeof(ErrorAsPrimitiveRequest), nullptr,
+                     0, 0) {
+        message_.LinearizeAndEncode<ErrorAsPrimitiveRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -3996,6 +4532,12 @@ class WithErrorSyntax final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(ErrorAsPrimitiveRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -4009,8 +4551,7 @@ class WithErrorSyntax final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[ErrorAsPrimitiveRequest::PrimarySize +
-                     ErrorAsPrimitiveRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -4050,6 +4591,16 @@ class WithErrorSyntax final {
         FIDL_ALIGNDECL ErrorAsEnumResponse _response(result);
         message_.LinearizeAndEncode<ErrorAsEnumResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             ErrorAsEnumResponse* response)
+          : message_(bytes, byte_size, sizeof(ErrorAsEnumResponse), nullptr, 0,
+                     0) {
+        message_.LinearizeAndEncode<ErrorAsEnumResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -4071,6 +4622,12 @@ class WithErrorSyntax final {
       explicit OwnedOutgoingMessage(
           ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result& result)
           : message_(bytes_, sizeof(bytes_), result) {}
+      explicit OwnedOutgoingMessage(ErrorAsEnumResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -4084,8 +4641,7 @@ class WithErrorSyntax final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[ErrorAsEnumResponse::PrimarySize +
-                     ErrorAsEnumResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -4123,6 +4679,16 @@ class WithErrorSyntax final {
         auto& _request = *new (_request_buffer) ErrorAsEnumRequest(_txid);
         message_.LinearizeAndEncode<ErrorAsEnumRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             ErrorAsEnumRequest* request)
+          : message_(bytes, byte_size, sizeof(ErrorAsEnumRequest), nullptr, 0,
+                     0) {
+        message_.LinearizeAndEncode<ErrorAsEnumRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -4143,6 +4709,12 @@ class WithErrorSyntax final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(ErrorAsEnumRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -4156,8 +4728,7 @@ class WithErrorSyntax final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[ErrorAsEnumRequest::PrimarySize +
-                     ErrorAsEnumRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 

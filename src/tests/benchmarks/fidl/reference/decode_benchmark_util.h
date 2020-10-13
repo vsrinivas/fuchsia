@@ -22,18 +22,17 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   fidl::aligned<FidlType> aligned_value = builder();
-  ::fidl::internal::LinearizeBuffer<FidlType> buf;
-  auto encode_result = ::fidl::LinearizeAndEncode<FidlType>(&aligned_value.value, buf.buffer());
-  ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
-  const fidl::BytePart& bytes = encode_result.message.bytes();
+  fidl::OwnedOutgoingMessage<FidlType> encoded(&aligned_value.value);
+  ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
+  fidl::OutgoingMessage& encoded_message = encoded.GetOutgoingMessage();
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  std::vector<uint8_t> test_data(bytes.size());
+  std::vector<uint8_t> test_data(encoded_message.byte_actual());
   while (state->KeepRunning()) {
-    memcpy(test_data.data(), bytes.data(), bytes.size());
+    memcpy(test_data.data(), encoded_message.bytes(), encoded_message.byte_actual());
 
     state->NextStep();  // End: Setup. Begin: Decode.
 
@@ -51,22 +50,21 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
       fidl::BytePart(test_data.data(), static_cast<unsigned int>(test_data.size()),
                      static_cast<unsigned int>(test_data.size()))));
   if (reference_encode_result.status != ZX_OK) {
-    std::cout << "fidl::Encode failed with error: " << encode_result.error << std::endl;
+    std::cout << "fidl::Encode failed with error: " << reference_encode_result.error << std::endl;
     return false;
   }
-  auto& expected_bytes = encode_result.message.bytes();
   auto& reference_bytes = reference_encode_result.message.bytes();
-  if (expected_bytes.actual() != reference_bytes.actual()) {
+  if (encoded_message.byte_actual() != reference_bytes.actual()) {
     std::cout << "output size mismatch - encoded reference size was " << reference_bytes.actual()
-              << " but expected encode result size was" << expected_bytes.actual() << std::endl;
+              << " but expected encode result size was" << encoded_message.byte_actual() << std::endl;
     return false;
   }
   bool success = true;
-  for (size_t i = 0; i < expected_bytes.size(); i++) {
-    if (expected_bytes.data()[i] != reference_bytes.data()[i]) {
+  for (uint32_t i = 0; i < encoded_message.byte_actual(); ++i) {
+    if (encoded_message.bytes()[i] != reference_bytes.data()[i]) {
       std::cout << "At offset " << i << " reference got 0x" << std::setw(2) << std::setfill('0')
                 << std::hex << int(reference_bytes.data()[i]) << " but fidl::Decode got 0x"
-                << int(expected_bytes.data()[i]) << std::dec << std::endl;
+                << int(encoded_message.bytes()[i]) << std::dec << std::endl;
       success = false;
     }
   }

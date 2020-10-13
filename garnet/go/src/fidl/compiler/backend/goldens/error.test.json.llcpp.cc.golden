@@ -31,7 +31,7 @@ extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 
 }  // namespace
 Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
-  fooRequest::OwnedOutgoingMessage _request(0, s);
+  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -40,7 +40,7 @@ Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
 
 Example::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
                             zx_time_t _deadline) {
-  fooRequest::OwnedOutgoingMessage _request(0, s);
+  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);

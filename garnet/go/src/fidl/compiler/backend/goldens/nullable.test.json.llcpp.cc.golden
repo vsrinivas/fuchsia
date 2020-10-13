@@ -33,7 +33,7 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace
 SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
-  AddRequest::OwnedOutgoingMessage _request(0, a, b);
+  AddRequest::OwnedOutgoingMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(
       _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -42,7 +42,7 @@ SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b) {
 
 SimpleProtocol::ResultOf::Add::Add(zx_handle_t _client, int32_t a, int32_t b,
                                    zx_time_t _deadline) {
-  AddRequest::OwnedOutgoingMessage _request(0, a, b);
+  AddRequest::OwnedOutgoingMessage _request(zx_txid_t(0), a, b);
   _request.GetOutgoingMessage().Call<AddResponse>(
       _client, bytes_, AddResponse::PrimarySize + AddResponse::MaxOutOfLine,
       _deadline);

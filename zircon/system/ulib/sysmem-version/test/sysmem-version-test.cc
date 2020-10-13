@@ -59,18 +59,11 @@ class LinearSnap {
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
-    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-    fidl::OutgoingMessage outgoing_message(linear_data_, kMaxDataSize, 0, handles,
-                                           ZX_CHANNEL_MAX_MSG_HANDLES, 0);
+    fidl::UnownedOutgoingMessage<FidlType> encoded(linear_data_, kMaxDataSize, &aligned);
+    ZX_ASSERT(encoded.ok());
+    ZX_ASSERT(encoded.error() == nullptr);
 
-    outgoing_message.LinearizeAndEncode<FidlType>(&aligned);
-    if (!outgoing_message.ok()) {
-      printf("Encoded error: %s\n",
-             (outgoing_message.error() == nullptr) ? "" : outgoing_message.error());
-    }
-    ZX_ASSERT(outgoing_message.ok());
-    ZX_ASSERT(outgoing_message.error() == nullptr);
-
+    fidl::OutgoingMessage& outgoing_message = encoded.GetOutgoingMessage();
     ZX_ASSERT(outgoing_message.byte_actual() <= sizeof(snap_data_));
     memcpy(snap_data_, outgoing_message.bytes(), outgoing_message.byte_actual());
     snap_data_size_ = outgoing_message.byte_actual();

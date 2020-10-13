@@ -19,7 +19,7 @@ extern "C" const fidl_type_t
 
 }  // namespace
 SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
-  MethodOnSecondRequest::OwnedOutgoingMessage _request(0);
+  MethodOnSecondRequest::OwnedOutgoingMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -101,7 +101,7 @@ extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstResponseTable;
 
 }  // namespace
 FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
-  MethodOnFirstRequest::OwnedOutgoingMessage _request(0);
+  MethodOnFirstRequest::OwnedOutgoingMessage _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();

@@ -99,7 +99,7 @@ class {{ .Name }};
   {{- if gt .RequestSentMaxSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
-  {{ .Name }}Request::PrimarySize + {{ .Name }}Request::MaxOutOfLine
+  PrimarySize + MaxOutOfLine
   {{- end -}}
 {{- end }}
 
@@ -107,7 +107,7 @@ class {{ .Name }};
   {{- if gt .ResponseSentMaxSize 65536 -}}
   ZX_CHANNEL_MAX_MSG_BYTES
   {{- else -}}
-  {{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine
+  PrimarySize + MaxOutOfLine
   {{- end -}}
 {{- end }}
 
@@ -197,7 +197,7 @@ class {{ .Name }} final {
         {{- template "CommaMessagePrototype" .Response }})
           : message_(_bytes, _byte_size, sizeof({{ .Name }}Response),
       {{- if gt .ResponseMaxHandles 0 }}
-        handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Response::MaxNumHandles), 0
+        handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
@@ -218,6 +218,20 @@ class {{ .Name }} final {
     {{- end }}
           message_.LinearizeAndEncode<{{ .Name }}Response>(&_response);
         }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}Response* response)
+          : message_(bytes, byte_size, sizeof({{ .Name }}Response),
+      {{- if gt .ResponseMaxHandles 0 }}
+        handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
+      {{- else }}
+        nullptr, 0, 0
+      {{- end }}
+        ) {
+        message_.LinearizeAndEncode<{{ .Name }}Response>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -231,7 +245,7 @@ class {{ .Name }} final {
       {{ .Name }}Response& Message() { return *reinterpret_cast<{{ .Name }}Response*>(message_.bytes()); }
 
       {{- if gt .ResponseMaxHandles 0 }}
-        zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Response::MaxNumHandles)];
+        zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       {{- end }}
       ::fidl::OutgoingMessage message_;
     };
@@ -247,6 +261,18 @@ class {{ .Name }} final {
           : message_(bytes_, sizeof(bytes_)
           {{- end }}
           {{- template "CommaPassthroughMessageParams" .Response }}) {}
+      explicit OwnedOutgoingMessage({{ .Name }}Response* response)
+          {{- if gt .ResponseSentMaxSize 512 -}}
+        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>>()),
+          message_(bytes_->data(), {{- template "ResponseSentSize" .}}
+          {{- else }}
+          : message_(bytes_, sizeof(bytes_)
+          {{- end }}
+          , response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -261,7 +287,7 @@ class {{ .Name }} final {
       std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "ResponseSentSize" .}}>> bytes_;
       {{- else }}
       FIDL_ALIGNDECL
-      uint8_t bytes_[{{ .Name }}Response::PrimarySize + {{ .Name }}Response::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       {{- end }}
       UnownedOutgoingMessage message_;
     };
@@ -317,7 +343,7 @@ class {{ .Name }} final {
         {{- template "CommaMessagePrototype" .Request }})
           : message_(_bytes, _byte_size, sizeof({{ .Name }}Request),
       {{- if gt .RequestMaxHandles 0 }}
-        handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Request::MaxNumHandles), 0
+        handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
@@ -338,6 +364,20 @@ class {{ .Name }} final {
     {{- end }}
           message_.LinearizeAndEncode<{{ .Name }}Request>(&_request);
         }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}Request* request)
+          : message_(bytes, byte_size, sizeof({{ .Name }}Request),
+      {{- if gt .RequestMaxHandles 0 }}
+        handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
+      {{- else }}
+        nullptr, 0, 0
+      {{- end }}
+        ) {
+        message_.LinearizeAndEncode<{{ .Name }}Request>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -351,7 +391,7 @@ class {{ .Name }} final {
       {{ .Name }}Request& Message() { return *reinterpret_cast<{{ .Name }}Request*>(message_.bytes()); }
 
       {{- if gt .RequestMaxHandles 0 }}
-        zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, {{ .Name }}Request::MaxNumHandles)];
+        zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       {{- end }}
       ::fidl::OutgoingMessage message_;
     };
@@ -367,6 +407,18 @@ class {{ .Name }} final {
           : message_(bytes_, sizeof(bytes_), _txid
           {{- end }}
           {{- template "CommaPassthroughMessageParams" .Request }}) {}
+      explicit OwnedOutgoingMessage({{ .Name }}Request* request)
+          {{- if gt .RequestSentMaxSize 512 -}}
+        : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>>()),
+          message_(bytes_->data(), {{- template "RequestSentSize" .}}
+          {{- else }}
+          : message_(bytes_, sizeof(bytes_)
+          {{- end }}
+          , request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -381,7 +433,7 @@ class {{ .Name }} final {
       std::unique_ptr<::fidl::internal::AlignedBuffer<{{- template "RequestSentSize" .}}>> bytes_;
       {{- else }}
       FIDL_ALIGNDECL
-      uint8_t bytes_[{{ .Name }}Request::PrimarySize + {{ .Name }}Request::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       {{- end }}
       UnownedOutgoingMessage message_;
     };

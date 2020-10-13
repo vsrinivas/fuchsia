@@ -18,7 +18,7 @@ extern "C" const fidl_type_t fidl_test_json_superfooResponseTable;
 
 }  // namespace
 super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
-  fooRequest::OwnedOutgoingMessage _request(0, s);
+  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -27,7 +27,7 @@ super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
 
 super::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
                           zx_time_t _deadline) {
-  fooRequest::OwnedOutgoingMessage _request(0, s);
+  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);
@@ -190,7 +190,7 @@ extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
 
 }  // namespace
 sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
-  fooRequest::OwnedOutgoingMessage _request(0, s);
+  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine);
   status_ = _request.status();
@@ -199,7 +199,7 @@ sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s) {
 
 sub::ResultOf::foo::foo(zx_handle_t _client, const ::fidl::StringView& s,
                         zx_time_t _deadline) {
-  fooRequest::OwnedOutgoingMessage _request(0, s);
+  fooRequest::OwnedOutgoingMessage _request(zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<fooResponse>(
       _client, bytes_, fooResponse::PrimarySize + fooResponse::MaxOutOfLine,
       _deadline);

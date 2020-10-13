@@ -32,7 +32,7 @@ const fragmentSyncRequestManagedTmpl = `
   : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
     {{- end }}
    {
-  {{ .Name }}Request::OwnedOutgoingMessage _request(0
+  {{ .Name }}Request::OwnedOutgoingMessage _request(zx_txid_t(0)
     {{- template "CommaPassthroughMessageParams" .Request -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client,
@@ -52,7 +52,7 @@ const fragmentSyncRequestManagedTmpl = `
   : bytes_(std::make_unique<::fidl::internal::AlignedBuffer<{{ template "ResponseReceivedSize" . }}>>())
     {{- end }}
    {
-  {{ .Name }}Request::OwnedOutgoingMessage _request(0
+  {{ .Name }}Request::OwnedOutgoingMessage _request(zx_txid_t(0)
     {{- template "CommaPassthroughMessageParams" .Request -}});
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client,
                                  {{- template "ResponseReceivedByteAccess" . }},

@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -173,6 +173,54 @@ struct StructWithNullableVector {
 
   ::fidl::VectorView<int32_t> val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableVector* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableVector), nullptr,
+                   0, 0) {
+      message_.LinearizeAndEncode<StructWithNullableVector>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableVector* value)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
@@ -188,6 +236,52 @@ struct StructWithNullableUnion {
 
   ::llcpp::fidl::test::nullable::SimpleUnion val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableUnion* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableUnion), nullptr,
+                   0, 0) {
+      message_.LinearizeAndEncode<StructWithNullableUnion>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableUnion* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
@@ -203,6 +297,52 @@ struct StructWithNullableStruct {
 
   ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::Int32Wrapper> val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableStruct* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableStruct), nullptr,
+                   0, 0) {
+      message_.LinearizeAndEncode<StructWithNullableStruct>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableStruct* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
@@ -218,6 +358,54 @@ struct StructWithNullableString {
 
   ::fidl::StringView val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableString* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableString), nullptr,
+                   0, 0) {
+      message_.LinearizeAndEncode<StructWithNullableString>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableString* value)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
@@ -233,6 +421,54 @@ struct StructWithNullableRequest {
 
   ::zx::channel val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableRequest* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableRequest),
+                   handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.LinearizeAndEncode<StructWithNullableRequest>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableRequest* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
@@ -248,6 +484,54 @@ struct StructWithNullableProtocol {
 
   ::zx::channel val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableProtocol* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableProtocol),
+                   handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.LinearizeAndEncode<StructWithNullableProtocol>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableProtocol* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
@@ -263,6 +547,53 @@ struct StructWithNullableHandle {
 
   ::zx::vmo val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           StructWithNullableHandle* value)
+        : message_(bytes, byte_size, sizeof(StructWithNullableHandle), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.LinearizeAndEncode<StructWithNullableHandle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(StructWithNullableHandle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
@@ -300,6 +631,15 @@ class SimpleProtocol final {
         auto& _response = *new (_response_buffer) AddResponse(sum);
         message_.LinearizeAndEncode<AddResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             AddResponse* response)
+          : message_(bytes, byte_size, sizeof(AddResponse), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<AddResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -320,6 +660,12 @@ class SimpleProtocol final {
      public:
       explicit OwnedOutgoingMessage(int32_t sum)
           : message_(bytes_, sizeof(bytes_), sum) {}
+      explicit OwnedOutgoingMessage(AddResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -333,7 +679,7 @@ class SimpleProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[AddResponse::PrimarySize + AddResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -375,6 +721,15 @@ class SimpleProtocol final {
         auto& _request = *new (_request_buffer) AddRequest(_txid, a, b);
         message_.LinearizeAndEncode<AddRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             AddRequest* request)
+          : message_(bytes, byte_size, sizeof(AddRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<AddRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -395,6 +750,12 @@ class SimpleProtocol final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, int32_t a, int32_t b)
           : message_(bytes_, sizeof(bytes_), _txid, a, b) {}
+      explicit OwnedOutgoingMessage(AddRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -408,7 +769,7 @@ class SimpleProtocol final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[AddRequest::PrimarySize + AddRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -631,6 +992,51 @@ struct Int32Wrapper {
 
   int32_t val = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Int32Wrapper* value)
+        : message_(bytes, byte_size, sizeof(Int32Wrapper), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Int32Wrapper>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Int32Wrapper* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 }  // namespace nullable

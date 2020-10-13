@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -70,6 +70,52 @@ struct Padding7ByteMiddle {
 
   uint64_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding7ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding7ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding7ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding7ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
@@ -87,6 +133,51 @@ struct Padding7ByteEnd {
 
   uint8_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding7ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding7ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding7ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding7ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteMiddleTable;
@@ -104,6 +195,52 @@ struct Padding6ByteMiddle {
 
   uint64_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding6ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding6ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding6ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding6ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
@@ -121,6 +258,51 @@ struct Padding6ByteEnd {
 
   uint16_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding6ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding6ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding6ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding6ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteMiddleTable;
@@ -140,6 +322,52 @@ struct Padding5ByteMiddle {
 
   uint64_t c = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding5ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding5ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding5ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding5ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
@@ -159,6 +387,51 @@ struct Padding5ByteEnd {
 
   uint8_t c = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding5ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding5ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding5ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding5ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
@@ -176,6 +449,52 @@ struct Padding4ByteMiddle {
 
   uint64_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding4ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding4ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding4ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding4ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
@@ -193,6 +512,51 @@ struct Padding4ByteEnd {
 
   uint32_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding4ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding4ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding4ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding4ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t
@@ -215,6 +579,52 @@ struct Padding4ByteAlignmentLength12 {
 
   uint16_t d = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding4ByteAlignmentLength12* value)
+        : message_(bytes, byte_size, sizeof(Padding4ByteAlignmentLength12),
+                   nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding4ByteAlignmentLength12>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding4ByteAlignmentLength12* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
@@ -232,6 +642,52 @@ struct Padding3ByteMiddle {
 
   uint32_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding3ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding3ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding3ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding3ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
@@ -249,6 +705,51 @@ struct Padding3ByteEnd {
 
   uint8_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding3ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding3ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding3ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding3ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteMiddleTable;
@@ -266,6 +767,52 @@ struct Padding2ByteMiddle {
 
   uint32_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding2ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding2ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding2ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding2ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
@@ -283,6 +830,51 @@ struct Padding2ByteEnd {
 
   uint16_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding2ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding2ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding2ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding2ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t
@@ -303,6 +895,52 @@ struct Padding2ByteAlignmentLength6 {
 
   uint8_t c = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding2ByteAlignmentLength6* value)
+        : message_(bytes, byte_size, sizeof(Padding2ByteAlignmentLength6),
+                   nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding2ByteAlignmentLength6>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding2ByteAlignmentLength6* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
@@ -320,6 +958,52 @@ struct Padding1ByteMiddle {
 
   uint16_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding1ByteMiddle* value)
+        : message_(bytes, byte_size, sizeof(Padding1ByteMiddle), nullptr, 0,
+                   0) {
+      message_.LinearizeAndEncode<Padding1ByteMiddle>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding1ByteMiddle* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
@@ -337,6 +1021,51 @@ struct Padding1ByteEnd {
 
   uint8_t b = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           Padding1ByteEnd* value)
+        : message_(bytes, byte_size, sizeof(Padding1ByteEnd), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<Padding1ByteEnd>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(Padding1ByteEnd* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[PrimarySize + MaxOutOfLine];
+    UnownedOutgoingMessage message_;
+  };
 };
 
 }  // namespace padding

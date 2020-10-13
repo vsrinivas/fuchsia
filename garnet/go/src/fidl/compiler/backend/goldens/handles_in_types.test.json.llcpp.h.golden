@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -300,6 +300,55 @@ struct HandlesInTypes {
 
   ::llcpp::test::name::UnionWithHandle union_with_handle = {};
   void _CloseHandles();
+
+  class UnownedOutgoingMessage final {
+   public:
+    UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                           HandlesInTypes* value)
+        : message_(bytes, byte_size, sizeof(HandlesInTypes), handles_,
+                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+      message_.LinearizeAndEncode<HandlesInTypes>(value);
+    }
+    UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+    UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+    UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedOutgoingMessage final {
+   public:
+    explicit OwnedOutgoingMessage(HandlesInTypes* value)
+        : bytes_(std::make_unique<
+                 ::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>()),
+          message_(bytes_->data(), ZX_CHANNEL_MAX_MSG_BYTES, value) {}
+    OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+    OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+    OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
+        bytes_;
+    UnownedOutgoingMessage message_;
+  };
 };
 
 }  // namespace name

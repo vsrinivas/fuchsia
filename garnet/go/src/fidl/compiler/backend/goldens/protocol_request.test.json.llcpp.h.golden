@@ -11,6 +11,7 @@
 #include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -22,7 +23,6 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -80,15 +80,23 @@ class Parent final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              ::zx::channel& c)
           : message_(_bytes, _byte_size, sizeof(GetChildResponse), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                              GetChildResponse::MaxNumHandles),
-                     0) {
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
         FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)];
         auto& _response = *new (_response_buffer) GetChildResponse(c);
         message_.LinearizeAndEncode<GetChildResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             GetChildResponse* response)
+          : message_(bytes, byte_size, sizeof(GetChildResponse), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<GetChildResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -102,8 +110,7 @@ class Parent final {
       GetChildResponse& Message() {
         return *reinterpret_cast<GetChildResponse*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                    GetChildResponse::MaxNumHandles)];
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -111,6 +118,12 @@ class Parent final {
      public:
       explicit OwnedOutgoingMessage(::zx::channel& c)
           : message_(bytes_, sizeof(bytes_), c) {}
+      explicit OwnedOutgoingMessage(GetChildResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -124,8 +137,7 @@ class Parent final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[GetChildResponse::PrimarySize +
-                     GetChildResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -163,6 +175,15 @@ class Parent final {
         auto& _request = *new (_request_buffer) GetChildRequest(_txid);
         message_.LinearizeAndEncode<GetChildRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             GetChildRequest* request)
+          : message_(bytes, byte_size, sizeof(GetChildRequest), nullptr, 0, 0) {
+        message_.LinearizeAndEncode<GetChildRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -183,6 +204,12 @@ class Parent final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(GetChildRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -196,8 +223,7 @@ class Parent final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t
-          bytes_[GetChildRequest::PrimarySize + GetChildRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -232,9 +258,7 @@ class Parent final {
                              ::zx::channel& r)
           : message_(_bytes, _byte_size, sizeof(GetChildRequestResponse),
                      handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                              GetChildRequestResponse::MaxNumHandles),
-                     0) {
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
         FIDL_ALIGNDECL uint8_t
@@ -242,6 +266,17 @@ class Parent final {
         auto& _response = *new (_response_buffer) GetChildRequestResponse(r);
         message_.LinearizeAndEncode<GetChildRequestResponse>(&_response);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             GetChildRequestResponse* response)
+          : message_(bytes, byte_size, sizeof(GetChildRequestResponse),
+                     handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<GetChildRequestResponse>(response);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -255,8 +290,7 @@ class Parent final {
       GetChildRequestResponse& Message() {
         return *reinterpret_cast<GetChildRequestResponse*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                    GetChildRequestResponse::MaxNumHandles)];
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -264,6 +298,12 @@ class Parent final {
      public:
       explicit OwnedOutgoingMessage(::zx::channel& r)
           : message_(bytes_, sizeof(bytes_), r) {}
+      explicit OwnedOutgoingMessage(GetChildRequestResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -277,8 +317,7 @@ class Parent final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[GetChildRequestResponse::PrimarySize +
-                     GetChildRequestResponse::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -316,6 +355,16 @@ class Parent final {
         auto& _request = *new (_request_buffer) GetChildRequestRequest(_txid);
         message_.LinearizeAndEncode<GetChildRequestRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             GetChildRequestRequest* request)
+          : message_(bytes, byte_size, sizeof(GetChildRequestRequest), nullptr,
+                     0, 0) {
+        message_.LinearizeAndEncode<GetChildRequestRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -336,6 +385,12 @@ class Parent final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid)
           : message_(bytes_, sizeof(bytes_), _txid) {}
+      explicit OwnedOutgoingMessage(GetChildRequestRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -349,8 +404,7 @@ class Parent final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[GetChildRequestRequest::PrimarySize +
-                     GetChildRequestRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -386,15 +440,23 @@ class Parent final {
       UnownedOutgoingMessage(uint8_t* _bytes, uint32_t _byte_size,
                              zx_txid_t _txid, ::zx::channel& c)
           : message_(_bytes, _byte_size, sizeof(TakeChildRequest), handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                              TakeChildRequest::MaxNumHandles),
-                     0) {
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
         FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequest)];
         auto& _request = *new (_request_buffer) TakeChildRequest(_txid, c);
         message_.LinearizeAndEncode<TakeChildRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             TakeChildRequest* request)
+          : message_(bytes, byte_size, sizeof(TakeChildRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<TakeChildRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -408,8 +470,7 @@ class Parent final {
       TakeChildRequest& Message() {
         return *reinterpret_cast<TakeChildRequest*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                    TakeChildRequest::MaxNumHandles)];
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -417,6 +478,12 @@ class Parent final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& c)
           : message_(bytes_, sizeof(bytes_), _txid, c) {}
+      explicit OwnedOutgoingMessage(TakeChildRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -430,8 +497,7 @@ class Parent final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[TakeChildRequest::PrimarySize +
-                     TakeChildRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 
@@ -468,9 +534,7 @@ class Parent final {
                              zx_txid_t _txid, ::zx::channel& r)
           : message_(_bytes, _byte_size, sizeof(TakeChildRequestRequest),
                      handles_,
-                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                              TakeChildRequestRequest::MaxNumHandles),
-                     0) {
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         // Destructors can't be called because it will lead to handle double
         // close (here and in fidl::Encode).
         FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(TakeChildRequestRequest)];
@@ -478,6 +542,17 @@ class Parent final {
             *new (_request_buffer) TakeChildRequestRequest(_txid, r);
         message_.LinearizeAndEncode<TakeChildRequestRequest>(&_request);
       }
+      UnownedOutgoingMessage(uint8_t* bytes, uint32_t byte_size,
+                             TakeChildRequestRequest* request)
+          : message_(bytes, byte_size, sizeof(TakeChildRequestRequest),
+                     handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<TakeChildRequestRequest>(request);
+      }
+      UnownedOutgoingMessage(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage(UnownedOutgoingMessage&&) = delete;
+      UnownedOutgoingMessage* operator=(const UnownedOutgoingMessage&) = delete;
+      UnownedOutgoingMessage* operator=(UnownedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.status() == ZX_OK; }
@@ -491,8 +566,7 @@ class Parent final {
       TakeChildRequestRequest& Message() {
         return *reinterpret_cast<TakeChildRequestRequest*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES,
-                                    TakeChildRequestRequest::MaxNumHandles)];
+      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -500,6 +574,12 @@ class Parent final {
      public:
       explicit OwnedOutgoingMessage(zx_txid_t _txid, ::zx::channel& r)
           : message_(bytes_, sizeof(bytes_), _txid, r) {}
+      explicit OwnedOutgoingMessage(TakeChildRequestRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedOutgoingMessage(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage(OwnedOutgoingMessage&&) = delete;
+      OwnedOutgoingMessage* operator=(const OwnedOutgoingMessage&) = delete;
+      OwnedOutgoingMessage* operator=(OwnedOutgoingMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
       bool ok() const { return message_.ok(); }
@@ -513,8 +593,7 @@ class Parent final {
 
      private:
       FIDL_ALIGNDECL
-      uint8_t bytes_[TakeChildRequestRequest::PrimarySize +
-                     TakeChildRequestRequest::MaxOutOfLine];
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
     };
 

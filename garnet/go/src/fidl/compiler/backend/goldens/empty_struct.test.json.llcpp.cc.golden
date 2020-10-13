@@ -32,7 +32,7 @@ extern "C" const fidl_type_t
 }  // namespace
 EmptyProtocol::ResultOf::Send::Send(zx_handle_t _client,
                                     ::llcpp::fidl::test::json::Empty& e) {
-  SendRequest::OwnedOutgoingMessage _request(0, e);
+  SendRequest::OwnedOutgoingMessage _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -50,7 +50,7 @@ EmptyProtocol::UnownedResultOf::Send::Send(
 
 EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
     zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e) {
-  SendAndReceiveRequest::OwnedOutgoingMessage _request(0, e);
+  SendAndReceiveRequest::OwnedOutgoingMessage _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
       _client, bytes_,
       SendAndReceiveResponse::PrimarySize +
@@ -62,7 +62,7 @@ EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
 EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
     zx_handle_t _client, ::llcpp::fidl::test::json::Empty& e,
     zx_time_t _deadline) {
-  SendAndReceiveRequest::OwnedOutgoingMessage _request(0, e);
+  SendAndReceiveRequest::OwnedOutgoingMessage _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
       _client, bytes_,
       SendAndReceiveResponse::PrimarySize +
