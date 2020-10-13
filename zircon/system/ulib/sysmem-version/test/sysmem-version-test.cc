@@ -80,11 +80,18 @@ class LinearSnap {
            outgoing_message.handle_actual() * sizeof(zx_handle_t));
     snap_handles_count_ = outgoing_message.handle_actual();
 
+    fidl::IncomingMessage incoming_message(
+        outgoing_message.bytes(), outgoing_message.byte_capacity(), outgoing_message.byte_actual(),
+        outgoing_message.handles(), outgoing_message.handle_capacity(),
+        outgoing_message.handle_actual());
     // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
-    fidl::IncomingMessage incoming_message(std::move(outgoing_message));
     incoming_message.Decode<FidlType>();
     ZX_ASSERT(incoming_message.ok());
     ZX_ASSERT(incoming_message.error() == nullptr);
+
+    // Release handles so they don't close when outgoing_message goes out of
+    // scope.
+    outgoing_message.ReleaseHandles();
 
     // At this point, the handles are in linear_data_ and value_'s message() is stored directly in
     // linear_data_.

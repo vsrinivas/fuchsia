@@ -114,18 +114,6 @@ class IncomingMessage final : public ::fidl::Result {
   // |IncomingMessage| is destructed.
   IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
                   zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual);
-  explicit IncomingMessage(OutgoingMessage&& outgoing_message)
-      : ::fidl::Result(ZX_OK, nullptr),
-        message_(fidl_msg_t{
-            .bytes = outgoing_message.bytes(),
-            .handles = outgoing_message.handles(),
-            .num_bytes = outgoing_message.byte_actual(),
-            .num_handles = outgoing_message.handle_actual(),
-        }),
-        byte_capacity_(outgoing_message.byte_capacity()),
-        handle_capacity_(outgoing_message.handle_capacity()) {
-    outgoing_message.ReleaseHandles();
-  }
   explicit IncomingMessage(const fidl_msg_t* msg)
       : ::fidl::Result(ZX_OK, nullptr),
         message_(*msg),
