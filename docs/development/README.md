@@ -49,7 +49,7 @@ and debugging Fuchsia and programs running on Fuchsia.
 
 ## SDK
 
- - [SDK](sdk/README.md) - information about developing the Fuchsia SDK
+ - [SDK](idk/README.md) - information about developing the Fuchsia SDK
 
 ## Hardware
 
