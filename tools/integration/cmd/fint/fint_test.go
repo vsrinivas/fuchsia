@@ -26,3 +26,14 @@ skip_if_unaffected: true
 		t.Errorf("failed to parse static .textproto: %s", err)
 	}
 }
+
+func TestParseContextProto(t *testing.T) {
+	textproto := `checkout_dir: "/a/b/c/fuchsia/"
+build_dir: "/a/b/c/fuchsia/out/release"
+artifact_dir: "/a/b/c/fuchsia/out/artifacts"
+`
+
+	if _, err := parseContext(textproto); err != nil {
+		t.Errorf("failed to parse context .textproto: %s", err)
+	}
+}

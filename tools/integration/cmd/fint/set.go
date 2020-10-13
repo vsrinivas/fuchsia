@@ -60,5 +60,14 @@ func (c *SetCommand) run(ctx context.Context) error {
 		return err
 	}
 
+	bytes, err = ioutil.ReadFile(c.contextSpecPath)
+	if err != nil {
+		return err
+	}
+
+	if _, err := parseContext(string(bytes)); err != nil {
+		return err
+	}
+
 	return nil
 }
