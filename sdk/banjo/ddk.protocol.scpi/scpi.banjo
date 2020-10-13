@@ -4,16 +4,31 @@
 
 library ddk.protocol.scpi;
 
-using zircon.device.scpi;
 using zx;
 
 const uint32 MAX_DVFS_OPPS = 16;
+
+struct ScpiOppEntry {
+    /// The operating point frequency in Hz.
+    uint32 freq_hz;
+    /// The operating point voltage in microvolts.
+    uint32 volt_uv;
+};
+
+struct ScpiOpp {
+    /// The device's operating points.
+    array<ScpiOppEntry>:MAX_DVFS_OPPS opp;
+    /// In microseconds.
+    uint32 latency;
+    /// The number of operating points in opp.
+    uint32 count;
+};
 
 [Layout = "ddk-protocol"]
 protocol Scpi {
     GetSensor(string name) -> (zx.status s, uint32 sensor_id);
     GetSensorValue(uint32 sensor_id) -> (zx.status s, uint32 sensor_value);
-    GetDvfsInfo(uint8 power_domain) -> (zx.status s, zircon.device.scpi.ScpiOpp opps);
+    GetDvfsInfo(uint8 power_domain) -> (zx.status s, ScpiOpp opps);
     GetDvfsIdx(uint8 power_domain) -> (zx.status s, uint16 index);
     SetDvfsIdx(uint8 power_domain, uint16 index) -> (zx.status s);
 };

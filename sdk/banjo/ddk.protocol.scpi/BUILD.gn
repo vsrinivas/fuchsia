@@ -6,5 +6,4 @@ import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.scpi") {
   sources = [ "scpi.banjo" ]
-  deps = [ "//sdk/banjo/zircon.device.scpi" ]
 }

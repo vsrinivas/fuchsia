@@ -139,7 +139,7 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
                          kExpectedLittleClusterOpp);
 
   zx_status_t status;
-  scpi_opp_t out_opp;
+  fuchsia_hardware_thermal_OperatingPoint out_opp;
 
   EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsInfo(
       client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,

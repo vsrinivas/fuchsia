@@ -86,7 +86,6 @@ template("sherlock_driver") {
       "//sdk/banjo/ddk.protocol.iommu",
       "//sdk/banjo/ddk.protocol.platform.bus",
       "//sdk/banjo/ddk.protocol.platform.device",
-      "//sdk/banjo/ddk.protocol.scpi",
       "//sdk/banjo/ddk.protocol.sdmmc",
       "//sdk/banjo/ddk.protocol.serial",
       "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",

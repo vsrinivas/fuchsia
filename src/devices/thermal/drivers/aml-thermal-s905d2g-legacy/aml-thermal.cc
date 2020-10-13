@@ -247,7 +247,7 @@ zx_status_t AmlThermal::GetDeviceInfo(fidl_txn_t* txn) {
 
 zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn) {
-  scpi_opp_t opps = {};
+  fuchsia_hardware_thermal_OperatingPoint opps = {};
   opps = thermal_config_.opps[power_domain];
   return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, &opps);
 }

@@ -12,7 +12,6 @@
 #include <memory>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/scpi.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/pwm.h>
 #include <soc/aml-common/aml-pwm-regs.h>

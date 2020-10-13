@@ -13,7 +13,6 @@
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/scpi.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/composite.h>
 #include <hwreg/mmio.h>

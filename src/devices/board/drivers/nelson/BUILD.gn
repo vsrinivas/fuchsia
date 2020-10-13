@@ -50,7 +50,6 @@ driver_module("nelson") {
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_c",

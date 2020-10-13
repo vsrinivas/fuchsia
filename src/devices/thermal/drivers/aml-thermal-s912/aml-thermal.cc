@@ -29,6 +29,21 @@ enum {
   FRAGMENT_COUNT,
 };
 
+fuchsia_hardware_thermal_OperatingPoint ScpiToThermalOpps(const scpi_opp_t& opps) {
+  fuchsia_hardware_thermal_OperatingPoint thermal_opps = {
+      .opp = {},
+      .latency = opps.latency,
+      .count = opps.count,
+  };
+  for (uint32_t i = 0; i < opps.count; i++) {
+    thermal_opps.opp[i] = {
+        .freq_hz = opps.opp[i].freq_hz,
+        .volt_uv = opps.opp[i].volt_uv,
+    };
+  }
+  return thermal_opps;
+}
+
 }  // namespace
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
@@ -120,7 +135,9 @@ zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_d
 
   scpi_opp_t opps = {};
   auto status = scpi_.GetDvfsInfo(static_cast<uint8_t>(power_domain), &opps);
-  return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, status, &opps);
+
+  const fuchsia_hardware_thermal_OperatingPoint thermal_opps = ScpiToThermalOpps(opps);
+  return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, status, &thermal_opps);
 }
 
 zx_status_t AmlThermal::GetTemperatureCelsius(fidl_txn_t* txn) {
@@ -233,19 +250,23 @@ zx_status_t AmlThermal::Init(zx_device_t* dev) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = scpi_.GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
-                             &info_.opps[0]);
+  scpi_opp_t opps;
+  status = scpi_.GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &opps);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get bigcluster dvfs opps: %d", status);
     return status;
   }
 
-  status = scpi_.GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
-                             &info_.opps[1]);
+  info_.opps[0] = ScpiToThermalOpps(opps);
+
+  status =
+      scpi_.GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, &opps);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get littlecluster dvfs opps: %d", status);
     return status;
   }
+
+  info_.opps[1] = ScpiToThermalOpps(opps);
 
   auto start_thread = [](void* arg) { return static_cast<AmlThermal*>(arg)->Worker(); };
   status = thrd_create_with_name(&worker_, start_thread, this, "aml_thermal_notify_thread");

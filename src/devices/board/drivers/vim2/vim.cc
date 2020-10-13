@@ -24,7 +24,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/scpi.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>

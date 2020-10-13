@@ -52,7 +52,6 @@ test("aml-meson-power-test") {
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/banjo/ddk.protocol.pwm",
     "//sdk/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
-    "//sdk/banjo/ddk.protocol.scpi",
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/banjo/ddk.protocol.vreg",
     "//sdk/banjo/ddk.protocol.vreg:ddk.protocol.vreg_mock",
