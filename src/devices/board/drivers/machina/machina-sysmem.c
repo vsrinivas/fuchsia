@@ -44,9 +44,8 @@ static const pbus_dev_t sysmem_dev = {
 zx_status_t machina_sysmem_init(machina_board_t* bus) {
   zx_status_t status;
 
-  if ((status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_SYSMEM, &sysmem_dev)) != ZX_OK) {
-    zxlogf(ERROR, "machina_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d",
-           status);
+  if ((status = pbus_device_add(&bus->pbus, &sysmem_dev)) != ZX_OK) {
+    zxlogf(ERROR, "machina_sysmem_init: pbus_protocol_device_add() failed for sysmem: %d", status);
     return status;
   }
 

@@ -48,7 +48,7 @@ zx_status_t Mt8167::SysmemInit() {
     return ret;
   }();
 
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_SYSMEM, &sysmem_dev);
+  zx_status_t status = pbus_.DeviceAdd(&sysmem_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
     return status;

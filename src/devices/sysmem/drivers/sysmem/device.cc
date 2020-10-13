@@ -348,8 +348,7 @@ zx_status_t Device::Bind() {
   ddk::PBusProtocolClient pbus;
   status = ddk::PBusProtocolClient::CreateFromDevice(parent_, &pbus);
   if (status != ZX_OK) {
-    DRIVER_ERROR("ZX_PROTOCOL_PBUS not available %d \n", status);
-    return status;
+    zxlogf(INFO, "ZX_PROTOCL_PBUS not available %d", status);
   }
 
   status = DdkAdd(ddk::DeviceAddArgs("sysmem")
@@ -360,20 +359,23 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  // Register the sysmem protocol with the platform bus.
-  //
-  // This is essentially the in-proc version of
-  // fuchsia.sysmem.DriverConnector.
-  //
-  // We should only pbus_register_protocol() if device_add() succeeded, but if
-  // pbus_register_protocol() fails, we should remove the device without it
-  // ever being visible.
-  // TODO(fxbug.dev/33536) Remove this after all clients have switched to using composite protocol.
-  status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
-                                 sizeof(in_proc_sysmem_protocol_));
-  if (status != ZX_OK) {
-    DdkAsyncRemove();
-    return status;
+  if (pbus.is_valid()) {
+    // Register the sysmem protocol with the platform bus.
+    //
+    // This is essentially the in-proc version of
+    // fuchsia.sysmem.DriverConnector.
+    //
+    // We should only pbus_register_protocol() if device_add() succeeded, but if
+    // pbus_register_protocol() fails, we should remove the device without it
+    // ever being visible.
+    // TODO(fxbug.dev/33536) Remove this after all clients have switched to using composite
+    // protocol.
+    status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM, &in_proc_sysmem_protocol_,
+                                   sizeof(in_proc_sysmem_protocol_));
+    if (status != ZX_OK) {
+      DdkAsyncRemove();
+      return status;
+    }
   }
 
   return ZX_OK;

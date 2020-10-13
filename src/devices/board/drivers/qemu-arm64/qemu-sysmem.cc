@@ -45,7 +45,7 @@ zx_status_t QemuArm64::SysmemInit() {
   sysmem_dev.metadata_list = kSysmemMetadataList;
   sysmem_dev.metadata_count = countof(kSysmemMetadataList);
 
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_SYSMEM, &sysmem_dev);
+  zx_status_t status = pbus_.DeviceAdd(&sysmem_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __func__, status);
     return status;

@@ -47,7 +47,7 @@ static const pbus_dev_t sysmem_dev = []() {
 zx_status_t Vim3::SysmemInit() {
   zx_status_t status;
 
-  if ((status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_SYSMEM, &sysmem_dev)) != ZX_OK) {
+  if ((status = pbus_.DeviceAdd(&sysmem_dev)) != ZX_OK) {
     zxlogf(ERROR, "SysmemInit: pbus_protocol_device_add() failed for sysmem: %d", status);
     return status;
   }

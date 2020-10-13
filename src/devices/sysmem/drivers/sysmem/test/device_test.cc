@@ -35,6 +35,7 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size) {
+    registered_proto_id_ = proto_id;
     return ZX_OK;
   }
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
@@ -50,8 +51,11 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  uint32_t registered_proto_id() const { return registered_proto_id_; }
+
  private:
   pbus_protocol_t proto_;
+  uint32_t registered_proto_id_ = 0;
 };
 
 class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
@@ -108,9 +112,8 @@ TEST(Device, OverrideCommandLine) {
 class FakeDdkSysmem : public zxtest::Test {
  public:
   void SetUp() override {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
-    protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
-    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
+    protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
     ddk_.SetProtocols(std::move(protocols));
     EXPECT_EQ(sysmem_.Bind(), ZX_OK);
   }
@@ -140,11 +143,24 @@ class FakeDdkSysmem : public zxtest::Test {
   sysmem_driver::Driver sysmem_ctx_;
   sysmem_driver::Device sysmem_{fake_ddk::kFakeParent, &sysmem_ctx_};
 
-  FakePBus pbus_;
   FakePDev pdev_;
   // ddk must be destroyed before sysmem because it may be executing messages against sysmem on
   // another thread.
   fake_ddk::Bind ddk_;
+};
+
+class FakeDdkSysmemPbus : public FakeDdkSysmem {
+ public:
+  void SetUp() override {
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[2], 2);
+    protocols[0] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
+    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
+    ddk_.SetProtocols(std::move(protocols));
+    EXPECT_EQ(sysmem_.Bind(), ZX_OK);
+  }
+
+ protected:
+  FakePBus pbus_;
 };
 
 TEST_F(FakeDdkSysmem, TearDownLoop) {
@@ -334,6 +350,8 @@ TEST_F(FakeDdkSysmem, MaxSize) {
   EXPECT_NE(ZX_OK, fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(),
                                                                           &status, &info));
 }
+
+TEST_F(FakeDdkSysmemPbus, Register) { EXPECT_EQ(ZX_PROTOCOL_SYSMEM, pbus_.registered_proto_id()); }
 
 }  // namespace
 }  // namespace sysmem_driver
