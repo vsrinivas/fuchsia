@@ -34,10 +34,14 @@ pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + Partia
     fn default_value() -> Self;
 
     fn deserialize_from(value: &String) -> Self {
-        serde_json::from_str(&value).unwrap_or_else(|_| {
-            fx_log_err!("unable to deserialize setting value");
+        Self::extract(&value).unwrap_or_else(|error| {
+            fx_log_err!("error occurred:{:?}", error);
             Self::default_value()
         })
+    }
+
+    fn extract(value: &String) -> Result<Self, Error> {
+        serde_json::from_str(&value).map_err(|_| format_err!("could not deserialize"))
     }
 
     fn serialize_to(&self) -> String {
@@ -493,5 +497,70 @@ mod tests {
 
             assert_eq!(data, retrieved_struct);
         }
+    }
+
+    // This mod includes structs to only be used by
+    // test_device_compatible_migration tests.
+    mod test_device_compatible_migration {
+        use crate::handler::device_storage::DeviceStorageCompatible;
+        use serde::{Deserialize, Serialize};
+
+        pub const DEFAULT_V1_VALUE: i32 = 1;
+        pub const DEFAULT_CURRENT_VALUE: i32 = 2;
+        pub const DEFAULT_CURRENT_VALUE_2: i32 = 3;
+
+        #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
+        pub struct V1 {
+            pub value: i32,
+        }
+
+        impl DeviceStorageCompatible for V1 {
+            const KEY: &'static str = "testkey";
+
+            fn default_value() -> Self {
+                Self { value: DEFAULT_V1_VALUE }
+            }
+        }
+
+        #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
+        pub struct Current {
+            pub value: i32,
+            pub value_2: i32,
+        }
+
+        impl From<V1> for Current {
+            fn from(v1: V1) -> Self {
+                Current { value: v1.value, value_2: DEFAULT_CURRENT_VALUE_2 }
+            }
+        }
+
+        impl DeviceStorageCompatible for Current {
+            const KEY: &'static str = "testkey2";
+
+            fn default_value() -> Self {
+                Self { value: DEFAULT_CURRENT_VALUE, value_2: DEFAULT_CURRENT_VALUE_2 }
+            }
+
+            fn deserialize_from(value: &String) -> Self {
+                Self::extract(&value).unwrap_or_else(|_| {
+                    V1::extract(&value).map_or(Self::default_value(), Self::from)
+                })
+            }
+        }
+    }
+
+    #[test]
+    fn test_device_compatible_custom_migration() {
+        // Create an initial struct based on the first version.
+        let initial = test_device_compatible_migration::V1::default_value();
+        // Serialize.
+        let initial_serialized = initial.serialize_to();
+
+        // Deserialize using the second version.
+        let current =
+            test_device_compatible_migration::Current::deserialize_from(&initial_serialized);
+        // Assert values carried over from first version and defaults are used for rest.
+        assert_eq!(current.value, test_device_compatible_migration::DEFAULT_V1_VALUE);
+        assert_eq!(current.value_2, test_device_compatible_migration::DEFAULT_CURRENT_VALUE_2);
     }
 }
