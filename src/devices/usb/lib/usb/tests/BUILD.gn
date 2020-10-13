@@ -25,7 +25,7 @@ test("usb-request-test") {
     "//sdk/banjo/ddk.protocol.usb.request",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",

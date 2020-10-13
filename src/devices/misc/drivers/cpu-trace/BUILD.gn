@@ -78,7 +78,7 @@ test("perf-mon-tests") {
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",

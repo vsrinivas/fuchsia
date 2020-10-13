@@ -52,7 +52,7 @@ test("virtio-input-test") {
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

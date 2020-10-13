@@ -28,8 +28,8 @@ test("mt8167-audio-lib-test") {
   deps = [
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
-    "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

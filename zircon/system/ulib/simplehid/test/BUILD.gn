@@ -37,7 +37,7 @@ test("simplehid") {
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

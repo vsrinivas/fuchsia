@@ -96,7 +96,7 @@ test("platform-bus-unittest") {
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

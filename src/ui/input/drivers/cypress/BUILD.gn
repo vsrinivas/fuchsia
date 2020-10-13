@@ -48,7 +48,7 @@ test("cypress-touch-test") {
     "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/testing/mock-i2c",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/ui/input/testing/fake-hidbus-ifc",
