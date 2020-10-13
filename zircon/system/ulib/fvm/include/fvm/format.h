@@ -234,9 +234,7 @@ struct Header {
   //   1 <= |maximum valid pslice| <= pslice_count
   //
   // IMPORTANT NOTE: Due to fxbug.dev/59980, this value is one less than the number of entries worth
-  // of space in the allocation table because there is an unused 0 entry. Always compute with
-  // UsableSlicesCountOrZero() in fvm.cc to account for some edge conditions. See also
-  // allocation_table_size below.
+  // of space in the allocation table because there is an unused 0 entry.
   uint64_t pslice_count = 0;
 
   // Size of the each slice in bytes. Must be a multiple of kBlockSize.
@@ -447,14 +445,6 @@ constexpr size_t BackupStart(size_t total_size, size_t slice_size) {
 
 constexpr size_t SlicesStart(size_t total_size, size_t slice_size) {
   return 2 * MetadataSizeForDiskSize(total_size, slice_size);
-}
-
-constexpr size_t UsableSlicesCount(size_t total_size, size_t slice_size) {
-  size_t slices_start = SlicesStart(total_size, slice_size);
-  if (total_size < slices_start) {
-    return 0;
-  }
-  return (total_size - slices_start) / slice_size;
 }
 
 constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t block_count) {

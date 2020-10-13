@@ -18,8 +18,7 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t slices = fvm::UsableSlicesCount(disk_size, slice_size);
-  fvm::Header header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slices, slice_size);
+  fvm::Header header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size);
   auto metadata_or = fvm::Metadata::Synthesize(header, nullptr, 0, nullptr, 0);
   if (metadata_or.is_error()) {
     fprintf(stderr, "Failed to create metadata: %d\n", metadata_or.status_value());
@@ -39,7 +38,7 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
           sb->GetAllocationTableAllocatedByteSize());
   xprintf("fvm_init: Backup meta starts at: %zu\n", fvm::BackupStart(disk_size, slice_size));
   xprintf("fvm_init: Slices start at %zu, there are %zu of them\n",
-          fvm::SlicesStart(disk_size, slice_size), fvm::UsableSlicesCount(disk_size, slice_size));
+          fvm::SlicesStart(disk_size, slice_size), sb->GetAllocationTableAllocatedEntryCount());
 
   return ZX_OK;
 }
@@ -108,11 +107,9 @@ bool FvmInfo::Validate() const {
 zx_status_t FvmInfo::Write(fvm::host::FileWrapper* file, size_t disk_offset, size_t disk_size) {
   if (disk_size != SuperBlock().fvm_partition_size) {
     // If the disk size has changed, update and attempt to grow metadata.
-    size_t slices = fvm::UsableSlicesCount(disk_size, SliceSize());
-    const fvm::Header header = fvm::Header::FromSliceCount(
-        SuperBlock().GetPartitionTableEntryCount(), slices, SliceSize());
-    zx_status_t status = Grow(header);
-    if (status != ZX_OK) {
+    const fvm::Header header =
+        fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, SliceSize());
+    if (zx_status_t status = Grow(header); status != ZX_OK) {
       return status;
     }
   }

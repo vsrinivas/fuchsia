@@ -114,6 +114,10 @@ SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t
 
 SparseContainer::~SparseContainer() = default;
 
+uint64_t SparseContainer::MaximumDiskSize() const {
+  return (image_.maximum_disk_size == 0) ? disk_size_ : image_.maximum_disk_size;
+}
+
 zx_status_t SparseContainer::InitNew() {
   if (slice_size_ == 0) {
     fprintf(stderr, "Cannot initialize sparse container with no slice size\n");
@@ -343,18 +347,18 @@ zx_status_t SparseContainer::UsedSize(uint64_t* out_size) const {
 zx_status_t SparseContainer::CheckDiskSize(uint64_t target_disk_size) const {
   CheckValid();
 
-  size_t usable_slices = fvm::UsableSlicesCount(target_disk_size, image_.slice_size);
+  fvm::Header fvm_header = GetFvmConfiguration(target_disk_size);
+  size_t usable_slices = fvm_header.GetAllocationTableAllocatedEntryCount();
   size_t required_slices = SliceCount();
 
   if (usable_slices < required_slices) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  uint64_t required_disk_size =
-      fvm::SlicesStart(target_disk_size, image_.slice_size) + (required_slices * image_.slice_size);
-  if (target_disk_size < required_disk_size) {
+  // Compute the header representing the required slices.
+  fvm_header.SetSliceCount(required_slices);
+  if (target_disk_size < fvm_header.fvm_partition_size)
     return ZX_ERR_OUT_OF_RANGE;
-  }
 
   return ZX_OK;
 }
@@ -786,6 +790,6 @@ void SparseContainer::CheckValid() const {
   }
 }
 
-uint64_t SparseContainer::MaximumDiskSize() const {
-  return (image_.maximum_disk_size == 0) ? disk_size_ : image_.maximum_disk_size;
+fvm::Header SparseContainer::GetFvmConfiguration(uint64_t target_disk_size) const {
+  return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, target_disk_size, image_.slice_size);
 }

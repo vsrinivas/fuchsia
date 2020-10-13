@@ -333,6 +333,8 @@ class SparseContainer final : public Container {
   // Format::Detect()). |out| has a unit which is dependent on the function called.
   zx_status_t PartitionsIterator(UsedSize_f* used_size_f, uint64_t* out) const;
   void CheckValid() const;
+
+  fvm::Header GetFvmConfiguration(uint64_t target_disk_size) const;
 };
 
 #endif  // FVM_HOST_CONTAINER_H_

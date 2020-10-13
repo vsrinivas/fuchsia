@@ -44,21 +44,23 @@ void QueryInfo(const TestFilesystem& fs, fio::FilesystemInfo* info) {
   // blocks which are reserved but not yet allocated won't be counted.
   fbl::unique_fd root_fd = fs.GetRootFd();
   fsync(root_fd.get());
+
   fdio_cpp::FdioCaller caller(std::move(root_fd));
   auto result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);
   ASSERT_NE(result.Unwrap()->info, nullptr);
   *info = *(result.Unwrap()->info);
-  const char* kFsName = "minfs";
+
   // For now, info->name.data is a fixed size array.
+  const char* kFsName = "minfs";
   ASSERT_EQ(memcmp(info->name.data(), kFsName, strlen(kFsName) + 1), 0)
       << "Unexpected filesystem mounted";
+
   ASSERT_EQ(info->block_size, minfs::kMinfsBlockSize);
   ASSERT_EQ(info->max_filename_size, minfs::kMinfsMaxNameSize);
   ASSERT_EQ(info->fs_type, VFS_TYPE_MINFS);
   ASSERT_NE(info->fs_id, 0ul);
-
   ASSERT_EQ(info->used_bytes % info->block_size, 0ul);
   ASSERT_EQ(info->total_bytes % info->block_size, 0ul);
 }
@@ -191,35 +193,24 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
   }
 };
 
-// Verify initial conditions on a filesystem, and validate that filesystem
-// modifications adjust the query info accordingly.
+// Verify initial conditions on a filesystem, and validate that filesystem modifications adjust the
+// query info accordingly.
 TEST_F(MinfsFvmTest, QueryInfo) {
-  const uint64_t device_size = fs().options().device_block_size * fs().options().device_block_count;
-  const uint64_t total_slices = fvm::UsableSlicesCount(device_size, fs().options().fvm_slice_size);
-  // kMinfsMinimumSlices assumes a slice size of at least 1 MiB, so adjust for that here.
-  const size_t default_journal_bytes =
-      minfs::TransactionLimits::kDefaultJournalBlocks * minfs::kMinfsBlockSize;
-  const size_t free_slices =
-      total_slices - minfs::kMinfsMinimumSlices + (default_journal_bytes + 1'048'575) / 1'048'576 -
-      (default_journal_bytes + fs().options().fvm_slice_size - 1) / fs().options().fvm_slice_size;
-
-  ExpectedQueryInfo expected_info = {};
-  expected_info.total_bytes = fs().options().fvm_slice_size;
-  // TODO(fxbug.dev/31276): Adjust this once minfs accounting on truncate is fixed.
-  expected_info.used_bytes = 2 * minfs::kMinfsBlockSize;
-  // The inode table's implementation is currently a flat array on disk.
-  expected_info.total_nodes = fs().options().fvm_slice_size / sizeof(minfs::Inode);
-  // The "zero-th" inode is reserved, as well as the root directory.
-  expected_info.used_nodes = 2;
-  // The remainder of the FVM should be unused during this filesystem test.
-  expected_info.free_shared_pool_bytes = free_slices * fs().options().fvm_slice_size;
   fio::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
-  ASSERT_NO_FATAL_FAILURE(VerifyQueryInfo(expected_info));
+
+  EXPECT_EQ(fs().options().fvm_slice_size, info.total_bytes);
+  // TODO(fxbug.dev/31276): Adjust this once minfs accounting on truncate is fixed.
+  EXPECT_EQ(2 * minfs::kMinfsBlockSize, info.used_bytes);
+  // The inode table's implementation is currently a flat array on disk.
+  EXPECT_EQ(fs().options().fvm_slice_size / sizeof(minfs::Inode), info.total_nodes);
+  // The "zero-th" inode is reserved, as well as the root directory.
+  const uint64_t kInitialUsedNodes = 2;
+  EXPECT_EQ(kInitialUsedNodes, info.used_nodes);
 
   // Allocate kExtraNodeCount new files, each using truncated (sparse) files.
-  const int kExtraNodeCount = 16;
-  for (int i = 0; i < kExtraNodeCount; i++) {
+  const uint64_t kExtraNodeCount = 16;
+  for (uint64_t i = 0; i < kExtraNodeCount; i++) {
     const std::string path = GetPath("file_" + std::to_string(i));
 
     fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR));
@@ -227,10 +218,9 @@ TEST_F(MinfsFvmTest, QueryInfo) {
     ASSERT_EQ(ftruncate(fd.get(), 30 * 1024), 0);
   }
 
-  // Adjust our query expectations: We should see 16 new nodes, but no other
-  // difference.
-  expected_info.used_nodes += kExtraNodeCount;
-  ASSERT_NO_FATAL_FAILURE(VerifyQueryInfo(expected_info));
+  // Adjust our query expectations: We should see the new nodes.
+  ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
+  EXPECT_EQ(kInitialUsedNodes + kExtraNodeCount, info.used_nodes);
 }
 
 // Validate that Minfs metrics are functioning correctly.

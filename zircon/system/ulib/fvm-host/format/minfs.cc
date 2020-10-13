@@ -73,8 +73,6 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t kBlocksPerSlice = fvm_info_.slice_size / minfs::kMinfsBlockSize;
-
   uint64_t minimum_inodes = reserve->inodes().request.value_or(0);
   uint32_t ibm_blocks = fvm_info_.abm_block - fvm_info_.ibm_block;
   uint32_t ino_blocks = fvm_info_.integrity_start_block - fvm_info_.ino_block;
@@ -100,26 +98,25 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
 
   uint32_t integrity_blocks = fvm_info_.dat_block - fvm_info_.integrity_start_block;
 
-  // TODO(planders): Once blobfs journaling patch is landed, use fvm::BlocksToSlices() here.
-  fvm_info_.ibm_slices =
-      safemath::checked_cast<uint32_t>((ibm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
-  fvm_info_.abm_slices =
-      safemath::checked_cast<uint32_t>((abm_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
-  fvm_info_.ino_slices =
-      safemath::checked_cast<uint32_t>((ino_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
+  fvm_info_.ibm_slices = safemath::checked_cast<uint32_t>(
+      fvm::BlocksToSlices(fvm_info_.slice_size, minfs::kMinfsBlockSize, ibm_blocks));
+  fvm_info_.abm_slices = safemath::checked_cast<uint32_t>(
+      fvm::BlocksToSlices(fvm_info_.slice_size, minfs::kMinfsBlockSize, abm_blocks));
+  fvm_info_.ino_slices = safemath::checked_cast<uint32_t>(
+      fvm::BlocksToSlices(fvm_info_.slice_size, minfs::kMinfsBlockSize, ino_blocks));
 
   // TODO(planders): Weird things may happen if we grow the journal here while it contains valid
   //                 entries. Make sure to account for this case (or verify that the journal is
   //                 resolved prior to extension).
   minfs::TransactionLimits limits(fvm_info_);
   integrity_blocks = std::max(integrity_blocks, limits.GetRecommendedIntegrityBlocks());
-  fvm_info_.integrity_slices =
-      safemath::checked_cast<uint32_t>((integrity_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
-  fvm_info_.dat_slices =
-      safemath::checked_cast<uint32_t>((dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
+  fvm_info_.integrity_slices = safemath::checked_cast<uint32_t>(
+      fvm::BlocksToSlices(fvm_info_.slice_size, minfs::kMinfsBlockSize, integrity_blocks));
+  fvm_info_.dat_slices = safemath::checked_cast<uint32_t>(
+      fvm::BlocksToSlices(fvm_info_.slice_size, minfs::kMinfsBlockSize, dat_blocks));
 
-  xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
-          kBlocksPerSlice);
+  xprintf("Minfs: slice_size is %" PRIu64 ", block size is %zu\n", fvm_info_.slice_size,
+          minfs::kMinfsBlockSize);
   xprintf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
   xprintf("Minfs: abm_blocks: %u, abm_slices: %u\n", abm_blocks, fvm_info_.abm_slices);
   xprintf("Minfs: ino_blocks: %u, ino_slices: %u\n", ino_blocks, fvm_info_.ino_slices);
@@ -139,8 +136,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
 
   reserve->set_data_reserved(fvm_info_.dat_slices * fvm_info_.slice_size);
   reserve->set_inodes_reserved(fvm_info_.inode_count);
-  reserve->set_total_bytes_reserved(CalculateVsliceCount(fvm_info_) * kBlocksPerSlice *
-                                    minfs::kMinfsBlockSize);
+  reserve->set_total_bytes_reserved(CalculateVsliceCount(fvm_info_) * fvm_info_.slice_size);
   if (!reserve->Approved()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }

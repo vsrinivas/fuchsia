@@ -70,14 +70,18 @@
 
 namespace {
 
-/////////////////////// Helper functions for creating FVM:
-
 using filesystem_info_t = fuchsia_io_FilesystemInfo;
 using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 
 constexpr char kTmpfsPath[] = "/fvm-tmp";
 constexpr char kMountPath[] = "/fvm-tmp/minfs_test_mountpath";
 constexpr char kTestDevPath[] = "/fake/dev";
+
+// Returns the number of usable slices for a standard layout on a given-sized device.
+size_t UsableSlicesCount(size_t disk_size, size_t slice_size) {
+  return fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, disk_size, slice_size)
+      .GetAllocationTableUsedEntryCount();
+}
 
 typedef struct {
   const char* name;
@@ -656,7 +660,7 @@ TEST_F(FvmTest, TestVPartitionExtend) {
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
   constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
-  size_t slices_total = fvm::UsableSlicesCount(kDiskSize, slice_size);
+  size_t slices_total = UsableSlicesCount(kDiskSize, slice_size);
   size_t slices_left = slices_total;
 
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
@@ -758,7 +762,7 @@ TEST_F(FvmTest, TestVPartitionExtendSparse) {
   fbl::unique_fd fd = fvm_device();
   ASSERT_TRUE(fd);
 
-  size_t slices_left = fvm::UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
+  size_t slices_left = UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
 
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
@@ -828,7 +832,7 @@ TEST_F(FvmTest, TestVPartitionShrink) {
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
   const size_t kDiskSize = kBlockSize * kBlockCount;
-  size_t slices_total = fvm::UsableSlicesCount(kDiskSize, slice_size);
+  size_t slices_total = UsableSlicesCount(kDiskSize, slice_size);
   size_t slices_left = slices_total;
 
   FVMCheckAllocatedCount(fd, slices_total - slices_left, slices_total);
@@ -950,7 +954,7 @@ TEST_F(FvmTest, TestVPartitionSplit) {
   volume_info_t volume_info;
   ASSERT_EQ(fvm_query(fd.get(), &volume_info), ZX_OK);
   size_t slice_size = volume_info.slice_size;
-  size_t slices_left = fvm::UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
+  size_t slices_left = UsableSlicesCount(kBlockSize * kBlockCount, kSliceSize);
 
   // Allocate one VPart
   alloc_req_t request;
@@ -1460,7 +1464,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  size_t usable_slices_per_vpart = fvm::UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
+  size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
   while (vparts[i].slices_used < usable_slices_per_vpart) {
     int vfd = vparts[i].fd.get();
@@ -1607,7 +1611,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  size_t usable_slices_per_vpart = fvm::UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
+  size_t usable_slices_per_vpart = UsableSlicesCount(kDiskSize, kSliceSize) / kNumVParts;
   size_t i = 0;
   while (vparts[i].slices_used < usable_slices_per_vpart) {
     int vfd = vparts[i].fd.get();
@@ -1661,7 +1665,7 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   ASSERT_TRUE(fd);
 
   constexpr uint64_t kDiskSize = kBlockSize * kBlockCount;
-  size_t slices_left = fvm::UsableSlicesCount(kDiskSize, kSliceSize);
+  size_t slices_left = UsableSlicesCount(kDiskSize, kSliceSize);
   const uint64_t kSliceCount = slices_left;
 
   volume_info_t volume_info;
