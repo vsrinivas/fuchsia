@@ -374,6 +374,7 @@ if (zx != "/" && zircon_toolchain == false) {
               "zircon/dlfcn.h",
               "zircon/sanitizer.h",
               "zircon/threads.h",
+              "zircon/utc.h",
             ]
           }
         },
