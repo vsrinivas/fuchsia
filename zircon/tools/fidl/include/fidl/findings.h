@@ -5,16 +5,6 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FINDINGS_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FINDINGS_H_
 
-///////////////////////////////////////////////////////////////
-// Even though this file is namespaced to "fidl::lint", it
-// could be promoted to the "fidl" namespace in the future.
-//
-// findings.h and findings.cpp should not have any
-// dependencies on the "Lint" process. They should be
-// generic enough to be useful for capturing and reporting
-// findings from other developer tools, such as fidlc.
-///////////////////////////////////////////////////////////////
-
 #include <list>
 #include <optional>
 #include <sstream>

@@ -10,9 +10,11 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include <fidl/findings.h>
 #include <fidl/findings_json.h>
 #include <fidl/lexer.h>
 #include <fidl/linter.h>
@@ -41,16 +43,34 @@ namespace {
   exit(2);  // Exit code 1 is reserved to indicate lint findings
 }
 
-bool Lint(const fidl::SourceFile& source_file, fidl::Findings* findings, fidl::Reporter* reporter,
+fidl::Finding DiagnosticToFinding(const fidl::Diagnostic& diag) {
+  const char* check_id;
+  switch (diag.kind) {
+    case fidl::DiagnosticKind::kError:
+      check_id = "parse-error";
+      break;
+    case fidl::DiagnosticKind::kWarning:
+      check_id = "parse-warning";
+      break;
+  }
+  assert(diag.span.has_value() && "Parser diagnostics should always have a source span");
+  return fidl::Finding(diag.span.value(), check_id, diag.msg);
+}
+
+void Lint(const fidl::SourceFile& source_file, fidl::Findings* findings,
           const std::set<std::string>& included_checks,
           const std::set<std::string>& excluded_checks, bool exclude_by_default,
           std::set<std::string>* excluded_checks_not_found) {
-  fidl::Lexer lexer(source_file, reporter);
+  fidl::Reporter reporter;
+  fidl::Lexer lexer(source_file, &reporter);
   fidl::ExperimentalFlags experimental_flags;
-  fidl::Parser parser(&lexer, reporter, experimental_flags);
+  fidl::Parser parser(&lexer, &reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
+  for (auto* diag : reporter.diagnostics()) {
+    findings->push_back(DiagnosticToFinding(*diag));
+  }
   if (!parser.Success()) {
-    return false;
+    return;
   }
 
   fidl::linter::Linter linter;
@@ -59,7 +79,7 @@ bool Lint(const fidl::SourceFile& source_file, fidl::Findings* findings, fidl::R
   linter.set_excluded_checks(excluded_checks);
   linter.set_exclude_by_default(exclude_by_default);
 
-  return linter.Lint(ast, findings, excluded_checks_not_found);
+  linter.Lint(ast, findings, excluded_checks_not_found);
 }
 
 }  // namespace
@@ -123,16 +143,12 @@ int main(int argc, char* argv[]) {
 
   fidl::Findings findings;
   bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
-  fidl::Reporter reporter(false, enable_color);
   for (const auto& source_file : source_manager.sources()) {
-    Lint(*source_file, &findings, &reporter, included_checks, excluded_and_disabled_checks,
-         exclude_by_default, &excluded_checks_not_found);
-    // Lint() returns true if no findings were added, but that information is not useful to the
-    // program at this point. We return a 0 or 1 status code based on the final size of the findings
-    // collection.
+    Lint(*source_file, &findings, included_checks, excluded_and_disabled_checks, exclude_by_default,
+         &excluded_checks_not_found);
   }
+
   if (options.format == "text") {
-    reporter.PrintReports();
     auto lints = fidl::utils::FormatFindings(findings, enable_color);
     for (const auto& lint : lints) {
       fprintf(stderr, "%s\n", lint.c_str());
@@ -153,5 +169,5 @@ int main(int argc, char* argv[]) {
   }
 
   // Exit with a status of '1' if there were any findings (at least one file was not "lint-free")
-  std::exit(findings.size() == 0 ? 0 : 1);
+  return findings.empty() ? 0 : 1;
 }
