@@ -502,7 +502,3 @@ _zx_futex_wake
 
 # ZX_PANIC_LIB
 __zx_panic
-
-# To be removed (fxbug.dev/38657)
-async_get_default_dispatcher
-async_set_default_dispatcher
