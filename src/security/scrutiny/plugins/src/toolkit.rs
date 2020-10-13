@@ -19,6 +19,7 @@ use {
     scrutiny_utils::{bootfs::*, env, fvm::*, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
+    std::collections::HashMap,
     std::fs::{self, File},
     std::io::prelude::*,
     std::io::Cursor,
@@ -48,14 +49,23 @@ impl DataController for ZbiExtractController {
         let zbi_sections = reader.parse()?;
 
         fs::create_dir_all(&output_path)?;
-        let mut section_count = 0;
+        let mut sections_dir = output_path.clone();
+        sections_dir.push("sections");
+        fs::create_dir_all(&sections_dir)?;
+        let mut section_count = HashMap::new();
         for section in zbi_sections.iter() {
-            let section_name = format!("{}_{:?}", section_count, section.section_type);
-            let mut path = output_path.clone();
+            let section_str = format!("{:?}", section.section_type).to_lowercase();
+            let section_name = if let Some(count) = section_count.get_mut(&section.section_type) {
+                *count += 1;
+                format!("{}.{}.blk", section_str, count)
+            } else {
+                section_count.insert(section.section_type, 0);
+                format!("{}.blk", section_str)
+            };
+            let mut path = sections_dir.clone();
             path.push(section_name);
             let mut file = File::create(path)?;
             file.write_all(&section.buffer)?;
-            section_count += 1;
 
             // Expand bootfs into its own folder as well.
             if section.section_type == ZbiType::StorageBootfs {

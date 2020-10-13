@@ -281,7 +281,7 @@ pub struct Protocol {
 /// Defines all of the known ZBI section types. These are used to partition
 /// the Zircon boot image into sections.
 #[repr(u32)]
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ZbiType {
     AcpiRsdp = 0x50445352,
     BootVersion = 0x53525642,
