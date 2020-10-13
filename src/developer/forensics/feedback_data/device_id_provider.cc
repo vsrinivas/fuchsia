@@ -54,8 +54,6 @@ std::string InitializeDeviceId(const std::string& path) {
 DeviceIdProvider::DeviceIdProvider(const std::string& path)
     : device_id_(InitializeDeviceId(path)) {}
 
-std::string DeviceIdProvider::GetId() { return device_id_; }
-
 void DeviceIdProvider::GetId(GetIdCallback callback) { callback(device_id_); }
 
 }  // namespace feedback_data

@@ -24,7 +24,6 @@
 #include "src/developer/forensics/feedback_data/attachments/inspect_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
@@ -33,6 +32,7 @@
 #include "src/developer/forensics/testing/stubs/board_info_provider.h"
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/inspect_archive.h"
 #include "src/developer/forensics/testing/stubs/inspect_batch_iterator.h"
 #include "src/developer/forensics/testing/stubs/last_reboot_info_provider.h"
@@ -87,7 +87,7 @@ const std::vector<std::string> kCurrentLogFilePaths = {
 
 class DatastoreTest : public UnitTestFixture {
  public:
-  DatastoreTest() : executor_(dispatcher()), device_id_provider_(kDeviceIdPath) {}
+  DatastoreTest() : executor_(dispatcher()) {}
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -103,7 +103,7 @@ class DatastoreTest : public UnitTestFixture {
                       const bool is_first_instance = true) {
     datastore_ =
         std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, &device_id_provider_, is_first_instance);
+                                    attachment_allowlist, is_first_instance);
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -117,6 +117,13 @@ class DatastoreTest : public UnitTestFixture {
     channel_provider_server_ = std::move(server);
     if (channel_provider_server_) {
       InjectServiceProvider(channel_provider_server_.get());
+    }
+  }
+
+  void SetUpDeviceIdProviderServer(std::unique_ptr<stubs::DeviceIdProviderBase> server) {
+    device_id_provider_server_ = std::move(server);
+    if (device_id_provider_server_) {
+      InjectServiceProvider(device_id_provider_server_.get());
     }
   }
 
@@ -169,8 +176,6 @@ class DatastoreTest : public UnitTestFixture {
     FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
   }
 
-  std::string device_id() { return device_id_provider_.GetId(); }
-
   ::fit::result<Annotations> GetAnnotations() {
     FX_CHECK(datastore_);
 
@@ -199,13 +204,13 @@ class DatastoreTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
-  DeviceIdProvider device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 
   // Stubs servers.
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
+  std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
   std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
   std::unique_ptr<stubs::LoggerBase> logger_server_;
@@ -277,17 +282,15 @@ TEST_F(DatastoreTest, GetAnnotations_Channel) {
 }
 
 TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>("device-id"));
   SetUpDatastore({kAnnotationDeviceFeedbackId}, kDefaultAttachmentsToAvoidSpuriousLogs);
 
   ::fit::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationDeviceFeedbackId, device_id()),
-                                        }));
-
-  EXPECT_THAT(GetStaticAnnotations(), ElementsAreArray({
-                                          Pair(kAnnotationDeviceFeedbackId, device_id()),
-                                      }));
+  EXPECT_THAT(annotations.take_value(),
+              ElementsAreArray({
+                  Pair(kAnnotationDeviceFeedbackId, AnnotationOr("device-id")),
+              }));
 
   ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false));
 }

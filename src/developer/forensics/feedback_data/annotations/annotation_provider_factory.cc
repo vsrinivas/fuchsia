@@ -11,6 +11,7 @@
 
 #include "src/developer/forensics/feedback_data/annotations/board_info_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/channel_provider.h"
+#include "src/developer/forensics/feedback_data/annotations/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/last_reboot_info_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/product_info_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/time_provider.h"
@@ -28,6 +29,7 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
   std::vector<std::unique_ptr<AnnotationProvider>> providers;
 
   providers.push_back(std::make_unique<BoardInfoProvider>(dispatcher, services, cobalt));
+  providers.push_back(std::make_unique<DeviceIdProviderClient>(dispatcher, services));
   providers.push_back(std::make_unique<LastRebootInfoProvider>(dispatcher, services, cobalt));
   providers.push_back(std::make_unique<ProductInfoProvider>(dispatcher, services, cobalt));
   providers.push_back(std::make_unique<TimeProvider>(std::make_unique<timekeeper::SystemClock>()));

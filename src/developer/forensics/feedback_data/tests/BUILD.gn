@@ -145,6 +145,7 @@ executable("datastore_unittest_exe") {
     "//src/developer/forensics/testing/stubs:board_info_provider",
     "//src/developer/forensics/testing/stubs:channel_provider",
     "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/developer/forensics/testing/stubs:device_id_provider",
     "//src/developer/forensics/testing/stubs:inspect",
     "//src/developer/forensics/testing/stubs:last_reboot_info_provider",
     "//src/developer/forensics/testing/stubs:logger",

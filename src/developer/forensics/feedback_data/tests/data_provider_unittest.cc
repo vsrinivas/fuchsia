@@ -25,7 +25,6 @@
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -138,8 +137,6 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderTest : public UnitTestFixture {
  public:
-  DataProviderTest() : device_id_provider_(kDeviceIdPath) {}
-
   void SetUp() override {
     // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
     // heap and then give |cobalt_| ownership of it. This allows us to control the time perceived by
@@ -153,9 +150,9 @@ class DataProviderTest : public UnitTestFixture {
  protected:
   void SetUpDataProvider(const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
                          const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
-    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
-                                             annotation_allowlist, attachment_allowlist,
-                                             &device_id_provider_, /*is_first_instance=*/true);
+    datastore_ =
+        std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
+                                    attachment_allowlist, /*is_first_instance=*/true);
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), clock_, /*is_first_instance=*/true, annotation_allowlist,
         attachment_allowlist, cobalt_.get(), datastore_.get());
@@ -206,7 +203,6 @@ class DataProviderTest : public UnitTestFixture {
   }
 
  private:
-  DeviceIdProvider device_id_provider_;
   // The lifetime of |clock_| is managed by |cobalt_|.
   timekeeper::TestClock* clock_;
   std::unique_ptr<cobalt::Logger> cobalt_;

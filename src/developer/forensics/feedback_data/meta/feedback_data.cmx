@@ -14,6 +14,7 @@
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            "fuchsia.feedback.DeviceIdProvider",
             "fuchsia.feedback.LastRebootInfoProvider",
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",

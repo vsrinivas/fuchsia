@@ -13,7 +13,6 @@
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
-#include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
@@ -39,8 +38,7 @@ class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
-            const AttachmentKeys& attachment_allowlist, DeviceIdProvider* device_id_provider,
-            bool is_first_instance);
+            const AttachmentKeys& attachment_allowlist, bool is_first_instance);
 
   ::fit::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fit::promise<Attachments> GetAttachments(zx::duration timeout);

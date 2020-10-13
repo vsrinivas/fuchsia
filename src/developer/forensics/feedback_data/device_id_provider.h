@@ -19,8 +19,6 @@ class DeviceIdProvider : public fuchsia::feedback::DeviceIdProvider {
  public:
   DeviceIdProvider(const std::string& path);
 
-  std::string GetId();
-
   // |fuchsia.feedback.DeviceIdProvider|
   void GetId(GetIdCallback callback) override;
 

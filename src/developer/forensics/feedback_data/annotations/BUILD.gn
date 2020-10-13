@@ -15,6 +15,8 @@ source_set("annotation_providers") {
     "annotation_provider.h",
     "annotation_provider_factory.cc",
     "annotation_provider_factory.h",
+    "device_id_provider.cc",
+    "device_id_provider.h",
     "time_provider.cc",
     "time_provider.h",
   ]
@@ -31,6 +33,7 @@ source_set("annotation_providers") {
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:time",
+    "//src/developer/forensics/utils/fidl:device_id_provider_ptr",
     "//src/lib/fxl",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",

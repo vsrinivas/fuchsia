@@ -6,15 +6,13 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_STATIC_ANNOTATIONS_H_
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/feedback_data/device_id_provider.h"
 
 namespace forensics {
 namespace feedback_data {
 
 // Synchronously fetches the static annotations, i.e. the annotations that don't change during a
 // boot cycle.
-Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
-                                 DeviceIdProvider* device_id_provider);
+Annotations GetStaticAnnotations(const AnnotationKeys& allowlist);
 
 }  // namespace feedback_data
 }  // namespace forensics

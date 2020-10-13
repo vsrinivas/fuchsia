@@ -22,9 +22,8 @@ namespace feedback_data {
 namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
-    kAnnotationBuildBoard,       kAnnotationBuildProduct, kAnnotationBuildLatestCommitDate,
-    kAnnotationBuildVersion,     kAnnotationBuildIsDebug, kAnnotationDeviceBoardName,
-    kAnnotationDeviceFeedbackId,
+    kAnnotationBuildBoard,   kAnnotationBuildProduct, kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildVersion, kAnnotationBuildIsDebug, kAnnotationDeviceBoardName,
 };
 
 AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
@@ -40,7 +39,7 @@ AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key, const std::s
   return value;
 }
 
-AnnotationOr BuildAnnotationOr(const AnnotationKey& key, DeviceIdProvider* device_id_provider) {
+AnnotationOr BuildAnnotationOr(const AnnotationKey& key) {
   if (key == kAnnotationBuildBoard) {
     return ReadAnnotationOrFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {
@@ -57,10 +56,7 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key, DeviceIdProvider* devic
 #endif
   } else if (key == kAnnotationDeviceBoardName) {
     return GetBoardName();
-  } else if (key == kAnnotationDeviceFeedbackId) {
-    return device_id_provider->GetId();
   }
-
   // We should never attempt to build a non-static annotation as a static annotation.
   FX_LOGS(FATAL) << "Attempting to get non-static annotation " << key << " as a static annotation";
   return AnnotationOr(Error::kNotSet);
@@ -68,12 +64,11 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key, DeviceIdProvider* devic
 
 }  // namespace
 
-Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
-                                 DeviceIdProvider* device_id_provider) {
+Annotations GetStaticAnnotations(const AnnotationKeys& allowlist) {
   Annotations annotations;
 
   for (const auto& key : RestrictAllowlist(allowlist, kSupportedAnnotations)) {
-    annotations.insert({key, BuildAnnotationOr(key, device_id_provider)});
+    annotations.insert({key, BuildAnnotationOr(key)});
   }
   return annotations;
 }

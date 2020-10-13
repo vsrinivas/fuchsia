@@ -27,15 +27,13 @@ namespace feedback_data {
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist,
-                     DeviceIdProvider* device_id_provider, const bool is_first_instance)
+                     const AttachmentKeys& attachment_allowlist, const bool is_first_instance)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(
-          feedback_data::GetStaticAnnotations(annotation_allowlist_, device_id_provider)),
+      static_annotations_(feedback_data::GetStaticAnnotations(annotation_allowlist_)),
       static_attachments_(
           feedback_data::GetStaticAttachments(attachment_allowlist_, cobalt, is_first_instance)),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {
