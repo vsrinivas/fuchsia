@@ -318,8 +318,9 @@ TEST_F(AnnotationManagerTest, NotFoundIfSessionDies) {
   //
   // If we send a Annotation ViewHolder create request before View1 is
   // actually created, the request should be deferred until View1
-  // exists.  If View1's session dies while the request is deferred, the request
-  // should fail with an error.
+  // exists.  If View1's session dies while the request is deferred, the
+  // callback of the request should not be executed because no new annotation
+  // ViewHolder is created.
 
   // Create Views.
   auto [view1_token, view_holder1_token] = scenic::ViewTokenPair::New();
@@ -382,14 +383,152 @@ TEST_F(AnnotationManagerTest, NotFoundIfSessionDies) {
   // Destroy View1's session.
   session_view1.reset();
 
-  // Try fulfilling the request again after View1 is created but the session is dead.  It should
-  // fail with an error.
+  // Try fulfilling the request again after View1 is created but the session is
+  // dead.
+  // The callback won't be triggered because there is no new Annotation
+  // ViewHolder created; and the AnnotationRegistryHandler should be still
+  // alive as this is not considered as a fatal error.
   annotation_manager()->FulfillCreateRequests();
   annotation_manager()->StageViewTreeUpdates();
   scene_graph()->ProcessViewTreeUpdates();
   EXPECT_FALSE(created);
-  EXPECT_EQ(handler_status, ZX_ERR_PEER_CLOSED);
-  EXPECT_TRUE(handler_removed);
+  EXPECT_EQ(handler_status, ZX_OK);
+  EXPECT_FALSE(handler_removed);
+}
+
+TEST_F(AnnotationManagerTest, HandlerAliveIfSessionDies) {
+  // Consider the following Resource Graph:
+  //
+  //                                  Scene
+  //                                    |
+  //                               EntityNode
+  //                                    |
+  //                       ------------------------------
+  //                       |                            |
+  //                       v                            v
+  //                 ViewHolder1                   ViewHolder2
+  //                  .`    |                       .`    |
+  //                .`      v                     .`      v
+  //             View1 ==> ViewNode1           View2 ==> ViewNode2
+  //               ||                            ||
+  //               V                             V
+  //            Annotation                    Annotation
+  //            ViewHolder                    ViewHolder
+  //
+  // If we send a Annotation ViewHolder create request before View1 is
+  // actually created, the request should be deferred until View1
+  // exists.  If View1's session dies while the request is deferred, the
+  // handler should be still alive and be able to handle other annotation
+  // ViewHolder creation requests.
+
+  // Create Views.
+  auto [view1_token, view_holder1_token] = scenic::ViewTokenPair::New();
+  auto [view1_ctrl_ref, view1_ref] = scenic::ViewRefPair::New();
+  fuchsia::ui::views::ViewRef view1_ref_for_creation;
+  view1_ref.Clone(&view1_ref_for_creation);
+
+  auto [view2_token, view_holder2_token] = scenic::ViewTokenPair::New();
+  auto [view2_ctrl_ref, view2_ref] = scenic::ViewRefPair::New();
+  fuchsia::ui::views::ViewRef view2_ref_for_creation;
+  view2_ref.Clone(&view2_ref_for_creation);
+
+  auto session_view1 = CreateAndRegisterSession();
+  auto session_view2 = CreateAndRegisterSession();
+  CommandContext cmds = CreateCommandContext();
+
+  // Create ViewHolders and attach it to scene.
+  Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
+  Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
+
+  Apply(scenic::NewCreateViewHolderCmd(kViewHolder2Id, std::move(view_holder2_token), "holder 2"));
+  Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder2Id));
+
+  // Try creating Annotation ViewHolder for View1.
+  auto [annotation_view1_token, annotation_view_holder1_token] = scenic::ViewTokenPair::New();
+  fuchsia::ui::views::ViewRef view1_ref_for_lookup;
+  view1_ref.Clone(&view1_ref_for_lookup);
+
+  // Try creating Annotation ViewHolder for View2.
+  auto [annotation_view2_token, annotation_view_holder2_token] = scenic::ViewTokenPair::New();
+  fuchsia::ui::views::ViewRef view2_ref_for_lookup;
+  view2_ref.Clone(&view2_ref_for_lookup);
+
+  bool annotation_view1_created = false;
+  bool annotation_view2_created = false;
+  bool handler_removed = false;
+  zx_status_t handler_status = ZX_OK;
+  constexpr AnnotationHandlerId kAnnotationHandlerId = 0;
+  annotation_manager()->RegisterHandler(kAnnotationHandlerId,
+                                        [&handler_status, &handler_removed](zx_status_t status) {
+                                          handler_status = status;
+                                          handler_removed = true;
+                                        });
+  annotation_manager()->RequestCreate(
+      kAnnotationHandlerId, std::move(view1_ref_for_lookup),
+      std::move(annotation_view_holder1_token),
+      [&annotation_view1_created]() { annotation_view1_created = true; });
+
+  // If the View doesn't exist in ViewTree yet, the Annotation View creation
+  // request is defered until View is created, but the handler (and the
+  // request) should be still alive.
+  annotation_manager()->FulfillCreateRequests();
+  annotation_manager()->StageViewTreeUpdates();
+  scene_graph()->ProcessViewTreeUpdates();
+  ASSERT_FALSE(annotation_view1_created);
+  EXPECT_EQ(handler_status, ZX_OK);
+  EXPECT_FALSE(handler_removed);
+
+  // Now we create View1.
+  session_view1->ApplyCommand(
+      &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
+                                      std::move(view1_ref_for_creation), "view 1"));
+  StageAndUpdateViewTree(scene_graph());
+
+  // Lookup View1 in the ResourceMap of Sessions to verify that it is created successfully.
+  // NOTE: The pointer must be temporary, so as not to keep the View alive after the Session is
+  // destroyed below.
+  {
+    ViewPtr view1_ptr = session_view1->resources()->FindResource<View>(kView1Id);
+    EXPECT_TRUE(view1_ptr && view1_ptr->GetViewNode());
+
+    EXPECT_EQ(view1_ptr->annotation_view_holders().size(), 0U);
+    EXPECT_EQ(view1_ptr->GetViewNode()->children().size(), 0U);
+  }
+
+  // Destroy View1's session.
+  session_view1.reset();
+
+  // Try fulfilling the request again after View1 is created but the session is
+  // dead.
+  // The callback won't be triggered because there is no new Annotation
+  // ViewHolder created; and the AnnotationRegistryHandler should be still
+  // alive as this is not considered as a fatal error.
+  annotation_manager()->FulfillCreateRequests();
+  annotation_manager()->StageViewTreeUpdates();
+  scene_graph()->ProcessViewTreeUpdates();
+  EXPECT_FALSE(annotation_view1_created);
+  EXPECT_EQ(handler_status, ZX_OK);
+  EXPECT_FALSE(handler_removed);
+
+  // Try creating another annotation ViewHolder to verify that the handler is
+  // still alive.
+  annotation_manager()->RequestCreate(
+      kAnnotationHandlerId, std::move(view2_ref_for_lookup),
+      std::move(annotation_view_holder2_token),
+      [&annotation_view2_created]() { annotation_view2_created = true; });
+
+  // Now we create View2.
+  session_view2->ApplyCommand(
+      &cmds, scenic::NewCreateViewCmd(kView2Id, std::move(view2_token), std::move(view2_ctrl_ref),
+                                      std::move(view2_ref_for_creation), "view 2"));
+  StageAndUpdateViewTree(scene_graph());
+
+  annotation_manager()->FulfillCreateRequests();
+  annotation_manager()->StageViewTreeUpdates();
+  scene_graph()->ProcessViewTreeUpdates();
+  EXPECT_TRUE(annotation_view2_created);
+  EXPECT_EQ(handler_status, ZX_OK);
+  EXPECT_FALSE(handler_removed);
 }
 
 TEST_F(AnnotationManagerTest, DelayCreateIfNotFound) {

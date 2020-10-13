@@ -85,11 +85,15 @@ void AnnotationManager::RequestCreate(AnnotationHandlerId handler_id, ViewRef ma
 
 void AnnotationManager::CleanupInvalidHandlerState(
     const std::vector<std::pair<AnnotationHandlerId, zx_status_t>>& invalid_handlers_info) {
+  std::unordered_set<AnnotationHandlerId> removed_handlers;
   // Clean up invalid handlers.
   for (const auto [handler_id, epitaph] : invalid_handlers_info) {
-    auto result = RemoveHandlerWithEpitaph(handler_id, epitaph);
-    FX_DCHECK(result) << "Remove annotation handler #" << handler_id
-                      << " failed: Handler doesn't exist.";
+    if (removed_handlers.find(handler_id) == removed_handlers.end()) {
+      auto result = RemoveHandlerWithEpitaph(handler_id, epitaph);
+      removed_handlers.insert(handler_id);
+      FX_DCHECK(result) << "Remove annotation handler #" << handler_id
+                        << " failed: Handler doesn't exist.";
+    }
   }
 }
 
@@ -114,6 +118,11 @@ void AnnotationManager::FulfillCreateRequests() {
       if (status == ZX_OK) {
         request.fulfilled = true;
         request.callback();
+      } else if (status == ZX_ERR_PEER_CLOSED) {
+        // This occurred when Session of |request.main_view| is destroyed
+        // before AnnotationManager handles the request. In this case we only
+        // need to remove it from the request list.
+        request.fulfilled = true;
       } else if (status != ZX_ERR_NOT_FOUND) {
         invalid_handlers_info.emplace_back(handler_id, status);
         break;
