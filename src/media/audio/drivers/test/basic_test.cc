@@ -93,6 +93,7 @@ void BasicTest::RequestStreamProperties() {
 
 // Request that the driver return its gain capabilities and current state.
 void BasicTest::RequestGain() {
+  ASSERT_FALSE(issued_set_gain_);  // Must request gain capabilities before seeting gain.
   // Since we reconnect to the audio stream every time we run this test and we are guaranteed by the
   // audio driver interface definition that the driver will reply to the first watch request, we
   // can get the gain state by issuing a watch FIDL call.
@@ -117,6 +118,10 @@ void BasicTest::RequestGain() {
     }
     EXPECT_GE(gain_state_.gain_db(), stream_props_.min_gain_db());
     EXPECT_LE(gain_state_.gain_db(), stream_props_.max_gain_db());
+
+    // We require that audio drivers have a default gain no greater than 0dB.
+    EXPECT_LE(gain_state_.gain_db(), 0.f);
+
     received_get_gain_ = true;
   });
   RunLoopUntil([this]() { return received_get_gain_; });
@@ -145,6 +150,7 @@ void BasicTest::RequestSetGain() {
   EXPECT_EQ(set_gain_state_.Clone(&gain_state), ZX_OK);
   AUDIO_LOG(DEBUG) << "Sent gain " << gain_state.gain_db();
   stream_config()->SetGain(std::move(gain_state));
+  issued_set_gain_ = true;
 }
 
 // Request that driver retrieve the current plug detection state.

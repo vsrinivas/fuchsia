@@ -33,6 +33,7 @@ class BasicTest : public TestBase {
   bool received_get_stream_properties_ = false;
   bool received_get_gain_ = false;
   bool received_plug_detect_ = false;
+  bool issued_set_gain_ = false;
 };
 
 }  // namespace media::audio::drivers::test
