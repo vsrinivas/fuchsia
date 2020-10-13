@@ -29,6 +29,7 @@ use {
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,
 	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles},
+	std::mem::ManuallyDrop
 };
 
 // BENCHMARKS is aggregated by a generated benchmark_suite.rs file, which is ultimately
@@ -103,42 +104,30 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 }
 
 fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
-	{{- if .HandleDefs }}
 	b.iter_batched_ref(
 		|| {
+			{{- if .HandleDefs }}
 			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
 			let handle_defs = unsafe { disown_handles(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
-			let original_value = &mut {{ .Value }};
+			{{- end }}
 			let mut bytes = Vec::<u8>::new();
 			let mut handles = Vec::<Handle>::new();
+			let original_value = &mut {{ .Value }};
 			Encoder::encode_with_context(_V1_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
-			(bytes, handles, {{ .ValueType }}::new_empty())
+			{{- /* Wrap handle in an Option to allow low-overhead measurement of drop time */}}
+			(bytes, handles, ManuallyDrop::new({{ .ValueType }}::new_empty()))
 		},
-		|(bytes, handles, value)| {
+		|(bytes, handles, manually_drop_value)| {
+			// Cast &mut ManuallyDrop<T> to &mut T.
+			let value : &mut {{ .ValueType }} = unsafe { std::mem::transmute(manually_drop_value as *mut _) };
 			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
-			{{- /* semicolon above: include drop time. */}}
+			// Count the drop time in the benchmark.
+			unsafe { ManuallyDrop::drop(manually_drop_value) };
 		},
 		{{- /* Consider using LargeInput or NumIterations if this causes memory issues. */}}
 		BatchSize::SmallInput,
 	);
-	{{- else }}
-	let bytes = &mut Vec::<u8>::new();
-	let handles = &mut Vec::<Handle>::new();
-	let original_value = &mut {{ .Value }};
-	Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, original_value).unwrap();
-	b.iter_batched_ref(
-		{{- /* We use a fresh empty value for each run rather than decoding into
-			   the same value every time. The latter would be less realistic
-			   since e.g. vectors would only allocate on the first run. */}}
-		{{ .ValueType }}::new_empty,
-		|value| {
-			Decoder::decode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
-			{{- /* semicolon above: include drop time */}}
-		},
-		BatchSize::SmallInput,
-	);
-	{{- end }}
 }
 
 {{ if .EnableSendEventBenchmark }}
