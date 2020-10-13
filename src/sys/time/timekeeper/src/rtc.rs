@@ -26,7 +26,7 @@ lazy_static! {
 }
 
 /// Time to wait before declaring a FIDL call to be failed.
-const FIDL_TIMEOUT: zx::Duration = zx::Duration::from_millis(100);
+const FIDL_TIMEOUT: zx::Duration = zx::Duration::from_millis(200);
 
 // The minimum error at which to begin an async wait for top of second while setting RTC.
 const WAIT_THRESHOLD: zx::Duration = zx::Duration::from_millis(1);
