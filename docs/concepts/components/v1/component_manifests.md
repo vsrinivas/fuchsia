@@ -217,7 +217,8 @@ The set of currently known features are as follows:
 
 - `isolated-temp`, which requests that a temp directory be installed into the
   component's namespace at `/tmp`. This is isolated from the system temp and
-  the temp directories of other component instances.
+  the temp directories of other component instances. This directory is backed by
+  an in-memory filesystem, and is thus cleared on device reboots.
 
 - `root-ssl-certificates`, which requests access to the root SSL certificates
   for the device. These certificates are provided in the `/config/ssl` directory
