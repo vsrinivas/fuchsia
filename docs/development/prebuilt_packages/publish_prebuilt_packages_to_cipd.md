@@ -22,7 +22,7 @@ continuous integration (CI) and Fuchsia developers.
 If you plan on using a Fuchsia archive
 ([FAR](/docs/concepts/source_code/archive_format.md)) to publish your prebuilt
 package, see
-[Build a package](/docs/development/idk/documentation/packages.md#build-package)
+[Build a package](/docs/development/sdk/documentation/packages.md#build-package)
 (using FAR).
 
 Note: Provide only one Fuchsia archive (FAR) file per prebuilt package (for example,

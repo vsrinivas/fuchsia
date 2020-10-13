@@ -1070,4 +1070,4 @@ templates. These unsupported features include:
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/master/docs/reference.md#placeholders
-[working-with-packages]: /docs/development/idk/documentation/packages.md
+[working-with-packages]: /docs/development/sdk/documentation/packages.md

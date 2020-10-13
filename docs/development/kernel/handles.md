@@ -82,6 +82,6 @@ with the condition **ZX_POL_BAD_HANDLE** and the action
 **ZX_POL_ACTION_ALLOW_EXCEPTION**. When a process is launched under a job with
 this policy, any use of an already closed handle will generate an exception
 that if not handled will terminate the process and log the offending call stack
-or that can be trapped by the [debugger](/docs/development/idk/documentation/debugger.md)
+or that can be trapped by the [debugger](/docs/development/sdk/documentation/debugger.md)
 for interactive troubleshooting.
 

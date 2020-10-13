@@ -39,7 +39,7 @@ toc:
   - include: /docs/development/triage/_toc.yaml
 - title: "Develop using the SDK"
   section:
-  - include: /docs/development/idk/_toc.yaml
+  - include: /docs/development/sdk/_toc.yaml
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml

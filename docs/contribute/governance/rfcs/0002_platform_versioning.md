@@ -473,7 +473,7 @@ Apple has used these mechanisms successfully to migrate applications for these
 operating systems from older APIs to newer APIs.
 
 [Fuchsia System Interface]: /docs/concepts/system/abi/system.md
-[Fuchsia IDK]: /docs/development/idk/README.md
+[Fuchsia IDK]: /docs/development/sdk/README.md
 [`uses-sdk`]: https://developer.android.com/guide/topics/manifest/uses-sdk-element
 [`SupportedOS`]: https://docs.microsoft.com/en-us/windows/win32/win7appqual/compatibility---application-manifest#leveraging-feature-capabilities
 [`API_AVAILABLE`]: https://developer.apple.com/documentation/swift/objective-c_and_c_code_customization/marking_api_availability_in_objective-c
