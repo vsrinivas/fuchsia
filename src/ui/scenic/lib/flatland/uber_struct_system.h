@@ -12,6 +12,7 @@
 
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace flatland {
 
@@ -71,8 +72,10 @@ class UberStructSystem {
   void RemoveSession(scheduling::SessionId session_id);
 
   // Commits a new UberStruct to the instance map for each key/value pair in |sessions_to_update|.
-  // All pending UberStructs associated each SessionId with lower PresentIds will be discarded.
-  void UpdateSessions(
+  // All pending UberStructs associated with each SessionId with lower PresentIds will be
+  // discarded. Returns the set of SessionIds that did not have their associated PresentId in their
+  // queue, indicating the session failed to update.
+  scheduling::SessionUpdater::UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update);
 
   // Snapshots the current map of UberStructs and returns the copy.

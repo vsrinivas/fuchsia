@@ -162,7 +162,8 @@ TEST(UberStructSystemTest, UpdateSessionsTriggersSnapshotUpdate) {
 
   // Call UpdateSessions, but with only the second session, which should push that UberStruct into
   // the snapshot.
-  system.UpdateSessions({{kSession2, 0}});
+  auto result = system.UpdateSessions({{kSession2, 0}});
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   snapshot = system.Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -173,7 +174,8 @@ TEST(UberStructSystemTest, UpdateSessionsTriggersSnapshotUpdate) {
 
   // Call it a second time with the first session, which should result in both UberStructs being in
   // the snapshot.
-  system.UpdateSessions({{kSession1, 0}});
+  result = system.UpdateSessions({{kSession1, 0}});
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   snapshot = system.Snapshot();
   EXPECT_EQ(snapshot.size(), 2ul);
@@ -202,14 +204,16 @@ TEST(UberStructSystemTest, UpdateSessionsIgnoresGfxSessionIds) {
   EXPECT_TRUE(snapshot.empty());
 
   // Call UpdateSessions, but with only the GFX session, which should update nothing.
-  system.UpdateSessions({{kGfxSession, 0}});
+  auto result = system.UpdateSessions({{kGfxSession, 0}});
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   snapshot = system.Snapshot();
   EXPECT_TRUE(snapshot.empty());
 
   // Call it a second time with the Flatland session, which should result in an UberStruct in the
   // snapshot.
-  system.UpdateSessions({{kFlatlandSession, 0}});
+  result = system.UpdateSessions({{kFlatlandSession, 0}});
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   snapshot = system.Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -247,7 +251,8 @@ TEST(UberStructSystemTest, UpdateSessionsConsumesPreviousPresents) {
 
   // Call UpdateSessions with PresentId = 2. This should skip struct1, place struct2 in the
   // snapshot, and leave struct3 queued.
-  system.UpdateSessions({{kSession, 2}});
+  auto result = system.UpdateSessions({{kSession, 2}});
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   snapshot = system.Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -258,7 +263,8 @@ TEST(UberStructSystemTest, UpdateSessionsConsumesPreviousPresents) {
   EXPECT_EQ(iter->second->local_topology[0].handle, kTransform2);
 
   // Call UpdateSessions with PresentId = 3 to confirm that struct3 is still queued.
-  system.UpdateSessions({{kSession, 3}});
+  result = system.UpdateSessions({{kSession, 3}});
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   snapshot = system.Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -270,6 +276,40 @@ TEST(UberStructSystemTest, UpdateSessionsConsumesPreviousPresents) {
 
   // Ensure there are no queued updates left.
   EXPECT_EQ(queue->GetPendingSize(), 0ul);
+}
+
+TEST(UberStructSystemTest, UpdateSessionsFailedUpdates) {
+  UberStructSystem system;
+
+  // Create two Flatland sessions.
+  const scheduling::SessionId kSession1 = 1;
+  const scheduling::SessionId kSession2 = 2;
+
+  auto queue1 = system.AllocateQueueForSession(kSession1);
+  auto queue2 = system.AllocateQueueForSession(kSession2);
+
+  std::unordered_map<scheduling::SessionId, scheduling::PresentId> sessions_to_update;
+
+  // Queue an UberStruct for session 1 with PresentId 1, but request that the session update to
+  // PresentId 2, which will fail since the queue will be empty before the PresentId shows up.
+  queue1->Push(1, std::make_unique<UberStruct>());
+  sessions_to_update[kSession1] = 2;
+
+  // Queue two UberStructs for session 2 with PresentId 10 and PresentId 12, but request that the
+  // session update to PresentId 11, which will fail because the queue will pass the requested
+  // PresentId without finding it, even though the queue isn't empty.
+  queue1->Push(10, std::make_unique<UberStruct>());
+  queue1->Push(12, std::make_unique<UberStruct>());
+  sessions_to_update[kSession2] = 11;
+
+  // Call UpdateSessions and expect both sessions to be in the result.
+  auto results = system.UpdateSessions(sessions_to_update);
+  EXPECT_THAT(results.sessions_with_failed_updates,
+              ::testing::UnorderedElementsAre(kSession1, kSession2));
+
+  // The snapshot should be empty.
+  auto snapshot = system.Snapshot();
+  EXPECT_TRUE(snapshot.empty());
 }
 
 TEST(UberStructSystemTest, BasicTopologyRetrieval) {
@@ -299,7 +339,8 @@ TEST(UberStructSystemTest, BasicTopologyRetrieval) {
     sessions_to_update[session_id] = 0;
   }
 
-  system.UpdateSessions(sessions_to_update);
+  auto result = system.UpdateSessions(sessions_to_update);
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
 
   auto snapshot = system.Snapshot();
   for (const auto& v : vectors) {
@@ -446,7 +487,9 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
     sessions_to_update[session_id] = present_id;
   }
 
-  system.UpdateSessions(sessions_to_update);
+  auto result = system.UpdateSessions(sessions_to_update);
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
+
   sessions_to_update.clear();
 
   // The expected output child counts should be the same regardless.
