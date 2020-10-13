@@ -128,6 +128,9 @@ zx_status_t Vnode::OpenValidating(VnodeConnectionOptions options,
   if (validated_options.is_error()) {
     return validated_options.error();
   }
+  // The documentation on Vnode::Open promises it will never be called if options includes
+  // vnode_reference.
+  ZX_DEBUG_ASSERT(!validated_options.value()->flags.node_reference);
   return Open(validated_options.value(), out_redirect);
 }
 

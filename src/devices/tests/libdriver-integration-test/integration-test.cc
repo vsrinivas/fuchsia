@@ -202,7 +202,7 @@ IntegrationTest::Promise<void> IntegrationTest::ExpectRelease(
 }
 
 IntegrationTest::Promise<void> IntegrationTest::DoOpen(
-    const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client) {
+    const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client, uint32_t flags) {
   fidl::InterfaceRequest<fuchsia::io::Node> server(
       client->NewRequest(IntegrationTest::IntegrationTest::loop_.dispatcher()));
   PROMISE_ASSERT(ASSERT_TRUE(server.is_valid()));
@@ -222,9 +222,7 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
     completer.complete_ok();
     client->events().OnOpen = nullptr;
   };
-  devfs_->Open(fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
-                   fuchsia::io::OPEN_RIGHT_WRITABLE,
-               0, path, std::move(server));
+  devfs_->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, 0, path, std::move(server));
   return bridge.consumer.promise_or(::fit::error("devfs open abandoned"));
 }
 

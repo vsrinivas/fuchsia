@@ -200,4 +200,33 @@ TEST_F(BasicLifecycleTest, BindThenOpenRemoveThenClose) {
   RunPromise(std::move(promise));
 }
 
+class NeverOpenOrClose : public MockDeviceHooks {
+ public:
+  NeverOpenOrClose() : MockDeviceHooks(Completer()) {}
+
+  void Open(HookInvocation record, uint32_t flags, OpenCallback callback) override {
+    ZX_PANIC("open should never be called");
+  }
+  void Close(HookInvocation record, uint32_t flags, CloseCallback callback) override {
+    ZX_PANIC("close should never be called");
+  }
+};
+
+TEST_F(BasicLifecycleTest, StatDoesntCallOpen) {
+  std::unique_ptr<RootMockDevice> root_mock_device;
+  std::unique_ptr<MockDevice> mock_child_device;
+  fidl::InterfacePtr<fuchsia::io::Node> client;
+
+  auto promise = CreateFirstChild(&root_mock_device, &mock_child_device)
+                     .and_then([&]() { return DoWaitForPath(mock_child_device->path()); })
+                     .and_then([&]() {
+                       mock_child_device->set_hooks(std::make_unique<NeverOpenOrClose>());
+                       return DoOpen(mock_child_device->path(), &client,
+                                     fuchsia::io::OPEN_FLAG_NODE_REFERENCE);
+                     })
+                     .and_then([&]() { client.Unbind(); });
+
+  RunPromise(std::move(promise));
+}
+
 }  // namespace libdriver_integration_test

@@ -125,9 +125,11 @@ zx_status_t DriverHostContext::DeviceConnect(const fbl::RefPtr<zx_device_t>& dev
   auto options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
 
   fbl::RefPtr<fs::Vnode> target;
-  zx_status_t status = dev->vnode->OpenValidating(options, &target);
-  if (status != ZX_OK) {
-    return status;
+  if (!options.flags.node_reference) {
+    zx_status_t status = dev->vnode->OpenValidating(options, &target);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
   if (target == nullptr) {
     target = dev->vnode;

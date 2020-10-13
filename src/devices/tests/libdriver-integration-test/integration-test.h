@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <memory>
+#ifndef SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_INTEGRATION_TEST_H_
+#define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_INTEGRATION_TEST_H_
 
 #include <fuchsia/io/cpp/fidl.h>
-#include <gtest/gtest.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 
-#include "mock-device.h"
+#include <memory>
+
+#include <gtest/gtest.h>
+
 #include "mock-device-hooks.h"
+#include "mock-device.h"
 #include "root-mock-device.h"
 
 // Wrapper for an assert that converts a failure to a return of a // fit::promise<void, const char*>
@@ -102,7 +104,9 @@ class IntegrationTest : public testing::Test {
   // connection into |client|.  The promise returned completes when the open
   // result is sent.  We must setup an open hook handler in order for that
   // promise to be completed.
-  Promise<void> DoOpen(const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client);
+  Promise<void> DoOpen(const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client,
+                       uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                                        fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Waits for the given |path| relative to devfs to be available.  Currently
   // waiting for paths in which non-terminal directories don't yet exist is
@@ -142,3 +146,5 @@ class IntegrationTest : public testing::Test {
 };
 
 }  // namespace libdriver_integration_test
+
+#endif  // SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_INTEGRATION_TEST_H_
