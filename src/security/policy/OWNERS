@@ -14,5 +14,6 @@ per-file package_resolver_allowlist_* = file: /src/sys/pkg/OWNERS
 per-file package_cache_allowlist_* = file: /src/sys/pkg/OWNERS
 per-file pkgfs_versions_allowlist_* = file: /src/sys/pkg/OWNERS
 per-file pkgfs_non_static_pkgs_allowlist_* = file: /src/sys/pkg/OWNERS
+per-file system_updater_allowlist_* = file: /src/sys/pkg/OWNERS
 
 # COMPONENT: Security

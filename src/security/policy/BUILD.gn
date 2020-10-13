@@ -20,6 +20,7 @@ group("appmgr_policy_eng") {
     ":appmgr_pkgfs_versions_allowlist_eng",
     ":appmgr_root_job_allowlist_eng",
     ":appmgr_root_resource_allowlist_eng",
+    ":appmgr_system_updater_allowlist_eng",
     ":appmgr_vmex_resource_allowlist_eng",
     "//build/validate:non_production_tag",
   ]
@@ -107,6 +108,12 @@ config_data("appmgr_root_resource_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "root_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_resource.txt" ]
+}
+
+config_data("appmgr_system_updater_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "system_updater_allowlist_eng.txt" ]
+  outputs = [ "allowlist/system_updater.txt" ]
 }
 
 config_data("appmgr_vmex_resource_allowlist_eng") {

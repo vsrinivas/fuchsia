@@ -1,0 +1,12 @@
+fuchsia-pkg://fuchsia.com/omaha-client#meta/omaha-client.cmx
+fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
+fuchsia-pkg://fuchsia.com/update-bin#meta/update.cmx
+fuchsia-pkg://fuchsia.com/usb-system-update-checker#meta/usb-system-update-checker.cmx
+
+# TODO: don't block components started in a testenv from getting system-updater
+# access if they're not interacting with the privileged capability. Until then,
+# this list can grow.
+fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx
+fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-for-integration-test.cmx
+fuchsia-pkg://fuchsia.com/update-integration-tests#meta/update.cmx
+fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/usb-system-update-checker-isolated.cmx
