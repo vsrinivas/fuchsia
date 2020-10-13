@@ -37,27 +37,6 @@ pub mod types;
 /// in get_saved_networks. This depends on the maximum size of a FIDL NetworkConfig, so it may
 /// need to change if a FIDL NetworkConfig or FIDL Credential changes.
 const MAX_CONFIGS_PER_RESPONSE: usize = 100;
-
-#[derive(Debug)]
-struct RequestError {
-    cause: Error,
-    status: fidl_common::RequestStatus,
-}
-
-impl RequestError {
-    /// Produces a new `RequestError` for internal errors.
-    fn new() -> Self {
-        RequestError {
-            cause: format_err!("internal error"),
-            status: fidl_common::RequestStatus::RejectedNotSupported,
-        }
-    }
-
-    fn with_cause(self, cause: Error) -> Self {
-        RequestError { cause, ..self }
-    }
-}
-
 #[derive(Debug)]
 enum InternalMsg {
     /// Sent when a new scan request was issued. Holds the output iterator through which the
@@ -290,16 +269,13 @@ async fn handle_client_request_connect(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
-) -> Result<oneshot::Receiver<()>, RequestError> {
+) -> Result<oneshot::Receiver<()>, Error> {
     let network_config = saved_networks
         .lookup(NetworkIdentifier::new(network.ssid.clone(), network.type_.into()))
         .await
         .pop()
         .ok_or_else(|| {
-            RequestError::new().with_cause(format_err!(
-                "error network not found: {}",
-                String::from_utf8_lossy(&network.ssid)
-            ))
+            format_err!("Network not found: {}", String::from_utf8_lossy(&network.ssid))
         })?;
 
     let network_id = fidl_policy::NetworkIdentifier {
@@ -312,13 +288,7 @@ async fn handle_client_request_connect(
     };
 
     let mut iface_manager = iface_manager.lock().await;
-    match iface_manager.connect(connect_req).await {
-        Ok(receiver) => Ok(receiver),
-        Err(e) => Err(RequestError {
-            cause: e,
-            status: fidl_common::RequestStatus::RejectedIncompatibleMode,
-        }),
-    }
+    iface_manager.connect(connect_req).await
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the
