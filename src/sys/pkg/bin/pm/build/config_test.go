@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"sort"
 	"testing"
 )
 
@@ -30,9 +29,6 @@ func TestOrderedBlobInfo(t *testing.T) {
 	for _, blob := range blobs {
 		actualPaths = append(actualPaths, blob.Path)
 	}
-
-	// FIXME(61368) Remove this sort once the paths are actually sorted by BlobInfo().
-	sort.Strings(actualPaths[1:])
 
 	if !reflect.DeepEqual(actualPaths, expectedPaths) {
 		t.Errorf("got %v, want %v", actualPaths, expectedPaths)

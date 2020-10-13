@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
@@ -167,7 +168,14 @@ func (c *Config) BlobInfo() ([]PackageBlobInfo, error) {
 		return nil, err
 	}
 
-	for path, merkle := range contents {
+	contentsKeys := make([]string, 0, len(contents))
+	for k := range contents {
+		contentsKeys = append(contentsKeys, k)
+	}
+	sort.Strings(contentsKeys)
+
+	for _, path := range contentsKeys {
+		merkle := contents[path]
 		info, err := os.Stat(manifest.Paths[path])
 		if err != nil {
 			return nil, err
