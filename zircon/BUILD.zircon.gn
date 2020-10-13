@@ -250,28 +250,10 @@ build_api_module("zbi_tests") {
 ### Top-level targets.
 ###
 
-# This collects all the top-level targets that should contribute to the
-# "everything" target, which is the root of build_api_module() metadata walks.
-_everything_deps = []
-
-# Just building this constitutes a useful test that the build system and
-# compiler configurations work as intended.  It may also entail building a
-# lot of stuff that is not actually useful to build and/or cannot be tested
-# easily (or at all).
-group("build-tests") {
-  testonly = true
-  deps = [ "$zx/public/gn/toolchain:noop-test" ]
-}
-_everything_deps += [ ":build-tests" ]
-
 # This is used in the top-level build_api_module() deps to reach "everything".
 # Note that "all" is a magical target name to Ninja, hence this name instead.
 group("everything") {
   testonly = true
-
-  # TODO(mcgrathr): Infra depends on not seeing too many things in the
-  # build API, so only include things used by the legacy build for now.
-  #deps = _everything_deps
   deps = default_deps
 }
 

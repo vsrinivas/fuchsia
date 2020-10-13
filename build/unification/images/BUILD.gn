@@ -41,14 +41,13 @@ group("images") {
 aggregate_manifest("legacy-aux") {
   deps = [
     ":lib.c",
-    ":test.sys.noop-test",
-    ":test.sys.noop-test.asan",
-    ":test.sys.noop-test.asan-ubsan",
-    ":test.sys.noop-test.profile",
-    ":test.sys.noop-test.sancov",
-    ":test.sys.noop-test.ubsan",
-    ":test.sys.noop-test.ubsan-sancov",
-    ":test.sys.noop-test.ubsan-sancov-full",
+    ":lib.c.asan",
+    ":lib.c.asan-ubsan",
+    ":lib.c.profile",
+    ":lib.c.sancov",
+    ":lib.c.ubsan",
+    ":lib.c.ubsan-sancov",
+    ":lib.c.ubsan-sancov-full",
   ]
 
   reference = "legacy-aux-$target_cpu"

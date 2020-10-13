@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+# noop-test is a basic test that verifies that C library initialization
+# and process startup work correctly. Same as "hello world" without
+# a printed output.
+#
+# This is particularly useful to verify that a variant works correctly
+# (i.e. all runtime dependencies are installed and loaded properly).
+test("noop-test") {
+  sources = [ "noop-test.cc" ]
+}
+
+fuchsia_unittest_package("noop-test-package") {
+  executable_path = "test/noop-test"
+  package_name = "noop-test"
+  deps = [ ":noop-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":noop-test-package" ]
+}

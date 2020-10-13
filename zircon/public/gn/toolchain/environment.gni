@@ -985,19 +985,12 @@ set_defaults("environment") {
 # elements and must start with ".".  Parameters are generally as for
 # environment() except $cpu and $os cannot be set and $configs has
 # $standard_configs (and others) prepended rather than being preset.
-#
-# As well as the toolchains, this defines a noop-test target for each
-# environment.  All the targets for an environment are grouped into a target
-# called "${toolchain.environment}${target_name}.noop-test".  All those are
-# grouped together into a target called "noop-test${target_name}".
 template("standard_environments") {
   assert(target_name == "" || get_path_info(target_name, "extension") != "",
          "standard_environments() name must start with `.`")
 
-  all_env_noop_test = []
   foreach(env, standard_environments) {
     env_name = env.name + target_name
-    env_all_noop_tests = []
 
     foreach(target, env.targets) {
       environment(env_name) {
@@ -1046,35 +1039,6 @@ template("standard_environments") {
           tags += invoker.tags
         }
       }
-
-      # Provide a test target to exercise this environment with a trivial
-      # no-op test program.  The noop-tests target builds noop-test.$variant
-      # for each variant available in the environment.
-      test_name = "${env_name}-${target.cpu}"
-      if (defined(target.os)) {
-        test_name += "-${target.os}"
-      }
-      test_name += ".noop-test"
-      env_all_noop_tests += [ ":$test_name" ]
-      environment_redirect(test_name) {
-        testonly = true
-        environment_label = ":$env_name"
-        forward_variables_from(target, "*")
-        deps = [ "$zx/system/ulib/c/test/noop:noop-tests" ]
-        direct = true
-      }
     }
-
-    # This groups all the tests for this environment, for every target.
-    all_env_noop_test += [ ":${env_name}.noop-test" ]
-    group("${env_name}.noop-test") {
-      testonly = true
-      deps = env_all_noop_tests
-    }
-  }
-
-  group("noop-test${target_name}") {
-    testonly = true
-    deps = all_env_noop_test
   }
 }

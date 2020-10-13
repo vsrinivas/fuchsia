@@ -149,6 +149,7 @@ group("test") {
   deps = [
     ":atexit-test-pkg",
     ":posix-clocks-test-pkg",
+    "noop:tests",
   ]
   foreach(case, default_stack_size_cases) {
     deps += [ ":default-stack-size-${case.name}-pkg" ]
