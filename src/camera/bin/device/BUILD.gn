@@ -22,6 +22,8 @@ source_set("lib") {
     "stream_impl.cc",
     "stream_impl.h",
     "stream_impl_client.cc",
+    "sysmem_allocator.cc",
+    "sysmem_allocator.h",
     "util.h",
   ]
 
@@ -31,7 +33,6 @@ source_set("lib") {
     "//src/lib/fsl",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [
@@ -40,8 +41,10 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/trace",
   ]
 
   defines = [ camera_debug_define ]
@@ -60,7 +63,6 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
@@ -90,6 +92,7 @@ executable("unittests") {
   output_name = "camera_device_unittests"
   sources = [
     "device_impl_unittest.cc",
+    "sysmem_allocator_unittest.cc",
     "util_unittest.cc",
   ]
   deps = [
@@ -99,9 +102,14 @@ executable("unittests") {
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/camera/lib/fake_controller",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
+
+  # Increase the default stack size from 256 KB because creating the configs can take up a very
+  # large amount of stack and would otherwise cause crashes on ASAN builds.
+  ldflags = [ "-Wl,-z,stack-size=0x100000" ]
 }
