@@ -114,7 +114,6 @@ group("bluetooth_avrcp") {
 group("bluetooth_core") {
   public_deps = [
     "//src/connectivity/bluetooth/core/bt-gap",
-    "//src/connectivity/bluetooth/core/bt-host",
     "//src/connectivity/bluetooth/core/bt-init",
     "//src/connectivity/bluetooth/tools/bt-snoop",
   ]
