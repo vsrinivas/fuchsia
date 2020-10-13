@@ -29,7 +29,6 @@ group("tests") {
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-dev",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
-    "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:magma-dev",
   ]
   if (target_cpu == "x64") {
     public_deps += [
@@ -51,9 +50,10 @@ group("tests") {
 # go into the system image.
 group("test-drivers") {
   testonly = true
-
-  # TODO(fxbug.dev/61705): Move test drivers here.
-  deps = []
+  deps = [
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:test-driver",
+    "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:test-driver",
+  ]
 }
 
 # Tests that require a working libvulkan to run.

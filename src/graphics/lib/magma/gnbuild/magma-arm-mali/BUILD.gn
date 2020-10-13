@@ -28,14 +28,18 @@ group("magma-vulkan-config") {
 
 group("magma-dev") {
   testonly = true
-  public_deps = [
-    ":magma-arm-mali",
-    ":msd-arm-mali-test",
-  ]
+  public_deps = [ ":magma-arm-mali" ]
   if (have_libvulkan_mali) {
     public_deps += [ ":magma-arm-mali-config" ]
   }
-  deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+}
+
+group("test-driver") {
+  testonly = true
+  deps = [
+    ":msd-arm-mali-test",
+    "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
+  ]
 }
 
 if (have_libvulkan_mali) {

@@ -6,7 +6,7 @@ group("magma-vsi-vip") {
   public_deps = [ "//src/graphics/drivers/msd-vsi-vip" ]
 }
 
-group("magma-dev") {
+group("test-driver") {
   testonly = true
   public_deps = [ "//src/graphics/drivers/msd-vsi-vip:msd-vsi-vip-test" ]
   deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
