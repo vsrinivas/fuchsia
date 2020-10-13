@@ -18,29 +18,17 @@ import (
 )
 
 var (
-	// The path to the Fuchsia build directory root.
-	buildDir string
-
-	// The filepath to write output to. If unspecified, stdout is used.
-	outputFile string
-
-	// The mode in which to run the testsharder.
-	mode testsharder.Mode = testsharder.Normal
-
-	// Tags are keys on which to filter environments, which are labeled.
-	tags flagmisc.StringsValue
-
-	// The path to the json manifest file containing the tests to modify.
-	modifiersPath string
-
-	// Target number of tests per shard.
-	targetTestCount int
-
-	// Target duration per shard.
-	targetDurationSecs int
-
-	// Maximum number of shards per environment.
-	maxShardsPerEnvironment int
+	buildDir                       string
+	outputFile                     string
+	mode                           testsharder.Mode = testsharder.Normal
+	tags                           flagmisc.StringsValue
+	modifiersPath                  string
+	targetTestCount                int
+	targetDurationSecs             int
+	maxShardsPerEnvironment        int
+	affectedTestsPath              string
+	affectedTestsMaxAttempts       int
+	affectedTestsMultiplyThreshold int
 )
 
 func usage() {
@@ -65,6 +53,10 @@ func init() {
 	// target_test_count fuchsia.proto field and do a soft transition with the
 	// recipes to start setting the renamed argument instead.
 	flag.IntVar(&targetTestCount, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
+	flag.StringVar(&affectedTestsPath, "affected-tests", "", "path to a file containing names of tests affected by the change being tested. One test name per line.")
+	flag.IntVar(&affectedTestsMaxAttempts, "affected-tests-max-attempts", 2, "maximum attempts for each affected test. Only applied to tests that are not multiplied")
+	flag.IntVar(&affectedTestsMultiplyThreshold, "affected-tests-multiply-threshold", 0, "if there are <= this many tests in -affected-tests, they may be multplied "+
+		"(modified to run many times in a separate shard), but only be multiplied if allowed by certain constraints designed to minimize false rejections and bot demand.")
 	flag.Usage = usage
 }
 
@@ -109,6 +101,14 @@ func execute() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if affectedTestsPath != "" {
+		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), affectedTestsPath, affectedTestsMaxAttempts, affectedTestsMultiplyThreshold)
+		if err != nil {
+			return err
+		}
+		modifiers = append(modifiers, affectedModifiers...)
 	}
 
 	shards, err = testsharder.ShardAffected(shards, modifiers)

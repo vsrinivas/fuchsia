@@ -22,7 +22,8 @@ type TestSpec struct {
 
 // Test encapsulates details about a particular test.
 type Test struct {
-	// Name is the "basename" of the test, e.g. "foo_test".
+	// Name is a human-readable identifier for this test. It should be unique
+	// within any given TestSpec.
 	Name string `json:"name"`
 
 	// PackageURL is the fuchsia package URL for this test. It is only set for
@@ -38,6 +39,9 @@ type Test struct {
 
 	// OS is the operating system in which this test must be executed.
 	OS string `json:"os"`
+
+	// CPU architecture on which this test can execute.
+	CPU string `json:"cpu"`
 
 	// Settings of log produced by this test
 	LogSettings LogSettings `json:"log_settings,omitempty"`

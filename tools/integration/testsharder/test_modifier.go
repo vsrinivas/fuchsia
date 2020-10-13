@@ -8,6 +8,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
+)
+
+const (
+	fuchsia = "fuchsia"
+	linux   = "linux"
+	x64     = "x64"
 )
 
 // TestModifier is the specification for a single test and the number of
@@ -51,4 +60,65 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 		}
 	}
 	return specs, nil
+}
+
+// AffectedModifiers returns modifiers for tests that are in both testSpecs and
+// affectedTestsPath.
+// affectedTestsPath is the path to a file containing test names separated by `\n`.
+// maxAttempts will be applied to any test that is not multiplied.
+// Tests will be considered for multiplication only if num affected tests <= multiplyThreshold.
+func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, maxAttempts, multiplyThreshold int) ([]TestModifier, error) {
+	affectedTestBytes, err := ioutil.ReadFile(affectedTestsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read affectedTestsPath (%s): %w", affectedTestsPath, err)
+	}
+	affectedTestNames := strings.Split(string(affectedTestBytes), "\n")
+
+	ret := []TestModifier{}
+	// Names of tests to which we'll apply maxAttempts (i.e. we didn't multiply them).
+	namesForMaxAttempts := []string{}
+	if len(affectedTestNames) > multiplyThreshold {
+		namesForMaxAttempts = affectedTestNames
+	} else {
+		nameToSpec := make(map[string]build.TestSpec)
+		for _, ts := range testSpecs {
+			nameToSpec[ts.Name] = ts
+		}
+		for _, name := range affectedTestNames {
+			spec, found := nameToSpec[name]
+			if !found {
+				continue
+			}
+			// Only x64 Linux VMs are plentiful, don't multiply anything that would require
+			// any other type of bot.
+			if spec.CPU != x64 || (spec.OS != fuchsia && spec.OS != linux) {
+				namesForMaxAttempts = append(namesForMaxAttempts, name)
+				continue
+			}
+			foundBadEnv := false
+			for _, env := range spec.Envs {
+				// Don't multiply host+target tests because they tend to be flaky already.
+				// The idea is to expose new flakiness, not pre-existing flakiness.
+				if env.Dimensions.DeviceType != "" && spec.OS != fuchsia {
+					foundBadEnv = true
+					break
+				}
+				// Only x64 Linux VMs are plentiful, don't multiply anything that would require
+				// any other type of bot.
+				if env.Dimensions.DeviceType != "" && !strings.HasSuffix(env.Dimensions.DeviceType, "EMU") {
+					foundBadEnv = true
+					break
+				}
+			}
+			if foundBadEnv {
+				namesForMaxAttempts = append(namesForMaxAttempts, name)
+				continue
+			}
+			ret = append(ret, TestModifier{Name: name, OS: spec.OS})
+		}
+	}
+	for _, name := range namesForMaxAttempts {
+		ret = append(ret, TestModifier{Name: name, TotalRuns: -1, Affected: true, MaxAttempts: maxAttempts})
+	}
+	return ret, nil
 }
