@@ -48,8 +48,8 @@ class AskModel extends ChangeNotifier {
   // List of built-in suggestions show when ask box is empty.
   static final List<Map<String, String>> builtInSuggestions = [
     {
-      'title': 'simple_browser',
-      'url': 'fuchsia-pkg://fuchsia.com/simple_browser#meta/simple_browser.cmx',
+      'title': 'simple-browser',
+      'url': 'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx',
     },
     {
       'title': 'terminal',

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("bin") {
-  deps = [ "simple_browser" ]
+  deps = [ "simple_browser:simple-browser" ]
 }
 
 group("dart_target_tests") {

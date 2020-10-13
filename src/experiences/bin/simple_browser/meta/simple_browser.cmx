@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/simple_browser"
+        "data": "data/simple-browser"
     },
     "sandbox": {
         "services": [
