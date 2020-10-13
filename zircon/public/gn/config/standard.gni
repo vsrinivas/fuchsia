@@ -159,24 +159,6 @@ standard_environments = [
         ]
         add = [ "$zx/system/ulib/c:crt1" ]
       },
-
-      # The compiler implicitly links to runtime libraries that might turn
-      # into runtime dependencies on the shared libraries.  By default,
-      # that includes the shared standard C++ runtime.  But when that is
-      # linked in statically, other runtimes (e.g. instrumentation) still
-      # implicitly linked in might have runtime dependencies of their own.
-      # So first add the static C++ deps and then, if not actually using
-      # static C++, remove it again and add the shared C++ deps instead.
-      "$zx_build_config:static-libc++-deps",
-      {
-        unless_configs = [ "$zx_build_config:static-libc++" ]
-        add = [ "$zx_build_config:shared-libc++-deps" ]
-        remove = [ "$zx_build_config:static-libc++-deps" ]
-      },
-
-      # Currently there's no config in the zircon build for making the
-      # Rust standard library static.
-      "$zx_build_config:shared-ruststd-deps",
     ]
     shlib = true
     strip = "--strip-sections"

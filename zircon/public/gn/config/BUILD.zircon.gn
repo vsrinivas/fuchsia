@@ -5,7 +5,6 @@
 import("$zx/public/gn/toolchain/clang.gni")
 import("$zx/public/gn/toolchain/goma.gni")
 import("$zx/public/gn/toolchain/rustc.gni")
-import("$zx/public/gn/toolchain/toolchain_runtime_deps.gni")
 import("$zx_build_config/standard.gni")
 import("levels.gni")
 
@@ -878,30 +877,6 @@ config("static-libc++") {
         "pthread",
       ]
     }
-  }
-}
-
-if (is_fuchsia) {
-  toolchain_runtime_deps("static-libc++-deps") {
-    toolchain_spec = clang_toolchain_spec
-    cflags = toolchain.runtime_deps_cflags
-    ldflags = [ "-static-libstdc++" ]
-  }
-
-  toolchain_runtime_deps("shared-libc++-deps") {
-    toolchain_spec = clang_toolchain_spec
-    cflags = toolchain.runtime_deps_cflags
-    ldflags = []
-  }
-
-  toolchain_runtime_deps("static-ruststd-deps") {
-    toolchain_spec = rustc_toolchain_spec
-    rustflags = toolchain.runtime_deps_rustflags
-  }
-
-  toolchain_runtime_deps("shared-ruststd-deps") {
-    toolchain_spec = rustc_toolchain_spec
-    rustflags = toolchain.runtime_deps_rustflags + [ "-Cprefer-dynamic" ]
   }
 }
 

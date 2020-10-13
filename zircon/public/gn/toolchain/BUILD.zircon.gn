@@ -6,7 +6,6 @@ import("$zx/public/gn/config/standard.gni")
 import("breakpad.gni")
 import("environment.gni")
 import("toolchain.gni")
-import("toolchain_runtime_deps.gni")
 
 assert(current_toolchain == default_toolchain,
        "Define toolchains only in `default_toolchain` $default_toolchain")

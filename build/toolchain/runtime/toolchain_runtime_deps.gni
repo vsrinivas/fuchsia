@@ -279,6 +279,36 @@ template("toolchain_runtime_deps") {
                  ])
 
       foreach(lib, match.runtime) {
+        # For build_api_module("binaries") in //BUILD.gn.
+        metadata.binaries += [
+          {
+            cpu = current_cpu
+            os = current_os
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            type = "shared_library"
+            dist = rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir)
+            if (defined(lib.debug)) {
+              debug =
+                  rebase_path(lib.debug, root_build_dir, toolchain_spec.lib_dir)
+              if (output_breakpad_syms) {
+                breakpad = rebase_path(lib.breakpad,
+                                       root_build_dir,
+                                       toolchain_spec.lib_dir)
+              }
+            }
+
+            target_tuple = match.target
+            forward_variables_from(match, toolchain_spec.flag_vars)
+
+            if (toolchain_spec.version_string != "") {
+              toolchain_id = toolchain_spec.version_string
+            }
+            if (toolchain_spec.version_description != "") {
+              toolchain_version = toolchain_spec.version_description
+            }
+          },
+        ]
+
         if (!defined(invoker.libraries) || invoker.libraries + [ lib.name ] -
                                            [ lib.name ] != invoker.libraries) {
           _dist_file =
