@@ -2,8 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+
+bind_rules("goldfish_control_composite-bind") {
+  rules = "goldfish_control_composite.bind"
+  output = "goldfish_control_composite-bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 declare_args() {
   goldfish_control_use_composite_device = true
@@ -24,6 +35,7 @@ driver_module("control_driver") {
   ]
 
   deps = [
+    ":goldfish_control_composite-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.goldfish.addressspace",
     "//sdk/banjo/ddk.protocol.goldfish.control",

@@ -12,15 +12,13 @@
 #include <map>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#define GOLDFISH_ADDRESS_SPACE_PCI_VID 0x607D
-#define GOLDFISH_ADDRESS_SPACE_PCI_DID 0xF153
+#include "src/graphics/drivers/misc/goldfish_address_space/goldfish_address_space-bind.h"
 
 namespace goldfish {
 namespace {
@@ -425,8 +423,4 @@ static constexpr zx_driver_ops_t goldfish_address_space_driver_ops = []() -> zx_
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(goldfish_address_space, goldfish_address_space_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, GOLDFISH_ADDRESS_SPACE_PCI_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, GOLDFISH_ADDRESS_SPACE_PCI_DID),
-    ZIRCON_DRIVER_END(goldfish_address_space)
+ZIRCON_DRIVER(goldfish_address_space, goldfish_address_space_driver_ops, "zircon", "0.1")

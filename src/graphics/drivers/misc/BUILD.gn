@@ -12,5 +12,8 @@ group("misc") {
 
 group("tests") {
   testonly = true
-  deps = [ "goldfish_address_space:tests" ]
+  deps = [
+    "goldfish:tests",
+    "goldfish_address_space:tests",
+  ]
 }

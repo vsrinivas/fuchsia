@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
@@ -19,6 +18,7 @@
 #include <fbl/auto_lock.h>
 
 #include "src/graphics/drivers/misc/goldfish_control/device_local_heap.h"
+#include "src/graphics/drivers/misc/goldfish_control/goldfish_control_composite-bind.h"
 #include "src/graphics/drivers/misc/goldfish_control/host_visible_heap.h"
 
 namespace goldfish {
@@ -877,10 +877,6 @@ static constexpr zx_driver_ops_t goldfish_control_driver_ops = []() -> zx_driver
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(goldfish_control_composite, goldfish_control_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GOLDFISH),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GOLDFISH_CONTROL),
-ZIRCON_DRIVER_END(goldfish_control_composite)
-    // clang-format on
+ZIRCON_DRIVER(goldfish_control_composite, goldfish_control_driver_ops, "zircon", "0.1")
+
+// clang-format on

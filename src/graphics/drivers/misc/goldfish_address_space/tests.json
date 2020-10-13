@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE"
+    }
+  },
+
+  {
+    "name": "goldfish-pipe",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "0x607D",
+      "fuchsia.BIND_PCI_DID": "0xF153"
+    }
+  }
+]
+
