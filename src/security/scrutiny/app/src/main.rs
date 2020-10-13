@@ -8,6 +8,7 @@ mod error;
 mod logo;
 mod scrutiny;
 mod shell;
+mod rest;
 
 use {
     crate::scrutiny::ScrutinyApp,

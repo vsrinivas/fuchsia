@@ -3,7 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{logo, shell::Shell},
+    crate::{
+        logo,
+        shell::Shell,
+        rest::service::RestService,
+        rest::visualizer::Visualizer,
+    },
     anyhow::{Error, Result},
     clap::{App, Arg, ArgMatches},
     log::error,
@@ -13,8 +18,6 @@ use {
             scheduler::CollectorScheduler,
         },
         model::model::DataModel,
-        rest::service::RestService,
-        rest::visualizer::Visualizer,
     },
     simplelog::{Config, LevelFilter, WriteLogger},
     std::env,

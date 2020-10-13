@@ -4,5 +4,4 @@
 
 pub mod engine;
 pub mod model;
-pub mod rest;
 pub mod store;

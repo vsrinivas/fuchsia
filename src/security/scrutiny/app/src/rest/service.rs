@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::engine::dispatcher::{ControllerDispatcher, DispatcherError},
-    crate::model::controller::ConnectionMode,
+    scrutiny::{
+        engine::dispatcher::{ControllerDispatcher, DispatcherError},
+        model::controller::ConnectionMode,
+    },
     crate::rest::visualizer::*,
     anyhow::Error,
     log::{info, warn},
@@ -162,7 +164,11 @@ impl RestService {
 mod tests {
 
     use {
-        super::*, crate::model::controller::DataController, crate::model::model::DataModel,
+        super::*,
+        scrutiny::{
+            model::controller::DataController,
+            model::model::DataModel,
+        },
         anyhow::Result, serde_json::value::Value, std::io, tempfile::tempdir, uuid::Uuid,
     };
 

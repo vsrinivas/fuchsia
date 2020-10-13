@@ -24,6 +24,7 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:termion",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates/transitional/rustyline",
+      "//third_party/rust_crates:rouille",
     ]
 
     test_deps = [
@@ -37,6 +38,9 @@ if (!is_fuchsia) {
       "src/error.rs",
       "src/logo.rs",
       "src/main.rs",
+      "src/rest/mod.rs",
+      "src/rest/service.rs",
+      "src/rest/visualizer.rs",
       "src/scrutiny.rs",
       "src/shell.rs",
     ]
