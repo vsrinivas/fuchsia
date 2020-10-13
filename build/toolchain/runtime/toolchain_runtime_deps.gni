@@ -68,6 +68,55 @@ _clang_lib_dir = rebase_path("$clang_prefix/../lib", ".", root_build_dir)
 _clang_runtime_file = "$_clang_lib_dir/runtime.json"
 _clang_runtime = read_file(_clang_runtime_file, "json")
 
+# As a special case, on Fuchsia and for ASan builds, libclang_rt.asan.so depends
+# on libc++abi.so even if the generated machine code does not (i.e. when
+# -static-libstdc++ is also used). libc++abi.so depends on libwundind.so itself.
+# Linking issues appear because these dependencies are not listed properly, so
+# work-around this by patching _clang_runtime for Asan.
+
+# First, record a map of runtimes for Fuchsia for Asan without -static-libstdc++
+_asan_runtimes_map = []
+foreach(entry, _clang_runtime) {
+  if (entry.cflags == [ "-fsanitize=address" ] && entry.ldflags == []) {
+    _targets = []
+    _targets = entry.target
+    _target = _targets[0]
+    if (string_replace(_target, "-fuchsia", "") != _target) {
+      _asan_runtimes_map += [
+        {
+          target = _target
+          runtime = entry.runtime
+        },
+      ]
+    }
+  }
+}
+
+# Then patch up the entry of Asan with -static-libstdc++ to be the same.
+_new_clang_runtime = []
+foreach(entry, _clang_runtime) {
+  _new_clang_runtime += [
+    {
+      forward_variables_from(entry, "*")
+      if (cflags == [ "-fsanitize=address" ] &&
+          ldflags == [ "-static-libstdc++" ]) {
+        _target = target[0]
+        if (string_replace(_target, "-fuchsia", "") != _target) {
+          foreach(_asan_entry, _asan_runtimes_map) {
+            if (_asan_entry.target == _target) {
+              runtime = []
+              runtime = _asan_entry.runtime
+            }
+          }
+        }
+      }
+    },
+  ]
+}
+
+_clang_runtime = []
+_clang_runtime = _new_clang_runtime
+
 _rustc_lib_dir = rebase_path("$rustc_prefix/../lib", ".", root_build_dir)
 _rustc_runtime_file = "$_rustc_lib_dir/runtime.json"
 _rustc_runtime = read_file(_rustc_runtime_file, "json")
@@ -210,6 +259,7 @@ template("toolchain_runtime_deps") {
       metadata = {
         binaries = []
         distribution_entries = []
+        runtime_deps_manifest_lines = []
       }
 
       _label = get_label_info(":$target_name", "label_with_toolchain")
@@ -240,6 +290,11 @@ template("toolchain_runtime_deps") {
             _soname = get_path_info(lib.dist, "file")
           }
 
+          # Used by runtime_deps_manifest().
+          metadata.runtime_deps_manifest_lines +=
+              [ "lib/${_libprefix}${_soname}=" +
+                rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir) ]
+
           # Used by the distribution_manifest() template.
           metadata.distribution_entries += [
             {
@@ -251,5 +306,42 @@ template("toolchain_runtime_deps") {
         }
       }
     }
+  }
+}
+
+# Generate a fini manifest that lists all toolchain runtime dependencies and their
+# installation location.
+#
+# deps, data_deps, public_deps (optional)
+#   [list of labels] The targets to generate a manifest for.
+#
+# testonly, visibility (optional)
+#   See `gn help`.
+#
+# outputs (optional)
+#   Singleton list containing the path to the manifest file.
+#   Defaults to `[ "$target_gen_dir/$target_name.runtime_deps" ]`.
+template("toolchain_runtime_deps_manifest") {
+  # Build the name of the output file.
+  if (defined(invoker.outputs)) {
+    _outputs = invoker.outputs
+    assert(_outputs != [] && _outputs == [ _outputs[0] ],
+           "Outputs list must have exactly one element.")
+    manifest_file = _outputs[0]
+  } else {
+    manifest_file = "$target_gen_dir/$target_name.runtime_deps"
+  }
+
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                           ])
+    data_keys = [ "runtime_deps_manifest_lines" ]
+    walk_keys = [ "runtime_deps_manifest_barrier" ]
+    outputs = [ manifest_file ]
   }
 }

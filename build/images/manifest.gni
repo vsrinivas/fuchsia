@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/dist/distribution_manifest.gni")
 import("//build/rust/config.gni")
+import("//build/toolchain/runtime/toolchain_runtime_deps.gni")
 
 declare_args() {
   # Path to Clang lib directory.
@@ -135,6 +137,21 @@ template("generate_response_file") {
 template("generate_manifest") {
   assert(defined(invoker.args),
          "generate_manifest(\"${target_name}\") requires args")
+
+  # Generate a manifest containing all runtime deps.
+  runtime_deps_manifest_target = "${target_name}.runtime_deps"
+  runtime_deps_manifest = "$target_gen_dir/${target_name}.runtime_deps.manifest"
+  toolchain_runtime_deps_manifest(runtime_deps_manifest_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "public_deps",
+                             "testonly",
+                           ])
+    outputs = [ runtime_deps_manifest ]
+  }
+
   action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -183,9 +200,13 @@ template("generate_manifest") {
 
     # First the Zircon manifests are pure auxiliaries:
     # they just supply libraries that might satisfy dependencies.
+    sources += [ runtime_deps_manifest ]
+    deps += [ ":${runtime_deps_manifest_target}" ]
     sources += zircon_aux_manifests + zircon_boot_manifests
     deps += zircon_aux_manifests_deps + zircon_boot_manifests_deps
-    foreach(manifest, zircon_aux_manifests + zircon_boot_manifests) {
+    foreach(manifest,
+            [ runtime_deps_manifest ] + zircon_aux_manifests +
+                zircon_boot_manifests) {
       response_file_contents += [
         "--cwd=.",
         "--manifest=" + rebase_path(manifest),

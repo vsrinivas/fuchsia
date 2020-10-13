@@ -234,17 +234,6 @@ template("toolchain_runtime_deps") {
             }
           },
         ]
-
-        if (defined(lib.soname)) {
-          soname = lib.soname
-        } else {
-          soname = get_path_info(lib.dist, "file")
-        }
-
-        # This is the main purpose of the whole target.
-        metadata.manifest_lines +=
-            [ "lib/${toolchain.libprefix}${soname}=" +
-              rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir) ]
       }
     } else {
       public_deps = [ ":$target_name(${toolchain.shlib})" ]
