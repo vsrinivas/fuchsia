@@ -345,7 +345,7 @@ fn test_no_rtc_start_clock_from_time_source() {
     timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _| async move {
         let before_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
-        let sample_monotonic = zx::Time::get(zx::ClockId::Monotonic);
+        let sample_monotonic = zx::Time::get_monotonic();
         push_source_controller
             .set_sample(TimeSample {
                 utc: Some(VALID_TIME.into_nanos()),
@@ -361,7 +361,7 @@ fn test_no_rtc_start_clock_from_time_source() {
         // UTC time reported by the clock should be at least the time in the sample and no
         // more than the UTC time in the sample + time elapsed since the sample was created.
         let reported_utc = clock.read().unwrap();
-        let monotonic_after_update = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_after_update = zx::Time::get_monotonic();
         assert_geq!(reported_utc, *VALID_TIME);
         assert_leq!(reported_utc, *VALID_TIME + (monotonic_after_update - sample_monotonic));
     });
@@ -376,7 +376,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
         |mut push_source_controller, rtc_updates| async move {
             // Timekeeper should reject the RTC time.
 
-            let sample_monotonic = zx::Time::get(zx::ClockId::Monotonic);
+            let sample_monotonic = zx::Time::get_monotonic();
             push_source_controller
                 .set_sample(TimeSample {
                     utc: Some(VALID_TIME.into_nanos()),
@@ -391,12 +391,12 @@ fn test_invalid_rtc_start_clock_from_time_source() {
             // source, and no more than the UTC time reported by the time source + time elapsed
             // since the time was read.
             let reported_utc = clock.read().unwrap();
-            let monotonic_after = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after = zx::Time::get_monotonic();
             assert_geq!(reported_utc, *VALID_TIME);
             assert_leq!(reported_utc, *VALID_TIME + (monotonic_after - sample_monotonic));
             // RTC should also be set.
             wait_until(|| rtc_updates.to_vec().len() == 1, RTC_SET_TIMEOUT).await;
-            let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after_rtc_set = zx::Time::get_monotonic();
             let rtc_reported_utc = rtc_time_to_zx_time(rtc_updates.to_vec().pop().unwrap());
             assert_geq!(rtc_reported_utc, *VALID_TIME);
             assert_leq!(
@@ -410,7 +410,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
 #[test]
 fn test_start_clock_from_rtc() {
     let clock = new_clock();
-    let monotonic_before = zx::Time::get(zx::ClockId::Monotonic);
+    let monotonic_before = zx::Time::get_monotonic();
     timekeeper_test(
         Arc::clone(&clock),
         Some(*VALID_RTC_TIME),
@@ -421,13 +421,13 @@ fn test_start_clock_from_rtc() {
             // UTC time reported by the clock should be at least the time reported by the RTC, and no
             // more than the UTC time reported by the RTC + time elapsed since Timekeeper was launched.
             let reported_utc = clock.read().unwrap();
-            let monotonic_after = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after = zx::Time::get_monotonic();
             assert_geq!(reported_utc, *VALID_RTC_TIME);
             assert_leq!(reported_utc, *VALID_RTC_TIME + (monotonic_after - monotonic_before));
 
             // Clock should be updated again when the push source reports another time.
             let clock_last_set_ticks = clock.get_details().unwrap().last_value_update_ticks;
-            let sample_monotonic = zx::Time::get(zx::ClockId::Monotonic);
+            let sample_monotonic = zx::Time::get_monotonic();
             push_source_controller
                 .set_sample(TimeSample {
                     utc: Some(VALID_TIME.into_nanos()),
@@ -441,12 +441,12 @@ fn test_start_clock_from_rtc() {
             )
             .await;
             let clock_utc = clock.read().unwrap();
-            let monotonic_after_read = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after_read = zx::Time::get_monotonic();
             assert_geq!(clock_utc, *VALID_TIME);
             assert_leq!(clock_utc, *VALID_TIME + (monotonic_after_read - sample_monotonic));
             // RTC should be set too.
             wait_until(|| rtc_updates.to_vec().len() == 1, RTC_SET_TIMEOUT).await;
-            let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
+            let monotonic_after_rtc_set = zx::Time::get_monotonic();
             let rtc_reported_utc = rtc_time_to_zx_time(rtc_updates.to_vec().pop().unwrap());
             assert_geq!(rtc_reported_utc, *VALID_TIME);
             assert_leq!(

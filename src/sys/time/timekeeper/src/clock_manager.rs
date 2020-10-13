@@ -108,7 +108,7 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
             // Determine the error in the current clock compared to this updated estimate.
             // Note: In the initial implementation of `Estimator` updates are discarded hence
             //       error will be zero for the second and all subsequent samples.
-            let reference_mono = zx::Time::get(zx::ClockId::Monotonic);
+            let reference_mono = zx::Time::get_monotonic();
             let estimate_utc = estimator.estimate(reference_mono);
             let estimate_offset = estimate_utc - reference_mono;
             let clock_error = zx::Duration::from_nanos(
@@ -174,9 +174,9 @@ impl<T: TimeSource, R: Rtc, D: Diagnostics> ClockManager<T, R, D> {
     fn log_utc_offset(&self) {
         // TODO(jsankey): Remove this function once the tooling has ceased to use it,
         //                estimate end October 2020 (b/169868836).
-        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_before = zx::Time::get_monotonic().into_nanos();
         let utc_now = self.clock.read().map_or(0, |time| time.into_nanos());
-        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_after = zx::Time::get_monotonic().into_nanos();
         info!(
             "CF-884:monotonic_before={}:utc={}:monotonic_after={}",
             monotonic_before, utc_now, monotonic_after,
@@ -270,7 +270,7 @@ mod tests {
         assert_eq!(executor.run_until_stalled(&mut fut1), Poll::Ready(ftime::UtcSource::Backstop));
 
         // Create a clock manager
-        let monotonic_ref = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
             &clock,
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref)],
@@ -280,11 +280,11 @@ mod tests {
         );
 
         // Maintain the clock until no more work remains
-        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_before = zx::Time::get_monotonic();
         let mut fut2 = clock_manager.maintain_clock().boxed();
         let _ = executor.run_until_stalled(&mut fut2);
         let updated_utc = clock.read().unwrap();
-        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_after = zx::Time::get_monotonic();
 
         // Check that the clocks and reported time source have been updated. The UTC
         // should be bounded by the offset we supplied added to the monotonic window in which the
@@ -310,7 +310,7 @@ mod tests {
 
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let monotonic_ref = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
             &clock,
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref)],
@@ -320,11 +320,11 @@ mod tests {
         );
 
         // Maintain the clock until no more work remains
-        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_before = zx::Time::get_monotonic();
         let mut fut = clock_manager.maintain_clock().boxed();
         let _ = executor.run_until_stalled(&mut fut);
         let updated_utc = clock.read().unwrap();
-        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_after = zx::Time::get_monotonic();
 
         // Check that the clock has been updated. The UTC should be bounded by the offset we
         // supplied added to the monotonic window in which the calculation took place.
@@ -344,7 +344,7 @@ mod tests {
 
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let monotonic_ref = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
             &clock,
             vec![
@@ -360,11 +360,11 @@ mod tests {
         );
 
         // Maintain the clock until no more work remains
-        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_before = zx::Time::get_monotonic();
         let mut fut = clock_manager.maintain_clock().boxed();
         let _ = executor.run_until_stalled(&mut fut);
         let updated_utc = clock.read().unwrap();
-        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_after = zx::Time::get_monotonic();
 
         // Check that the clock has been updated based on the first sample. The UTC should be
         // bounded by the offset we supplied added to the monotonic window in which the calculation

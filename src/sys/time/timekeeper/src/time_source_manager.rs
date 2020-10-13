@@ -38,7 +38,7 @@ pub struct KernelMonotonicProvider();
 
 impl MonotonicProvider for KernelMonotonicProvider {
     fn now(&mut self) -> zx::Time {
-        zx::Time::get(zx::ClockId::Monotonic)
+        zx::Time::get_monotonic()
     }
 }
 

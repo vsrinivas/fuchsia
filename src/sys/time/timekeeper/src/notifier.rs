@@ -24,7 +24,7 @@ impl Notifier {
 
     /// Changes the source to the supplied value.
     pub async fn set_source(&self, source: ftime::UtcSource) {
-        let monotonic = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic = zx::Time::get_monotonic().into_nanos();
         self.0.lock().await.set_source(source, monotonic);
     }
 
@@ -41,7 +41,7 @@ impl Notifier {
                 // we return immediately if this is the first request on this channel, or if there
                 // has been a new update since the last request.
                 if request_count == 0 || last_seen_state != n.source {
-                    n.reply(responder, zx::Time::get(zx::ClockId::Monotonic).into_nanos());
+                    n.reply(responder, zx::Time::get_monotonic().into_nanos());
                 } else {
                     n.register(responder);
                 }

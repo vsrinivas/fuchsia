@@ -33,7 +33,7 @@ lazy_static! {
 }
 
 fn monotonic_time() -> i64 {
-    zx::Time::get(zx::ClockId::Monotonic).into_nanos()
+    zx::Time::get_monotonic().into_nanos()
 }
 
 fn utc_time() -> i64 {

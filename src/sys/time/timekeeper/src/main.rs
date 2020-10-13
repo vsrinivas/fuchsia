@@ -382,7 +382,7 @@ mod tests {
 
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
-        let monotonic_ref = zx::Time::get(zx::ClockId::Monotonic);
+        let monotonic_ref = zx::Time::get_monotonic();
         let interface_event_stream = network::create_stream_with_valid_interface();
 
         // Spawning test notifier and verifying initial state

@@ -139,13 +139,13 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
     async fn poll_time_once(&self) -> Result<TimeSample, Status> {
         let mut client_lock = self.client.lock().await;
 
-        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_before = zx::Time::get_monotonic().into_nanos();
         // We assume here that the time reported by an HTTP server is truncated down a second. We
         // provide the median value of the range of possible actual UTC times, which makes the
         // error distribution symmetric.
         let utc =
             client_lock.request_utc(&self.request_uri).await? + zx::Duration::from_millis(500);
-        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_after = zx::Time::get_monotonic().into_nanos();
         let monotonic_center = (monotonic_before + monotonic_after) / 2;
 
         Ok(TimeSample {
@@ -293,14 +293,14 @@ mod test {
         let update_algorithm =
             HttpsDateUpdateAlgorithm::with_client(TEST_RETRY_STRATEGY, TEST_URI.clone(), client);
 
-        let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_before = zx::Time::get_monotonic().into_nanos();
 
         let (sender, receiver) = channel(0);
         let _update_task =
             fasync::Task::spawn(async move { update_algorithm.generate_updates(sender).await });
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
-        let monotonic_after = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+        let monotonic_after = zx::Time::get_monotonic().into_nanos();
 
         // The first update should indicate status OK, and any subsequent status updates should
         // indicate OK.
