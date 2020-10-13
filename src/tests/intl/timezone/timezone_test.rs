@@ -11,12 +11,19 @@ mod tests {
         anyhow::{Context as _, Error},
         crossbeam::channel,
         fidl_fidl_examples_echo as fecho, fidl_fuchsia_intl as fintl,
-        fidl_fuchsia_settings as fsettings, fuchsia_async as fasync,
+        fidl_fuchsia_settings as fsettings,
+        fidl_fuchsia_sys::{ComponentControllerEvent, LauncherProxy},
+        fuchsia_async as fasync,
         fuchsia_async::DurationExt,
         fuchsia_component::client,
         fuchsia_syslog::{self as syslog, macros::*},
-        fuchsia_zircon as zx, icu_data, rust_icu_ucal as ucal, rust_icu_udat as udat,
-        rust_icu_uloc as uloc, rust_icu_ustring as ustring,
+        fuchsia_zircon as zx,
+        futures::{
+            future,
+            stream::{StreamExt, TryStreamExt},
+        },
+        icu_data, rust_icu_ucal as ucal, rust_icu_udat as udat, rust_icu_uloc as uloc,
+        rust_icu_ustring as ustring,
         std::convert::TryFrom,
     };
 
@@ -152,7 +159,8 @@ mod tests {
         .unwrap();
 
         let launcher = client::launcher().context("Failed to get the launcher")?;
-        let app = client::launch(&launcher, DART_TIME_SERVICE_URL.to_string(), None)
+        let app = launch_time_service(&launcher)
+            .await
             .context("failed to launch the dart service under test")?;
 
         let echo = app
@@ -182,6 +190,30 @@ mod tests {
         Ok(())
     }
 
+    /// Launch the time server.  The function blocks until the launched time
+    /// server says it has started serving its outgoing directory.
+    async fn launch_time_service(launcher: &LauncherProxy) -> Result<client::App, Error> {
+        let app = client::launch(&launcher, DART_TIME_SERVICE_URL.to_string(), None)
+            .context("failed to launch the dart service under test")?;
+        // Keep filtering the events that the component controller emits, until
+        // we find the signal that the outgoing directory is ready.
+        let event_stream = app.controller().take_event_stream();
+        event_stream
+            .try_filter_map(|event| {
+                let event = match event {
+                    ComponentControllerEvent::OnDirectoryReady {} => Some(event),
+                    _ => {
+                        fx_log_err!("Unexpected event on the time service controller: {:?}", &event);
+                        None
+                    },
+                };
+                future::ready(Ok(event))
+            })
+            .next()
+            .await;
+        Ok(app)
+    }
+
     #[fasync::run_singlethreaded(test)]
     #[ignore] // See http://fxbug.dev/58383
     async fn check_reported_time_in_dart_vm_no_update() -> Result<(), Error> {
@@ -202,7 +234,8 @@ mod tests {
         .unwrap();
 
         let launcher = client::launcher().context("Failed to get the launcher")?;
-        let app = client::launch(&launcher, DART_TIME_SERVICE_URL.to_string(), None)
+        let app = launch_time_service(&launcher)
+            .await
             .context("failed to launch the dart service under test")?;
 
         let echo = app
