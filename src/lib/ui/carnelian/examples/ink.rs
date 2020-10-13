@@ -1001,7 +1001,7 @@ impl Ink {
 
         let stylus_device = StylusDevice::create().ok();
         let flower_start = Time::from_nanos(
-            Time::get(ClockId::Monotonic)
+            Time::get_monotonic()
                 .into_nanos()
                 .saturating_add(zx::Duration::from_seconds(FLOWER_DELAY_SECONDS).into_nanos()),
         );
@@ -1033,7 +1033,7 @@ impl Ink {
     ) -> Result<(), Error> {
         duration!("gfx", "update");
 
-        let time_now = Time::get(ClockId::Monotonic);
+        let time_now = Time::get_monotonic();
         let size = &context.size;
         let mut full_damage = false;
 

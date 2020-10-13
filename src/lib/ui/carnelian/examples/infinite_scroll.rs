@@ -979,7 +979,7 @@ impl InfiniteScroll {
     ) -> Self {
         let scene = Scene::new(scale, exposure, max_columns, text_disabled);
         let fake_scroll_start =
-            Time::from_nanos(Time::get(ClockId::Monotonic).into_nanos().saturating_add(
+            Time::from_nanos(Time::get_monotonic().into_nanos().saturating_add(
                 zx::Duration::from_seconds(FAKE_SCROLL_DELAY_SECONDS).into_nanos(),
             ));
 
@@ -988,7 +988,7 @@ impl InfiniteScroll {
             touch_sampling_offset,
             scene,
             contents: BTreeMap::new(),
-            last_presentation_time: Time::get(ClockId::Monotonic),
+            last_presentation_time: Time::get_monotonic(),
             touch_event_resampler: TouchEventResampler::new(),
             touch_points: Vec::new(),
             touch_time: Time::from_nanos(0),

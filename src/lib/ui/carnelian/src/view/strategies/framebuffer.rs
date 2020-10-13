@@ -21,7 +21,7 @@ use fidl::endpoints::create_endpoints;
 use fuchsia_async::{self as fasync};
 use fuchsia_framebuffer::{FrameSet, ImageId};
 use fuchsia_trace::{self, duration, instant};
-use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Time};
+use fuchsia_zircon::{self as zx, Duration, Event, HandleBased, Time};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     StreamExt,
@@ -115,7 +115,7 @@ impl FrameBufferViewStrategy {
             context,
             wait_events,
             image_sender: image_sender,
-            vsync_phase: Time::get(ClockId::Monotonic),
+            vsync_phase: Time::get_monotonic(),
             vsync_interval: Duration::from_millis(16),
         }))
     }
@@ -127,7 +127,7 @@ impl FrameBufferViewStrategy {
     ) -> (ViewAssistantContext, &mut Context) {
         let render_context = &mut self.context;
 
-        let time_now = Time::get(ClockId::Monotonic);
+        let time_now = Time::get_monotonic();
         // |interval_offset| is the offset from |time_now| to the next multiple
         // of vsync interval after vsync phase, possibly negative if in the past.
         let mut interval_offset = Duration::from_nanos(

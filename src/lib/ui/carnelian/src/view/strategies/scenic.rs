@@ -25,7 +25,7 @@ use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
 use fuchsia_scenic::{EntityNode, Image2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_trace::{self, duration, instant};
-use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
+use fuchsia_zircon::{self as zx, Event, HandleBased, Signals, Time};
 use futures::{channel::mpsc::UnboundedSender, TryStreamExt};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -270,7 +270,7 @@ impl ScenicViewStrategy {
             key: view_details.key,
             size: view_details.logical_size,
             metrics: view_details.metrics,
-            presentation_time: Time::get(ClockId::Monotonic),
+            presentation_time: Time::get_monotonic(),
             messages: Vec::new(),
             buffer_count: None,
             image_id,

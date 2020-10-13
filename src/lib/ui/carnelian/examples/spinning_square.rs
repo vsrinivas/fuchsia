@@ -149,7 +149,7 @@ impl SpinningSquareViewAssistant {
     fn new() -> Result<ViewAssistantPtr, Error> {
         let square_color = Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff };
         let background_color = Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff };
-        let start = Time::get(ClockId::Monotonic);
+        let start = Time::get_monotonic();
         let composition = Composition::new(background_color);
         Ok(Box::new(SpinningSquareViewAssistant {
             background_color,
