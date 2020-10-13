@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DRIVER_CTX_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DRIVER_CTX_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DRIVER_CTX_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DRIVER_CTX_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/media/codec_impl/codec_metrics.h>
 
 #include <memory>
 
@@ -55,9 +56,19 @@ class DriverCtx {
   // Run to_run_on_shared_fidl_thread on shared_fidl_thread().
   void PostToSharedFidl(fit::closure to_run_on_shared_fidl_thread);
 
+  void SetAuxServiceDirectory(fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory);
+
+  CodecMetrics& metrics();
+
  private:
   std::unique_ptr<async::Loop> shared_fidl_loop_;
   thrd_t shared_fidl_thread_;
+
+  // Services provided by codec_factory:
+  std::shared_ptr<sys::ServiceDirectory> aux_service_directory_;
+
+  // Cobalt:
+  CodecMetrics metrics_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DRIVER_CTX_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DRIVER_CTX_H_

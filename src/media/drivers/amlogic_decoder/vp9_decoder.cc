@@ -163,7 +163,9 @@ uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->ph
 
 Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
                        bool use_compressed_output, bool is_secure)
-    : VideoDecoder(owner, client, is_secure),
+    : VideoDecoder(
+          media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderVp9,
+          owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
   constexpr uint32_t kStreamOffsetBitWidth = 32;

@@ -44,6 +44,7 @@ class FakeOwner : public VideoDecoder::Owner {
     blob_.LoadFakeFirmwareForTesting(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu, nullptr, 0);
   }
 
+  CodecMetrics& metrics() override { return default_nop_metrics_; }
   DosRegisterIo* dosbus() override { return dosbus_; }
   zx::unowned_bti bti() override { return video_->bti(); }
   DeviceType device_type() override { return DeviceType::kGXM; }
@@ -104,6 +105,7 @@ class FakeOwner : public VideoDecoder::Owner {
   uint64_t phys_map_start_ = 0x1000;
   FirmwareBlob blob_;
   bool have_set_protected_ = false;
+  CodecMetrics default_nop_metrics_;
 };
 
 constexpr uint32_t kDosbusMemorySize = 0x10000;

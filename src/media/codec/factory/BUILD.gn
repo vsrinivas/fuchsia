@@ -13,11 +13,15 @@ source_set("factory_source") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.hardware.mediacodec",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+
+    # For FX_LOGF
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

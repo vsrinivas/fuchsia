@@ -178,6 +178,7 @@ if (target_cpu == "arm64") {
       "//sdk/banjo/ddk.protocol.clock",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
+      "//sdk/lib/fdio",
       "//sdk/lib/fidl/cpp",
       "//src/media/lib/codec_impl",
     ]

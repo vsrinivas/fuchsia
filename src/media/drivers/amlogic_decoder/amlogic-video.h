@@ -48,10 +48,15 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   ~AmlogicVideo();
 
+  void SetMetrics(CodecMetrics* metrics);
   [[nodiscard]] zx_status_t InitRegisters(zx_device_t* parent);
   [[nodiscard]] zx_status_t InitDecoder();
 
   // VideoDecoder::Owner implementation.
+  [[nodiscard]] CodecMetrics& metrics() override {
+    ZX_DEBUG_ASSERT(metrics_);
+    return *metrics_;
+  }
   [[nodiscard]] DosRegisterIo* dosbus() override { return dosbus_.get(); }
   [[nodiscard]] zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
   [[nodiscard]] DeviceType device_type() override { return device_type_; }
@@ -202,6 +207,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   tee_protocol_t tee_{};
   bool is_tee_available_ = false;
   std::optional<SecmemSession> secmem_session_;
+
+  CodecMetrics default_nop_metrics_;
+  CodecMetrics* metrics_ = &default_nop_metrics_;
 
   DeviceType device_type_ = DeviceType::kUnknown;
   zx::handle secure_monitor_;

@@ -334,7 +334,10 @@ enum H264Status {
 
 H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvider* provider,
                                    bool is_secure)
-    : VideoDecoder(owner, client, is_secure), frame_data_provider_(provider) {
+    : VideoDecoder(
+          media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderH264Multi,
+          owner, client, is_secure),
+      frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);
   use_parser_ = true;

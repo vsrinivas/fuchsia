@@ -4,6 +4,8 @@
 
 #include "driver_ctx.h"
 
+#include <lib/fdio/directory.h>
+#include <lib/media/codec_impl/codec_metrics.h>
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -15,6 +17,7 @@
 namespace {
 
 extern "C" {
+
 zx_status_t amlogic_video_init(void** out_ctx);
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
 }
@@ -68,6 +71,11 @@ DriverCtx::DriverCtx() {
   // DriverCtx.  We'll plumb async_t(s) explicitly instead.
   shared_fidl_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   shared_fidl_loop_->StartThread("shared_fidl_thread", &shared_fidl_thread_);
+  // This won't actually be logged until codec_factory opens a device and calls
+  // SetAuxServiceDirectory() on it.  Until then we're buffering event counts.
+  metrics_.LogEvent(
+      media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicDecoderShared,
+      media_metrics::StreamProcessorEventsMetricDimensionEvent_HostProcessStart);
 }
 
 DriverCtx::~DriverCtx() {
@@ -122,3 +130,27 @@ void DriverCtx::PostToSharedFidl(fit::closure to_run_on_shared_fidl_thread) {
   // Switch the implementation here to fit::function when possible.
   PostSerial(shared_fidl_loop()->dispatcher(), std::move(to_run_on_shared_fidl_thread));
 }
+
+void DriverCtx::SetAuxServiceDirectory(
+    fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory) {
+  if (aux_service_directory_) {
+    // Check if old aux_service_directory_ is PEER_CLOSED / broken.
+    fidl::InterfaceHandle<fuchsia::io::Directory> tmp_directory;
+    zx_status_t status = aux_service_directory_->CloneChannel(tmp_directory.NewRequest());
+    if (status == ZX_OK) {
+      // Keep the service directory we already had, and that seems to not be PEER_CLOSED.  This path
+      // is to avoid switching to a temporary service directory when running tests that spawn their
+      // own separate instance of codec_factory.
+      return;
+    }
+    // Toss the PEER_CLOSED / broken service directory.
+    aux_service_directory_ = nullptr;
+  }
+  ZX_DEBUG_ASSERT(!aux_service_directory_);
+  aux_service_directory_ =
+      std::make_shared<sys::ServiceDirectory>(std::move(aux_service_directory));
+  ZX_DEBUG_ASSERT(aux_service_directory_);
+  metrics_.SetServiceDirectory(aux_service_directory_);
+}
+
+CodecMetrics& DriverCtx::metrics() { return metrics_; }

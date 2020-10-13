@@ -19,7 +19,10 @@
 class Mpeg12Decoder : public VideoDecoder {
  public:
   explicit Mpeg12Decoder(Owner* owner, Client* client)
-      : VideoDecoder(owner, client, /*is_secure=*/false) {
+      : VideoDecoder(
+            media_metrics::StreamProcessorEventsMetricDimensionImplementation_AmlogicMpeg12, owner,
+            client,
+            /*is_secure=*/false) {
     power_ref_ = std::make_unique<PowerReference>(owner_->core());
   }
 

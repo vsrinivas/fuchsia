@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_frame.h>
+#include <lib/media/codec_impl/codec_metrics.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -28,6 +29,8 @@
 #include "pts_manager.h"
 #include "registers.h"
 #include "video_frame.h"
+
+#include <src/media/lib/metrics/metrics.cb.h>
 
 class FirmwareBlob;
 class PtsManager;
@@ -81,6 +84,7 @@ class VideoDecoder {
       kVdec = 13
     };
 
+    virtual __WARN_UNUSED_RESULT CodecMetrics& metrics() = 0;
     virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
     virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
@@ -158,7 +162,8 @@ class VideoDecoder {
     virtual const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const = 0;
   };
 
-  VideoDecoder(Owner* owner, Client* client, bool is_secure);
+  VideoDecoder(media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation,
+               Owner* owner, Client* client, bool is_secure);
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() { return ZX_ERR_NOT_SUPPORTED; }
@@ -186,7 +191,7 @@ class VideoDecoder {
   // Initialize hardware protection.
   virtual zx_status_t SetupProtection() { return ZX_ERR_NOT_SUPPORTED; }
 
-  virtual ~VideoDecoder() {}
+  virtual ~VideoDecoder();
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }
 
@@ -201,10 +206,19 @@ class VideoDecoder {
   const uint32_t decoder_id_ = 0;
 
  protected:
+  // In case a sub-class wants to do something directly with Metrics, like log using a separate
+  // component or similar.
+  CodecMetrics& metrics() { return owner_->metrics(); }
+  void LogEvent(media_metrics::StreamProcessorEventsMetricDimensionEvent event);
+
   std::unique_ptr<PtsManager> pts_manager_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 0;
   Owner* owner_ = nullptr;
   Client* client_ = nullptr;
   bool is_secure_ = false;
+
+ private:
+  const media_metrics::StreamProcessorEventsMetricDimensionImplementation implementation_;
 };
+
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_

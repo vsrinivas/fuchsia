@@ -5,12 +5,16 @@
 #include "device_ctx.h"
 
 #include <fuchsia/hardware/mediacodec/c/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/sync/completion.h>
 
 #include "amlogic-video.h"
 #include "macros.h"
+#include "sdk/lib/sys/cpp/service_directory.h"
 
 namespace {
+
+const char* kLogTag = "DeviceCtx";
 
 const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
     .GetCodecFactory =
@@ -19,7 +23,17 @@ const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
           reinterpret_cast<DeviceCtx*>(ctx)->GetCodecFactory(std::move(request));
           return ZX_OK;
         },
-};
+    .SetAuxServiceDirectory =
+        [](void* ctx, zx_handle_t aux_service_directory_handle) {
+          zx::channel aux_service_directory_channel(aux_service_directory_handle);
+          fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory(
+              std::move(aux_service_directory_channel));
+          FX_LOGF(INFO, kLogTag, "SetAuxServiceDirectory -- handle value: %u",
+                  aux_service_directory_handle);
+          reinterpret_cast<DeviceCtx*>(ctx)->SetAuxServiceDirectory(
+              std::move(aux_service_directory));
+          return ZX_OK;
+        }};
 
 static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
@@ -37,6 +51,7 @@ static zx_protocol_device_t amlogic_video_device_ops = {
 DeviceCtx::DeviceCtx(DriverCtx* driver)
     : driver_(driver), codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
   video_ = std::make_unique<AmlogicVideo>();
+  video_->SetMetrics(&metrics());
   device_fidl_ = std::make_unique<DeviceFidl>(this);
 }
 
@@ -86,3 +101,10 @@ zx_status_t DeviceCtx::Bind(zx_device_t* parent) {
 void DeviceCtx::GetCodecFactory(zx::channel request) {
   device_fidl()->ConnectChannelBoundCodecFactory(std::move(request));
 }
+
+void DeviceCtx::SetAuxServiceDirectory(
+    fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory) {
+  driver_->SetAuxServiceDirectory(std::move(aux_service_directory));
+}
+
+CodecMetrics& DeviceCtx::metrics() { return driver_->metrics(); }

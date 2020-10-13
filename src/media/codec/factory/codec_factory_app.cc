@@ -4,9 +4,11 @@
 
 #include "codec_factory_app.h"
 
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/global.h>
 #include <lib/trace-provider/provider.h>
 #include <zircon/status.h>
 
@@ -14,6 +16,8 @@
 #include <random>
 
 #include "codec_factory_impl.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/sys/cpp/component_context.h"
 #include "src/lib/fsl/io/device_watcher.h"
 
 namespace codec_factory {
@@ -21,6 +25,7 @@ namespace codec_factory {
 namespace {
 
 constexpr char kDeviceClass[] = "/dev/class/media-codec";
+const char* kLogTag = "CodecFactoryApp";
 
 const std::string kAllSwDecoderMimeTypes[] = {
     "video/h264",  // VIDEO_ENCODING_H264
@@ -31,10 +36,26 @@ const std::string kAllSwDecoderMimeTypes[] = {
 CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
   trace::TraceProviderWithFdio trace_provider(dispatcher_);
 
-  // Don't publish service or even create the component context until after initial discovery is
-  // done, else the pumping of the loop will drop the
-  // incoming request for CodecFactory before AddPublicService() below has had
-  // a chance to register for it.
+  // Don't publish service or outgoing()->ServeFromStartupInfo() until after initial discovery is
+  // done, else the pumping of the loop will drop the incoming request for CodecFactory before
+  // AddPublicService() below has had a chance to register for it.
+  startup_context_ = sys::ComponentContext::Create();
+
+  zx_status_t status =
+      outgoing_codec_aux_service_directory_parent_.AddPublicService<fuchsia::cobalt::LoggerFactory>(
+          [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
+            ZX_DEBUG_ASSERT(startup_context_);
+            FX_LOGF(INFO, kLogTag,
+                    "codec_factory handling request for LoggerFactory -- handle value: %u",
+                    request.channel().get());
+            startup_context_->svc()->Connect(std::move(request));
+          });
+  outgoing_codec_aux_service_directory_ =
+      outgoing_codec_aux_service_directory_parent_.GetOrCreateDirectory("svc");
+
+  // Else codec_factory won't be able to provide what codecs expect to be able to rely on.
+  ZX_ASSERT(status == ZX_OK);
+
   DiscoverMediaCodecDriversAndListenForMoreAsync();
 }
 
@@ -43,13 +64,17 @@ void CodecFactoryApp::PublishService() {
   // We _rely_ on the driver to either fail the channel or send OnCodecList().
   ZX_DEBUG_ASSERT(existing_devices_discovered_);
 
-  startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  startup_context_->outgoing()->AddPublicService<fuchsia::mediacodec::CodecFactory>(
-      [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
-        // The CodecFactoryImpl is self-owned and will self-delete when the
-        // channel closes or an error occurs.
-        CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
-      });
+  zx_status_t status =
+      startup_context_->outgoing()->AddPublicService<fuchsia::mediacodec::CodecFactory>(
+          [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
+            // The CodecFactoryImpl is self-owned and will self-delete when the
+            // channel closes or an error occurs.
+            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
+          });
+  // else this codec_factory is useless
+  ZX_ASSERT(status == ZX_OK);
+  status = startup_context_->outgoing()->ServeFromStartupInfo();
+  ZX_ASSERT(status == ZX_OK);
 }
 
 // All of the current supported hardware and software decoders, randomly shuffled
@@ -95,17 +120,15 @@ const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwCodec(
 }
 
 void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
-  // We use fsl::DeviceWatcher::CreateWithIdleCallback() instead of
-  // fsl::DeviceWatcher::Create() because the CodecFactory service is started on
-  // demand, and we don't want to start serving CodecFactory until we've
-  // discovered and processed all existing media-codec devices.  That way, the
-  // first time a client requests a HW-backed codec, we robustly consider all
-  // codecs provided by pre-existing devices.  The request for a HW-backed Codec
-  // will have a much higher probability of succeeding vs. if we just discovered
-  // pre-existing devices async.  This doesn't prevent the possiblity that the
-  // device might not exist at the moment the CodecFactory is started, but as
-  // long as the device does exist by then, this will ensure the device's codecs
-  // are considered, including for the first client request.
+  // We use fsl::DeviceWatcher::CreateWithIdleCallback() instead of fsl::DeviceWatcher::Create()
+  // because the CodecFactory service is started on demand, and we don't want to start serving
+  // CodecFactory until we've discovered and processed all existing media-codec devices.  That way,
+  // the first time a client requests a HW-backed codec, we robustly consider all codecs provided by
+  // pre-existing devices.  The request for a HW-backed Codec will have a much higher probability of
+  // succeeding vs. if we just discovered pre-existing devices async.  This doesn't prevent the
+  // possiblity that the device might not exist at the moment the CodecFactory is started, but as
+  // long as the device does exist by then, this will ensure the device's codecs are considered,
+  // including for the first client request.
   device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
       kDeviceClass,
       [this](int dir_fd, std::string filename) {
@@ -137,6 +160,25 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
                          << " status: " << status << " device_path: " << device_path;
           return;
         }
+
+        fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory;
+        status = outgoing_codec_aux_service_directory_->Serve(
+            fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
+                fuchsia::io::OPEN_FLAG_DIRECTORY,
+            aux_service_directory.NewRequest().TakeChannel(), dispatcher_);
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "outgoing_codec_aux_service_directory_.Serve() failed - status: "
+                         << status;
+          return;
+        }
+
+        // It's ok for a codec that doesn't need the aux service directory to just close the client
+        // handle to it, so there's no need to attempt to detect a codec closing the aux service
+        // directory client end.
+        //
+        // TODO(dustingreen): Combine these two calls into "Connect" and use FIDL table with the
+        // needed fields.
+        device_interface->SetAuxServiceDirectory(std::move(aux_service_directory));
         device_interface->GetCodecFactory(std::move(client_factory_remote));
 
         // From here on in the current lambda, we're doing stuff that can't fail

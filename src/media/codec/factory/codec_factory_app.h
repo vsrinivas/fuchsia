@@ -124,6 +124,9 @@ class CodecFactoryApp {
   std::list<std::unique_ptr<DeviceDiscoveryEntry>> device_discovery_queue_;
   bool existing_devices_discovered_ = false;
 
+  sys::OutgoingDirectory outgoing_codec_aux_service_directory_parent_;
+  vfs::PseudoDir* outgoing_codec_aux_service_directory_ = nullptr;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(CodecFactoryApp);
 };
 

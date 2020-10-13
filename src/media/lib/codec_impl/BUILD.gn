@@ -24,6 +24,7 @@ source_set("codec_impl") {
     "codec_frame.cc",
     "codec_impl.cc",
     "codec_input_item.cc",
+    "codec_metrics.cc",
     "codec_packet.cc",
     "codec_vmo_range.cc",
     "decryptor_adapter.cc",
@@ -37,6 +38,7 @@ source_set("codec_impl") {
     "include/lib/media/codec_impl/codec_buffer.h",
     "include/lib/media/codec_impl/codec_impl.h",
     "include/lib/media/codec_impl/codec_input_item.h",
+    "include/lib/media/codec_impl/codec_metrics.h",
     "include/lib/media/codec_impl/codec_packet.h",
     "include/lib/media/codec_impl/codec_vmo_range.h",
     "include/lib/media/codec_impl/decryptor_adapter.h",
@@ -46,6 +48,9 @@ source_set("codec_impl") {
     "//sdk/fidl/fuchsia.media.drm",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
+    "//src/lib/cobalt/cpp:cobalt_logger",
+    "//src/media/lib/metrics",
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -60,6 +65,9 @@ source_set("codec_impl") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
 
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",

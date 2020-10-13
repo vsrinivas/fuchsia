@@ -91,6 +91,7 @@ enum {
 }  // namespace
 
 AmlogicVideo::AmlogicVideo() {
+  ZX_DEBUG_ASSERT(metrics_ == &default_nop_metrics_);
   vdec1_core_ = std::make_unique<Vdec1>(this);
   hevc_core_ = std::make_unique<HevcDec>(this);
 }
@@ -725,6 +726,13 @@ void AmlogicVideo::ToggleClock(ClockType type, bool enable) {
   } else {
     clock_disable(&clocks_[static_cast<int>(type)]);
   }
+}
+
+void AmlogicVideo::SetMetrics(CodecMetrics* metrics) {
+  ZX_DEBUG_ASSERT(metrics);
+  ZX_DEBUG_ASSERT(metrics != &default_nop_metrics_);
+  ZX_DEBUG_ASSERT(metrics_ == &default_nop_metrics_);
+  metrics_ = metrics;
 }
 
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {

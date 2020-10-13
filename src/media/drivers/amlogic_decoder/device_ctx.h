@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_CTX_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_CTX_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
 
 #include "amlogic-video.h"
 #include "device_fidl.h"
@@ -30,10 +30,13 @@ class DeviceCtx {
   AmlogicVideo* video() { return video_.get(); }
 
   void GetCodecFactory(zx::channel request);
+  void SetAuxServiceDirectory(fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory);
 
   DeviceFidl* device_fidl() { return device_fidl_.get(); }
 
   CodecAdmissionControl* codec_admission_control() { return &codec_admission_control_; }
+
+  CodecMetrics& metrics();
 
  private:
   DriverCtx* driver_ = nullptr;
@@ -48,23 +51,14 @@ class DeviceCtx {
   } proto_ops_;
   zx_device_t* device_ = nullptr;
 
-  //
   // Specific device driving:
-  //
-
   std::unique_ptr<AmlogicVideo> video_;
 
-  //
   // FIDL interface handling:
-  //
-
   std::unique_ptr<DeviceFidl> device_fidl_;
 
-  //
   // Codec admission control:
-  //
-
   CodecAdmissionControl codec_admission_control_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DEVICE_CTX_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DEVICE_CTX_H_
