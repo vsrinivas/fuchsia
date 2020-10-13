@@ -385,11 +385,6 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 }
 
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, _, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
-	// runtests doesn't support v2 coverage data. fxbug.dev/61180 tracks an alternative for v2.
-	if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
-		return nil, &TestSkippedError{}
-	}
-
 	command, err := commandForTest(&test, true, dataOutputDir, t.perTestTimeout)
 	if err != nil {
 		return nil, err
