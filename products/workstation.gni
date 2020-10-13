@@ -29,7 +29,7 @@ base_package_labels += [
 cache_package_labels -= [ "//src/ui/tools/tiles" ]
 
 cache_package_labels += [
-  "//src/experiences/bin/simple_browser",
+  "//src/experiences/bin/simple_browser:simple-browser",
   "//src/experiences/bin/simple_browser:web_engine_config",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/session_shells/ermine/session:session_config",
