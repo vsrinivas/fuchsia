@@ -138,6 +138,49 @@ struct Superblock {
     ZX_ASSERT(block_size == kMinfsBlockSize);
     return block_size;
   }
+
+  // Returns true if kMinfsFlagFVM is set for superblock.
+  bool GetFlagFvm() const { return (flags & kMinfsFlagFVM) == kMinfsFlagFVM; }
+
+  // Returns first block number from where inode bitmap starts.
+  uint64_t InodeBitmapStartBlock() const {
+    if (!GetFlagFvm()) {
+      return ibm_block;
+    }
+    return kFVMBlockInodeBmStart;
+  }
+
+  // Returns first block number from where data bitmap starts.
+  uint64_t DataBitmapStartBlock() const {
+    if (!GetFlagFvm()) {
+      return abm_block;
+    }
+    return kFVMBlockDataBmStart;
+  }
+
+  // Returns first block number from where inode table starts.
+  uint64_t InodeTableStartBlock() const {
+    if (!GetFlagFvm()) {
+      return ino_block;
+    }
+    return kFVMBlockInodeStart;
+  }
+
+  // Returns first block number from where data blocks starts.
+  uint64_t DataStartBlock() const {
+    if (!GetFlagFvm()) {
+      return dat_block;
+    }
+    return kFVMBlockDataStart;
+  }
+
+  // Returns first block number from where backup superblock starts.
+  uint64_t BackupSuperblockStart() const {
+    if (!GetFlagFvm()) {
+      return kNonFvmSuperblockBackup;
+    }
+    return kFvmSuperblockBackup;
+  }
 };
 
 static_assert(sizeof(Superblock) == kMinfsBlockSize, "minfs info size is wrong");
@@ -252,11 +295,6 @@ constexpr uint32_t kMinfsHashBits = (8);
 
 // Sets kMinfsFlagFVM for given superblock.
 constexpr void SetMinfsFlagFvm(Superblock& info) { info.flags |= kMinfsFlagFVM; }
-
-// Returns true if kMinfsFlagFVM is set for given superblock.
-constexpr bool GetMinfsFlagFvm(Superblock& info) {
-  return (info.flags & kMinfsFlagFVM) == kMinfsFlagFVM;
-}
 
 constexpr uint64_t InodeBitmapBlocks(const Superblock& info) {
   if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {

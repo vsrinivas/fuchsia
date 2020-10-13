@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -38,27 +39,28 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
 
-enum class BlockType { DirectBlock = 0, IndirectBlock, DoubleIndirectBlock };
-
+// The structure is initialized to an invalid state such that the block offset is the last block
+// that an inode can address and that block is a double indirect block - this potentially cannot
+// happen.
 struct BlockInfo {
-  ino_t owner;     // Inode number that maps this block.
-  blk_t offset;    // Offset, in blocks, where this block is.
-  BlockType type;  // What is this block used as.
+  ino_t owner = std::numeric_limits<ino_t>::max();   // Inode number that maps this block.
+  blk_t offset = std::numeric_limits<blk_t>::max();  // Offset, in blocks, where this block is.
+  BlockType type = BlockType::kDoubleIndirect;       // What is this block used as.
 };
 
 const std::string kBlockInfoDirectStr("direct");
 const std::string kBlockInfoIndirectStr("indirect");
-const std::string kBlockInfoDoubleIndirectStr("double indirect");
+const std::string kBlockInfokDoubleIndirectStr("double indirect");
 
 // Given a type of block, returns human readable c-string for the block type.
 std::string BlockTypeToString(BlockType type) {
   switch (type) {
-    case BlockType::DirectBlock:
+    case BlockType::kDirect:
       return kBlockInfoDirectStr;
-    case BlockType::IndirectBlock:
+    case BlockType::kIndirect:
       return kBlockInfoIndirectStr;
-    case BlockType::DoubleIndirectBlock:
-      return kBlockInfoDoubleIndirectStr;
+    case BlockType::kDoubleIndirect:
+      return kBlockInfokDoubleIndirectStr;
     default:
       ZX_ASSERT(false);
   }
@@ -407,7 +409,7 @@ std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo blo
   vec.push_back(block_info);
   blk_info_.insert(std::pair<blk_t, std::vector<BlockInfo>>(bno, vec));
   alloc_blocks_++;
-  if (block_info.type != BlockType::DirectBlock) {
+  if (block_info.type != BlockType::kDirect) {
     ++indirect_blocks_;
   }
   return std::nullopt;
@@ -425,7 +427,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
   // count and sanity-check indirect blocks
   for (unsigned n = 0; n < kMinfsIndirect; n++) {
     if (inode->inum[n]) {
-      BlockInfo block_info = {ino, LogicalBlockIndirect(n), BlockType::IndirectBlock};
+      BlockInfo block_info = {ino, LogicalBlockIndirect(n), BlockType::kIndirect};
       auto msg = CheckDataBlock(inode->inum[n], block_info);
       if (msg) {
         FS_TRACE_WARN("check: ino#%u: indirect block %u(@%u): %s\n", ino, n, inode->inum[n],
@@ -439,7 +441,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
   // count and sanity-check doubly indirect blocks
   for (unsigned n = 0; n < kMinfsDoublyIndirect; n++) {
     if (inode->dinum[n]) {
-      BlockInfo block_info = {ino, LogicalBlockDoublyIndirect(n), BlockType::DoubleIndirectBlock};
+      BlockInfo block_info = {ino, LogicalBlockDoublyIndirect(n), BlockType::kDoubleIndirect};
       auto msg = CheckDataBlock(inode->dinum[n], block_info);
       if (msg) {
         FS_TRACE_WARN("check: ino#%u: doubly indirect block %u(@%u): %s\n", ino, n, inode->dinum[n],
@@ -457,7 +459,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
 
       for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
         if (entry[m]) {
-          BlockInfo block_info = {ino, LogicalBlockDoublyIndirect(n, m), BlockType::IndirectBlock};
+          BlockInfo block_info = {ino, LogicalBlockDoublyIndirect(n, m), BlockType::kIndirect};
           msg = CheckDataBlock(entry[m], block_info);
           if (msg) {
             FS_TRACE_WARN("check: ino#%u: indirect block (in dind) %u(@%u): %s\n", ino, m, entry[m],
@@ -494,7 +496,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
     if (bno) {
       next_blk = n + 1;
       block_count++;
-      BlockInfo block_info = {ino, n, BlockType::DirectBlock};
+      BlockInfo block_info = {ino, n, BlockType::kDirect};
       auto msg = CheckDataBlock(bno, block_info);
       if (msg) {
         FS_TRACE_WARN("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg.value().c_str());

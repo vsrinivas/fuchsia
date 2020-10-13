@@ -24,6 +24,12 @@
 
 namespace minfs {
 
+enum class BlockType {
+  kDirect = 0,     // Direct block contains user data.
+  kIndirect,       // Contains an array of block numbers pointing to direct blocks.
+  kDoubleIndirect  // Contains an array of block numbers of pointing to indirect blocks.
+};
+
 #ifdef __Fuchsia__
 // Validates header information.
 zx_status_t CheckSuperblock(const Superblock* info, block_client::BlockDevice* device,

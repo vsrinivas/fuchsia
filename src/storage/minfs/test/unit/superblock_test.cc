@@ -325,5 +325,59 @@ TEST(SuperblockTest, SupportedBlockSize) {
   }));
 }
 
+TEST(SuperblockTest, GetFvmFlag) {
+  Superblock info;
+  FillSuperblockFields(&info);
+  ASSERT_FALSE(info.GetFlagFvm());
+
+  SetMinfsFlagFvm(info);
+  ASSERT_TRUE(info.GetFlagFvm());
+}
+
+TEST(SuperblockTest, InodeBitmapStartBlock) {
+  Superblock info;
+  FillSuperblockFields(&info);
+  ASSERT_EQ(info.InodeBitmapStartBlock(), info.ibm_block);
+
+  SetMinfsFlagFvm(info);
+  ASSERT_EQ(info.InodeBitmapStartBlock(), kFVMBlockInodeBmStart);
+}
+
+TEST(SuperblockTest, DataBitmapStartBlock) {
+  Superblock info;
+  FillSuperblockFields(&info);
+  ASSERT_EQ(info.DataBitmapStartBlock(), info.abm_block);
+
+  SetMinfsFlagFvm(info);
+  ASSERT_EQ(info.DataBitmapStartBlock(), kFVMBlockDataBmStart);
+}
+
+TEST(SuperblockTest, InodeTableStartBlock) {
+  Superblock info;
+  FillSuperblockFields(&info);
+  ASSERT_EQ(info.InodeTableStartBlock(), info.ino_block);
+
+  SetMinfsFlagFvm(info);
+  ASSERT_EQ(info.InodeTableStartBlock(), kFVMBlockInodeStart);
+}
+
+TEST(SuperblockTest, DataStartBlock) {
+  Superblock info;
+  FillSuperblockFields(&info);
+  ASSERT_EQ(info.DataStartBlock(), info.dat_block);
+
+  SetMinfsFlagFvm(info);
+  ASSERT_EQ(info.DataStartBlock(), kFVMBlockDataStart);
+}
+
+TEST(SuperblockTest, BackupSuperblock) {
+  Superblock info;
+  FillSuperblockFields(&info);
+  ASSERT_EQ(info.BackupSuperblockStart(), kNonFvmSuperblockBackup);
+
+  SetMinfsFlagFvm(info);
+  ASSERT_EQ(info.BackupSuperblockStart(), kFvmSuperblockBackup);
+}
+
 }  // namespace
 }  // namespace minfs

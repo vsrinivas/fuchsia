@@ -26,7 +26,7 @@ TEST(MinfsFormat, MinfsSuperblock) {
   info.integrity_slices = 13;
   info.dat_slices = 17;
 
-  ASSERT_FALSE(GetMinfsFlagFvm(info));
+  ASSERT_FALSE(info.GetFlagFvm());
 
   ASSERT_EQ(InodeBitmapBlocks(info), info.abm_block - info.ibm_block);
 
@@ -60,7 +60,7 @@ TEST(MinfsFormat, MinfsSuperblockOnFvm) {
   info.dat_slices = 17;
 
   SetMinfsFlagFvm(info);
-  ASSERT_TRUE(GetMinfsFlagFvm(info));
+  ASSERT_TRUE(info.GetFlagFvm());
 
   auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
 

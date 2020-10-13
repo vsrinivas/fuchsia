@@ -187,7 +187,7 @@ fit::result<fs::JournalCommitBlock, zx_status_t> MinfsInspector::InspectJournalE
 fit::result<Superblock, zx_status_t> MinfsInspector::InspectBackupSuperblock() {
   Loader loader(handler_.get());
   uint32_t backup_location =
-      GetMinfsFlagFvm(superblock_) ? kFvmSuperblockBackup : kNonFvmSuperblockBackup;
+      superblock_.GetFlagFvm() ? kFvmSuperblockBackup : kNonFvmSuperblockBackup;
   zx_status_t status = loader.LoadSuperblock(backup_location, buffer_.get());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Cannot load backup superblock. err: %d\n", status);
