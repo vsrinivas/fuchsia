@@ -706,6 +706,10 @@ void brcmf_detach(brcmf_pub* drvr) {
   /* stop firmware event handling */
   brcmf_fweh_detach(drvr);
 
+  if (drvr->bus_if == nullptr) {
+    return;
+  }
+
   brcmf_bus_change_state(drvr->bus_if, BRCMF_BUS_DOWN);
 
   /* make sure primary interface removed last */

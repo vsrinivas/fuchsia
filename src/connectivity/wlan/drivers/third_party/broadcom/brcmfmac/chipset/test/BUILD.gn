@@ -4,6 +4,41 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+source_set("fake_register_window_provider_interface") {
+  output_name = "fake_register_window_provider_interface"
+  testonly = true
+  sources = [ "fake_register_window_provider_interface.cc" ]
+  public = [ "fake_register_window_provider_interface.h" ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
+    "//zircon/system/public",
+  ]
+}
+
+executable("axi_backplane_test") {
+  output_name = "axi_backplane_test"
+  testonly = true
+  sources = [ "axi_backplane_test.cc" ]
+  deps = [
+    ":fake_register_window_provider_interface",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+executable("cr4_chipset_test") {
+  output_name = "cr4_chipset_test"
+  testonly = true
+  sources = [ "cr4_chipset_test.cc" ]
+  deps = [
+    ":fake_register_window_provider_interface",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 executable("firmware_test") {
   output_name = "firmware_test"
   testonly = true
@@ -19,7 +54,12 @@ unittest_package("brcmfmac_chipset_test") {
   package_name = "brcmfmac-chipset-test"
   deps = []
   tests = []
-  foreach(test_name, [ "firmware_test" ]) {
+  foreach(test_name,
+          [
+            "axi_backplane_test",
+            "cr4_chipset_test",
+            "firmware_test",
+          ]) {
     deps += [ ":$test_name" ]
     tests += [
       {

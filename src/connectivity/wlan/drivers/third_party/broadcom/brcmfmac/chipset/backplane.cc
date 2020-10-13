@@ -9,8 +9,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <utility>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/axi_backplane.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/bitfield.h"
@@ -22,7 +24,9 @@ namespace {
 class ChipIdRegister : public wlan::common::AddressableBitField<uint16_t, uint32_t,
                                                                 offsetof(ChipsetCoreRegs, chipid)> {
  public:
-  enum class Type : uint32_t {};
+  enum class Type : uint32_t {
+    kAxi = 1,  // AXI backplane.
+  };
 
   WLAN_BIT_FIELD(id, 0, 16);
   WLAN_BIT_FIELD(rev, 16, 4);
@@ -35,7 +39,8 @@ bool IsSupportedCore(CommonCoreId chip_id) {
   // This is the list of known supported chip IDs.  Add a chip here once it has been confirmed to
   // work with this driver.
   constexpr CommonCoreId kSupportedChipIds[] = {
-      CommonCoreId::kInvalid,
+      CommonCoreId::kBrcm4345,
+      CommonCoreId::kBrcm4356,
   };
 
   return std::binary_search(std::begin(kSupportedChipIds), std::end(kSupportedChipIds), chip_id,
@@ -97,6 +102,17 @@ zx_status_t Backplane::Create(RegisterWindowProviderInterface* register_window_p
 
   std::unique_ptr<Backplane> backplane;
   switch (static_cast<ChipIdRegister::Type>(chip_id_register.type())) {
+    case ChipIdRegister::Type::kAxi: {
+      std::optional<AxiBackplane> axi_backplane;
+      if ((status = AxiBackplane::Create(register_window_provider, chip_id, chip_rev,
+                                         &axi_backplane)) != ZX_OK) {
+        BRCMF_ERR("Failed to create AXI backplane: %s", zx_status_get_string(status));
+        return status;
+      }
+      backplane = std::make_unique<AxiBackplane>(std::move(axi_backplane).value());
+      break;
+    }
+
     default: {
       BRCMF_ERR("Invalid backplane type %d", static_cast<int>(chip_id_register.type()));
       return ZX_ERR_NOT_FOUND;

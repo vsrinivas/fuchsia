@@ -3,9 +3,13 @@
 
 source_set("chipset") {
   sources = [
+    "axi_backplane.cc",
+    "axi_backplane.h",
     "backplane.cc",
     "chipset.cc",
     "chipset_interfaces.cc",
+    "cr4_chipset.cc",
+    "cr4_chipset.h",
     "firmware.cc",
   ]
   public = [
@@ -14,14 +18,15 @@ source_set("chipset") {
     "chipset_interfaces.h",
     "chipset_regs.h",
     "firmware.h",
+    "spinwait.h",
   ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/lib/zx",
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//zircon/public/lib/zx",
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]
