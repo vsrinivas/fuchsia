@@ -300,7 +300,8 @@ component instances][children]
 -   `startup` _(optional)_: The component instance's startup mode.
     -   `lazy` _(default)_: Start the component instance only if another
         component instance binds to it.
-    -   `eager`: Start the component instance as soon as its parent starts.
+    -   `eager`: ([legacy feature][doc-eager]) Start the component instance as
+        soon as its parent starts.
 -   `environment` _(optional)_: If present, the name of the environment to be
     assigned to the child component instance, one of
     [`environments`](#environment). If omitted, the child will inherit the same
@@ -658,6 +659,7 @@ This section may be omitted.
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
+[doc-eager]: lifecycle.md#eager-binding
 [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [doc-runners]: /docs/concepts/components/v2/runners.md
 [doc-resolver]: /docs/concepts/components/v2/runners.md
