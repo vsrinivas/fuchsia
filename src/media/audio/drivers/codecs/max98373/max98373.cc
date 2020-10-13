@@ -7,12 +7,13 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/media/audio/drivers/codecs/max98373/max98373-bind.h"
 
 namespace {
 
@@ -338,10 +339,4 @@ static zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ti_max98373, audio::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98373),
-ZIRCON_DRIVER_END(ti_max98373)
-    // clang-format on
+ZIRCON_DRIVER(max98373, audio::driver_ops, "zircon", "0.1")

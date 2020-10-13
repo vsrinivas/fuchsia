@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.composite;
+using fuchsia.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == 0x15; // PDEV_VID_MAXIM
+accept fuchsia.BIND_PLATFORM_DEV_DID {
+  1, // PDEV_DID_MAXIM_MAX98373
+}
