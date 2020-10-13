@@ -644,6 +644,20 @@ typedef struct zx_info_maps {
         // No additional fields for other types.
     } u;
 } zx_info_maps_t;
+
+typedef struct zx_info_maps_mapping {
+    // MMU flags for the mapping.
+    // Bitwise OR of ZX_VM_PERM_{READ,WRITE,EXECUTE} values.
+    zx_vm_option_t mmu_flags;
+    uint8_t padding1[4];
+    // koid of the mapped VMO.
+    zx_koid_t vmo_koid;
+    // Offset into the above VMO.
+    uint64_t vmo_offset;
+    // The number of PAGE_SIZE pages in the mapped region of the VMO
+    // that are backed by physical memory.
+    size_t committed_pages;
+} zx_info_maps_mapping_t;
 ```
 
 The *depth* field of each entry describes its relationship to the nodes that
