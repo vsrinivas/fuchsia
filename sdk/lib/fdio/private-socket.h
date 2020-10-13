@@ -5,7 +5,7 @@
 #ifndef LIB_FDIO_PRIVATE_SOCKET_H_
 #define LIB_FDIO_PRIVATE_SOCKET_H_
 
-#include "private.h"
+#include "internal.h"
 
 // SIO signals
 #define ZXSIO_SIGNAL_INCOMING ZX_USER_SIGNAL_0

@@ -7,7 +7,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "private.h"
+#include "internal.h"
 
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 

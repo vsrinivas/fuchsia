@@ -9,7 +9,7 @@
 #include <cstdarg>
 #include <cstdint>
 
-#include "private.h"
+#include "internal.h"
 
 struct fdio {
   // The operation function table which encapsulates specialized I/O

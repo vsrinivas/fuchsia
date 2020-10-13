@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_PRIVATE_H_
-#define LIB_FDIO_PRIVATE_H_
+#ifndef LIB_FDIO_INTERNAL_H_
+#define LIB_FDIO_INTERNAL_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
@@ -411,4 +411,4 @@ int fdio_release_reserved(int fd);
 // Connect to a service named |name| in /svc.
 zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out);
 
-#endif  // LIB_FDIO_PRIVATE_H_
+#endif  // LIB_FDIO_INTERNAL_H_

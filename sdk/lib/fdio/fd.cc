@@ -7,7 +7,7 @@
 #include <lib/fdio/unsafe.h>
 #include <zircon/assert.h>
 
-#include "private.h"
+#include "internal.h"
 
 __EXPORT
 zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {

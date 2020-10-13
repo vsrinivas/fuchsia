@@ -37,7 +37,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "private.h"
+#include "internal.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 namespace fprocess = ::llcpp::fuchsia::process;

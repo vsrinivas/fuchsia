@@ -15,7 +15,7 @@
 #include <mutex>
 #include <vector>
 
-#include "private.h"
+#include "internal.h"
 #include "unistd.h"
 
 static zx_status_t get_name_provider(llcpp::fuchsia::device::NameProvider::SyncClient** out) {

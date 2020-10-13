@@ -19,7 +19,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "private.h"
+#include "internal.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 

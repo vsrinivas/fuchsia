@@ -27,7 +27,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 
-#include "../private.h"
+#include "../internal.h"
 #include "local-connection.h"
 #include "local-vnode.h"
 

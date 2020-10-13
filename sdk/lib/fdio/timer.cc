@@ -18,7 +18,7 @@
 
 #include <fbl/auto_call.h>
 
-#include "private.h"
+#include "internal.h"
 #include "unistd.h"
 
 // An implementation of a POSIX timerfd.

@@ -12,7 +12,7 @@
 
 #include <cerrno>
 
-#include "private.h"
+#include "internal.h"
 
 // fd_to_io calls fdio_acquire on the fd, must call fdio_release() when done.
 #define fd_to_io(n) fdio_unsafe_fd_to_io(n)

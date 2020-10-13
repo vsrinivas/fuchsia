@@ -22,7 +22,7 @@
 
 #include <fbl/auto_call.h>
 
-#include "private.h"
+#include "internal.h"
 #include "src/network/getifaddrs.h"
 #include "unistd.h"
 
