@@ -21,7 +21,7 @@ type Instance interface {
 	ListFuzzers() []string
 	Get(fuzzerName, targetSrc, hostDst string) error
 	Put(fuzzerName, hostSrc, targetDst string) error
-	RunFuzzer(out io.Writer, name string, args ...string) error
+	RunFuzzer(out io.Writer, name, hostArtifactDir string, args ...string) error
 	Handle() (Handle, error)
 	Close()
 }
@@ -119,15 +119,31 @@ func (i *BaseInstance) Start() error {
 	return nil
 }
 
-// RunFuzzer runs the named fuzzer on the Instance
-func (i *BaseInstance) RunFuzzer(out io.Writer, name string, args ...string) error {
+// RunFuzzer runs the named fuzzer on the Instance. If `hostArtifactDir` is
+// specified and the run generated any output artifacts, they will be copied to
+// that directory. `args` is an optional list of arguments in the form
+// `-key=value` that will be passed to libFuzzer.
+func (i *BaseInstance) RunFuzzer(out io.Writer, name, hostArtifactDir string, args ...string) error {
 	fuzzer, err := i.Build.Fuzzer(name)
 	if err != nil {
 		return err
 	}
+
 	fuzzer.Parse(args)
-	// TODO(fxbug.dev/47370): implement artifact fetching
-	return fuzzer.Run(i.Connector, out, "implementMe")
+	artifacts, err := fuzzer.Run(i.Connector, out, hostArtifactDir)
+	if err != nil {
+		return err
+	}
+
+	if hostArtifactDir != "" {
+		for _, art := range artifacts {
+			if err := i.Get(name, art, hostArtifactDir); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Get copies files from a fuzzer namespace on the Instance to the host

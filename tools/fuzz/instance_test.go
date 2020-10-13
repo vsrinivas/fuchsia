@@ -97,7 +97,7 @@ func TestInstance(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	if err := i.RunFuzzer(&outBuf, "foo/bar", "arg1", "arg2"); err != nil {
+	if err := i.RunFuzzer(&outBuf, "foo/bar", "", "arg1", "arg2"); err != nil {
 		t.Fatalf("Error running fuzzer: %s", err)
 	}
 	out := outBuf.String()
@@ -107,7 +107,7 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("fuzzer output missing package: %q", out)
 	}
 
-	if err := i.RunFuzzer(&outBuf, "invalid/fuzzer"); err == nil {
+	if err := i.RunFuzzer(&outBuf, "invalid/fuzzer", ""); err == nil {
 		t.Fatalf("expected error when running invalid fuzzer")
 	}
 
@@ -134,7 +134,37 @@ func TestInstance(t *testing.T) {
 	}
 
 	if err := i.Stop(); err != nil {
+		t.Fatalf("Error stopping instance: %s", err)
+	}
+}
+
+func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
+	build, _ := newMockBuild()
+	launcher := &mockLauncher{}
+	i := &BaseInstance{Build: build, Launcher: launcher}
+
+	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)
 	}
 
+	hostArtifactDir := "/art/dir"
+	var outBuf bytes.Buffer
+	if err := i.RunFuzzer(&outBuf, "foo/bar", hostArtifactDir, "-artifact_prefix=data/wow/x"); err != nil {
+		t.Fatalf("Error running fuzzer: %s", err)
+	}
+
+	out := outBuf.String()
+	if !strings.Contains(out, "/art/dir/xcrash-1312") {
+		t.Fatalf("fuzzer output missing host artifact path: %q", out)
+	}
+
+	expected := []string{"/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/wow/xcrash-1312"}
+	got := i.Connector.(*mockConnector).PathsGot
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("incorrect file get list: %v", got)
+	}
+
+	if err := i.Stop(); err != nil {
+		t.Fatalf("Error stopping instance: %s", err)
+	}
 }

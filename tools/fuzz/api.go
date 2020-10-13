@@ -104,7 +104,7 @@ func (c *APICommand) Execute(out io.Writer) error {
 		return instance.Put(c.fuzzer, c.srcPath, c.dstPath)
 	case RunFuzzer:
 		// TODO(fxbug.dev/45431): buffer output so we don't get prematurely terminated by CF
-		return instance.RunFuzzer(out, c.fuzzer, c.extraArgs...)
+		return instance.RunFuzzer(out, c.fuzzer, c.dstPath, c.extraArgs...)
 	case Version:
 		fmt.Fprintf(out, "v%d.%d.%d\n", VersionMajor, VersionMinor, VersionPatch)
 	}
@@ -137,6 +137,7 @@ func ParseArgs(args []string) (*APICommand, error) {
 	case RunFuzzer:
 		flagSet.StringVar(&cmd.handle, "handle", "", handleDesc)
 		flagSet.StringVar(&cmd.fuzzer, "fuzzer", "", fuzzerDesc)
+		flagSet.StringVar(&cmd.dstPath, "artifact-dir", "", "host `path` to store artifacts")
 		requiredArgs = []*string{&cmd.handle, &cmd.fuzzer}
 	case GetData:
 		flagSet.StringVar(&cmd.handle, "handle", "", handleDesc)

@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -71,16 +72,11 @@ func (f *Fuzzer) Parse(args []string) {
 	}
 }
 
-func scanFuzzerOutput(conn Connector, out io.WriteCloser, in io.Reader) (chan error,
-	chan []string) {
-
+func scanForPIDs(conn Connector, out io.WriteCloser, in io.Reader) chan error {
 	scanErr := make(chan error, 1)
-	artifactsCh := make(chan []string, 1)
 
 	go func() {
 		defer out.Close() // Propagate the EOF, so the symbolizer terminates properly
-
-		artifacts := []string{}
 
 		// mutRegex detects output from
 		// MutationDispatcher::PrintMutationSequence
@@ -89,7 +85,6 @@ func scanFuzzerOutput(conn Connector, out io.WriteCloser, in io.Reader) (chan er
 		// as part of exit/crash callbacks
 		mutRegex := regexp.MustCompile(`^MS: [0-9]*`)
 		pidRegex := regexp.MustCompile(`^==([0-9]+)==`)
-		artifactRegex := regexp.MustCompile(`Test unit written to (\S*)`)
 		sawMut := false
 		sawPid := false
 		scanner := bufio.NewScanner(in)
@@ -104,10 +99,6 @@ func scanFuzzerOutput(conn Connector, out io.WriteCloser, in io.Reader) (chan er
 
 				pid, _ = strconv.Atoi(m[1]) // guaranteed parseable due to regex
 				glog.Infof("Found fuzzer PID: %d", pid)
-			}
-			if m := artifactRegex.FindStringSubmatch(line); m != nil {
-				glog.Infof("Found artifact: %s", m[1])
-				artifacts = append(artifacts, m[1])
 			}
 			if mutRegex.MatchString(line) {
 				if sawMut {
@@ -135,17 +126,64 @@ func scanFuzzerOutput(conn Connector, out io.WriteCloser, in io.Reader) (chan er
 		}
 
 		scanErr <- scanner.Err()
+	}()
+
+	return scanErr
+}
+
+func scanForArtifacts(out io.WriteCloser, in io.Reader,
+	artifactPrefix, hostArtifactDir string) (chan error, chan []string) {
+
+	// Only replace the directory part of the artifactPrefix, which is
+	// guaranteed to be at least "data"
+	artifactDir := path.Dir(artifactPrefix)
+
+	scanErr := make(chan error, 1)
+	artifactsCh := make(chan []string, 1)
+
+	go func() {
+		defer out.Close() // Propagate the EOF, so the symbolizer terminates properly
+
+		artifacts := []string{}
+
+		artifactRegex := regexp.MustCompile(`Test unit written to (\S+)`)
+		scanner := bufio.NewScanner(in)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if m := artifactRegex.FindStringSubmatch(line); m != nil {
+				glog.Infof("Found artifact: %s", m[1])
+				artifacts = append(artifacts, m[1])
+				if hostArtifactDir != "" {
+					line = strings.Replace(line, artifactDir, hostArtifactDir, 2)
+				}
+			}
+			io.WriteString(out, line+"\n")
+		}
+
+		scanErr <- scanner.Err()
 		artifactsCh <- artifacts
 	}()
 
 	return scanErr, artifactsCh
 }
 
-// Run the fuzzer, sending symbolized output to out and copying any referenced artifacts (e.g.
-// crashes) to the artifactDir.
-func (f *Fuzzer) Run(conn Connector, out io.Writer, artifactDir string) error {
+// Run the fuzzer, sending symbolized output to `out` and returning a list of
+// any referenced artifacts (e.g. crashes) as absolute paths. If provided,
+// `hostArtifactDir` will be used to transparently rewrite artifact_prefix
+// references in artifact paths in the output log.
+func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]string, error) {
 	if f.options == nil {
-		return fmt.Errorf("Run called on Fuzzer before Parse")
+		return nil, fmt.Errorf("Run called on Fuzzer before Parse")
+	}
+
+	// Ensure artifact_prefix will be writable, and fall back to default if not
+	// specified
+	if artPrefix, ok := f.options["artifact_prefix"]; ok {
+		if !strings.HasPrefix(strings.TrimLeft(artPrefix, "/"), "data/") {
+			return nil, fmt.Errorf("artifact_prefix not in data/ namespace: %q", artPrefix)
+		}
+	} else {
+		f.options["artifact_prefix"] = "data/"
 	}
 
 	cmdline := []string{f.url}
@@ -158,22 +196,28 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, artifactDir string) error {
 	cmd := conn.Command("run", cmdline...)
 	fuzzerOutput, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := cmd.Start(); err != nil {
-		return err
+		return nil, err
 	}
 
-	fromScanner, toSymbolizer := io.Pipe()
+	fromPIDScanner, toArtifactScanner := io.Pipe()
 
-	// Start goroutine to scan for artifact names and PID
-	scanErr, artifactsCh := scanFuzzerOutput(conn, toSymbolizer, fuzzerOutput)
+	// Start goroutine to scan for PID and insert syslog
+	pidScanErr := scanForPIDs(conn, toArtifactScanner, fuzzerOutput)
+
+	fromArtifactScanner, toSymbolizer := io.Pipe()
+
+	// Start goroutine to check/rewrite artifact paths
+	artifactScanErr, artifactCh := scanForArtifacts(toSymbolizer,
+		fromPIDScanner, f.options["artifact_prefix"], hostArtifactDir)
 
 	// Start symbolizer goroutine, connected to the output
 	symErr := make(chan error, 1)
 	go func(in io.Reader) {
 		symErr <- f.build.Symbolize(in, out)
-	}(fromScanner)
+	}(fromArtifactScanner)
 
 	err = cmd.Wait()
 	glog.Infof("Fuzzer run has completed")
@@ -189,24 +233,27 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, artifactDir string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("unexpected return code: %s", err)
+			return nil, fmt.Errorf("unexpected return code: %s", err)
 		}
 	} else if err != nil {
-		return fmt.Errorf("failed during wait: %s", err)
+		return nil, fmt.Errorf("failed during wait: %s", err)
 	}
 
 	// Check for any errors in the goroutines
 	if err := <-symErr; err != nil {
-		return fmt.Errorf("failed during symbolization: %s", err)
+		return nil, fmt.Errorf("failed during symbolization: %s", err)
 	}
-	if err := <-scanErr; err != nil {
-		return fmt.Errorf("failed during scanning: %s", err)
+	if err := <-pidScanErr; err != nil {
+		return nil, fmt.Errorf("failed during PID scanning: %s", err)
 	}
-
-	// TODO(fxbug.dev/47370): implement this, possibly elsewhere
-	for _, artifact := range <-artifactsCh {
-		glog.Infof("should fetch artifact %s", f.AbsPath(artifact))
+	if err := <-artifactScanErr; err != nil {
+		return nil, fmt.Errorf("failed during artifact scanning: %s", err)
 	}
 
-	return nil
+	var artifacts []string
+	for _, artifact := range <-artifactCh {
+		artifacts = append(artifacts, f.AbsPath(artifact))
+	}
+
+	return artifacts, nil
 }

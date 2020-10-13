@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -70,14 +71,35 @@ func TestEndToEnd(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
+	artifactDir := filepath.Join(dir, "artifacts")
+	os.Mkdir(artifactDir, 0755|os.ModeDir)
 	out = runCommand(t, "run_fuzzer", "-handle", handle, "-fuzzer", fuzzer,
-		"--", "-artifact_prefix=data/", "-jobs=0")
+		"-artifact-dir", artifactDir, "--", "-artifact_prefix=data/", "-jobs=0")
 
 	glog.Info(out)
 
 	// TODO(fxbug.dev/45425): validate output more
 	if m, err := regexp.MatchString(`deadly signal`, out); err != nil || !m {
-		t.Fatalf("unxpected output: %s", out)
+		t.Fatalf("output missing signal: %s", out)
+	}
+
+	artifactRegex := regexp.MustCompile(`Test unit written to (\S+)`)
+	m := artifactRegex.FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("output missing artifact: %s", out)
+	}
+
+	artifactPath := m[1]
+	if path.Dir(artifactPath) != artifactDir {
+		t.Fatalf("artifact path not properly rewritten: %q", artifactPath)
+	}
+
+	artifactData, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Fatalf("error reading fetched artifact file: %s", err)
+	}
+	if !bytes.HasPrefix(artifactData, []byte("HI!")) {
+		t.Fatalf("artifact contents unexpected: %q", artifactData)
 	}
 
 	testFile := path.Join(dir, "test_file")

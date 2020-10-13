@@ -59,8 +59,9 @@ const (
 	FuzzerSyslogFailure
 )
 
-// Run fuzzer and collect its output. scenario should be one of those listed above.
-func runFuzzer(t *testing.T, name string, scenario int) (string, error) {
+// Run fuzzer and collect its output and artifacts. Scenario should be one of
+// those listed above.
+func runFuzzer(t *testing.T, name string, args []string, scenario int) (string, []string, error) {
 	build, _ := newMockBuild()
 	conn := &mockConnector{}
 
@@ -76,33 +77,52 @@ func runFuzzer(t *testing.T, name string, scenario int) (string, error) {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
 
-	args := []string{}
 	f.Parse(args)
 
 	var outBuf bytes.Buffer
-	err = f.Run(conn, &outBuf, "/some/artifactDir")
+	artifacts, err := f.Run(conn, &outBuf, "/some/artifactDir")
 
-	return outBuf.String(), err
+	return outBuf.String(), artifacts, err
 }
 
 func TestRun(t *testing.T) {
-	out, err := runFuzzer(t, "foo/bar", FuzzerNormal)
+	out, artifacts, err := runFuzzer(t, "foo/bar", nil, FuzzerNormal)
 	if err != nil {
 		t.Fatalf("failed to run fuzzer: %s", err)
 	}
 
+	// Check for syslog insertion
 	if !strings.Contains(out, "syslog for 123") {
 		t.Fatalf("fuzzer output missing syslog: %q", out)
 	}
 
+	// Check for symbolization
 	if !strings.Contains(out, "wow.c:1") {
 		t.Fatalf("fuzzer output not properly symbolized: %q", out)
 	}
-	// TODO(fxbug.dev/47370): check artifact behavior
+
+	// Check for artifact detection
+	artifactAbsPath := "/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/crash-1312"
+	if !reflect.DeepEqual(artifacts, []string{artifactAbsPath}) {
+		t.Fatalf("unexpected artifact list: %s", artifacts)
+	}
+
+	// Check for artifact path rewriting
+	if !strings.Contains(out, "/some/artifactDir/crash-1312") {
+		t.Fatalf("artifact prefix not rewritten: %q", out)
+	}
+}
+
+func TestRunWithInvalidArtifactPrefix(t *testing.T) {
+	args := []string{"-artifact_prefix=foo/bar"}
+	_, _, err := runFuzzer(t, "foo/bar", args, FuzzerNormal)
+	if err == nil || !strings.Contains(err.Error(), "artifact_prefix not in data/") {
+		t.Fatalf("expected failure to run but got: %s", err)
+	}
 }
 
 func TestMissingPID(t *testing.T) {
-	output, err := runFuzzer(t, "fail/nopid", FuzzerNormal)
+	output, _, err := runFuzzer(t, "fail/nopid", nil, FuzzerNormal)
 
 	if err != nil {
 		t.Fatalf("expected to succeed but got: %s", err)
@@ -114,7 +134,7 @@ func TestMissingPID(t *testing.T) {
 }
 
 func TestSyslogFailure(t *testing.T) {
-	output, err := runFuzzer(t, "foo/bar", FuzzerSyslogFailure)
+	output, _, err := runFuzzer(t, "foo/bar", nil, FuzzerSyslogFailure)
 
 	if err != nil {
 		t.Fatalf("expected to succeed but got: %s", err)
@@ -126,14 +146,14 @@ func TestSyslogFailure(t *testing.T) {
 }
 
 func TestMissingSymbolizer(t *testing.T) {
-	_, err := runFuzzer(t, "foo/bar", FuzzerSymbolizerFailure)
+	_, _, err := runFuzzer(t, "foo/bar", nil, FuzzerSymbolizerFailure)
 	if err == nil || !strings.Contains(err.Error(), "failed during symbolization") {
 		t.Fatalf("expected failure to symbolize but got: %s", err)
 	}
 }
 
 func TestMissingFuzzerPackage(t *testing.T) {
-	_, err := runFuzzer(t, "fail/notfound", FuzzerNormal)
+	_, _, err := runFuzzer(t, "fail/notfound", nil, FuzzerNormal)
 	if err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("expected failure to find package but got: %s", err)
 	}

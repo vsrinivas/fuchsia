@@ -33,6 +33,20 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 		}
 		fuzzerName := fmt.Sprintf("%s/%s", m[1], m[2])
 
+		// Look up the artifact prefix to use
+		var artifactPrefix string
+		for _, arg := range c.args[1:] {
+			if parts := strings.Split(arg, "="); parts[0] == "-artifact_prefix" {
+				artifactPrefix = parts[1]
+				break
+			}
+		}
+		if artifactPrefix == "" {
+			return nil, fmt.Errorf("run command missing artifact_prefix option: %q", c.args)
+		}
+		artifactLine := fmt.Sprintf("artifact_prefix='%s'; "+
+			"Test unit written to %scrash-1312", artifactPrefix, artifactPrefix)
+
 		var output []string
 		switch fuzzerName {
 		case "foo/bar":
@@ -41,7 +55,7 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 				"==123==", // pid
 				"MS: ",    // mut
 				"Deadly signal",
-				"Test unit written to /some/path", // artifact
+				artifactLine,
 			}
 		case "fail/nopid":
 			// No PID
@@ -49,7 +63,7 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 				fmt.Sprintf("running %v", c.args),
 				"MS: ", // mut
 				"Deadly signal",
-				"Test unit written to /some/path", // artifact
+				artifactLine,
 			}
 		case "fail/notfound":
 			return nil, &InstanceCmdError{ReturnCode: 127, Command: c.name, Stderr: "not found"}
