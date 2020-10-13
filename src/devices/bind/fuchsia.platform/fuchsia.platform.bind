@@ -34,4 +34,8 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   MAXIM = 21,
   NORDIC = 22,
   MARVELL = 23,
+  INFINEON = 24,
+  SILERGY = 25,
+  FOCALTECH = 26,
+  SENSIRION = 27,
 };
