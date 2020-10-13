@@ -256,10 +256,10 @@ TEST(Resource, CreateResourceSlice) {
                                                          PAGE_SIZE, NULL, 0, &smaller_mmio));
     // Creating a resource with a different base and the same size should fail.
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
-              zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base + PAGE_SIZE, PAGE_SIZE,
+              zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base + PAGE_SIZE, PAGE_SIZE,
                                    NULL, 0, &smaller_mmio));
     // Creating a resource with the same base and a different size should fail.
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base,
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
                                                          PAGE_SIZE + 34u, NULL, 0, &smaller_mmio));
   }
   {
