@@ -11,9 +11,9 @@ This codelab explains the Triage utility:
 
 The source files and examples to which this document refers are available at:
 
-*   [//src/diagnostics/examples/triage/snapshot/inspect.json][triage-inspect-example].
-*   [//src/diagnostics/examples/triage/rules.triage][triage-rules-example].
-*   [//src/diagnostics/examples/triage/solution][triage-codelab-solution].
+*   [//examples/diagnostics/triage/snapshot/inspect.json][triage-inspect-example].
+*   [//examples/diagnostics/triage/rules.triage][triage-rules-example].
+*   [//examples/diagnostics/triage/solution][triage-codelab-solution].
 
 ## What is Triage?
 
@@ -88,7 +88,7 @@ the following steps:
 
 ### Find the codelab's sample files
 
-Navigate to the `src/diagnostics/examples/triage` directory in your source tree.
+Navigate to the `examples/diagnostics/triage` directory in your source tree.
 The following command is intended to run from that directory:
 
 ```shell
@@ -560,7 +560,7 @@ See [`fx triage`][fx-triage] for the latest features and options - Triage will
 keep improving!
 
 [fx-triage]: https://www.fuchsia.dev/reference/tools/fx/cmd/triage
-[triage-inspect-example]: /src/diagnostics/examples/triage/snapshot/inspect.json
-[triage-rules-example]: /src/diagnostics/examples/triage/rules.triage
-[triage-codelab-solution]: /src/diagnostics/examples/triage/solution
+[triage-inspect-example]: /examples/diagnostics/triage/snapshot/inspect.json
+[triage-rules-example]: /examples/diagnostics/triage/rules.triage
+[triage-codelab-solution]: /examples/diagnostics/triage/solution
 [triage-config-reference]: /src/diagnostics/triage/config.md

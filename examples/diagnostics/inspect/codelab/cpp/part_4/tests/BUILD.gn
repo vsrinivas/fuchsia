@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test("integration_part_4") {
+  sources = [ "integration_test.cc" ]
+
+  deps = [
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}

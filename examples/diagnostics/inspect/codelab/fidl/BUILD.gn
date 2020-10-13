@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(fxrev.dev/438294) delete once topaz has been moved to new example locations
 import("//build/fidl/fidl.gni")
+
 fidl("fuchsia.examples.inspect") {
   sources = [
-    "//examples/diagnostics/inspect/codelab/fidl/fizzbuzz.test.fidl",
-    "//examples/diagnostics/inspect/codelab/fidl/reverser.test.fidl",
+    "fizzbuzz.test.fidl",
+    "reverser.test.fidl",
   ]
 }

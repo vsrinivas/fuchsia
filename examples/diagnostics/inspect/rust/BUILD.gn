@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+group("rust") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":inspect_example_rs_tests" ]
+}
+
+rustc_binary("bin") {
+  name = "inspect_example_rs"
+
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+package("pkg") {
+  package_name = "inspect-rs"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "inspect_example_rs"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/inspect-rs.cmx")
+      dest = "inspect-rs.cmx"
+    },
+  ]
+}
+
+test_package("inspect_example_rs_tests") {
+  deps = [ ":bin_test" ]
+
+  tests = [
+    {
+      name = "inspect_example_rs_bin_test"
+    },
+  ]
+}

@@ -56,13 +56,13 @@ This section shows an example where you take an existing data structure and
 apply inspect to that structure. Let's start with a simple example, a Yak:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="quick_start_before_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="quick_start_before_decl" adjust_indentation="auto" %}
 ```
 
 Then, consider this construction site:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="quick_start_before_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="quick_start_before_init" adjust_indentation="auto" %}
 ```
 
 Let's make the yak inspectable. In particular:
@@ -75,7 +75,7 @@ Now use `fuchsia_inspect_derive` to make this Yak inspectable:
 
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="quick_start_after_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="quick_start_after_decl" adjust_indentation="auto" %}
 ```
 
 Now, in your main program (or in a unit test), construct the yak and attach it
@@ -83,7 +83,7 @@ to the inspect tree:
 
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="quick_start_after_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="quick_start_after_init" adjust_indentation="auto" %}
 ```
 
 Now you have integrated a simple program with Inspect. The rest of this guide
@@ -105,7 +105,7 @@ The library provides implementations of `Inspect` for several types:
 If you add a type which isn't `Inspect`, you get a compiler error:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/compiler_errors.rs" region_tag="derive_inspect_unwrapped" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/compiler_errors.rs" region_tag="derive_inspect_unwrapped" adjust_indentation="auto" %}
 ```
 
 ### Nested `Inspect` Types {#inspect-nesting}
@@ -113,7 +113,7 @@ If you add a type which isn't `Inspect`, you get a compiler error:
 `Inspect` types can be freely nested, like so:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_nested_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_nested_decl" adjust_indentation="auto" %}
 ```
 
 ### Fields and Attributes {#inspect-attributes}
@@ -125,14 +125,14 @@ If an `inspect_node` field is present, instances will have its own node in the
 inspect tree. It must be a `fuchsia_inspect::Node`:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_node_present_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_node_present_decl" adjust_indentation="auto" %}
 ```
 
 If `inspect_node` is absent, fields will be attached directly to the parent node
 (meaning that the name provided to `with_inspect` will be ignored):
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_node_absent_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_node_absent_decl" adjust_indentation="auto" %}
 ```
 
 If your type needs to add or remove nodes or properties dynamically,
@@ -149,7 +149,7 @@ nodes or properties are added or removed after the initial attachment.
   `inspect_node` field. Useful for wrapper types. For example:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_forward_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_forward_decl" adjust_indentation="auto" %}
 ```
 
 ### Manually Managed Inspect Types
@@ -169,14 +169,14 @@ An inspect type should be attached once, and immediately after instantiation,
 using the `with_inspect` extension trait method:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_node_present_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_node_present_init" adjust_indentation="auto" %}
 ```
 
 If you have a nested `Inspect` structure, you should only attach the top-level
 type. The nested types are attached implicitly:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="inspect_nested_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_nested_init" adjust_indentation="auto" %}
 ```
 
 Note that when a `Yak` is constructed from within a `Stable`, there is no
@@ -262,7 +262,7 @@ all share the same behavior: An `IOwned<T>` smart pointer owns a generic
 Here is a demonstration of the `IOwned` API:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="smart_pointers_ivalue" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="smart_pointers_ivalue" adjust_indentation="auto" %}
 ```
 
 An `IOwned<T>` smart pointer should not be instantiated directly, but rather one
@@ -319,14 +319,14 @@ Sometimes a logical `Unit` is a composite type. Unit can be derived for a named
 struct, as long as its fields also implement `Unit`. For example:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="unit_plain_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="unit_plain_decl" adjust_indentation="auto" %}
 ```
 
 `Unit` can be nested, but keep in mind that all fields are still written at
 the same time:
 
 ```rust
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/rust/ergonomic-inspect/src/main.rs" region_tag="unit_nested_decl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="unit_nested_decl" adjust_indentation="auto" %}
 ```
 
 #### Attributes {#unit-attributes}

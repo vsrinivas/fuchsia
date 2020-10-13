@@ -304,7 +304,7 @@ See below for the quick start guide in your language of choice.
   let hello_world_property = root.create_string("hello", "world!");
   ```
 
-  See [this example](/examples/rust/inspect-rs/src/main.rs) for further
+  See [this example](/examples/diagnostics/inspect/rust/src/main.rs) for further
   learning of other types offered by the API.
 
   To test your inspect code, you can use `assert_inspect_tree`:
@@ -552,7 +552,7 @@ See below for the quick start guide in your language of choice.
 
 ## Supported Data Types
 
-  Type | Description | Notes
+ Type | Description | Notes
   -----|-------------|-------
     IntProperty | A metric containing a signed 64-bit integer. | All Languages
     UIntProperty | A metric containing an unsigned 64-bit integer. | Not supported in Dart

@@ -4,8 +4,8 @@ This document contains the codelab for Inspect in C++, Dart and Rust.
 
 The code is available at:
 
-* [//src/diagnostics/examples/inspect/cpp][inspect-cpp-codelab].
-* [//src/diagnostics/examples/inspect/rust][inspect-rust-codelab].
+* [//examples/diagnostics/inspect/codelab/cpp][inspect-cpp-codelab].
+* [//examples/diagnostics/inspect/codelab/rust][inspect-rust-codelab].
 * [//topaz/public/dart/fuchsia_inspect/codelab][inspect-dart-codelab].
 
 This codelab is organized into several parts, each with their own
@@ -42,16 +42,16 @@ Note: Replace core.x64 with your product and board configuration.
 
    ```
    fx set core.x64 \
-   --with //src/diagnostics/examples/inspect/cpp \
-   --with //src/diagnostics/examples/inspect/cpp:tests
+   --with //examples/diagnostics/inspect/codelab/cpp \
+   --with //examples/diagnostics/inspect/codelab/cpp:tests
    ```
 
 * {Rust}
 
    ```
    fx set core.x64 \
-   --with //src/diagnostics/examples/inspect/rust \
-   --with //src/diagnostics/examples/inspect/rust:tests
+   --with //examples/diagnostics/inspect/codelab/rust \
+   --with //examples/diagnostics/inspect/codelab/rust:tests
    ```
 
 * {Dart}
@@ -66,7 +66,7 @@ Note: Replace core.x64 with your product and board configuration.
 There is a component that serves a protocol called [Reverser][fidl-reverser]:
 
 ```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/fidl/reverser.test.fidl" region_tag="reverser_fidl" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/fidl/reverser.test.fidl" region_tag="reverser_fidl" adjust_indentation="auto" %}
 ```
 
 This protocol has a single method, called "Reverse," that simply reverses
@@ -161,7 +161,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
    In the [client main][cpp-client-main]:
 
    ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/client/main.cc" region_tag="reverse_loop" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/client/main.cc" region_tag="reverse_loop" adjust_indentation="auto" %}
    ```
 
 * {Rust}
@@ -169,7 +169,7 @@ Now that you can reproduce the problem, take a look at what the client is doing:
    In the [client main][rust-client-main]:
 
    ```rust
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/client/src/main.rs" region_tag="reverse_loop" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/client/src/main.rs" region_tag="reverse_loop" adjust_indentation="auto" %}
    ```
 
 * {Dart}
@@ -195,19 +195,19 @@ codelab. There is a lot of standard component setup:
    - Logging initialization
 
      ```cpp
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="init_logger" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_1/main.cc" region_tag="init_logger" adjust_indentation="auto" %}
      ```
 
    - Creating an asynchronous executor
 
      ```cpp
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="async_executor" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_1/main.cc" region_tag="async_executor" adjust_indentation="auto" %}
      ```
 
    - Serving a public service
 
      ```cpp
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="serve_outgoing" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_1/main.cc" region_tag="serve_outgoing" adjust_indentation="auto" %}
      ```
 
 * {Rust}
@@ -217,25 +217,25 @@ codelab. There is a lot of standard component setup:
    - Logging initialization
 
      ```rust
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="init_logger" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="init_logger" adjust_indentation="auto" %}
      ```
 
    - ServiceFs initialization and collection
 
      ```rust
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="servicefs_init" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="servicefs_init" adjust_indentation="auto" %}
      ```
 
    - ServiceFs collection
 
      ```rust
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="servicefs_collect" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="servicefs_collect" adjust_indentation="auto" %}
      ```
 
    - Serving a public service
 
      ```rust
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="serve_service" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="serve_service" adjust_indentation="auto" %}
      ```
 
 * {Dart}
@@ -261,7 +261,7 @@ See what the reverser definition is:
    In [reverser.h][cpp-part1-reverser-h]:
 
    ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/reverser.h" region_tag="reverser_h" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_1/reverser.h" region_tag="reverser_h" adjust_indentation="auto" %}
    ```
 
    This class implements the `Reverser` protocol. A helper method called
@@ -273,7 +273,7 @@ See what the reverser definition is:
    In [reverser.rs][rust-part1-reverser]:
 
    ```rust
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/reverser.rs" region_tag="reverser_def" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/reverser.rs" region_tag="reverser_def" adjust_indentation="auto" %}
    ```
 
    This struct serves the `Reverser` protocol. The `ReverserServerFactory` (will make more sense
@@ -313,7 +313,7 @@ state without needing to dig through logs.
       In [BUILD.gn][cpp-part1-build]:
 
       ```
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
       ```
 
    * {Rust}
@@ -321,7 +321,7 @@ state without needing to dig through logs.
       In [BUILD.gn][rust-part1-build] in `deps` under `rustc_binary("bin")`:
 
       ```
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -340,8 +340,8 @@ state without needing to dig through logs.
       In [main.cc][cpp-part1-main]:
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_include_inspect" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/main.cc" region_tag="part_1_include_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/main.cc" region_tag="part_1_init_inspect" adjust_indentation="auto" %}
       ```
 
 
@@ -350,8 +350,8 @@ state without needing to dig through logs.
       In [main.rs][rust-part1-main]:
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_use_inspect" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_serve_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/main.rs" region_tag="part_1_use_inspect" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/main.rs" region_tag="part_1_serve_inspect" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -370,7 +370,7 @@ state without needing to dig through logs.
    * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_write_version" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/main.cc" region_tag="part_1_write_version" adjust_indentation="auto" %}
       ```
 
       This snippet does the following:
@@ -396,7 +396,7 @@ state without needing to dig through logs.
    * {Rust}
 
      ```rust
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_write_version" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/main.rs" region_tag="part_1_write_version" adjust_indentation="auto" %}
      ```
 
      This snippet does the following:
@@ -581,14 +581,14 @@ is even being handled by your component.
    * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="part_1_new_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/main.cc" region_tag="part_1_new_child" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="part_1_new_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/main.rs" region_tag="part_1_new_child" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -606,8 +606,8 @@ is even being handled by your component.
       and [reverser.cc][part1-reverser-cc]:
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.h" region_tag="part_1_include" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_update_server" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/reverser.h" region_tag="part_1_include" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/reverser.cc" region_tag="part_1_update_server" adjust_indentation="auto" %}
       ```
 
    * {Rust}
@@ -615,8 +615,8 @@ is even being handled by your component.
       Update `ReverserServerFactory::new` to accept this node in [reverser.rs][rust-part1-reverser]:
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_use" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/reverser.rs" region_tag="part_1_use" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/reverser.rs" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -636,7 +636,7 @@ is even being handled by your component.
    * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/reverser.cc" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
      Note: `node` is moved into the handler so that it is not dropped and
@@ -645,7 +645,7 @@ is even being handled by your component.
    * {Rust}
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_3/src/reverser.rs" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_3/src/reverser.rs" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
      Note: `node` is moved into the handler so that it is not dropped and
@@ -715,13 +715,13 @@ implementation itself. In particular, it will be helpful to know:
    * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_connection_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/reverser.cc" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_connection_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/reverser.rs" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -802,13 +802,13 @@ The output above shows that the connection is still open and it received one req
 
       ```cpp
       // At the end of Reverser::Reverse
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/reverser.cc" region_tag="part_1_callback" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/reverser.cc" region_tag="part_1_callback" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="part_1_respond" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/reverser.rs" region_tag="part_1_respond" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -869,13 +869,13 @@ out to the "FizzBuzz" service and prints the response:
 * {C++}
 
    ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_1/main.cc" region_tag="fizzbuzz_connect" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_1/main.cc" region_tag="fizzbuzz_connect" adjust_indentation="auto" %}
    ```
 
 * {Rust}
 
    ```rust
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_1/src/main.rs" region_tag="fizzbuzz_connect" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs" region_tag="fizzbuzz_connect" adjust_indentation="auto" %}
    ```
 
 * {Dart}
@@ -951,13 +951,13 @@ You will need to diagnose and solve this problem.
    * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_2/main.cc" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_2/main.cc" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/main.rs" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/main.rs" region_tag="instrument_fizzbuzz" adjust_indentation="auto" %}
       ```
 
    * {Dart}
@@ -1221,7 +1221,7 @@ The code to open a Reverser looks like the following:
 * {C++}
 
    ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_3/reverser_unittests.cc" region_tag="open_reverser" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_3/reverser_unittests.cc" region_tag="open_reverser" adjust_indentation="auto" %}
    // Alternatively
    binding_set_.AddBinding(std::make_unique<Reverser>(inspect::Node()),
                            ptr.NewRequest());
@@ -1230,7 +1230,7 @@ The code to open a Reverser looks like the following:
 * {Rust}
 
    ```rust
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_2/src/reverser.rs" region_tag="open_reverser" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_2/src/reverser.rs" region_tag="open_reverser" adjust_indentation="auto" %}
    ```
 
 * {Dart}
@@ -1289,8 +1289,8 @@ Add code to test the output in Inspect:
 * {C++}
 
    ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/reverser_unittests.cc" region_tag="include_testing" adjust_indentation="auto" %}
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/reverser_unittests.cc" region_tag="get_hierarchy" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_4/reverser_unittests.cc" region_tag="include_testing" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_4/reverser_unittests.cc" region_tag="get_hierarchy" adjust_indentation="auto" %}
    ```
 
    Note: If you use the LazyNode or LazyValues features, you will need to
@@ -1303,15 +1303,15 @@ Add code to test the output in Inspect:
    You can now read individual properties and children as follows:
 
    ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/reverser_unittests.cc" region_tag="assertions" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_4/reverser_unittests.cc" region_tag="assertions" adjust_indentation="auto" %}
    ```
 
 * {Rust}
 
    ```rust
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/src/reverser.rs" region_tag="include_testing" adjust_indentation="auto" %}
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/src/reverser.rs" region_tag="test_inspector" adjust_indentation="auto" %}
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/src/reverser.rs" region_tag="assert_tree" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_4/src/reverser.rs" region_tag="include_testing" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_4/src/reverser.rs" region_tag="test_inspector" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_4/src/reverser.rs" region_tag="assert_tree" adjust_indentation="auto" %}
    ```
 
 * {Dart}
@@ -1435,7 +1435,7 @@ Look at how the integration test is setup:
       Locate the integration test in [part4/tests/integration_test.cc][cpp-part4-integration].
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_4/tests/integration_test.cc" region_tag="integration_test" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_4/tests/integration_test.cc" region_tag="integration_test" adjust_indentation="auto" %}
       ```
 
       `StartComponentAndConnect` is responsible for creating a new test
@@ -1449,7 +1449,7 @@ Look at how the integration test is setup:
       Locate the integration test in [part4/tests/integration_test.rs][rust-part4-integration].
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_4/tests/integration_test.rs" region_tag="integration_test" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_4/tests/integration_test.rs" region_tag="integration_test" adjust_indentation="auto" %}
       ```
 
       `IntegrationTest::start` is responsible for creating a new test
@@ -1476,15 +1476,15 @@ Look at how the integration test is setup:
    * {C++}
 
      ```cpp
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="include_json" adjust_indentation="auto" %}
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="get_inspect" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_5/tests/integration_test.cc" region_tag="include_json" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_5/tests/integration_test.cc" region_tag="get_inspect" adjust_indentation="auto" %}
      ```
 
    * {Rust}
 
      ```rust
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_5/tests/integration_test.rs" region_tag="include_test_stuff" adjust_indentation="auto" %}
-     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_5/tests/integration_test.rs" region_tag="get_inspect" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_5/tests/integration_test.rs" region_tag="include_test_stuff" adjust_indentation="auto" %}
+     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_5/tests/integration_test.rs" region_tag="get_inspect" adjust_indentation="auto" %}
      ```
 
    * {Dart}
@@ -1500,7 +1500,7 @@ Look at how the integration test is setup:
    * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="parse_result" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_5/tests/integration_test.cc" region_tag="parse_result" adjust_indentation="auto" %}
       ```
 
       Add assertions on the returned JSON data.
@@ -1513,13 +1513,13 @@ Look at how the integration test is setup:
         `rapidjson::Value("OK")`.
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/cpp/part_5/tests/integration_test.cc" region_tag="hint_get_value" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/cpp/part_5/tests/integration_test.cc" region_tag="hint_get_value" adjust_indentation="auto" %}
       ```
 
    * {Rust}
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/diagnostics/examples/inspect/rust/part_5/tests/integration_test.rs" region_tag="result_hierarchy" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_5/tests/integration_test.rs" region_tag="result_hierarchy" adjust_indentation="auto" %}
       ```
 
       Add assertions on the returned `NodeHierarchy`.
@@ -1555,31 +1555,31 @@ This section is under construction.
 
 - TODO: Selectors for Feedback and other pipelines
 
-[fidl-fizzbuzz]: /src/diagnostics/examples/inspect/fidl/fizzbuzz.test.fidl
-[fidl-reverser]: /src/diagnostics/examples/inspect/fidl/reverser.test.fidl
+[fidl-fizzbuzz]: /examples/diagnostics/inspect/codelab/fidl/fizzbuzz.test.fidl
+[fidl-reverser]: /examples/diagnostics/inspect/codelab/fidl/reverser.test.fidl
 
-[inspect-cpp-codelab]: /src/diagnostics/examples/inspect/cpp
-[cpp-part1]: /src/diagnostics/examples/inspect/cpp/part_1
-[cpp-part1-main]: /src/diagnostics/examples/inspect/cpp/part_1/main.cc
-[cpp-part1-reverser-h]: /src/diagnostics/examples/inspect/cpp/part_1/reverser.h
-[cpp-part1-reverser-cc]: /src/diagnostics/examples/inspect/cpp/part_1/reverser.cc
-[cpp-part1-build]: /src/diagnostics/examples/inspect/cpp/part_1/BUILD.gn
-[cpp-client-main]: /src/diagnostics/examples/inspect/cpp/client/main.cc#118
-[cpp-part2-meta]: /src/diagnostics/examples/inspect/cpp/part_2/meta/inspect_cpp_codelab_part_2.cmx
-[cpp-part3-unittest]: /src/diagnostics/examples/inspect/cpp/part_3/reverser_unittests.cc
-[cpp-part4-integration]: /src/diagnostics/examples/inspect/cpp/part_4/tests/integration_test.cc
-[cpp-part4-integration-meta]: /src/diagnostics/examples/inspect/cpp/meta/integration_part_4.cmx
+[inspect-cpp-codelab]: /examples/diagnostics/inspect/codelab/cpp
+[cpp-part1]: /examples/diagnostics/inspect/codelab/cpp/part_1
+[cpp-part1-main]: /examples/diagnostics/inspect/codelab/cpp/part_1/main.cc
+[cpp-part1-reverser-h]: /examples/diagnostics/inspect/codelab/cpp/part_1/reverser.h
+[cpp-part1-reverser-cc]: /examples/diagnostics/inspect/codelab/cpp/part_1/reverser.cc
+[cpp-part1-build]: /examples/diagnostics/inspect/codelab/cpp/part_1/BUILD.gn
+[cpp-client-main]: /examples/diagnostics/inspect/codelab/cpp/client/main.cc#118
+[cpp-part2-meta]: /examples/diagnostics/inspect/codelab/cpp/part_2/meta/inspect_cpp_codelab_part_2.cmx
+[cpp-part3-unittest]: /examples/diagnostics/inspect/codelab/cpp/part_3/reverser_unittests.cc
+[cpp-part4-integration]: /examples/diagnostics/inspect/codelab/cpp/part_4/tests/integration_test.cc
+[cpp-part4-integration-meta]: /examples/diagnostics/inspect/codelab/cpp/meta/integration_part_4.cmx
 
-[inspect-rust-codelab]: /src/diagnostics/examples/inspect/rust
-[rust-part1]: /src/diagnostics/examples/inspect/rust/part_1
-[rust-part1-main]: /src/diagnostics/examples/inspect/rust/part_1/src/main.rs
-[rust-part1-reverser]: /src/diagnostics/examples/inspect/rust/part_1/src/reverser.rs
-[rust-part1-build]: /src/diagnostics/examples/inspect/rust/part_1/BUILD.gn
-[rust-client-main]: /src/diagnostics/examples/inspect/rust/client/src/main.rs#41
-[rust-part2-meta]: /src/diagnostics/examples/inspect/rust/part_2/meta/inspect_rust_codelab_part_2.cmx
-[rust-part3-unittest]: /src/diagnostics/examples/inspect/rust/part_3/src/reverser.rs#99
-[rust-part4-integration]: /src/diagnostics/examples/inspect/rust/part_4/tests/integration_test.rs
-[rust-part4-integration-meta]: /src/diagnostics/examples/inspect/rust/meta/integration_test_part_4.cmx
+[inspect-rust-codelab]: /examples/diagnostics/inspect/codelab/rust
+[rust-part1]: /examples/diagnostics/inspect/codelab/rust/part_1
+[rust-part1-main]: /examples/diagnostics/inspect/codelab/rust/part_1/src/main.rs
+[rust-part1-reverser]: /examples/diagnostics/inspect/codelab/rust/part_1/src/reverser.rs
+[rust-part1-build]: /examples/diagnostics/inspect/codelab/rust/part_1/BUILD.gn
+[rust-client-main]: /examples/diagnostics/inspect/codelab/rust/client/src/main.rs#41
+[rust-part2-meta]: /examples/diagnostics/inspect/codelab/rust/part_2/meta/inspect_rust_codelab_part_2.cmx
+[rust-part3-unittest]: /examples/diagnostics/inspect/codelab/rust/part_3/src/reverser.rs#99
+[rust-part4-integration]: /examples/diagnostics/inspect/codelab/rust/part_4/tests/integration_test.rs
+[rust-part4-integration-meta]: /examples/diagnostics/inspect/codelab/rust/meta/integration_test_part_4.cmx
 
 [inspect-dart-codelab]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab
 [dart-part1]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1

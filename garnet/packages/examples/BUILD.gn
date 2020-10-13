@@ -40,7 +40,6 @@ group("all") {
     "//garnet/packages/examples:eth-rs",
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
-    "//garnet/packages/examples:inspection",
     "//garnet/packages/examples:intl",
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
@@ -84,19 +83,6 @@ group("fidl") {
     "//garnet/examples/fidl/echo_server_llcpp",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust",
     "//garnet/go/src/fidl/examples",
-  ]
-}
-
-group("inspection") {
-  testonly = true
-  public_deps = [
-    "//examples/rust/inspect-rs",
-    "//garnet/examples/inspection:example_server",
-    "//garnet/examples/inspection:example_server_unittests",
-    "//garnet/examples/inspection/vmo:inspect_vmo_example",
-    "//garnet/examples/inspection/vmo:inspect_vmo_example_tests",
-    "//src/diagnostics/examples/inspect/cpp:inspect_cpp_codelab",
-    "//src/diagnostics/examples/inspect/rust:inspect_rust_codelab",
   ]
 }
 

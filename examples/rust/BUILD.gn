@@ -13,7 +13,6 @@ group("rust") {
     # TODO(fxbug.dev/50421): This target seems broken.
     # "cdylib",
     "eth-rs",
-    "inspect-rs",
     "staticlib",
   ]
 }
@@ -22,8 +21,6 @@ group("tests") {
   testonly = true
   deps = [
     ":garnet-rust-examples",
-    "ergonomic-inspect:tests",
-    "inspect-rs:tests",
     "rust_static_linking:tests",
 
     # Until such time that these directories have tests, at least check that
@@ -32,7 +29,6 @@ group("tests") {
     # TODO(fxbug.dev/50421): This target seems broken.
     # "cdylib",
     "eth-rs",
-    "inspect-rs",
     "staticlib",
   ]
 }

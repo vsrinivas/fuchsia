@@ -1,0 +1,110 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("lib") {
+  sources = [
+    "echo_connection.cc",
+    "echo_connection.h",
+    "example_server_app.cc",
+    "example_server_app.h",
+  ]
+
+  public_deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "example_server"
+
+  sources = [ "example_server.cc" ]
+
+  deps = [
+    ":lib",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("client") {
+  output_name = "example_client"
+
+  sources = [ "example_client.cc" ]
+
+  deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//sdk/lib/fdio",
+    "//src/lib/files",
+  ]
+}
+
+package("example_server") {
+  deps = [
+    ":bin",
+    ":client",
+  ]
+  binaries = [
+    {
+      name = "example_server"
+    },
+    {
+      name = "example_client"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example_server.cmx")
+      dest = "example_server.cmx"
+    },
+  ]
+}
+
+executable("example_server_cpp_unittests") {
+  output_name = "example_server_unittests"
+  testonly = true
+
+  sources = [ "echo_connection_unittest.cc" ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("example_server_unittests") {
+  deps = [ ":example_server_cpp_unittests" ]
+
+  tests = [
+    {
+      name = "example_server_unittests"
+      environments = [ emu_env ]
+    },
+  ]
+}
+
+group("cpp") {
+  testonly = true
+  public_deps = [
+    ":tests",
+    "//examples/diagnostics/inspect/cpp:example_server",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "//examples/diagnostics/inspect/cpp:example_server_unittests" ]
+}

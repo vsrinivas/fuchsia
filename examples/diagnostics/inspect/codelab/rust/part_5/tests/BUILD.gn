@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("integration_test") {
+  name = "inspect_rust_codelab_part_5_integration_test"
+  source_root = "./integration_test.rs"
+  edition = "2018"
+
+  deps = [
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
+    "//examples/diagnostics/inspect/codelab/rust/inspect-codelab-shared",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  sources = [ "integration_test.rs" ]
+}

@@ -2,18 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("diagnostics") {
+group("logs") {
   testonly = true
   deps = [
-    "inspect",
-    "logs",
+    ":tests",
+    "rust",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "inspect:tests",
-    "logs:tests",
-  ]
+  data_deps = [ "rust:tests" ]
 }

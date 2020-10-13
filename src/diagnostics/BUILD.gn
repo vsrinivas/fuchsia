@@ -8,7 +8,6 @@ group("diagnostics") {
     ":tests",
     "archivist",
     "config",
-    "examples",
     "log-stats",
     "wasm",
   ]
@@ -19,7 +18,6 @@ group("tests") {
   deps = [
     "archivist:tests",
     "config:tests",
-    "examples:tests",
     "inspect_validator:tests",
     "inspect_validator/lib/cpp:tests",
     "inspect_validator/lib/rust:tests",

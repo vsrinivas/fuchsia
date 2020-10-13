@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bin") {
+  output_name = "inspect_cpp_codelab_fizzbuzz_bin"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
