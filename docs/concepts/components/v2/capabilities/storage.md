@@ -1,35 +1,13 @@
 # Storage capabilities
 
-[Storage capabilities][glossary-storage] are a way for components to define,
-[offer][offer], and [use][use] directories, but they have different semantics
-than [directory capabilities][directory-capabilities]. Storage capabilities are
-not directly provided from a component instance's
-[outgoing directory][outgoing-directory], but are created from preexisting
-directory capabilities that are declared as a
-[`storage` `capability`][manifests-storage] in a component manifest.
-
-Directories provided by storage capabilities are guaranteed to be unique and
-non-overlapping for each [component instance][component-instance], preventing
-any component instances from accessing files belonging to any other component
-instance (including their own children).
-
-There are different types of storage capabilities, each with different
-semantics. For more information, see [storage types](#storage-types).
-
-## Storage types {#storage-types}
-
-Storage capabilities are identified by types. The following storage types
-are supported:
-
--   `data`: A mutable directory the component may store its state in. This
-    directory is guaranteed to be unique and non-overlapping with directories
-    provided to other components.
--   `cache`: Identical to the `data` storage type, but the framework may delete
-    items from this directory to reclaim space.
--   `meta`: A directory where the framework can store metadata for the component
-    instance. Features such as persistent collections must use this capability
-    as they require component manager to store data on the component's behalf.
-    The component cannot directly access this directory.
+[Storage capabilities][glossary-storage] are a way for components to receive
+_isolated_ access to a private storage directory. When a storage capability is
+declared in a [component manifest][manifests-storage] it must reference a
+backing [directory capability][directory-capabilities]. Each component that then
+[uses][use] this storage capability receives a unique and non-overlapping
+sub-directory within the backing directory. This prevents [component
+instances][component-instance] from accessing files belonging to other component
+instances (including their own children).
 
 ## Directory vs storage capabilities
 
@@ -125,30 +103,30 @@ instance.
 Storage capabilities can be created with a
 [`storage` declaration][storage-syntax] in a [component manifest][manifests].
 Once storage capabilities have been declared, they can then be offered to other
-component instances by referencing the declaration by name.
+component instances.
 
 A `storage` declaration must include a reference to a directory capability,
 which is the directory from which the component manager will create isolated
 directories for each component instance using the storage capability.
 
-For example, the following manifest describes new storage capabilities backed by
-the `memfs` directory exposed by the child named `#memfs`. From this storage
-declaration a data storage capability is offered to the child named
+For example, the following manifest describes a new storage capability named
+`temp` backed by the `memfs` directory exposed by the child named `#memfs`. From
+this storage declaration a storage capability is offered to the child named
 `storage_user`.
 
 ```
 {
     capabilities: [
         {
-            storage: "mystorage",
+            storage: "temp",
             from: "#memfs",
             backing_dir: "memfs",
         },
     ],
     offer: [
         {
-            storage: "data",
-            from: "#mystorage",
+            storage: "temp",
+            from: "self",
             to: [ "#storage-user" ],
         },
     ],
@@ -173,10 +151,9 @@ capability. Then, the framework provides the component instance access to a
 unique sub-directory.
 
 The sub-directory to which a component instance is provided access is determined
-by the type of storage and its location in the component topology. This means
-that if a component instance is renamed in its parent manifest or moved to a
-different parent then it will receive a different sub-directory than it did
-before the change.
+by its location in the component topology. This means that if a component
+instance is renamed in its parent manifest or moved to a different parent then
+it will receive a different sub-directory than it did before the change.
 
 [component-instance]: /docs/glossary.md#component-instance
 [directory-capabilities]: /docs/glossary.md#directory-capability

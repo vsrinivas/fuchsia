@@ -253,7 +253,6 @@ A reference may refer to:
 
 -   A [static child instance][static-children] whose name is `<reference-name>`.
 -   A [collection][collections] whose name is `<reference-name>`.
--   A [storage declaration](#storage) whose name is `<reference-name>`.
 
 ### program {#program}
 
@@ -440,6 +439,8 @@ A definition of a [storage capability][doc-storage].
         instance.
 -   `backing_dir`: The [name](#capability-names) of the directory backing the
     storage.
+-   `subdir`: Users are given isolated access to this sub-directory that is
+    inside of the `backing_dir` directory.
 
 #### runner {#capability-runner}
 
@@ -459,8 +460,7 @@ runtime, as explained in [Routing terminology](#routing-terminology).
     -   `protocol`: The [name](#capability-names) of a protocol capability, or
         an array of names of protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `storage`: The [type](#storage-types) of a storage capability. A
-        manifest can only declare one `use` for each storage type.
+    -   `storage`: The [name](#capability-names) of a storage capability.
     -   `runner`: The [name](#capability-names) of a runner capability. A
         component can use at most one `runner`.
 
@@ -470,8 +470,7 @@ runtime, as explained in [Routing terminology](#routing-terminology).
     -   `protocol`: The [name](#capability-names) of a protocol capability, or
         an array of names of protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `storage`: The [type](#storage-types) of a storage capability. A
-        manifest can only declare one `use` for each storage type.
+    -   `storage`: The [name](#capability-names) of a storage capability.
     -   `runner`: The [name](#capability-names) of a runner capability. A
         component can use at most one `runner`.
 -   `path` _(optional)_: The path at which to install the capability in the
@@ -571,7 +570,7 @@ explained in [Routing terminology](#routing-terminology).
     -   `protocol`: The [name](#capability-names) of a protocol capability, or
         an array of names of protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `storage`: The [type](#storage-types) of a storage capability.
+    -   `storage`: The [name](#capability-names) of a storage capability.
     -   `runner`: The [name](#capability-names) of a runner capability.
 -   `from`: The source of the capability, one of:
     -   `parent`: The component's parent. This source can be used for all
@@ -581,16 +580,12 @@ explained in [Routing terminology](#routing-terminology).
     -   `#<child-name>`: A [reference](#references) to a child component
         instance. This source can only be used when offering protocol,
         directory, or runner capabilities.
-    -   `#<storage-name>` A [reference](#references) to a storage declaration.
-        This source can only be used when offering storage capabilities.
 -   `to`: An array of capability targets, each of which is a
     [reference](#references) to the child or collection to which the capability
     is being offered, of the form `#<target-name>`.
 -   `as` _(optional)_: An explicit [name](#capability-names) for the capability
     as it will be known by the target. If omitted, defaults to the original
-    name. `as` cannot be used:
-    -   For storage capabilities.
-    -   When `protocol` is an array of multiple items.
+    name. `as` cannot be used when `protocol` is an array of multiple items.
 -   `dependency` _(optional)_: The type of dependency between the source and
     targets, one of:
     -   `strong`: a strong dependency, which is used to determine shutdown
