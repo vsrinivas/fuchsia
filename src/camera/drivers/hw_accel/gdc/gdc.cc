@@ -42,7 +42,10 @@ enum {
 
 }  // namespace
 
-static inline uint32_t AxiWordAlign(uint32_t value) { return fbl::round_up(value, kAxiAlignment); }
+static inline uint32_t AxiWordAlign(zx_paddr_t value) {
+  ZX_DEBUG_ASSERT(value < std::numeric_limits<uint32_t>::max());
+  return fbl::round_up(static_cast<uint32_t>(value), kAxiAlignment);
+}
 
 void GdcDevice::InitClocks() {
   // First reset the clocks.
@@ -148,9 +151,11 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
       .set_config_addr(addr)
       .WriteTo(gdc_mmio());
 
+  ZX_DEBUG_ASSERT(size < std::numeric_limits<uint32_t>::max());
+
   ConfigSize::Get()
       .ReadFrom(gdc_mmio())
-      .set_config_size(size)
+      .set_config_size(static_cast<uint32_t>(size))
       .WriteTo(gdc_mmio());
 
   // Program the Input frame details.

@@ -18,6 +18,7 @@ constexpr uint32_t kEndianness = 7;
 constexpr auto kTag = "ge2d";
 
 namespace ge2d {
+
 ScopedCanvasId::ScopedCanvasId(ScopedCanvasId&& other) {
   canvas_ = other.canvas_;
   id_ = other.id_;
@@ -396,19 +397,20 @@ zx_status_t Ge2dTask::InitializeWatermarkImages(const water_mark_info_t* wm_info
       if (wm_info[i].global_alpha != 1.0f) {
         for (uint32_t x = 0; x < wm.image_format.coded_width; ++x) {
           uint8_t* alpha = &output_row[4 * x + 3];
-          *alpha = *alpha * wm_info[i].global_alpha;
+          *alpha = static_cast<uint8_t>(static_cast<float>(*alpha) * wm_info[i].global_alpha);
         }
       }
     }
-
     zx_cache_flush(mapped_contig_vmo.start(), output_vmo_size, ZX_CACHE_FLUSH_DATA);
   }
+
   // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
   status = zx::vmo::create_contiguous(bti, max_size, 0, &watermark_blended_vmo_);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Unable to get create contiguous blended watermark VMO");
     return status;
   }
+
   watermark_blended_vmo_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, max_size, nullptr, 0);
   AllocateWatermarkCanvasIds();
   return ZX_OK;
@@ -459,4 +461,5 @@ zx_status_t Ge2dTask::InitInPlaceWatermark(
 
   return InitializeWatermarkImages(wm_info, image_format_table_count, bti, canvas);
 }
+
 }  // namespace ge2d

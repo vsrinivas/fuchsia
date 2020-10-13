@@ -52,13 +52,9 @@ class GenCtrl1 : public hwreg::RegisterBase<GenCtrl1, uint32_t> {
 
 class GenCtrl2 : public hwreg::RegisterBase<GenCtrl2, uint32_t> {
  public:
-  enum ColorMap16 {
+  enum ColorMap {
     kColorMap16CbCr = 9,
-  };
-  enum ColorMap24 {
     kColorMap24NV12 = 14,
-  };
-  enum ColorMap32 {
     kColorMap32RGBA8888 = 0,
   };
   enum Format { kFormat8Bit = 0, kFormat16Bit = 1, kFormat24Bit = 2, kFormat32Bit = 3 };
