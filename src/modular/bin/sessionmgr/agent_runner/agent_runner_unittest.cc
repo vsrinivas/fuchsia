@@ -462,8 +462,11 @@ TEST_F(AgentRunnerTest, AddRunningAgent_IsGracefullyTornDown) {
   agent_runner->Teardown([&is_torn_down] { is_torn_down = true; });
   RunLoopUntil([&] { return is_torn_down; });
 
-  EXPECT_TRUE(test_agent->lifecycle_terminate_called());
-  EXPECT_FALSE(test_agent->controller_connected());
+  // The agent should have been instructed to tear down gracefully.
+  RunLoopUntil([&] { return test_agent->lifecycle_terminate_called(); });
+
+  // The agent should have been terminated.
+  RunLoopUntil([&] { return !test_agent->controller_connected(); });
 }
 
 TEST_F(AgentRunnerTest, AddRunningAgent_CanBeCriticalAgent) {
