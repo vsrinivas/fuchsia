@@ -4,14 +4,13 @@
 
 #include "network_device.h"
 
-#include <zircon/status.h>
-
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/connectivity/network/drivers/network-device/network_device_bind.h"
 
 namespace network {
 
@@ -119,9 +118,4 @@ static zx_driver_ops_t network_driver_ops = []() {
 
 }  // namespace network
 
-// The formatter does not play nice with these macros.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(network, network::network_driver_ops, "zircon", "0.1", 1)
-            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_NETWORK_DEVICE_IMPL),
-ZIRCON_DRIVER_END(network)
-    // clang-format on
+ZIRCON_DRIVER(network, network::network_driver_ops, "zircon", "0.1")

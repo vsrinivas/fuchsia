@@ -2,8 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("network-device_bind") {
+  rules = "network_device.bind"
+  output = "network_device_bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.network" ]
+}
 
 source_set("src") {
   sources = [
@@ -11,6 +19,7 @@ source_set("src") {
     "network_device.h",
   ]
   public_deps = [
+    ":network-device_bind",
     "device:device_ddk",
     "mac:mac_ddk",
     "//src/lib/ddk",
@@ -35,6 +44,7 @@ group("tests") {
 
   deps = [
     ":network-device-test",
+    ":network-device_bind_test",
     "device:tests",
     "mac:tests",
   ]
