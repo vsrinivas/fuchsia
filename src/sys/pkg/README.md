@@ -118,11 +118,11 @@ this example?
 #### How do I run a hosted package server?
 
 See the instructions on
-[running a package repository with pm](https://fuchsia.dev/fuchsia-src/development/sdk/documentation/packages)
+[running a package repository with pm](https://fuchsia.dev/fuchsia-src/development/idk/documentation/packages)
 
 ### More information:
 
-*   [Package overview](/docs/development/sdk/documentation/packages.md)
+*   [Package overview](/docs/development/idk/documentation/packages.md)
 *   [Package updates](/docs/concepts/packages/package_update.md)
 *   [Package metadata](/docs/concepts/packages/package.md)
 *   [Package URLs](/docs/concepts/packages/package_url.md)

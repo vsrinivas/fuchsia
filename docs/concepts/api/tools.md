@@ -18,11 +18,11 @@ The Integrator Development Kit (IDK) will contain:
 
   * The tool binary itself.
 
-  * The [device-finder](/docs/development/sdk/documentation/device_discovery.md)
+  * The [device-finder](/docs/development/idk/documentation/device_discovery.md)
     tool which can enumerate Fuchsia devices to get their names.
 
   * A document in
-    [//docs/development/sdk/documentation](/docs/development/sdk/documentation)
+    [//docs/development/idk/documentation](/docs/development/idk/documentation)
     describing the contract of this tool and how to connect it to the target
     system. The target audience of this document is people writing integration
     scripts rather than being an end-user-friendly “how-to” (debugger example).
@@ -55,7 +55,7 @@ launch scripts can be removed.
 Tool authors are responsible for:
 
   * Writing the tool with the appropriate interface.
-  * Providing documentation on this interface in //docs/development/sdk/documentation.
+  * Providing documentation on this interface in //docs/development/idk/documentation.
   * Currently please reach out to get bugs filed on individual SDKs. We are
     working on a better process for this (fxbug.dev/5908).
 

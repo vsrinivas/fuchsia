@@ -70,7 +70,7 @@ only takes a few steps:
 2. Create a new SDK `//some/place:my_sdk` with the `sdk` template, regrouping
    the atoms and molecules that should be included;
 3. Add a new
-   [package](/docs/development/sdk/documentation/packages.md)
+   [package](/docs/development/idk/documentation/packages.md)
    file for the molecule:
 ```
 {

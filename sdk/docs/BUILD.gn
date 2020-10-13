@@ -33,7 +33,7 @@ sdk_documentation("docs") {
   foreach(doc, docs) {
     files += [
       {
-        source = "//docs/development/sdk/documentation/$doc.md"
+        source = "//docs/development/idk/documentation/$doc.md"
         dest = "docs/$doc.md"
       },
     ]

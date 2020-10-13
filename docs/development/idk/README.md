@@ -1,7 +1,7 @@
 # Integrator Development Kit (IDK)
 
 This folder contains information about developing the Fuchsia Integrator Development Kit (IDK).
-For information on the GN C++ Frontend SDK see [this getting started guide](/docs/development/sdk/gn).
+For information on the GN C++ Frontend SDK see [this getting started guide](/docs/development/idk/gn).
 
 > [Download the Fuchsia IDK](download.md)
 
@@ -30,7 +30,7 @@ for very flexible release schemes and iteration cycles.
 
 The present documentation focuses on the details of the creation process of the
 IDK.
-The documentation included in the IDK, hosted under `//sdk/docs`, contains
+The documentation included in the IDK, hosted under `//idk/docs`, contains
 information regarding how to work with the IDK.
 Lastly, some examples of SDK distributions can be found under `//scripts/sdk`;
 most notably it contains a [frontend](#frontend) generating a workspace
