@@ -244,8 +244,8 @@ mod tests {
         super::*,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{
-            serve::{handler, ServedRepository},
-            PackageBuilder, RepositoryBuilder,
+            serve::{handler, ServedRepository, ServedRepositoryBuilder, UriPathHandler},
+            Package, PackageBuilder, Repository as TestRepository, RepositoryBuilder,
         },
         fuchsia_url::pkg_url::RepoUrl,
         futures::{channel::mpsc, stream::StreamExt},
@@ -255,12 +255,46 @@ mod tests {
         updating_tuf_client::SUBSCRIBE_CACHE_STALE_TIMEOUT,
     };
 
+    const TEST_REPO_URL: &str = "fuchsia-pkg://test";
     const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
-    impl Repository {
-        pub async fn new_no_cobalt_or_inspect(
-            config: &RepositoryConfig,
-        ) -> Result<Self, anyhow::Error> {
+    struct TestEnvBuilder<'a> {
+        server_repo_builder: RepositoryBuilder<'a>,
+    }
+
+    impl<'a> TestEnvBuilder<'a> {
+        fn add_package(mut self, pkg: &'a Package) -> Self {
+            self.server_repo_builder = self.server_repo_builder.add_package(pkg);
+            self
+        }
+
+        async fn build(self) -> TestEnv {
+            let repo = self.server_repo_builder.build().await.expect("created repo");
+
+            TestEnv { repo: Arc::new(repo) }
+        }
+    }
+
+    struct TestEnv {
+        repo: Arc<TestRepository>,
+    }
+
+    impl TestEnv {
+        fn builder<'a>() -> TestEnvBuilder<'a> {
+            TestEnvBuilder {
+                server_repo_builder: RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH),
+            }
+        }
+
+        async fn new() -> Self {
+            Self::builder().build().await
+        }
+
+        fn serve_repo(&self) -> ServerBuilder {
+            ServerBuilder { builder: Arc::clone(&self.repo).server(), subscribe: false }
+        }
+
+        async fn repo(&self, config: &RepositoryConfig) -> Result<Repository, anyhow::Error> {
             let (sender, _) = futures::channel::mpsc::channel(0);
             let cobalt_sender = CobaltSender::new(sender);
             Repository::new(
@@ -273,42 +307,59 @@ mod tests {
         }
     }
 
+    struct ServerBuilder {
+        builder: ServedRepositoryBuilder,
+        subscribe: bool,
+    }
+
+    impl ServerBuilder {
+        fn subscribe(mut self) -> Self {
+            self.subscribe = true;
+            self
+        }
+
+        fn uri_path_override_handler(mut self, handler: impl UriPathHandler) -> Self {
+            self.builder = self.builder.uri_path_override_handler(handler);
+            self
+        }
+
+        fn start(self, repo_url: &str) -> (ServedRepository, RepositoryConfig) {
+            let served_repository = self.builder.start().expect("create served repo");
+            let repo_url = RepoUrl::parse(repo_url).expect("created repo url");
+
+            let repo_config = if self.subscribe {
+                served_repository.make_repo_config_with_subscribe(repo_url)
+            } else {
+                served_repository.make_repo_config(repo_url)
+            };
+
+            (served_repository, repo_config)
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_log_ctx_correctly_set() {
         // Serve static repo and connect to it
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let repo = Arc::new(
-            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-                .add_package(&pkg)
-                .build()
-                .await
-                .expect("created repo"),
-        );
-        let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
-        let repo_config = served_repository.make_repo_config(repo_url);
-        let repo =
-            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
 
-        assert_matches!(repo.log_ctx, LogContext { repo_url } if repo_url == "fuchsia-pkg://test");
+        let env = TestEnv::builder().add_package(&pkg).build().await;
+
+        let (_served_repository, repo_config) = env.serve_repo().start(TEST_REPO_URL);
+        let repo = env.repo(&repo_config).await.expect("created opened repo");
+
+        assert_matches!(repo.log_ctx, LogContext { repo_url } if repo_url == TEST_REPO_URL);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_merkle_at_path() {
         // Serve static repo and connect to it
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let repo = Arc::new(
-            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-                .add_package(&pkg)
-                .build()
-                .await
-                .expect("created repo"),
-        );
-        let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
-        let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo =
-            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+
+        let env = TestEnv::builder().add_package(&pkg).build().await;
+
+        let (_served_repository, repo_config) = env.serve_repo().start(TEST_REPO_URL);
+        let mut repo = env.repo(&repo_config).await.expect("created opened repo");
+
         let target_path =
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
@@ -323,17 +374,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_merkle_at_path_fails_when_no_package() {
-        let repo = Arc::new(
-            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-                .build()
-                .await
-                .expect("created repo"),
-        );
-        let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
-        let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo =
-            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+        let env = TestEnv::new().await;
+        let (_served_repository, repo_config) = env.serve_repo().start(TEST_REPO_URL);
+        let mut repo = env.repo(&repo_config).await.expect("created opened repo");
+
         let target_path =
             TargetPath::new("path_that_doesnt_exist/0".to_string()).expect("created target path");
 
@@ -345,26 +389,16 @@ mod tests {
     async fn test_get_merkle_at_path_fails_when_remote_repo_down() {
         // Serve static repo
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let repo = Arc::new(
-            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-                .add_package(&pkg)
-                .build()
-                .await
-                .expect("created repo"),
-        );
+        let env = TestEnv::builder().add_package(&pkg).build().await;
         let should_fail = handler::AtomicToggle::new(false);
-        let served_repository = repo
-            .server()
+        let (_served_repository, repo_config) = env
+            .serve_repo()
             .uri_path_override_handler(handler::Toggleable::new(
                 &should_fail,
                 handler::StaticResponseCode::not_found(),
             ))
-            .start()
-            .expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
-        let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo =
-            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+            .start(TEST_REPO_URL);
+        let mut repo = env.repo(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
@@ -386,26 +420,16 @@ mod tests {
     async fn test_get_merkle_path_fails_and_logs_when_remote_server_500s() {
         // Serve static repo
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let repo = Arc::new(
-            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-                .add_package(&pkg)
-                .build()
-                .await
-                .expect("created repo"),
-        );
+        let env = TestEnv::builder().add_package(&pkg).build().await;
         let should_fail = handler::AtomicToggle::new(false);
-        let served_repository = repo
-            .server()
+        let (_served_repository, repo_config) = env
+            .serve_repo()
             .uri_path_override_handler(handler::Toggleable::new(
                 &should_fail,
                 handler::StaticResponseCode::server_error(),
             ))
-            .start()
-            .expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
-        let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo =
-            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+            .start(TEST_REPO_URL);
+        let mut repo = env.repo(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("just-meta-far/0".to_owned()).expect("created target path");
 
@@ -421,35 +445,26 @@ mod tests {
     }
 
     async fn make_repo_with_auto_and_watched_timestamp_metadata(
-    ) -> (ServedRepository, mpsc::UnboundedReceiver<()>, Repository) {
+    ) -> (TestEnv, ServedRepository, mpsc::UnboundedReceiver<()>, Repository) {
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let repo = Arc::new(
-            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-                .add_package(&pkg)
-                .build()
-                .await
-                .expect("created repo"),
-        );
+        let env = TestEnv::builder().add_package(&pkg).build().await;
         let (notify_on_request_handler, notified) = handler::NotifyWhenRequested::new();
-        let served_repository = repo
-            .server()
+        let (served_repository, repo_config) = env
+            .serve_repo()
             .uri_path_override_handler(handler::ForPath::new(
                 "/timestamp.json",
                 notify_on_request_handler,
             ))
-            .start()
-            .expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
-        let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
-        let repo =
-            Repository::new_no_cobalt_or_inspect(&repo_config).await.expect("created opened repo");
+            .subscribe()
+            .start(TEST_REPO_URL);
+        let repo = env.repo(&repo_config).await.expect("created opened repo");
         served_repository.wait_for_n_connected_auto_clients(1).await;
-        (served_repository, notified, repo)
+        (env, served_repository, notified, repo)
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn update_subscribed_repo_on_auto_event() {
-        let (served_repository, mut ts_metadata_fetched, _repo) =
+        let (_env, served_repository, mut ts_metadata_fetched, _repo) =
             make_repo_with_auto_and_watched_timestamp_metadata().await;
 
         served_repository
@@ -464,7 +479,7 @@ mod tests {
     async fn only_update_subscribed_repo_if_stale() {
         let initial_time = zx::Time::from_nanos(0);
         clock::mock::set(initial_time);
-        let (served_repository, mut ts_metadata_fetched, mut repo) =
+        let (_env, served_repository, mut ts_metadata_fetched, mut repo) =
             make_repo_with_auto_and_watched_timestamp_metadata().await;
 
         served_repository
@@ -492,7 +507,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn auto_client_reconnects() {
-        let (served_repository, _ts_metadata_fetched, _repo) =
+        let (_env, served_repository, _ts_metadata_fetched, _repo) =
             make_repo_with_auto_and_watched_timestamp_metadata().await;
 
         served_repository.drop_all_auto_clients().await;
@@ -515,6 +530,7 @@ mod inspect_tests {
         std::sync::Arc,
     };
 
+    const TEST_REPO_URL: &str = "fuchsia-pkg://test";
     const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
     fn dummy_sender() -> CobaltSender {
@@ -532,7 +548,7 @@ mod inspect_tests {
                 .expect("created repo"),
         );
         let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
+        let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
 
         let repo = Repository::new(
@@ -583,7 +599,7 @@ mod inspect_tests {
                 .expect("created repo"),
         );
         let served_repository = repo.server().start().expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
+        let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
         let mut repo = Repository::new(
             &repo_config,
@@ -640,7 +656,7 @@ mod inspect_tests {
             ))
             .start()
             .expect("create served repo");
-        let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
+        let repo_url = RepoUrl::parse(TEST_REPO_URL).expect("created repo url");
         let repo_config = served_repository.make_repo_config_with_subscribe(repo_url);
         let repo = Repository::new(
             &repo_config,
