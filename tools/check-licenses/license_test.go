@@ -5,14 +5,12 @@
 package checklicenses
 
 import (
-	"fmt"
 	"regexp"
 	"sync"
 	"testing"
 )
 
 func TestLicenseAppend(t *testing.T) {
-	fmt.Println("asdfasdf")
 	license := License{
 		pattern:      regexp.MustCompile("abcdefghijklmnopqrs\ntuvwxyz"),
 		category:     "alphabet-test",
