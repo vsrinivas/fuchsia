@@ -42,13 +42,11 @@ impl From<&fidl_sme::BssInfo> for types::Bss {
 /// Requests a new SME scan and returns the results.
 async fn sme_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-) -> Result<Vec<types::ScanResult>, ()> {
+    scan_request: fidl_sme::ScanRequest,
+) -> Result<Vec<fidl_sme::BssInfo>, ()> {
     let txn = {
         let mut iface_manager = iface_manager.lock().await;
-        match iface_manager
-            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}))
-            .await
-        {
+        match iface_manager.scan(scan_request).await {
             Ok(txn) => txn,
             Err(error) => {
                 error!("Scan initiation error: {:?}", error);
@@ -67,8 +65,7 @@ async fn sme_scan(
             }
             fidl_sme::ScanTransactionEvent::OnFinished {} => {
                 debug!("Finished getting scan results from SME");
-                let scan_results = convert_scan_info(&scanned_networks);
-                return Ok(scan_results);
+                return Ok(scanned_networks);
             }
             fidl_sme::ScanTransactionEvent::OnError { error } => {
                 error!("Scan error from SME: {:?}", error);
@@ -85,16 +82,20 @@ async fn sme_scan(
 /// On successful scan, also provides scan results to:
 /// - Emergency Location Provider
 /// - Network Selection Module
-pub(crate) async fn perform_scan(
+pub(crate) async fn perform_scan<F>(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
+    mut output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
     network_selector: Arc<impl ScanResultUpdate>,
     location_sensor_updater: Arc<impl ScanResultUpdate>,
-) {
-    let sme_result = sme_scan(iface_manager).await;
-    let scan_results = match sme_result {
+    active_scan_decider: F,
+) where
+    F: FnOnce(Vec<types::ScanResult>) -> Option<Vec<Vec<u8>>>,
+{
+    let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+    let sme_result = sme_scan(Arc::clone(&iface_manager), scan_request).await;
+    let mut scan_results = match sme_result {
         Ok(results) => results,
-        Err(_) => {
+        Err(()) => {
             if let Some(output_iterator) = output_iterator {
                 send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
                     .await
@@ -103,6 +104,35 @@ pub(crate) async fn perform_scan(
             return;
         }
     };
+
+    // Determine which active scans to perform by asking the active_scan_decider()
+    if let Some(ssids) = active_scan_decider(convert_scan_info(&scan_results)) {
+        let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: ssids,
+            channels: vec![],
+        });
+        let sme_result = sme_scan(iface_manager, scan_request).await;
+        let mut active_scan_results = match sme_result {
+            Ok(results) => results,
+            Err(()) => {
+                // There was an error in the active scan. For the FIDL interface, send an error. We
+                // `.take()` the output_iterator here, so it won't be used for sending results below.
+                if let Some(output_iterator) = output_iterator.take() {
+                    send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
+                        .await
+                        .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
+                };
+                // Also return an empty vec![], so that the other consumers of scan results at least
+                // get the passive scan results.
+                info!("Proceeding with passive scan results for non-FIDL scan result consumers");
+                vec![]
+            }
+        };
+        // TODO(35920): scan results returned need to include passive vs active annotation
+        scan_results.append(&mut active_scan_results);
+    }
+
+    let scan_results = convert_scan_info(&scan_results);
 
     let mut scan_result_consumers = FuturesUnordered::new();
 
@@ -373,17 +403,20 @@ mod tests {
         }
     }
 
-    fn send_sme_scan_result(
+    fn validate_sme_request_and_send_results(
         exec: &mut fasync::Executor,
         sme_stream: &mut fidl_sme::ClientSmeRequestStream,
+        expected_scan_request: &fidl_sme::ScanRequest,
         scan_results: &[fidl_sme::BssInfo],
     ) {
         // Check that a scan request was sent to the sme and send back results
         assert_variant!(
             exec.run_until_stalled(&mut sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, ..
+                txn, req, control_handle: _
             }))) => {
+                // Validate the request
+                assert_eq!(req, *expected_scan_request);
                 // Send all the APs
                 let (_stream, ctrl) = txn
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -398,9 +431,16 @@ mod tests {
     }
 
     // Creates test data for the scan functions.
-    fn create_scan_ap_data(
-    ) -> (Vec<fidl_sme::BssInfo>, Vec<types::ScanResult>, Vec<fidl_policy::ScanResult>) {
-        let input_aps = vec![
+    struct MockScanData {
+        passive_input_aps: Vec<fidl_sme::BssInfo>,
+        passive_internal_aps: Vec<types::ScanResult>,
+        passive_fidl_aps: Vec<fidl_policy::ScanResult>,
+        active_input_aps: Vec<fidl_sme::BssInfo>,
+        combined_internal_aps: Vec<types::ScanResult>,
+        combined_fidl_aps: Vec<fidl_policy::ScanResult>,
+    }
+    fn create_scan_ap_data() -> MockScanData {
+        let passive_input_aps = vec![
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
@@ -431,7 +471,7 @@ mod tests {
         ];
         // input_aps contains some duplicate SSIDs, which should be
         // grouped in the output.
-        let internal_aps = vec![
+        let passive_internal_aps = vec![
             types::ScanResult {
                 id: types::NetworkIdentifier {
                     ssid: "duplicated ssid".as_bytes().to_vec(),
@@ -467,7 +507,7 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
         ];
-        let fidl_aps = vec![
+        let passive_fidl_aps = vec![
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
                     ssid: "duplicated ssid".as_bytes().to_vec(),
@@ -503,28 +543,234 @@ mod tests {
                 compatibility: Some(fidl_policy::Compatibility::Supported),
             },
         ];
-        (input_aps, internal_aps, fidl_aps)
+
+        let active_input_aps = vec![
+            fidl_sme::BssInfo {
+                bssid: [9, 9, 9, 9, 9, 9],
+                ssid: "foo active ssid".as_bytes().to_vec(),
+                rx_dbm: 0,
+                snr_db: 0,
+                channel: 0,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [8, 8, 8, 8, 8, 8],
+                ssid: "misc ssid".as_bytes().to_vec(),
+                rx_dbm: 7,
+                snr_db: 0,
+                channel: 8,
+                protection: fidl_sme::Protection::Wpa2Personal,
+                compatible: true,
+            },
+        ];
+        let combined_internal_aps = vec![
+            types::ScanResult {
+                id: types::NetworkIdentifier {
+                    ssid: "duplicated ssid".as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa3,
+                },
+                entries: vec![
+                    types::Bss {
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        rssi: 0,
+                        frequency: 0,
+                        timestamp_nanos: 0,
+                    },
+                    types::Bss {
+                        bssid: [7, 8, 9, 10, 11, 12],
+                        rssi: 13,
+                        frequency: 0,
+                        timestamp_nanos: 0,
+                    },
+                ],
+                compatibility: types::Compatibility::Supported,
+            },
+            types::ScanResult {
+                id: types::NetworkIdentifier {
+                    ssid: "foo active ssid".as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa3,
+                },
+                entries: vec![types::Bss {
+                    bssid: [9, 9, 9, 9, 9, 9],
+                    rssi: 0,
+                    frequency: 0,
+                    timestamp_nanos: 0,
+                }],
+                compatibility: types::Compatibility::Supported,
+            },
+            types::ScanResult {
+                id: types::NetworkIdentifier {
+                    ssid: "misc ssid".as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                entries: vec![types::Bss {
+                    bssid: [8, 8, 8, 8, 8, 8],
+                    rssi: 7,
+                    frequency: 0,
+                    timestamp_nanos: 0,
+                }],
+                compatibility: types::Compatibility::Supported,
+            },
+            types::ScanResult {
+                id: types::NetworkIdentifier {
+                    ssid: "unique ssid".as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                entries: vec![types::Bss {
+                    bssid: [1, 2, 3, 4, 5, 6],
+                    rssi: 7,
+                    frequency: 0,
+                    timestamp_nanos: 0,
+                }],
+                compatibility: types::Compatibility::Supported,
+            },
+        ];
+        let combined_fidl_aps = vec![
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "duplicated ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa3,
+                }),
+                entries: Some(vec![
+                    fidl_policy::Bss {
+                        bssid: Some([0, 0, 0, 0, 0, 0]),
+                        rssi: Some(0),
+                        frequency: Some(0),
+                        timestamp_nanos: Some(0),
+                    },
+                    fidl_policy::Bss {
+                        bssid: Some([7, 8, 9, 10, 11, 12]),
+                        rssi: Some(13),
+                        frequency: Some(0),
+                        timestamp_nanos: Some(0),
+                    },
+                ]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "foo active ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa3,
+                }),
+                entries: Some(vec![fidl_policy::Bss {
+                    bssid: Some([9, 9, 9, 9, 9, 9]),
+                    rssi: Some(0),
+                    frequency: Some(0),
+                    timestamp_nanos: Some(0),
+                }]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "misc ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                }),
+                entries: Some(vec![fidl_policy::Bss {
+                    bssid: Some([8, 8, 8, 8, 8, 8]),
+                    rssi: Some(7),
+                    frequency: Some(0),
+                    timestamp_nanos: Some(0),
+                }]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "unique ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                }),
+                entries: Some(vec![fidl_policy::Bss {
+                    bssid: Some([1, 2, 3, 4, 5, 6]),
+                    rssi: Some(7),
+                    frequency: Some(0),
+                    timestamp_nanos: Some(0),
+                }]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+        ];
+
+        MockScanData {
+            passive_input_aps,
+            passive_internal_aps,
+            passive_fidl_aps,
+            active_input_aps,
+            combined_internal_aps,
+            combined_fidl_aps,
+        }
     }
 
     #[test]
-    fn sme_scan_successful() {
+    fn sme_scan_with_passive_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
-        let scan_fut = sme_scan(client);
+        let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let scan_fut = sme_scan(client, scan_request.clone());
         pin_mut!(scan_fut);
 
         // Request scan data from SME
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
-        // Create mock scan data and send it via the SME
-        let (input_aps, internal_aps, _) = create_scan_ap_data();
-        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+        // Create mock scan data
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps: _,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+        // Validate the SME received the scan_request and send back mock data
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &scan_request,
+            &input_aps,
+        );
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            assert_eq!(result, Ok(internal_aps));
+            assert_eq!(result, Ok(input_aps));
+        });
+    }
+
+    #[test]
+    fn sme_scan_with_active_request() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+
+        // Issue request to scan.
+        let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec!["foo_ssid".as_bytes().to_vec(), "bar_ssid".as_bytes().to_vec()],
+            channels: vec![1, 20],
+        });
+        let scan_fut = sme_scan(client, scan_request.clone());
+        pin_mut!(scan_fut);
+
+        // Request scan data from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps: _,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+        // Validate the SME received the scan_request and send back mock data
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &scan_request,
+            &input_aps,
+        );
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
+            assert_eq!(result, Ok(input_aps));
         });
     }
 
@@ -534,7 +780,8 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
-        let scan_fut = sme_scan(client);
+        let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let scan_fut = sme_scan(client, scan_request);
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -569,7 +816,8 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
-        let scan_fut = sme_scan(client);
+        let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let scan_fut = sme_scan(client, scan_request);
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -607,6 +855,7 @@ mod tests {
             Some(iter_server),
             network_selector.clone(),
             location_sensor.clone(),
+            |_| None,
         );
         pin_mut!(scan_fut);
 
@@ -618,8 +867,21 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let (input_aps, internal_aps, fidl_aps) = create_scan_ap_data();
-        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: internal_aps,
+            passive_fidl_aps: fidl_aps,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &input_aps,
+        );
 
         // Process response from SME
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
@@ -657,6 +919,201 @@ mod tests {
     }
 
     #[test]
+    fn scan_with_active_scan_decider() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let network_selector = Arc::new(MockScanResultConsumer::new());
+        let location_sensor = Arc::new(MockScanResultConsumer::new());
+
+        // Create the passive and active scan info
+        let MockScanData {
+            passive_input_aps,
+            passive_internal_aps,
+            passive_fidl_aps: _,
+            active_input_aps,
+            combined_internal_aps,
+            combined_fidl_aps,
+        } = create_scan_ap_data();
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let expected_passive_results = passive_internal_aps.clone();
+        let scan_fut = perform_scan(
+            client,
+            Some(iter_server),
+            network_selector.clone(),
+            location_sensor.clone(),
+            |passive_results| {
+                assert_eq!(passive_results, expected_passive_results);
+                Some(vec!["foo active ssid".as_bytes().to_vec()])
+            },
+        );
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Respond to the first (passive) scan request
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &passive_input_aps,
+        );
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Respond to the second (active) scan request
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec!["foo active ssid".as_bytes().to_vec()],
+            channels: vec![],
+        });
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &active_input_aps,
+        );
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, combined_fidl_aps);
+        });
+
+        // Request the next chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+
+        // Process scan handler
+        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
+        // scan results.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, vec![]);
+        });
+
+        // Check both successful scan consumers got results
+        assert_eq!(
+            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            Some(combined_internal_aps.clone())
+        );
+        assert_eq!(
+            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            Some(combined_internal_aps.clone())
+        );
+    }
+
+    #[test]
+    fn scan_with_active_scan_decider_and_active_scan_failure() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let network_selector = Arc::new(MockScanResultConsumer::new());
+        let location_sensor = Arc::new(MockScanResultConsumer::new());
+
+        // Create the passive and active scan info
+        let MockScanData {
+            passive_input_aps,
+            passive_internal_aps,
+            passive_fidl_aps: _,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let expected_passive_results = passive_internal_aps.clone();
+        let scan_fut = perform_scan(
+            client,
+            Some(iter_server),
+            network_selector.clone(),
+            location_sensor.clone(),
+            |passive_results| {
+                assert_eq!(passive_results, expected_passive_results);
+                Some(vec!["foo active ssid".as_bytes().to_vec()])
+            },
+        );
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Respond to the first (passive) scan request
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &passive_input_aps,
+        );
+
+        // Process response from SME
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back an error
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec!["foo active ssid".as_bytes().to_vec()],
+            channels: vec![],
+        });
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, ..
+            }))) => {
+                assert_eq!(req, expected_scan_request);
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
+
+        // Process scan handler
+        // Note: this will be Poll::Ready because the scan handler will exit after sending the final
+        // scan results.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+
+        // Check the FIDL result -- this should be an error, since the active scan failed
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let result = result.expect("Failed to get next scan results").unwrap_err();
+            assert_eq!(result, fidl_policy::ScanErrorCode::GeneralError);
+        });
+
+        // Check both scan consumers got just the passive scan results, since the active scan failed
+        assert_eq!(
+            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            Some(passive_internal_aps.clone())
+        );
+        assert_eq!(
+            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            Some(passive_internal_aps.clone())
+        );
+    }
+
+    #[test]
     fn scan_iterator_never_polled() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
@@ -671,6 +1128,7 @@ mod tests {
             Some(iter_server),
             network_selector.clone(),
             location_sensor.clone(),
+            |_| None,
         );
         pin_mut!(scan_fut);
 
@@ -678,8 +1136,21 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let (input_aps, internal_aps, fidl_aps) = create_scan_ap_data();
-        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: internal_aps,
+            passive_fidl_aps: fidl_aps,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &input_aps,
+        );
 
         // Progress scan side forward without progressing the scan result iterator
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
@@ -693,6 +1164,7 @@ mod tests {
             Some(iter_server2),
             network_selector.clone(),
             location_sensor.clone(),
+            |_| None,
         );
         pin_mut!(scan_fut2);
 
@@ -700,7 +1172,13 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut2), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &input_aps,
+        );
 
         // Request the results on the second iterator
         let mut output_iter_fut2 = iter2.get_next();
@@ -740,6 +1218,7 @@ mod tests {
             Some(iter_server),
             network_selector.clone(),
             location_sensor.clone(),
+            |_| None,
         );
         pin_mut!(scan_fut);
 
@@ -747,8 +1226,21 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Create mock scan data and send it via the SME
-        let (input_aps, internal_aps, _) = create_scan_ap_data();
-        send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps);
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: internal_aps,
+            passive_fidl_aps: _,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &input_aps,
+        );
 
         // Close the channel
         drop(iter.into_channel());
@@ -783,6 +1275,7 @@ mod tests {
             Some(iter_server),
             network_selector.clone(),
             location_sensor.clone(),
+            |_| None,
         );
         pin_mut!(scan_fut);
 
@@ -831,7 +1324,14 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let network_selector = Arc::new(MockScanResultConsumer::new());
         let location_sensor = Arc::new(MockScanResultConsumer::new());
-        let (input_aps, internal_aps, fidl_aps) = create_scan_ap_data();
+        let MockScanData {
+            passive_input_aps,
+            passive_internal_aps,
+            passive_fidl_aps,
+            active_input_aps,
+            combined_internal_aps: _,
+            combined_fidl_aps,
+        } = create_scan_ap_data();
 
         // Create two sets of endpoints
         let (iter0, iter_server0) =
@@ -845,6 +1345,7 @@ mod tests {
             Some(iter_server0),
             network_selector.clone(),
             location_sensor.clone(),
+            |_| None,
         );
         pin_mut!(scan_fut0);
         let scan_fut1 = perform_scan(
@@ -852,6 +1353,10 @@ mod tests {
             Some(iter_server1),
             network_selector.clone(),
             location_sensor.clone(),
+            |passive_results| {
+                assert_eq!(passive_results, passive_internal_aps);
+                Some(vec!["foo active ssid".as_bytes().to_vec()])
+            },
         );
         pin_mut!(scan_fut1);
 
@@ -874,7 +1379,7 @@ mod tests {
                     // Send the first AP
                     let (_stream, ctrl) = txn
                         .into_stream_and_control_handle().expect("error accessing control handle");
-                    let mut aps = [input_aps[0].clone()];
+                    let mut aps = [passive_input_aps[0].clone()];
                     ctrl.send_on_result(&mut aps.iter_mut())
                         .expect("failed to send scan data");
                     // Process SME result.
@@ -885,18 +1390,27 @@ mod tests {
                     // Progress second scan handler forward so that it will respond to the iterator get next request.
                     assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
                     // Check that the second scan request was sent to the sme and send back results
-                    send_sme_scan_result(&mut exec, &mut sme_stream, &input_aps); // for output_iter_fut1
+                    let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+                    validate_sme_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, &passive_input_aps); // for output_iter_fut1
                     // Process SME result.
                     assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
-                    // The second iterator should have all its data
+                    // The second request should now result in an active scan
+                    let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+                        channels: vec![],
+                        ssids: vec!["foo active ssid".as_bytes().to_vec()],
+                    });
+                    validate_sme_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, &active_input_aps); // for output_iter_fut1
+                    // Process SME result.
+                    assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);// The second iterator should have all its data
+
                     assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
                         let results = result.expect("Failed to get next scan results").unwrap();
-                        assert_eq!(results.len(), fidl_aps.len());
-                        assert_eq!(results, fidl_aps);
+                        assert_eq!(results.len(), combined_fidl_aps.len());
+                        assert_eq!(results, combined_fidl_aps);
                     });
 
                     // Send the remaining APs for the first iterator
-                    let mut aps = input_aps[1..].to_vec();
+                    let mut aps = passive_input_aps[1..].to_vec();
                     ctrl.send_on_result(&mut aps.iter_mut())
                         .expect("failed to send scan data");
                     // Process SME result.
@@ -913,18 +1427,18 @@ mod tests {
         // The first iterator should have all its data
         assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Ready(result) => {
             let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results.len(), fidl_aps.len());
-            assert_eq!(results, fidl_aps);
+            assert_eq!(results.len(), passive_fidl_aps.len());
+            assert_eq!(results, passive_fidl_aps);
         });
 
         // Check both successful scan consumers got results
         assert_eq!(
             *exec.run_singlethreaded(network_selector.scan_results.lock()),
-            Some(internal_aps.clone())
+            Some(passive_internal_aps.clone())
         );
         assert_eq!(
             *exec.run_singlethreaded(location_sensor.scan_results.lock()),
-            Some(internal_aps.clone())
+            Some(passive_internal_aps.clone())
         );
     }
 
@@ -934,7 +1448,14 @@ mod tests {
     fn partial_scan_result_consumption_has_no_error() {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (input_aps, _, fidl_aps) = create_scan_ap_data();
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps: fidl_aps,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
         let scan_results = convert_scan_info(&input_aps);
 
         // Create an iterator and send scan results
@@ -971,7 +1492,14 @@ mod tests {
     fn no_scan_result_consumption_has_error() {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (input_aps, _, _) = create_scan_ap_data();
+        let MockScanData {
+            passive_input_aps: input_aps,
+            passive_internal_aps: _,
+            passive_fidl_aps: _,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
         let scan_results = convert_scan_info(&input_aps);
 
         // Create an iterator and send scan results
@@ -994,7 +1522,14 @@ mod tests {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let location_sensor_updater = LocationSensorUpdater {};
-        let (_, internal_aps, _) = create_scan_ap_data();
+        let MockScanData {
+            passive_input_aps: _,
+            passive_internal_aps: internal_aps,
+            passive_fidl_aps: _,
+            active_input_aps: _,
+            combined_internal_aps: _,
+            combined_fidl_aps: _,
+        } = create_scan_ap_data();
         let fut = location_sensor_updater.update_scan_results(&internal_aps);
         exec.run_singlethreaded(fut);
         panic!("Need to reach into location sensor and check it got data")

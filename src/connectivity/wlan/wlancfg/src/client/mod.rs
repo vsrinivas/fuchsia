@@ -116,7 +116,11 @@ pub(crate) async fn serve_provider_requests(
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
                     pending_scans.push(scan::perform_scan(
                         Arc::clone(&iface_manager),
-                        Some(output_iterator), Arc::clone(&network_selector), Arc::new(scan::LocationSensorUpdater {})));
+                        Some(output_iterator),
+                        Arc::clone(&network_selector),
+                        Arc::new(scan::LocationSensorUpdater {}),
+                        |_| None,
+                    ));
                 }
             },
             // Progress scans.
@@ -502,6 +506,7 @@ pub(crate) async fn scan_for_network_selector(
         Some(server),
         selector,
         Arc::new(scan::LocationSensorUpdater {}),
+        |_| None,
     );
 
     let process_results_fut = process_scan_results(proxy);
