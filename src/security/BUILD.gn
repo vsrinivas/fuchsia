@@ -17,7 +17,7 @@ group("tests") {
     "codelab:tests",
     "kms:tests",
     "tee_manager:tests",
-    "tools:tests",
+    "scrutiny:tests",
     "zxcrypt:tests",
   ]
 }

@@ -10,12 +10,12 @@ if (!is_fuchsia) {
     name = "scrutiny_plugins"
     with_unit_tests = true
     edition = "2018"
-    visibility = [ "//src/security/tools/scrutiny/*" ]
+    visibility = [ "//src/security/scrutiny/*" ]
     deps = [
       "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
       "//src/lib/fidl/rust/fidl",
-      "//src/security/tools/scrutiny/framework",
-      "//src/security/tools/scrutiny/utils",
+      "//src/security/scrutiny/framework",
+      "//src/security/scrutiny/utils",
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/pkg/lib/fuchsia-archive",
       "//third_party/rust_crates:anyhow",

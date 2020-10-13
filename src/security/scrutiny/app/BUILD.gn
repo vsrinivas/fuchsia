@@ -13,8 +13,8 @@ if (!is_fuchsia) {
     with_unit_tests = true
     edition = "2018"
     deps = [
-      "//src/security/tools/scrutiny/framework",
-      "//src/security/tools/scrutiny/plugins",
+      "//src/security/scrutiny/framework",
+      "//src/security/scrutiny/plugins",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:log",

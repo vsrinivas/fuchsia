@@ -10,7 +10,7 @@ if (!is_fuchsia) {
     name = "scrutiny"
     with_unit_tests = true
     edition = "2018"
-    visibility = [ "//src/security/tools/scrutiny/*" ]
+    visibility = [ "//src/security/scrutiny/*" ]
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:lazy_static",
