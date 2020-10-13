@@ -33,7 +33,7 @@ bits EthernetFeatures : uint32 {
 };
 
 /// Specifies a frame type and features and supported flags associated with that type.
-/// This is used by clients to read the supported frames on the Tx path for a given
+/// This is used by clients to read the supported frames on the tx path for a given
 /// Network Device.
 /// Some Network Devices may parse outgoing frames to perform frame transformation or specific
 /// hardware support. Each frame type has an associated
@@ -59,20 +59,20 @@ enum InfoType : uint32 {
     NO_INFO = 0x00;
 };
 
-/// Available Rx acceleration features. Features are mapped to the `RX_ACCEL_*` bits in descriptors
+/// Available rx acceleration features. Features are mapped to the `RX_ACCEL_*` bits in descriptors
 /// by the available values reported in [`fuchsia.hardware.network/Info.rx_accel`].
 enum RxAcceleration : uint8 {
-    /// Inbound Rx frame validated the Ethernet Frame Check Sequence.
+    /// Inbound rx frame validated the Ethernet Frame Check Sequence.
     VALIDATED_ETHERNET_FCS = 0;
-    /// Inbound Rx frame validated the IPv4 checksum.
+    /// Inbound rx frame validated the IPv4 checksum.
     VALIDATED_IPV4_CHECKSUM = 1;
-    /// Inbound Rx frame validated the TCP checksum.
+    /// Inbound rx frame validated the TCP checksum.
     VALIDATED_TCP_CHECKSUM = 2;
-    /// Inbound Rx frame validated the UDP checksum.
+    /// Inbound rx frame validated the UDP checksum.
     VALIDATED_UDP_CHECKSUM = 3;
 };
 
-/// Available Tx acceleration features. Features are mapped to the `TX_ACCEL_*` bits in descriptors
+/// Available tx acceleration features. Features are mapped to the `TX_ACCEL_*` bits in descriptors
 /// by the available values reported in  [`fuchsia.hardware.network/Info.tx_accel`].
 enum TxAcceleration : uint8 {
     /// Request that device calculate the Ethernet Frame Check Sequence and write it in place.
@@ -86,8 +86,8 @@ enum TxAcceleration : uint8 {
     // Future expansions: TCP segmentation acceleration
 };
 
-/// Flags set by a Device when handing a buffer to a client on the Rx path. Set by devices on the
-/// `inbound_flags` field of an Rx descriptor.
+/// Flags set by a Device when handing a buffer to a client on the rx path. Set by devices on the
+/// `inbound_flags` field of an rx descriptor.
 bits RxFlags : uint32 {
     /// Acceleration flag 0. Acceleration flags are mapped to the acceleration features reported by
     /// the [`fuchsia.hardware.network/Device`] in [`fuchsia.hardware.network/Info.rx_accel`]. The
@@ -111,7 +111,7 @@ bits RxFlags : uint32 {
 
     // RESERVED - bits 16 to 28 reserved for future expansions
 
-    /// Device experienced a hardware Rx overrun. Rx overruns are typically set by hardware
+    /// Device experienced a hardware rx overrun. Rx overruns are typically set by hardware
     /// controllers when a frame event was detected but the frame data couldn't be captured. Devices
     /// should clear the controller flag once this is set on an inbound frame, so future overruns
     /// can be detected and reported.
@@ -122,13 +122,13 @@ bits RxFlags : uint32 {
     /// transmitted to the client if the `SessionFlags::REPORT_INVALID_RX` option is selected when
     /// creating a session.
     RX_VALIDATION_ERROR = 0x40000000;
-    /// This is an echoed Tx frame, created by a Tx request. Can only be set in sessions that have
+    /// This is an echoed tx frame, created by a tx request. Can only be set in sessions that have
     /// the `LISTEN_TX` flag.
     RX_ECHOED_TX = 0x80000000;
 };
 
-/// Flags set by a Client when handing a buffer to a client on the Tx path. Set by Clients on the
-/// `inbound_flags` field of a Tx descriptor.
+/// Flags set by a Client when handing a buffer to a client on the tx path. Set by Clients on the
+/// `inbound_flags` field of a tx descriptor.
 bits TxFlags : uint32 {
     /// Acceleration flag 0. Acceleration flags are mapped to the acceleration features reported by
     /// the [`fuchsia.hardware.network/Device`] in [`fuchsia.hardware.network/Info.tx_accel`]. The
@@ -151,8 +151,8 @@ bits TxFlags : uint32 {
     TX_ACCEL_15 = 0x00008000;
 };
 
-/// Flags set by a Device when returning a Tx buffer back to a client. Set by Devices on the
-/// `return_flags` field of a Tx descriptor.
+/// Flags set by a Device when returning a tx buffer back to a client. Set by Devices on the
+/// `return_flags` field of a tx descriptor.
 bits TxReturnFlags : uint32 {
     /// Requested operation in `inbound_flags` is not supported; the frame was not sent.
     /// Always set in conjunction with `TX_RET_ERROR`.

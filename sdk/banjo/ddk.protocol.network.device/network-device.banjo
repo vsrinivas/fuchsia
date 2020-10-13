@@ -76,7 +76,7 @@ using zx;
 /// automatically copies all tx traffic to any snooping clients. Devices may turn off that behavior
 /// by setting the `FEATURE_NO_AUTO_SNOOP` flag.
 /// Devices that disable auto-snooping SHOULD use the
-/// [`ddk.protocol.network.device/NetworkDeviceIfc.Snoop`] interface method to expose any Tx frames
+/// [`ddk.protocol.network.device/NetworkDeviceIfc.Snoop`] interface method to expose any tx frames
 /// they receive.
 const uint32 FEATURE_NO_AUTO_SNOOP = 0x01;
 
@@ -139,7 +139,7 @@ struct BufferMetadata {
   FrameInfo info;
   //// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
   uint32 info_type;
-  /// Frame TX or RX flags, as defined in [`fuchsia.hardware.network/RxFlags`],
+  /// Frame tx or rx flags, as defined in [`fuchsia.hardware.network/RxFlags`],
   /// [`fuchsia.hardware.network/txFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
   uint32 flags;
   /// Type of frame contained in this buffer, as defined in [`fuchsia.hardware.network/FrameType`].
@@ -283,17 +283,17 @@ struct DeviceInfo {
   /// Alignment requirement for buffers relative to the start of VMOs.
   /// Must be greater than zero.
   uint32 buffer_alignment;
-  /// The minimum RX buffer length for correct operation, in bytes.
+  /// The minimum rx buffer length for correct operation, in bytes.
   uint32 min_rx_buffer_length;
-  /// The minimum TX buffer length for correct operation, in bytes. This length accounts only for
+  /// The minimum tx buffer length for correct operation, in bytes. This length accounts only for
   /// the buffer's body, and should not account for `tx_head_length` or `tx_tail_length`.
   uint32 min_tx_buffer_length;
-  /// Number of bytes requested as header bytes on Tx buffers. If set to zero, Tx buffers will never
-  /// contain header space. Otherwise, Tx buffers will start at the beginning of the header space,
+  /// Number of bytes requested as header bytes on tx buffers. If set to zero, tx buffers will never
+  /// contain header space. Otherwise, tx buffers will start at the beginning of the header space,
   /// and the header region will be informed.
   uint16 tx_head_length;
-  /// Number of bytes requested as tail bytes on Tx buffers. If set to zero, Tx buffers will never
-  /// contain tail space. Otherwise, Tx buffers will end at the end of the tail space,
+  /// Number of bytes requested as tail bytes on tx buffers. If set to zero, tx buffers will never
+  /// contain tail space. Otherwise, tx buffers will end at the end of the tail space,
   /// and the tail region will be informed.
   uint16 tx_tail_length;
   /// Available Rx acceleration flags for this device, as defined in
@@ -302,7 +302,7 @@ struct DeviceInfo {
   /// features described by `RxAcceleration`. Position `n` of `rx_accel` conveys the meaning of
   /// the `RX_ACCEL_n` flag.
   vector<uint8> rx_accel;
-  /// Available Tx acceleration flags for this device, as defined in
+  /// Available tx acceleration flags for this device, as defined in
   /// [`fuchsia.hardware.network/TxAcceleration`].
   /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with semantic acceleration
   /// features described by `TxAcceleration`. Position `n` of `tx_accel` conveys the meaning of
@@ -331,7 +331,7 @@ protocol NetworkDeviceImpl {
   Init(NetworkDeviceIfc iface) -> (zx.status s);
   /// Starts the device's data path.
   /// `start` signals to the device implementation that it should bring up its data path and be
-  /// ready to receive Tx frames and `iface` will start accepting Rx frames.
+  /// ready to receive tx frames and `iface` will start accepting rx frames.
   /// The device is only considered started once `Start` returns. Until then, the contract
   /// guarantees that no other data-path calls will be made to the device (`QueueTx`, `RxAvailable`,
   /// `Stop`), implementers can safely assume or assert that this contract is upheld.
@@ -339,11 +339,11 @@ protocol NetworkDeviceImpl {
   Start() -> ();
   /// Stops the network device, data-path callbacks to the NetworkDeviceIfc are no longer allowed
   /// after `Stop` returns.
-  /// Implementation may turn off the Rx path on the underlying hardware upon receiving this call.
+  /// Implementation may turn off the rx path on the underlying hardware upon receiving this call.
   /// Upon completion, no more calls can be made to open data path sessions with `NetworkDeviceIfc`
   /// (doing so is a logic error and may be protected by assertions) and all the data buffers that
-  /// were previously held by the implementation are automatically returned back. Pending Tx buffers
-  /// will be returned with an incomplete error, and pending Rx buffers will be reclaimed.
+  /// were previously held by the implementation are automatically returned back. Pending tx buffers
+  /// will be returned with an incomplete error, and pending rx buffers will be reclaimed.
   [Async]
   Stop() -> ();
   /// Gets information about the device. Device information must not change over the course

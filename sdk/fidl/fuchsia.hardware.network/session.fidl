@@ -14,42 +14,42 @@ using zx;
 /// is controlled by a `Session` protocol handle. Sessions are always created in a paused state.
 ///
 /// The session will be closed with an error epitaph if an invalid buffer descriptor is sent over
-/// either the Tx or Rx FIFOs. Invalid descriptors include:
+/// either the tx or rx FIFOs. Invalid descriptors include:
 ///    - Descriptor index larger than [`fuchsia.hardware.network/SessionInfo.descriptor_count`].
 ///    - Descriptor chains larger than [`fuchsia.hardware.network/MAX_DESCRIPTOR_CHAIN`].
-///    - Rx buffers smaller than [`fuchsia.hardware.network/Info.min_rx_buffer_length`].
-///    - Tx buffers smaller than [`fuchsia.hardware.network/Info.min_tx_buffer_length`].
-///    - Tx buffers not respecting [`fuchsia.hardware.network/Info.min_tx_buffer_head`] or
+///    - rx buffers smaller than [`fuchsia.hardware.network/Info.min_rx_buffer_length`].
+///    - tx buffers smaller than [`fuchsia.hardware.network/Info.min_tx_buffer_length`].
+///    - tx buffers not respecting [`fuchsia.hardware.network/Info.min_tx_buffer_head`] or
 ///    [`fuchsia.hardware.network/Info.min_tx_buffer_tail`].
 protocol Session {
     /// Pauses or unpauses reception of frames on this session.
     SetPaused(bool paused);
     /// Cleanly closes a session. This will cause the session to send a `ZX_ERR_CANCELLED` epitaph
     /// and proceed to close the Session channel. Clients may only assume that they own all the
-    /// buffers that are currently owned by the session (sent over either the Rx or Tx FIFOs) once
-    /// the epitaph is received. Closing the Rx or Tx FIFO is equivalent to calling `Close`.
+    /// buffers that are currently owned by the session (sent over either the rx or tx FIFOs) once
+    /// the epitaph is received. Closing the rx or tx FIFO is equivalent to calling `Close`.
     Close();
 };
 
 /// Additional session options.
 bits SessionFlags : uint16 {
     /// Sessions marked with the `PRIMARY` bit get the following different treatment:
-    /// - If no PRIMARY sessions are attached, the device will *not* serve Rx frames to non-PRIMARY
+    /// - If no PRIMARY sessions are attached, the device will *not* serve rx frames to non-PRIMARY
     ///   sessions.
     /// - If there's only one PRIMARY session active, it may get a zero-copy data path from the
     ///   the backing hardware, if the underlying implementation supports it.
     PRIMARY = 0x0001;
     /// `LISTEN_TX` sessions will receive any outgoing frames (from all sessions) on its
-    /// Rx path. Can be used for snooping traffic. Sessions marked with `LISTEN_TX` may also send
+    /// rx path. Can be used for snooping traffic. Sessions marked with `LISTEN_TX` may also send
     /// frames, but they should keep in mind that they'll ALWAYS receive those frames back on their
-    /// Rx path (no origin session filtering is performed).
+    /// rx path (no origin session filtering is performed).
     LISTEN_TX = 0x0002;
     /// Sessions marked with `REPORT_INVALID_RX` are interested in receiving frames that were
     /// rejected by internal device checks or payload validation performed by hardware. Due to the
     /// nature of some hardware platforms, sessions marked with `REPORT_INVALID_RX` may still not
     /// receive frames that fail validation if the hardware implementation simply drops the frame
     /// and doesn't expose it to the software stack. Sessions NOT marked with `REPORT_INVALID_RX`,
-    /// in contrast, will NEVER receive an Rx frame with the `RX_VALIDATION_ERROR` flag set.
+    /// in contrast, will NEVER receive an rx frame with the `RX_VALIDATION_ERROR` flag set.
     REPORT_INVALID_RX = 0x0004;
 };
 
@@ -78,10 +78,10 @@ resource struct SessionInfo {
     uint8 descriptor_version;
     /// Descriptor length, in 64-bit words. The length of each descriptor in the `descriptors` VMO.
     /// This is used as a multiplier to find byte offsets in `descriptors` given a descriptor index
-    /// passed through the Rx or Tx FIFOs.
+    /// passed through the rx or tx FIFOs.
     uint8 descriptor_length;
     /// Total number of descriptors that can be used by this session. Descriptor indices transferred
-    /// through either the Rx or Tx FIFO must be in the range [0, `descriptor_count`).
+    /// through either the rx or tx FIFO must be in the range [0, `descriptor_count`).
     uint16 descriptor_count;
     /// Extra options.
     SessionFlags options;

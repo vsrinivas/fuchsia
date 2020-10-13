@@ -36,7 +36,7 @@ table Status {
     2: uint32 mtu;
 };
 
-/// Maximum numbers of supported frame types for Rx or Tx.
+/// Maximum numbers of supported frame types for rx or tx.
 // NOTE(brunodalbo) 4 seems a sensible number for maximum number of frame types supported by a
 // single device. Most common use cases are going to use 1 or 2 types (1 if device operates at L2, 2
 // if at L3).
@@ -66,10 +66,10 @@ struct Info {
     uint8 min_descriptor_length;
     /// Accepted descriptor version.
     uint8 descriptor_version;
-    /// Maximum number of items in Rx FIFO (per session).
+    /// Maximum number of items in rx FIFO (per session).
     /// `rx_depth` is calculated based on the size of the actual backing hardware rx queue.
     uint16 rx_depth;
-    /// Maximum number of items in Tx FIFO (per session).
+    /// Maximum number of items in tx FIFO (per session).
     /// `tx_depth` is calculated based on the size of the actual backing hardware tx queue.
     uint16 tx_depth;
     /// Alignment requirement for buffers in the data VMO. All buffers in the data VMO *must* be
@@ -78,25 +78,25 @@ struct Info {
     uint32 buffer_alignment;
     /// Maximum supported length of buffers in the data VMO, in bytes.
     uint32 max_buffer_length;
-    /// The minimum RX buffer length required for device.
+    /// The minimum rx buffer length required for device.
     uint32 min_rx_buffer_length;
-    /// The minimum TX buffer length required for the device.
+    /// The minimum tx buffer length required for the device.
     ///
-    /// This value accounts only for TX payload length, `min_tx_buffer_head` and
+    /// This value accounts only for tx payload length, `min_tx_buffer_head` and
     /// `min_tx_buffer_tail` are not part of this value.
     ///
     /// Clients must zero pad outgoing frames to meet the required minimum length.
     uint32 min_tx_buffer_length;
-    /// The number of bytes the device requests be free as `head` space in a Tx buffer.
+    /// The number of bytes the device requests be free as `head` space in a tx buffer.
     uint16 min_tx_buffer_head;
-    /// The amount of bytes the device requests be free as `tail` space in a Tx buffer.
+    /// The amount of bytes the device requests be free as `tail` space in a tx buffer.
     uint16 min_tx_buffer_tail;
-    /// Supported Rx frame types on this device.
+    /// Supported rx frame types on this device.
     ///
     /// Clients may open sessions subscribing to a subset of `rx_types` frame types on this device.
     /// Clients will only receive the frame types they are subscribed to in this session
     vector<FrameType>:MAX_FRAME_TYPES rx_types;
-    /// Supported Tx frame types on this device.
+    /// Supported tx frame types on this device.
     ///
     /// A client is free to send any frame type on an open session, as long as the frame type is
     /// part of `tx_types`. Some network devices may need to perform partial frame parsing and
@@ -107,12 +107,12 @@ struct Info {
     /// For example, a device that supports Ethernet frames but needs to convert the Ethernet header
     /// may only support standard EthernetII frames, and not any "raw" Ethernet frame.
     vector<FrameTypeSupport>:MAX_FRAME_TYPES tx_types;
-    /// Available Rx acceleration flags for this device. `rx_accel` maps the `RX_ACCEL_*` flags in
+    /// Available rx acceleration flags for this device. `rx_accel` maps the `RX_ACCEL_*` flags in
     /// the frame descriptors with semantic acceleration features described by
     /// [`fuchsia.hardware.network/RxAcceleration`]. Position `n` of `rx_accel` conveys the meaning
     /// of the `RX_ACCEL_n` flag.
     vector<RxAcceleration>:MAX_ACCEL_FLAGS rx_accel;
-    /// Available Tx acceleration flags for this device. `tx_accel` maps the `TX_ACCEL_*` flags in
+    /// Available tx acceleration flags for this device. `tx_accel` maps the `TX_ACCEL_*` flags in
     /// the frame descriptors with semantic acceleration features described by
     /// [`fuchsia.hardware.network/TxAcceleration]`. Position `n` of `tx_accel` conveys the meaning
     /// of the `TX_ACCEL_n` flag.
