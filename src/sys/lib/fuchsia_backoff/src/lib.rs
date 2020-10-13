@@ -237,7 +237,6 @@ where
 }
 
 /// A backoff policy for deciding to retry an operation.
-///
 pub trait Backoff<E> {
     fn next_backoff(&mut self, err: &E) -> Option<Duration>;
 }

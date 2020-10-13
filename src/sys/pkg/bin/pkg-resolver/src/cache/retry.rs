@@ -53,7 +53,7 @@ impl Backoff<FetchError> for HttpErrors {
     }
 }
 
-/// HttpErrors implements a [fuchsia_backoff::Backoff] strategy wrapping an inner strategy with a
+/// MaxCumulative implements a [fuchsia_backoff::Backoff] strategy wrapping an inner strategy with a
 /// globally enforced maximum delay duration of [MAX_RETRY_DELAY].
 #[derive(Default)]
 struct MaxCumulative<B> {
