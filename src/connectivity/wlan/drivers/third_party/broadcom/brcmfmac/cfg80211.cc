@@ -2843,9 +2843,13 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
 static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_start_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) ||
-      brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
-    BRCMF_ERR("AP already started or start pending");
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state)) {
+    BRCMF_ERR("AP already started");
+    return WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED;
+  }
+
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+    BRCMF_ERR("AP start request received, start pending");
     return WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED;
   }
 
