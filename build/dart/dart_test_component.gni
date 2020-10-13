@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+assert(is_fuchsia, "dart_test_component is only available for Fuchsia targets")
+
+import("//build/dart/kernel/dart_kernel.gni")  # for dart_platform_name
 import("//build/flutter/internal/flutter_dart_test_component.gni")
 
 # Defines a component which runs tests in the dart test harness
@@ -56,21 +59,11 @@ import("//build/flutter/internal/flutter_dart_test_component.gni")
 #     Type: String
 #     Default: target_name
 #
-#   build_cfg (optional)
-#     Specifies the parameters for building the component.
-#     See //build/dart/dart_build_config.gni for predefined configs.
-#
 #  deps
 #  visibility
 template("dart_test_component") {
-  _build_cfg = dart_default_build_cfg
-  if (defined(invoker.build_cfg)) {
-    _build_cfg = invoker.build_cfg
-  }
-
   flutter_dart_test_component(target_name) {
     forward_variables_from(invoker, "*")
-
-    build_cfg = _build_cfg
+    platform_name = dart_platform_name
   }
 }
