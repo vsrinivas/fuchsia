@@ -263,6 +263,7 @@ if (current_toolchain == default_toolchain) {
       defines += [
         "WITH_LOCK_DEP=1",
         "LOCK_DEP_ENABLE_VALIDATION=1",
+        "CUSTOM_DEFAULT_STACK_SIZE=16384",
       ]
     }
     if (enable_lock_dep_tests) {
