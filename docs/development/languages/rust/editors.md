@@ -5,7 +5,7 @@ most popular options. However, documentation for setting up any editor is welcom
 
 ## `rust-analyzer` setup {#rust-analyzer}
 
-[rust-analyzer](https://rust-analyzer.github.io/) is a [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
+[rust-analyzer](https://rust-analyzer.github.io/) is a [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (LSP)
 implementation for Rust. This is the recommended workflow and will work with minimal editor setup.
 
 `rust-analyzer` uses a file in the `out/` directory called `rust-project.json` that is
@@ -33,6 +33,9 @@ It is recommended to:
 
 ### `rust-analyzer` VSCode extension (supported workflow)
 
+Note:  This is the [`rust-analyzer`][vscode-rust-analyzer] extension, not the `rust` extension that
+VSCode may recommend for Rust files.
+
 You can install the `rust-analyzer` extension directly
 [from the VSCode marketplace][vscode-rust-analyzer].
 If you notice that `rust-analyzer` is broken, it could be due to a breaking
@@ -41,10 +44,10 @@ change in the `rust-project.json` file. You may need to
 to [a currently supported version](#rust-analyzer).
 
 Once you have installed the rust-analyzer extension, add the following
-configurations to your `settings.json` file:
+configurations to your Workspace `settings.json` file:
 
-Note: To access the VS Code settings, click the **Code** menu, then **Preferences**, then **Settings**.
-Scroll and click on **Edit in settings.json**.
+Note: To access the VS Code Workspace settings, click the **View** menu, then **Command Palette**,
+and select `Preferences: Open Workspace Settings (JSON)`.
 
 ```javascript
 {
@@ -64,6 +67,47 @@ In addition, the following settings may provide a smoother experience:
   "editor.parameterHints.enabled": false,
 }
 ```
+
+### Enabling rustfmt in the `rust-analyzer` extension
+
+The `rust-analyzer` extension relies on the `rustup` tool to choose the right toolchain for
+invoking rustfmt, so you need to tell `rustup` about your Fuchsia checkout and its toolchain:
+
+```shell
+$ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/<host os>
+```
+
+e.g.
+```shell
+$ rustup toolchain link fuchsia-tools $FUCHSIA_DIR/prebuilt/third_party/rust_tools/linux_x64/
+```
+
+Having done that, the `rust-analyzer` extension can be configured to use this toolchain and
+the Fuchsia `rustfmt.toml`.  Open Workspace settings as above, and add:
+
+```javascript
+{
+    // use fuchsia-tools toolchain and fuchsia's rules for rustfmt:
+    "rust-analyzer.rustfmt.extraArgs": [
+        "+fuchsia-tools",
+        "--config-path=<path to $FUCHSIA_DIR>/rustfmt.toml"
+    ],
+}
+```
+
+### A note on `rust-analyzer` and symlinked Fuchsia directories
+
+If your Fuchsia workspace is symlinked from elsewhere (such as another mountpoint), the
+`rust-analyzer` extension may not be able to properly locate the files for analysis as they are
+opened in VSCode.
+
+`rust-analyzer`, and the `rust-project.json` file, contain _absolute_ paths to your source files.
+As such, if you open the Fuchsia directory via the symlink'd location, it will not match those
+absolute paths, and the `rust-analyzer` VSCode extension will not be able to align the opened files
+in VSCode with the files that the `rust-analyzer` LSP is parsing and analyzing.
+
+Instead, open the actual path to the Fuchsia source in VSCode, so that the LSP and the editor see
+the same paths to all source files.
 
 ## Vim
 
