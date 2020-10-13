@@ -419,35 +419,39 @@ unsafe impl ObjectQuery for HandleBasicInfoQuery {
 }
 
 /// Handle operation.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[repr(transparent)]
-pub struct HandleOp(sys::zx_handle_op_t);
-
-assoc_values!(HandleOp, [
-    MOVE            = sys::ZX_HANDLE_OP_MOVE;
-    DUPLICATE         = sys::ZX_HANDLE_OP_DUPLICATE;
-]);
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum HandleOp<'a> {
+    Move(Handle),
+    Duplicate(HandleRef<'a>),
+}
 
 /// Operation to perform on handles during write.
-/// Based on zx_handle_disposition_t.
+/// Based on zx_handle_disposition_t, but does not match the same layout.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(C)]
-pub struct HandleDisposition {
-    pub operation: HandleOp,
-    pub handle: Handle,
-    pub rights: Rights,
+pub struct HandleDisposition<'a> {
+    pub handle_op: HandleOp<'a>,
     pub object_type: ObjectType,
+    pub rights: Rights,
     pub result: Status,
 }
 
-impl HandleDisposition {
-    pub unsafe fn into_raw(self) -> sys::zx_handle_disposition_t {
-        sys::zx_handle_disposition_t {
-            operation: self.operation.0,
-            handle: self.handle.into_raw(),
-            rights: self.rights.bits(),
-            type_: self.object_type.0,
-            result: self.result.into_raw(),
+impl HandleDisposition<'_> {
+    pub unsafe fn into_raw<'a>(self) -> sys::zx_handle_disposition_t {
+        match self.handle_op {
+            HandleOp::Move(mut handle) => sys::zx_handle_disposition_t {
+                operation: sys::ZX_HANDLE_OP_MOVE,
+                handle: std::mem::replace(&mut handle, Handle::invalid()).into_raw(),
+                type_: self.object_type.0,
+                rights: self.rights.bits(),
+                result: self.result.into_raw(),
+            },
+            HandleOp::Duplicate(handle_ref) => sys::zx_handle_disposition_t {
+                operation: sys::ZX_HANDLE_OP_DUPLICATE,
+                handle: handle_ref.raw_handle(),
+                type_: self.object_type.0,
+                rights: self.rights.bits(),
+                result: self.result.into_raw(),
+            },
         }
     }
 }
@@ -539,11 +543,10 @@ mod tests {
     }
 
     #[test]
-    fn handle_disposition_into_raw() {
+    fn raw_handle_disposition() {
         const RAW_HANDLE: sys::zx_handle_t = 1;
         let hd = HandleDisposition {
-            operation: HandleOp::MOVE,
-            handle: unsafe { Handle::from_raw(RAW_HANDLE) },
+            handle_op: HandleOp::Move(unsafe { Handle::from_raw(RAW_HANDLE) }),
             rights: Rights::EXECUTE,
             object_type: ObjectType::VMO,
             result: Status::OK,

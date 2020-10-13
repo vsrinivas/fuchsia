@@ -14,7 +14,7 @@ async fn test_server_sender() {
 
     let mut bytes = Vec::with_capacity(1024);
     let mut handles = Vec::with_capacity(1024);
-    let () = channel.read_raw(&mut bytes, &mut handles).unwrap().expect("failed reading request");
+    channel.read_split(&mut bytes, &mut handles).expect("failed reading request");
 
     let msg = fidl_echo::EchoRequestMessage::decode(&bytes[..], &mut handles[..])
         .expect("error deserializing request");

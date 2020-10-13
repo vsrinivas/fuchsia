@@ -545,8 +545,8 @@ pub struct zx_channel_call_etc_args_t {
 pub struct zx_handle_disposition_t {
     pub operation: zx_handle_op_t,
     pub handle: zx_handle_t,
-    pub rights: zx_rights_t,
     pub type_: zx_obj_type_t,
+    pub rights: zx_rights_t,
     pub result: zx_status_t,
 }
 

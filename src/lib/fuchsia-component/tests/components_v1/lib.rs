@@ -149,6 +149,7 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
         let err = chan
             .read_raw(&mut vec![], &mut vec![])
             .expect("unexpected too small buffer")
+            .0
             .expect_err("should've been a PEER_CLOSED error");
         assert_eq!(err, zx::Status::PEER_CLOSED);
     }
