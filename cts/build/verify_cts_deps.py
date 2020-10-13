@@ -20,7 +20,15 @@ import sys
 
 # These must be fully qualified labels (without a toolchain).
 ALLOWED_CTS_DEPS = [
+    '//sdk/testing/sl4f/client:client',
     '//sdk:sdk',
+    '//third_party/dart-pkg/pub/async:async',
+    '//third_party/dart-pkg/pub/file:file',
+    '//third_party/dart-pkg/pub/logging:logging',
+    '//third_party/dart-pkg/pub/path:path',
+    '//third_party/dart-pkg/pub/quiver:quiver',
+    '//third_party/dart-pkg/pub/retry:retry',
+    '//third_party/dart-pkg/pub/test:test',
     '//zircon/public/lib/zxtest:zxtest',
 ]
 

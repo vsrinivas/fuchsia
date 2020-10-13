@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_library.gni")
+import("//cts/build/cts_dart_library.gni")
 
-dart_library("net") {
+cts_dart_library("net") {
   package_name = "net"
+
+  testonly = true
 
   sources = [
     "curl.dart",
