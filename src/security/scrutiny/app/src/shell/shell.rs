@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{
+    crate::shell::{
         args::args_to_json,
-        builtin::{Builtin, BuiltinCommand},
         error::ShellError,
+        builtin::{Builtin, BuiltinCommand},
     },
     anyhow::{Error, Result},
     log::{info, warn},

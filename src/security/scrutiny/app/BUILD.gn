@@ -33,16 +33,17 @@ if (!is_fuchsia) {
     ]
 
     sources = [
-      "src/args.rs",
-      "src/builtin.rs",
-      "src/error.rs",
       "src/logo.rs",
       "src/main.rs",
       "src/rest/mod.rs",
       "src/rest/service.rs",
       "src/rest/visualizer.rs",
       "src/scrutiny.rs",
-      "src/shell.rs",
+      "src/shell/args.rs",
+      "src/shell/builtin.rs",
+      "src/shell/error.rs",
+      "src/shell/mod.rs",
+      "src/shell/shell.rs",
     ]
   }
 }

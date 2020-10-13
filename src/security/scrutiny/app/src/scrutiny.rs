@@ -5,7 +5,7 @@
 use {
     crate::{
         logo,
-        shell::Shell,
+        shell::shell::Shell,
         rest::service::RestService,
         rest::visualizer::Visualizer,
     },
