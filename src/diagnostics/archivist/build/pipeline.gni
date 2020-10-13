@@ -24,23 +24,8 @@ template("archive_pipeline") {
     name = invoker.name
   }
 
-  config_data_name = "${target_name}_config_data"
-  config_data(config_data_name) {
-    for_pkg = "archivist"
-    outputs = [ "${name}/{{source_file_part}}" ]
-    sources = invoker.inspect
-  }
-
-  resource_name = "${target_name}_resource"
-  resource(resource_name) {
+  resource(invoker.target_name) {
     sources = invoker.inspect
     outputs = [ "config/archivist/${name}/{{source_file_part}}" ]
-  }
-
-  group(invoker.target_name) {
-    deps = [
-      ":${config_data_name}",
-      ":${resource_name}",
-    ]
   }
 }

@@ -151,12 +151,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("archivist-v1") {
-  component_name = "archivist"
-  manifest = "meta/archivist.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("archivist-with-klog") {
   manifest = "meta/archivist-with-klog.cmx"
   deps = [
@@ -174,31 +168,12 @@ fuchsia_component("archivist-for-embedding-v1") {
   ]
 }
 
-fuchsia_component("observer-v1") {
-  component_name = "observer"
-  manifest = "meta/archivist-for-embedding.cmx"
-  deps = [
-    ":bin",
-    ":embedding-config-file",
-  ]
-}
-
 fuchsia_component("archivist-for-embedding-v2") {
   component_name = "archivist-for-embedding"
   manifest = "meta/archivist-for-embedding.cml"
   deps = [
     ":bin",
     ":embedding-config-file",
-  ]
-}
-
-# TODO(fxbug.dev/60992) remove
-fuchsia_package("archivist") {
-  deps = [
-    ":archivist-v1",
-
-    # TODO(fxbug.dev/58074) remove
-    ":observer-v1",
   ]
 }
 
@@ -227,24 +202,12 @@ fuchsia_package("archivist-for-embedding") {
   ]
 }
 
-# TODO(fxbug.dev/60992) remove
-config_data("archivist_config") {
-  for_pkg = "archivist"
-  outputs = [ "archivist_config.json" ]
-
-  sources = [ "configs/archivist_config.json" ]
-}
-
 resource("embedding-config-file") {
   sources = [ "configs/embedding-config.json" ]
   outputs = "data/{{source_file_part}}"
 }
 
 group("with_default_config") {
-  deps = [
-    ":archivist",
-    ":archivist_config",
-  ]
 }
 
 rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
@@ -273,6 +236,15 @@ fuchsia_unittest_component("archivist-unittests") {
 
 fuchsia_test_package("archivist-tests") {
   test_components = [ ":archivist-unittests" ]
+}
+
+group("archivist") {
+  testonly = true
+  deps = [
+    ":archivist-for-embedding",
+    ":bootfs",
+    ":tests",
+  ]
 }
 
 group("tests") {

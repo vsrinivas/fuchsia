@@ -92,9 +92,6 @@ group("run-test-component") {
   deps = [
     ":run-test-component-pkg",
     "//src/diagnostics/archivist:archivist-for-embedding",
-
-    # TODO(fxbug.dev/60992) remove
-    "//src/diagnostics/archivist:with_default_config",
   ]
 }
 
