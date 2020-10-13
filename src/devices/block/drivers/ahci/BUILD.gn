@@ -39,7 +39,7 @@ test("ahci-unittest") {
     ":shared",
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",

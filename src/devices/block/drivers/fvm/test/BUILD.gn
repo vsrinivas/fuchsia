@@ -15,7 +15,7 @@ test("fvm-driver-unittests") {
   include_dirs = [ ".." ]
   deps = [
     "//src/devices/block/drivers/fvm:shared",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
   ]
 }

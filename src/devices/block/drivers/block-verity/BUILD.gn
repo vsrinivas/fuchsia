@@ -109,7 +109,7 @@ test("config-test") {
   deps = [
     ":config",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//zircon/public/lib/zxtest",
   ]

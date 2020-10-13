@@ -42,7 +42,7 @@ test("core-unittest") {
     ":shared",
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/lib/fdio",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
