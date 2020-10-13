@@ -24,9 +24,14 @@ constexpr std::string_view kCompute = "compute";
 constexpr std::string_view kEnableValidationLayers = "enable-validation-layers";
 constexpr std::string_view kPaintCount = "paint-count";
 constexpr std::string_view kPng = "png";
+constexpr std::string_view kWorkGroupSize = "work-group-size";
+constexpr std::string_view kWorkGroupTileCount = "work-group-tile-count";
 
 constexpr uint32_t kShapeWidth = 640;
 constexpr uint32_t kShapeHeight = 480;
+
+constexpr uint32_t kDefaultWorkGroupSize = 64;
+constexpr uint32_t kDefaultWorkGroupTileCount = 64;
 
 // Inspect values.
 constexpr char kSoftwareView[] = "software_view";
@@ -36,8 +41,8 @@ constexpr char kComputeView[] = "compute_view";
 
 // fx shell "killall scenic.cmx; killall root_presenter.cmx"
 //
-// fx shell "present_view fuchsia-pkg://fuchsia.com/frame-compression#meta/frame-compression.cmx
-// --AFBC"
+// fx shell \
+// "present_view fuchsia-pkg://fuchsia.com/frame-compression#meta/frame-compression.cmx --AFBC"
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -93,6 +98,22 @@ int main(int argc, const char** argv) {
     paint_count = strtoul(count.c_str(), nullptr, 10);
   }
 
+  uint32_t work_group_size = kDefaultWorkGroupSize;
+  if (command_line.HasOption(kWorkGroupSize)) {
+    std::string size;
+    FX_CHECK(command_line.GetOptionValue(kWorkGroupSize, &size))
+        << "Missing --" << kWorkGroupSize << " argument";
+    work_group_size = strtoul(size.c_str(), nullptr, 10);
+  }
+
+  uint32_t work_group_tile_count = kDefaultWorkGroupTileCount;
+  if (command_line.HasOption(kWorkGroupTileCount)) {
+    std::string count;
+    FX_CHECK(command_line.GetOptionValue(kWorkGroupTileCount, &count))
+        << "Missing --" << kWorkGroupTileCount << " argument";
+    work_group_tile_count = strtoul(count.c_str(), nullptr, 10);
+  }
+
   escher::GlslangInitializeProcess();
 
   escher::VulkanInstance::Params instance_params(
@@ -123,11 +144,13 @@ int main(int argc, const char** argv) {
 
   scenic::ViewFactory factory;
   if (command_line.HasOption(kCompute)) {
-    factory = [modifier, width, height, paint_count, png_fp, inspector = &inspector,
+    factory = [modifier, width, height, paint_count, work_group_size, work_group_tile_count, png_fp,
+               inspector = &inspector,
                weak_escher = escher.GetWeakPtr()](scenic::ViewContext view_context) {
       return std::make_unique<frame_compression::ComputeView>(
           std::move(view_context), std::move(weak_escher), modifier, width, height, paint_count,
-          png_fp, inspector->root().CreateChild(kComputeView));
+          work_group_size, work_group_tile_count, png_fp,
+          inspector->root().CreateChild(kComputeView));
     };
   } else {
     factory = [modifier, width, height, paint_count, png_fp,
