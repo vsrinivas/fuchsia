@@ -26,7 +26,6 @@ group("tests") {
     "//src/graphics/drivers/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration",
     "//src/graphics/drivers/msd-vsi-vip/tests/unit_tests:msd-vsi-vip-nonhardware-tests",
-    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-dev",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
   ]
