@@ -1,0 +1,25 @@
+library fidl.test.json;
+
+struct StructSmallArray {
+    array<uint32>:2 a;
+};
+
+struct StructLargeArray {
+    array<uint32>:100 a;
+};
+
+table TableSmallArray {
+    1: array<uint32>:2 a;
+};
+
+table TableLargeArray {
+    1: array<uint32>:100 a;
+};
+
+union UnionSmallArray {
+    1: array<uint32>:2 a;
+};
+
+union UnionLargeArray {
+    1: array<uint32>:100 a;
+};

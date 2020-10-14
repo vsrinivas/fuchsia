@@ -1,3 +1,4 @@
+arrays.test.json.golden
 bindings_denylist.test.json.golden
 bits.test.json.golden
 byte_and_bytes.test.json.golden

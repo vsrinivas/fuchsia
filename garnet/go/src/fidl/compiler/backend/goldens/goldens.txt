@@ -1,3 +1,12 @@
+arrays.test.json
+arrays.test.json.cc.golden
+arrays.test.json.go.golden
+arrays.test.json.h.golden
+arrays.test.json.llcpp.cc.golden
+arrays.test.json.llcpp.h.golden
+arrays.test.json.rs.golden
+arrays.test.json.syz.txt.golden
+arrays.test.json_test_base.h.golden
 bindings_denylist.test.json
 bindings_denylist.test.json.cc.golden
 bindings_denylist.test.json.go.golden
