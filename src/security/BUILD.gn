@@ -16,8 +16,8 @@ group("tests") {
   deps = [
     "codelab:tests",
     "kms:tests",
-    "tee_manager:tests",
     "scrutiny:tests",
+    "tee_manager:tests",
     "zxcrypt:tests",
   ]
 }

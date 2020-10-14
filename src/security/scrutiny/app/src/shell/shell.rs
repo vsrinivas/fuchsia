@@ -5,8 +5,8 @@
 use {
     crate::shell::{
         args::args_to_json,
-        error::ShellError,
         builtin::{Builtin, BuiltinCommand},
+        error::ShellError,
     },
     anyhow::{Error, Result},
     log::{info, warn},

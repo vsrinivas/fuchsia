@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::{
-        engine::dispatcher::{ControllerDispatcher, DispatcherError},
-        model::controller::ConnectionMode,
-    },
     crate::rest::visualizer::*,
     anyhow::Error,
     log::{info, warn},
     rouille::{Request, Response, ResponseBody},
+    scrutiny::{
+        engine::dispatcher::{ControllerDispatcher, DispatcherError},
+        model::controller::ConnectionMode,
+    },
     serde_json::json,
     std::collections::HashMap,
     std::io::{self, ErrorKind, Read},
@@ -165,11 +165,12 @@ mod tests {
 
     use {
         super::*,
-        scrutiny::{
-            model::controller::DataController,
-            model::model::DataModel,
-        },
-        anyhow::Result, serde_json::value::Value, std::io, tempfile::tempdir, uuid::Uuid,
+        anyhow::Result,
+        scrutiny::{model::controller::DataController, model::model::DataModel},
+        serde_json::value::Value,
+        std::io,
+        tempfile::tempdir,
+        uuid::Uuid,
     };
 
     #[derive(Default)]

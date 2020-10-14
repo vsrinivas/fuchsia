@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 mod logo;
+mod rest;
 mod scrutiny;
 mod shell;
-mod rest;
 
 use {
     crate::scrutiny::ScrutinyApp,

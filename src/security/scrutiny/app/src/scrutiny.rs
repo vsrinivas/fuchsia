@@ -3,12 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        logo,
-        shell::shell::Shell,
-        rest::service::RestService,
-        rest::visualizer::Visualizer,
-    },
+    crate::{logo, rest::service::RestService, rest::visualizer::Visualizer, shell::shell::Shell},
     anyhow::{Error, Result},
     clap::{App, Arg, ArgMatches},
     log::error,

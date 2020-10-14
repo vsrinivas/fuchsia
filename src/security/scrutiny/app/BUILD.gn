@@ -18,13 +18,13 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:rouille",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates/transitional/rustyline",
-      "//third_party/rust_crates:rouille",
     ]
 
     test_deps = [
