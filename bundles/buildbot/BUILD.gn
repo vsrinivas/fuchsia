@@ -17,6 +17,7 @@ group("bringup") {
 group("core") {
   testonly = true
   public_deps = [
+    "//bundles:infratools",
     "//bundles:tools",
     "//bundles/fidl:tests",
     "//cts",
