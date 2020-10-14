@@ -22,7 +22,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
-#include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -40,6 +39,7 @@
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "keyboard.h"
+#include "src/lib/listnode/listnode.h"
 #include "vc.h"
 
 static bool keep_log;

@@ -5,10 +5,9 @@
 #ifndef SRC_BRINGUP_BIN_VIRTCON_VC_DISPLAY_H_
 #define SRC_BRINGUP_BIN_VIRTCON_VC_DISPLAY_H_
 
-#include <zircon/listnode.h>
-
 #include "fuchsia/hardware/display/llcpp/fidl.h"
 #include "fuchsia/sysmem/llcpp/fidl.h"
+#include "src/lib/listnode/listnode.h"
 #include "vc.h"
 #include "zircon/types.h"
 

@@ -13,11 +13,11 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <threads.h>
-#include <zircon/listnode.h>
 
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 
+#include "src/lib/listnode/listnode.h"
 #include "textcon.h"
 #include "vc-colors.h"
 #include "vc-gfx.h"
