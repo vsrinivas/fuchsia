@@ -95,13 +95,13 @@ To run the test:
 1. Configure your GN build to include the test:
 
    ```
-   fx set core.x64 --with //examples/fidl/hlcpp/testing`
+   fx set core.x64 --with //examples/fidl/hlcpp/testing
 
    ```
 1. Run the test:
 
    ```
-   fx test -vo example-hlcpp-protocol-test`
+   fx test -vo example-hlcpp-protocol-test
    ```
 
 You should see the test output indicating a success.
