@@ -19,7 +19,6 @@ config("test_utils_config") {
 source_set("fake_buffer_collection") {
   visibility = [ ":*" ]
   sources = [
-    "fake-buffer-collection.h",
     "fake_buffer_collection.cc",
     "fake_buffer_collection.h",
   ]
