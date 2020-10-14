@@ -8597,7 +8597,7 @@ rust_library("tiny_http-v0_6_2") {
   deps += [ ":chunked_transfer-v0_3_1" ]
   deps += [ ":log-v0_4_8" ]
   deps += [ ":url-v1_7_2" ]
-
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   rustenv = []
 
   rustflags = [

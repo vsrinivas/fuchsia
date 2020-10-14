@@ -373,6 +373,10 @@ rustflags = ["--cfg=ops_bound", "--cfg=core_reverse", "--cfg=de_boxed_c_str", "-
 [gn.package.serde_derive."1.0.116"]
 rustflags = ["--cfg=underscore_consts"]
 
+[gn.package.tiny_http."0.6.2"]
+# TODO(61282): Fix the leaks and remove this.
+deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
 [gn.package.unicase."1.4.2"]
 rustflags = ["--cfg=__unicase__default_hasher", "--cfg=__unicase__iter_cmp"]
 
