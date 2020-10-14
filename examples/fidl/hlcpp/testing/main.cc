@@ -24,17 +24,19 @@ class EchoImpl : public fuchsia::examples::testing::Echo_TestBase {
 class EchoServerInstance {
  public:
   explicit EchoServerInstance(std::unique_ptr<sys::ComponentContext> context) {
+    context_ = std::move(context);
     binding_ = std::make_unique<fidl::Binding<fuchsia::examples::Echo>>(&impl_);
     fidl::InterfaceRequestHandler<fuchsia::examples::Echo> handler =
         [&](fidl::InterfaceRequest<fuchsia::examples::Echo> request) {
           binding_->Bind(std::move(request));
         };
-    context->outgoing()->AddPublicService(std::move(handler));
+    context_->outgoing()->AddPublicService(std::move(handler));
   }
 
  private:
   EchoImpl impl_;
   std::unique_ptr<fidl::Binding<fuchsia::examples::Echo>> binding_;
+  std::unique_ptr<sys::ComponentContext> context_;
 };
 // [END wrapper]
 
