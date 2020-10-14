@@ -79,7 +79,7 @@ Device::~Device() {
   // Make certain that all bus access (MMIO, PIO, Bus mastering) has been
   // disabled.  Also, explicitly disable legacy IRQs.
   // TODO(cja/fxbug.dev/32979)): Only use the PCIe int disable if PCIe
-  ModifyCmd(PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN, PCIE_CFG_COMMAND_INT_DISABLE);
+  ModifyCmd(PCI_CFG_COMMAND_IO_EN | PCI_CFG_COMMAND_MEM_EN, PCIE_CFG_COMMAND_INT_DISABLE);
 
   caps_.list.clear();
   caps_.ext_list.clear();
@@ -222,7 +222,7 @@ zx_status_t Device::EnableBusMaster(bool enabled) {
     return ZX_ERR_BAD_STATE;
   }
 
-  ModifyCmdLocked(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+  ModifyCmdLocked(enabled ? 0 : PCI_CFG_COMMAND_BUS_MASTER_EN, enabled ? PCI_CFG_COMMAND_BUS_MASTER_EN : 0);
   return upstream_->EnableBusMasterUpstream(enabled);
 }
 
@@ -267,7 +267,7 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
   // some minor glitching while access is disabled.
   bool enabled = MmioEnabled() || IoEnabled();
   uint16_t cmd_backup = ReadCmdLocked();
-  ModifyCmdLocked(PCI_COMMAND_MEM_EN | PCI_COMMAND_IO_EN, cmd_backup);
+  ModifyCmdLocked(PCI_CFG_COMMAND_MEM_EN | PCI_CFG_COMMAND_IO_EN, cmd_backup);
   uint32_t addr_mask = (bar_info.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
 
   // For enabled devices save the original address in the BAR. If the device
@@ -390,7 +390,7 @@ zx_status_t Device::AllocateBar(uint8_t bar_id) {
 
   // Now write the allocated address space to the BAR.
   uint16_t cmd_backup = cfg_->Read(Config::kCommand);
-  ModifyCmdLocked(PCI_COMMAND_MEM_EN | PCI_COMMAND_IO_EN, cmd_backup);
+  ModifyCmdLocked(PCI_CFG_COMMAND_MEM_EN | PCI_CFG_COMMAND_IO_EN, cmd_backup);
   cfg_->Write(Config::kBar(bar_id), static_cast<uint32_t>(bar_info.allocation->base()));
   if (bar_info.is_64bit) {
     uint32_t addr_hi = static_cast<uint32_t>(bar_info.allocation->base() >> 32);
@@ -423,6 +423,7 @@ zx_status_t Device::ConfigureBars() {
       status = AllocateBar(bar_id);
       if (status != ZX_OK) {
         zxlogf(ERROR, "[%s] failed to allocate bar %u: %d", cfg_->addr(), bar_id, status);
+        return status;
       }
     }
 

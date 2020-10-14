@@ -10,11 +10,27 @@ using zx;
 enum PciCfg : uint16 {
     VENDOR_ID = 0x00;
     DEVICE_ID = 0x02;
+    COMMAND = 0x04;
+    STATUS = 0x06;
     REVISION_ID = 0x08;
     CLASS_CODE = 0x09;
-    SUBSYSTEM_VENDOR_ID = 0x2C;
-    SUBSYSTEM_ID = 0x2E;
+    CLASS_CODE_INTR = 0x09;
+    CLASS_CODE_SUB = 0x0a;
+    CLASS_CODE_BASE = 0x0b;
+    CACHE_LINE_SIZE = 0x0c;
+    LATENCY_TIMER = 0x0d;
+    HEADER_TYPE = 0x0e;
+    BIST = 0x0f;
+    BASE_ADDRESSES = 0x10;
+    CARDBUS_CIS_PTR = 0x28;
+    SUBSYSTEM_VENDOR_ID = 0x2c;
+    SUBSYSTEM_ID = 0x2e;
+    EXP_ROM_ADDRESS = 0x30;
     CAPABILITIES_PTR = 0x34;
+    INTERRUPT_LINE = 0x3c;
+    INTERRUPT_PIN = 0x3d;
+    MIN_GRANT = 0x3e;
+    MAX_LATENCY = 0x3f;
 };
 
 enum PciCapId : uint8 {

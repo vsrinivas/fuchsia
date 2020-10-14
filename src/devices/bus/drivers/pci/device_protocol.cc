@@ -125,7 +125,7 @@ zx_status_t Device::RpcConfigRead(const zx::unowned_channel& ch) {
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   }
 
-  zxlogf(TRACE, "%s Read%u[%#x] = %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+  zxlogf(TRACE, "[%s] Read%u[%#x] = %#x", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
          response_.cfg.value);
   return RpcReply(ch, ZX_OK);
 }
@@ -209,8 +209,6 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
       response_.bar.is_mmio = true;
       handle = vmo.release();
       handle_cnt++;
-    } else {
-      return RpcReply(ch, ZX_ERR_INTERNAL);
     }
   } else {  // IO BAR
     zx::resource res = {};
@@ -226,8 +224,6 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
       zxlogf(ERROR, "[%s] Failed to create a resource for IO bar %u: %d", cfg_->addr(), bar_id,
              status);
     }
-    response_.bar.io_addr = static_cast<uint16_t>(bar.address);
-    response_.bar.io_size = static_cast<uint16_t>(bar.size);
   }
 
   zxlogf(DEBUG, "[%s] GetBar { bar_id = %u, status = %s }", cfg_->addr(), bar_id,
@@ -255,7 +251,7 @@ zx_status_t Device::RpcGetBti(const zx::unowned_channel& ch) {
     handle_cnt++;
   }
 
-  zxlogf(DEBUG, "[%s] GetBti { index = %u, status = %s }\n", cfg_->addr(), request_.bti_index,
+  zxlogf(DEBUG, "[%s] GetBti { index = %u, status = %s }", cfg_->addr(), request_.bti_index,
          zx_status_get_string(st));
   return RpcReply(ch, st, &handle, handle_cnt);
 }

@@ -69,16 +69,20 @@
 /*
  * PCI command register bits
  */
-#define PCI_COMMAND_IO_EN 0x0001
-#define PCI_COMMAND_MEM_EN 0x0002
-#define PCI_COMMAND_BUS_MASTER_EN 0x0004
-#define PCI_COMMAND_SPECIAL_EN 0x0008
-#define PCI_COMMAND_MEM_WR_INV_EN 0x0010
-#define PCI_COMMAND_PAL_SNOOP_EN 0x0020
-#define PCI_COMMAND_PERR_RESP_EN 0x0040
-#define PCI_COMMAND_AD_STEP_EN 0x0080
-#define PCI_COMMAND_SERR_EN 0x0100
-#define PCI_COMMAND_FAST_B2B_EN 0x0200
+
+// clang-format off
+#define PCI_CFG_COMMAND_IO_EN         (1u << 0)
+#define PCI_CFG_COMMAND_MEM_EN        (1u << 1)
+#define PCI_CFG_COMMAND_BUS_MASTER_EN (1u << 2)
+#define PCI_CFG_COMMAND_SPECIAL_EN    (1u << 3)
+#define PCI_CFG_COMMAND_MEM_WR_INV_EN (1u << 4)
+#define PCI_CFG_COMMAND_PAL_SNOOP_EN  (1u << 5)
+#define PCI_CFG_COMMAND_PERR_RESP_EN  (1u << 6)
+#define PCI_CFG_COMMAND_AD_STEP_EN    (1u << 7)
+#define PCI_CFG_COMMAND_SERR_EN       (1u << 8)
+#define PCI_CFG_COMMAND_FAST_B2B_EN   (1u << 9)
+#define PCI_CFG_COMMAND_INT_DISABLE   (1u << 10)
+// clang-format on
 
 /**
  * The maximum possible number of standard capabilities for a PCI

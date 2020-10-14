@@ -173,19 +173,19 @@ TEST_F(PciProtocolTests, EnableBusMaster) {
   uint16_t cached_value = 0;
 
   // Ensure Bus mastering is already enabled in our test quadro.
-  ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_COMMAND, &cmd_reg.value));
   ASSERT_EQ(true, cmd_reg.bus_master());
   cached_value = cmd_reg.value;  // cache so we can test other bits are preserved
 
   // Ensure we can disable it.
   ASSERT_OK(pci().EnableBusMaster(false));
-  ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_COMMAND, &cmd_reg.value));
   ASSERT_EQ(false, cmd_reg.bus_master());
-  ASSERT_EQ(cached_value & ~PCI_COMMAND_BUS_MASTER_EN, cmd_reg.value);
+  ASSERT_EQ(cached_value & ~PCI_CFG_COMMAND_BUS_MASTER_EN, cmd_reg.value);
 
   // Enable and confirm it.
   ASSERT_OK(pci().EnableBusMaster(true));
-  ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_COMMAND, &cmd_reg.value));
   ASSERT_EQ(true, cmd_reg.bus_master());
   ASSERT_EQ(cached_value, cmd_reg.value);
 }
@@ -405,14 +405,14 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
   uint8_t dev_id = PCI_TEST_DEV_ID;
   uint8_t func_id = PCI_TEST_FUNC_ID;
 
-  ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_VENDOR_ID, &vendor_id));
-  ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_DEVICE_ID, &device_id));
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_VENDOR_ID, &vendor_id));
+  ASSERT_OK(pci().ConfigRead16(PCI_CFG_DEVICE_ID, &device_id));
   ASSERT_EQ(vendor_id, PCI_TEST_DRIVER_VID);
   ASSERT_EQ(device_id, PCI_TEST_DRIVER_DID);
-  ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_BASE, &base_class));
-  ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_SUB, &sub_class));
-  ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_INTR, &program_interface));
-  ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_REVISION_ID, &revision_id));
+  ASSERT_OK(pci().ConfigRead8(PCI_CFG_CLASS_CODE_BASE, &base_class));
+  ASSERT_OK(pci().ConfigRead8(PCI_CFG_CLASS_CODE_SUB, &sub_class));
+  ASSERT_OK(pci().ConfigRead8(PCI_CFG_CLASS_CODE_INTR, &program_interface));
+  ASSERT_OK(pci().ConfigRead8(PCI_CFG_REVISION_ID, &revision_id));
 
   zx_pcie_device_info_t info;
   ASSERT_OK(pci().GetDeviceInfo(&info));

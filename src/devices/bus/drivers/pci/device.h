@@ -238,9 +238,9 @@ class Device : public PciDeviceType,
     ModifyCmdLocked(UINT16_MAX, value);
   }
 
-  bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_COMMAND_IO_EN; }
+  bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CFG_COMMAND_IO_EN; }
 
-  bool MmioEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_COMMAND_MEM_EN; }
+  bool MmioEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CFG_COMMAND_MEM_EN; }
 
   zx_status_t ProbeCapabilities() __TA_REQUIRES(dev_lock_);
   zx_status_t ParseCapabilities() __TA_REQUIRES(dev_lock_);
