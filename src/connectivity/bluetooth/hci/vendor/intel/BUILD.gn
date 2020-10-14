@@ -64,11 +64,11 @@ driver_module("driver") {
 if (internal_access) {
   copy("btintel-firmware") {
     sources = [
-      "firmware/ibt-11-5.sfi",
-      "firmware/ibt-12-16.sfi",
-      "firmware/ibt-18-2.sfi",
-      "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
-      "firmware/ibt-hw-37.8.bseq",
+      "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-11-5.sfi",
+      "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-12-16.sfi",
+      "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-18-2.sfi",
+      "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
+      "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-hw-37.8.bseq",
     ]
     outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
   }

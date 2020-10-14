@@ -44,18 +44,18 @@ driver_module("driver") {
 if (internal_access) {
   copy("btatheros-firmware") {
     sources = [
-      "firmware/nvm_00130300.bin",
-      "firmware/nvm_00130302.bin",
-      "firmware/nvm_usb_00000200.bin",
-      "firmware/nvm_usb_00000201.bin",
-      "firmware/nvm_usb_00000300.bin",
-      "firmware/nvm_usb_00000302.bin",
-      "firmware/rampatch_00130300.bin",
-      "firmware/rampatch_00130302.bin",
-      "firmware/rampatch_usb_00000200.bin",
-      "firmware/rampatch_usb_00000201.bin",
-      "firmware/rampatch_usb_00000300.bin",
-      "firmware/rampatch_usb_00000302.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/nvm_00130300.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/nvm_00130302.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/nvm_usb_00000200.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/nvm_usb_00000201.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/nvm_usb_00000300.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/nvm_usb_00000302.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/rampatch_00130300.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/rampatch_00130302.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/rampatch_usb_00000200.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/rampatch_usb_00000201.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/rampatch_usb_00000300.bin",
+      "//prebuilt/connectivity/bluetooth/firmware/atheros/rampatch_usb_00000302.bin",
     ]
     outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
   }
