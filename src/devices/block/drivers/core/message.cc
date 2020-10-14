@@ -4,11 +4,14 @@
 
 #include "message.h"
 
+#include <zircon/device/block.h>
+
 #include "server.h"
 
 zx_status_t Message::Create(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_fifo_request_t* req,
-                            size_t block_op_size, std::unique_ptr<Message>* out) {
-  std::unique_ptr<Message> msg(new (block_op_size) Message());
+                            size_t block_op_size, MessageCompleter completer,
+                            std::unique_ptr<Message>* out) {
+  std::unique_ptr<Message> msg(new (block_op_size) Message(std::move(completer)));
   if (msg == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -23,7 +26,7 @@ zx_status_t Message::Create(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_f
 }
 
 void Message::Complete() {
-  server_->TxnComplete(result(), req_.reqid, req_.group);
+  completer_(result(), req_);
   server_->TxnEnd();
   iobuf_ = nullptr;
 }

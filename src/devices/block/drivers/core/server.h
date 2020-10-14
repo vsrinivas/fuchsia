@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_SERVER_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_CORE_SERVER_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_
 
 #include <lib/fzl/fifo.h>
 #include <lib/sync/completion.h>
@@ -27,8 +27,8 @@
 #include <fbl/ref_ptr.h>
 
 #include "iobuffer.h"
+#include "message-group.h"
 #include "message.h"
-#include "txn-group.h"
 
 class Server {
  public:
@@ -51,11 +51,12 @@ class Server {
   // on (and removed from) in_queue_.
   void TxnEnd();
 
-  // Wrapper around "Completed Transaction", as a convenience
-  // both both one-shot and group-based transactions.
-  //
-  // (If appropriate) tells the client that their operation is done.
-  void TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group);
+  // Wrapper around "SendResponse", as a convenience
+  // for finishing both one-shot and group-based transactions.
+  void FinishTransaction(zx_status_t status, reqid_t reqid, groupid_t group);
+
+  // Send the given response to the client.
+  void SendResponse(const block_fifo_response_t& response);
 
   void Shutdown();
 
@@ -102,11 +103,11 @@ class Server {
   MessageQueue in_queue_;
   std::atomic<size_t> pending_count_;
   std::atomic<bool> barrier_in_progress_;
-  TransactionGroup groups_[MAX_TXN_GROUP_COUNT];
+  std::unique_ptr<MessageGroup> groups_[MAX_TXN_GROUP_COUNT];
 
   fbl::Mutex server_lock_;
   fbl::WAVLTree<vmoid_t, fbl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
   vmoid_t last_id_ TA_GUARDED(server_lock_);
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_SERVER_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_CORE_SERVER_H_

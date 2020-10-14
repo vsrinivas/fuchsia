@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <limits>
 #include <new>
+#include <optional>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -25,6 +26,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+
+#include "message-group.h"
 
 namespace {
 
@@ -38,45 +41,6 @@ constexpr zx_signals_t kSignalFifoOpsComplete = ZX_USER_SIGNAL_1;
 // (If we need to free up user signals, this could easily be transformed
 // into a completion object).
 constexpr zx_signals_t kSignalFifoTerminated = ZX_USER_SIGNAL_2;
-
-// Impossible groupid used internally to signify that an operation
-// has no accompanying group.
-constexpr groupid_t kNoGroup = MAX_TXN_GROUP_COUNT;
-
-void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_t>& fifo,
-                      zx_status_t status, reqid_t reqid, groupid_t group) {
-  block_fifo_response_t response;
-  response.status = status;
-  response.reqid = reqid;
-  response.group = group;
-  response.count = 1;
-
-  for (;;) {
-    status = fifo.write_one(response);
-    switch (status) {
-      case ZX_OK:
-        return;
-      case ZX_ERR_SHOULD_WAIT: {
-        zx_signals_t signals;
-        status = zx_object_wait_one(fifo.get_handle(),
-                                    ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate,
-                                    ZX_TIME_INFINITE, &signals);
-        if (status != ZX_OK) {
-          zxlogf(WARNING, "(fifo) zx_object_wait_one failed: %s", zx_status_get_string(status));
-          return;
-        }
-        if (signals & kSignalFifoTerminate) {
-          // The server is shutting down and we shouldn't block, so dump the response and return.
-          return;
-        }
-        break;
-      }
-      default:
-        zxlogf(WARNING, "Fifo write failed: %s", zx_status_get_string(status));
-        return;
-    }
-  }
-}
 
 void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
   ZX_DEBUG_ASSERT(bop != nullptr);
@@ -133,12 +97,45 @@ void Server::TerminateQueue() {
     }
   }
 }
-void Server::TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group) {
-  if (group == kNoGroup) {
-    OutOfBandRespond(fifo_, status, reqid, group);
+
+void Server::SendResponse(const block_fifo_response_t& response) {
+  for (;;) {
+    zx_status_t status = fifo_.write_one(response);
+    switch (status) {
+      case ZX_OK:
+        return;
+      case ZX_ERR_SHOULD_WAIT: {
+        zx_signals_t signals;
+        status = zx_object_wait_one(fifo_.get_handle(),
+                                    ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate,
+                                    ZX_TIME_INFINITE, &signals);
+        if (status != ZX_OK) {
+          zxlogf(WARNING, "(fifo) zx_object_wait_one failed: %s", zx_status_get_string(status));
+          return;
+        }
+        if (signals & kSignalFifoTerminate) {
+          // The server is shutting down and we shouldn't block, so dump the response and return.
+          return;
+        }
+        break;
+      }
+      default:
+        zxlogf(WARNING, "Fifo write failed: %s", zx_status_get_string(status));
+        return;
+    }
+  }
+}
+
+void Server::FinishTransaction(zx_status_t status, reqid_t reqid, groupid_t group) {
+  if (group != kNoGroup) {
+    groups_[group]->Complete(status);
   } else {
-    ZX_DEBUG_ASSERT(group < MAX_TXN_GROUP_COUNT);
-    groups_[group].Complete(status);
+    SendResponse(block_fifo_response_t{
+        .status = status,
+        .reqid = reqid,
+        .group = group,
+        .count = 1,
+    });
   }
 }
 
@@ -281,7 +278,7 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
   }
 
   for (size_t i = 0; i < std::size(bs->groups_); i++) {
-    bs->groups_[i].Initialize(bs->fifo_.get_handle(), static_cast<groupid_t>(i));
+    bs->groups_[i] = std::make_unique<MessageGroup>(*bs, static_cast<groupid_t>(i));
   }
 
   // Notably, drop ZX_RIGHT_SIGNAL_PEER, since we use bs->fifo for thread
@@ -301,8 +298,6 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
 }
 
 zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
-  groupid_t group = request->group;
-
   // TODO(fxbug.dev/31470): Reduce the usage of this lock (only used to protect
   // IoBuffers).
   fbl::AutoLock server_lock(&server_lock_);
@@ -329,31 +324,44 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   }
 
   std::unique_ptr<Message> msg;
-  status = Message::Create(iobuf.CopyPointer(), this, request, block_op_size_, &msg);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  msg->Op()->command = OpcodeToCommand(request->opcode);
 
   const uint32_t max_xfer = info_.max_transfer_size / bsz;
   if (max_xfer != 0 && max_xfer < request->length) {
+    // If the request is larger than the maximum transfer size,
+    // split it up into a collection of smaller block messages.
     uint32_t len_remaining = request->length;
     uint64_t vmo_offset = request->vmo_offset;
     uint64_t dev_offset = request->dev_offset;
+    uint32_t sub_txns = fbl::round_up(len_remaining, max_xfer) / max_xfer;
 
-    // If the request is larger than the maximum transfer size,
-    // split it up into a collection of smaller block messages.
-    //
+    // For groups, we simply add extra (uncounted) messages to the existing MessageGroup,
+    // but for ungrouped messages we create a oneshot MessageGroup.
+    std::unique_ptr<MessageGroup> oneshot_group = nullptr;
+    MessageGroup* transaction_group = nullptr;
+
+    if (request->group == kNoGroup) {
+      oneshot_group = std::make_unique<MessageGroup>(*this);
+      oneshot_group->ExpectResponses(sub_txns, 1, request->reqid);
+      transaction_group = oneshot_group.get();
+    } else {
+      groups_[request->group]->ExpectResponses(sub_txns - 1, 0, std::nullopt);
+      transaction_group = groups_[request->group].get();
+    }
+
     // Once all of these smaller messages are created, splice
     // them into the input queue together.
     MessageQueue sub_txns_queue;
-    uint32_t sub_txns = fbl::round_up(len_remaining, max_xfer) / max_xfer;
+
     uint32_t sub_txn_idx = 0;
+
+    auto completer = [transaction_group](zx_status_t status, block_fifo_request_t& req) {
+      transaction_group->Complete(status);
+    };
     while (sub_txn_idx != sub_txns) {
       // We'll be using a new BlockMsg for each sub-component.
       if (msg == nullptr) {
-        status = Message::Create(iobuf.CopyPointer(), this, request, block_op_size_, &msg);
+        status =
+            Message::Create(iobuf.CopyPointer(), this, request, block_op_size_, completer, &msg);
         if (status != ZX_OK) {
           return status;
         }
@@ -372,11 +380,25 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
       dev_offset += length;
       sub_txn_idx++;
     }
-    groups_[group].CtrAdd(sub_txns - 1);
     ZX_DEBUG_ASSERT(len_remaining == 0);
 
+    if (oneshot_group) {
+      // Release the oneshot MessageGroup: it will free itself once all messages have been handled.
+      oneshot_group.release();
+    }
     in_queue_.splice(in_queue_.end(), sub_txns_queue);
   } else {
+    auto completer = [this](zx_status_t status, block_fifo_request_t& req) {
+      FinishTransaction(status, req.reqid, req.group);
+    };
+    status = Message::Create(iobuf.CopyPointer(), this, request, block_op_size_,
+                             std::move(completer), &msg);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    msg->Op()->command = OpcodeToCommand(request->opcode);
+
     InQueueAdd(iobuf->vmo(), request->length, request->vmo_offset, request->dev_offset,
                msg.release(), &in_queue_);
   }
@@ -402,7 +424,11 @@ zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
 
 zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
   std::unique_ptr<Message> msg;
-  zx_status_t status = Message::Create(nullptr, this, request, block_op_size_, &msg);
+  auto completer = [this](zx_status_t result, block_fifo_request_t& req) {
+    FinishTransaction(result, req.reqid, req.group);
+  };
+  zx_status_t status =
+      Message::Create(nullptr, this, request, block_op_size_, std::move(completer), &msg);
   if (status != ZX_OK) {
     return status;
   }
@@ -417,7 +443,11 @@ zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
   }
 
   std::unique_ptr<Message> msg;
-  zx_status_t status = Message::Create(nullptr, this, request, block_op_size_, &msg);
+  auto completer = [this](zx_status_t result, block_fifo_request_t& req) {
+    FinishTransaction(result, req.reqid, req.group);
+  };
+  zx_status_t status =
+      Message::Create(nullptr, this, request, block_op_size_, std::move(completer), &msg);
   if (status != ZX_OK) {
     return status;
   }
@@ -434,26 +464,26 @@ void Server::ProcessRequest(block_fifo_request_t* request) {
     case BLOCKIO_READ:
     case BLOCKIO_WRITE:
       if ((status = ProcessReadWriteRequest(request)) != ZX_OK) {
-        TxnComplete(status, request->reqid, request->group);
+        FinishTransaction(status, request->reqid, request->group);
       }
       break;
     case BLOCKIO_FLUSH:
       if ((status = ProcessFlushRequest(request)) != ZX_OK) {
-        TxnComplete(status, request->reqid, request->group);
+        FinishTransaction(status, request->reqid, request->group);
       }
       break;
     case BLOCKIO_TRIM:
       if ((status = ProcessTrimRequest(request)) != ZX_OK) {
-        TxnComplete(status, request->reqid, request->group);
+        FinishTransaction(status, request->reqid, request->group);
       }
       break;
     case BLOCKIO_CLOSE_VMO:
       status = ProcessCloseVmoRequest(request);
-      TxnComplete(status, request->reqid, request->group);
+      FinishTransaction(status, request->reqid, request->group);
       break;
     default:
       zxlogf(WARNING, "Unrecognized block server operation: %d", request->opcode);
-      TxnComplete(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
+      FinishTransaction(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
   }
 }
 
@@ -482,19 +512,21 @@ zx_status_t Server::Serve() {
           // Operation which is not accessing a valid group.
           zxlogf(WARNING, "Serve: group %d is not valid, failing request", group);
           if (wants_reply) {
-            OutOfBandRespond(fifo_, ZX_ERR_IO, reqid, group);
+            FinishTransaction(ZX_ERR_IO, reqid, group);
           }
           continue;
         }
 
         // Enqueue the message against the transaction group.
-        status = groups_[group].Enqueue(wants_reply, reqid);
+        status = groups_[group]->ExpectResponses(1, 1,
+                                                 wants_reply ? std::optional{reqid} : std::nullopt);
         if (status != ZX_OK) {
           zxlogf(WARNING, "Serve: Enqueue for group %d failed: %s", group,
                  zx_status_get_string(status));
-          TxnComplete(status, reqid, group);
+          FinishTransaction(status, reqid, group);
           continue;
         }
+
       } else {
         requests[i].group = kNoGroup;
       }

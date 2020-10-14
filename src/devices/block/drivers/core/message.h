@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_MESSAGE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_CORE_MESSAGE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_
 
 #include <zircon/device/block.h>
 
 #include <ddk/protocol/block.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 
 class IoBuffer;
 class Server;
+
+using MessageCompleter = std::function<void(zx_status_t, block_fifo_request_t&)>;
 
 // A single unit of work transmitted to the underlying block layer.
 // Message contains a block_op_t, which is dynamically sized. Therefore, it implements its
@@ -30,7 +33,8 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
   // Allocate a new, uninitialized Message whose block_op begins in a memory region that
   // is block_op_size bytes long.
   static zx_status_t Create(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_fifo_request_t* req,
-                            size_t block_op_size, std::unique_ptr<Message>* out);
+                            size_t block_op_size, MessageCompleter completer,
+                            std::unique_ptr<Message>* out);
 
   // End the transaction specified by reqid and group, and release iobuf.
   void Complete();
@@ -41,9 +45,10 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
   block_op_t* Op() { return &op_; }
 
  private:
-  Message() = default;
+  explicit Message(MessageCompleter completer) : completer_(std::move(completer)) {}
 
   fbl::RefPtr<IoBuffer> iobuf_;
+  MessageCompleter completer_;
   Server* server_;
   size_t op_size_;
   zx_status_t result_ = ZX_OK;
@@ -57,4 +62,4 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
 
 using MessageQueue = fbl::DoublyLinkedList<Message*>;
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_MESSAGE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_

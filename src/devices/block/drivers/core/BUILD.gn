@@ -69,9 +69,9 @@ source_set("shared") {
     "block-device.cc",
     "iobuffer.cc",
     "manager.cc",
+    "message-group.cc",
     "message.cc",
     "server.cc",
-    "txn-group.cc",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.block",
