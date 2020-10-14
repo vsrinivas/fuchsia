@@ -32,6 +32,9 @@ driver_module("lite-on") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -67,6 +70,9 @@ test("ltr-578als-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 

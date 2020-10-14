@@ -25,6 +25,9 @@ driver_module("aml-light") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -50,6 +53,9 @@ test("aml-light-test") {
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -57,8 +63,8 @@ test("aml-light-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }

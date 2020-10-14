@@ -31,6 +31,9 @@ driver_module("bt-hci-broadcom") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
   data_deps = [ ":firmware" ]
 

@@ -21,7 +21,6 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>

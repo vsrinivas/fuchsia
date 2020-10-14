@@ -18,6 +18,9 @@ driver_module("fake-display") {
   deps = [
     ":fake-lib",
     "//src/devices/lib/driver",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -33,6 +36,9 @@ source_set("fake-lib") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",

@@ -4,7 +4,8 @@
 
 #include "uvc_format.h"
 
-#include <ddk/binding.h>
+#include <lib/fake_ddk/fake_ddk.h>
+
 #include <zxtest/zxtest.h>
 
 namespace video {

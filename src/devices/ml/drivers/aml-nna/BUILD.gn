@@ -26,6 +26,9 @@ driver_module("aml-nna") {
     "//src/devices/lib/mmio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -47,6 +50,9 @@ test("aml-nna-test") {
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zxtest",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 

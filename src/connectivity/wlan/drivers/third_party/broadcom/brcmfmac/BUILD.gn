@@ -229,6 +229,9 @@ driver_module("driver_module") {
   deps = [
     ":core",
     ":driver_sources",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -242,6 +245,9 @@ driver_module("test_driver_module") {
   deps = [
     ":core",
     ":driver_sources",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
 
     # All driver test targets are linked into the driver test.  The appropriate test will be
     # executed at runtime.

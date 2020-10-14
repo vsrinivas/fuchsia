@@ -76,6 +76,9 @@ if (target_cpu == "arm64") {
     deps = [
       "//src/devices/lib/driver",
       "//src/lib/ddk",
+
+      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+      "//src/lib/ddk:ddk-deprecated-binding-headers",
     ]
     sources = [ "tests/test_support.h" ]
   }
@@ -156,6 +159,9 @@ if (target_cpu == "arm64") {
       "//src/devices/lib/driver",
       "//src/devices/lib/mmio",
       "//src/lib/ddk",
+
+      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
       "//src/media/lib/internal_buffer",
       "//src/media/lib/memory_barriers",

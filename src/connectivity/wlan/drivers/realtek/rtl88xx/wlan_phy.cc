@@ -8,7 +8,6 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <wlan/common/phy.h>

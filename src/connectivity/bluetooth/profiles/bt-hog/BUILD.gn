@@ -20,6 +20,9 @@ driver_module("driver") {
     "//src/connectivity/bluetooth/lib/device-protocol-bt-gatt-svc",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/zx",
   ]
 

@@ -22,6 +22,9 @@ driver_module("fidl-llcpp-driver") {
     "//src/devices/lib/driver",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -46,6 +49,9 @@ driver_module("fidl-async-llcpp-driver") {
     "//src/devices/lib/driver",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -61,6 +67,9 @@ test("ddk-fidl-test") {
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_c",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",

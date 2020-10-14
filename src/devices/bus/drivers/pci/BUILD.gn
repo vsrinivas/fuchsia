@@ -39,6 +39,9 @@ source_set("user_pci") {
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -65,6 +68,9 @@ source_set("user_pci.proxy") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
@@ -123,6 +129,9 @@ if (platform_enable_user_pci) {
       "//sdk/banjo/ddk.protocol.sysmem",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
+
+      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
       "//zircon/public/lib/fidl",
     ]
@@ -149,6 +158,9 @@ if (platform_enable_user_pci) {
       "//sdk/banjo/ddk.protocol.sysmem",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
+
+      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
     ]
 

@@ -13,7 +13,6 @@
 #include <string>
 #include <thread>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 

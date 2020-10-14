@@ -15,7 +15,6 @@
 #include <map>
 #include <optional>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
 #include <fbl/mutex.h>

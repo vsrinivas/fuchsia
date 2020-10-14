@@ -32,6 +32,9 @@ source_set("driver_sources") {
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//src/graphics/lib/magma/src/sys_driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/imgtec-pvr-rgx-km:src_no_hardware",
     "//zircon/system/ulib/fidl-utils",

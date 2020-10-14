@@ -12,7 +12,6 @@
 
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>

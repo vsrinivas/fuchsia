@@ -48,6 +48,9 @@ template("ot_radio_driver") {
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/driver-unit-test",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+
+      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+      "//src/lib/ddk:ddk-deprecated-binding-headers",
     ]
 
     include_dirs =

@@ -21,5 +21,8 @@ driver_module("pl031-rtc") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }

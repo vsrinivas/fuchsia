@@ -44,6 +44,9 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/ddk.protocol.pci",
       "//src/devices/pci/lib/device-protocol-pci",
       "//src/lib/ddk",
+
+      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+      "//src/lib/ddk:ddk-deprecated-binding-headers",
     ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

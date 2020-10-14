@@ -35,6 +35,9 @@ source_set("smbios") {
 
   deps = [
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
@@ -51,6 +54,9 @@ source_set("iommu") {
 
   deps = [
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
@@ -131,6 +137,9 @@ driver_module("platform-bus-x86") {
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
@@ -176,6 +185,9 @@ test("x86-battery-test") {
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
@@ -213,6 +225,9 @@ test("x86-lid-test") {
     "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
@@ -254,6 +269,9 @@ test("x86-pwrsrc-test") {
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/zxtest",
@@ -319,6 +337,9 @@ test("x86-thermal-test") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
@@ -359,6 +380,9 @@ test("x86-cros-ec-test") {
     "//sdk/banjo/ddk.protocol.hidbus",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",

@@ -21,6 +21,9 @@ driver_module("nxp") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

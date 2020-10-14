@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
+#include <ddk/binding_priv.h>
 
 // clang-format off
 #define ZIRCON_DRIVER(Driver, Ops, VendorName, Version) \
-  ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, {bind_count}) {binding} \
-  ZIRCON_DRIVER_END(Driver)
+  ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, {bind_count}) {binding} \
+  ZIRCON_DRIVER_END_PRIV(Driver)

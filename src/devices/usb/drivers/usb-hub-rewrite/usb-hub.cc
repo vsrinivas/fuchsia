@@ -16,7 +16,6 @@
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <fbl/auto_lock.h>
 #include <fbl/hard_int.h>
 
@@ -201,8 +200,8 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
                        if (status != ZX_OK) {
                          return status;
                        }
-                       // TODO (fxbug.dev/56002): Support multi-TT hubs properly. Currently, we operate in
-                       // single-TT mode even if the hub supports multiple TTs.
+                       // TODO (fxbug.dev/56002): Support multi-TT hubs properly. Currently, we
+                       // operate in single-TT mode even if the hub supports multiple TTs.
                        return bus_.ConfigureHub(zxdev(), speed_, &raw_desc, false);
                      })
                   .then(

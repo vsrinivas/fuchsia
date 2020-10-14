@@ -38,6 +38,9 @@ driver_module("sdmmc") {
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
@@ -78,6 +81,9 @@ test("sdmmc-test") {
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/pretty",

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include <ddk/binding.h>
+#include <ddk/binding_priv.h>
 
 #ifdef __cplusplus
 #include <string.h>

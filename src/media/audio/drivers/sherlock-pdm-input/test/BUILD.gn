@@ -20,6 +20,9 @@ test("sherlock-audio-in-test") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/fbl",

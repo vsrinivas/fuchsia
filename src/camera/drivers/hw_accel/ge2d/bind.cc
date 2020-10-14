@@ -5,8 +5,6 @@
 #include <lib/driver-unit-test/utils.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <ddk/binding.h>
-
 #include "src/camera/drivers/hw_accel/ge2d/ge2d-bind.h"
 #include "src/camera/drivers/hw_accel/ge2d/ge2d.h"
 

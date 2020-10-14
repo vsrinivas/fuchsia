@@ -253,7 +253,7 @@ mod tests {
         assert!(bytecode.is_empty());
 
         let template = write_bind_template(vec![]).unwrap();
-        assert!(template.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 0)"));
+        assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 0)"));
     }
 
     #[test]
@@ -264,7 +264,7 @@ mod tests {
 
         let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
         let template = write_bind_template(instructions).unwrap();
-        assert!(template.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 1)"));
+        assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 1)"));
         assert!(template.contains("{0x1000000,0x0,0x0}"));
     }
 
@@ -282,7 +282,7 @@ mod tests {
             InstructionDebug::new(Instruction::Match(Condition::Always)),
         ];
         let template = write_bind_template(instructions).unwrap();
-        assert!(template.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
+        assert!(template.contains("ZIRCON_DRIVER_BEGIN_PRIV(Driver, Ops, VendorName, Version, 2)"));
         assert!(template.contains("{0x20000002,0x0,0x0}"));
     }
 

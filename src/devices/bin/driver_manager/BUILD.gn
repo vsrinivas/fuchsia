@@ -98,6 +98,9 @@ source_set("lib") {
     "//zircon/system/ulib/memfs",
     "//zircon/system/ulib/memfs:memfs-cpp",
     "//zircon/system/ulib/svc",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 
   configs += [ "//build/config:all_source" ]

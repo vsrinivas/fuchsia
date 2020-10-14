@@ -24,6 +24,9 @@ driver_module("wlanif-test-driver") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//zircon/public/lib/zx",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -71,7 +74,6 @@ executable("device_unittest") {
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/sync",

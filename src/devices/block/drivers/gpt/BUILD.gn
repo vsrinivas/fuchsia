@@ -28,6 +28,9 @@ driver_module("gpt") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
@@ -48,6 +51,9 @@ test("gpt-device-test") {
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fit",

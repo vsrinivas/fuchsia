@@ -20,6 +20,9 @@ driver_module("bootpart") {
     "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/sync",
   ]

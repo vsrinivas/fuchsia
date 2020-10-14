@@ -56,6 +56,9 @@ driver_module("mt8167s_ref") {
     "//src/devices/lib/mt8167",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -118,6 +121,9 @@ test("mt8167s-ref-test") {
     "//src/devices/lib/mt8167",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",

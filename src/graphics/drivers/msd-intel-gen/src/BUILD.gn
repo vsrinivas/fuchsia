@@ -70,6 +70,9 @@ source_set("src") {
     "$magma_build_root/src/magma_util/platform:trace",
     "../include",
     "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
   ]
 
