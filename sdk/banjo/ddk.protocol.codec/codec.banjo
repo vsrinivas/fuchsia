@@ -23,14 +23,29 @@ enum FrameFormat : uint8 {
     /// at the falling edge of sclk. The frame sync must stay high for bits_per_channel bits for the
     /// first channel and low for bits_per_channel bits for the second channel.
     STEREO_LEFT = 3;
-    /// Right justified, 2 channels, data starts at frame sync changes from low to high clocked out
-    /// at the falling edge of sclk. The frame sync must stay high for bits_per_channel bits for the
+    /// Right justified, 2 channels. The frame sync must stay high for bits_per_channel bits for the
     /// first channel and low for bits_per_channel bits for the second channel.
     STEREO_RIGHT = 4;
     /// Left justified, variable number of channels, data starts at frame sync changes from low to
     /// high clocked out at the rising edge of sclk. The frame sync must stay high for exactly 1
     /// clock cycle.
     TDM1 = 5;
+    /// Custom format specified via FrameFormatCustom.
+    CUSTOM = 6;
+};
+
+/// Frame format only used if FrameFormat is set to CUSTOM.
+struct FrameFormatCustom {
+    /// Justification of the samples within a slot.
+    bool left_justified;
+    /// Clocking of data samples and frame sync output on either raising or falling sclk.
+    bool sclk_on_raising;
+    /// Number of sclks between the beginning of a frame sync change and audio samples.
+    /// For example, for I2S set to 1 and for stereo left justified set to 0.
+    int8 frame_sync_sclks_offset;
+    /// Number of sclks the frame sync is high within a frame.
+    /// For example, for I2S with 32 bits slots set to 32, for TDM usually set to 1.
+    uint8 frame_sync_size;
 };
 
 struct DaiFormat {
@@ -40,8 +55,10 @@ struct DaiFormat {
     vector<uint32> channels_to_use;
     /// The format of all samples in the DAI.
     SampleFormat sample_format;
-    /// The justification of all samples in the DAI.
+    /// The format of all samples in the DAI.
     FrameFormat frame_format;
+    /// Frame format if frame_format is set to CUSTOM, ignored otherwise.
+    FrameFormatCustom frame_format_custom;
     /// The frame rate for all samples in the DAI.
     uint32 frame_rate;
     /// The bits per slot for all channels in the DAI.
@@ -58,6 +75,8 @@ struct DaiSupportedFormats {
     vector<SampleFormat> sample_formats;
     /// Frame formats supported by the codec.
     vector<FrameFormat> frame_formats;
+    /// For frame formats supported by the codec specified to be CUSTOM.
+    vector<FrameFormatCustom> frame_formats_custom;
     /// Rates supported by the codec.
     vector<uint32> frame_rates;
     /// The bits per slot supported by the codec.

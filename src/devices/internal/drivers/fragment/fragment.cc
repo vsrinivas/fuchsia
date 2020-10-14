@@ -392,24 +392,26 @@ void Fragment::CodecTransactCallback(void* cookie, zx_status_t status,
   p += sizeof(dai_supported_formats_t) * formats_count;
   for (size_t i = 0; i < formats_count; ++i) {
     // clang-format off
-        size_t size_number_of_channels = formats_list[i].number_of_channels_count * sizeof(uint32_t);
-        size_t size_sample_formats     = formats_list[i].sample_formats_count     * sizeof(sample_format_t);
-        size_t size_frame_formats      = formats_list[i].frame_formats_count      * sizeof(frame_format_t);
-        size_t size_frame_rates        = formats_list[i].frame_rates_count        * sizeof(uint32_t);
-        size_t size_bits_per_slot      = formats_list[i].bits_per_slot_count      * sizeof(uint8_t);
-        size_t size_bits_per_sample    = formats_list[i].bits_per_sample_count    * sizeof(uint8_t);
+        size_t size_number_of_channels   = formats_list[i].number_of_channels_count * sizeof(uint32_t);
+        size_t size_sample_formats       = formats_list[i].sample_formats_count     * sizeof(sample_format_t);
+        size_t size_frame_formats        = formats_list[i].frame_formats_count      * sizeof(frame_format_t);
+        size_t size_frame_formats_custom = formats_list[i].frame_formats_custom_count      * sizeof(frame_format_custom_t);
+        size_t size_frame_rates          = formats_list[i].frame_rates_count        * sizeof(uint32_t);
+        size_t size_bits_per_slot        = formats_list[i].bits_per_slot_count      * sizeof(uint8_t);
+        size_t size_bits_per_sample      = formats_list[i].bits_per_sample_count    * sizeof(uint8_t);
         if (p - reinterpret_cast<uint8_t*>(out->buffer) + size_number_of_channels +
             size_sample_formats + size_frame_formats + size_frame_rates + size_bits_per_slot +
             size_bits_per_sample > out->size) {
             out->status = ZX_ERR_INTERNAL;
             return;
         }
-        memcpy(p, formats_list[i].number_of_channels_list, size_number_of_channels); p += size_number_of_channels;
-        memcpy(p, formats_list[i].sample_formats_list,     size_sample_formats);     p += size_sample_formats;
-        memcpy(p, formats_list[i].frame_formats_list,      size_frame_formats);      p += size_frame_formats;
-        memcpy(p, formats_list[i].frame_rates_list,        size_frame_rates);        p += size_frame_rates;
-        memcpy(p, formats_list[i].bits_per_slot_list,      size_bits_per_slot);      p += size_bits_per_slot;
-        memcpy(p, formats_list[i].bits_per_sample_list,    size_bits_per_sample);    p += size_bits_per_sample;
+        memcpy(p, formats_list[i].number_of_channels_list,   size_number_of_channels);   p += size_number_of_channels;
+        memcpy(p, formats_list[i].sample_formats_list,       size_sample_formats);       p += size_sample_formats;
+        memcpy(p, formats_list[i].frame_formats_list,        size_frame_formats);        p += size_frame_formats;
+        memcpy(p, formats_list[i].frame_formats_custom_list, size_frame_formats_custom); p += size_frame_formats_custom;
+        memcpy(p, formats_list[i].frame_rates_list,          size_frame_rates);          p += size_frame_rates;
+        memcpy(p, formats_list[i].bits_per_slot_list,        size_bits_per_slot);        p += size_bits_per_slot;
+        memcpy(p, formats_list[i].bits_per_sample_list,      size_bits_per_sample);      p += size_bits_per_sample;
     // clang-format on
   }
   out->size = p - reinterpret_cast<uint8_t*>(out->buffer);  // Override out->size with actual size.

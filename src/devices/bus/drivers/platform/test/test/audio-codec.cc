@@ -47,15 +47,27 @@ class TestAudioCodecDevice : public DeviceType,
   }
   void CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
     dai_supported_formats_t formats[3] = {};
-    uint8_t bits_per_sample[3] = {1, 99, 253};
-    formats[0].bits_per_sample_list = bits_per_sample;
-    formats[0].bits_per_sample_count = 3;
     uint32_t number_of_channels[3] = {0, 1, 200};
     formats[1].number_of_channels_list = number_of_channels;
     formats[1].number_of_channels_count = 3;
+    sample_format_t sample_format = {};
+    formats[2].sample_formats_list = &sample_format;
+    formats[2].sample_formats_count = 1;
+    frame_format_t frame_format = {};
+    formats[0].frame_formats_list = &frame_format;
+    formats[0].frame_formats_count = 1;
+    frame_format_custom_t custom_format = {};
+    formats[0].frame_formats_custom_list = &custom_format;
+    formats[0].frame_formats_custom_count = 1;
     uint32_t frame_rates[1] = {48000};
     formats[2].frame_rates_list = frame_rates;
     formats[2].frame_rates_count = 1;
+    uint8_t bits_per_slot = 32;
+    formats[1].bits_per_slot_list = &bits_per_slot;
+    formats[1].bits_per_slot_count = 1;
+    uint8_t bits_per_sample[3] = {1, 99, 253};
+    formats[0].bits_per_sample_list = bits_per_sample;
+    formats[0].bits_per_sample_count = 3;
     callback(cookie, ZX_OK, formats, 3);
   }
   void CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,

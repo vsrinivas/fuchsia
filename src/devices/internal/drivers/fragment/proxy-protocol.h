@@ -121,6 +121,7 @@ struct CodecDaiFormatsProxyResponse {
   uint32_t number_of_channels[kMaxChannels];
   sample_format_t formats_list[kMaxSampleFormats];
   frame_format_t frame_formats[kMaxFrameFormats];
+  frame_format_custom_t frame_formats_custom[kMaxFrameFormats];
   uint32_t frame_rates_list[kMaxRates];
   uint8_t bits_per_slot[kMaxBitsPerSlot];
   uint8_t bits_per_sample_list[kMaxBitsPerSample];

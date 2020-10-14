@@ -60,6 +60,32 @@ struct TestCodec : public SimpleCodecServer {
       format.bits_per_sample.push_back(32);
       formats.push_back(std::move(format));
     }
+    {
+      DaiSupportedFormats format;
+      format.number_of_channels.push_back(4);
+      format.sample_formats.push_back(SAMPLE_FORMAT_PCM_SIGNED);
+      format.frame_formats.push_back(FRAME_FORMAT_CUSTOM);
+      format.frame_formats.push_back(FRAME_FORMAT_CUSTOM);
+      format.frame_formats.push_back(FRAME_FORMAT_TDM1);
+      format.frame_formats.push_back(FRAME_FORMAT_STEREO_RIGHT);
+      format.frame_formats.push_back(FRAME_FORMAT_CUSTOM);
+      format.frame_formats_custom.push_back({.left_justified = true,
+                                             .sclk_on_raising = false,
+                                             .frame_sync_sclks_offset = 2,
+                                             .frame_sync_size = 9});
+      format.frame_formats_custom.push_back({.left_justified = true,
+                                             .sclk_on_raising = true,
+                                             .frame_sync_sclks_offset = 0,
+                                             .frame_sync_size = 9});
+      format.frame_formats_custom.push_back({.left_justified = true,
+                                             .sclk_on_raising = false,
+                                             .frame_sync_sclks_offset = 0,
+                                             .frame_sync_size = 9});
+      format.frame_rates.push_back(96'000);
+      format.bits_per_slot.push_back(16);
+      format.bits_per_sample.push_back(16);
+      formats.push_back(std::move(format));
+    }
     return formats;
   }
   zx_status_t SetDaiFormat(const DaiFormat& format) override {
@@ -119,12 +145,14 @@ TEST(SimpleCodecTest, ServerProtocolPassThrougDaiFormat) {
       [](void* ctx, zx_status_t status, const dai_supported_formats_t* formats_list,
          size_t formats_count) {
         EXPECT_OK(status);
-        EXPECT_EQ(formats_count, 2);
+        EXPECT_EQ(formats_count, 3);
         EXPECT_EQ(formats_list[0].frame_rates_count, 2);
         EXPECT_EQ(formats_list[0].frame_rates_list[0], 48'000);
         EXPECT_EQ(formats_list[0].frame_rates_list[1], 96'000);
         EXPECT_EQ(formats_list[1].frame_rates_count, 1);
         EXPECT_EQ(formats_list[1].frame_rates_list[0], 24'000);
+        EXPECT_EQ(formats_list[2].frame_rates_count, 1);
+        EXPECT_EQ(formats_list[2].frame_rates_list[0], 96'000);
       },
       nullptr);
   dai_format_t format = {};
@@ -207,13 +235,15 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
 
   auto formats = client.GetDaiFormats();
   ASSERT_TRUE(formats.is_ok());
-  ASSERT_EQ(formats->size(), 2);
+  ASSERT_EQ(formats->size(), 3);
   ASSERT_EQ(formats.value()[0].bits_per_sample.size(), 3);
   ASSERT_EQ(formats.value()[0].bits_per_sample[0], 16);
   ASSERT_EQ(formats.value()[0].bits_per_sample[1], 24);
   ASSERT_EQ(formats.value()[0].bits_per_sample[2], 32);
   ASSERT_EQ(formats.value()[1].bits_per_sample.size(), 1);
   ASSERT_EQ(formats.value()[1].bits_per_sample[0], 32);
+  ASSERT_EQ(formats.value()[2].bits_per_sample.size(), 1);
+  ASSERT_EQ(formats.value()[2].bits_per_sample[0], 16);
 
   DaiFormat format = {
       .number_of_channels = 2,
@@ -243,6 +273,28 @@ TEST(SimpleCodecTest, ClientProtocolPassThroughDaiFormat) {
       .bits_per_slot = 32,
       .bits_per_sample = 32,
   };
+  ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+  ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  // Custom format.
+  format = {
+      .number_of_channels = 4,
+      .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
+      .frame_format = FRAME_FORMAT_CUSTOM,
+      .frame_format_custom.left_justified = true,
+      .frame_format_custom.sclk_on_raising = false,
+      .frame_format_custom.frame_sync_sclks_offset = 2,
+      .frame_format_custom.frame_sync_size = 9,
+      .frame_rate = 96'000,
+      .bits_per_slot = 16,
+      .bits_per_sample = 16,
+  };
+  ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+  ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  format.frame_format_custom.frame_sync_size = 32;  // Incorrect frame sync size.
+  ASSERT_FALSE(IsDaiFormatSupported(format, formats.value()));
+  ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  format.frame_format_custom.frame_sync_size = 9;          // Fix it back.
+  format.frame_format_custom.frame_sync_sclks_offset = 0;  // Another valid custom format.
   ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
 }

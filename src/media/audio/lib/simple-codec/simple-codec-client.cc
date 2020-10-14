@@ -139,6 +139,10 @@ zx::status<std::vector<DaiSupportedFormats>> SimpleCodecClient::GetDaiFormats() 
             std::vector<frame_format_t> frame_formats(
                 formats_list[i].frame_formats_list,
                 formats_list[i].frame_formats_list + formats_list[i].frame_formats_count);
+            std::vector<frame_format_custom_t> frame_formats_custom(
+                formats_list[i].frame_formats_custom_list,
+                formats_list[i].frame_formats_custom_list +
+                    formats_list[i].frame_formats_custom_count);
             std::vector<uint32_t> frame_rates(
                 formats_list[i].frame_rates_list,
                 formats_list[i].frame_rates_list + formats_list[i].frame_rates_count);
@@ -151,6 +155,7 @@ zx::status<std::vector<DaiSupportedFormats>> SimpleCodecClient::GetDaiFormats() 
             DaiSupportedFormats formats = {.number_of_channels = number_of_channels,
                                            .sample_formats = sample_formats,
                                            .frame_formats = frame_formats,
+                                           .frame_formats_custom = frame_formats_custom,
                                            .frame_rates = frame_rates,
                                            .bits_per_slot = bits_per_slot,
                                            .bits_per_sample = bits_per_sample};
@@ -182,6 +187,7 @@ zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   f.channels_to_use_list = channels_to_use.get();
   f.sample_format = format.sample_format;
   f.frame_format = format.frame_format;
+  f.frame_format_custom = format.frame_format_custom;
   f.frame_rate = format.frame_rate;
   f.bits_per_slot = format.bits_per_slot;
   f.bits_per_sample = format.bits_per_sample;
