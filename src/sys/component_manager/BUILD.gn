@@ -268,7 +268,8 @@ rustc_binary("bin") {
 fuchsia_component("component-manager-cmp") {
   deps = [
     ":bin",
-    ":component_manager_test_config_resource",
+    ":component_manager_appmgr_config_resource",
+    ":component_manager_debug_config_resource",
   ]
   component_name = "component_manager"
   manifest = "meta/component_manager.cmx"
@@ -281,8 +282,8 @@ fuchsia_package("component-manager") {
 fuchsia_component("component-manager-tests-cmp") {
   testonly = true
   deps = [
+    ":component_manager_debug_config_resource",
     ":component_manager_test",
-    ":component_manager_test_config_resource",
     "//src/lib/process_builder:test_util",
   ]
   component_name = "component_manager_tests"
@@ -298,7 +299,7 @@ fuchsia_component("component-manager-boot-env-tests-cmp") {
   testonly = true
   deps = [
     ":component_manager_boot_env_test",
-    ":component_manager_test_config_resource",
+    ":component_manager_debug_config_resource",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
   ]
@@ -339,33 +340,30 @@ group("bootfs") {
   ]
 }
 
-component_config("component_manager_config") {
-  sources = [
-    "config.json",
-    "resolver_pkgfs.json",
-  ]
+component_config("component_manager_appmgr_config") {
+  sources = [ "appmgr_config.json" ]
 }
 
-resource("component_manager_config_resource") {
-  sources = [ "$target_gen_dir/component_manager_config" ]
-  outputs = [ "data/component_manager_config" ]
-  deps = [ ":component_manager_config" ]
+resource("component_manager_appmgr_config_resource") {
+  sources = [ "$target_gen_dir/component_manager_appmgr_config" ]
+  outputs = [ "data/component_manager_appmgr_config" ]
+  deps = [ ":component_manager_appmgr_config" ]
 }
 
-component_config("component_manager_test_config") {
-  sources = [ "test_config.json" ]
+component_config("component_manager_debug_config") {
+  sources = [ "debug_config.json" ]
 }
 
-resource("component_manager_test_config_resource") {
-  sources = [ "$target_gen_dir/component_manager_test_config" ]
-  outputs = [ "data/component_manager_config" ]
-  deps = [ ":component_manager_test_config" ]
+resource("component_manager_debug_config_resource") {
+  sources = [ "$target_gen_dir/component_manager_debug_config" ]
+  outputs = [ "data/component_manager_debug_config" ]
+  deps = [ ":component_manager_debug_config" ]
 }
 
 component_config("component_manager_bootfs_config") {
   sources = [
-    "config.json",
     "resolver_pkgfs.json",
+    "bootfs_config.json",
     rebase_path("//src/security/policy/component_manager_policy.json"),
   ]
 }
@@ -378,7 +376,7 @@ resource("component_manager_config_bootfs_resource") {
 
 component_config("component_manager_bootfs_config_no_pkgresolver") {
   sources = [
-    "config.json",
+    "bootfs_config.json",
     "pkgfs_resolver_disabled.json",
     rebase_path("//src/security/policy/component_manager_policy.json"),
   ]

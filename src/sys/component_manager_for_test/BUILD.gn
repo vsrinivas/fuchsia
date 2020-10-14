@@ -49,7 +49,6 @@ package("component_manager_for_test_pkg") {
   deps = [
     ":bin",
     ":component_manager_config",
-    "//src/sys/component_manager:component_manager_test_config",
   ]
   package_name = "component_manager_for_test"
 

@@ -81,7 +81,9 @@ component_config("config") {
 
 resource("config_resource") {
   sources = [ "$target_gen_dir/config" ]
-  outputs = [ "data/component_manager_config" ]
+
+  # OpaqueTest uses this path to search for config file.
+  outputs = [ "data/component_manager_debug_config" ]
   deps = [ ":config" ]
 }
 

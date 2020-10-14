@@ -132,7 +132,9 @@ test_package("rights_integration_test") {
   resources = [
     {
       path = "${root_gen_dir}/src/sys/component_manager/tests/rights/component_manager_rights_test_config"
-      dest = "component_manager_config"
+
+      # OpaqueTest uses this path to search for config file.
+      dest = "component_manager_debug_config"
     },
   ]
 

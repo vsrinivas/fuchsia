@@ -27,13 +27,13 @@ test_package("component_manager_for_test_integration_test") {
   deps = [
     ":bin",
     "//examples/tests:passing-test-example",
-    "//src/sys/component_manager:component_manager_test_config",
+    "//src/sys/component_manager:component_manager_debug_config",
     "//src/sys/component_manager_for_test:bin",
   ]
 
   resources = [
     {
-      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
+      path = "${root_gen_dir}/src/sys/component_manager/component_manager_debug_config"
       dest = "component_manager_config"
     },
   ]

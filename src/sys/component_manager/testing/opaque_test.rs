@@ -123,7 +123,7 @@ impl OpaqueTestBuilder {
     /// identified by the URL `root_component_url`.
     pub fn new(root_component_url: impl Into<String>) -> Self {
         OpaqueTestBuilder {
-            config: "/pkg/data/component_manager_config".to_string(),
+            config: "/pkg/data/component_manager_debug_config".to_string(),
             root_component_url: root_component_url.into(),
             component_manager_url: None,
             dir_handles: Vec::new(),
