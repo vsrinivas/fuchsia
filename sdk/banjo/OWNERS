@@ -1,3 +1,6 @@
 include /src/devices/OWNERS
 
+# For WLAN protocols
+joshconner@google.com
+
 # COMPONENT: Zircon>FDF
