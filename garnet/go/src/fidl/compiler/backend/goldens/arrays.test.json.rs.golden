@@ -37,6 +37,7 @@ fidl_xunion! {
     ],
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionLargeArray {
     A([u32; 100]),
 }
@@ -72,6 +73,9 @@ fidl_struct_copy! {
   align_v1: 4,
 }
 
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
 #[repr(C)]
 pub struct StructLargeArray {
     pub a: [u32; 100],
@@ -105,6 +109,7 @@ fidl_table! {
   ],
 }
 
+#[derive(Debug, PartialEq)]
 pub struct TableLargeArray {
     pub a: Option<[u32; 100]>,
 }

@@ -141,12 +141,10 @@ type TableMember struct {
 
 type Protocol struct {
 	types.Attributes
-	RequestDerives derives
-	EventDerives   derives
-	ECI            EncodedCompoundIdentifier
-	Name           string
-	Methods        []Method
-	ServiceName    string
+	ECI         EncodedCompoundIdentifier
+	Name        string
+	Methods     []Method
+	ServiceName string
 }
 
 type Method struct {
@@ -1060,7 +1058,6 @@ func (c *compiler) compileTable(table types.Table) Table {
 
 type derives uint16
 
-// FIXME(cramertj) remove `Debug`, `Hash`, and `PartialEq` when impl'd for large arrays
 const (
 	derivesDebug derives = 1 << iota
 	derivesCopy
@@ -1072,14 +1069,15 @@ const (
 	derivesHash
 	derivesAsBytes
 	derivesFromBytes
-	derivesAll            derives = (1 << iota) - 1
-	derivesAllButZerocopy         = derivesAll & ^derivesAsBytes & ^derivesFromBytes
-	// note: ensure any new flags don't outnumber the number of bits in `derives`
+	derivesAll derives = (1 << iota) - 1
+
+	derivesMinimal        derives = derivesDebug | derivesPartialEq
+	derivesAllButZerocopy derives = derivesAll & ^derivesAsBytes & ^derivesFromBytes
 )
 
 // note: keep this list in the same order as the derives definitions
 var derivesNames = []string{
-	// [START default_derived_traits]
+	// [START derived_traits]
 	"Debug",
 	"Copy",
 	"Clone",
@@ -1090,15 +1088,7 @@ var derivesNames = []string{
 	"Hash",
 	"zerocopy::AsBytes",
 	"zerocopy::FromBytes",
-	// [END default_derived_traits]
-}
-
-func newDerives(values ...derives) derives {
-	var v derives
-	for i := 0; i < len(values); i++ {
-		v |= values[i]
-	}
-	return v
+	// [END derived_traits]
 }
 
 func (v derives) and(others derives) derives {
@@ -1114,15 +1104,7 @@ func (v derives) remove(others ...derives) derives {
 }
 
 func (v derives) andUnknown() derives {
-	// FIXME(cramertj): properly, this should set everything to false
-	// since e.g. a new table member could be added containing a large
-	// array, which would be a breaking change due to the removal of the
-	// `Debug` impl. However, soon enough every type will implement
-	// `Debug`, `PartialEq`, and `Hash` due to the automatic impls for arrays.
-	// In any case, not having `Debug` for all types containing non-strict
-	// tables or unions would be *extremely* annoying and a massively breaking
-	// change, so we leave them as `true` for now.
-	return v.and(newDerives(derivesDebug, derivesPartialEq))
+	return v.and(derivesMinimal)
 }
 
 func (v derives) contains(other derives) bool {
@@ -1194,21 +1176,11 @@ func (c *compiler) fillDerives(ir *Root) {
 }
 
 func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) derives {
-	// TODO(fxbug.dev/52257): Remove this temporary hack.
-	if eci == "fuchsia.sysmem/BufferCollectionInfo_2" {
-		return newDerives()
-	}
 	if dc.inExternalLibrary(types.ParseCompoundIdentifier(eci)) {
-		// Return the set of derives that we assume external types have.
-		// If an externally referenced type fails to have all of these derives
-		// present, we may fail compilation. However, `Debug` and `PartialEq`
-		// are so enormously valuable and only missing on large arrays, so we
-		// assume that they are present.
-		//
-		// FIXME(cramertj): this is a dirty hack that shouldn't exist-- instead,
-		// we should check the list of derives that are actually present
-		// for the external type.
-		return newDerives(derivesDebug, derivesPartialEq)
+		// We must be conservative with external types and assume they only
+		// derive the minimal set of traits that all types derive.
+		// TODO(fxbug.dev/61760): Make external type information available here.
+		return derivesMinimal
 	}
 
 	topMostCall := dc.topMostCall
@@ -1243,44 +1215,8 @@ typeSwitch:
 		// implement all derivable traits except zerocopy.
 		derivesOut = derivesAllButZerocopy
 	case types.ProtocolDeclType:
-		// Derives output for protocols is only used when talking about ClientEnds,
-		// which are neither Copy nor Clone. Note: this does *not* refer to the
-		// derives used in either the `Request` or `Event` enums, which are the
-		// values filled in by this function.
+		// When a protocol is used as a type, it means a ClientEnd in Rust.
 		derivesOut = derivesAllButZerocopy.remove(derivesCopy, derivesClone)
-
-		// Check if the derives have already been calculated
-		if deriveStatus.complete {
-			break typeSwitch
-		}
-
-		protocol := dc.root.findProtocol(eci)
-		if protocol == nil {
-			log.Panic("protocol not found: ", eci)
-		}
-		// Requests and events are at *most* ever Debug.
-		// FIXME(cramertj): all of the protocol logic here can
-		// be removed once all types (large arrays) are Debug,
-		// since that's all we care about for protocols
-		requestDerives := derivesDebug
-		eventDerives := derivesDebug
-		for _, method := range protocol.Methods {
-			if method.HasRequest {
-				// Request enum object-- consider all request data
-				for _, requestParam := range method.Request {
-					d := dc.fillDerivesForType(requestParam.OGType)
-					requestDerives = requestDerives.and(d)
-				}
-			} else {
-				// Event enum object-- consider all response data
-				for _, responseParam := range method.Response {
-					d := dc.fillDerivesForType(responseParam.OGType)
-					eventDerives = eventDerives.and(d)
-				}
-			}
-		}
-		protocol.RequestDerives = requestDerives
-		protocol.EventDerives = eventDerives
 	case types.StructDeclType:
 		st := dc.root.findStruct(eci)
 		if st == nil {
@@ -1313,12 +1249,7 @@ typeSwitch:
 		for _, member := range table.Members {
 			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 		}
-		// FIXME(cramertj) this should only happen on non-`strict` tables.
-		// Non-strict tables aren't Copy because of storing extra bits and handles in vecs.
-		// When large arrays are no longer an issue and we stop tracking
-		// Debug and PartialEq, this should set all values to false for
-		// non-strict tables.
-		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+		derivesOut = derivesOut.andUnknown()
 		table.Derives = derivesOut
 	case types.UnionDeclType:
 		union := dc.root.findUnion(eci)
@@ -1340,11 +1271,8 @@ typeSwitch:
 			for _, member := range union.Members {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
-			if !union.Strictness {
-				// FIXME(cramertj) When large arrays are no longer an issue and we
-				// stop tracking Debug and PartialEq, this should set all values to
-				// false for non-strict unions.
-				derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+			if union.Strictness.IsFlexible() {
+				derivesOut = derivesOut.andUnknown()
 			}
 			union.Derives = derivesOut
 		} else {
@@ -1398,13 +1326,7 @@ typeSwitch:
 func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 	switch ogType.Kind {
 	case types.ArrayType:
-		if *ogType.ElementCount > 32 {
-			// Turn off *all* derives for large arrays
-			// FIXME(cramertj) remove when array derives are expanded
-			return newDerives()
-		} else {
-			return dc.fillDerivesForType(*ogType.ElementType)
-		}
+		return dc.fillDerivesForType(*ogType.ElementType)
 	case types.VectorType:
 		return derivesAllButZerocopy.remove(derivesCopy).and(dc.fillDerivesForType(*ogType.ElementType))
 	case types.StringType:
@@ -1437,7 +1359,7 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 		log.Panic("Unknown type kind in fillDerivesForType: ", ogType.Kind)
 	}
 	log.Panic("unreachable")
-	return newDerives()
+	return 0
 }
 
 func Compile(r types.Root) Root {

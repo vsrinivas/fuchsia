@@ -284,7 +284,7 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 	}
 }
 
-{{ $protocol.EventDerives }}
+#[derive(Debug)]
 pub enum {{ $protocol.Name }}Event {
 	{{ range $method := $protocol.Methods }}
 	{{ if not $method.HasRequest }}
@@ -515,7 +515,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 /// RequestMessages should only be used for manual deserialization when higher level
 /// structs such as RequestStream cannot be used. One usually would only encounter
 /// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
-{{ $protocol.RequestDerives }}
+#[derive(Debug)]
 #[deprecated(note = "Use {{ $protocol.Name }}Request instead")]
 pub enum {{ $protocol.Name }}RequestMessage {
 	{{- range $method := $protocol.Methods }}
@@ -577,7 +577,7 @@ impl {{ $protocol.Name }}RequestMessage {
 {{- range .DocComments}}
 ///{{ . }}
 {{- end}}
-{{ $protocol.RequestDerives }}
+#[derive(Debug)]
 pub enum {{ $protocol.Name }}Request {
 	{{- range $method := $protocol.Methods }}
         {{- if $method.HasRequest }}

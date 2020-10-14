@@ -287,17 +287,16 @@ Example usage:
 
 When the FIDL toolchain generates a new `struct` or `enum` for a FIDL type, it
 attempts to `derive` as many traits from a predefined list of useful traits as
-it can, including `Debug`, `Copy`, `Clone`, etc. The complete list of default
-derived traits can be found in [Appendix A](#default-derived-traits).
+it can, including `Debug`, `Copy`, `Clone`, etc. The complete list of traits can
+be found in [Appendix A](#derived-traits).
 
 For aggregate types, such as structs, unions, and tables, the set of derives is
 determined by starting with the list of all possible derives and then removing
 some based on the fields that are transitively present in the type. For example,
 aggregate types that transitively contain a `vector` do not derive `Copy`, and
-types that contain a `handle` do not derive `Copy` and `Clone`. Additionally,
-arrays larger than 32 have no derives. When in doubt, refer to the generated
-code to check which traits are derived by a specific type. See [Appendix
-B](#fill-derives) for implementation details.
+types that contain a `handle` do not derive `Copy` and `Clone`. When in doubt,
+refer to the generated code to check which traits are derived by a specific
+type. See [Appendix B](#fill-derives) for implementation details.
 
 ## Protocols {#protocols}
 
@@ -566,10 +565,10 @@ used for fake proxies in client-side unit tests.
 For protocols annotated with the `"Discoverable"` attribute, the Marker type
 additionally implements the `fidl::endpoints::DiscoverableService` trait.
 
-## Appendix A: Default derived traits {#default-derived-traits}
+## Appendix A: Derived traits {#derived-traits}
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="default_derived_traits" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="derived_traits" adjust_indentation="auto" %}
 ```
 
 ## Appendix B: Fill derives {#fill-derives}
