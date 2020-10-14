@@ -30,7 +30,7 @@ const SLICE_ENTRY_VSLICE_MASK: u64 = SLICE_ENTRY_VSLICE_MAX << SLICE_ENTRY_VPART
 const VPARTITION_ENTRY_MASK: u64 = (1 << SLICE_ENTRY_VPARTITION_BITS) - 1;
 
 /// The set of supported FVM partition types.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum FvmPartitionType {
     MinFs,
     BlobFs,

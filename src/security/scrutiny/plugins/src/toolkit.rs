@@ -91,14 +91,22 @@ impl DataController for ZbiExtractController {
                     let mut fvm_dir = output_path.clone();
                     fvm_dir.push("fvm");
                     fs::create_dir_all(fvm_dir.clone())?;
-                    let mut partition_count = 0;
+
+                    let mut partition_count = HashMap::<FvmPartitionType, u64>::new();
                     for partition in fvm_partitions.iter() {
-                        let file_name = format!("{}_{}", partition_count, partition.partition_type);
+                        let file_name = if let Some(count) =
+                            partition_count.get_mut(&partition.partition_type)
+                        {
+                            *count += 1;
+                            format!("{}.{}.blk", partition.partition_type, count)
+                        } else {
+                            section_count.insert(section.section_type, 0);
+                            format!("{}.blk", partition.partition_type)
+                        };
                         let mut fvm_partition_path = fvm_dir.clone();
                         fvm_partition_path.push(file_name);
                         let mut fvm_file = File::create(fvm_partition_path)?;
                         fvm_file.write_all(&partition.buffer)?;
-                        partition_count += 1;
                     }
                 } else {
                     info!("No FvmPartitions found in StorageRamdisk");
