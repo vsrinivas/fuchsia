@@ -19,7 +19,6 @@ class FakeHost(Host):
 
        Attributes:
          history:       List of commands whose execution has been faked.
-         log:           Saves messages printed by echo, error, or choose.
          selection:     Pre-selected option for a future call to choose().
     """
 
@@ -27,7 +26,6 @@ class FakeHost(Host):
 
     def __init__(self):
         super(FakeHost, self).__init__()
-        self._log = []
         self._dirs = set()
         self._files = {}
         self._links = {}

@@ -83,6 +83,7 @@ class Fuzzer(object):
         self._foreground = False
         self._output = None
         self._logbase = None
+        self._last_known_pid = 0
 
     def __str__(self):
         return '{}/{}'.format(self.package, self.executable)
@@ -326,6 +327,7 @@ class Fuzzer(object):
         cmd = self.device.ssh(fuzz_cmd)
         if self.foreground:
             cmd.stderr = subprocess.PIPE
+        self._last_known_pid = 0
         proc = cmd.popen()
         if self.foreground:
             return proc
@@ -419,6 +421,7 @@ class Fuzzer(object):
             art_match = art_pattern.search(line)
             if pid_match:
                 pid = int(pid_match.group(1))
+                self._last_known_pid = pid
             if mut_match:
                 if pid <= 0:
                     pid = self.device.guess_pid()
@@ -485,7 +488,20 @@ class Fuzzer(object):
 
         # Default to repro-ing in the foreground
         self.foreground = True
-        self._launch().wait()
+        proc = self._launch()
+        self.symbolize_log(proc.stderr, 0, echo=True)
+        if proc.wait() == 0:
+            return
+
+        # Unlike in normal fuzzing mode, when reproing there is no reliable way
+        # to detect a crash by grepping the output log. However, if we see that
+        # the process exited uncleanly, we should go looking for a stacktrace.
+        pid = self._last_known_pid
+        if pid <= 0:
+            pid = self.device.guess_pid()
+        raw = self.device.dump_log('--pid', str(pid))
+        sym = self.buildenv.symbolize(raw)
+        self.host.echo(sym.strip())
 
     def analyze(self):
         """Collects coverage data for a finite amount of time."""

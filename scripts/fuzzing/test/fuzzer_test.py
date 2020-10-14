@@ -432,16 +432,42 @@ class FuzzerTest(TestCaseWithFuzzer):
             'fake-package1/fake-target2 is running and must be stopped first.')
         self.host.sleep(60)
 
-        #  Valid
-        self.fuzzer.repro()
-        self.assertSsh(
+        # Valid
+        run_cmd = [
             'run',
             self.fuzzer.executable_url,
             '-artifact_prefix=data/',
             'data/crash-deadbeef',
             'data/crash-deadfa11',
             'data/oom-feedface',
-        )
+        ]
+
+        # Set a crashing return code
+        self.set_outputs(run_cmd, [], returncode=77, ssh=True)
+
+        # Set a symbolizer output
+        self.set_outputs(self.symbolize_cmd(), ["symbolized"], returncode=0)
+
+        # Because FakeProcess uses StringIO for synchronous simulation of stdio,
+        # we need to preload the stderr so it is picked up by `symbolize_log`. (The
+        # result of `set_outputs` wouldn't show up until a call to wait/poll).
+        proc = self.get_process(run_cmd, ssh=True)._popen
+        proc._stderr.write('==123== INFO: libFuzzer starting.\n')
+        proc._stderr.seek(0)
+
+        self.fuzzer.repro()
+        self.assertSsh(*run_cmd)
+
+        # Check that appropriate logs were fetched
+        log_cmd = [
+            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--pid',
+            '123'
+        ]
+        self.assertSsh(*log_cmd)
+
+        # Check that both the libFuzzer and symbolizer outputs were echoed to the
+        # host
+        self.assertLogged('==123== INFO: libFuzzer starting.', 'symbolized')
 
     def test_analyze(self):
         self.set_running(self.fuzzer.executable_url, duration=10)
