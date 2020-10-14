@@ -10,7 +10,6 @@ group("tests") {
   testonly = true
   deps = [
     ":tun",
-    "examples",
     "network-tun:tests",
   ]
 }
