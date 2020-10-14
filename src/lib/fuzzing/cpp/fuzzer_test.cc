@@ -30,7 +30,9 @@ TEST(LlvmFuzzerTest, OneInput) {
   //  Should work with non-null but zero size
   uint8_t ignored;
   EXPECT_EQ(0, LLVMFuzzerTestOneInput(&ignored, 0));
+}
 
+TEST(LlvmFuzzerTest, SeedCorpus) {
 #if defined(__Fuchsia__)
   FX_LOGS(INFO) << "Fuzzer built as test: " << gArgv0;
 #endif
@@ -42,6 +44,12 @@ TEST(LlvmFuzzerTest, OneInput) {
     ASSERT_TRUE(files::ReadFileToVector(pathname, &data));
     EXPECT_EQ(0, LLVMFuzzerTestOneInput(&data[0], data.size()));
   }
+}
+
+TEST(LlvmFuzzerTest, MultipleCalls) {
+  // Should work even when called multiple times consecutively
+  EXPECT_EQ(0, LLVMFuzzerTestOneInput(nullptr, 0));
+  EXPECT_EQ(0, LLVMFuzzerTestOneInput(nullptr, 0));
 }
 
 bool ExtractFlag(const std::string &flag, int *argc, char **argv) {
