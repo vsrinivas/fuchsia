@@ -54,9 +54,11 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
     case ZX_RSRC_KIND_IRQ:
       strlcpy(name, "irq", ZX_MAX_NAME_LEN);
       break;
+#if ARCH_X86
     case ZX_RSRC_KIND_IOPORT:
       strlcpy(name, "io_port", ZX_MAX_NAME_LEN);
       break;
+#endif
     case ZX_RSRC_KIND_HYPERVISOR:
       strlcpy(name, "hypervisor", ZX_MAX_NAME_LEN);
       break;
@@ -81,7 +83,9 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
       break;
     case ZX_RSRC_KIND_MMIO:
     case ZX_RSRC_KIND_IRQ:
+#if ARCH_X86
     case ZX_RSRC_KIND_IOPORT:
+#endif
     case ZX_RSRC_KIND_SMC:
       result = ResourceDispatcher::CreateRangedRoot(&rsrc, &rights, kind, name);
       break;
@@ -316,6 +320,10 @@ void userboot_init(uint) {
   ASSERT(handles[userboot::kMmioResource]);
   handles[userboot::kIrqResource] = get_resource_handle(ZX_RSRC_KIND_IRQ).release();
   ASSERT(handles[userboot::kIrqResource]);
+#if ARCH_X86
+  handles[userboot::kIoportResource] = get_resource_handle(ZX_RSRC_KIND_IOPORT).release();
+  ASSERT(handles[userboot::kIoportResource]);
+#endif
   handles[userboot::kRootJob] = get_job_handle().release();
   ASSERT(handles[userboot::kRootJob]);
 
