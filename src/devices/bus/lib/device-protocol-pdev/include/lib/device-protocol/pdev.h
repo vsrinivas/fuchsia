@@ -12,7 +12,6 @@
 #include <optional>
 
 #include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/composite.h>
 
 namespace ddk {
 
@@ -23,12 +22,9 @@ class PDev : public PDevProtocolClient {
   PDev() {}
 
   // TODO(andresoportus): pass protocol by value/const& so there is no question on lifecycle.
-  PDev(const pdev_protocol_t* proto) : PDevProtocolClient(proto) {}
+  PDev(pdev_protocol_t* proto) : PDevProtocolClient(proto) {}
 
   PDev(zx_device_t* parent) : PDevProtocolClient(parent) {}
-
-  PDev(ddk::CompositeProtocolClient& composite)
-      : PDevProtocolClient(composite, "ddk.protocol.platform.device.PDev") {}
 
   ~PDev() = default;
 
