@@ -324,7 +324,7 @@ if (zircon_toolchain == false) {
   # that build commands are identical between the Fuchsia and Zircon builds,
   # as verified by //zircon/public/canaries/compare_toolchains.py.
   #
-  # After build unification completes, it will be possible to remove the
+  # TODO(fxbug.dev/60410): After build unification completes, emove the
   # intermediate configs.
   #
   default_common_binary_configs = [
@@ -359,15 +359,45 @@ if (zircon_toolchain == false) {
     ]
   }
 
+  # Fuzzing and sanitizing variants have remove_common_configs entries that point
+  # to //build/config:foo, and need to be translated into //build/config/zircon:foo
+  # until build unification completes and the latter can be removed.
+  # TODO(fxbug.dev/60410): Remove this after build unification.
+  _remove_common_configs = toolchain_variant.remove_common_configs
+  foreach(_config,
+          [
+            "icf",
+            "no_rtti",
+          ]) {
+    _config_label = "//build/config:" + _config
+    if (_remove_common_configs + [ _config_label ] - [ _config_label ] !=
+        _remove_common_configs) {
+      _remove_common_configs -= [ _config_label ]
+      _remove_common_configs += [ "//build/config/zircon:" + _config ]
+    }
+  }
+
+  # To the same for remove_shared_configs
+  # TODO(fxbug.dev/60410): Remove this after build unification.
+  _remove_shared_configs = toolchain_variant.remove_shared_configs
+  foreach(_config, [ "symbol_no_undefined" ]) {
+    _config_label = "//build/config:" + _config
+    if (_remove_shared_configs + [ _config_label ] - [ _config_label ] !=
+        _remove_shared_configs) {
+      _remove_shared_configs -= [ _config_label ]
+      _remove_shared_configs += [ "//build/config/zircon:" + _config ]
+    }
+  }
+
   # NOTE: Contrary to the Fuchsia build, we start by removing common configs
   # then adding new ones. This is necessary because some Zircon kernel
   # toolchains want to move certain configs to the end of the list to ensure
   # that kernel-provided ones are listed first.
 
-  default_common_binary_configs -= toolchain_variant.remove_common_configs
+  default_common_binary_configs -= _remove_common_configs
   default_common_binary_configs += toolchain_variant.configs
 
-  default_shared_library_configs -= toolchain_variant.remove_common_configs
+  default_shared_library_configs -= _remove_shared_configs
   default_shared_library_configs += toolchain_variant.configs
 
   default_executable_configs = default_common_binary_configs
@@ -893,6 +923,19 @@ declare_args() {
 
     {
       configs = [ "//build/config/sanitizers:ubsan" ]
+
+      # The vptr instrumentation requires RTTI.  If -fno-rtti is passed then
+      # this checking is implicitly disabled.  However, another translation
+      # unit built without -fno-rtti will have the checking enabled.  The
+      # -fno-rtti vtables are not compatible with the checking at runtime, so a
+      # vtable from a -fno-rtti TU used by code from a -frtti TU gets false
+      # positive failures.  Since the vtables are emitted in multiple TUs in
+      # COMDAT and one implementation chosen randomly at link time, there's no
+      # way to be sure the checking code requiring RTTI uses its own
+      # RTTI-enabled vtables rather than other non-RTTI vtables.  So just let
+      # RTTI be enabled everywhere, and then get the vptr checking everywhere
+      # too.
+      remove_common_configs = [ "//build/config:no_rtti" ]
       tags = [
         "instrumented",
         "instrumentation-runtime",
@@ -903,6 +946,7 @@ declare_args() {
         "//build/config/sanitizers:ubsan",
         "//build/config/sanitizers:sancov",
       ]
+      remove_common_configs = [ "//build/config:no_rtti" ]  # See above.
       tags = [
         "instrumented",
         "instrumentation-runtime",
@@ -914,6 +958,7 @@ declare_args() {
     {
       forward_variables_from(_asan_variant, "*")
       configs += [ "//build/config/sanitizers:ubsan" ]
+      remove_common_configs = [ "//build/config:no_rtti" ]  # See above.
     },
     {
       forward_variables_from(_asan_variant, "*")
@@ -944,6 +989,7 @@ declare_args() {
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs
       remove_shared_configs = _fuzzer_remove_shared_configs
+      remove_common_configs += [ "//build/config:no_rtti" ]  # See above.
       tags = [
         "fuzzer",
         "instrumented",

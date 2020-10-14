@@ -256,7 +256,24 @@ standard_sanitizer_variants = [
   {
     variant = {
       name = "ubsan"
-      configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+      configs = [
+        {
+          add = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+
+          # The vptr instrumentation requires RTTI.  If -fno-rtti is passed
+          # then this checking is implicitly disabled.  However, another
+          # translation unit built without -fno-rtti will have the checking
+          # enabled.  The -fno-rtti vtables are not compatible with the
+          # checking at runtime, so a vtable from a -fno-rtti TU used by code
+          # from a -frtti TU gets false positive failures.  Since the vtables
+          # are emitted in multiple TUs in COMDAT and one implementation chosen
+          # randomly at link time, there's no way to be sure the checking code
+          # requiring RTTI uses its own RTTI-enabled vtables rather than other
+          # non-RTTI vtables.  So just let RTTI be enabled everywhere, and then
+          # get the vptr checking everywhere too.
+          remove = [ "$zx/public/gn/config:no_rtti" ]
+        },
+      ]
       toolchain_vars = {
         # This is the key for toolchain_runtime_deps() to find the right
         # shared library dependencies for the instrumentation.  Note that
