@@ -44,25 +44,47 @@ impl Injector for LegacyInjector {
     }
 }
 
-macro_rules! register_device {
-    ( $injector:expr , $field:ident : $value:expr ) => {{
-        let mut device = DeviceDescriptor {
-            device_info: None,
-            keyboard: None,
-            media_buttons: None,
-            mouse: None,
-            stylus: None,
-            touchscreen: None,
-            sensor: None,
-        };
-        device.$field = Some(Box::new($value));
+// Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
+// allowing us to pass any of them to `register_device()`.
+enum UniformDeviceDescriptor {
+    Keyboard(KeyboardDescriptor),
+    MediaButtons(MediaButtonsDescriptor),
+    Touchscreen(TouchscreenDescriptor),
+}
 
-        let (input_device_client, input_device_server) =
-            endpoints::create_endpoints::<InputDeviceMarker>()?;
-        $injector.register_device(&mut device, input_device_server)?;
+// Creates a device with the properties given in `descriptor`, and registers the newly
+// created device with the input pipeline associated with `injector`.
+fn register_device(
+    injector: &mut dyn Injector,
+    descriptor: UniformDeviceDescriptor,
+) -> Result<InputDeviceProxy, Error> {
+    let mut device = DeviceDescriptor {
+        device_info: None,
+        keyboard: None,
+        media_buttons: None,
+        mouse: None,
+        stylus: None,
+        touchscreen: None,
+        sensor: None,
+    };
 
-        Ok(input_device_client.into_proxy()?)
-    }};
+    match descriptor {
+        UniformDeviceDescriptor::Keyboard(descriptor) => {
+            device.keyboard = Some(Box::new(descriptor))
+        }
+        UniformDeviceDescriptor::Touchscreen(descriptor) => {
+            device.touchscreen = Some(Box::new(descriptor))
+        }
+        UniformDeviceDescriptor::MediaButtons(descriptor) => {
+            device.media_buttons = Some(Box::new(descriptor))
+        }
+    };
+
+    let (input_device_client, input_device_server) =
+        endpoints::create_endpoints::<InputDeviceMarker>()?;
+    injector.register_device(&mut device, input_device_server)?;
+
+    Ok(input_device_client.into_proxy()?)
 }
 
 fn register_touchscreen(
@@ -70,9 +92,9 @@ fn register_touchscreen(
     width: u32,
     height: u32,
 ) -> Result<InputDeviceProxy, Error> {
-    register_device! {
+    register_device(
         injector,
-        touchscreen: TouchscreenDescriptor {
+        UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
             x: Axis {
                 range: Range { min: 0, max: width as i32 },
                 resolution: 1,
@@ -84,28 +106,28 @@ fn register_touchscreen(
                 scale: AxisScale::Linear,
             },
             max_finger_id: 255,
-        }
-    }
+        }),
+    )
 }
 
 fn register_keyboard(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
-    register_device! {
+    register_device(
         injector,
-        keyboard: KeyboardDescriptor {
+        UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
             keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
-        }
-    }
+        }),
+    )
 }
 
 fn register_media_buttons(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
-    register_device! {
+    register_device(
         injector,
-        media_buttons: MediaButtonsDescriptor {
+        UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
             buttons: fidl_fuchsia_ui_input::MIC_MUTE
                 | fidl_fuchsia_ui_input::VOLUME_DOWN
                 | fidl_fuchsia_ui_input::VOLUME_UP,
-        }
-    }
+        }),
+    )
 }
 
 fn nanos_from_epoch() -> Result<u64, Error> {
