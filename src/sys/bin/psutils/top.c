@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/listnode.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -21,6 +20,8 @@
 #include <pretty/sizes.h>
 #include <task-utils/get.h>
 #include <task-utils/walker.h>
+
+#include "src/lib/listnode/listnode.h"
 
 enum sort_order { UNSORTED, SORT_TIME_DELTA };
 

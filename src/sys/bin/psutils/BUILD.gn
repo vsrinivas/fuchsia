@@ -68,6 +68,7 @@ executable("top") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
+    "//src/lib/listnode",
     "//zircon/public/lib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
