@@ -24,7 +24,6 @@
 #include <optional>
 #include <thread>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -36,6 +35,8 @@
 #include <fbl/mutex.h>
 #include <inet6/inet6.h>
 #include <usb/usb-request.h>
+
+#include "src/connectivity/ethernet/drivers/usb-cdc-function/usb_cdc-bind.h"
 
 namespace usb_cdc_function {
 
@@ -959,9 +960,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace usb_cdc_function
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_cdc, usb_cdc_function::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-ZIRCON_DRIVER_END(usb_cdc)
+ZIRCON_DRIVER(usb_cdc, usb_cdc_function::driver_ops, "zircon", "0.1")

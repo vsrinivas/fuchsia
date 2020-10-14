@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("usb_cdc_bind") {
+  rules = "usb_cdc.bind"
+  output = "usb_cdc-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
+}
 
 driver_module("usb-cdc-function") {
   configs += [
@@ -16,6 +24,7 @@ driver_module("usb-cdc-function") {
   ]
   sources = [ "cdc-eth-function.cc" ]
   deps = [
+    ":usb_cdc_bind",
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.function",
@@ -23,11 +32,13 @@ driver_module("usb-cdc-function") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/inet6",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb_cdc_bind_test" ]
 }

@@ -12,6 +12,7 @@ group("tests") {
     "ethertap:tests",
     "rndis-function:rndis-function-test-package",
     "usb-cdc-ecm:tests",
+    "usb-cdc-function:tests",
     "virtio:virtio-ethernet-test-package",
   ]
 }

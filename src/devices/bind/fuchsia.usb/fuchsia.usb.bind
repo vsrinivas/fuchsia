@@ -52,6 +52,8 @@ extend uint fuchsia.BIND_USB_SUBCLASS {
   VIDEO_INTERFACE_COLLECTION = 0x03,
 
   MISC_RNDIS = 0x04,
+
+  ETHERNET = 0x06,
 };
 
 extend uint fuchsia.BIND_USB_PROTOCOL {

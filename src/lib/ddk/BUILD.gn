@@ -109,7 +109,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/connectivity/ethernet/drivers/realtek-8211f:*",
     "//src/connectivity/ethernet/drivers/rndis-host:*",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:*",
-    "//src/connectivity/ethernet/drivers/usb-cdc-function:*",
     "//src/connectivity/ethernet/drivers/virtio:*",
     "//src/connectivity/openthread/drivers/ot-radio:*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:*",
