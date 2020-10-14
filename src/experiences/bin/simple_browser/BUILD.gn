@@ -80,11 +80,6 @@ fuchsia_package("simple-browser") {
   deps = [ ":component" ]
 }
 
-# TODO(fxb/60618): Remove after soft transition.
-group("simple_browser") {
-  deps = [ ":simple-browser" ]
-}
-
 # fx run-host-tests simple_browser_unittests
 flutter_test("simple_browser_unittests") {
   sources = [
