@@ -9,7 +9,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/device/bt-hci.h>
-#include <zircon/listnode.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
@@ -21,6 +20,8 @@
 #include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/lib/listnode/listnode.h"
 
 #define EVENT_REQ_COUNT 8
 
