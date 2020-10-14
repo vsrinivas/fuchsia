@@ -54,6 +54,11 @@ isolated_devmgr_unittest_package("pci-driver-test") {
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 # These drivers are not 'test' drivers because at the moment having other

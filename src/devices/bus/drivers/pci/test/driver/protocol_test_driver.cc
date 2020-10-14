@@ -257,15 +257,12 @@ TEST_F(PciProtocolTests, GetBar4) {
 TEST_F(PciProtocolTests, GetBar5) {
   zx_pci_bar_t info = {};
   // BAR 5 (I/O ports @ 0x2000, size 128)
-#if __x86_64__
-  ASSERT_OK(pci().GetBar(5, &info));
-  ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_PIO);
-  ASSERT_EQ(info.id, 5);
-  ASSERT_EQ(info.addr, kTestDeviceBars[5].address);
-  ASSERT_EQ(info.size, kTestDeviceBars[5].size);
-#else
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().GetBar(5, &info));
-#endif
+  ASSERT_STATUS(ZX_ERR_INTERNAL, pci().GetBar(5, &info));
+  // TODO(61631): If the resource is sorted out we can verify the other fields.
+  // ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_PIO);
+  // ASSERT_EQ(info.id, 5);
+  // ASSERT_EQ(info.addr, kTestDeviceBars[5].address);
+  // ASSERT_EQ(info.size, kTestDeviceBars[5].size);
 }
 
 TEST_F(PciProtocolTests, GetCapabilities) {

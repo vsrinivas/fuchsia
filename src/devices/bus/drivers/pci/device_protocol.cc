@@ -195,7 +195,6 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
     return RpcReply(ch, ZX_ERR_NOT_FOUND);
   }
 
-  zx_status_t st;
   zx_handle_t handle = ZX_HANDLE_INVALID;
   uint32_t handle_cnt = 0;
   response_.bar.id = bar_id;
@@ -203,33 +202,37 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
   // IO bars have a Resource corresponding to an IO range for the
   // driver to access. These are mutually exclusive, so only one
   // handle is ever needed.
+  zx_status_t status = {};
   if (bar.is_mmio) {
-    response_.bar.is_mmio = true;
-    zx::vmo vmo;
-    st = bar.allocation->CreateVmObject(&vmo);
-    if (st == ZX_OK) {
+    zx::vmo vmo = {};
+    if ((status = bar.allocation->CreateVmObject(&vmo)) == ZX_OK) {
+      response_.bar.is_mmio = true;
       handle = vmo.release();
       handle_cnt++;
     } else {
       return RpcReply(ch, ZX_ERR_INTERNAL);
     }
-  } else {
-    zx::resource res;
-    response_.bar.is_mmio = false;
-    if (bar.allocation->resource().get() != ZX_HANDLE_INVALID) {
-      st = bar.allocation->resource().duplicate(ZX_RIGHT_SAME_RIGHTS, &res);
-      if (st != ZX_OK) {
-        return RpcReply(ch, ZX_ERR_INTERNAL);
-      }
-
+  } else {  // IO BAR
+    zx::resource res = {};
+    if (bar.allocation->resource() &&
+        (status = bar.allocation->resource().duplicate(ZX_RIGHT_SAME_RIGHTS, &res)) == ZX_OK) {
+      response_.bar.is_mmio = false;
+      response_.bar.io_addr = static_cast<uint16_t>(bar.address);
+      response_.bar.io_size = static_cast<uint16_t>(bar.size);
       handle = res.release();
       handle_cnt++;
+    } else {
+      status = ZX_ERR_INTERNAL;
+      zxlogf(ERROR, "[%s] Failed to create a resource for IO bar %u: %d", cfg_->addr(), bar_id,
+             status);
     }
     response_.bar.io_addr = static_cast<uint16_t>(bar.address);
     response_.bar.io_size = static_cast<uint16_t>(bar.size);
   }
 
-  return RpcReply(ch, ZX_OK, &handle, handle_cnt);
+  zxlogf(DEBUG, "[%s] GetBar { bar_id = %u, status = %s }", cfg_->addr(), bar_id,
+         zx_status_get_string(status));
+  return RpcReply(ch, status, &handle, handle_cnt);
 }
 
 zx_status_t Device::RpcConnectSysmem(const zx::unowned_channel& ch, zx_handle_t channel) {
