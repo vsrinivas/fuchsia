@@ -898,8 +898,9 @@ async fn test_broker_filter_custom() {
         .await
         .expect("broadcast messenger should be created");
     // Filter to target only the ORIGINAL message.
-    let filter =
-        filter::Builder::single(filter::Condition::Custom(|message| message.payload() == ORIGINAL));
+    let filter = filter::Builder::single(filter::Condition::Custom(Arc::new(|message| {
+        message.payload() == ORIGINAL
+    })));
     // Broker that should only target ORIGINAL messages.
     let (_, mut broker_receptor) = messenger_factory
         .create(MessengerType::Broker(Some(filter)))
@@ -914,6 +915,40 @@ async fn test_broker_filter_custom() {
     // Ensure broker gets message. If the broadcast message was received, this
     // will fail.
     verify_payload(ORIGINAL, &mut broker_receptor, None).await;
+}
+
+/// Verify that using a closure that captures a variable for a custom filter works, since it can't
+/// be used in place of an function pointer.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_broker_filter_caputring_closure() {
+    // Prepare a message hub with a sender, broker, and target.
+    let messenger_factory = test::message::create_hub();
+
+    // Messenger to send broadcast message and targeted message.
+    let (messenger, _) = messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("broadcast messenger should be created");
+    // Filter to target only the Foo message.
+    let expected_payload = TestMessage::Foo;
+    let expected_payload_clone = expected_payload.clone();
+    let filter = filter::Builder::single(filter::Condition::Custom(Arc::new(move |message| {
+        message.payload() == expected_payload_clone
+    })));
+    // Broker that should only target Foo messages.
+    let (_, mut broker_receptor) = messenger_factory
+        .create(MessengerType::Broker(Some(filter)))
+        .await
+        .expect("broker should be created");
+
+    // Send broadcast message.
+    messenger.message(BROADCAST, Audience::Broadcast).send().ack();
+
+    // Send foo message.
+    messenger.message(expected_payload, Audience::Broadcast).send().ack();
+    // Ensure broker gets message. If the broadcast message was received, this
+    // will fail.
+    verify_payload(expected_payload, &mut broker_receptor, None).await;
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -935,7 +970,7 @@ async fn test_broker_filter_combined_any() {
 
     // Filter to target only the ORIGINAL message.
     let filter = filter::Builder::new(
-        filter::Condition::Custom(|message| message.payload() == ORIGINAL),
+        filter::Condition::Custom(Arc::new(|message| message.payload() == ORIGINAL)),
         filter::Conjugation::Any,
     )
     .append(filter::Condition::Filter(filter::Builder::single(filter::Condition::Audience(
@@ -983,7 +1018,7 @@ async fn test_broker_filter_combined_all() {
 
     // Filter to target only the ORIGINAL message.
     let filter = filter::Builder::new(
-        filter::Condition::Custom(|message| message.payload() == ORIGINAL),
+        filter::Condition::Custom(Arc::new(|message| message.payload() == ORIGINAL)),
         filter::Conjugation::All,
     )
     .append(filter::Condition::Filter(filter::Builder::single(filter::Condition::Audience(

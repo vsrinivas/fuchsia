@@ -179,6 +179,7 @@ pub enum MessengerType<P: Payload + 'static, A: Address + 'static> {
 pub mod filter {
     use super::{Address, Audience, Message, MessageType, Payload};
     use core::fmt::{Debug, Formatter};
+    use std::sync::Arc;
 
     /// `Condition` allows specifying a filter condition that must be true
     /// for a filter to match.
@@ -188,7 +189,7 @@ pub mod filter {
         /// sender.
         Audience(Audience<A>),
         /// Matches on a custom closure that may evaluate the sent message.
-        Custom(fn(&Message<P, A>) -> bool),
+        Custom(Arc<dyn Fn(&Message<P, A>) -> bool + Send + Sync>),
         /// Matches on another filter and its conditions.
         Filter(Filter<P, A>),
     }
