@@ -570,20 +570,20 @@ TEST_F(TestImporter, Counter) {
                           2                // counter_id
   );
   static const char* const expected[] = {
-      "String(index: 50, \"process\")",
+      "String(index: 51, \"process\")",
       "KernelObject(koid: 1895825408, type: thread, name: \"cpu-0\", {process: koid(0)})",
       "Thread(index: 1, 0/1895825408)",
-      "String(index: 51, \"probe 0\")",
+      "String(index: 52, \"probe 0\")",
       "Event(ts: 99, pt: 0/1895825408, category: \"kernel:ipc\", name: \"probe 0\", Counter(id: "
       "0), {arg0: int64(10)})",
       "KernelObject(koid: 1895825409, type: thread, name: \"cpu-1\", {process: koid(0)})",
       "Thread(index: 2, 0/1895825409)",
-      "String(index: 52, \"probe 0x1\")",
+      "String(index: 53, \"probe 0x1\")",
       "Event(ts: 100, pt: 0/1895825409, category: \"kernel:tasks\", name: \"probe 0x1\", "
       "Counter(id: 1), {arg0: int64(20)})",
       "KernelObject(koid: 1895825411, type: thread, name: \"cpu-3\", {process: koid(0)})",
       "Thread(index: 3, 0/1895825411)",
-      "String(index: 53, \"probe 0x2\")",
+      "String(index: 54, \"probe 0x2\")",
       "Event(ts: 101, pt: 0/1895825411, category: \"kernel:irq\", name: \"probe 0x2\", Counter(id: "
       "2), {arg0: int64(30)})",
   };

@@ -25,8 +25,8 @@ KTRACE_DEF(0x031, 16B, IRQ_EXIT, IRQ)           // (irqn << 8) | cpu
 KTRACE_DEF(0x032, 16B, SYSCALL_ENTER, SYSCALL)  // (n << 8) | cpu
 KTRACE_DEF(0x033, 16B, SYSCALL_EXIT, SYSCALL)   // (n << 8) | cpu
 
-KTRACE_DEF(0x034, 32B, PAGE_FAULT, IRQ)       // virtual_address_hi, virtual_address_lo, flags, cpu
-KTRACE_DEF(0x035, 32B, PAGE_FAULT_EXIT, IRQ)  // virtual_address_hi, virtual_address_lo, flags, cpu
+KTRACE_DEF(0x034, 32B, PAGE_FAULT, VM)       // virtual_address_hi, virtual_address_lo, flags, cpu
+KTRACE_DEF(0x035, 32B, PAGE_FAULT_EXIT, VM)  // virtual_address_hi, virtual_address_lo, flags, cpu
 
 // to-tid, ((new_thread_prioriy<<24) | (old_thread_priority<<16) | (old_thread_state<<8) | cpu),
 // from-kt, to-kt

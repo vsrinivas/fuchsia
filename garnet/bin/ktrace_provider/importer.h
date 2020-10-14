@@ -178,6 +178,7 @@ class Importer {
   trace_string_ref_t const syscall_category_ref_;
   trace_string_ref_t const channel_category_ref_;
   trace_string_ref_t const vcpu_category_ref_;
+  trace_string_ref_t const vm_category_ref_;
   trace_string_ref_t const channel_read_name_ref_;
   trace_string_ref_t const channel_write_name_ref_;
   trace_string_ref_t const num_bytes_name_ref_;

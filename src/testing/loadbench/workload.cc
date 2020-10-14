@@ -662,6 +662,8 @@ void Workload::ParseTracing(const rapidjson::Value& tracing) {
         config.group_mask = KTRACE_GRP_ARCH;
       } else if (group_mask_str == "KTRACE_GRP_SYSCALL") {
         config.group_mask = KTRACE_GRP_SYSCALL;
+      } else if (group_mask_str == "KTRACE_GRP_VM") {
+        config.group_mask = KTRACE_GRP_VM;
       } else {
         FX_LOGS(WARNING) << "Tracing enabled with unknown group mask, mask set to all groups.";
         config.group_mask = KTRACE_GRP_ALL;

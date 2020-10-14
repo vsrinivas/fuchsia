@@ -42,6 +42,7 @@ constexpr KTraceCategory kGroupCategories[] = {
     {"kernel:probe", KTRACE_GRP_PROBE},
     {"kernel:arch", KTRACE_GRP_ARCH},
     {"kernel:syscall", KTRACE_GRP_SYSCALL},
+    {"kernel:vm", KTRACE_GRP_VM},
 };
 
 // Meta category to retain current contents of ktrace buffer.

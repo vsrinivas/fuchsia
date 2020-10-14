@@ -257,7 +257,7 @@ inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_
 
 template <bool enabled>
 inline void ktrace_flow_step(TraceEnabled<enabled>, TraceContext context, uint32_t group,
-                            StringRef* string_ref, uint64_t flow_id, uint64_t a = 0) {
+                             StringRef* string_ref, uint64_t flow_id, uint64_t a = 0) {
   if constexpr (!enabled) {
     return;
   }
@@ -300,10 +300,10 @@ void ktrace_report_live_processes();
 // instance for use in tracing scopes.
 // TODO(eieio): Add option to combine begin/end traces as a single complete
 // event for better trace buffer efficiency.
-template <typename Enabled, uint8_t group, TraceContext = TraceContext::Thread>
+template <typename Enabled, uint16_t group, TraceContext = TraceContext::Thread>
 class TraceDuration;
 
-template <bool enabled, uint8_t group, TraceContext context>
+template <bool enabled, uint16_t group, TraceContext context>
 class TraceDuration<TraceEnabled<enabled>, group, context> {
  public:
   explicit TraceDuration(StringRef* string_ref) : string_ref_{string_ref} {

@@ -59,6 +59,7 @@ __BEGIN_CDECLS
 #define KTRACE_GRP_PROBE          0x040
 #define KTRACE_GRP_ARCH           0x080
 #define KTRACE_GRP_SYSCALL        0x100
+#define KTRACE_GRP_VM             0x200
 
 #define KTRACE_GRP_TO_MASK(grp)   ((grp) << 20)
 

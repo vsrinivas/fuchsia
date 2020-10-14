@@ -32,6 +32,7 @@ TEST(WorkloadTest, ParseTracingTranslatesStringsToGroupMasksCorrectly) {
       {"KTRACE_GRP_PROBE", KTRACE_GRP_PROBE},
       {"KTRACE_GRP_ARCH", KTRACE_GRP_ARCH},
       {"KTRACE_GRP_SYSCALL", KTRACE_GRP_SYSCALL},
+      {"KTRACE_GRP_VM", KTRACE_GRP_VM},
       {"UNKNOWN", KTRACE_GRP_ALL},
   };
 

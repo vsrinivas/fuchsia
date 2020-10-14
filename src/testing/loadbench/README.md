@@ -329,6 +329,7 @@ The following groups are supported:
 * **KTRACE_GRP_PROBE:** 0x040
 * **KTRACE_GRP_ARCH:** 0x080
 * **KTRACE_GRP_SYSCALL:** 0x100
+* **KTRACE_GRP_VM:** 0x200
 
 ##### filepath - Human Readable Kernel Tracing Translation Filepath (optional)
 

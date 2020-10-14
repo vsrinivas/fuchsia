@@ -80,6 +80,7 @@ Importer::Importer(trace_context_t* context)
       syscall_category_ref_(MAKE_STRING("kernel:syscall")),
       channel_category_ref_(MAKE_STRING("kernel:channel")),
       vcpu_category_ref_(MAKE_STRING("kernel:vcpu")),
+      vm_category_ref_(MAKE_STRING("kernel:vm")),
       channel_read_name_ref_(MAKE_STRING("read")),
       channel_write_name_ref_(MAKE_STRING("write")),
       num_bytes_name_ref_(MAKE_STRING("num_bytes")),
@@ -624,7 +625,7 @@ bool Importer::HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t
         trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
         trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
     trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
-                                                    &irq_category_ref_, &page_fault_name_ref_, args,
+                                                    &vm_category_ref_, &page_fault_name_ref_, args,
                                                     std::size(args));
   }
   return true;
@@ -638,7 +639,7 @@ bool Importer::HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t 
         trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
         trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
     trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
-                                                  &irq_category_ref_, &page_fault_name_ref_, args,
+                                                  &vm_category_ref_, &page_fault_name_ref_, args,
                                                   std::size(args));
   }
   return true;
@@ -1218,6 +1219,8 @@ const trace_string_ref_t& Importer::GetCategoryForGroup(uint32_t group) {
       return probe_category_ref_;
     case KTRACE_GRP_ARCH:
       return arch_category_ref_;
+    case KTRACE_GRP_VM:
+      return vm_category_ref_;
     default:
       return unknown_category_ref_;
   }
