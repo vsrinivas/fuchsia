@@ -54,7 +54,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/BUILD.zircon.gn:26
+From //public/gn/config/BUILD.zircon.gn:25
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
@@ -70,7 +70,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir.zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.zircon.gn:14
+From //public/gn/config/BUILD.zircon.gn:13
 
 ### current_cpu
 
@@ -454,7 +454,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.zircon.gn:20
+From //public/gn/config/BUILD.zircon.gn:19
 
 ### target_cpu
 
@@ -463,20 +463,6 @@ From //public/gn/config/BUILD.zircon.gn:20
 ### target_os
 
 **Current value (from the default):** `""`
-
-### thinlto_cache_dir
-ThinLTO cache directory path.
-
-**Current value (from the default):** `"host-arm64-linux-lto/thinlto-cache"`
-
-From //public/gn/config/lto/BUILD.zircon.gn:22
-
-### thinlto_jobs
-Number of parallel ThinLTO jobs.
-
-**Current value (from the default):** `8`
-
-From //public/gn/config/lto/BUILD.zircon.gn:19
 
 ### toolchain
 *This must never be set as a build argument.*

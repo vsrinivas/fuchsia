@@ -542,7 +542,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:10
+From //build/images/manifest.gni:12
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -667,7 +667,7 @@ From //build/images/custom_signing.gni:12
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/ceb2a7975e50ebe94b24512e09ee0eea21a712c1/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -692,14 +692,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/ceb2a7975e50ebe94b24512e09ee0eea21a712c1/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/ceb2a7975e50ebe94b24512e09ee0eea21a712c1/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -878,7 +878,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:16
+From //build/images/manifest.gni:18
 
 ### extra_package_labels
 
@@ -940,7 +940,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/ceb2a7975e50ebe94b24512e09ee0eea21a712c1/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -980,14 +980,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/ceb2a7975e50ebe94b24512e09ee0eea21a712c1/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/ceb2a7975e50ebe94b24512e09ee0eea21a712c1/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -2121,7 +2121,7 @@ Path to rustc lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/rust/linux-x64/lib"`
 
-From //build/images/manifest.gni:13
+From //build/images/manifest.gni:15
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
