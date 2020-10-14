@@ -289,8 +289,6 @@ TEST_F(TouchInputTest, FlutterTap) {
   uint32_t display_width = 0;
   uint32_t display_height = 0;
 
-  FX_LOGS(INFO) << "***** JJOSH: printing out something in the test, just to see.";
-
   // Get the display dimensions
   auto scenic = test_env()->ConnectToService<fuchsia::ui::scenic::Scenic>();
   scenic->GetDisplayInfo(
@@ -648,7 +646,7 @@ TEST_F(WebEngineTest, ChromiumTap) {
 
     zx::duration elapsed_time =
         zx::basic_time<ZX_CLOCK_UTC>(pointer_data.time_received()) - input_injection_time;
-    EXPECT_TRUE(elapsed_time.get() > 0 && elapsed_time.get() != ZX_TIME_INFINITE);
+    EXPECT_NE(elapsed_time.get(), ZX_TIME_INFINITE);
     FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
     FX_LOGS(INFO) << "Chromium Received Time (ns): " << pointer_data.time_received();
     FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
