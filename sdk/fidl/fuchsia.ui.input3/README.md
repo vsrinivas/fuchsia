@@ -31,8 +31,8 @@ Only focused components receive key events.
 Key events are delivered in root to leaf order - i.e. parent components first.
 
 Parent components have the ability to block further event propagation via
-`KeyboardListener.OnKeyEvent` by returning `Status.Handled` to prevent event’s
-propagation.
+`KeyboardListener.OnKeyEvent` by returning `KeyEventStatus.Handled` to prevent
+event’s propagation.
 
 Clients are notified of keys being pressed or released via `Pressed` and
 `Released` event types.
@@ -45,17 +45,19 @@ client was not available.
 ## Example
 
 ```rust
+use fidl_fuchsia_ui_input3 as ui_input;
+
 let keyboard = connect_to_service::<ui_input::KeyboardMarker>()
     .context("Failed to connect to Keyboard service")?;
 
 let (listener_client_end, mut listener_stream) =
-    create_request_stream::<ui_input::KeyListenerMarker>()?;
+    create_request_stream::<ui_input::KeyboardListenerMarker>()?;
 
-keyboard.set_listener(view_ref, listener_client_end).await.expect("set_listener");
+keyboard.add_listener(view_ref, listener_client_end).await.expect("add_listener");
 
 match listener_stream.next().await {
-    Some(Ok(ui_input::KeyListenerRequest::OnKeyEvent { event, responder, .. })) => {
-        assert_eq!(event.key, Some(ui_input::Key::A));
+    Some(Ok(ui_input::KeyboardListenerRequest::OnKeyEvent { event, responder, .. })) => {
+        assert_eq!(event.key, Some(fuchsia_input::Key::A));
         responder.send(ui_input::Status::Handled).expect("response from key listener")
     },
 }
