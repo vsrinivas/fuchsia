@@ -30,7 +30,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.number_of_channels.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find number of channels %u", format.number_of_channels);
+    zxlogf(INFO, "SimpleCodec did not find number of channels %u", format.number_of_channels);
     return false;
   }
 
@@ -38,7 +38,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.sample_formats.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find sample format %d", static_cast<int>(sample_format));
+    zxlogf(INFO, "SimpleCodec did not find sample format %d", static_cast<int>(sample_format));
     return false;
   }
 
@@ -63,14 +63,14 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
     }
   }
   if (i == supported.frame_formats.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find frame format %d", static_cast<int>(frame_format));
+    zxlogf(INFO, "SimpleCodec did not find frame format %d", static_cast<int>(frame_format));
     return false;
   }
 
   for (i = 0; i < supported.frame_rates.size() && supported.frame_rates[i] != frame_rate; ++i) {
   }
   if (i == supported.frame_rates.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find sample rate %u", frame_rate);
+    zxlogf(INFO, "SimpleCodec did not find sample rate %u", frame_rate);
     return false;
   }
 
@@ -79,7 +79,7 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.bits_per_sample.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find bits per sample %u", bits_per_sample);
+    zxlogf(INFO, "SimpleCodec did not find bits per sample %u", bits_per_sample);
     return false;
   }
 
@@ -87,16 +87,17 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
        ++i) {
   }
   if (i == supported.bits_per_slot.size()) {
-    zxlogf(ERROR, "SimpleCodec did not find wanted bits per slot %u", bits_per_slot);
+    zxlogf(INFO, "SimpleCodec did not find wanted bits per slot %u", bits_per_slot);
     return false;
   }
 
   if (bits_per_sample > bits_per_slot) {
-    zxlogf(ERROR, "SimpleCodec found bits per sample (%u) too big for the bits per slot (%u)",
+    zxlogf(INFO, "SimpleCodec found bits per sample (%u) too big for the bits per slot (%u)",
            bits_per_sample, bits_per_slot);
     return false;
   }
 
+  zxlogf(INFO, "SimpleCodec found a supported format");
   return true;
 }
 
