@@ -67,7 +67,7 @@ zx_status_t PciRegionAllocator::AllocateWindow(zx_paddr_t base, size_t size,
     };
     status = allocator_.GetRegion(request, region_uptr);
   } else {
-    status = allocator_.GetRegion(size, region_uptr);
+    status = allocator_.GetRegion(size, ZX_PAGE_SIZE, region_uptr);
   }
 
   if (status != ZX_OK) {

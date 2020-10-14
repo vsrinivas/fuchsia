@@ -119,7 +119,7 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
   if (add_range && is_mmio && base < MB(1)) {
     // The PC platform defines many legacy regions below 1MB that we do not
     // want PCIe to try to map onto.
-    zxlogf(INFO, "Skipping adding MMIO range, due to being below 1MB");
+    zxlogf(INFO, "Skipping adding MMIO range due to being below 1MB");
     return AE_OK;
   }
 
@@ -138,18 +138,23 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
 
   zxlogf(DEBUG, "ACPI range modification: %sing %s %016lx %016lx", add_range ? "add" : "subtract",
          is_mmio ? "MMIO" : "PIO", base, len);
+  // Not all resources ACPI informs us are in use are provided to us as
+  // resources in the first search, so we allow Incomplete ranges in both add
+  // and subtract passes.
   if (add_range) {
-    status = alloc->AddRegion({.base = base, .size = len}, RegionAllocator::AllowOverlap::No);
+    status = alloc->AddRegion({.base = base, .size = len}, RegionAllocator::AllowOverlap::Yes);
   } else {
     status =
-        alloc->SubtractRegion({.base = base, .size = len}, RegionAllocator::AllowIncomplete::No);
+        alloc->SubtractRegion({.base = base, .size = len}, RegionAllocator::AllowIncomplete::Yes);
   }
 
   if (status != ZX_OK) {
     if (add_range) {
-      zxlogf(INFO, "Failed to add range: %d", status);
+      zxlogf(INFO, "Failed to add range: [%#lx - %#lx] (%#lx): %d", base, base + len, len, status);
     } else {
       // If we are subtracting a range and fail, abort.  This is bad.
+      zxlogf(INFO, "Failed to subtract range [%#lx - %#lx] (%#lx): %d", base, base + len, len,
+             status);
       return AE_ERROR;
     }
   }
@@ -161,12 +166,12 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
 static ACPI_STATUS walk_devices_callback(ACPI_HANDLE object, uint32_t /*nesting_level*/, void* _ctx,
                                          void** /*ret*/) {
   acpi::UniquePtr<ACPI_DEVICE_INFO> info;
-  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-    zxlogf(DEBUG, "bus-acpi: acpi::GetObjectInfo failed %d", res.error_value());
+  auto res = acpi::GetObjectInfo(object);
+  if (res.is_error()) {
+    zxlogf(DEBUG, "acpi::GetObjectInfo failed %d", res.error_value());
     return res.error_value();
-  } else {
-    info = std::move(res.value());
   }
+  info = std::move(res.value());
 
   auto* ctx = static_cast<ResourceContext*>(_ctx);
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
@@ -207,11 +212,19 @@ zx_status_t scan_acpi_tree_for_resources(zx_handle_t root_resource_handle) {
     return ZX_ERR_INTERNAL;
   }
 
+  if (zxlog_level_enabled(TRACE)) {
+    RootHost->DumpAllocatorWindows();
+  }
+
   // Removes resources we believe are in use by other parts of the platform
   ctx.add_pass = false;
   status = AcpiGetDevices(nullptr, walk_devices_callback, &ctx, nullptr);
   if (status != AE_OK) {
     return ZX_ERR_INTERNAL;
+  }
+
+  if (zxlog_level_enabled(TRACE)) {
+    RootHost->DumpAllocatorWindows();
   }
 
   return ZX_OK;
@@ -284,7 +297,10 @@ zx_status_t pci_root_host_init() {
 
 zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE object,
                      ACPI_DEVICE_INFO* info) {
-  pci_root_host_init();
+  zx_status_t status = pci_root_host_init();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Error initializing PCI root host, attempting to boot regardless: %d", status);
+  }
 
   // Build up a context structure for the PCI Root / Host Bridge we've found.
   // If we find _BBN / _SEG we will use those, but if we don't we can fall
@@ -296,7 +312,7 @@ zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE obj
   // ACPI names are stored as 4 bytes in a u32
   memcpy(dev_ctx.name, &info->Name, 4);
 
-  zx_status_t status = acpi_bbn_call(object, &dev_ctx.info.start_bus_num);
+  status = acpi_bbn_call(object, &dev_ctx.info.start_bus_num);
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
     zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx.name,
            status);
@@ -369,7 +385,7 @@ zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE obj
   char name[ZX_DEVICE_NAME_MAX] = {0};
   memcpy(name, dev_ctx.name, ACPI_NAMESEG_SIZE);
 
-  status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name);
+  status = x64Pciroot::Create(&*RootHost, dev_ctx, parent, name);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {

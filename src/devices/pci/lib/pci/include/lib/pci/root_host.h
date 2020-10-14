@@ -83,8 +83,19 @@ class PciRootHost {
   zx::status<zx_paddr_t> AllocateMmio64Window(zx_paddr_t base, size_t size,
                                               zx::resource* out_resource,
                                               zx::eventpair* out_endpoint) {
-    return AllocateWindow(kMmio64, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource,
-                          out_endpoint);
+    auto status =
+        AllocateWindow(kMmio64, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource, out_endpoint);
+    // If an allocation request is made for Mmio64 but has no specified base we can
+    // attempt to allocate a window for it out of the <4GB Mmio32 allocator.
+    // This is common for a systems like some Intel NUCs which have devices with
+    // 64 bit Base Address Registers but all of the available address space
+    // discoverable via ACPI is below 4GB.
+    if (!status.is_ok() && base == 0) {
+      return AllocateWindow(kMmio32, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource,
+                            out_endpoint);
+    }
+
+    return status;
   }
 
   zx::status<zx_paddr_t> AllocateIoWindow(zx_paddr_t base, size_t size, zx::resource* out_resource,
@@ -106,7 +117,24 @@ class PciRootHost {
     return ZX_ERR_NOT_FOUND;
   }
 
+  void DumpAllocatorWindows() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    DumpAllocatorWindowsLocked();
+  }
+
  private:
+  void DumpAllocatorWindowsLocked() __TA_REQUIRES(lock_) {
+    auto cb = [](const ralloc_region_t* r) -> bool {
+      zxlogf(INFO, "    %#lx - %#lx", r->base, r->base + r->size);
+      return true;
+    };
+    zxlogf(INFO, "Mmio32 available:");
+    Mmio32().WalkAvailableRegions(cb);
+    zxlogf(INFO, "Mmio64 available:");
+    Mmio64().WalkAvailableRegions(cb);
+    zxlogf(INFO, "Io available:");
+    Io().WalkAvailableRegions(cb);
+  }
   void ProcessQueue() __TA_REQUIRES(lock_);
   zx::status<zx_paddr_t> AllocateWindow(AllocationType type, uint32_t kind, zx_paddr_t base,
                                         size_t size, zx::resource* out_resource,
@@ -114,9 +142,9 @@ class PciRootHost {
   // Creates a backing pair of eventpair endpoints used to store and track if a
   // process dies while holding a window allocation, allowing the worker thread
   // to add the resources back to the allocation pool.
+
   zx_status_t RecordAllocation(PciAddressWindow region, zx::eventpair* out_endpoint)
       __TA_REQUIRES(lock_);
-
   PciAllocator mmio32_alloc_;
   PciAllocator mmio64_alloc_;
   PciAllocator io_alloc_;

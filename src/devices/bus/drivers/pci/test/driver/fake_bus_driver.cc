@@ -46,7 +46,7 @@ zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf, uint8_t* base_cfg, size_t
   std::unique_ptr<Config> cfg = std::make_unique<FakeMmioConfig>(bdf, std::move(view));
   cfg->Write(Config::kVendorId, vid);
   cfg->Write(Config::kDeviceId, did);
-  cfg->DumpConfig(4096);
+  cfg->DumpConfig(PCIE_EXTENDED_CONFIG_SIZE);
   return pci::Device::Create(this->zxdev(), std::move(cfg), &upstream(), bus().bdi());
 }
 

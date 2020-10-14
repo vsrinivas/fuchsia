@@ -81,17 +81,14 @@ zx::status<zx_paddr_t> PciRootHost::AllocateWindow(AllocationType type, uint32_t
     };
     st = allocator->GetRegion(region, region_uptr);
   } else {
-    st = allocator->GetRegion(static_cast<uint64_t>(size), region_uptr);
+    st = allocator->GetRegion(static_cast<uint64_t>(size), ZX_PAGE_SIZE, region_uptr);
   }
 
   if (st != ZX_OK) {
-    zxlogf(DEBUG, "failed to allocate %s %#lx-%#lx: %d.", allocator_name, base, base + size, st);
-    if (zxlog_level_enabled(DEBUG)) {
-      zxlogf(TRACE, "Regions available:");
-      allocator->WalkAvailableRegions([](const ralloc_region_t* r) -> bool {
-        zxlogf(TRACE, "    %#lx - %#lx", r->base, r->base + r->size);
-        return true;
-      });
+    zxlogf(DEBUG, "failed to allocate %s %#lx-%#lx: %s.", allocator_name, base, base + size,
+           zx_status_get_string(st));
+    if (zxlog_level_enabled(TRACE)) {
+      DumpAllocatorWindowsLocked();
     }
     return zx::error(st);
   }

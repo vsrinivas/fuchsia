@@ -302,6 +302,10 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
     // steps of writing 1s and then reading the value of the next BAR.
     cfg_->Write(Config::kBar(bar_id + 1), UINT32_MAX);
     size_mask |= static_cast<uint64_t>(~cfg_->Read(Config::kBar(bar_id + 1))) << 32;
+  } else if (!bar_info.is_mmio && !(bar_val & (UINT16_MAX << 16))) {
+    // Per spec, if the type is IO and the upper 16 bits were zero in the read
+    // then they should be removed from the size mask before incrementing it.
+    size_mask &= UINT16_MAX;
   }
 
   // No matter what configuration we've found, |size_mask| should contain a
