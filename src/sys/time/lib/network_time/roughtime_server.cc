@@ -27,13 +27,13 @@ bool RoughTimeServer::IsValid() const { return valid_; }
 
 std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServer() const {
   if (!IsValid()) {
-    FX_LOGS(ERROR) << "time server not supported: " << address_;
+    FX_LOGS_FIRST_N(ERROR, 1) << "time server not supported: " << address_;
     return {NOT_SUPPORTED, {}};
   }
   // Create Socket
   const size_t colon_offset = address_.rfind(':');
   if (colon_offset == std::string::npos) {
-    FX_LOGS(ERROR) << "no port number in server address: " << address_;
+    FX_LOGS_FIRST_N(ERROR, 1) << "no port number in server address: " << address_;
     return {NOT_SUPPORTED, {}};
   }
 
@@ -55,24 +55,19 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   struct addrinfo* addrs;
   int err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
   if (err != 0) {
-    // Log once to cut down on logspam.
-    // TODO: Support general LOG_EVERY_N to solve this kind of problem.
-    if (!logged_once_) {
-      FX_LOGS(WARNING) << "resolving " << address_ << ": " << gai_strerror(err);
-      logged_once_ = true;
-    }
+    FX_LOGS_FIRST_N(WARNING, 1) << "resolving " << address_ << ": " << gai_strerror(err);
     return {NETWORK_ERROR, {}};
   }
   auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });
   fbl::unique_fd sock_ufd(socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
-    FX_LOGS(WARNING) << "creating UDP socket: " << strerror(errno);
+    FX_LOGS_FIRST_N(WARNING, 1) << "creating UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
   int sock_fd = sock_ufd.get();
 
   if (connect(sock_fd, addrs->ai_addr, addrs->ai_addrlen)) {
-    FX_LOGS(WARNING) << "connecting UDP socket: " << strerror(errno);
+    FX_LOGS_FIRST_N(WARNING, 1) << "connecting UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
 
@@ -81,7 +76,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
                     NI_NUMERICHOST);
 
   if (err != 0) {
-    FX_LOGS(WARNING) << "getnameinfo: " << gai_strerror(err);
+    FX_LOGS_FIRST_N(WARNING, 1) << "getnameinfo: " << gai_strerror(err);
     return {NETWORK_ERROR, {}};
   }
 
@@ -103,7 +98,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   const zx::time start{zx_clock_get_monotonic()};
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
-    FX_LOGS(WARNING) << "send on UDP socket" << strerror(errno);
+    FX_LOGS_FIRST_N(WARNING, 1) << "send on UDP socket" << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
 
@@ -116,15 +111,15 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   FD_SET(sock_fd, &readfds);
   int ret = poll(&readfd, 1, timeout);
   if (ret < 0) {
-    FX_LOGS(WARNING) << "poll on UDP socket: " << strerror(errno);
+    FX_LOGS_FIRST_N(WARNING, 1) << "poll on UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
   if (ret == 0) {
-    FX_LOGS(WARNING) << "timeout while poll";
+    FX_LOGS_FIRST_N(WARNING, 1) << "timeout while poll";
     return {NETWORK_ERROR, {}};
   }
   if (readfd.revents != POLLIN) {
-    FX_LOGS(WARNING) << "poll, revents = " << readfd.revents;
+    FX_LOGS_FIRST_N(WARNING, 1) << "poll, revents = " << readfd.revents;
     return {NETWORK_ERROR, {}};
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
@@ -133,7 +128,7 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
   const zx::duration drift = (end - start) / 2;
 
   if (buf_len == -1) {
-    FX_LOGS(WARNING) << "recv from UDP socket: " << strerror(errno);
+    FX_LOGS_FIRST_N(WARNING, 1) << "recv from UDP socket: " << strerror(errno);
     return {NETWORK_ERROR, {}};
   }
 
@@ -148,7 +143,6 @@ std::pair<Status, std::optional<zx::time_utc>> RoughTimeServer::GetTimeFromServe
 
   // zx_time_t is nanoseconds, timestamp_us is microseconds.
   zx::time_utc timestamp{ZX_USEC(timestamp_us)};
-  FX_LOGS(INFO) << "time successfully fetched from " << address_;
   return {OK, timestamp - drift};
 }
 
