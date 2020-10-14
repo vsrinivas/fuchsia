@@ -1370,7 +1370,7 @@ TEST(NetStreamTest, ConnectTwice) {
 
   ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
 
-  // TODO(tamird): decide if we want to match Linux's behaviour.
+  // TODO(fxbug.dev/61594): decide if we want to match Linux's behaviour.
   ASSERT_EQ(connect(client.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
 #if defined(__linux__)
             0)
