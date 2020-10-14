@@ -52,7 +52,7 @@ if (!is_fuchsia) {
       "src/core/util.rs",
       "src/engine.rs",
       "src/lib.rs",
-      "src/model.rs",
+      "src/search.rs",
       "src/toolkit.rs",
     ]
     inputs = [

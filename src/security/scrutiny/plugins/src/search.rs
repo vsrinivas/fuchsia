@@ -203,7 +203,7 @@ impl DataController for RouteSearchController {
 }
 
 plugin!(
-    ModelPlugin,
+    SearchPlugin,
     PluginHooks::new(
         collectors! {},
         controllers! {

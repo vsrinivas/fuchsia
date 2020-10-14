@@ -11,14 +11,14 @@ use {
     crate::scrutiny::ScrutinyApp,
     anyhow::Result,
     scrutiny_plugins::{
-        core::core::CorePlugin, engine::EnginePlugin, model::ModelPlugin, toolkit::ToolkitPlugin,
+        core::core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, toolkit::ToolkitPlugin,
     },
 };
 
 fn main() -> Result<()> {
     let mut app = ScrutinyApp::new(ScrutinyApp::args())?;
     app.plugin(CorePlugin::new())?;
-    app.plugin(ModelPlugin::new())?;
+    app.plugin(SearchPlugin::new())?;
     app.plugin(EnginePlugin::new(app.scheduler(), app.dispatcher(), app.plugin_manager()))?;
     app.plugin(ToolkitPlugin::new())?;
     app.run()
