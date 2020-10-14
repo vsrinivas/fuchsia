@@ -4,7 +4,8 @@
 
 use chrono::{Datelike, TimeZone, Timelike};
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_cobalt::LoggerFactoryMarker;
+use fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker};
+use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProxy};
 use fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream};
 use fidl_fuchsia_io::{NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_logger::LogSinkMarker;
@@ -13,16 +14,17 @@ use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
 use fidl_fuchsia_time_external::{Status, TimeSample};
 use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
 use fuchsia_async::{self as fasync, TimeoutExt};
+use fuchsia_cobalt::CobaltEventExt;
 use fuchsia_component::{
-    client::{App, AppBuilder},
+    client::{launcher, App, AppBuilder},
     server::{NestedEnvironment, ServiceFs},
 };
 use fuchsia_zircon::{self as zx, HandleBased, Rights};
 use futures::{
     channel::mpsc::Sender,
     future::join,
-    stream::{StreamExt, TryStreamExt},
-    Future, SinkExt,
+    stream::{Stream, StreamExt, TryStreamExt},
+    Future, FutureExt, SinkExt,
 };
 use lazy_static::lazy_static;
 use log::debug;
@@ -30,6 +32,11 @@ use parking_lot::Mutex;
 use push_source::{PushSource, TestUpdateAlgorithm, Update};
 use std::sync::Arc;
 use test_util::{assert_geq, assert_leq};
+use time_metrics_registry::{
+    RealTimeClockEventsMetricDimensionEventType as RtcEventType,
+    TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType, PROJECT_ID,
+    REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+};
 use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
 
 /// Test manifest for timekeeper.
@@ -43,7 +50,10 @@ const COBALT_URL: &str = "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt
 struct NestedTimekeeper {
     /// Application object for timekeeper. Needs to be kept in scope to
     /// keep timekeeper alive.
-    _app: App,
+    _timekeeper_app: App,
+
+    /// Application object for Cobalt. Needs to be kept in scope to keep Cobalt alive.
+    _cobalt_app: App,
 
     /// The nested environment timekeeper is running in. Needs to be kept
     /// in scope to keep the nested environment alive.
@@ -90,19 +100,21 @@ impl NestedTimekeeper {
     /// Launches an instance of timekeeper maintaining the provided |clock| in a nested
     /// environment. If |initial_rtc_time| is provided, then the environment contains a fake RTC
     /// device that reports the time as |initial_rtc_time|.
-    /// Returns a `NestedTimekeeper`, and handles to the PushSource and RTC it obtains updates
-    /// from.
+    /// Returns a `NestedTimekeeper`, handles to the PushSource and RTC it obtains updates from,
+    /// and a connection to a fake cobalt instance.
     fn new(
         clock: Arc<zx::Clock>,
         initial_rtc_time: Option<zx::Time>,
-    ) -> (Self, PushSourceController, RtcUpdates) {
+    ) -> (Self, PushSourceController, RtcUpdates, LoggerQuerierProxy) {
         let mut service_fs = ServiceFs::new();
         // Route logs for components in nested env to the same logsink as the test.
         service_fs.add_proxy_service::<LogSinkMarker, _>();
         // Launch a new instance of cobalt for each environment. This allows verifying
         // the events cobalt receives for each test case.
-        service_fs
-            .add_component_proxy_service::<LoggerFactoryMarker, _>(COBALT_URL.to_string(), None);
+        let cobalt_app = AppBuilder::new(COBALT_URL).spawn(&launcher().unwrap()).unwrap();
+        service_fs.add_proxy_service_to::<LoggerFactoryMarker, _>(Arc::clone(
+            cobalt_app.directory_request(),
+        ));
         // Inject test control and maintenence services.
         service_fs.add_fidl_service(InjectedServices::TimeSourceControl);
         service_fs.add_fidl_service(InjectedServices::Maintenance);
@@ -139,7 +151,7 @@ impl NestedTimekeeper {
 
         let nested_environment =
             service_fs.create_salted_nested_environment("timekeeper_test").unwrap();
-        let app = AppBuilder::new(TIMEKEEPER_URL)
+        let timekeeper_app = AppBuilder::new(TIMEKEEPER_URL)
             .add_handle_to_namespace("/dev".to_string(), devmgr_client.into_handle())
             .spawn(nested_environment.launcher())
             .unwrap();
@@ -184,14 +196,18 @@ impl NestedTimekeeper {
                 .await;
         };
 
+        let cobalt_querier = cobalt_app.connect_to_service::<LoggerQuerierMarker>().unwrap();
+
         let nested_timekeeper = NestedTimekeeper {
-            _app: app,
+            _timekeeper_app: timekeeper_app,
+            _cobalt_app: cobalt_app,
             _nested_envronment: nested_environment,
             _task: fasync::Task::spawn(async {
                 join(injected_service_fut, push_source_update_fut).await;
             }),
         };
-        (nested_timekeeper, PushSourceController(update_sink), rtc_updates)
+
+        (nested_timekeeper, PushSourceController(update_sink), rtc_updates, cobalt_querier)
     }
 
     async fn serve_test_control(
@@ -243,7 +259,7 @@ impl NestedTimekeeper {
     /// always torn down first, avoiding the situation where timekeeper sees a dependency close
     /// its channel and log an error in response.
     async fn teardown(self) {
-        let mut app = self._app;
+        let mut app = self._timekeeper_app;
         app.kill().unwrap();
         app.wait().await.unwrap();
         let _ = self._task.cancel();
@@ -272,19 +288,19 @@ fn rtc_time_to_zx_time(rtc_time: fidl_fuchsia_hardware_rtc::Time) -> zx::Time {
 /// Run a test against an instance of timekeeper. Timekeeper will maintain the provided clock.
 /// If `initial_rtc_time` is provided, a fake RTC device that reports the time as
 /// `initial_rtc_time` is injected into timekeeper's environment. The provided `test_fn` is
-/// provided with handles to manipulate the time source and observe changes to the RTC.
+/// provided with handles to manipulate the time source and observe changes to the RTC and cobalt.
 fn timekeeper_test<F, Fut>(clock: Arc<zx::Clock>, initial_rtc_time: Option<zx::Time>, test_fn: F)
 where
-    F: FnOnce(PushSourceController, RtcUpdates) -> Fut,
+    F: FnOnce(PushSourceController, RtcUpdates, LoggerQuerierProxy) -> Fut,
     Fut: Future,
 {
     let _ = fuchsia_syslog::init();
     let mut executor = fasync::Executor::new().unwrap();
     executor.run_singlethreaded(async move {
         let clock_arc = Arc::new(clock);
-        let (timekeeper, push_source_controller, rtc) =
+        let (timekeeper, push_source_controller, rtc, cobalt) =
             NestedTimekeeper::new(Arc::clone(&clock_arc), initial_rtc_time);
-        test_fn(push_source_controller, rtc).await;
+        test_fn(push_source_controller, rtc, cobalt).await;
         timekeeper.teardown().await;
     });
 }
@@ -312,6 +328,8 @@ lazy_static! {
     );
 }
 
+/// Timeout waiting for Timekeeper to connect to Cobalt.
+const COBALT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
 /// Timeout when waiting for the RTC to be set. Timekeeper may sleep up to a second before setting
 /// the RTC device to align on the second.
 const RTC_SET_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
@@ -322,27 +340,73 @@ fn new_clock() -> Arc<zx::Clock> {
     Arc::new(zx::Clock::create(zx::ClockOpts::empty(), Some(*BACKSTOP_TIME)).unwrap())
 }
 
-/// Poll `poll_fn` until it returns true. Panics if `timeout` is exceeded before `poll_fn` returns
-/// true.
-async fn wait_until<F: Fn() -> bool>(poll_fn: F, timeout: zx::Duration) {
+/// Retry an async `poll_fn` until it returns Some. Returns the contents of the `Some` value
+/// produced by `poll_fn`, or panics if `timeout` is exceeded before `poll_fn` returns a value.
+async fn poll_until<T, F, Fut>(poll_fn: F, timeout: zx::Duration) -> T
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Option<T>>,
+{
     const RETRY_WAIT_DURATION: zx::Duration = zx::Duration::from_millis(10);
 
     let poll_fut = async {
         loop {
-            match poll_fn() {
-                true => return,
-                false => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
+            match poll_fn().await {
+                Some(value) => return value,
+                None => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
             }
         }
     };
 
-    poll_fut.on_timeout(fasync::Time::after(timeout), || panic!("Poll produced no value")).await;
+    poll_fut.on_timeout(fasync::Time::after(timeout), || panic!("Poll produced no value")).await
+}
+
+/// Poll `poll_fn` until it returns true. Panics if `timeout` is exceeded before `poll_fn` returns
+/// true.
+async fn wait_until<F: Fn() -> bool>(poll_fn: F, timeout: zx::Duration) {
+    poll_until(
+        || async {
+            match poll_fn() {
+                false => None,
+                true => Some(()),
+            }
+        },
+        timeout,
+    )
+    .await;
+}
+
+/// Create a stream of CobaltEvents from a proxy.
+fn create_cobalt_event_stream(
+    proxy: Arc<LoggerQuerierProxy>,
+    log_method: LogMethod,
+) -> std::pin::Pin<Box<dyn Stream<Item = CobaltEvent>>> {
+    // mock_cobalt contains a race condition where it returns an error if timekeeper hasn't
+    // connected yet (fxbug.dev/45615). Therefore, we retry the first watch.
+    let proxy_clone = Arc::clone(&proxy);
+    let first_poll_stream = poll_until(
+        move || {
+            let clone = Arc::clone(&proxy_clone);
+            clone
+                .watch_logs(PROJECT_ID, log_method)
+                .map(|res| res.unwrap().ok().map(|(events, _)| events))
+        },
+        COBALT_TIMEOUT,
+    )
+    .into_stream();
+
+    let subsequent_polls_stream =
+        async_utils::hanging_get::client::GeneratedFutureStream::new(Box::new(move || {
+            Some(proxy.watch_logs(PROJECT_ID, log_method).map(|res| res.unwrap().unwrap().0))
+        }));
+
+    first_poll_stream.chain(subsequent_polls_stream).map(futures::stream::iter).flatten().boxed()
 }
 
 #[test]
 fn test_no_rtc_start_clock_from_time_source() {
     let clock = new_clock();
-    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _| async move {
+    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, cobalt| async move {
         let before_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
         let sample_monotonic = zx::Time::get_monotonic();
@@ -364,6 +428,23 @@ fn test_no_rtc_start_clock_from_time_source() {
         let monotonic_after_update = zx::Time::get_monotonic();
         assert_geq!(reported_utc, *VALID_TIME);
         assert_leq!(reported_utc, *VALID_TIME + (monotonic_after_update - sample_monotonic));
+
+        let cobalt_event_stream =
+            create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
+        assert_eq!(
+            cobalt_event_stream.take(3).collect::<Vec<_>>().await,
+            vec![
+                CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                    .with_event_codes(vec![RtcEventType::NoDevices])
+                    .as_event(),
+                CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
+                    .with_event_codes(vec![LifecycleEventType::InitializedBeforeUtcStart])
+                    .as_event(),
+                CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
+                    .with_event_codes(vec![LifecycleEventType::StartedUtcFromTimeSource])
+                    .as_event(),
+            ]
+        );
     });
 }
 
@@ -373,8 +454,21 @@ fn test_invalid_rtc_start_clock_from_time_source() {
     timekeeper_test(
         Arc::clone(&clock),
         Some(*BEFORE_BACKSTOP_TIME),
-        |mut push_source_controller, rtc_updates| async move {
+        |mut push_source_controller, rtc_updates, cobalt| async move {
+            let mut cobalt_event_stream =
+                create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
             // Timekeeper should reject the RTC time.
+            assert_eq!(
+                cobalt_event_stream.by_ref().take(2).collect::<Vec<CobaltEvent>>().await,
+                vec![
+                    CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![LifecycleEventType::InitializedBeforeUtcStart])
+                        .as_event(),
+                    CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![RtcEventType::ReadInvalidBeforeBackstop])
+                        .as_event()
+                ]
+            );
 
             let sample_monotonic = zx::Time::get_monotonic();
             push_source_controller
@@ -395,13 +489,25 @@ fn test_invalid_rtc_start_clock_from_time_source() {
             assert_geq!(reported_utc, *VALID_TIME);
             assert_leq!(reported_utc, *VALID_TIME + (monotonic_after - sample_monotonic));
             // RTC should also be set.
-            wait_until(|| rtc_updates.to_vec().len() == 1, RTC_SET_TIMEOUT).await;
-            let monotonic_after_rtc_set = zx::Time::get_monotonic();
-            let rtc_reported_utc = rtc_time_to_zx_time(rtc_updates.to_vec().pop().unwrap());
+            let rtc_update =
+                poll_until(|| async { rtc_updates.to_vec().pop() }, RTC_SET_TIMEOUT).await;
+            let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
+            let rtc_reported_utc = rtc_time_to_zx_time(rtc_update);
             assert_geq!(rtc_reported_utc, *VALID_TIME);
             assert_leq!(
                 rtc_reported_utc,
                 *VALID_TIME + (monotonic_after_rtc_set - sample_monotonic)
+            );
+            assert_eq!(
+                cobalt_event_stream.take(2).collect::<Vec<_>>().await,
+                vec![
+                    CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![LifecycleEventType::StartedUtcFromTimeSource])
+                        .as_event(),
+                    CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![RtcEventType::WriteSucceeded])
+                        .as_event()
+                ]
             );
         },
     );
@@ -414,7 +520,10 @@ fn test_start_clock_from_rtc() {
     timekeeper_test(
         Arc::clone(&clock),
         Some(*VALID_RTC_TIME),
-        |mut push_source_controller, rtc_updates| async move {
+        |mut push_source_controller, rtc_updates, cobalt| async move {
+            let mut cobalt_event_stream =
+                create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
+
             // Clock should start from the time read off the RTC.
             fasync::OnSignals::new(&*clock, zx::Signals::CLOCK_STARTED).await.unwrap();
 
@@ -424,6 +533,21 @@ fn test_start_clock_from_rtc() {
             let monotonic_after = zx::Time::get_monotonic();
             assert_geq!(reported_utc, *VALID_RTC_TIME);
             assert_leq!(reported_utc, *VALID_RTC_TIME + (monotonic_after - monotonic_before));
+
+            assert_eq!(
+                cobalt_event_stream.by_ref().take(3).collect::<Vec<CobaltEvent>>().await,
+                vec![
+                    CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![LifecycleEventType::InitializedBeforeUtcStart])
+                        .as_event(),
+                    CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![RtcEventType::ReadSucceeded])
+                        .as_event(),
+                    CobaltEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID)
+                        .with_event_codes(vec![LifecycleEventType::StartedUtcFromRtc])
+                        .as_event(),
+                ]
+            );
 
             // Clock should be updated again when the push source reports another time.
             let clock_last_set_ticks = clock.get_details().unwrap().last_value_update_ticks;
@@ -445,14 +569,28 @@ fn test_start_clock_from_rtc() {
             assert_geq!(clock_utc, *VALID_TIME);
             assert_leq!(clock_utc, *VALID_TIME + (monotonic_after_read - sample_monotonic));
             // RTC should be set too.
-            wait_until(|| rtc_updates.to_vec().len() == 1, RTC_SET_TIMEOUT).await;
-            let monotonic_after_rtc_set = zx::Time::get_monotonic();
-            let rtc_reported_utc = rtc_time_to_zx_time(rtc_updates.to_vec().pop().unwrap());
+            let rtc_update =
+                poll_until(|| async { rtc_updates.to_vec().pop() }, RTC_SET_TIMEOUT).await;
+            let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
+            let rtc_reported_utc = rtc_time_to_zx_time(rtc_update);
             assert_geq!(rtc_reported_utc, *VALID_TIME);
             assert_leq!(
                 rtc_reported_utc,
                 *VALID_TIME + (monotonic_after_rtc_set - sample_monotonic)
             );
+
+            assert_eq!(
+                cobalt_event_stream.by_ref().take(1).collect::<Vec<CobaltEvent>>().await,
+                vec![CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                    .with_event_codes(vec![RtcEventType::WriteSucceeded])
+                    .as_event(),]
+            );
         },
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+#[should_panic(expected = "Poll produced no value")]
+async fn test_poll_until_panics_on_timeout() {
+    poll_until(|| futures::future::pending::<Option<()>>(), CLOCK_SET_TIMEOUT).await
 }
