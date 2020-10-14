@@ -46,21 +46,6 @@ group("core") {
   ]
 }
 
-# Only use a subset of //src/connectivity:tests here, because we do not include
-# some of the other connectivity stacks in the router build, for example
-# bluetooth and LoWPAN.
-group("router") {
-  testonly = true
-  public_deps = [
-    "//bundles:infratools",
-    "//src/connectivity/ethernet:tests",
-    "//src/connectivity/lib:tests",
-    "//src/connectivity/management:tests",
-    "//src/connectivity/network:tests",
-    "//src/connectivity/wlan:tests",
-  ]
-}
-
 group("terminal") {
   testonly = true
   public_deps = [
