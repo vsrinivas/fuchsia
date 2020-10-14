@@ -121,25 +121,29 @@ pub mod tests {
             })
             .expect("send running event ok");
 
-        // Send a `CapabilityReady` event for diagnostics.
-        let (node, _) = fidl::endpoints::create_request_stream::<NodeMarker>().unwrap();
-        stream_server
-            .on_event(fsys::Event {
-                event_type: Some(fsys::EventType::CapabilityReady),
-                descriptor: Some(fsys::ComponentDescriptor {
-                    moniker: Some("./foo:0/bar:0".to_string()),
-                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
-                }),
-                event_result: Some(fsys::EventResult::Payload(
-                    fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
-                        path: Some("/diagnostics".to_string()),
-                        node: Some(node),
+        // Send a `CapabilityReady` event for diagnostics (name and path based).
+        for path in &["diagnostics", "/diagnostics"] {
+            let (node, _) = fidl::endpoints::create_request_stream::<NodeMarker>().unwrap();
+            stream_server
+                .on_event(fsys::Event {
+                    event_type: Some(fsys::EventType::CapabilityReady),
+                    descriptor: Some(fsys::ComponentDescriptor {
+                        moniker: Some("./foo:0/bar:0".to_string()),
+                        component_url: Some(
+                            "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string(),
+                        ),
                     }),
-                )),
-                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
-                ..fsys::Event::empty()
-            })
-            .expect("send diagnostics ready event ok");
+                    event_result: Some(fsys::EventResult::Payload(
+                        fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
+                            path: Some(path.to_string()),
+                            node: Some(node),
+                        }),
+                    )),
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::Event::empty()
+                })
+                .expect("send diagnostics ready event ok");
+        }
 
         // Send a Stopped event.
         stream_server
@@ -178,7 +182,15 @@ pub mod tests {
             }),
         );
 
-        // Assert the third received event was a CapabilityReady event for diagnostics.
+        // Assert the third and fourth received event was a CapabilityReady event for diagnostics.
+        let event = event_stream.next().await.unwrap();
+        match event {
+            ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
+                metadata,
+                directory: Some(_),
+            }) => assert_eq!(metadata.component_id, expected_component_id),
+            _ => assert!(false),
+        }
         let event = event_stream.next().await.unwrap();
         match event {
             ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
@@ -188,7 +200,7 @@ pub mod tests {
             _ => assert!(false),
         }
 
-        // Assert the fourth received event was a Stop event.
+        // Assert the last received event was a Stop event.
         let event = event_stream.next().await.unwrap();
         compare_events_ignore_timestamp_and_payload(
             &event,

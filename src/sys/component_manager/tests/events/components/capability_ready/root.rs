@@ -48,6 +48,8 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
 /// It sends "Saw: /path/to/dir on /some_moniker:0" for each successful read.
 #[fasync::run_singlethreaded]
 async fn main() {
+    const NUM_CAPABILITIES: usize = 4;
+
     let fs = ServiceFs::new_local();
     let event_source = EventSource::new_sync().unwrap();
     let mut event_stream = event_source.subscribe(vec![CapabilityReady::NAME]).await.unwrap();
@@ -55,15 +57,14 @@ async fn main() {
     event_source.start_component_tree().await;
 
     let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
-
     let expected_entries = hashmap! {
-        "foo".to_string() => vec![ftest::TriggerMarker::SERVICE_NAME.to_string()],
-        "bar".to_string() => vec![format!("baz/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
+        "normal".to_string() => vec![ftest::TriggerMarker::SERVICE_NAME.to_string()],
+        "nested".to_string() => vec![format!("inner/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
     };
 
     let mut seen = HashSet::new();
 
-    while seen.len() != 3 {
+    while seen.len() < NUM_CAPABILITIES {
         let event =
             EventMatcher::default().expect_match::<CapabilityReady>(&mut event_stream).await;
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");

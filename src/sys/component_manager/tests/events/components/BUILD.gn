@@ -282,6 +282,7 @@ rustc_binary("capability_ready_root_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
   ]
 
   sources = [ "capability_ready/root.rs" ]
@@ -313,9 +314,11 @@ rustc_binary("synthesis_reporter_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
   ]
 

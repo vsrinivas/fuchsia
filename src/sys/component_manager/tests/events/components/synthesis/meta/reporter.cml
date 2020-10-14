@@ -10,7 +10,12 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+        },
         {
             protocol: [
                 "fidl.examples.routing.echo.Echo",
@@ -29,7 +34,7 @@
         {
             event: "capability_ready",
             from: "framework",
-            filter: { path: "foo" },
+            filter: { path: "normal" },
         },
     ],
 }

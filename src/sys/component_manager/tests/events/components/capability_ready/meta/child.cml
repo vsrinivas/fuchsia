@@ -4,24 +4,33 @@
     },
     capabilities: [
         {
-            directory: "foo",
+            directory: "normal",
             rights: [ "r*" ],
-            path: "/foo",
+            path: "/normal",
         },
         {
-            directory: "mar",
+            directory: "aliased",
             rights: [ "r*" ],
-            path: "/mar",
+            path: "/aliased",
         },
         {
-            directory: "qux",
+            directory: "not_filtered",
             rights: [ "r*" ],
-            path: "/qux",
+            path: "/not_filtered",
         },
+
+        // Insufficient rights (connection should fail)
         {
-            directory: "bleep",
+            directory: "insufficient_rights",
+            rights: [ "x*" ],
+            path: "/insufficient_rights",
+        },
+
+        // Never published
+        {
+            directory: "not_published",
             rights: [ "r*" ],
-            path: "/bleep",
+            path: "/not_published",
         },
     ],
     use: [
@@ -29,23 +38,28 @@
     ],
     expose: [
         {
-            directory: "foo",
+            directory: "normal",
             from: "self",
             to: "framework",
         },
         {
-            directory: "mar",
+            directory: "aliased",
             from: "self",
-            as: "bar",
+            as: "nested",
             to: "framework",
         },
         {
-            directory: "qux",
+            directory: "not_filtered",
             from: "self",
             to: "framework",
         },
         {
-            directory: "bleep",
+            directory: "insufficient_rights",
+            from: "self",
+            to: "framework",
+        },
+        {
+            directory: "not_published",
             from: "self",
             to: "framework",
         },

@@ -6,6 +6,8 @@ use {
     anyhow::Error,
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{self as component, ScopedInstance},
+    fuchsia_syslog as syslog,
+    log::*,
     regex::Regex,
     std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
     test_utils_lib::events::{
@@ -15,6 +17,7 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&[]).unwrap();
     let mut instances = vec![];
     let url =
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
@@ -52,15 +55,17 @@ async fn main() -> Result<(), Error> {
     let mut running = vec![];
     let mut capability_ready = BTreeSet::new();
 
-    while running.len() != 4 || capability_ready.len() != 1 {
+    while running.len() < 4 || capability_ready.len() < 1 {
         let event = event_stream.next().await?;
         match event.event_type {
             Some(Running::TYPE) => {
                 let event = Running::try_from(event).expect("convert to running");
+                info!("Got running event");
                 running.push(event.target_moniker().to_string());
             }
             Some(CapabilityReady::TYPE) => {
                 let event = CapabilityReady::try_from(event).expect("convert to capability ready");
+                info!("Got capability ready event");
                 capability_ready.insert(event.target_moniker().to_string());
             }
             other => panic!("unexpected event type: {:?}", other),

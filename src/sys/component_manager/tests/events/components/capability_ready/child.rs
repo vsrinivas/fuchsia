@@ -16,21 +16,23 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
     }
 }
 
-/// This component serves the `Trigger` service on three places: /foo, /bar/baz and /qux
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
 
-    fs.dir("foo").add_fidl_service(move |stream| {
+    fs.dir("normal").add_fidl_service(move |stream| {
         fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
-    fs.dir("qux").add_fidl_service(move |stream| {
+    fs.dir("aliased").dir("inner").add_fidl_service(move |stream| {
         fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
-    fs.dir("quux").add_fidl_service(move |stream| {
+    fs.dir("not_filtered").add_fidl_service(move |stream| {
         fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
-    fs.dir("mar").dir("baz").add_fidl_service(move |stream| {
+    fs.dir("insufficient_rights").add_fidl_service(move |stream| {
+        fasync::Task::spawn(run_trigger_service(stream)).detach();
+    });
+    fs.dir("not_exposed").add_fidl_service(move |stream| {
         fasync::Task::spawn(run_trigger_service(stream)).detach();
     });
 

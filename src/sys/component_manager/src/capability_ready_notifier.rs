@@ -150,11 +150,11 @@ impl CapabilityReadyNotifier {
                     rights,
                     ..
                 }) => {
-                    let source_path = match source_path {
-                        CapabilityNameOrPath::Path(source_path) => source_path,
+                    let (source_path, rights) = match source_path {
+                        CapabilityNameOrPath::Path(source_path) => (source_path, *rights),
                         CapabilityNameOrPath::Name(source_name) => {
                             if let Some(directory_decl) = decl.find_directory_source(source_name) {
-                                &directory_decl.source_path
+                                (&directory_decl.source_path, Some(directory_decl.rights))
                             } else {
                                 panic!("Missing directory declaration for expose: {:?}", decl);
                             }

@@ -231,6 +231,8 @@ async fn event_dispatch_order_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn event_capability_ready() {
+    const NUM_CAPABILITIES: usize = 4;
+
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_root.cm",
     )
@@ -245,7 +247,7 @@ async fn event_capability_ready() {
     event_source.start_component_tree().await;
 
     let mut messages = vec![];
-    for _ in 0..3 {
+    for _ in 0..NUM_CAPABILITIES {
         let event = echo_rx.next().await.unwrap();
         messages.push(event.message.clone());
         event.resume();
@@ -253,9 +255,10 @@ async fn event_capability_ready() {
     messages.sort_unstable();
     assert_eq!(
         vec![
-            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw bar on ./child:0",
-            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw foo on ./child:0",
-            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error bleep on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw nested on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] Saw normal on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error insufficient_rights on ./child:0",
+            "[fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm] error not_published on ./child:0",
         ],
         messages
     );

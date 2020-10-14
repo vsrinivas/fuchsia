@@ -339,7 +339,9 @@ fn construct_payload_holding_component_event(
                 fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
                     capability_ready,
                 )) => {
-                    if capability_ready.path == Some("/diagnostics".to_string()) {
+                    if capability_ready.path == Some("/diagnostics".to_string())
+                        || capability_ready.path == Some("diagnostics".to_string())
+                    {
                         match capability_ready.node {
                             Some(node) => {
                                 let diagnostics_ready_event = DiagnosticsReadyEvent {

@@ -21,9 +21,10 @@
             from: "framework",
             filter: {
                 path: [
-                    "bar",
-                    "bleep",
-                    "foo",
+                    "insufficient_rights",
+                    "nested",
+                    "normal",
+                    "not_published",
                 ],
             },
         },
