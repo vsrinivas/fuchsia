@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(is_fuchsia,
-       "flutter_dart_test_component is only available for Fuchsia targets")
-
 import("//build/dart/dart_component.gni")
 import("//build/dart/dart_library.gni")
 import("//build/flutter/internal/flutter_dart_component.gni")
@@ -30,10 +27,6 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     The list of test sources. These sources must be within the test/ directory.
 #     Type: List of paths
 #
-#   platform_name (required)
-#     One of flutter_runner or dart_runner
-#     Type: string
-#
 #   language_version (optional)
 #     Specify the Dart language version to use for this test.
 #     Defaults to "2.8".
@@ -43,6 +36,15 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     Type: String
 #     Default: target_name
 #
+#   build_cfg (required)
+#    A description of how to build this component. This object needs
+#    to contain the following variables:
+#      runtime_meta: a path to the partial cmx file containing the runner
+#      platform_name: either 'dart_runner' or 'flutter_runner'
+#      is_aot: a boolean indicating if this is an AOT build
+#      is_product: a boolean indicating if this is a product build
+#      enable_asserts: whether we should enable asserts when compiling
+#
 #  deps
 #  visibility
 template("flutter_dart_test_component") {
@@ -50,8 +52,11 @@ template("flutter_dart_test_component") {
          "flutter_dart_test_component() requires 'sources' be defined")
   assert(defined(invoker.manifest),
          "flutter_dart_test_component() requires 'manifest' be defined")
-  assert(defined(invoker.platform_name),
-         "flutter_dart_test_component() requires 'platform_name' be defined")
+  assert(defined(invoker.build_cfg),
+         "flutter_dart_test_component() requires 'build_cfg' be defined")
+  _build_cfg = invoker.build_cfg
+  assert(!_build_cfg.is_product,
+         "flutter_dart_test_component() requires a non-product build_cfg")
 
   _test_files = invoker.sources
 
@@ -141,37 +146,29 @@ template("flutter_dart_test_component") {
     non_dart_deps = [ ":$_generate_test_main_target_name($target_toolchain)" ]
   }
 
-  # TODO(fxbug.dev/57577) All tests are currently executing in the dart_component because
-  # the flutter runner is not able to run them. This is the legacy behavior so
-  # nothing has regressed but we should update this to switch based on the
-  # type of test we are running.
-  not_needed(invoker, [ "platform_name" ])
+  _component_deps = [
+    ":$_generated_package_target_name",
+    _build_cfg.runner_dep,
+  ]
+  if (defined(invoker.deps)) {
+    _component_deps += invoker.deps
+  }
 
   flutter_dart_component(target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "manifest",
                              "visibility",
                              "language_version",
                              "component_name",
+                             "build_cfg",
                            ])
 
     main_package = _generated_test_package
     main_dart = "main.dart"
 
-    platform_name = dart_platform_name
-    runtime_meta = "//build/dart/meta/jit_runtime"
-
     testonly = true
 
-    if (!defined(deps)) {
-      deps = []
-    }
-
-    deps += [
-      ":$_generated_package_target_name",
-      "//topaz/runtime/dart_runner:dart_jit_runner",
-    ]
+    deps = _component_deps
   }
 }
