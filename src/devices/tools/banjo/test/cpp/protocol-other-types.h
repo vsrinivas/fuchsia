@@ -13,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <ddktl/protocol/composite.h>
 
 #include "types-internal.h"
 
@@ -258,19 +257,6 @@ public:
         }
     }
 
-    OtherTypesProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        other_types_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a OtherTypesProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -284,20 +270,6 @@ public:
         }
         *result = OtherTypesProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a OtherTypesProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           OtherTypesProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(other_types_protocol_t* proto) const {
@@ -404,19 +376,6 @@ public:
         }
     }
 
-    OtherTypesAsyncProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        other_types_async_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_ASYNC, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a OtherTypesAsyncProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -430,20 +389,6 @@ public:
         }
         *result = OtherTypesAsyncProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a OtherTypesAsyncProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           OtherTypesAsyncProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(other_types_async_protocol_t* proto) const {
@@ -546,19 +491,6 @@ public:
         }
     }
 
-    OtherTypesReferenceProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        other_types_reference_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_REFERENCE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a OtherTypesReferenceProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -572,20 +504,6 @@ public:
         }
         *result = OtherTypesReferenceProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a OtherTypesReferenceProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           OtherTypesReferenceProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(other_types_reference_protocol_t* proto) const {
@@ -684,19 +602,6 @@ public:
         }
     }
 
-    OtherTypesAsyncReferenceProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        other_types_async_reference_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -710,20 +615,6 @@ public:
         }
         *result = OtherTypesAsyncReferenceProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a OtherTypesAsyncReferenceProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           OtherTypesAsyncReferenceProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(other_types_async_reference_protocol_t* proto) const {
@@ -818,19 +709,6 @@ public:
         }
     }
 
-    InterfaceProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        interface_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_INTERFACE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a InterfaceProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -844,20 +722,6 @@ public:
         }
         *result = InterfaceProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a InterfaceProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           InterfaceProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(interface_protocol_t* proto) const {

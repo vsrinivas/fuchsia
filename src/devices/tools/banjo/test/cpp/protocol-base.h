@@ -13,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <ddktl/protocol/composite.h>
 
 #include "base-internal.h"
 
@@ -190,19 +189,6 @@ public:
         }
     }
 
-    SynchronousBaseProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        synchronous_base_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_BASE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a SynchronousBaseProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -216,20 +202,6 @@ public:
         }
         *result = SynchronousBaseProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a SynchronousBaseProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           SynchronousBaseProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(synchronous_base_protocol_t* proto) const {
@@ -360,19 +332,6 @@ public:
         }
     }
 
-    AsyncBaseProtocolClient(CompositeProtocolClient& composite, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        async_base_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_ASYNC_BASE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
     // Create a AsyncBaseProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
@@ -386,20 +345,6 @@ public:
         }
         *result = AsyncBaseProtocolClient(&proto);
         return ZX_OK;
-    }
-
-    // Create a AsyncBaseProtocolClient from the given composite protocol.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromComposite(CompositeProtocolClient& composite,
-                                           const char* fragment_name,
-                                           AsyncBaseProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = composite.GetFragment(fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
     }
 
     void GetProto(async_base_protocol_t* proto) const {

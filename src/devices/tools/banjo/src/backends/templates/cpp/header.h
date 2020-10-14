@@ -8,7 +8,6 @@
 #pragma once
 
 {includes}
-#include <ddktl/protocol/composite.h>
 
 #include "{primary_namespace}-internal.h"
 
