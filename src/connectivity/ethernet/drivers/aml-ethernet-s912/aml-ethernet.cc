@@ -12,7 +12,6 @@
 
 #include <iterator>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
@@ -28,6 +27,7 @@
 #include <soc/aml-s912/s912-hw.h>
 
 #include "aml-regs.h"
+#include "src/connectivity/ethernet/drivers/aml-ethernet-s912/aml_eth-bind.h"
 
 namespace eth {
 
@@ -132,8 +132,7 @@ zx_status_t AmlEthernet::Bind() {
   zx_status_t status = pdev_.GetBoardInfo(&board);
 
   if (status == ZX_OK) {
-    is_vim3 = ((board.vid == PDEV_VID_KHADAS) &&
-               (board.pid == PDEV_PID_VIM3));
+    is_vim3 = ((board.vid == PDEV_VID_KHADAS) && (board.pid == PDEV_PID_VIM3));
   }
 
   if (!is_vim3) {
@@ -218,10 +217,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace eth
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_eth, eth::driver_ops, "aml-ethernet", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_ETH),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A311D),
-ZIRCON_DRIVER_END(aml_eth)
+ZIRCON_DRIVER(aml_eth, eth::driver_ops, "aml-ethernet", "0.1")

@@ -39,3 +39,12 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   FOCALTECH = 26,
   SENSIRION = 27,
 };
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  AMLOGIC_ETH = 9,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  AMLOGIC_S912 = 0x02,
+  AMLOGIC_A311D = 0x06,
+};
