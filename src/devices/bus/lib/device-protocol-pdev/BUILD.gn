@@ -9,6 +9,7 @@ zx_library("device-protocol-pdev") {
   sdk_headers = [ "lib/device-protocol/pdev.h" ]
   sources = [ "pdev.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "//sdk/banjo/ddk.protocol.platform.device",
 
