@@ -1,0 +1,18 @@
+{
+    program: {
+        binary: "bin/pkg_cache_bin_test",
+    },
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            directory: "/tmp",
+            rights: [ "rw*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
