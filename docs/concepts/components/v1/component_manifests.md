@@ -251,7 +251,9 @@ The set of currently known features are as follows:
   the device and places it at `/factory` in the component's namespace.
 
 - `durable-data`, which requests access to the read-write durable partition for
-  the device and places it at `/durable` in the component's namespace.
+  the device and places it at `/durable` in the component's namespace. This
+  partition is for storing persistent data that will survive a factory reset,
+  and is only to be used for specific, approved use cases.
 
 See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
 
