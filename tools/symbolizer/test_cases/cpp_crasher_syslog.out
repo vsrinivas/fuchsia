@@ -7,8 +7,8 @@
 [01040.461364][1][2][klog] INFO: [[[ELF module #0x4 "libunwind.so.1" BuildID=7b0d4cebd9c3618d 0x3d160f5e000]]]
 [01040.461404][1][2][klog] INFO: [[[ELF module #0x5 "libc.so" BuildID=8ce60b04bdfd0610 0x811986aae000]]]
 [01040.461437][1][2][klog] INFO: [[[ELF module #0x6 "libzircon.so" BuildID=b60aa30791277c5b 0x8303db976000]]]
-[01040.461602][1][2][klog] INFO:    #1    0x000000bb57d370b0 in blind_write ../../src/developer/forensics/crasher/cpp/crasher.c:23 <<VMO#49750=cpp_crasher.cmx>>+0x20b0 sp 0x3f540e65ef0
-[01040.461730][1][2][klog] INFO:    #2    0x000000bb57d37c68 in main ../../src/developer/forensics/crasher/cpp/crasher.c:282 <<VMO#49750=cpp_crasher.cmx>>+0x2c68 sp 0x3f540e65f10
-[01040.461819][1][2][klog] INFO:    #3    0x0000811986b0adfc in start_main ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:112 <libc.so>+0x5cdfc sp 0x3f540e65f40
-[01040.461978][1][2][klog] INFO:    #4    0x0000811986b0b00c in __libc_start_main ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:164 <libc.so>+0x5d00c sp 0x3f540e66000
-[01040.462097][1][2][klog] INFO:    #5    0x000000bb57d37014 in _start ../../zircon/system/ulib/c/Scrt1.cc:7 <<VMO#49750=cpp_crasher.cmx>>+0x2014 sp 0x83dc91e4dff0
+[01040.461602][1][2][klog] INFO:    #1    0x000000bb57d370b0 in blind_write(volatile unsigned int*) ../../src/developer/forensics/crasher/cpp/crasher.c:23 <<VMO#49750=cpp_crasher.cmx>>+0x20b0 sp 0x3f540e65ef0
+[01040.461730][1][2][klog] INFO:    #2    0x000000bb57d37c68 in main(int, char**) ../../src/developer/forensics/crasher/cpp/crasher.c:282 <<VMO#49750=cpp_crasher.cmx>>+0x2c68 sp 0x3f540e65f10
+[01040.461819][1][2][klog] INFO:    #3    0x0000811986b0adfc in start_main(const start_params*) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:112 <libc.so>+0x5cdfc sp 0x3f540e65f40
+[01040.461978][1][2][klog] INFO:    #4    0x0000811986b0b00c in __libc_start_main(zx_handle_t, int (*)(int, char**, char**)) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:164 <libc.so>+0x5d00c sp 0x3f540e66000
+[01040.462097][1][2][klog] INFO:    #5    0x000000bb57d37014 in _start(zx_handle_t) ../../zircon/system/ulib/c/Scrt1.cc:7 <<VMO#49750=cpp_crasher.cmx>>+0x2014 sp 0x83dc91e4dff0

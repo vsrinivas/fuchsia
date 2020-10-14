@@ -49,18 +49,18 @@ spsr:         0x80000345
  far:                0x1
 
 BACKTRACE (up to 16 calls)
-   #0    0xffffffff10044514 in crashlog_to_string ../../zircon/kernel/lib/crashlog/crashlog.cc:179 <kernel>+0xffffffff00044514
-   #1    0xffffffff10145514 in platform_halt ../../zircon/kernel/platform/power.cc:54 <kernel>+0xffffffff00145514
-   #2    0xffffffff100b9d38 in exception_die ../../zircon/kernel/arch/arm64/exceptions_c.cc:147 <kernel>+0xffffffff000b9d38
-   #3.1  0xffffffff100b9c60 in arm64_data_abort_handler ../../zircon/kernel/arch/arm64/exceptions_c.cc:363 <kernel>+0xffffffff000b9c60
-   #3    0xffffffff100b9c60 in arm64_sync_exception ../../zircon/kernel/arch/arm64/exceptions_c.cc:404 <kernel>+0xffffffff000b9c60
+   #0    0xffffffff10044514 in crashlog_to_string(char*, size_t const, zircon_crash_reason_t) ../../zircon/kernel/lib/crashlog/crashlog.cc:179 <kernel>+0xffffffff00044514
+   #1    0xffffffff10145514 in platform_halt(platform_halt_action, zircon_crash_reason_t) ../../zircon/kernel/platform/power.cc:54 <kernel>+0xffffffff00145514
+   #2    0xffffffff100b9d38 in exception_die(arm64_iframe_t*, uint32_t, uint64_t, const char*) ../../zircon/kernel/arch/arm64/exceptions_c.cc:147 <kernel>+0xffffffff000b9d38
+   #3.1  0xffffffff100b9c60 in arm64_data_abort_handler(arm64_iframe_t*, uint, uint32_t) ../../zircon/kernel/arch/arm64/exceptions_c.cc:363 <kernel>+0xffffffff000b9c60
+   #3    0xffffffff100b9c60 in arm64_sync_exception(arm64_iframe_t*, uint, uint32_t) ../../zircon/kernel/arch/arm64/exceptions_c.cc:404 <kernel>+0xffffffff000b9c60
    #4    0xffffffff100b8278 in ../../zircon/kernel/arch/arm64/exceptions.S:294 <kernel>+0xffffffff000b8278
-   #5    0xffffffff10005188 in command_loop ../../zircon/kernel/lib/console/console.cc:572 <kernel>+0xffffffff00005188
-   #6.1  0xffffffff100048dc in console_run_script_etc ../../zircon/kernel/lib/console/console.cc:665 <kernel>+0xffffffff000048dc
-   #6    0xffffffff100048dc in console_run_script ../../zircon/kernel/lib/console/console.cc:672 <kernel>+0xffffffff000048dc
-   #7    0xffffffff100f5abc in sys_debug_send_command ../../zircon/kernel/lib/syscalls/debug.cc:124 <kernel>+0xffffffff000f5abc
-   #8.2  0xffffffff10107c98 in operator() gen/vdso/include/lib/syscalls/kernel-wrappers.inc:164 <kernel>+0xffffffff00107c98
-   #8.1  0xffffffff10107c98 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163:97)> ../../zircon/kernel/lib/syscalls/syscalls.cc:103 <kernel>+0xffffffff00107c98
-   #8    0xffffffff10107c98 in wrapper_debug_send_command gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163 <kernel>+0xffffffff00107c98
+   #5    0xffffffff10005188 in command_loop(int (*)(const char**, void*), void*, bool, bool) ../../zircon/kernel/lib/console/console.cc:572 <kernel>+0xffffffff00005188
+   #6.1  0xffffffff100048dc in console_run_script_etc(const char*, bool) ../../zircon/kernel/lib/console/console.cc:665 <kernel>+0xffffffff000048dc
+   #6    0xffffffff100048dc in console_run_script(const char*) ../../zircon/kernel/lib/console/console.cc:672 <kernel>+0xffffffff000048dc
+   #7    0xffffffff100f5abc in sys_debug_send_command(zx_handle_t, user_in_ptr<const char>, size_t) ../../zircon/kernel/lib/syscalls/debug.cc:124 <kernel>+0xffffffff000f5abc
+   #8.2  0xffffffff10107c98 in λ(const (anon class)*, ProcessDispatcher*) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:164 <kernel>+0xffffffff00107c98
+   #8.1  0xffffffff10107c98 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163:97)>(uint64_t, uint64_t, (anon class)) ../../zircon/kernel/lib/syscalls/syscalls.cc:103 <kernel>+0xffffffff00107c98
+   #8    0xffffffff10107c98 in wrapper_debug_send_command(zx_handle_t, const char*, size_t, uint64_t) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:163 <kernel>+0xffffffff00107c98
    #9    0xffffffff100b8a28 in gen/vdso/include/lib/syscalls/kernel.inc:173 <kernel>+0xffffffff000b8a28
 

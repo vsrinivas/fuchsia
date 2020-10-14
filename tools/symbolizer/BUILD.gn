@@ -15,6 +15,7 @@ if (is_host) {
     ]
     public_deps = [
       "//src/developer/debug/zxdb/client",
+      "//src/developer/debug/zxdb/console",
       "//src/developer/debug/zxdb/symbols",
       "//src/lib/fxl",
       "//zircon/system/ulib/cmdline",

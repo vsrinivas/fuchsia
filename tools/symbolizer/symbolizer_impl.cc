@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -173,8 +174,13 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
     if (module) {
       // Function name.
       const zxdb::Location location = stack[i]->GetLocation();
-      if (location.symbol()) {
-        out += " " + location.symbol().Get()->GetFullName();
+      if (location.symbol().is_valid()) {
+        auto symbol = location.symbol().Get();
+        if (auto function = symbol->AsFunction()) {
+          out += " " + zxdb::FormatFunctionName(function, {}).AsString();
+        } else {
+          out += " " + symbol->GetFullName();
+        }
       }
 
       // FileLine info.
