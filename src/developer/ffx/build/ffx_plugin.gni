@@ -210,18 +210,15 @@ template("ffx_plugin") {
       file_source_root = invoker.source_root
     }
 
-    source_exists = exec_script("//src/developer/ffx/build/file_exists.py",
-                                [
-                                  "-file_name",
-                                  rebase_path(file_source_root),
-                                ],
-                                "list lines",
-                                [ "//src/developer/ffx/build/file_exists.py" ])
+    source_exists =
+        exec_script("//src/developer/ffx/build/file_exists.sh",
+                    [ rebase_path(file_source_root, root_build_dir) ],
+                    "value")
 
     plugins_name = output_name + "_plugins"
     execution_lib = output_name
     includes_execution = "false"
-    if (source_exists == [ "true" ]) {
+    if (source_exists) {
       includes_execution = "true"
     }
 
@@ -251,7 +248,7 @@ template("ffx_plugin") {
       suite_deps += [ ":" + sub_cmd ]
     }
 
-    if (source_exists == [ "true" ]) {
+    if (source_exists) {
       rustc_library(output_name) {
         deps = lib_deps
         non_rust_deps = [ "//third_party/boringssl" ]
