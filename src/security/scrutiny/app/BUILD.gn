@@ -43,7 +43,6 @@ if (!is_fuchsia) {
       "src/shell/builtin.rs",
       "src/shell/error.rs",
       "src/shell/mod.rs",
-      "src/shell/shell.rs",
     ]
   }
 }
