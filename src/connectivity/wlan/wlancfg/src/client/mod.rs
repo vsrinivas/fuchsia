@@ -96,8 +96,8 @@ pub(crate) async fn serve_provider_requests(
                     pending_scans.push(scan::perform_scan(
                         Arc::clone(&iface_manager),
                         Some(output_iterator),
-                        Arc::clone(&network_selector),
-                        Arc::new(scan::LocationSensorUpdater {}),
+                        network_selector.generate_scan_result_updater(),
+                        scan::LocationSensorUpdater {},
                         |_| None,
                     ));
                 }
@@ -474,8 +474,8 @@ pub(crate) async fn scan_for_network_selector(
     let scan_fut = scan::perform_scan(
         iface_manager,
         Some(server),
-        selector,
-        Arc::new(scan::LocationSensorUpdater {}),
+        selector.generate_scan_result_updater(),
+        scan::LocationSensorUpdater {},
         |_| None,
     );
 
@@ -2127,7 +2127,8 @@ mod tests {
             }],
             compatibility: types::Compatibility::Supported,
         }];
-        let mut update_fut = selector.update_scan_results(&scan_results);
+        let mut network_selector_updater = selector.generate_scan_result_updater();
+        let mut update_fut = network_selector_updater.update_scan_results(&scan_results);
         assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
         drop(update_fut);
 

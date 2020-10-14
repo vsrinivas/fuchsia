@@ -25,7 +25,7 @@ const OUTPUT_CHUNK_NETWORK_COUNT: usize = 5;
 /// Allows for consumption of updated scan results.
 #[async_trait]
 pub trait ScanResultUpdate: Sync + Send {
-    async fn update_scan_results(&self, scan_results: &Vec<types::ScanResult>);
+    async fn update_scan_results(&mut self, scan_results: &Vec<types::ScanResult>);
 }
 
 impl From<&fidl_sme::BssInfo> for types::Bss {
@@ -85,8 +85,8 @@ async fn sme_scan(
 pub(crate) async fn perform_scan<F>(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     mut output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
-    network_selector: Arc<impl ScanResultUpdate>,
-    location_sensor_updater: Arc<impl ScanResultUpdate>,
+    mut network_selector: impl ScanResultUpdate,
+    mut location_sensor_updater: impl ScanResultUpdate,
     active_scan_decider: F,
 ) where
     F: FnOnce(Vec<types::ScanResult>) -> Option<Vec<Vec<u8>>>,
@@ -156,7 +156,7 @@ pub(crate) async fn perform_scan<F>(
 pub struct LocationSensorUpdater {}
 #[async_trait]
 impl ScanResultUpdate for LocationSensorUpdater {
-    async fn update_scan_results(&self, scan_results: &Vec<types::ScanResult>) {
+    async fn update_scan_results(&mut self, scan_results: &Vec<types::ScanResult>) {
         async fn send_results(scan_results: &Vec<types::ScanResult>) -> Result<(), Error> {
             // Get an output iterator
             let (iter, server) =
@@ -388,16 +388,17 @@ mod tests {
     }
 
     struct MockScanResultConsumer {
-        scan_results: Mutex<Option<Vec<types::ScanResult>>>,
+        scan_results: Arc<Mutex<Option<Vec<types::ScanResult>>>>,
     }
     impl MockScanResultConsumer {
-        fn new() -> Self {
-            Self { scan_results: Mutex::new(None) }
+        fn new() -> (Self, Arc<Mutex<Option<Vec<types::ScanResult>>>>) {
+            let scan_results = Arc::new(Mutex::new(None));
+            (Self { scan_results: Arc::clone(&scan_results) }, scan_results)
         }
     }
     #[async_trait]
     impl ScanResultUpdate for MockScanResultConsumer {
-        async fn update_scan_results(&self, scan_results: &Vec<types::ScanResult>) {
+        async fn update_scan_results(&mut self, scan_results: &Vec<types::ScanResult>) {
             let mut guard = self.scan_results.lock().await;
             *guard = Some(scan_results.clone());
         }
@@ -844,19 +845,14 @@ mod tests {
     fn basic_scan() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
 
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(
-            client,
-            Some(iter_server),
-            network_selector.clone(),
-            location_sensor.clone(),
-            |_| None,
-        );
+        let scan_fut =
+            perform_scan(client, Some(iter_server), network_selector, location_sensor, |_| None);
         pin_mut!(scan_fut);
 
         // Request a chunk of scan results. Progress until waiting on response from server side of
@@ -909,11 +905,11 @@ mod tests {
 
         // Check both successful scan consumers got results
         assert_eq!(
-            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            *exec.run_singlethreaded(network_selector_results.lock()),
             Some(internal_aps.clone())
         );
         assert_eq!(
-            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(internal_aps.clone())
         );
     }
@@ -922,8 +918,8 @@ mod tests {
     fn scan_with_active_scan_decider() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
 
         // Create the passive and active scan info
         let MockScanData {
@@ -942,8 +938,8 @@ mod tests {
         let scan_fut = perform_scan(
             client,
             Some(iter_server),
-            network_selector.clone(),
-            location_sensor.clone(),
+            network_selector,
+            location_sensor,
             |passive_results| {
                 assert_eq!(passive_results, expected_passive_results);
                 Some(vec!["foo active ssid".as_bytes().to_vec()])
@@ -1008,11 +1004,11 @@ mod tests {
 
         // Check both successful scan consumers got results
         assert_eq!(
-            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            *exec.run_singlethreaded(network_selector_results.lock()),
             Some(combined_internal_aps.clone())
         );
         assert_eq!(
-            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(combined_internal_aps.clone())
         );
     }
@@ -1021,8 +1017,8 @@ mod tests {
     fn scan_with_active_scan_decider_and_active_scan_failure() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
 
         // Create the passive and active scan info
         let MockScanData {
@@ -1041,8 +1037,8 @@ mod tests {
         let scan_fut = perform_scan(
             client,
             Some(iter_server),
-            network_selector.clone(),
-            location_sensor.clone(),
+            network_selector,
+            location_sensor,
             |passive_results| {
                 assert_eq!(passive_results, expected_passive_results);
                 Some(vec!["foo active ssid".as_bytes().to_vec()])
@@ -1104,11 +1100,11 @@ mod tests {
 
         // Check both scan consumers got just the passive scan results, since the active scan failed
         assert_eq!(
-            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            *exec.run_singlethreaded(network_selector_results.lock()),
             Some(passive_internal_aps.clone())
         );
         assert_eq!(
-            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(passive_internal_aps.clone())
         );
     }
@@ -1117,8 +1113,10 @@ mod tests {
     fn scan_iterator_never_polled() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector1, network_selector_results1) = MockScanResultConsumer::new();
+        let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
+        let (network_selector2, network_selector_results2) = MockScanResultConsumer::new();
+        let (location_sensor2, location_sensor_results2) = MockScanResultConsumer::new();
 
         // Issue request to scan.
         let (_iter, iter_server) =
@@ -1126,8 +1124,8 @@ mod tests {
         let scan_fut = perform_scan(
             client.clone(),
             Some(iter_server),
-            network_selector.clone(),
-            location_sensor.clone(),
+            network_selector1,
+            location_sensor1,
             |_| None,
         );
         pin_mut!(scan_fut);
@@ -1159,13 +1157,8 @@ mod tests {
         // moving along even though the first scan result iterator was never progressed.
         let (iter2, iter_server2) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut2 = perform_scan(
-            client,
-            Some(iter_server2),
-            network_selector.clone(),
-            location_sensor.clone(),
-            |_| None,
-        );
+        let scan_fut2 =
+            perform_scan(client, Some(iter_server2), network_selector2, location_sensor2, |_| None);
         pin_mut!(scan_fut2);
 
         // Progress scan side forward
@@ -1192,13 +1185,21 @@ mod tests {
             assert_eq!(results, fidl_aps);
         });
 
-        // Check both successful scan consumers got results
+        // Check all successful scan consumers got results
         assert_eq!(
-            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            *exec.run_singlethreaded(network_selector_results1.lock()),
             Some(internal_aps.clone())
         );
         assert_eq!(
-            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            *exec.run_singlethreaded(location_sensor_results1.lock()),
+            Some(internal_aps.clone())
+        );
+        assert_eq!(
+            *exec.run_singlethreaded(network_selector_results2.lock()),
+            Some(internal_aps.clone())
+        );
+        assert_eq!(
+            *exec.run_singlethreaded(location_sensor_results2.lock()),
             Some(internal_aps.clone())
         );
     }
@@ -1207,19 +1208,14 @@ mod tests {
     fn scan_iterator_shut_down() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
 
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(
-            client,
-            Some(iter_server),
-            network_selector.clone(),
-            location_sensor.clone(),
-            |_| None,
-        );
+        let scan_fut =
+            perform_scan(client, Some(iter_server), network_selector, location_sensor, |_| None);
         pin_mut!(scan_fut);
 
         // Progress scan handler forward so that it will respond to the iterator get next request.
@@ -1251,11 +1247,11 @@ mod tests {
 
         // Check both successful scan consumers got results
         assert_eq!(
-            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            *exec.run_singlethreaded(network_selector_results.lock()),
             Some(internal_aps.clone())
         );
         assert_eq!(
-            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(internal_aps.clone())
         );
     }
@@ -1264,19 +1260,14 @@ mod tests {
     fn scan_error() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
 
         // Issue request to scan.
         let (iter, iter_server) =
             fidl::endpoints::create_proxy().expect("failed to create iterator");
-        let scan_fut = perform_scan(
-            client,
-            Some(iter_server),
-            network_selector.clone(),
-            location_sensor.clone(),
-            |_| None,
-        );
+        let scan_fut =
+            perform_scan(client, Some(iter_server), network_selector, location_sensor, |_| None);
         pin_mut!(scan_fut);
 
         // Request a chunk of scan results. Progress until waiting on response from server side of
@@ -1314,22 +1305,25 @@ mod tests {
         });
 
         // Check both successful scan consumers have no results
-        assert_eq!(*exec.run_singlethreaded(network_selector.scan_results.lock()), None);
-        assert_eq!(*exec.run_singlethreaded(location_sensor.scan_results.lock()), None);
+        assert_eq!(*exec.run_singlethreaded(network_selector_results.lock()), None);
+        assert_eq!(*exec.run_singlethreaded(location_sensor_results.lock()), None);
     }
 
     #[test]
     fn overlapping_scans() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
-        let network_selector = Arc::new(MockScanResultConsumer::new());
-        let location_sensor = Arc::new(MockScanResultConsumer::new());
+        let (network_selector1, network_selector_results1) = MockScanResultConsumer::new();
+        let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
+        let (network_selector2, network_selector_results2) = MockScanResultConsumer::new();
+        let (location_sensor2, location_sensor_results2) = MockScanResultConsumer::new();
+
         let MockScanData {
             passive_input_aps,
             passive_internal_aps,
             passive_fidl_aps,
             active_input_aps,
-            combined_internal_aps: _,
+            combined_internal_aps,
             combined_fidl_aps,
         } = create_scan_ap_data();
 
@@ -1343,16 +1337,16 @@ mod tests {
         let scan_fut0 = perform_scan(
             client.clone(),
             Some(iter_server0),
-            network_selector.clone(),
-            location_sensor.clone(),
+            network_selector1,
+            location_sensor1,
             |_| None,
         );
         pin_mut!(scan_fut0);
         let scan_fut1 = perform_scan(
             client.clone(),
             Some(iter_server1),
-            network_selector.clone(),
-            location_sensor.clone(),
+            network_selector2,
+            location_sensor2,
             |passive_results| {
                 assert_eq!(passive_results, passive_internal_aps);
                 Some(vec!["foo active ssid".as_bytes().to_vec()])
@@ -1433,12 +1427,20 @@ mod tests {
 
         // Check both successful scan consumers got results
         assert_eq!(
-            *exec.run_singlethreaded(network_selector.scan_results.lock()),
+            *exec.run_singlethreaded(network_selector_results1.lock()),
             Some(passive_internal_aps.clone())
         );
         assert_eq!(
-            *exec.run_singlethreaded(location_sensor.scan_results.lock()),
+            *exec.run_singlethreaded(location_sensor_results1.lock()),
             Some(passive_internal_aps.clone())
+        );
+        assert_eq!(
+            *exec.run_singlethreaded(network_selector_results2.lock()),
+            Some(combined_internal_aps.clone())
+        );
+        assert_eq!(
+            *exec.run_singlethreaded(location_sensor_results2.lock()),
+            Some(combined_internal_aps.clone())
         );
     }
 
@@ -1521,7 +1523,7 @@ mod tests {
     fn scan_observer_sends_to_location_sensor() {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let location_sensor_updater = LocationSensorUpdater {};
+        let mut location_sensor_updater = LocationSensorUpdater {};
         let MockScanData {
             passive_input_aps: _,
             passive_internal_aps: internal_aps,

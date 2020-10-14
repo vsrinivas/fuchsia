@@ -29,8 +29,13 @@ const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minute
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
-    latest_scan_results: Mutex<Vec<types::ScanResult>>,
-    cobalt_api: Mutex<CobaltSender>,
+    scan_result_cache: Arc<Mutex<ScanResultCache>>,
+    cobalt_api: Arc<Mutex<CobaltSender>>,
+}
+
+struct ScanResultCache {
+    updated_at: SystemTime,
+    results: Vec<types::ScanResult>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -46,61 +51,20 @@ impl NetworkSelector {
     pub fn new(saved_network_manager: Arc<SavedNetworksManager>, cobalt_api: CobaltSender) -> Self {
         Self {
             saved_network_manager,
-            latest_scan_results: Mutex::new(Vec::new()),
-            cobalt_api: Mutex::new(cobalt_api),
+            scan_result_cache: Arc::new(Mutex::new(ScanResultCache {
+                updated_at: SystemTime::UNIX_EPOCH,
+                results: Vec::new(),
+            })),
+            cobalt_api: Arc::new(Mutex::new(cobalt_api)),
         }
     }
 
-    /// Insert all saved networks into a hashmap with this module's internal data representation
-    async fn load_saved_networks(&self) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
-        let mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData> = HashMap::new();
-        for saved_network in self.saved_network_manager.get_networks().await.into_iter() {
-            let recent_failure_count = saved_network
-                .perf_stats
-                .failure_list
-                .get_recent(SystemTime::now() - RECENT_FAILURE_WINDOW)
-                .len()
-                .try_into()
-                .unwrap_or_else(|e| {
-                    error!("Failed to convert failure count: {:?}", e);
-                    u8::MAX
-                });
-
-            trace!(
-                "Adding saved network to hashmap{}",
-                if recent_failure_count > 0 { " with some failures" } else { "" }
-            );
-            // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
-            if let Some(security_type) = upgrade_security(&saved_network.security_type) {
-                networks.insert(
-                    types::NetworkIdentifier {
-                        ssid: saved_network.ssid.clone(),
-                        type_: security_type,
-                    },
-                    InternalNetworkData {
-                        credential: saved_network.credential.clone(),
-                        has_ever_connected: saved_network.has_ever_connected,
-                        recent_failure_count: recent_failure_count,
-                        rssi: None,
-                        compatible: false,
-                    },
-                );
-            };
-            networks.insert(
-                types::NetworkIdentifier {
-                    ssid: saved_network.ssid,
-                    type_: saved_network.security_type.into(),
-                },
-                InternalNetworkData {
-                    credential: saved_network.credential,
-                    has_ever_connected: saved_network.has_ever_connected,
-                    recent_failure_count: recent_failure_count,
-                    rssi: None,
-                    compatible: false,
-                },
-            );
+    pub fn generate_scan_result_updater(&self) -> NetworkSelectorScanUpdater {
+        NetworkSelectorScanUpdater {
+            scan_result_cache: Arc::clone(&self.scan_result_cache),
+            saved_network_manager: Arc::clone(&self.saved_network_manager),
+            cobalt_api: Arc::clone(&self.cobalt_api),
         }
-        networks
     }
 
     /// Augment the networks hash map with data from scan results
@@ -108,8 +72,8 @@ impl NetworkSelector {
         &self,
         mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData>,
     ) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
-        let scan_result_guard = self.latest_scan_results.lock().await;
-        for scan_result in &*scan_result_guard {
+        let scan_result_guard = self.scan_result_cache.lock().await;
+        for scan_result in &*scan_result_guard.results {
             if let Some(hashmap_entry) = networks.get_mut(&scan_result.id) {
                 // Extract the max RSSI from all the BSS in scan_result.entries
                 if let Some(max_rssi) =
@@ -139,9 +103,61 @@ impl NetworkSelector {
         &self,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<(types::NetworkIdentifier, Credential)> {
-        let networks = self.augment_networks_with_scan_data(self.load_saved_networks().await).await;
+        let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
+        let networks = self.augment_networks_with_scan_data(saved_networks).await;
         find_best_network(&networks, ignore_list)
     }
+}
+
+/// Insert all saved networks into a hashmap with this module's internal data representation
+async fn load_saved_networks(
+    saved_network_manager: Arc<SavedNetworksManager>,
+) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
+    let mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData> = HashMap::new();
+    for saved_network in saved_network_manager.get_networks().await.into_iter() {
+        let recent_failure_count = saved_network
+            .perf_stats
+            .failure_list
+            .get_recent(SystemTime::now() - RECENT_FAILURE_WINDOW)
+            .len()
+            .try_into()
+            .unwrap_or_else(|e| {
+                error!("Failed to convert failure count: {:?}", e);
+                u8::MAX
+            });
+
+        trace!(
+            "Adding saved network to hashmap{}",
+            if recent_failure_count > 0 { " with some failures" } else { "" }
+        );
+        // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
+        if let Some(security_type) = upgrade_security(&saved_network.security_type) {
+            networks.insert(
+                types::NetworkIdentifier { ssid: saved_network.ssid.clone(), type_: security_type },
+                InternalNetworkData {
+                    credential: saved_network.credential.clone(),
+                    has_ever_connected: saved_network.has_ever_connected,
+                    recent_failure_count: recent_failure_count,
+                    rssi: None,
+                    compatible: false,
+                },
+            );
+        };
+        networks.insert(
+            types::NetworkIdentifier {
+                ssid: saved_network.ssid,
+                type_: saved_network.security_type.into(),
+            },
+            InternalNetworkData {
+                credential: saved_network.credential,
+                has_ever_connected: saved_network.has_ever_connected,
+                recent_failure_count: recent_failure_count,
+                rssi: None,
+                compatible: false,
+            },
+        );
+    }
+    networks
 }
 
 fn upgrade_security(security: &config_management::SecurityType) -> Option<types::SecurityType> {
@@ -152,17 +168,23 @@ fn upgrade_security(security: &config_management::SecurityType) -> Option<types:
     }
 }
 
+pub struct NetworkSelectorScanUpdater {
+    scan_result_cache: Arc<Mutex<ScanResultCache>>,
+    saved_network_manager: Arc<SavedNetworksManager>,
+    cobalt_api: Arc<Mutex<CobaltSender>>,
+}
 #[async_trait]
-impl ScanResultUpdate for NetworkSelector {
-    async fn update_scan_results(&self, scan_results: &Vec<types::ScanResult>) {
+impl ScanResultUpdate for NetworkSelectorScanUpdater {
+    async fn update_scan_results(&mut self, scan_results: &Vec<types::ScanResult>) {
         // Update internal scan result cache
         let scan_results_clone = scan_results.clone();
-        let mut scan_result_guard = self.latest_scan_results.lock().await;
-        *scan_result_guard = scan_results_clone;
+        let mut scan_result_guard = self.scan_result_cache.lock().await;
+        scan_result_guard.results = scan_results_clone;
+        scan_result_guard.updated_at = SystemTime::now();
         drop(scan_result_guard);
 
         // Record metrics for this scan
-        let saved_networks = self.load_saved_networks().await;
+        let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
         let mut cobalt_api_guard = self.cobalt_api.lock().await;
         let cobalt_api = &mut *cobalt_api_guard;
         record_metrics_on_scan(scan_results, saved_networks, cobalt_api);
@@ -287,10 +309,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn saved_networks_are_loaded() {
         let test_values = test_setup().await;
-        let network_selector = test_values.network_selector;
 
         // check there are 0 saved networks to start with
-        let networks = network_selector.load_saved_networks().await;
+        let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
         assert_eq!(networks.len(), 0);
 
         // create some identifiers
@@ -372,7 +393,7 @@ mod tests {
                 recent_failure_count: 1,
             },
         );
-        let networks = network_selector.load_saved_networks().await;
+        let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
         assert_eq!(networks, expected_hashmap);
     }
 
@@ -382,8 +403,8 @@ mod tests {
         let network_selector = test_values.network_selector;
 
         // check there are 0 scan results to start with
-        let guard = network_selector.latest_scan_results.lock().await;
-        assert_eq!(guard.len(), 0);
+        let guard = network_selector.scan_result_cache.lock().await;
+        assert_eq!(guard.results.len(), 0);
         drop(guard);
 
         // create some identifiers
@@ -433,11 +454,12 @@ mod tests {
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
         ];
-        network_selector.update_scan_results(&mock_scan_results).await;
+        let mut updater = network_selector.generate_scan_result_updater();
+        updater.update_scan_results(&mock_scan_results).await;
 
         // check that the scan results are stored
-        let guard = network_selector.latest_scan_results.lock().await;
-        assert_eq!(*guard, mock_scan_results);
+        let guard = network_selector.scan_result_cache.lock().await;
+        assert_eq!(guard.results, mock_scan_results);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -517,7 +539,8 @@ mod tests {
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
         ];
-        network_selector.update_scan_results(&mock_scan_results).await;
+        let mut updater = network_selector.generate_scan_result_updater();
+        updater.update_scan_results(&mock_scan_results).await;
 
         // build our expected result
         let mut expected_result = HashMap::new();
@@ -938,7 +961,8 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
         ];
-        network_selector.update_scan_results(&mock_scan_results).await;
+        let mut updater = network_selector.generate_scan_result_updater();
+        updater.update_scan_results(&mock_scan_results).await;
 
         // Check that we pick a network
         assert_eq!(
@@ -993,7 +1017,8 @@ mod tests {
             }],
             compatibility: types::Compatibility::Supported,
         }];
-        network_selector.update_scan_results(&mixed_scan_results).await;
+        let mut updater = network_selector.generate_scan_result_updater();
+        updater.update_scan_results(&mixed_scan_results).await;
 
         // Check that we choose the config saved as WPA2
         assert_eq!(

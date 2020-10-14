@@ -3746,7 +3746,8 @@ mod tests {
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
-            let update_fut = selector.update_scan_results(&scan_results);
+            let mut network_selector_updater = selector.generate_scan_result_updater();
+            let update_fut = network_selector_updater.update_scan_results(&scan_results);
             pin_mut!(update_fut);
             assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
         }
