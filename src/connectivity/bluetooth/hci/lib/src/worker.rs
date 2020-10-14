@@ -80,8 +80,6 @@ impl WorkerHandle {
             if let Err(e) = result {
                 bt_log_err!("error running worker thread: {}", e);
             };
-
-            unsafe { zx::sys::zx_thread_exit() }
         })?;
 
         // Error receiving the worker thread handle indicates that the worker thread died before it
@@ -186,9 +184,7 @@ impl Worker {
                     drop(host_acl);
                     drop(snoop);
                     if let Some(mut t) = transport {
-                        unsafe {
-                            t.unbind();
-                        }
+                        t.unbind();
                     }
 
                     responder.send(zx::Status::OK).await.unwrap_or_else(log_responder_error);
@@ -211,7 +207,7 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
     let transport_borrow;
     let mut cmd_read;
     let mut acl_read;
-    let mut incoming_buffer = Vec::with_capacity(0);
+    let mut incoming_buffer: Vec<u8> = Vec::with_capacity(0);
 
     // Get all handles before reading any data.
     // Set up read futures from sockets
@@ -234,10 +230,20 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
         return;
     }
 
+    let mut unbound = false;
+
     loop {
         select! {
             msg = control_plane.next() => {
                 if let Some(m) = msg {
+                    if unbound {
+                        let (_, mut responder) = m;
+                        responder.send(zx::Status::UNAVAILABLE)
+                            .await
+                            .unwrap_or_else(log_responder_error);
+                        continue;
+                    }
+
                     match m {
                         (Message::OpenTransport(_), mut responder) => {
                             bt_log_warn!("transport already bound");
@@ -275,19 +281,24 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                         (Message::Unbind, mut responder) => {
                             // Signal unbind to transport and close all worker resources before
                             // responding.
-                            unsafe { worker.transport.unbind(); }
-                            drop(worker);
+                            unsafe { transport_borrow.unbind(); }
+                            cmd_read = Fuse::terminated();
+                            acl_read = Fuse::terminated();
+                            worker.cmd.take();
+                            worker.acl.take();
+                            worker.snoop.channel.take();
+                            unbound = true;
 
                             responder
                                 .send(zx::Status::OK)
                                 .await
                                 .unwrap_or_else(log_responder_error);
-                            return;
                         }
                     }
                 } else {
                     // driver has dropped the sender so we should close
                     bt_log_warn!("driver channel closed. read task ending");
+
                     return;
                 }
             }
