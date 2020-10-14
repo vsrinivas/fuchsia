@@ -147,6 +147,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, driverHostCrash("pdev", "pdev:00:00:24"))
 	// Catch-all for driver host crashes.
 	ret = append(ret, driverHostCrash("", "pdev:00:00:24"))
+	// For fxbug.dev/55637
+	ret = append(ret, &stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType})
+
 	// These are rather generic. New checks should probably go above here so that they run before these.
 	allLogTypes := []logType{serialLogType, swarmingOutputType, syslogType}
 	for _, lt := range allLogTypes {
