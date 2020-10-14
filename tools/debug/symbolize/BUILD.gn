@@ -37,7 +37,11 @@ go_test("symbolize_tests") {
     "--test_data_dir",
     rebase_path(_testdata_path, root_build_dir),
   ]
-  deps = [ ":symbolize_lib" ]
+  deps = [
+    ":symbolize_lib",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
+
   non_go_deps = [ ":testdata" ]
 }
 

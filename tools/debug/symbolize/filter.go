@@ -36,15 +36,20 @@ func (l logHeader) Present() string {
 }
 
 type sysLogHeader struct {
-	time    float64
-	process uint64
-	thread  uint64
-	tags    string
-	typ     string
+	uptime   float64 // Device uptime, in seconds.
+	datetime string  // Absolute UTC timestamp.
+	process  uint64
+	thread   uint64
+	tags     string
+	typ      string
 }
 
 func (s sysLogHeader) Present() string {
-	return fmt.Sprintf("[%012.6f][%d][%d][%s] %s:", s.time, s.process, s.thread, s.tags, s.typ)
+	ts := s.datetime
+	if ts == "" {
+		ts = fmt.Sprintf("%012.6f", s.uptime)
+	}
+	return fmt.Sprintf("[%s][%d][%d][%s] %s:", ts, s.process, s.thread, s.tags, s.typ)
 }
 
 type LogLine struct {

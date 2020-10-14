@@ -60,6 +60,8 @@ const (
 	strRegexp   = "(?:[^{}:]*)"
 	spaceRegexp = `(?:\s*)`
 	floatRegexp = `(?:[[:digit:]]+)\.(?:[[:digit:]]+)`
+	// Matches datetimes like "2020-10-08 16:12:44".
+	datetimeRegexp = `(?:\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})`
 )
 
 type ParseLineFunc func(msg string) []Node
@@ -126,6 +128,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	var b regexpTokenizerBuilder
 	space := spaceRegexp
 	float := floatRegexp
+	datetime := datetimeRegexp
 	dec := decRegexp
 	tags := `[^\[\]]*`
 	b.addRule(fmt.Sprintf(`\[(%s)\]%s(%s)[.:](%s)>(.*)$`, float, space, dec, dec), func(args ...string) {
@@ -143,7 +146,21 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\] ([A-Z]+):?(.*)$`, float, dec, dec, tags), func(args ...string) {
 		var hdr sysLogHeader
 		var line InputLine
-		hdr.time = str2float(args[1])
+		hdr.uptime = str2float(args[1])
+		hdr.process = str2dec(args[2])
+		hdr.thread = str2dec(args[3])
+		hdr.tags = args[4]
+		hdr.typ = args[5]
+		line.header = hdr
+		line.source = Process(hdr.process)
+		line.lineno = lineno
+		line.msg = args[6]
+		out <- line
+	})
+	b.addRule(fmt.Sprintf(`\[(%s)\]\[(%s)\]\[(%s)\]\[(%s)\] ([A-Z]+):?(.*)$`, datetime, dec, dec, tags), func(args ...string) {
+		var hdr sysLogHeader
+		var line InputLine
+		hdr.datetime = args[1]
 		hdr.process = str2dec(args[2])
 		hdr.thread = str2dec(args[3])
 		hdr.tags = args[4]
