@@ -23,7 +23,7 @@ class Namespace {
   Namespace& operator=(Namespace&& other) noexcept;
 
   // Connect to a service within a driver's namespace.
-  zx::status<zx::channel> Connect(std::string path) const;
+  zx::status<zx::channel> Connect(std::string_view path) const;
 
  private:
   explicit Namespace(fdio_ns_t* ns);
