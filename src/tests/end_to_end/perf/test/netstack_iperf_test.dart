@@ -115,8 +115,7 @@ void main(List<String> args) {
         'label': '$testRun$protocol/send/${msgSize}bytes/$key',
         'test_suite': testSuite,
         'unit': unit(key),
-        'values': [sender[key]],
-        'split_first': false
+        'values': [sender[key]]
       });
     }
 
@@ -129,8 +128,7 @@ void main(List<String> args) {
             'label': '$testRun$protocol/recv/${msgSize}bytes/$key',
             'test_suite': testSuite,
             'unit': unit(key),
-            'values': [receiver[key]],
-            'split_first': false
+            'values': [receiver[key]]
           });
         }
       }
@@ -139,8 +137,7 @@ void main(List<String> args) {
       'label': '$testRun$protocol/send/${msgSize}bytes/CPU',
       'test_suite': testSuite,
       'unit': 'percent',
-      'values': cpuPercentages,
-      'split_first': false
+      'values': cpuPercentages
     });
 
     var fuchsiaperfFile = await Dump().writeAsString(

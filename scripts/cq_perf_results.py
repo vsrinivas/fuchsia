@@ -55,8 +55,6 @@ def _get_perf_test_results(build_id, test_name):
   for test in test_result:
     name = '%s/%s' % (test['test_suite'], test['label'])
     values = test['values']
-    if test['split_first']:
-      values = values[1:]
     results.append((name, values))
   return results
 

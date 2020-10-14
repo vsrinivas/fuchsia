@@ -92,13 +92,11 @@ void main(List<String> args) {
     expect(resultsObject[0]['test_suite'], equals('test_name'));
     expect(resultsObject[0]['unit'], equals('nanoseconds'));
     expect(resultsObject[0]['values'], equals([1.0]));
-    expect(resultsObject[0]['split_first'], equals(false));
 
     expect(resultsObject[1]['label'], equals('label_2'));
     expect(resultsObject[1]['test_suite'], equals('test_name'));
     expect(resultsObject[1]['unit'], equals('milliseconds'));
     expect(resultsObject[1]['values'], equals([2.0]));
-    expect(resultsObject[1]['split_first'], equals(false));
   });
 
   test('convert results', () async {

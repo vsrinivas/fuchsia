@@ -13,11 +13,10 @@ import (
 func TestDecodeTestResultsFile(t *testing.T) {
 	expected := &TestResultsFile{
 		&TestCaseResults{
-			Label:      "test case",
-			TestSuite:  "test suite",
-			Unit:       Nanoseconds,
-			Values:     []float64{100, 200, 300},
-			SplitFirst: true,
+			Label:     "test case",
+			TestSuite: "test suite",
+			Unit:      Nanoseconds,
+			Values:    []float64{100, 200, 300},
 		},
 	}
 
@@ -31,8 +30,7 @@ func TestDecodeTestResultsFile(t *testing.T) {
                     100,
                     200,
                     300
-                ],
-                "split_first": true
+                ]
             }
         ]`)
 
@@ -51,11 +49,10 @@ func TestTestResultsFile_Add(t *testing.T) {
 	var file TestResultsFile
 
 	results := &TestCaseResults{
-		Label:      "test case",
-		TestSuite:  "test suite",
-		Unit:       Nanoseconds,
-		Values:     []float64{100, 200, 300},
-		SplitFirst: true,
+		Label:     "test case",
+		TestSuite: "test suite",
+		Unit:      Nanoseconds,
+		Values:    []float64{100, 200, 300},
 	}
 	file.Add(results)
 
@@ -68,11 +65,10 @@ func TestTestResultsFile_Add(t *testing.T) {
 func TestTestResultsFile_Encode(t *testing.T) {
 	file := &TestResultsFile{
 		&TestCaseResults{
-			Label:      "test case",
-			TestSuite:  "test suite",
-			Unit:       Nanoseconds,
-			Values:     []float64{100, 200, 300},
-			SplitFirst: true,
+			Label:     "test case",
+			TestSuite: "test suite",
+			Unit:      Nanoseconds,
+			Values:    []float64{100, 200, 300},
 		},
 	}
 

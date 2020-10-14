@@ -44,11 +44,10 @@ const (
 //
 // See the link at the top of this file for documentation.
 type TestCaseResults struct {
-	Label      string    `json:"label"`
-	TestSuite  string    `json:"test_suite"`
-	Unit       Unit      `json:"unit"`
-	Values     []float64 `json:"values"`
-	SplitFirst bool      `json:"split_first"`
+	Label     string    `json:"label"`
+	TestSuite string    `json:"test_suite"`
+	Unit      Unit      `json:"unit"`
+	Values    []float64 `json:"values"`
 }
 
 // TestResultsFile represents the results produced by individual benchmarks.
@@ -61,7 +60,6 @@ type TestCaseResults struct {
 //         TestSuite: "test suite",
 //         Unit:  Nanoseconds,
 //         Values: []float64{100, 200, 300},
-//         SplitFirst: true,
 //     })
 //
 //     _ := results.Encode(outputFile)

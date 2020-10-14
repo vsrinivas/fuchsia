@@ -33,7 +33,6 @@ library or file a bug against IN to request one.
         "test_suite":  string     // Name of the test suite in the performance dashboard.
         "unit":        string     // One of the supported units (see below)
         "values":      [v1, v2..] // Numeric values collected in this test case
-        "split_first": bool       // Whether to split the first element in |values| from the rest.
     },
     {
         ...
@@ -62,23 +61,12 @@ of the result's `values`.
         "test_suite": "fuchsia.microbenchmarks",
         "unit": "nanoseconds",
         "values": [105.45, 697.916667, 672.743056],
-        "split_first": true
     },
     {
         "label":"Channel/WriteRead/1024bytes",
         "test_suite":"fuchsia.microbenchmarks",
         "unit":"nanoseconds",
         "values":[102.23, 1004.340278, 906.250000],
-        "split_first": true
     }
 ]
 ```
-
-## split_first behavior
-
-split_first is useful when the first value in the test results is usually skewed
-due to external influence on the test (e.g. empty caches).  When true, benchmark
-results will appear as two separate series in the performance dashboard:
-
-1. `$label/samples_0_to_0` which tracks the first element in `values`, and
-1. `$label/samples_1_to_N` which tracks the remaining `values`.

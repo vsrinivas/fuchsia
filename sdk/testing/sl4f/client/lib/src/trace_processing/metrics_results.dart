@@ -58,16 +58,13 @@ class TestCaseResults {
   String label;
   Unit unit;
   List<double> values;
-  bool splitFirst;
 
-  TestCaseResults(this.label, this.unit, this.values,
-      {this.splitFirst = false});
+  TestCaseResults(this.label, this.unit, this.values);
 
   Map<String, dynamic> toJson({@required String testSuite}) => {
         'label': label,
         'test_suite': testSuite,
         'unit': unitToCatapultConverterString(unit),
         'values': values,
-        'split_first': splitFirst,
       };
 }

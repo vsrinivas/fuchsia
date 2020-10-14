@@ -136,8 +136,8 @@ TEST(TestTools, SplitLines) {
   EXPECT_STREQ(lines[4].c_str(), "");
 }
 
-// Test the basic case that does not set split_first=true.  This covers
-// multiple time units.  This covers converting spaces to underscores in
+// Test the basic case that covers multiple time units.
+// This also covers converting spaces to underscores in
 // the test name.
 TEST(CatapultConverter, Convert) {
   const char* input_str = R"JSON(
@@ -271,8 +271,7 @@ TEST(CatapultConverter, Convert) {
   AssertJsonEqual(output, expected_output);
 }
 
-// Test the basic case that does not set split_first=true AND
-// with product_versions available.
+// Test the basic case with product_versions available.
 TEST(CatapultConverter, ConvertWithReleaseVersion) {
   const char* input_str = R"JSON(
 [
@@ -409,133 +408,6 @@ TEST(CatapultConverter, ConvertWithReleaseVersion) {
   AssertApproxEqual(&output, &output[7]["running"][4], 6);
   AssertApproxEqual(&output, &output[7]["running"][5], 416);
   AssertApproxEqual(&output, &output[7]["running"][6], 6290.666);
-
-  AssertJsonEqual(output, expected_output);
-}
-
-TEST(CatapultConverter, ConvertWithSplitFirst) {
-  const char* input_str = R"JSON(
-[
-    {
-        "label": "ExampleTest",
-        "test_suite": "my_test_suite",
-        "values": [101.0, 102.0, 103.0, 104.0, 105.0],
-        "unit": "nanoseconds",
-        "split_first": true
-    }
-]
-)JSON";
-
-  const char* expected_output_str = R"JSON(
-[
-    {
-        "guid": "dummy_guid_0",
-        "type": "GenericSet",
-        "values": [
-            123004005006
-        ]
-    },
-    {
-        "guid": "dummy_guid_1",
-        "type": "GenericSet",
-        "values": [
-            "example_bots"
-        ]
-    },
-    {
-        "guid": "dummy_guid_2",
-        "type": "GenericSet",
-        "values": [
-            "example_masters"
-        ]
-    },
-    {
-        "guid": "dummy_guid_3",
-        "type": "GenericSet",
-        "values": [
-            [
-                "Build Log",
-                "https://ci.example.com/build/100"
-            ]
-        ]
-    },
-    {
-        "guid": "dummy_guid_4",
-        "type": "GenericSet",
-        "values": [
-            "my_test_suite"
-        ]
-    },
-    {
-        "name": "ExampleTest_samples_0_to_0",
-        "unit": "ms_smallerIsBetter",
-        "description": "",
-        "diagnostics": {
-            "pointId": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            1,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_5",
-        "maxNumSampleValues": 1,
-        "numNans": 0
-    },
-    {
-        "name": "ExampleTest_samples_1_to_4",
-        "unit": "ms_smallerIsBetter",
-        "description": "",
-        "diagnostics": {
-            "pointId": "dummy_guid_0",
-            "bots": "dummy_guid_1",
-            "masters": "dummy_guid_2",
-            "logUrls": "dummy_guid_3",
-            "benchmarks": "dummy_guid_4"
-        },
-        "running": [
-            4,
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere",
-            "compared_elsewhere"
-        ],
-        "guid": "dummy_guid_6",
-        "maxNumSampleValues": 4,
-        "numNans": 0
-    }
-]
-)JSON";
-
-  rapidjson::Document expected_output;
-  CheckParseResult(expected_output.Parse(expected_output_str));
-
-  rapidjson::Document output;
-  TestConverter(input_str, &output);
-
-  AssertApproxEqual(&output, &output[5]["running"][1], .000101);
-  AssertApproxEqual(&output, &output[5]["running"][2], -9.2003900411230148);
-  AssertApproxEqual(&output, &output[5]["running"][3], 0.000101);
-  AssertApproxEqual(&output, &output[5]["running"][4], 0.000101);
-  AssertApproxEqual(&output, &output[5]["running"][5], 0.000101);
-  AssertApproxEqual(&output, &output[5]["running"][6], 0);
-
-  AssertApproxEqual(&output, &output[6]["running"][1], 0.000105);
-  AssertApproxEqual(&output, &output[6]["running"][2], -9.175997295261073);
-  AssertApproxEqual(&output, &output[6]["running"][3], 0.0001035);
-  AssertApproxEqual(&output, &output[6]["running"][4], 0.000102);
-  AssertApproxEqual(&output, &output[6]["running"][5], 0.000414);
-  AssertApproxEqual(&output, &output[6]["running"][6], 1.6666666666666712e-12);
 
   AssertJsonEqual(output, expected_output);
 }

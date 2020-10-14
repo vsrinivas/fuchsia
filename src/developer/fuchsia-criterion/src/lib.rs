@@ -149,8 +149,7 @@ impl FuchsiaCriterion {
         "label": {:?},
         "test_suite": {:?},
         "unit": "nanoseconds",
-        "values": {:?},
-        "split_first": false
+        "values": {:?}
     }}"#,
                     label, test_suite, samples,
                 )
@@ -247,8 +246,7 @@ mod tests {
         "label": "parallel",
         "test_suite": "fib",
         "unit": "nanoseconds",
-        "values": [10.0, 10.0, 13.333333333333334, 15.0],
-        "split_first": false
+        "values": [10.0, 10.0, 13.333333333333334, 15.0]
     }
 ]
 "#

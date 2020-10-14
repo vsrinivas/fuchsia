@@ -359,30 +359,9 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output, const Conv
     for (auto& val : values.GetArray()) {
       vals.push_back(val.GetDouble());
     }
-
-    // Create the histogram.
-    if (element.HasMember("split_first") && element["split_first"].IsBool() &&
-        element["split_first"].GetBool()) {
-      // Create a histogram for the first sample value.
-      std::string h1_name = name + "_samples_0_to_0";
-      std::vector<double> h1_vals(vals.begin(), vals.begin() + 1);
-      AddHistogram(output, &alloc, h1_name, element["unit"].GetString(), std::move(h1_vals),
-                   helper.Copy(diagnostic_map), MakeUuid());
-
-      // Create a histogram for the remaining sample values, if any.
-      if (vals.size() > 1) {
-        std::stringstream h2_name;
-        h2_name << name << "_samples_1_to_" << vals.size() - 1;
-
-        std::vector<double> h2_vals(vals.begin() + 1, vals.end());
-        AddHistogram(output, &alloc, h2_name.str(), element["unit"].GetString(), std::move(h2_vals),
-                     helper.Copy(diagnostic_map), MakeUuid());
-      }
-    } else {
-      // Create a histogram for all |vals|.
-      AddHistogram(output, &alloc, name, element["unit"].GetString(), std::move(vals),
-                   std::move(diagnostic_map), MakeUuid());
-    }
+    // Create a histogram for all |vals|.
+    AddHistogram(output, &alloc, name, element["unit"].GetString(), std::move(vals),
+                 std::move(diagnostic_map), MakeUuid());
   }
 }
 
