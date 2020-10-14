@@ -898,7 +898,7 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
           *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
           std::move(rb_vmo), resp.num_ring_buffer_frames, [this]() {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-            auto t = audio_clock_.Read();
+            auto t = reference_clock().Read();
             return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
                 .Floor();
           });
@@ -907,7 +907,7 @@ zx_status_t AudioDriverV1::ProcessGetBufferResponse(const audio_rb_cmd_get_buffe
           *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
           std::move(rb_vmo), resp.num_ring_buffer_frames, [this]() {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-            auto t = audio_clock_.Read();
+            auto t = reference_clock().Read();
             return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
                 .Floor();
           });
@@ -1177,22 +1177,12 @@ void AudioDriverV1::SetUpClocks() {
 
   recovered_clock_ =
       AudioClock::CreateAsDeviceNonadjustable(std::move(adjustable_clock), clock_domain_);
-  if (!recovered_clock_.is_valid()) {
-    FX_LOGS(ERROR)
-        << "CreateAsDeviceNonadjustable (recovered) failed, will not recover a device clock!";
-    return;
-  }
 
   // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
   // be DeviceAdjustable, not DeviceNonadjustable, to articulate that it has hardware controls.
   auto clone =
       AudioClock::CreateAsDeviceNonadjustable(read_only_clock_result.take_value(), clock_domain_);
-  if (!clone.is_valid()) {
-    FX_LOGS(ERROR)
-        << "CreateAsDeviceNonadjustable (read_only) failed, will not recover a device clock!";
-    recovered_clock_ = AudioClock();
-    return;
-  }
+
   audio_clock_ = std::move(clone);
 }
 

@@ -9,11 +9,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
-#include <limits>
-
+#include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/frames.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 
@@ -22,6 +22,8 @@ class AudioClock;
 namespace audio_clock_helper {
 const zx::clock& get_underlying_zx_clock(const AudioClock&);
 }
+
+class AudioClockTest;
 
 class AudioClock {
  public:
@@ -32,7 +34,7 @@ class AudioClock {
   // Device clock rates are changed by writes to hardware controls, or if clock hardware drifts. If
   // AudioCore can control a clock's rate, the clock is Adjustable; otherwise it is NotAdjustable.
   //
-  // We describe clocks by a pair (Source, Adjustable). Source is one of {Client, Device, Invalid}
+  // We describe clocks by a pair (Source, Adjustable). Source is one of {Client, Device}
   // and Adjustable is a boolean. The default constructor creates an Invalid clock, while static
   // Create methods create Client and Device clocks.
   //
@@ -58,123 +60,106 @@ class AudioClock {
   // over time with a feedback control loop.
 
   static constexpr uint32_t kMonotonicDomain = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
+  static constexpr uint32_t kInvalidDomain = 0xFFFFFFFE;
 
-  AudioClock() : AudioClock(zx::clock(), Source::Invalid, false) {}
+  static AudioClock CreateAsClientAdjustable(zx::clock clock);
+  static AudioClock CreateAsClientNonadjustable(zx::clock clock);
+  static AudioClock CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain);
+  static AudioClock CreateAsDeviceNonadjustable(zx::clock clock, uint32_t domain);
+
+  static Mixer::Resampler UpgradeResamplerIfNeeded(Mixer::Resampler resampler_hint,
+                                                   AudioClock& source_clock,
+                                                   AudioClock& dest_clock);
+
+  AudioClock() = delete;
+  virtual ~AudioClock() = default;
 
   // No copy
   AudioClock(const AudioClock&) = delete;
   AudioClock& operator=(const AudioClock&) = delete;
-
   // Move is allowed
   AudioClock(AudioClock&& moved_clock) = default;
   AudioClock& operator=(AudioClock&& moved_clock) = default;
 
-  static AudioClock CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain);
-  static AudioClock CreateAsDeviceNonadjustable(zx::clock clock, uint32_t domain);
-  static AudioClock CreateAsClientAdjustable(zx::clock clock);
-  static AudioClock CreateAsClientNonadjustable(zx::clock clock);
+  // Returns true iff both AudioClocks refer to the same underlying zx::clock.
+  bool operator==(const AudioClock& comparable) const {
+    return (audio::clock::GetKoid(clock_) == audio::clock::GetKoid(comparable.clock_));
+  }
+  bool operator!=(const AudioClock& comparable) const { return !(*this == comparable); }
 
+  bool is_client_clock() const { return (source_ == Source::Client); }
+  bool is_device_clock() const { return (source_ == Source::Device); }
+  bool is_adjustable() const { return is_adjustable_; }
+  uint32_t domain() const { return domain_; }
+
+  bool controls_device_clock() const { return controls_device_clock_; }
+  void set_controls_device_clock(bool should_control_device_clock);
+
+  // Return a transform based on a snapshot of the underlying zx::clock
+  TimelineFunction ref_clock_to_clock_mono() const;
+  zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
+  zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
+
+  zx::clock DuplicateClock() const;
+  zx::time Read() const;
+
+  // Audio clocks use a PID control; across a series of external rate adjustments, we track position
+  // (not just rate). Inputs to the feedback control are destination frame as "time" component, and
+  // source position error (in frac frames) as the process variable which we tune to zero. We
+  // regularly tune the feedback by reporting current position error at a given time; the PID
+  // provides the rate adjustment to be applied.
+  //
+  // At a given dest_frame, the source position error is provided (in fractional frames). This is
+  // used to maintain an adjustment_rate() factor that eliminates the error over time.
+  static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
+                                   Fixed frac_src_error, int64_t dest_frame);
+
+  // Clear internal running state and restart the feedback loop at the given destination frame.
+  virtual void ResetRateAdjustment(int64_t dest_frame);
+
+ private:
+  friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
+  friend class ::media::audio::AudioClockTest;
+
+  enum class Source { Client, Device };
   enum class SyncMode {
-    // If the client clock is adjustable, we address clock misalignment by rate-adjusting it, even
-    // if the device clock is also adjustable. This minimizes disruption to the rest of the system.
-    AdjustClientClock,
+    // If two clocks are identical or in the same clock domain, no synchronization is needed.
+    None,
 
-    // If the device clock is adjustable, AudioCore may choose a client clock for this device clock
-    // to follow. If so, AudioCore adjusts the hardware so the device clock aligns with this
-    // "hardware-controlling" client clock. If an adjustable device clock has no corresponding
-    // client clock that is designated as hardware-controlling, then the device clock is treated as
-    // if it were not adjustable.
-    AdjustHardwareClock,
+    // We rate-adjust zx::clocks even if hardware is also adjustable, to minimize disruption.
+    AdjustSourceClock,
+    AdjustDestClock,
+
+    // If clock hardware is adjustable, AudioCore may adjust it to follow a client clock; if so,
+    // this client clock is considered "hardware-controlling". If an adjustable device clock has no
+    // "controlling" client clock, it is treated as not adjustable.
+    AdjustSourceHardware,
+    AdjustDestHardware,
 
     // If neither clock is adjustable, we error-correct by slightly adjusting the sample-rate
     // conversion ratio (referred to as "micro-SRC"). This can occur with an adjustable device
     // clock, if another stream's client clock is already controlling that device clock hardware.
     MicroSrc,
-
-    // If two clocks are identical or in the same clock domain, no synchronization is needed.
-    None
   };
+  static SyncMode SynchronizationMode(AudioClock& source_clock, AudioClock& dest_clock);
+  static int32_t ClampPpm(SyncMode sync_mode, int32_t parts_per_million);
 
-  static SyncMode SynchronizationMode(AudioClock& clock1, AudioClock& clock2);
+  static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
 
-  explicit operator bool() const { return is_valid(); }
-  bool is_valid() const { return (source_ != Source::Invalid); }
-  bool is_device_clock() const { return (source_ == Source::Device); }
-  bool is_client_clock() const { return (source_ == Source::Client); }
-  bool is_adjustable() const { return is_adjustable_; }
-  bool controls_device_clock() const { return controls_device_clock_; }
-  bool set_controls_device_clock(bool controls_device_clock);
-  uint32_t domain() const {
-    FX_CHECK(is_device_clock());
-    return domain_;
-  }
+  AudioClock(zx::clock clock, Source source, bool adjustable)
+      : AudioClock(std::move(clock), source, adjustable, kInvalidDomain) {}
+  AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t domain);
 
-  // Return a transform based on a snapshot of the underlying zx::clock
-  TimelineFunction ref_clock_to_clock_mono() const;
-
-  // Because 1) AudioClock objects are not copyable, and 2) AudioClock 'consumes' the zx::clock
-  // provided to it, and 3) handle values are unique across the system, and 4) even duplicate
-  // handles have different values, this all means that the clock handle is essentially the unique
-  // ID for this AudioClock object.
-  // However, we also want to know whether two unique AudioClocks are based on the same underlying
-  // zx::clock (and thus respond identically to rate-adjustment), so we compare the root KOIDs.
-  bool operator==(const AudioClock& comparable) const {
-    return (audio::clock::GetKoid(clock_) == audio::clock::GetKoid(comparable.clock_));
-  }
-  // bool operator==(const AudioClock& comparable) const { return (clock_ == comparable.clock_); }
-  bool operator!=(const AudioClock& comparable) const { return !(*this == comparable); }
-
-  zx::clock DuplicateClock() const;
-  zx::time Read() const;
-
-  zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
-  zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
-
-  // Audio clocks use a PID control so that across a series of external rate adjustments, we
-  // smoothly track position (not just rate). The inputs to this feedback loop are destination frame
-  // as the "time" or X-axis component, and source position error (in frac frames) as the process
-  // variable which we intend to tune to zero. We regularly tune the feedback loop by reporting our
-  // current position error at the given time; the PID provides the rate adjustment to be applied.
-  //
-  // At a given dest_frame, the source position error is provided (in fractional frames). This is
-  // used to maintain an adjustment_rate() factor that eliminates the error over time.
-  void TuneRateForError(int64_t dest_frame, Fixed frac_src_error);
-
-  // This returns the current rate adjustment factor (a rate close to 1.0) that should be applied,
-  // to chase the actual source effectively.
-  const TimelineRate& adjustment_rate() const { return adjustment_rate_; }
-
-  // Clear any internal running state (except the PID coefficients themselves), and restart the
-  // feedback loop at the given destination frame.
-  void ResetRateAdjustment(int64_t dest_frame);
-
- private:
-  enum class Source { Client, Device, Invalid };
-
-  AudioClock(zx::clock clock, Source source, bool is_adjustable, uint32_t domain);
-  AudioClock(zx::clock clock, Source source, bool is_adjustable)
-      : AudioClock(std::move(clock), source, is_adjustable, kMonotonicDomain) {}
-
-  // This sets the PID coefficients for this clock, depending on the clock type.
-  void ConfigureAdjustment(const clock::PidControl::Coefficients& pid_coefficients);
-
-  friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
   zx::clock clock_;
 
   Source source_;
   bool is_adjustable_;
-  uint32_t domain_;  // Will only be used with device clocks.
+  uint32_t domain_;
+  int32_t adjustment_ppm_;
+  bool controls_device_clock_;
 
-  // Only used for non-adjustable client clocks.
-  bool controls_device_clock_ = false;
-
-  TimelineRate adjustment_rate_;
-  audio::clock::PidControl feedback_control_loop_;
-
-  // Only used for adjustable client clocks.
-  int32_t adjustment_ppm_ = 0;
-
-  // TODO(fxbug.dev/58541): Refactor to use subclasses for different clock types
+  audio::clock::PidControl microsrc_feedback_control_;
+  std::optional<audio::clock::PidControl> adjustable_feedback_control_;
 };
 
 }  // namespace media::audio

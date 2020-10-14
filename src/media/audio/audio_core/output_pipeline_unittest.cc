@@ -42,10 +42,6 @@ enum ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
 class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:
-  void SetUp() override {
-    device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                            AudioClock::kMonotonicDomain);
-  }
   std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       VolumeCurve volume_curve =
           VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume)) {
@@ -124,7 +120,8 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestOutputPipelineTrim(ClockMode clock_mode);
   void TestDifferentMixRates(ClockMode clock_mode);
 
-  AudioClock device_clock_;
+  AudioClock device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                                     AudioClock::kMonotonicDomain);
 };
 
 AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
@@ -134,18 +131,14 @@ AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
   EXPECT_TRUE(custom_clock_result.is_ok());
 
   zx::clock custom_clock = custom_clock_result.take_value();
-  EXPECT_TRUE(custom_clock.is_valid());
 
-  auto offset_result = clock::testing::GetOffsetFromMonotonic(custom_clock);
-  EXPECT_TRUE(offset_result.is_ok());
-  auto actual_offset = offset_result.take_value();
+  auto actual_offset = clock::testing::GetOffsetFromMonotonic(custom_clock).take_value();
 
   int64_t seek_frame = round(
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
   auto custom_audio_clock = AudioClock::CreateAsClientNonadjustable(std::move(custom_clock));
-  EXPECT_TRUE(custom_audio_clock.is_valid());
 
   return custom_audio_clock;
 }
@@ -171,9 +164,7 @@ void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
   if (clock_mode == ClockMode::SAME) {
     stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    AudioClock custom_audio_clock =
-        SetPacketFactoryWithOffsetAudioClock(zx::sec(-3), packet_factory4);
-    ASSERT_TRUE(custom_audio_clock.is_valid());
+    auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-3), packet_factory4);
 
     stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
                                             std::move(custom_audio_clock));
@@ -605,9 +596,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   if (clock_mode == ClockMode::SAME) {
     stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    AudioClock custom_audio_clock =
-        SetPacketFactoryWithOffsetAudioClock(zx::sec(7), packet_factory);
-    ASSERT_TRUE(custom_audio_clock.is_valid());
+    auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(7), packet_factory);
 
     stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
                                            std::move(custom_audio_clock));
@@ -769,19 +758,16 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   auto result = audio::clock::DuplicateClock(writable_clock);
   ASSERT_TRUE(result.is_ok());
   zx::clock readonly_clock = result.take_value();
-  ASSERT_TRUE(readonly_clock.is_valid());
   clock::testing::VerifyReadOnlyRights(readonly_clock);
 
   auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
                                                        kDefaultTransform, device_clock_);
 
-  ASSERT_TRUE(pipeline->reference_clock().is_valid());
   audio_clock_helper::VerifyReadOnlyRights(pipeline->reference_clock());
   audio_clock_helper::VerifyAdvances(pipeline->reference_clock());
   audio_clock_helper::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
 
   auto& loopback_clock = pipeline->loopback()->reference_clock();
-  ASSERT_TRUE(loopback_clock.is_valid());
   audio_clock_helper::VerifyReadOnlyRights(loopback_clock);
   audio_clock_helper::VerifyAdvances(loopback_clock);
   audio_clock_helper::VerifyCannotBeRateAdjusted(loopback_clock);

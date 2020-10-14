@@ -176,10 +176,7 @@ TEST_F(UltrasoundTest, RendererDoesNotSupportSetReferenceClock) {
   std::optional<zx_status_t> renderer_error;
   renderer->fidl().set_error_handler([&renderer_error](auto status) { renderer_error = {status}; });
 
-  auto result = clock::DuplicateClock(renderer->reference_clock());
-  ASSERT_TRUE(result.is_ok());
-  zx::clock clock_to_set = result.take_value();
-  ASSERT_TRUE(clock_to_set.is_valid());
+  auto clock_to_set = clock::DuplicateClock(renderer->reference_clock()).take_value();
 
   renderer->fidl()->SetReferenceClock(std::move(clock_to_set));
 
@@ -277,7 +274,6 @@ TEST_F(UltrasoundTest, CapturerDoesNotSupportSetReferenceClock) {
   auto result = clock::DuplicateClock(capturer->reference_clock());
   ASSERT_TRUE(result.is_ok());
   zx::clock clock_to_set = result.take_value();
-  ASSERT_TRUE(clock_to_set.is_valid());
 
   capturer->fidl()->SetReferenceClock(std::move(clock_to_set));
 

@@ -33,9 +33,6 @@ class InputRingBufferTest : public ::testing::Test {
         TimelineFunction(0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(),
                          zx::sec(1).to_nsecs()));
 
-    audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                           AudioClock::kMonotonicDomain);
-
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,
         [this]() { return safe_read_frame_; });
@@ -55,7 +52,9 @@ class InputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
 
-  AudioClock audio_clock_;
+  AudioClock audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                                    AudioClock::kMonotonicDomain);
+
   int64_t safe_read_frame_ = -1;
 };
 
@@ -66,9 +65,6 @@ class OutputRingBufferTest : public ::testing::Test {
     auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(),
                          zx::sec(1).to_nsecs()));
-
-    audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                           AudioClock::kMonotonicDomain);
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,
@@ -89,7 +85,8 @@ class OutputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<WritableRingBuffer> ring_buffer_;
 
-  AudioClock audio_clock_;
+  AudioClock audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                                    AudioClock::kMonotonicDomain);
   int64_t safe_write_frame_ = 0;
 };
 

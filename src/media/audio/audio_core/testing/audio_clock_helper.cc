@@ -16,41 +16,31 @@ const zx::clock& get_underlying_zx_clock(const AudioClock& audio_clock) {
 }
 
 void VerifyReadOnlyRights(const AudioClock& audio_clock) {
-  ASSERT_TRUE(audio_clock.is_valid());
   audio::clock::testing::VerifyReadOnlyRights(get_underlying_zx_clock(audio_clock));
 }
 
 void VerifyAdvances(const AudioClock& audio_clock) {
-  ASSERT_TRUE(audio_clock.is_valid());
   audio::clock::testing::VerifyAdvances(get_underlying_zx_clock(audio_clock));
 }
 
 void VerifyCannotBeRateAdjusted(const AudioClock& audio_clock) {
-  ASSERT_TRUE(audio_clock.is_valid());
   audio::clock::testing::VerifyCannotBeRateAdjusted(get_underlying_zx_clock(audio_clock));
 }
 void VerifyCanBeRateAdjusted(const AudioClock& audio_clock) {
-  ASSERT_TRUE(audio_clock.is_valid());
   audio::clock::testing::VerifyCanBeRateAdjusted(get_underlying_zx_clock(audio_clock));
 }
 
 void VerifySame(const AudioClock& audio_clock1, const AudioClock& audio_clock2) {
-  ASSERT_TRUE(audio_clock1.is_valid());
-  ASSERT_TRUE(audio_clock2.is_valid());
   ASSERT_TRUE(audio_clock1 == audio_clock2);
 }
 void VerifyNotSame(const AudioClock& audio_clock1, const AudioClock& audio_clock2) {
-  ASSERT_TRUE(audio_clock1.is_valid());
-  ASSERT_TRUE(audio_clock2.is_valid());
   ASSERT_FALSE(audio_clock1 == audio_clock2);
 }
 
 void VerifyIsSystemMonotonic(const AudioClock& audio_clock) {
-  ASSERT_TRUE(audio_clock.is_valid());
   audio::clock::testing::VerifyIsSystemMonotonic(get_underlying_zx_clock(audio_clock));
 }
 void VerifyIsNotSystemMonotonic(const AudioClock& audio_clock) {
-  ASSERT_TRUE(audio_clock.is_valid());
   audio::clock::testing::VerifyIsNotSystemMonotonic(get_underlying_zx_clock(audio_clock));
 }
 

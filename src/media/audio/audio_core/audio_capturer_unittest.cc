@@ -183,7 +183,6 @@ TEST_F(AudioCapturerTest, CanReleasePacketWithoutDroppingConnection) {
 
 TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(capturer_->reference_clock().is_valid());
 
   clock::testing::VerifyAdvances(fidl_clock);
   audio_clock_helper::VerifyAdvances(capturer_->reference_clock());
@@ -191,7 +190,6 @@ TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
 
 TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(capturer_->reference_clock().is_valid());
 
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
@@ -201,7 +199,6 @@ TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {
 
 TEST_F(AudioCapturerTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(capturer_->reference_clock().is_valid());
 
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
   audio_clock_helper::VerifyIsSystemMonotonic(capturer_->reference_clock());

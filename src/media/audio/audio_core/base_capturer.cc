@@ -58,12 +58,10 @@ BaseCapturer::BaseCapturer(
       state_(State::WaitingForVmo),
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
-      reporter_(Reporter::Singleton().CreateCapturer()) {
+      reporter_(Reporter::Singleton().CreateCapturer()),
+      audio_clock_(
+          AudioClock::CreateAsClientAdjustable(audio::clock::AdjustableCloneOfMonotonic())) {
   FX_DCHECK(mix_domain_);
-
-  // Our default clock starts as an adjustable clone of MONOTONIC, but ultimately will track the
-  // clock of the device where the capturer is initially routed.
-  SetAdjustableReferenceClock();
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
@@ -808,16 +806,6 @@ void BaseCapturer::UpdateFormat(Format format) {
   uint32_t max_mix_frames = format_.frames_per_second();
   mix_stage_ = std::make_shared<MixStage>(format_, max_mix_frames, ref_pts_to_fractional_frame_,
                                           reference_clock());
-}
-
-// Our default clock starts as an adjustable clone of MONOTONIC, but ultimately it will track the
-// clock of the device where the capturer is routed.
-void BaseCapturer::SetAdjustableReferenceClock() {
-  TRACE_DURATION("audio", "BaseCapturer::SetAdjustableReferenceClock");
-
-  SetClock(AudioClock::CreateAsClientAdjustable(audio::clock::AdjustableCloneOfMonotonic()));
-
-  FX_DCHECK(reference_clock().is_valid()) << "Default reference clock is not valid";
 }
 
 // Regardless of the source of the reference clock, we can duplicate and return it here.

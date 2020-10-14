@@ -15,7 +15,7 @@ void PidControl::Start(int64_t start_time) {
   current_error_ = accum_error_ = 0.0;
 }
 
-double PidControl::Read() { return total_pid_contribution_; }
+double PidControl::Read() const { return total_pid_contribution_; }
 
 // Factor in the most current error reading
 void PidControl::TuneForError(int64_t time, double error) {

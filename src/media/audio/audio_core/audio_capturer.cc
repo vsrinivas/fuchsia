@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -85,7 +86,7 @@ void AudioCapturer::OnLinkAdded() {
 constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
 // If received clock is null, use our adjustable clock. Else, use this new clock. Fail/disconnect,
 // if the client-submitted clock has insufficient rights. Strip off other rights such as WRITE.
-void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
+void AudioCapturer::SetReferenceClock(zx::clock raw_clock) {
   TRACE_DURATION("audio", "AudioCapturer::SetReferenceClock");
   AUDIO_LOG_OBJ(DEBUG, this);
 
@@ -99,17 +100,17 @@ void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
   }
 
   zx_status_t status;
-  if (ref_clock.is_valid()) {
-    // If ref_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
-    status = ref_clock.replace(kRequiredClockRights, &ref_clock);
+  if (raw_clock.is_valid()) {
+    // If raw_clock doesn't have DUPLICATE or READ or TRANSFER rights, return (i.e. shutdown).
+    status = raw_clock.replace(kRequiredClockRights, &raw_clock);
     if (status != ZX_OK) {
       FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
       return;
     }
-    SetClock(AudioClock::CreateAsClientNonadjustable(std::move(ref_clock)));
+    SetClock(AudioClock::CreateAsClientNonadjustable(std::move(raw_clock)));
   } else {
     // To achieve "no-SRC", we will rate-adjust this clock to match the device clock.
-    SetAdjustableReferenceClock();
+    SetClock(AudioClock::CreateAsClientAdjustable(audio::clock::AdjustableCloneOfMonotonic()));
   }
 
   reference_clock_is_set_ = true;

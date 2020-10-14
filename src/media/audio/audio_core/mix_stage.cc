@@ -61,14 +61,8 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
     return nullptr;
   }
 
-  if (resampler_hint == Mixer::Resampler::Default) {
-    auto mode = AudioClock::SynchronizationMode(stream->reference_clock(), reference_clock());
-    // If we might need micro-SRC for synchronization, use the higher quality resampler.
-    if (mode == AudioClock::SyncMode::MicroSrc ||
-        mode == AudioClock::SyncMode::AdjustHardwareClock) {
-      resampler_hint = Mixer::Resampler::WindowedSinc;
-    }
-  }
+  resampler_hint = AudioClock::UpgradeResamplerIfNeeded(resampler_hint, stream->reference_clock(),
+                                                        reference_clock());
 
   auto mixer = std::shared_ptr<Mixer>(
       Mixer::Select(stream->format().stream_type(), format().stream_type(), resampler_hint)
@@ -496,9 +490,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 
   TRACE_DURATION("audio", "MixStage::ReconcileClocksAndSetStepSize");
 
+  auto& source_clk = stream.reference_clock();
+  auto& dest_clk = reference_clock();
+
   // Right upfront, capture current states for the source and destination clocks.
-  auto source_ref_to_clock_mono = stream.reference_clock().ref_clock_to_clock_mono();
-  auto dest_ref_to_mono = reference_clock().ref_clock_to_clock_mono();
+  auto source_ref_to_clock_mono = source_clk.ref_clock_to_clock_mono();
+  auto dest_ref_to_mono = dest_clk.ref_clock_to_clock_mono();
 
   // UpdateSourceTrans
   //
@@ -519,6 +516,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   auto frac_source_frame_to_clock_mono =
       source_ref_to_clock_mono * info.source_ref_clock_to_frac_source_frames.Inverse();
   info.clock_mono_to_frac_source_frames = frac_source_frame_to_clock_mono.Inverse();
+  FX_LOGS(TRACE) << clock::TimelineFunctionToString(info.clock_mono_to_frac_source_frames,
+                                                    "mono-to-frac-src");
 
   // Assert we can map from local monotonic-time to fractional source frames.
   FX_DCHECK(info.clock_mono_to_frac_source_frames.rate().reference_delta());
@@ -541,8 +540,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame).Inverse();
 
   // Compose our transformation from local monotonic-time to dest frames.
-  auto dest_frames_to_clock_mono =
-      TimelineFunction::Compose(dest_ref_to_mono, dest_frames_to_dest_ref, true);
+  auto dest_frames_to_clock_mono = dest_ref_to_mono * dest_frames_to_dest_ref;
+  FX_LOGS(TRACE) << clock::TimelineFunctionToString(dest_frames_to_clock_mono, "dest-to-mono");
 
   // ComposeDestToSource
   // Compose our transformation from destination frames to source fractional frames.
@@ -554,7 +553,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   info.dest_frames_to_frac_source_frames =
       info.clock_mono_to_frac_source_frames * dest_frames_to_clock_mono;
   FX_LOGS(TRACE) << clock::TimelineRateToString(info.dest_frames_to_frac_source_frames.rate(),
-                                                "dest-to-frac-src");
+                                                "dest-to-frac-src (with clocks)");
 
   // ComputeFrameRateConversionRatio
   //
@@ -564,7 +563,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   TimelineRate frac_src_frames_per_dest_frame =
       dest_frames_to_dest_ref.rate() * info.source_ref_clock_to_frac_source_frames.rate();
   FX_LOGS(TRACE) << clock::TimelineRateToString(frac_src_frames_per_dest_frame,
-                                                "dest-to-frac-src rate");
+                                                "dest-to-frac-src rate (no clock effects)");
 
   // SynchronizeClocks
   //
@@ -585,27 +584,9 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                    << prev_running_frac_src_frame.raw_value() << " to "
                    << info.next_frac_source_frame.raw_value();
 
-    // Also should reset the PID controls in the relevant clocks.
-    reference_clock().ResetRateAdjustment(curr_dest_frame);
-    stream.reference_clock().ResetRateAdjustment(curr_dest_frame);
-  } else if (reference_clock() == stream.reference_clock()) {
-    // Same clock on both sides can occur when multiple MixStages are connected serially (should
-    // both be device clocks). Don't synchronize: use frac_src_frames_per_dest_frame as-is.
-  } else if (reference_clock().is_device_clock() && stream.reference_clock().is_device_clock()) {
-    // We are synchronizing two device clocks. Unfortunately, we know they aren't the same.
-    // To enable this scenario in the future, at least one must be adjustable in hardware (it will
-    // be the "follower"); the other must be marked as hardware_controlling.
-    FX_DCHECK(reference_clock() == stream.reference_clock())
-        << "Cannot reconcile two different device clocks: clock routing error";
+    source_clk.ResetRateAdjustment(curr_dest_frame);
+    dest_clk.ResetRateAdjustment(curr_dest_frame);
   } else {
-    // MeasureClockError
-    //
-    // Between upstream (source) and downstream (dest) clocks, we should have one device clock
-    // and one client clock. Remember capture mix, where usual roles are reversed.
-    // They can't BOTH be client clocks (although we could handle this, if routing existed).
-    FX_DCHECK(reference_clock().is_device_clock() || stream.reference_clock().is_device_clock())
-        << "Cannot reconcile two client clocks. No device clock: clock routing error";
-
     // MeasureClockError
     //
     // Measure the error in src_frac_pos
@@ -616,51 +597,25 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
         Fixed::FromRaw(info.dest_frames_to_frac_source_frames(curr_dest_frame));
     info.frac_source_error = info.next_frac_source_frame - curr_src_frac_pos;
 
-    // AdjustClock
-    //
-    //   If mix is continuous since then, report the latest error to the AudioClock
-    //   AudioClock feeds errors to its internal PID, producing a running correction factor....
-    //   ... If clock is hardware-controlling, apply correction factor to the hardware.
-    //   ... If clock is adjustable, apply correction factor directly to the client clock.
-    //   ... Otherwise, expose this error correction factor directly to MixStage
-    AudioClock& device_clock =
-        stream.reference_clock().is_device_clock() ? stream.reference_clock() : reference_clock();
-    AudioClock& client_clock =
-        stream.reference_clock().is_device_clock() ? reference_clock() : stream.reference_clock();
-
     if (std::abs(info.frac_source_error.raw_value()) > max_error_frac) {
-      // Source error exceeds our threshold
-      // Reset the rate adjustment process altogether and allow a discontinuity
+      // Source error exceeds our threshold; reset rate adjustment altogether; allow a discontinuity
       info.next_frac_source_frame = curr_src_frac_pos;
       FX_LOGS(DEBUG) << "frac_source_error: out of bounds (" << info.frac_source_error.raw_value()
                      << " vs. limit +/-" << max_error_frac << "), resetting next_frac_src to "
                      << info.next_frac_source_frame.raw_value();
 
-      // Reset the PID controls, in the relevant clocks.
-      client_clock.ResetRateAdjustment(curr_dest_frame);
-      device_clock.ResetRateAdjustment(curr_dest_frame);
+      // Reset PID controls in the relevant clocks.
+      source_clk.ResetRateAdjustment(curr_dest_frame);
+      dest_clk.ResetRateAdjustment(curr_dest_frame);
     } else {
-      // No error is too small to worry about; handle them all.
-      FX_LOGS(TRACE) << "frac_source_error: tuning reference clock at dest " << curr_dest_frame
-                     << " for " << info.frac_source_error.raw_value();
-      if (client_clock.is_adjustable()) {
-        // Adjust the adjustable client clock to match the device clock
-      } else if (device_clock.is_adjustable() && client_clock.controls_device_clock()) {
-        // Adjust device_clock's hardware clock rate based on the frac_source_error
-      } else {
-        // Synchronize two non-adjustable clocks using micro-SRC
+      auto micro_src_ppm = AudioClock::SynchronizeClocks(source_clk, dest_clk,
+                                                         info.frac_source_error, curr_dest_frame);
 
-        client_clock.TuneRateForError(curr_dest_frame, info.frac_source_error);
+      if (micro_src_ppm) {
+        TimelineRate micro_src_factor{static_cast<uint64_t>(1'000'000 + micro_src_ppm), 1'000'000};
 
-        // With this factor, set the rate that determines step_size, so future src_pos converges to
-        // what the two clocks require.
-        TimelineRate micro_src_factor = client_clock.adjustment_rate();
-        FX_LOGS(TRACE) << "Inserting micro-SRC: " << micro_src_factor.subject_delta() << " / "
-                       << micro_src_factor.reference_delta();
-
-        // Product might exceed uint64/uint64, so allow reduction. Less-than-perfect precision is
-        // acceptable here because micro-SRC does not determine the stream's absolute position.
-        // Rather, it sets SRC factors accordingly, to chase that absolute position.
+        // Product might exceed uint64/uint64, so allow reduction. Approximation is OK, since clocks
+        // (not SRC/step_size) determines a stream absolute position. SRC just chases the position.
         frac_src_frames_per_dest_frame =
             TimelineRate::Product(frac_src_frames_per_dest_frame, micro_src_factor, false);
       }

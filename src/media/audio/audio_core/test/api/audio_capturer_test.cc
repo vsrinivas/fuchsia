@@ -76,7 +76,6 @@ class AudioCapturerClockTestOldAPI : public AudioCapturerTestOldAPI {
                     [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
 
     ExpectCallback();
-    EXPECT_TRUE(clock.is_valid());
 
     return clock;
   }
@@ -367,7 +366,6 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_NoTransferNoChange) {
   //
   // Now create another clock without transfer rights...
   zx::clock no_transfer_clock = clock::CloneOfMonotonic();
-  ASSERT_TRUE(no_transfer_clock.is_valid());
   ASSERT_EQ(no_transfer_clock.replace(kClockRights & ~ZX_RIGHT_TRANSFER, &no_transfer_clock),
             ZX_OK);
   clock::testing::VerifyIsSystemMonotonic(no_transfer_clock);

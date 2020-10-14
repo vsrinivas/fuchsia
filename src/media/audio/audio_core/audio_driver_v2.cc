@@ -374,7 +374,7 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
                   *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
                   std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-                    auto t = audio_clock_.Read();
+                    auto t = reference_clock().Read();
                     return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
                         .Floor();
                   });
@@ -383,7 +383,7 @@ zx_status_t AudioDriverV2::Configure(const Format& format, zx::duration min_ring
                   *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
                   std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-                    auto t = audio_clock_.Read();
+                    auto t = reference_clock().Read();
                     return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
                         .Floor();
                   });
@@ -702,12 +702,10 @@ zx_status_t AudioDriverV2::OnDriverInfoFetched(uint32_t info) {
 }
 
 void AudioDriverV2::SetUpClocks() {
-  // If we are in the monotonic domain, or if we have problem setting up the mechanism to recover a
-  // clock, then we'll just fall back to using this non-adjustable clone of CLOCK_MONOTONIC.
-  audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(audio::clock::CloneOfMonotonic(),
-                                                         AudioClock::kMonotonicDomain);
-
   if (clock_domain_ == AudioClock::kMonotonicDomain) {
+    // If in the monotonic domain, we'll fall back to a non-adjustable clone of CLOCK_MONOTONIC.
+    audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(audio::clock::CloneOfMonotonic(),
+                                                           AudioClock::kMonotonicDomain);
     return;
   }
 
@@ -716,30 +714,15 @@ void AudioDriverV2::SetUpClocks() {
   // provided by the audio driver, which correlate DMA position with CLOCK_MONOTONIC time.
   // TODO(fxbug.dev/60027): Recovered clocks should be per-domain not per-driver.
   auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
-  auto read_only_clock_result = audio::clock::DuplicateClock(adjustable_clock);
-  if (!read_only_clock_result.is_ok()) {
-    FX_LOGS(ERROR) << "DuplicateClock failed, will not recover a device clock!";
-    return;
-  }
+  auto read_only_clock = audio::clock::DuplicateClock(adjustable_clock).take_value();
 
   recovered_clock_ =
       AudioClock::CreateAsDeviceNonadjustable(std::move(adjustable_clock), clock_domain_);
-  if (!recovered_clock_.is_valid()) {
-    FX_LOGS(ERROR)
-        << "CreateAsDeviceNonadjustable (recovered) failed, will not recover a device clock!";
-    return;
-  }
 
   // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
   // be DeviceAdjustable, not DeviceNonadjustable, to articulate that it has hardware controls.
-  auto clone =
-      AudioClock::CreateAsDeviceNonadjustable(read_only_clock_result.take_value(), clock_domain_);
-  if (!clone.is_valid()) {
-    FX_LOGS(ERROR)
-        << "CreateAsDeviceNonadjustable (read_only) failed, will not recover a device clock!";
-    recovered_clock_ = AudioClock();
-    return;
-  }
+  auto clone = AudioClock::CreateAsDeviceNonadjustable(std::move(read_only_clock), clock_domain_);
+
   audio_clock_ = std::move(clone);
 }
 

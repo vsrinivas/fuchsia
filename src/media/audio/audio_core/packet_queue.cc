@@ -191,7 +191,7 @@ void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix
     if (ref_time_to_fixed.invertible()) {
       auto fixed_to_ref_time = ref_time_to_fixed.Inverse();
       auto start_ref_time = zx::time(fixed_to_ref_time.Apply(frac_source_start.raw_value()));
-      start_mono_time = audio_clock_.MonotonicTimeFromReferenceTime(start_ref_time);
+      start_mono_time = reference_clock().MonotonicTimeFromReferenceTime(start_ref_time);
     } else {
       start_mono_time = zx::clock::get_monotonic() - underflow_duration;
     }

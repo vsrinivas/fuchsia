@@ -6,223 +6,226 @@
 
 #include <zircon/syscalls.h>
 
-#include <algorithm>
 #include <cmath>
 #include <iomanip>
 
+#include "src/media/audio/audio_core/audio_clock_coefficients.h"
 #include "src/media/audio/lib/clock/pid_control.h"
-#include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
 
 //
-// Constants related to PID and clock-tuning
-//
-// These values were determined empirically based on one accepted rule-of-thumb for setting PID
-// factors (Ziegler-Nichols). First discover the P factor (without I or D factors) that leads to
-// steady-state non-divergent oscillation, then half that value. Set the I factor to approximately
-// (2P)/OscillationPeriod. Set the D factor to approximately (P/8)*OscillationPeriod.
-
-// Micro-SRC synchronization
-//
-constexpr double kMicroSrcOscillationPeriod = 3840;  // frames
-constexpr double kMicroSrcOscillationGain = -0.0000002537;
-constexpr double kMicroSrcPFactor = kMicroSrcOscillationGain * 0.3;
-constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
-    .proportional_factor = kMicroSrcPFactor,
-    .integral_factor = kMicroSrcPFactor * 2 / kMicroSrcOscillationPeriod,
-    .derivative_factor = kMicroSrcPFactor * kMicroSrcOscillationPeriod / 8};
-
-// Unlike an actual zx::clock, micro-SRC synchronization is not bound by the [-1000, +1000]
-// parts-per-million range. Micro-SRC fills the GAP between zx::clocks that AudioCore cannot
-// directly adjust (they are either adjusted by some other party or simply represent hardware in a
-// different clock domain and thus may drift): these clocks can each diverge from the local system
-// monotonic clock by as much as +/- 1000 ppm. Micro-SRC may need to reconcile a rate difference of
-// 2000 PPM; we set a limit of 2500 to more rapidly eliminate discrepancies that approach 2000 PPM.
-constexpr double kMicroSrcRateAdjustmentMax = 0.0025;
-
-//
 // static methods
 //
-AudioClock AudioClock::CreateAsClientNonadjustable(zx::clock clock) {
-  auto audio_clock = AudioClock(std::move(clock), Source::Client, false);
-  FX_CHECK(audio_clock.is_valid());
-
-  // Next: set micro-SRC PID coefficients, approprate for a software-tuned clock.
-  audio_clock.ConfigureAdjustment(kPidFactorsMicroSrc);
-
-  return audio_clock;
-}
-
 AudioClock AudioClock::CreateAsClientAdjustable(zx::clock clock) {
-  auto audio_clock = AudioClock(std::move(clock), Source::Client, true);
-  FX_CHECK(audio_clock.is_valid());
-
-  // Next: set HW-chaser PID coefficients, approprate for an adjustable client clock.
-
-  return audio_clock;
+  return AudioClock(std::move(clock), Source::Client, true);
 }
 
-AudioClock AudioClock::CreateAsDeviceNonadjustable(zx::clock clock, uint32_t domain) {
-  auto audio_clock = AudioClock(std::move(clock), Source::Device, false, domain);
-  FX_CHECK(audio_clock.is_valid());
-
-  return audio_clock;
+AudioClock AudioClock::CreateAsClientNonadjustable(zx::clock clock) {
+  return AudioClock(std::move(clock), Source::Client, false);
 }
 
 AudioClock AudioClock::CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain) {
-  auto audio_clock = AudioClock(std::move(clock), Source::Device, true, domain);
-  FX_CHECK(audio_clock.is_valid());
-
-  // Next: set HW-response PID coefficients, approprate for a tuned hardware clock.
-  return audio_clock;
+  return AudioClock(std::move(clock), Source::Device, true, domain);
 }
 
-AudioClock::SyncMode AudioClock::SynchronizationMode(AudioClock& clock1, AudioClock& clock2) {
-  FX_CHECK(clock1.is_valid());
-  FX_CHECK(clock2.is_valid());
+AudioClock AudioClock::CreateAsDeviceNonadjustable(zx::clock clock, uint32_t domain) {
+  return AudioClock(std::move(clock), Source::Device, false, domain);
+}
 
-  if (clock1 == clock2) {
+//
+// Policy-related static methods
+Mixer::Resampler AudioClock::UpgradeResamplerIfNeeded(Mixer::Resampler initial_resampler_hint,
+                                                      AudioClock& source_clock,
+                                                      AudioClock& dest_clock) {
+  if (initial_resampler_hint == Mixer::Resampler::Default) {
+    auto mode = AudioClock::SynchronizationMode(source_clock, dest_clock);
+    // If we might need micro-SRC for synchronization, use the higher quality resampler.
+    if (mode == AudioClock::SyncMode::MicroSrc ||
+        mode == AudioClock::SyncMode::AdjustSourceHardware ||
+        mode == AudioClock::SyncMode::AdjustDestHardware) {
+      return Mixer::Resampler::WindowedSinc;
+    }
+  }
+
+  return initial_resampler_hint;
+}
+
+AudioClock::SyncMode AudioClock::SynchronizationMode(AudioClock& source_clock,
+                                                     AudioClock& dest_clock) {
+  if (source_clock == dest_clock) {
     return SyncMode::None;
   }
-  if (clock1.is_device_clock() && clock2.is_device_clock() && clock1.domain() == clock2.domain()) {
+
+  if (source_clock.is_device_clock() && dest_clock.is_device_clock() &&
+      source_clock.domain() == dest_clock.domain()) {
     return SyncMode::None;
   }
 
-  if ((clock1.is_client_clock() && clock1.is_adjustable()) ||
-      (clock2.is_client_clock() && clock2.is_adjustable())) {
-    return SyncMode::AdjustClientClock;
+  if (source_clock.is_adjustable() && source_clock.is_client_clock()) {
+    return SyncMode::AdjustSourceClock;
   }
 
-  if (clock1.is_device_clock() && clock1.is_adjustable() && clock2.controls_device_clock()) {
-    return SyncMode::AdjustHardwareClock;
+  if (dest_clock.is_adjustable() && dest_clock.is_client_clock()) {
+    return SyncMode::AdjustDestClock;
   }
-  if (clock2.is_device_clock() && clock2.is_adjustable() && clock1.controls_device_clock()) {
-    return SyncMode::AdjustHardwareClock;
+
+  if (source_clock.is_adjustable() && dest_clock.controls_device_clock()) {
+    return SyncMode::AdjustSourceHardware;
+  }
+
+  if (dest_clock.is_adjustable() && source_clock.controls_device_clock()) {
+    return SyncMode::AdjustDestHardware;
   }
 
   return SyncMode::MicroSrc;
 }
 
-AudioClock::AudioClock(zx::clock clock, Source source, bool is_adjustable, uint32_t domain)
-    : clock_(std::move(clock)), source_(source), is_adjustable_(is_adjustable), domain_(domain) {
-  // If we can read the clock now, we will always be able to read it. This quick check covers all
-  // error modes: bad handle, wrong object type, no RIGHT_READ, clock not running.
-  zx_time_t now_unused;
-  if (clock_.read(&now_unused) != ZX_OK) {
-    source_ = Source::Invalid;
-    clock_.reset();
+int32_t AudioClock::ClampPpm(SyncMode sync_mode, int32_t parts_per_million) {
+  if (sync_mode == SyncMode::MicroSrc) {
+    return std::clamp<int32_t>(parts_per_million, -kMicroSrcAdjustmentPpmMax,
+                               kMicroSrcAdjustmentPpmMax);
   }
 
-  // Check whether a ClientAdjustable zx::clock has write privileges (can be rate-adjusted)?
+  return std::clamp<int32_t>(parts_per_million, ZX_CLOCK_UPDATE_MIN_RATE_ADJUST,
+                             ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
 }
 
-// Set the PID coefficients for this clock.
-void AudioClock::ConfigureAdjustment(const clock::PidControl::Coefficients& pid_coefficients) {
-  FX_CHECK(is_valid());
+//
+// Based on policy separately defined above, synchronize two clocks. Returns the ppm value of any
+// micro-SRC that is needed. Error factor is a delta in frac_src frames, time units are dest frames.
+int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
+                                      Fixed frac_src_error, int64_t dest_frame) {
+  // The two clocks determine the sync mode.
+  auto sync_mode = SynchronizationMode(source_clock, dest_clock);
 
-  feedback_control_loop_ = clock::PidControl(pid_coefficients);
+  // From the sync mode, determine which clock to tune, and the appropriate PID.
+  AudioClock* clock;
+  audio::clock::PidControl* feedback_control;
+  switch (sync_mode) {
+    case SyncMode::None:
+      // Same clock, or device clocks in the same clock domain. No need to adjust anything.
+      return 0;
+
+    case SyncMode::AdjustSourceClock:
+    case SyncMode::AdjustSourceHardware:
+      // We will adjust the source -- either its zx::clock, or the hardware it represents.
+      clock = &source_clock;
+      FX_CHECK(clock->adjustable_feedback_control_.has_value());
+
+      feedback_control = &(clock->adjustable_feedback_control_.value());
+      break;
+
+    case SyncMode::AdjustDestClock:
+    case SyncMode::AdjustDestHardware:
+      // We will adjust the dest -- either its zx::clock, or the hardware it represents.
+      clock = &dest_clock;
+      FX_CHECK(clock->adjustable_feedback_control_.has_value());
+
+      feedback_control = &(clock->adjustable_feedback_control_.value());
+      break;
+
+    case SyncMode::MicroSrc:
+      // No clock is adjustable; use micro-SRC. Either can do the accounting; we choose source.
+      clock = &source_clock;
+
+      feedback_control = &clock->microsrc_feedback_control_;
+      break;
+  }
+  feedback_control->TuneForError(dest_frame, frac_src_error.raw_value());
+
+  // 'adjustment' is a zero-centric adjustment factor, relative to current rate.
+  auto adjustment = feedback_control->Read();
+  auto adjust_ppm = ClampPpm(sync_mode, round(adjustment * 1'000'000));
+
+  if (adjust_ppm != clock->adjustment_ppm_) {
+    clock->adjustment_ppm_ = adjust_ppm;
+    FX_LOGS(TRACE) << "For sync_mode " << static_cast<uint32_t>(sync_mode) << ", adjusted to "
+                   << std::setw(5) << adjust_ppm << " ppm; frac_err " << frac_src_error.raw_value();
+  }
+
+  return (sync_mode == SyncMode::MicroSrc ? adjust_ppm : 0);
 }
 
-zx::clock AudioClock::DuplicateClock() const {
-  FX_CHECK(is_valid());
+//
+// instance methods
+//
+AudioClock::AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t domain)
+    : clock_(std::move(clock)),
+      source_(source),
+      is_adjustable_(adjustable),
+      domain_(domain),
+      adjustment_ppm_(0),
+      controls_device_clock_(false) {
+  zx_info_handle_basic_t info;
+  auto status = zx_object_get_info(clock_.get_handle(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                   nullptr, nullptr);
+  FX_CHECK(status == ZX_OK) << "Failed to to fetch clock rights";
 
-  // We pre-qualify the clock, so this should never fail.
-  return audio::clock::DuplicateClock(clock_).take_value();
+  const auto kRequiredRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ |
+                               (is_adjustable_ ? ZX_RIGHT_WRITE : 0);
+  auto rights = info.rights & kRequiredRights;
+  FX_CHECK(rights == kRequiredRights)
+      << "Rights: actual 0x" << std::hex << rights << ", expected 0x" << kRequiredRights;
+
+  // If we can read the clock now, we will always be able to. This check covers all error modes (bad
+  // handle, wrong object type, no RIGHT_READ, clock not running) short of actually adjusting it.
+  zx_time_t now_unused;
+  if (clock_.read(&now_unused) != ZX_OK) {
+    clock_.reset();
+    FX_CHECK(false);
+  }
+
+  // Set feedback controls (including PID coefficients) for synchronizing this clock.
+  if (is_adjustable()) {
+    switch (source_) {
+      case Source::Client:
+        adjustable_feedback_control_ = audio::clock::PidControl(kPidFactorsAdjustClientClock);
+        break;
+      case Source::Device:
+        adjustable_feedback_control_ = audio::clock::PidControl(kPidFactorsAdjustHardwareClock);
+        break;
+    }  // no default, to catch logic errors if an enum is added
+  }
+  microsrc_feedback_control_ = audio::clock::PidControl(kPidFactorsMicroSrc);
 }
 
-bool AudioClock::set_controls_device_clock(bool should_control_device_clock) {
-  FX_CHECK(is_valid());
-
-  controls_device_clock_ = (is_client_clock() && !is_adjustable() && should_control_device_clock);
-  return controls_device_clock_;
+void AudioClock::set_controls_device_clock(bool should_control_device_clock) {
+  if (is_client_clock() && !is_adjustable_) {
+    controls_device_clock_ = should_control_device_clock;
+  }
 }
 
+// We pre-qualify the clock, so the following methods should never fail.
 TimelineFunction AudioClock::ref_clock_to_clock_mono() const {
-  FX_CHECK(is_valid());
-
-  // We pre-qualify the clock, so this should never fail.
   return audio::clock::SnapshotClock(clock_).take_value().reference_to_monotonic;
 }
 
-zx::time AudioClock::Read() const {
-  FX_CHECK(is_valid());
+zx::time AudioClock::ReferenceTimeFromMonotonicTime(zx::time mono_time) const {
+  return audio::clock::ReferenceTimeFromMonotonicTime(clock_, mono_time).take_value();
+}
 
-  // We pre-qualify the clock for all the known ways that read can fail.
+zx::time AudioClock::MonotonicTimeFromReferenceTime(zx::time ref_time) const {
+  return audio::clock::MonotonicTimeFromReferenceTime(clock_, ref_time).take_value();
+}
+
+zx::clock AudioClock::DuplicateClock() const {
+  return audio::clock::DuplicateClock(clock_).take_value();
+}
+
+zx::time AudioClock::Read() const {
   zx::time ref_now;
   clock_.read(ref_now.get_address());
 
   return ref_now;
 }
 
-zx::time AudioClock::ReferenceTimeFromMonotonicTime(zx::time mono_time) const {
-  FX_CHECK(is_valid());
-
-  // We pre-qualify the clock, so this should never fail.
-  return audio::clock::ReferenceTimeFromMonotonicTime(clock_, mono_time).take_value();
-}
-
-zx::time AudioClock::MonotonicTimeFromReferenceTime(zx::time ref_time) const {
-  FX_CHECK(is_valid());
-
-  // We pre-qualify the clock, so this should never fail.
-  return audio::clock::MonotonicTimeFromReferenceTime(clock_, ref_time).take_value();
-}
-
-// The time units here are dest frames, the error factor is a difference in frac_src frames.
-// This method is periodically called, to incorporate the current source position error (in
-// fractional frames) into a feedback control that tunes the rate-adjustment factor for this clock.
-void AudioClock::TuneRateForError(int64_t dest_frame, Fixed frac_src_error) {
-  FX_CHECK(is_valid());
-
-  FX_CHECK(is_client_clock() || is_adjustable()) << "Cannot rate-adjust this type of clock";
-
-  FX_LOGS(TRACE) << __func__ << "(" << frac_src_error.raw_value() << ", " << dest_frame
-                 << ") for clock type " << (is_device_clock() ? "Device " : "Client ")
-                 << (is_adjustable_ ? "Adjustable" : "Non-adjustable");
-
-  // Feed into the PID
-  feedback_control_loop_.TuneForError(dest_frame, frac_src_error.raw_value());
-
-  // This is a zero-centric adjustment factor, relative to current rate.
-  auto adjustment = feedback_control_loop_.Read();
-
-  if (is_adjustable()) {
-    if (is_device_clock()) {
-      // TODO(fxbug.dev/46648): adjust hardware clock rate by rate_adjustment
-
-      // Convert this to a (truncated) PPM value, set_rate_adjust and update the device clock
-    } else {
-      // TODO(fxbug.dev/46651): adjust clock by rate_adjustment
-
-      // Convert this to a (truncated) PPM value, set_rate_adjust and update the client clock
-    }
-  } else {
-    // We could support micro-SRC between two device clocks but do not currently do so.
-    FX_CHECK(is_client_clock());
-
-    //' adjustment' contains the impact of the current error; adjustment_rate_ can be set now.
-    adjustment = trunc(adjustment * 1'000'000) / 1'000'000;
-    adjustment = std::clamp(adjustment, -kMicroSrcRateAdjustmentMax, kMicroSrcRateAdjustmentMax);
-    auto adjustment_rate = 1.0 + adjustment;
-
-    auto prev_adjustment_rate = adjustment_rate_;
-    adjustment_rate_ = TimelineRate(adjustment_rate);
-
-    if (prev_adjustment_rate != adjustment_rate_) {
-      FX_LOGS(DEBUG) << "Micro-SRC:" << std::fixed << std::setprecision(2) << std::setw(8)
-                     << adjustment * 1'000'000.0 << " ppm; frac_error "
-                     << frac_src_error.raw_value();
-    }
-  }
-}
-
 void AudioClock::ResetRateAdjustment(int64_t time) {
-  FX_CHECK(is_valid());
-
-  adjustment_rate_ = TimelineRate(1u);
-  feedback_control_loop_.Start(time);
+  microsrc_feedback_control_.Start(time);
+  if (adjustable_feedback_control_.has_value()) {
+    adjustable_feedback_control_.value().Start(time);
+  }
 }
 
 }  // namespace media::audio

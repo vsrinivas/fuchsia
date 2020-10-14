@@ -74,7 +74,7 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
 
-  AudioClock clock_for_packet_queue;
+  std::optional<AudioClock> clock_for_packet_queue;
   if (client_allows_clock_adjustment_ && !adjustable_clock_is_allocated_) {
     // Retain WRITE, mark AudioClock adjustable, and note that an adjustable clock has been
     // provided.
@@ -89,19 +89,13 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     adjustable_clock_is_allocated_ = true;
   } else {
     // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
-    auto result = audio::clock::DuplicateClock(raw_clock());
-    if (!result.is_ok()) {
-      return fit::error(result.error());
-    }
-
-    zx::clock readable_clock = result.take_value();
-    FX_DCHECK(readable_clock.is_valid());
+    auto readable_clock = audio::clock::DuplicateClock(raw_clock()).take_value();
 
     clock_for_packet_queue = AudioClock::CreateAsClientNonadjustable(std::move(readable_clock));
   }
 
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
-                                             std::move(clock_for_packet_queue));
+                                             std::move(clock_for_packet_queue.value()));
 
   queue->SetUnderflowReporter([this](zx::time start_time, zx::time stop_time) {
     reporter_->Underflow(start_time, stop_time);
@@ -747,18 +741,12 @@ void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   // Regardless of whether raw_clock_ is writable, this strips off the WRITE right.
-  auto result = audio::clock::DuplicateClock(raw_clock_);
-  if (!result.is_ok()) {
+  auto clock_result = audio::clock::DuplicateClock(raw_clock_);
+  if (!clock_result.is_ok()) {
     FX_LOGS(ERROR) << "Could not duplicate reference clock";
     return;
   }
-  auto clock = result.take_value();
-  if (!clock.is_valid()) {
-    FX_LOGS(ERROR) << "Duplicate reference clock was invalid";
-    return;
-  }
-
-  callback(std::move(clock));
+  callback(clock_result.take_value());
 
   cleanup.cancel();
 }

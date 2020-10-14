@@ -41,7 +41,7 @@ const Format kDefaultFormat =
 //
 // This set of tests validates how MixStage handles clock synchronization
 //
-// Currently, we tune PIDs by running all MicroSrcClockTest cases.
+// Currently, we tune PIDs by running all of these test cases.
 // Most recent tuning occurred 09/28/2020 with Fixed frames defined to have 13 fractional bits.
 //
 // There are three synchronization scenarios to be validated:
@@ -71,22 +71,25 @@ const Format kDefaultFormat =
 // the amount advanced in each Mix call) and subtracting the Expected source position (calculated by
 // converting dest frame through dest and source clocks to fractional source). Thus if our Expected
 // (clock-derived) source position is too high, we calculate a NEGATIVE position error.
-static constexpr float kMicroSrcPrimaryErrPpmMultiplier = -8;  // positive error? make SRC slower
+//
+static constexpr float kMicroSrcPrimaryErrPpmMultiplier = -7.1;  // positive error? consume slower
 
 static constexpr float kMicroSrcSecondaryErrPpmMultiplier = 1;
+
 static constexpr int32_t kMicroSrcMixCountUntilSettled = 100;
-static constexpr Fixed kMicroSrcLimitSettledErr = Fixed::FromRaw(4);
+
 static constexpr int32_t kMicroSrcMixCountSettledVerificationPeriod = 10;
 
-// Currently, we converge to 1 usec within 300ms, even at maximal rate discrepancy
+static constexpr Fixed kMicroSrcLimitSettledErr = Fixed::FromRaw(2);
+
 static constexpr int32_t kMicroSrcLimitMixCountOneUsecErr = 30;
 
-static constexpr int32_t kMicroSrcLimitMixCountOnePercentErr = 50;
+static constexpr int32_t kMicroSrcLimitMixCountOnePercentErr = 45;
 
 static constexpr Fixed kOneUsecErr = Fixed(kDefaultFrameRate) / 1'000'000;
 
 // When tuning a new set of PID coefficients, set this to enable additional logging.
-constexpr bool kDisplayForNewPidCoefficientsTuning = false;
+constexpr bool kDisplayForPidCoefficientsTuning = true;
 constexpr bool kTraceNewPidCoefficientsTuning = false;
 
 class MixStageClockTest : public testing::ThreadingModelFixture {
@@ -112,8 +115,8 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
   std::shared_ptr<MixStage> mix_stage_;
   std::shared_ptr<Mixer> mixer_;
 
-  AudioClock client_clock_;
-  AudioClock device_clock_;
+  std::optional<AudioClock> client_clock_;
+  std::optional<AudioClock> device_clock_;
 
   bool wait_for_mixes_;  // Do we wait for MONOTONIC time to pass between mixes.
 
@@ -176,19 +179,16 @@ void MixStageClockTest::SetRateLimits(int32_t rate_adjust_ppm) {
   // adjustment. At very small rate_adjust_ppm, these values can be overshadowed by any steady-state
   // "ripple" we might have, so include that "ripple" value in our max/min and 1% errors.
   auto min_max = std::minmax(primary_err_limit, secondary_err_limit);
-  lower_limit_src_pos_err_ = min_max.first - kMicroSrcLimitSettledErr;
-  upper_limit_src_pos_err_ = min_max.second + kMicroSrcLimitSettledErr;
+  lower_limit_src_pos_err_ = min_max.first - limit_settled_err_;
+  upper_limit_src_pos_err_ = min_max.second + limit_settled_err_;
 
-  one_usec_err_ = kOneUsecErr;
-
+  one_usec_err_ = std::max(limit_settled_err_, kOneUsecErr);
   Fixed primary_err_one_percent = primary_err_limit.Absolute() / 100;
-  one_percent_err_ = primary_err_one_percent + kMicroSrcLimitSettledErr;
+  one_percent_err_ = primary_err_one_percent + limit_settled_err_;
 
   limit_mix_count_one_usec_err_ = std::min(limit_mix_count_one_usec_err_, limit_mix_count_settled_);
   limit_mix_count_one_percent_err_ =
-      (one_percent_err_ == limit_settled_err_
-           ? limit_mix_count_settled_
-           : std::min(limit_mix_count_one_percent_err_, limit_mix_count_settled_));
+      std::min(limit_mix_count_one_percent_err_, limit_mix_count_settled_);
 }
 
 // Set up the various prerequisites of a clock synchronization test, then execute the test.
@@ -202,25 +202,20 @@ void MixStageClockTest::VerifySynchronization(ClockMode clock_mode, int32_t rate
   } else if (clock_mode == ClockMode::RATE_ADJUST) {
     clock_props = {.start_val = zx::time(0), .rate_adjust_ppm = rate_adjust_ppm};
   }
-  auto custom_clock_result = clock::testing::CreateCustomClock(clock_props);
-  EXPECT_TRUE(custom_clock_result.is_ok());
-  zx::clock raw_clock = custom_clock_result.take_value();
-  EXPECT_TRUE(raw_clock.is_valid());
+  auto raw_clock = clock::testing::CreateCustomClock(clock_props).take_value();
 
   // Call subclass-specific method to set up clocks for that synchronization method.
   SetUpClocks(clock_mode, std::move(raw_clock));
-  EXPECT_TRUE(client_clock_.is_valid());
-  EXPECT_TRUE(device_clock_.is_valid());
 
   // Create our source format transform; pass it and the client clock to a packet queue
   auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  std::shared_ptr<PacketQueue> packet_queue =
-      std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(client_clock_));
+  std::shared_ptr<PacketQueue> packet_queue = std::make_shared<PacketQueue>(
+      kDefaultFormat, nsec_to_frac_src, std::move(client_clock_.value()));
 
   // Pass the dest transform and device clock to a mix stage
-  mix_stage_ =
-      std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, timeline_function_, device_clock_);
+  mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix, timeline_function_,
+                                          device_clock_.value());
 
   // Connect packet queue to mix stage; we inspect running position & error via Mixer::SourceInfo.
   mixer_ = mix_stage_->AddInput(packet_queue);
@@ -311,7 +306,7 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
         << "rate ppm " << rate_adjust_ppm;
   }
 
-  if constexpr (kDisplayForNewPidCoefficientsTuning) {
+  if constexpr (kDisplayForPidCoefficientsTuning) {
     if (rate_adjust_ppm != 0) {
       FX_LOGS(INFO)
           << "****************************************************************************";

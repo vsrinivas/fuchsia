@@ -148,8 +148,6 @@ class BaseCapturer : public AudioObject,
 
   fidl::Binding<fuchsia::media::AudioCapturer>& binding() { return binding_; }
 
-  void SetAdjustableReferenceClock();
-
   // AudioCore treats client-provided clocks as not-rate-adjustable.
   void SetClock(AudioClock audio_clock) { audio_clock_ = std::move(audio_clock); }
 

@@ -42,8 +42,6 @@ class MixStageTest : public testing::ThreadingModelFixture {
   static constexpr uint32_t kBlockSizeFrames = 240;
 
   void SetUp() {
-    device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                            AudioClock::kMonotonicDomain);
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
                                             device_clock_);
   }
@@ -90,7 +88,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<MixStage> mix_stage_;
 
-  AudioClock device_clock_;
+  AudioClock device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
+                                                                     AudioClock::kMonotonicDomain);
 };
 
 TEST_F(MixStageTest, AddInput_MixerSelection) {
@@ -127,15 +126,16 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
                                                             timeline, nonadjustable_device_clock);
 
   auto adj_client_same_rate = std::make_shared<PacketQueue>(
-      kSameFrameRate, tl_same, AudioClock::CreateAsClientAdjustable(clock::CloneOfMonotonic()));
+      kSameFrameRate, tl_same,
+      AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   auto adj_client_diff_rate = std::make_shared<PacketQueue>(
       kDiffFrameRate, tl_different,
-      AudioClock::CreateAsClientAdjustable(clock::CloneOfMonotonic()));
+      AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   auto custom_same_rate = std::make_shared<PacketQueue>(
       kSameFrameRate, tl_same, AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic()));
-  auto controlling_clock =
-      AudioClock::CreateAsClientNonadjustable(clock::AdjustableCloneOfMonotonic());
+  auto controlling_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
   controlling_clock.set_controls_device_clock(true);
+  ASSERT_TRUE(controlling_clock.controls_device_clock());
   auto controlling =
       std::make_shared<PacketQueue>(kSameFrameRate, tl_same, std::move(controlling_clock));
 
@@ -202,16 +202,11 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
 
 AudioClock MixStageTest::SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                               testing::PacketFactory& factory) {
-  auto custom_clock_result =
-      clock::testing::CreateCustomClock({.start_val = zx::clock::get_monotonic() + clock_offset});
-  EXPECT_TRUE(custom_clock_result.is_ok());
+  auto custom_clock =
+      clock::testing::CreateCustomClock({.start_val = zx::clock::get_monotonic() + clock_offset})
+          .take_value();
 
-  zx::clock custom_clock = custom_clock_result.take_value();
-  EXPECT_TRUE(custom_clock.is_valid());
-
-  auto offset_result = clock::testing::GetOffsetFromMonotonic(custom_clock);
-  EXPECT_TRUE(offset_result.is_ok());
-  auto actual_offset = offset_result.take_value();
+  auto actual_offset = clock::testing::GetOffsetFromMonotonic(custom_clock).take_value();
 
   int64_t seek_frame = round(
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
@@ -232,9 +227,7 @@ void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
     packet_queue =
         std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    AudioClock custom_audio_clock =
-        SetPacketFactoryWithOffsetAudioClock(zx::sec(-2), packet_factory);
-    ASSERT_TRUE(custom_audio_clock.is_valid());
+    auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-2), packet_factory);
 
     packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
                                                  std::move(custom_audio_clock));
@@ -303,9 +296,7 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
     packet_queue2 =
         std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    AudioClock custom_audio_clock;
-    custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(10), packet_factory2);
-    ASSERT_TRUE(custom_audio_clock.is_valid());
+    auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(10), packet_factory2);
 
     packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
                                                   std::move(custom_audio_clock));
@@ -490,9 +481,7 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
     packet_queue =
         std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
-    AudioClock custom_audio_clock =
-        SetPacketFactoryWithOffsetAudioClock(zx::sec(5), packet_factory);
-    ASSERT_TRUE(custom_audio_clock.is_valid());
+    auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(5), packet_factory);
 
     packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function,
                                                  std::move(custom_audio_clock));
@@ -658,8 +647,8 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
 // src_pos_modulo and next_src_pos_modulo need not change. If denominator DOES change, then
 // src_pos_modulo and next_src_pos_modulo are scaled, from the old denominator to the new one.
 TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
-  AudioClock audio_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  ASSERT_TRUE(audio_clock.is_valid());
+  auto audio_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+
   auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   std::shared_ptr<PacketQueue> packet_queue =

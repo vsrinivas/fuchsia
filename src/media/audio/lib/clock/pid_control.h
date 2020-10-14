@@ -40,7 +40,7 @@ class PidControl {
 
   void Start(int64_t start_time);
 
-  double Read();
+  double Read() const;
   void TuneForError(int64_t time, double error);
 
   void DisplayCoefficients();

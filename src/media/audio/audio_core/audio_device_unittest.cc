@@ -41,6 +41,8 @@ class FakeAudioDevice : public AudioDevice {
 
 class AudioDeviceTest : public testing::ThreadingModelFixture {
  protected:
+  static constexpr uint32_t kCustomClockDomain = 42;
+
   void SetUp() override {
     device_ =
         std::make_shared<FakeAudioDevice>(AudioObject::Type::Input, &threading_model(),
@@ -49,6 +51,8 @@ class AudioDeviceTest : public testing::ThreadingModelFixture {
     zx::channel c1, c2;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
     remote_driver_ = std::make_unique<testing::FakeAudioDriverV2>(std::move(c1), dispatcher());
+    remote_driver_->set_clock_domain(kCustomClockDomain);
+
     device_->driver()->Init(std::move(c2));
     remote_driver_->Start();
   }
@@ -86,29 +90,20 @@ TEST_F(AudioDeviceTest, UniqueIdFromStringMixedCase) {
       << " got: " << AudioDevice::UniqueIdToString(id_result_from_valid.value());
 }
 
+// After GetDriverInfo, the clock domain has been set and the ref clock is valid.
 TEST_F(AudioDeviceTest, ReferenceClockIsAdvancing) {
-  // Before GetDriverInfo, the clock domain has not been set and the ref clock is invalid.
-  ASSERT_FALSE(device_->reference_clock().is_valid());
-
-  // After GetDriverInfo, the clock domain has been set and the ref clock is valid.
   threading_model().FidlDomain().ScheduleTask(device_->Startup());
 
   RunLoopUntilIdle();
-  ASSERT_TRUE(device_->driver_info_fetched_);
-  ASSERT_TRUE(device_->reference_clock().is_valid());
+  EXPECT_TRUE(device_->driver_info_fetched_);
   audio_clock_helper::VerifyAdvances(device_->reference_clock());
 }
 
 TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {
-  // Before GetDriverInfo, the clock domain has not been set and the ref clock is invalid.
-  ASSERT_FALSE(device_->reference_clock().is_valid());
-
-  // After GetDriverInfo, the clock domain has been set and the ref clock is valid.
   threading_model().FidlDomain().ScheduleTask(device_->Startup());
-
   RunLoopUntilIdle();
-  ASSERT_TRUE(device_->driver_info_fetched_);
-  ASSERT_TRUE(device_->reference_clock().is_valid());
+  EXPECT_TRUE(device_->driver_info_fetched_);
+
   audio_clock_helper::VerifyIsSystemMonotonic(device_->reference_clock());
 }
 

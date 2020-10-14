@@ -11,12 +11,14 @@
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio::testing {
 
 class FakeStream : public ReadableStream {
  public:
-  FakeStream(const Format& format, size_t max_buffer_size = PAGE_SIZE);
+  explicit FakeStream(const Format& format, size_t max_buffer_size = PAGE_SIZE,
+                      zx::clock clock = audio::clock::CloneOfMonotonic());
 
   void set_usage_mask(StreamUsageMask mask) { usage_mask_ = mask; }
   void set_gain_db(float gain_db) { gain_db_ = gain_db; }
@@ -26,10 +28,10 @@ class FakeStream : public ReadableStream {
   }
 
   // |media::audio::ReadableStream|
-  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const;
-  AudioClock& reference_clock() { return audio_clock_; }
-  std::optional<Buffer> ReadLock(Fixed frame, size_t frame_count);
-  void Trim(Fixed frame) {}
+  TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
+  AudioClock& reference_clock() override { return audio_clock_; }
+  std::optional<Buffer> ReadLock(Fixed frame, size_t frame_count) override;
+  void Trim(Fixed frame) override {}
 
  private:
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =

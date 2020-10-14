@@ -82,7 +82,6 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
         [&fidl_clock](zx::clock ref_clock) { fidl_clock = std::move(ref_clock); });
     RunLoopUntilIdle();
 
-    EXPECT_TRUE(fidl_clock.is_valid());
     return fidl_clock;
   }
 
@@ -349,7 +348,6 @@ TEST_F(AudioRendererTest, ReferenceClockIsReadOnly) {
 
 TEST_F(AudioRendererTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(renderer_->raw_clock().is_valid());
 
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
   clock::testing::VerifyIsSystemMonotonic(renderer_->raw_clock());
@@ -362,7 +360,6 @@ TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
   RunLoopUntilIdle();
 
   auto fidl_clock = GetReferenceClock();
-  ASSERT_TRUE(fidl_clock.is_valid());
 
   fidl_renderer_->SetPcmStreamType(stream_type_);
   RunLoopUntilIdle();

@@ -208,7 +208,6 @@ TYPED_TEST(AudioDriverTest, RefClockIsAdvancing) {
   this->driver_->GetDriverInfo();
   this->RunLoopUntilIdle();
 
-  ASSERT_TRUE(this->driver_->reference_clock().is_valid());
   audio_clock_helper::VerifyAdvances(this->driver_->reference_clock());
 }
 
@@ -219,7 +218,6 @@ TYPED_TEST(AudioDriverTest, DefaultClockIsClockMono) {
   this->driver_->GetDriverInfo();
   this->RunLoopUntilIdle();
 
-  ASSERT_TRUE(this->driver_->reference_clock().is_valid());
   audio_clock_helper::VerifyIsSystemMonotonic(this->driver_->reference_clock());
 }
 

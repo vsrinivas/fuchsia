@@ -167,7 +167,7 @@ class AudioDriverV1 : public AudioDriver {
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
 
-  AudioClock& reference_clock() override { return audio_clock_; }
+  AudioClock& reference_clock() override { return audio_clock_.value(); }
 
  private:
   friend class AudioDevice;
@@ -184,14 +184,7 @@ class AudioDriverV1 : public AudioDriver {
                                                 kDriverInfoHasFormats | kDriverInfoHasClockDomain;
 
   // Once the clock domain has been retrieved, set up AudioClock(s) for this driver -- a read-only
-  // AudioClock and PERHAPS also an adjustable AudioClock.
-  //
-  // The read-only AudioClock represents the device timeline when synchronizing clients and devices;
-  // it is passed upward into the output or input mix where that reconciliation is done.
-  //
-  // If this device is NOT in the system monotonic domain, then we must recover its clock, so we
-  // establish an adjustable AudioClock to do so. We will also set our read-only AudioClock (above)
-  // to be a clone of this adjustable clock.
+  // AudioClock for others to read, and PERHAPS an adjustable AudioClock that we will recover.
   void SetUpClocks();
 
   // Dispatchers for messages received over stream and ring buffer channels.
@@ -353,8 +346,8 @@ class AudioDriverV1 : public AudioDriver {
   // Counter of received position notifications since START.
   uint64_t position_notification_count_ = 0;
   uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
-  AudioClock audio_clock_;
-  AudioClock recovered_clock_;
+  std::optional<AudioClock> audio_clock_;
+  std::optional<AudioClock> recovered_clock_;
 };
 
 class AudioDriverV2 : public AudioDriver {
@@ -411,7 +404,7 @@ class AudioDriverV2 : public AudioDriver {
   zx_status_t SelectBestFormat(uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                                fuchsia::media::AudioSampleFormat* sample_format_inout) override;
 
-  AudioClock& reference_clock() override { return audio_clock_; }
+  AudioClock& reference_clock() override { return audio_clock_.value(); }
 
  private:
   static constexpr uint32_t kDriverInfoHasUniqueId = (1u << 0);
@@ -549,8 +542,8 @@ class AudioDriverV2 : public AudioDriver {
   // Counter of received position notifications since START.
   uint64_t position_notification_count_ = 0;
   uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
-  AudioClock audio_clock_;
-  AudioClock recovered_clock_;
+  std::optional<AudioClock> audio_clock_;
+  std::optional<AudioClock> recovered_clock_;
 };
 
 }  // namespace media::audio
