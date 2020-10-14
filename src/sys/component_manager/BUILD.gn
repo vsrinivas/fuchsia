@@ -46,6 +46,7 @@ template("component_manager") {
     "//src/lib/zircon/rust:fuchsia-zircon-sys",
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/cm_types",
     "//src/sys/lib/directory_broker",
     "//src/sys/lib/library_loader",
     "//src/sys/lib/runner",

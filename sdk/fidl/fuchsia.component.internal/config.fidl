@@ -55,6 +55,11 @@ table Config {
     /// Determine what content to expose through the component manager's
     /// outgoing directory. If no value is set, this defaults to NONE.
     9: OutDirContents out_dir_contents;
+
+    /// URL of the root component to launch. This field is used if the no URL
+    /// is passed to component manager. If value is passed in both places, then
+    /// an error is raised.
+    10: string:fuchsia.component.MAX_URL_SCHEME_LENGTH root_component_url;
 };
 
 /// The builtin resolver to use, if any.

@@ -501,7 +501,7 @@ impl<'de> de::Deserialize<'de> for RelativePath {
 
 /// A component URL. The URL is validated, but represented as a string to avoid
 /// normalization and retain the original representation.
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Url(String);
 
 impl Url {

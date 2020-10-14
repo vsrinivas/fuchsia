@@ -4,7 +4,7 @@
 
 use {
     argh::FromArgs,
-    cm_types::symmetrical_enums,
+    cm_types::{symmetrical_enums, Url},
     cml::error::{Error, Location},
     fidl::encoding::encode_persistent,
     fidl_fuchsia_component_internal as component_internal,
@@ -31,6 +31,7 @@ struct Config {
     num_threads: Option<u32>,
     builtin_pkg_resolver: Option<BuiltinPkgResolver>,
     out_dir_contents: Option<OutDirContents>,
+    root_component_url: Option<Url>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -117,6 +118,10 @@ impl TryFrom<Config> for component_internal::Config {
                 Some(out_dir_contents) => Some(out_dir_contents.into()),
                 None => None,
             },
+            root_component_url: match config.root_component_url {
+                Some(root_component_url) => Some(root_component_url.as_str().to_string()),
+                None => None,
+            },
         })
     }
 }
@@ -185,6 +190,7 @@ impl Config {
         extend_if_unset!(self, another, num_threads);
         extend_if_unset!(self, another, builtin_pkg_resolver);
         extend_if_unset!(self, another, out_dir_contents);
+        extend_if_unset!(self, another, root_component_url);
         Ok(self)
     }
 
@@ -300,7 +306,8 @@ mod tests {
                 },
             ],
             num_threads: 321,
-            out_dir_contents: "Svc"
+            out_dir_contents: "Svc",
+            root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -330,6 +337,7 @@ mod tests {
                 ]),
                 num_threads: Some(321),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
+                root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
             }
         );
     }
@@ -428,5 +436,13 @@ mod tests {
         assert_eq!(config.debug, Some(true));
         assert_eq!(config.list_children_batch_size, Some(42));
         Ok(())
+    }
+
+    #[test]
+    fn test_invalid_component_url() {
+        let input = r#"{
+            root_component_url: "not quite a valid Url",
+        }"#;
+        assert_matches!(compile_str(input), Err(Error::Parse { .. }));
     }
 }

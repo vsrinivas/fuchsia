@@ -9,6 +9,7 @@ use {
     },
     anyhow::{format_err, Context, Error},
     cm_rust::FidlIntoNative,
+    cm_types::Url,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinPkgResolver, OutDirContents,
     },
@@ -62,9 +63,16 @@ pub struct RuntimeConfig {
     /// Which builtin resolver to use. If not supplied this defaults to the NONE option.
     pub builtin_pkg_resolver: BuiltinPkgResolver,
 
-    /// Determine which directory to bind ServiceFs to.
+    /// Determine what content to expose through the component manager's
+    /// outgoing directory.
     pub out_dir_contents: OutDirContents,
+
+    /// URL of the root component to launch. This field is used if no URL
+    /// is passed to component manager. If value is passed in both places, then
+    /// an error is raised.
+    pub root_component_url: Option<Url>,
 }
+
 /// Runtime security policy.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SecurityPolicy {
@@ -105,6 +113,7 @@ impl Default for RuntimeConfig {
             namespace_capabilities: vec![],
             builtin_pkg_resolver: BuiltinPkgResolver::None,
             out_dir_contents: OutDirContents::None,
+            root_component_url: Default::default(),
         }
     }
 }
@@ -178,6 +187,11 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             as_usize_or_default(config.list_children_batch_size, default.list_children_batch_size);
         let num_threads = as_usize_or_default(config.num_threads, default.num_threads);
 
+        let root_component_url = match config.root_component_url {
+            Some(url) => Some(Url::new(url)?),
+            None => None,
+        };
+
         Ok(RuntimeConfig {
             list_children_batch_size,
             security_policy: SecurityPolicy { job_policy },
@@ -194,6 +208,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 .builtin_pkg_resolver
                 .unwrap_or(default.builtin_pkg_resolver),
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
+            root_component_url,
         })
     }
 }
@@ -267,6 +282,8 @@ mod tests {
         },
     };
 
+    const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";
+
     macro_rules! test_config_ok {
         (
             $(
@@ -299,6 +316,25 @@ mod tests {
             num_threads: None,
             namespace_capabilities: None,
             out_dir_contents: None,
+            root_component_url: None,
+        };
+
+        assert_matches!(RuntimeConfig::try_from(config), Err(_));
+    }
+
+    #[test]
+    fn invalid_root_component_url() {
+        let config = component_internal::Config {
+            debug: None,
+            list_children_batch_size: None,
+            maintain_utc_clock: None,
+            use_builtin_process_launcher: None,
+            builtin_pkg_resolver: None,
+            security_policy: None,
+            num_threads: None,
+            namespace_capabilities: None,
+            out_dir_contents: None,
+            root_component_url: Some("invalid url".to_string()),
         };
 
         assert_matches!(RuntimeConfig::try_from(config), Err(_));
@@ -315,6 +351,7 @@ mod tests {
             namespace_capabilities: None,
             builtin_pkg_resolver: None,
             out_dir_contents: None,
+            root_component_url: None,
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
             debug: Some(false),
@@ -331,6 +368,7 @@ mod tests {
             num_threads: Some(10),
             namespace_capabilities: None,
             out_dir_contents: None,
+            root_component_url: None,
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
             maintain_utc_clock: false, use_builtin_process_launcher:true,
@@ -363,6 +401,7 @@ mod tests {
                     }),
                 ]),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
+                root_component_url: Some(FOO_PKG_URL.to_string()),
             },
             RuntimeConfig {
                 debug: true,
@@ -394,6 +433,7 @@ mod tests {
                 ],
                 builtin_pkg_resolver: BuiltinPkgResolver::None,
                 out_dir_contents: OutDirContents::Svc,
+                root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
             }
         ),
     }
@@ -449,6 +489,7 @@ mod tests {
             num_threads: None,
             builtin_pkg_resolver: None,
             out_dir_contents: None,
+            root_component_url: None,
         };
         install_config_dir_in_namespace(config_dir, config_file, encode_persistent(&mut config)?)?;
 
