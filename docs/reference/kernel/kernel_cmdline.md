@@ -1,5 +1,7 @@
 # Zircon Kernel Commandline Options
 
+**TODO([fxbug.dev/53594](https://fxbug.dev/53594))**: kernel_cmdlind.md is slated to be replaced by [//docs/gen/boot-options.md](/docs/gen/boot-options.md)
+
 The Zircon kernel receives a textual commandline from the bootloader,
 which can be used to alter some behaviours of the system.  Kernel commandline
 parameters are in the form of *option* or *option=value*, separated by

@@ -6,6 +6,36 @@
 
 import("$zx_build/public/gn/migrated_targets.gni")
 
+import("//build/compiled_action.gni")
+
+if (current_toolchain == default_toolchain) {
+  compiled_action("json") {
+    outputs = [ "$root_build_dir/boot-options.json" ]
+    tool = ":boot-options-tool"
+    args = [ "--json" ] + rebase_path(outputs, root_build_dir)
+  }
+
+  action("markdown") {
+    script = "markdown.py"
+    outputs = [ "$root_build_dir/boot-options.md" ]
+    deps = [ ":json" ]
+    sources = get_target_outputs(":json") + [
+                "preamble.md",
+                "postamble.md",
+              ]
+    args = rebase_path(outputs + sources, root_build_dir)
+  }
+
+  action("check-markdown") {
+    script = "check-markdown.sh"
+    deps = [ ":markdown" ]
+    outputs = [ "$target_out_dir/$target_name.txt" ]
+    sources =
+        get_target_outputs(":markdown") + [ "$zx/../docs/gen/boot-options.md" ]
+    args = rebase_path(sources + outputs)
+  }
+}
+
 zx_library("boot-options") {
   kernel = true
   host = true
@@ -14,13 +44,13 @@ zx_library("boot-options") {
     "boot-options.cc",
     "word-view.cc",
   ]
-  deps = [ "$zx/system/ulib/uart" ]
-  public_deps = [ "$zx/system/ulib/uart:headers" ]
+  deps = [ "//zircon/system/ulib/uart" ]
+  public_deps = [ "//zircon/system/ulib/uart:headers" ]
 
   if (is_kernel) {
     deps += [
-      "$zx/kernel/lib/ktl",
-      "$zx/kernel/lib/libc",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
     public_deps += [ "$zx/kernel/lib/ktl:headers" ]
   }
@@ -31,4 +61,25 @@ zx_library("boot-options") {
   static = true
   sdk = "source"
   sdk_headers = []
+}
+
+if (is_host) {
+  zx_host_tool("boot-options-tool") {
+    # This recompiles the library's source file rather than using the library
+    # directly because the #if logic includes details for all machines when
+    # building for the generator tool but not in the library.
+    defines = [ "BOOT_OPTIONS_GENERATOR=1" ]
+    include_dirs = [ "include" ]
+    sources = [
+      "boot-options.cc",
+      "tool.cc",
+      "word-view.cc",
+    ]
+    deps = [
+      "//zircon/system/ulib/uart",
+
+      # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
+      "//zircon/third_party/rapidjson",
+    ]
+  }
 }

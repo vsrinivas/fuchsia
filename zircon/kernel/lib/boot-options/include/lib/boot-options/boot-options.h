@@ -10,7 +10,7 @@
 // TODO(fxbug.dev/32926): Once possible, only define this for test code.
 // In any case, we do not want to include tests options when generating
 // boot option documentation.
-#define BOOT_OPTIONS_TESTONLY_OPTIONS 1
+#define BOOT_OPTIONS_TESTONLY_OPTIONS !BOOT_OPTIONS_GENERATOR
 
 #include <stdio.h>
 #include <zircon/assert.h>

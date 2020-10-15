@@ -31,4 +31,14 @@ with no pointers.
 
 ## Documentation and JSON generation
 
-[**TODO(53593):**](https://fxbug.dev/53593)
+The build generates two files, `boot-options.json` and `boot-options.md` in the
+(Zircon) root build directory.  The JSON data provides information on each
+option supported by `BootOptions` (and thus by the kernel) in a simple
+machine-readable form.
+
+This information is formatted into Markdown along with a fixed header and
+footer to produce `boot-options.md`.  The build compares the generated file to
+[`//docs/gen/boot-options.md`](../../../../docs/gen/boot-options.md).  If they
+differ, the build breaks and shows a recommended `cp` command to update the
+file in the source tree.  Hence every update to `options.inc` must be
+accompanied by a re-generation of the documentation.
