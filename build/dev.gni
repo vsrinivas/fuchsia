@@ -8,4 +8,8 @@
 declare_args() {
   # List of labels for binaries to include in the system image.
   dev_system_image_deps = []
+
+  # List of labels for targets that should be built but not included in any
+  # build outputs that are part of the build API (e.g. zbi's, package servers).
+  dev_build_only_deps = []
 }
