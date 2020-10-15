@@ -545,7 +545,12 @@ set_defaults("rustc_staticlib") {
 #
 # - Add metadata entry for link_output_rspfile(). See its documentation for details.
 #
-# This takes the same arguments as the built-in shared_library().
+# This takes the same arguments as the built-in shared_library(). as well as:
+#
+#   install_name (optional)
+#     [string] An alternative installation name for the library. This should only
+#     be used by the C library that needs to be installed as `ld.so.1` instead of
+#     `libc.so`.
 #
 if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
   if (!toolchain_variant.is_pic_default) {
@@ -556,6 +561,7 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
         public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
         forward_variables_from(invoker,
                                [
+                                 "install_name",
                                  "output_name",
                                  "output_dir",
                                  "output_extension",
@@ -703,6 +709,11 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
         output_file = "$output_dir/$output_file_name"
         rebased_output_file = rebase_path(output_file, root_build_dir)
 
+        install_name = output_file_name
+        if (defined(invoker.install_name)) {
+          install_name = invoker.install_name
+        }
+
         # TODO(fxbug.dev/54322): Zircon toolchains must use a .debug suffix for non-stripped
         # shared libraries, instead of putting them into exe.unstripped. This can be
         # changed after build unification completes.
@@ -736,7 +747,7 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
           distribution_entries = [
             {
               source = rebased_output_file
-              destination = "lib/${variant_dir}$output_file_name"
+              destination = "lib/${variant_dir}$install_name"
               label = get_label_info(":$target_name", "label_with_toolchain")
             },
           ]
@@ -755,7 +766,7 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
           if (!defined(data_deps)) {
             data_deps = []
           }
-          should_add_shared_cpp_runtime = true
+          should_add_shared_cpp_runtime = zircon_toolchain == false
           if (defined(configs)) {
             # Do not add runtime dependencies if compiling statically.
             static_cpp_configs = [

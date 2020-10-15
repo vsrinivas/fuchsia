@@ -8,6 +8,10 @@ import json
 import os
 import sys
 
+# The following runtime libraries are provided directly by the SDK sysroot,
+# and not as SDK atoms.
+_SYSROOT_LIBS = ['libc.so', 'libzircon.so']
+
 
 def has_packaged_file(needed_file, deps):
     """Returns true if the given file could be found in the given deps."""
@@ -22,6 +26,9 @@ def has_missing_files(runtime_files, package_deps):
     """Returns true if a runtime file is missing from the given deps."""
     has_missing_files = False
     for file in runtime_files:
+        # Ignore sysroot libs
+        if os.path.basename(file) in _SYSROOT_LIBS:
+            continue
         # Some libraries are only known to GN as ABI stubs, whereas the real
         # runtime dependency is generated in parallel as a ".so.impl" file.
         if (not has_packaged_file(file, package_deps) and

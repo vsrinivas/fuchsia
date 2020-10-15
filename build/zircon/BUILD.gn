@@ -4,8 +4,6 @@
 
 import("//build/toolchain/basic_toolchain.gni")
 
-# Define a toolchain to build Zircon in.
-# This allows us to let the target and host toolchains depend on Zircon, which
-# in turn ensure Zircon is built before everything else.
-basic_toolchain("zircon_toolchain") {
+# Define a toolchain to build the Zircon sysroot.
+basic_toolchain("sysroot_toolchain") {
 }

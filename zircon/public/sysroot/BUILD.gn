@@ -6,7 +6,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/sdk/sdk_atom.gni")
 
-sysroot_toolchain = "//build/zircon:zircon_toolchain"
+sysroot_toolchain = "//build/zircon:sysroot_toolchain"
 sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "target_out_dir")
 sysroot_dir += "/sysroot"
 

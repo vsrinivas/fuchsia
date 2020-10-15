@@ -76,7 +76,7 @@ void FrameSink::PutFrame(uint32_t image_id, zx::vmo vmo, uint64_t vmo_offset,
     // Tell Scenic to show the first frame around now-ish.
     present_time = zx_clock_get_monotonic() + ZX_SEC(3);
   } else {
-    auto delta = ZX_USEC(1000000 / frames_per_second_);
+    auto delta = ZX_USEC((int64_t)(1000000 / frames_per_second_));
     FX_CHECK(delta > 0);
     present_time = last_requested_present_time_ + delta;
   }
@@ -117,7 +117,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_fra
   constexpr uint32_t kBlankFrameVmoOffset = 0;
 
   zx_time_t blank_frame_present_time =
-      last_requested_present_time_ + ZX_SEC(kDelayBeforeBlankFrameSeconds);
+      last_requested_present_time_ + ZX_SEC((int64_t)kDelayBeforeBlankFrameSeconds);
   ::zx::vmo blank_frame_vmo;
   zx_status_t status = ::zx::vmo::create(kBlankFrameBytes, 0, &blank_frame_vmo);
   FX_CHECK(status == ZX_OK) << "::zx::vmo::create() failed - status: " << status;
