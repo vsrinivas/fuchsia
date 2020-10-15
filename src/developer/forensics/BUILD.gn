@@ -197,6 +197,13 @@ resource("feedback_data_config") {
   outputs = [ "data/feedback_data/config.json" ]
 }
 
+config_data("device_id_provider_config") {
+  for_pkg = "sysmgr"
+
+  sources = [ "feedback_data/config/sysmgr.config" ]
+  outputs = [ "device_id_provider.config" ]
+}
+
 config_data("exceptions_enable_jitd_on_startup") {
   for_pkg = "forensics"
 

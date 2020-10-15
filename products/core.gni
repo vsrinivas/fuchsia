@@ -55,6 +55,7 @@ base_package_labels += [
   "//src/connectivity/wlan:packages",
   "//src/connectivity/wlan/config:default",
   "//src/developer/forensics:pkg",
+  "//src/developer/forensics:device_id_provider_config",
   "//src/developer/forensics/snapshot:pkg",
   "//src/diagnostics/log-stats:package",
   "//src/hwinfo:hwinfo",
