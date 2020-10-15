@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/promise.h>
+#include <lib/fit/scope.h>
 #include <lib/fit/sequencer.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace/event.h>
@@ -53,6 +54,7 @@ class SysmemAllocator {
   // because the 'free space probe' operation allocates some intermediate buffers that could exhaust
   // sysmem memory if multiple requests are processed concurrently.
   fit::sequencer serialize_requests_;
+  fit::scope scope_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_SYSMEM_ALLOCATOR_H_

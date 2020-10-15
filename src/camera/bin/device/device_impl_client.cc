@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -13,35 +12,25 @@
 
 DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Device> request)
-    : device_(device),
-      id_(id),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      binding_(this, std::move(request), loop_.dispatcher()) {
+    : device_(device), id_(id), binding_(this, std::move(request)) {
   FX_LOGS(DEBUG) << "Device client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &DeviceImpl::Client::OnClientDisconnected));
-  std::ostringstream oss;
-  oss << "Camera Device Client " << id;
-  ZX_ASSERT(loop_.StartThread(oss.str().c_str()) == ZX_OK);
 }
 
-DeviceImpl::Client::~Client() { loop_.Shutdown(); }
+DeviceImpl::Client::~Client() = default;
 
-void DeviceImpl::Client::PostConfigurationUpdated(uint32_t index) {
-  async::PostTask(loop_.dispatcher(), [this, index]() { configuration_.Set(index); });
-}
+void DeviceImpl::Client::ConfigurationUpdated(uint32_t index) { configuration_.Set(index); }
 
-void DeviceImpl::Client::PostMuteUpdated(MuteState mute_state) {
-  async::PostTask(loop_.dispatcher(), [this, mute_state] { mute_state_.Set(mute_state); });
-}
+void DeviceImpl::Client::MuteUpdated(MuteState mute_state) { mute_state_.Set(mute_state); }
 
 void DeviceImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Device client " << id_ << " disconnected.";
-  device_.PostRemoveClient(id_);
+  device_.RemoveClient(id_);
 }
 
 void DeviceImpl::Client::CloseConnection(zx_status_t status) {
   binding_.Close(status);
-  device_.PostRemoveClient(id_);
+  device_.RemoveClient(id_);
 }
 
 void DeviceImpl::Client::GetIdentifier(GetIdentifierCallback callback) {
@@ -85,7 +74,7 @@ void DeviceImpl::Client::SetCurrentConfiguration(uint32_t index) {
     return;
   }
 
-  device_.PostSetConfiguration(index);
+  device_.SetConfiguration(index);
 }
 
 void DeviceImpl::Client::WatchMuteState(WatchMuteStateCallback callback) {
@@ -101,17 +90,14 @@ void DeviceImpl::Client::SetSoftwareMuteState(bool muted, SetSoftwareMuteStateCa
     callback();
     callback = [] {};
   }
-  fit::closure marshalling_callback = [this, callback = callback.share()]() mutable {
-    async::PostTask(loop_.dispatcher(), [callback = std::move(callback)] { callback(); });
-  };
-  device_.PostSetSoftwareMuteState(muted, std::move(marshalling_callback));
+  device_.SetSoftwareMuteState(muted, std::move(callback));
 }
 
 void DeviceImpl::Client::ConnectToStream(uint32_t index,
                                          fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
-  device_.PostConnectToStream(index, std::move(request));
+  device_.ConnectToStream(index, std::move(request));
 }
 
 void DeviceImpl::Client::Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
-  device_.PostBind(std::move(request), false);
+  device_.Bind(std::move(request), false);
 }

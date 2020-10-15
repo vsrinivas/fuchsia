@@ -8,7 +8,6 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
@@ -37,14 +36,14 @@ class StreamImpl {
   // callback may be invoked from any thread.
   using CheckTokenCallback = fit::function<void(zx_koid_t, fit::function<void(bool)>)>;
 
-  StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
+  StreamImpl(async_dispatcher_t* dispatcher, const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
              CheckTokenCallback check_token, StreamRequestedCallback on_stream_requested,
              fit::closure on_no_clients);
   ~StreamImpl();
 
-  void PostSetMuteState(MuteState mute_state, fit::closure completed);
+  void SetMuteState(MuteState mute_state);
 
  private:
   // Called when a client calls Rebind.
@@ -53,28 +52,27 @@ class StreamImpl {
   // Called if the underlying legacy stream disconnects.
   void OnLegacyStreamDisconnected(zx_status_t status);
 
-  // Posts a task to remove the client with the given id.
-  void PostRemoveClient(uint64_t id);
+  // Remove the client with the given id.
+  void RemoveClient(uint64_t id);
 
-  // Posts a task to add the client with the given id to the queue of frame recipients.
-  void PostAddFrameSink(uint64_t id);
+  // Add the client with the given id to the queue of frame recipients.
+  void AddFrameSink(uint64_t id);
 
   // Called when the legacy stream's OnFrameAvailable event fires.
   void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info);
 
-  // Posts a task from the client with the given id to renegotiate buffers or opt out of buffer
-  // renegotiation.
-  void PostSetBufferCollection(uint64_t id,
-                               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
+  // Renegotiate buffers or opt out of buffer renegotiation for the client with the given id.
+  void SetBufferCollection(uint64_t id,
+                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
 
   // Sends pending frames to waiting recipients.
   void SendFrames();
 
-  // Posts a task from the client with the given id to change the resolution of the stream.
-  void PostSetResolution(uint64_t id, fuchsia::math::Size coded_size);
+  // Change the resolution of the stream.
+  void SetResolution(uint64_t id, fuchsia::math::Size coded_size);
 
-  // Posts a task from the client with the given id to change the crop region of the stream.
-  void PostSetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region);
+  // Change the crop region of the stream.
+  void SetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region);
 
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
@@ -83,31 +81,28 @@ class StreamImpl {
            fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
     ~Client() override;
 
-    // Posts a task to transfer ownership of the given frame to this client.
-    void PostSendFrame(fuchsia::camera3::FrameInfo frame);
+    // Transfer ownership of the given frame to this client.
+    void SendFrame(fuchsia::camera3::FrameInfo frame);
 
-    // Posts a task to close the client connection with the given epitaph.
-    void PostCloseConnection(zx_status_t epitaph);
+    // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
+    // the parent |clients_| map.
+    void CloseConnection(zx_status_t epitaph);
 
-    // Posts a task to add the given token to the client's token queue.
-    void PostReceiveBufferCollection(
+    // Add the given token to the client's token queue.
+    void ReceiveBufferCollection(
         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
 
-    // Posts a task to update the client's resolution.
-    void PostReceiveResolution(fuchsia::math::Size coded_size);
+    // Update the client's resolution.
+    void ReceiveResolution(fuchsia::math::Size coded_size);
 
-    // Posts a task to update the client's crop region.
-    void PostReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region);
+    // Update the client's crop region.
+    void ReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region);
 
     // Returns a mutable reference to this client's state as a participant in buffer renegotiation.
     // This state must be managed by the parent stream's thread, not the client thread.
     bool& Participant();
 
    private:
-    // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
-    // the parent |clients_| map.
-    void CloseConnection(zx_status_t status);
-
     // Called when the client endpoint of |binding_| is closed.
     void OnClientDisconnected(zx_status_t status);
 
@@ -127,7 +122,6 @@ class StreamImpl {
 
     StreamImpl& stream_;
     uint64_t id_;
-    async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Stream> binding_;
     camera::HangingGetHelper<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>>
         buffers_;
@@ -139,7 +133,7 @@ class StreamImpl {
     bool participant_ = false;
   };
 
-  async::Loop loop_;
+  async_dispatcher_t* dispatcher_;
   const fuchsia::camera3::StreamProperties2& properties_;
   const fuchsia::camera2::hal::StreamConfig& legacy_config_;
   fuchsia::camera2::StreamPtr legacy_stream_;

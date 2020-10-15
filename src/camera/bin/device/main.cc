@@ -6,6 +6,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
@@ -20,6 +21,7 @@ int main(int argc, char* argv[]) {
   syslog::SetLogSettings({.min_log_level = CAMERA_MIN_LOG_LEVEL}, {"camera", "camera_device"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Executor executor(loop.dispatcher());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
@@ -53,24 +55,9 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  // Create the device and publish its service.
-  auto result =
-      DeviceImpl::Create(std::move(controller), std::move(allocator), std::move(registry));
-  if (result.is_error()) {
-    FX_PLOGS(FATAL, result.error()) << "Failed to create device.";
-    return EXIT_FAILURE;
-  }
-  auto device = result.take_value();
-
-  // TODO(fxbug.dev/44628): publish discoverable service name once supported
-  status = context->outgoing()->AddPublicService(device->GetHandler(), outgoing_service_name);
-  if (status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "Failed to publish service.";
-    return EXIT_FAILURE;
-  }
-
   // Post a quit task in the event the device enters a bad state.
-  auto event = device->GetBadStateEvent();
+  zx::event event;
+  FX_CHECK(zx::event::create(0, &event) == ZX_OK);
   async::Wait wait(event.get(), ZX_EVENT_SIGNALED, 0,
                    [&](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
@@ -78,6 +65,30 @@ int main(int argc, char* argv[]) {
                      loop.Quit();
                    });
   ZX_ASSERT(wait.Begin(loop.dispatcher()) == ZX_OK);
+
+  // Create the device and publish its service.
+  auto result = DeviceImpl::Create(loop.dispatcher(), executor, std::move(controller),
+                                   std::move(allocator), std::move(registry), std::move(event));
+  std::unique_ptr<DeviceImpl> device;
+  executor.schedule_task(
+      result.then([&context, &device, &loop, &outgoing_service_name](
+                      fit::result<std::unique_ptr<DeviceImpl>, zx_status_t>& result) {
+        if (result.is_error()) {
+          FX_PLOGS(FATAL, result.error()) << "Failed to create device.";
+          loop.Quit();
+          return;
+        }
+        device = result.take_value();
+
+        // TODO(fxbug.dev/44628): publish discoverable service name once supported
+        zx_status_t status =
+            context->outgoing()->AddPublicService(device->GetHandler(), outgoing_service_name);
+        if (status != ZX_OK) {
+          FX_PLOGS(FATAL, status) << "Failed to publish service.";
+          loop.Quit();
+          return;
+        }
+      }));
 
   loop.Run();
   return EXIT_SUCCESS;

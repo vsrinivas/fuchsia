@@ -74,27 +74,6 @@ inline fuchsia::camera3::StreamProperties Convert(
           .supports_crop_region = properties.supports_crop_region()};
 }
 
-// Waits until |deadline| for |event| to signal all bits in |signals_all| or any bits in
-// |signals_any|, accumulating signaled bits into |pending|.
-inline zx_status_t WaitMixed(const zx::event& event, zx_signals_t signals_all,
-                             zx_signals_t signals_any, zx::time deadline, zx_signals_t* pending) {
-  ZX_ASSERT(pending);
-  *pending = ZX_SIGNAL_NONE;
-  zx_status_t status = ZX_OK;
-  while (status == ZX_OK) {
-    zx_signals_t signaled{};
-    status = event.wait_one(signals_all | signals_any, deadline, &signaled);
-    *pending |= signaled;
-    if ((*pending & signals_all) == signals_all) {
-      return status;
-    }
-    if ((*pending & signals_any) != ZX_SIGNAL_NONE) {
-      return status;
-    }
-  }
-  return status;
-}
-
 // Represents the mute state of a device as defined by the Device.WatchMuteState API.
 struct MuteState {
   bool software_muted = false;

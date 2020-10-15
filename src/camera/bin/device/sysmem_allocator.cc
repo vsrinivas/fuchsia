@@ -130,7 +130,8 @@ SysmemAllocator::SafelyBindSharedCollection(
         collection->SetConstraints(true, constraints);
         return WaitForBuffersAllocated(std::move(collection));
       })
-      .wrap_with(serialize_requests_);
+      .wrap_with(serialize_requests_)
+      .wrap_with(scope_);
 }
 
 fit::promise<> SysmemAllocator::WaitForFreeSpace(

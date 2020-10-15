@@ -9,9 +9,10 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fit/promise.h>
 #include <lib/fit/result.h>
+#include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -21,51 +22,52 @@
 #include <vector>
 
 #include "src/camera/bin/device/stream_impl.h"
+#include "src/camera/bin/device/sysmem_allocator.h"
 #include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
 // Represents a physical camera device, and serves multiple clients of the camera3.Device protocol.
 class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
  public:
-  DeviceImpl();
-  ~DeviceImpl() override;
-
   // Creates a DeviceImpl using the given |controller|.
-  static fit::result<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
+  //
+  // References to |dispatcher|, |executor|, and |context| may be retained by the instance so the
+  // caller must ensure these outlive the returned DeviceImpl.
+  static fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> Create(
+      async_dispatcher_t* dispatcher, fit::executor& executor,
       fuchsia::camera2::hal::ControllerHandle controller,
       fuchsia::sysmem::AllocatorHandle allocator,
-      fuchsia::ui::policy::DeviceListenerRegistryHandle registry);
+      fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event);
+
+  DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
+             fuchsia::sysmem::AllocatorHandle allocator, zx::event bad_state_event);
+  ~DeviceImpl() override;
 
   // Returns a service handler for use with a service directory.
   fidl::InterfaceRequestHandler<fuchsia::camera3::Device> GetHandler();
 
-  // Returns a waitable event that will signal ZX_EVENT_SIGNALED in the event this class becomes
-  // unusable, for example, due to the disconnection of the underlying controller channel.
-  zx::event GetBadStateEvent();
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
  private:
   // Called by the request handler returned by GetHandler, i.e. when a new client connects to the
   // published service.
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
 
-  // Posts a task to bind a new client. Closes |request| with the ZX_ERR_ALREADY_BOUND epitaph if
-  // |exclusive| is set and clients already exist.
-  void PostBind(fidl::InterfaceRequest<fuchsia::camera3::Device> request, bool exclusive);
+  // Bind a new client. Closes |request| with the ZX_ERR_ALREADY_BOUND epitaph if |exclusive| is
+  // set and clients already exist.
+  void Bind(fidl::InterfaceRequest<fuchsia::camera3::Device> request, bool exclusive);
 
   // Called if the underlying controller disconnects.
   void OnControllerDisconnected(zx_status_t status);
 
   // Posts a task to remove the client with the given id.
-  void PostRemoveClient(uint64_t id);
-
-  // Posts a task to update the current configuration.
-  void PostSetConfiguration(uint32_t index);
+  void RemoveClient(uint64_t id);
 
   // Sets the current configuration to the provided index.
   void SetConfiguration(uint32_t index);
 
-  // Posts a task to set the software mute state.
-  void PostSetSoftwareMuteState(bool muted,
-                                fuchsia::camera3::Device::SetSoftwareMuteStateCallback callback);
+  // Set the software mute state.
+  void SetSoftwareMuteState(bool muted,
+                            fuchsia::camera3::Device::SetSoftwareMuteStateCallback callback);
 
   // Toggles the streaming state of the controller if necessary.
   void UpdateControllerStreamingState();
@@ -97,11 +99,11 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
            fidl::InterfaceRequest<fuchsia::camera3::Device> request);
     ~Client() override;
 
-    // Posts a task to inform the client of a new configuration.
-    void PostConfigurationUpdated(uint32_t index);
+    // Inform the client of a new configuration.
+    void ConfigurationUpdated(uint32_t index);
 
-    // Posts a task to inform the client of a new mute state.
-    void PostMuteUpdated(MuteState mute_state);
+    // Inform the client of a new mute state.
+    void MuteUpdated(MuteState mute_state);
 
    private:
     // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
@@ -125,7 +127,6 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
 
     DeviceImpl& device_;
     uint64_t id_;
-    async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Device> binding_;
     camera::HangingGetHelper<uint32_t> configuration_;
     camera::HangingGetHelper<MuteState> mute_state_;
@@ -139,7 +140,9 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   };
   std::map<uint32_t, ControllerCreateStreamParams> stream_to_pending_legacy_stream_request_params_;
   std::map<uint32_t, bool> stream_request_sent_to_controller_;
-  async::Loop loop_;
+  async_dispatcher_t* dispatcher_;
+  fit::executor& executor_;
+  SysmemAllocator sysmem_allocator_;
   zx::event bad_state_event_;
   fuchsia::camera2::hal::ControllerPtr controller_;
   fuchsia::sysmem::AllocatorPtr allocator_;
@@ -160,8 +163,5 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
 
   friend class Client;
 };
-
-bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
-                      fuchsia::sysmem::BufferCollectionConstraints constraints);
 
 #endif  // SRC_CAMERA_BIN_DEVICE_DEVICE_IMPL_H_

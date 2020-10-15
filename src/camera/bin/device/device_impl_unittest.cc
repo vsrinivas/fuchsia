@@ -7,6 +7,7 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 
@@ -62,10 +63,21 @@ class DeviceImplTest : public gtest::RealLoopFixture {
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
     fake_listener_registry_.GetHandler()(registry.NewRequest());
 
-    auto device_result =
-        DeviceImpl::Create(std::move(controller), std::move(allocator), std::move(registry));
-    ASSERT_TRUE(device_result.is_ok());
-    device_ = device_result.take_value();
+    zx::event bad_state_event;
+    ASSERT_EQ(zx::event::create(0, &bad_state_event), ZX_OK);
+    auto device_promise =
+        DeviceImpl::Create(dispatcher(), executor_, std::move(controller), std::move(allocator),
+                           std::move(registry), std::move(bad_state_event));
+    bool device_created = false;
+    executor_.schedule_task(device_promise.then(
+        [this, &device_created](
+            fit::result<std::unique_ptr<DeviceImpl>, zx_status_t>& device_result) mutable {
+          device_created = true;
+          ASSERT_TRUE(device_result.is_ok());
+          device_ = device_result.take_value();
+        }));
+    RunLoopUntil([&device_created] { return device_created; });
+    ASSERT_NE(device_, nullptr);
   }
 
   void TearDown() override {
@@ -104,13 +116,14 @@ class DeviceImplTest : public gtest::RealLoopFixture {
   // sent to |stream| have been received by the server.
   void Sync(fuchsia::camera3::StreamPtr& stream) {
     fuchsia::camera3::StreamPtr stream2;
-    SetFailOnError(stream2, "Rebound Stream for DeviceTest::Sync");
+    SetFailOnError(stream2, "Rebound Stream for DeviceImplTest::Sync");
     stream->Rebind(stream2.NewRequest());
     bool resolution_returned = false;
     stream2->WatchResolution([&](fuchsia::math::Size resolution) { resolution_returned = true; });
     RunLoopUntilFailureOr(resolution_returned);
   }
 
+  async::Executor executor_{dispatcher()};
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<DeviceImpl> device_;
   std::unique_ptr<FakeController> controller_;
@@ -121,14 +134,14 @@ class DeviceImplTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(DeviceImplTest, CreateStreamNullConnection) {
-  StreamImpl stream(fake_properties_, fake_legacy_config_, nullptr, check_stream_valid,
-                    nop_stream_requested, nop);
+  StreamImpl stream(dispatcher(), fake_properties_, fake_legacy_config_, nullptr,
+                    check_stream_valid, nop_stream_requested, nop);
 }
 
 TEST_F(DeviceImplTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera3::Stream> stream;
   StreamImpl stream_impl(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
+      dispatcher(), fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
          fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -150,7 +163,7 @@ TEST_F(DeviceImplTest, GetFrames) {
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
   auto stream_impl = std::make_unique<StreamImpl>(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
+      dispatcher(), fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -271,7 +284,7 @@ TEST_F(DeviceImplTest, GetFramesInvalidCall) {
   });
   std::unique_ptr<FakeLegacyStream> fake_legacy_stream;
   auto stream_impl = std::make_unique<StreamImpl>(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
+      dispatcher(), fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
@@ -869,33 +882,6 @@ TEST_F(DeviceImplTest, GetProperties) {
   RunLoopUntilFailureOr(properties_returned);
 }
 
-TEST_F(DeviceImplTest, BindFailureOk) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("BindFailureOk");
-  volatile bool started = false;
-  volatile bool quit = false;
-  volatile bool done = false;
-  async::PostTask(loop.dispatcher(), [&] {
-    started = true;
-    while (!quit) {
-      zx::nanosleep({});
-    }
-    fuchsia::sysmem::AllocatorPtr allocator;
-    allocator.NewRequest().TakeChannel().reset();
-    EXPECT_FALSE(WaitForFreeSpace(allocator, {}));
-    done = true;
-  });
-  while (!started) {
-    zx::nanosleep({});
-  }
-  loop.Quit();
-  quit = true;
-  while (!done) {
-    zx::nanosleep({});
-  }
-  loop.Shutdown();
-}
-
 TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   constexpr uint32_t kCycleCount = 10;
   uint32_t cycle = 0;
@@ -904,7 +890,7 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   constexpr uint32_t kMaxCampingBuffers = 1;
   std::array<std::unique_ptr<FakeLegacyStream>, kCycleCount> legacy_stream_fakes;
   auto stream_impl = std::make_unique<StreamImpl>(
-      fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
+      dispatcher(), fake_properties_, fake_legacy_config_, stream.NewRequest(), check_stream_valid,
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {

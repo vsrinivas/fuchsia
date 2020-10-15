@@ -17,99 +17,55 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request)
     : stream_(stream),
       id_(id),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      binding_(this, std::move(request), loop_.dispatcher()),
+      binding_(this, std::move(request)),
       resolution_([](fuchsia::math::Size a, fuchsia::math::Size b) {
         return (a.width == b.width) && (a.height == b.height);
       }) {
   FX_LOGS(DEBUG) << "Stream client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
-  std::ostringstream oss;
-  oss << "Camera Stream Client " << id;
-  ZX_ASSERT(loop_.StartThread(oss.str().c_str()) == ZX_OK);
 }
 
-StreamImpl::Client::~Client() { loop_.Shutdown(); }
+StreamImpl::Client::~Client() = default;
 
-void StreamImpl::Client::PostSendFrame(fuchsia::camera3::FrameInfo frame) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::Client::PostSendFrame");
-  TRACE_FLOW_BEGIN("camera", "post_send_frame", nonce);
-  ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, frame = std::move(frame), nonce]() mutable {
-              TRACE_DURATION("camera", "StreamImpl::Client::PostSendFrame.task");
-              TRACE_FLOW_END("camera", "post_send_frame", nonce);
-              // This Flow can be connected on the client end to allow tracing the flow of frames
-              // into the client.
-              TRACE_FLOW_BEGIN("camera", "camera3::Stream::GetNextFrame",
-                               fsl::GetKoid(frame.release_fence.get()));
-              frame_callback_(std::move(frame));
-              frame_callback_ = nullptr;
-            }) == ZX_OK);
+void StreamImpl::Client::SendFrame(fuchsia::camera3::FrameInfo frame) {
+  TRACE_DURATION("camera", "StreamImpl::Client::SendFrame");
+  // This Flow can be connected on the client end to allow tracing the flow of frames
+  // into the client.
+  TRACE_FLOW_BEGIN("camera", "camera3::Stream::GetNextFrame",
+                   fsl::GetKoid(frame.release_fence.get()));
+  frame_callback_(std::move(frame));
+  frame_callback_ = nullptr;
 }
 
-void StreamImpl::Client::PostCloseConnection(zx_status_t epitaph) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::Client::PostCloseConnection");
-  TRACE_FLOW_BEGIN("camera", "post_close_connection", nonce);
-  zx_status_t status = async::PostTask(loop_.dispatcher(), [this, epitaph, nonce] {
-    TRACE_DURATION("camera", "StreamImpl::Client::PostCloseConnection.task");
-    TRACE_FLOW_END("camera", "post_close_connection", nonce);
-    CloseConnection(epitaph);
-  });
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-}
-
-void StreamImpl::Client::PostReceiveBufferCollection(
+void StreamImpl::Client::ReceiveBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveBufferCollection");
-  TRACE_FLOW_BEGIN("camera", "post_receive_buffer_collection", nonce);
-  ZX_ASSERT(
-      async::PostTask(loop_.dispatcher(), [this, token_handle = std::move(token), nonce]() mutable {
-        TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveBufferCollection.task");
-        TRACE_FLOW_END("camera", "post_receive_buffer_collection", nonce);
-        buffers_.Set(std::move(token_handle));
-      }) == ZX_OK);
+  TRACE_DURATION("camera", "StreamImpl::Client::ReceiveBufferCollection");
+  buffers_.Set(std::move(token));
 }
 
-void StreamImpl::Client::PostReceiveResolution(fuchsia::math::Size coded_size) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveResolution");
-  TRACE_FLOW_BEGIN("camera", "post_receive_resolution", nonce);
-  zx_status_t status = async::PostTask(loop_.dispatcher(), [this, coded_size, nonce] {
-    TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveResolution.task");
-    TRACE_FLOW_END("camera", "post_receive_resolution", nonce);
-    resolution_.Set(coded_size);
-  });
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+void StreamImpl::Client::ReceiveResolution(fuchsia::math::Size coded_size) {
+  TRACE_DURATION("camera", "StreamImpl::Client::ReceiveResolution");
+  resolution_.Set(coded_size);
 }
 
-void StreamImpl::Client::PostReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveCropRegion");
-  TRACE_FLOW_BEGIN("camera", "post_receive_crop_region", nonce);
-  zx_status_t status =
-      async::PostTask(loop_.dispatcher(), [this, region = std::move(region), nonce]() mutable {
-        TRACE_DURATION("camera", "StreamImpl::Client::PostReceiveCropRegion.task");
-        TRACE_FLOW_END("camera", "post_receive_crop_region", nonce);
-        // TODO(fxbug.dev/51176): Because unique_ptr is non-copyable, the hanging get helper assumes
-        // all values are never the same as previous values. In this case, however, back-to-back
-        // null regions or identical regions should not be sent twice.
-        crop_region_.Set(std::move(region));
-      });
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+void StreamImpl::Client::ReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
+  TRACE_DURATION("camera", "StreamImpl::Client::ReceiveCropRegion");
+  // TODO(fxbug.dev/51176): Because unique_ptr is non-copyable, the hanging get helper assumes all
+  // values are never the same as previous values. In this case, however, back-to-back null regions
+  // or identical regions should not be sent twice.
+  crop_region_.Set(std::move(region));
 }
 
 bool& StreamImpl::Client::Participant() { return participant_; }
 
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Stream client " << id_ << " disconnected.";
-  stream_.PostRemoveClient(id_);
+  stream_.RemoveClient(id_);
 }
 
 void StreamImpl::Client::CloseConnection(zx_status_t status) {
   binding_.Close(status);
-  stream_.PostRemoveClient(id_);
+  stream_.RemoveClient(id_);
 }
 
 void StreamImpl::Client::GetProperties(GetPropertiesCallback callback) {
@@ -137,7 +93,7 @@ void StreamImpl::Client::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> reg
     return;
   }
 
-  stream_.PostSetCropRegion(id_, std::move(region));
+  stream_.SetCropRegion(id_, std::move(region));
 }
 
 void StreamImpl::Client::WatchCropRegion(WatchCropRegionCallback callback) {
@@ -149,7 +105,7 @@ void StreamImpl::Client::WatchCropRegion(WatchCropRegionCallback callback) {
 
 void StreamImpl::Client::SetResolution(fuchsia::math::Size coded_size) {
   TRACE_DURATION("camera", "StreamImpl::Client::SetResolution");
-  stream_.PostSetResolution(id_, coded_size);
+  stream_.SetResolution(id_, coded_size);
 }
 
 void StreamImpl::Client::WatchResolution(WatchResolutionCallback callback) {
@@ -162,7 +118,7 @@ void StreamImpl::Client::WatchResolution(WatchResolutionCallback callback) {
 void StreamImpl::Client::SetBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   TRACE_DURATION("camera", "StreamImpl::Client::SetBufferCollection");
-  stream_.PostSetBufferCollection(id_, std::move(token));
+  stream_.SetBufferCollection(id_, std::move(token));
 }
 
 void StreamImpl::Client::WatchBufferCollection(WatchBufferCollectionCallback callback) {
@@ -188,7 +144,7 @@ void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
 
   frame_callback_ = std::move(callback);
 
-  stream_.PostAddFrameSink(id_);
+  stream_.AddFrameSink(id_);
 }
 
 void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {

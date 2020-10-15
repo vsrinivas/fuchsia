@@ -4,7 +4,6 @@
 
 #include "src/camera/bin/device/stream_impl.h"
 
-#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
@@ -25,12 +24,13 @@ static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) 
           .height = static_cast<int32_t>(format.coded_height)};
 }
 
-StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher,
+                       const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
                        CheckTokenCallback check_token, StreamRequestedCallback on_stream_requested,
                        fit::closure on_no_clients)
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+    : dispatcher_(dispatcher),
       properties_(properties),
       legacy_config_(legacy_config),
       check_token_(std::move(check_token)),
@@ -40,45 +40,25 @@ StreamImpl::StreamImpl(const fuchsia::camera3::StreamProperties2& properties,
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
   current_resolution_ = ConvertToSize(properties.image_format());
   OnNewRequest(std::move(request));
-  ZX_ASSERT(loop_.StartThread("Camera Stream Thread") == ZX_OK);
 }
 
-StreamImpl::~StreamImpl() {
-  Unbind(legacy_stream_);
-  async::PostTask(loop_.dispatcher(), [this] { loop_.Quit(); });
-  loop_.JoinThreads();
-}
+StreamImpl::~StreamImpl() = default;
 
-void StreamImpl::PostSetMuteState(MuteState mute_state, fit::closure completed) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::PostSetMuteState");
-  TRACE_FLOW_BEGIN("camera", "post_set_mute_state_task", nonce);
-  async::PostTask(loop_.dispatcher(), [this, mute_state, completed = std::move(completed), nonce] {
-    TRACE_DURATION("camera", "StreamImpl::PostSetMuteState.task");
-    TRACE_FLOW_END("camera", "post_set_mute_state_task", nonce);
-    mute_state_ = mute_state;
-    // On either transition, invalidate existing frames.
-    while (!frames_.empty()) {
-      frames_.pop();
-    }
-    completed();
-  });
+void StreamImpl::SetMuteState(MuteState mute_state) {
+  TRACE_DURATION("camera", "StreamImpl::SetMuteState");
+  mute_state_ = mute_state;
+  // On either transition, invalidate existing frames.
+  while (!frames_.empty()) {
+    frames_.pop();
+  }
 }
 
 void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
-  auto nonce = TRACE_NONCE();
   TRACE_DURATION("camera", "StreamImpl::OnNewRequest");
-  TRACE_FLOW_BEGIN("camera", "post_on_new_request", nonce);
-  zx_status_t status =
-      async::PostTask(loop_.dispatcher(), [this, request = std::move(request), nonce]() mutable {
-        TRACE_DURATION("camera", "StreamImpl::OnNewRequest.task");
-        TRACE_FLOW_END("camera", "post_on_new_request", nonce);
-        auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
-        client->PostReceiveResolution(current_resolution_);
-        client->PostReceiveCropRegion(nullptr);
-        clients_.emplace(client_id_next_++, std::move(client));
-      });
-  ZX_ASSERT(status == ZX_OK);
+  auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
+  client->ReceiveResolution(current_resolution_);
+  client->ReceiveCropRegion(nullptr);
+  clients_.emplace(client_id_next_++, std::move(client));
 }
 
 void StreamImpl::OnLegacyStreamDisconnected(zx_status_t status) {
@@ -87,30 +67,18 @@ void StreamImpl::OnLegacyStreamDisconnected(zx_status_t status) {
   on_no_clients_();
 }
 
-void StreamImpl::PostRemoveClient(uint64_t id) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::PostRemoveClient");
-  TRACE_FLOW_BEGIN("camera", "post_remove_client", nonce);
-  async::PostTask(loop_.dispatcher(), [=]() {
-    TRACE_DURATION("camera", "StreamImpl::PostRemoveClient.task");
-    TRACE_FLOW_END("camera", "post_remove_client", nonce);
-    clients_.erase(id);
-    if (clients_.empty()) {
-      on_no_clients_();
-    }
-  });
+void StreamImpl::RemoveClient(uint64_t id) {
+  TRACE_DURATION("camera", "StreamImpl::RemoveClient");
+  clients_.erase(id);
+  if (clients_.empty()) {
+    on_no_clients_();
+  }
 }
 
-void StreamImpl::PostAddFrameSink(uint64_t id) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::PostAddFrameSink");
-  TRACE_FLOW_BEGIN("camera", "post_add_frame_sink", nonce);
-  async::PostTask(loop_.dispatcher(), [=]() {
-    TRACE_DURATION("camera", "StreamImpl::PostAddFrameSink.task");
-    TRACE_FLOW_END("camera", "post_add_frame_sink", nonce);
-    frame_sinks_.push(id);
-    SendFrames();
-  });
+void StreamImpl::AddFrameSink(uint64_t id) {
+  TRACE_DURATION("camera", "StreamImpl::AddFrameSink");
+  frame_sinks_.push(id);
+  SendFrames();
 }
 
 void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
@@ -158,8 +126,8 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   // Queue a waiter so that when the client end of the fence is released, the frame is released back
   // to the driver.
   ZX_ASSERT(frame_waiters_.size() <= max_camping_buffers_);
-  frame_waiters_[info.buffer_id] = std::make_unique<FrameWaiter>(
-      loop_.dispatcher(), std::move(fence), [this, index = info.buffer_id] {
+  frame_waiters_[info.buffer_id] =
+      std::make_unique<FrameWaiter>(dispatcher_, std::move(fence), [this, index = info.buffer_id] {
         legacy_stream_->ReleaseFrame(index);
         frame_waiters_.erase(index);
       });
@@ -180,45 +148,38 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   SendFrames();
 }
 
-void StreamImpl::PostSetBufferCollection(
+void StreamImpl::SetBufferCollection(
     uint64_t id, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::PostSetBufferCollection");
-  TRACE_FLOW_BEGIN("camera", "post_set_buffer_collection", nonce);
-  async::PostTask(loop_.dispatcher(), [this, id, token_handle = std::move(token), nonce]() mutable {
-    TRACE_DURATION("camera", "StreamImpl::PostSetBufferCollection.task");
-    TRACE_FLOW_END("camera", "post_set_buffer_collection", nonce);
-    auto it = clients_.find(id);
-    if (it == clients_.end()) {
-      FX_LOGS(ERROR) << "Client " << id << " not found.";
-      token_handle.BindSync()->Close();
-      ZX_DEBUG_ASSERT(false);
-      return;
-    }
-    auto& client = it->second;
+  TRACE_DURATION("camera", "StreamImpl::SetBufferCollection");
+  auto it = clients_.find(id);
+  if (it == clients_.end()) {
+    FX_LOGS(ERROR) << "Client " << id << " not found.";
+    token.BindSync()->Close();
+    ZX_DEBUG_ASSERT(false);
+    return;
+  }
+  auto& client = it->second;
 
-    // If null, just unregister the client and return.
-    if (!token_handle) {
-      client->Participant() = false;
-      return;
-    }
-    client->Participant() = true;
+  // If null, just unregister the client and return.
+  if (!token) {
+    client->Participant() = false;
+    return;
+  }
+  client->Participant() = true;
 
-    // Validate the token.
-    fsl::GetRelatedKoid(token_handle.channel().get());
-    check_token_(fsl::GetRelatedKoid(token_handle.channel().get()), [this, it,
-                                                                     token_handle =
-                                                                         std::move(token_handle)](
-                                                                        bool valid) mutable {
-      if (!valid) {
-        FX_LOGS(INFO) << "Client provided an invalid BufferCollectionToken.";
-        it->second->PostCloseConnection(ZX_ERR_BAD_STATE);
-        return;
-      }
-      async::PostTask(loop_.dispatcher(), [this, token_handle = std::move(token_handle)]() mutable {
+  // Validate the token.
+  fsl::GetRelatedKoid(token.channel().get());
+  check_token_(
+      fsl::GetRelatedKoid(token.channel().get()),
+      [this, it, token_handle = std::move(token)](bool valid) mutable {
+        if (!valid) {
+          FX_LOGS(INFO) << "Client provided an invalid BufferCollectionToken.";
+          it->second->CloseConnection(ZX_ERR_BAD_STATE);
+          return;
+        }
         // Duplicate and send each client a token.
         fuchsia::sysmem::BufferCollectionTokenPtr token;
-        token.Bind(std::move(token_handle), loop_.dispatcher());
+        token.Bind(std::move(token_handle));
         std::map<uint64_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
         for (auto& client : clients_) {
           if (client.second->Participant()) {
@@ -232,20 +193,18 @@ void StreamImpl::PostSetBufferCollection(
             if (it == clients_.end()) {
               token.BindSync()->Close();
             } else {
-              it->second->PostReceiveBufferCollection(std::move(token));
+              it->second->ReceiveBufferCollection(std::move(token));
             }
           }
           // Send the last token to the device for constraints application.
           frame_waiters_.clear();
           on_stream_requested_(
-              std::move(token), legacy_stream_.NewRequest(loop_.dispatcher()),
+              std::move(token), legacy_stream_.NewRequest(),
               [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
               legacy_stream_format_index_);
           legacy_stream_->Start();
         });
       });
-    });
-  });
 }
 
 void StreamImpl::SendFrames() {
@@ -263,109 +222,94 @@ void StreamImpl::SendFrames() {
     auto it = clients_.find(frame_sinks_.front());
     frame_sinks_.pop();
     if (it != clients_.end()) {
-      it->second->PostSendFrame(std::move(frames_.front()));
+      it->second->SendFrame(std::move(frames_.front()));
       frames_.pop();
     }
   }
 }
 
-void StreamImpl::PostSetResolution(uint64_t id, fuchsia::math::Size coded_size) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::PostSetResolution");
-  TRACE_FLOW_BEGIN("camera", "post_set_resolution", nonce);
-  zx_status_t status = async::PostTask(loop_.dispatcher(), [this, id, coded_size, nonce] {
-    TRACE_DURATION("camera", "StreamImpl::PostSetResolution.task");
-    TRACE_FLOW_END("camera", "post_set_resolution", nonce);
-    auto it = clients_.find(id);
-    if (it == clients_.end()) {
-      FX_LOGS(ERROR) << "Client " << id << " not found.";
-      ZX_DEBUG_ASSERT(false);
-      return;
-    }
-    auto& client = it->second;
+void StreamImpl::SetResolution(uint64_t id, fuchsia::math::Size coded_size) {
+  TRACE_DURATION("camera", "StreamImpl::SetResolution");
+  auto it = clients_.find(id);
+  if (it == clients_.end()) {
+    FX_LOGS(ERROR) << "Client " << id << " not found.";
+    ZX_DEBUG_ASSERT(false);
+    return;
+  }
+  auto& client = it->second;
 
-    // Begin with the full resolution.
-    auto best_size = ConvertToSize(properties_.image_format());
-    if (coded_size.width > best_size.width || coded_size.height > best_size.height) {
-      client->PostCloseConnection(ZX_ERR_INVALID_ARGS);
-      return;
-    }
+  // Begin with the full resolution.
+  auto best_size = ConvertToSize(properties_.image_format());
+  if (coded_size.width > best_size.width || coded_size.height > best_size.height) {
+    client->CloseConnection(ZX_ERR_INVALID_ARGS);
+    return;
+  }
 
-    // Examine all supported resolutions, preferring those that cover the requested resolution but
-    // have fewer pixels, breaking ties by picking the one with a smaller width.
-    uint32_t best_index = 0;
-    for (uint32_t i = 0; i < legacy_config_.image_formats.size(); ++i) {
-      auto size = ConvertToSize(legacy_config_.image_formats[i]);
-      bool contains_request = size.width >= coded_size.width && size.height >= coded_size.height;
-      bool smaller_size = size.width * size.height < best_size.width * best_size.height;
-      bool equal_size = size.width * size.height == best_size.width * best_size.height;
-      bool smaller_width = size.width < best_size.width;
-      if (contains_request && (smaller_size || (equal_size && smaller_width))) {
-        best_size = size;
-        best_index = i;
-      }
+  // Examine all supported resolutions, preferring those that cover the requested resolution but
+  // have fewer pixels, breaking ties by picking the one with a smaller width.
+  uint32_t best_index = 0;
+  for (uint32_t i = 0; i < legacy_config_.image_formats.size(); ++i) {
+    auto size = ConvertToSize(legacy_config_.image_formats[i]);
+    bool contains_request = size.width >= coded_size.width && size.height >= coded_size.height;
+    bool smaller_size = size.width * size.height < best_size.width * best_size.height;
+    bool equal_size = size.width * size.height == best_size.width * best_size.height;
+    bool smaller_width = size.width < best_size.width;
+    if (contains_request && (smaller_size || (equal_size && smaller_width))) {
+      best_size = size;
+      best_index = i;
     }
+  }
 
-    // Save the selected image format, and set it on the stream if bound.
-    legacy_stream_format_index_ = best_index;
-    if (legacy_stream_) {
-      legacy_stream_->SetImageFormat(legacy_stream_format_index_, [this](zx_status_t status) {
-        if (status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "Unexpected response from driver.";
-          while (!clients_.empty()) {
-            auto it = clients_.begin();
-            it->second->PostCloseConnection(ZX_ERR_INTERNAL);
-            clients_.erase(it);
-          }
-          on_no_clients_();
-          return;
+  // Save the selected image format, and set it on the stream if bound.
+  legacy_stream_format_index_ = best_index;
+  if (legacy_stream_) {
+    legacy_stream_->SetImageFormat(legacy_stream_format_index_, [this](zx_status_t status) {
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status) << "Unexpected response from driver.";
+        while (!clients_.empty()) {
+          auto it = clients_.begin();
+          it->second->CloseConnection(ZX_ERR_INTERNAL);
+          clients_.erase(it);
         }
-      });
-    }
-    current_resolution_ = best_size;
+        on_no_clients_();
+        return;
+      }
+    });
+  }
+  current_resolution_ = best_size;
 
-    // Inform clients of the resolution change.
-    for (auto& [id, client] : clients_) {
-      client->PostReceiveResolution(best_size);
-    }
-  });
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+  // Inform clients of the resolution change.
+  for (auto& [id, client] : clients_) {
+    client->ReceiveResolution(best_size);
+  }
 }
 
-void StreamImpl::PostSetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "StreamImpl::PostSetCropRegion");
-  TRACE_FLOW_BEGIN("camera", "post_set_crop_region", nonce);
-  zx_status_t status =
-      async::PostTask(loop_.dispatcher(), [this, region = std::move(region), nonce]() mutable {
-        TRACE_DURATION("camera", "StreamImpl::PostSetCropRegion.task");
-        TRACE_FLOW_END("camera", "post_set_crop_region", nonce);
-        if (legacy_stream_) {
-          float x_min = 0.0f;
-          float y_min = 0.0f;
-          float x_max = 1.0f;
-          float y_max = 1.0f;
-          if (region) {
-            x_min = region->x;
-            y_min = region->y;
-            x_max = x_min + region->width;
-            y_max = y_min + region->height;
-          }
-          legacy_stream_->SetRegionOfInterest(x_min, y_min, x_max, y_max, [](zx_status_t status) {
-            // TODO(fxbug.dev/50908): Make this an error once RegionOfInterest support is known at
-            // init time. FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
-          });
-        }
-        current_crop_region_ = std::move(region);
+void StreamImpl::SetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region) {
+  TRACE_DURATION("camera", "StreamImpl::SetCropRegion");
+  if (legacy_stream_) {
+    float x_min = 0.0f;
+    float y_min = 0.0f;
+    float x_max = 1.0f;
+    float y_max = 1.0f;
+    if (region) {
+      x_min = region->x;
+      y_min = region->y;
+      x_max = x_min + region->width;
+      y_max = y_min + region->height;
+    }
+    legacy_stream_->SetRegionOfInterest(x_min, y_min, x_max, y_max, [](zx_status_t status) {
+      // TODO(fxbug.dev/50908): Make this an error once RegionOfInterest support is known at
+      // init time. FX_PLOGS(WARNING, status) << "Stream does not support crop region.";
+    });
+  }
+  current_crop_region_ = std::move(region);
 
-        // Inform clients of the resolution change.
-        for (auto& [id, client] : clients_) {
-          std::unique_ptr<fuchsia::math::RectF> region;
-          if (current_crop_region_) {
-            region = std::make_unique<fuchsia::math::RectF>(*current_crop_region_);
-          }
-          client->PostReceiveCropRegion(std::move(region));
-        }
-      });
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+  // Inform clients of the resolution change.
+  for (auto& [id, client] : clients_) {
+    std::unique_ptr<fuchsia::math::RectF> region;
+    if (current_crop_region_) {
+      region = std::make_unique<fuchsia::math::RectF>(*current_crop_region_);
+    }
+    client->ReceiveCropRegion(std::move(region));
+  }
 }
