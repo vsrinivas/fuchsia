@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_LINUX_LINUX_PLATFORM_CONNECTION_CLIENT_H_
+#define SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_LINUX_LINUX_PLATFORM_CONNECTION_CLIENT_H_
+
 #include "magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
@@ -40,8 +43,6 @@ class LinuxPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                          size_t* buffer_size_out) override;
 
-  magma_status_t WaitNotificationChannel(int64_t timeout_ns) override;
-
   void ExecuteCommandBufferWithResources(uint32_t context_id,
                                          magma_system_command_buffer* command_buffer,
                                          magma_system_exec_resource* resources,
@@ -59,3 +60,5 @@ class LinuxPlatformConnectionClient : public PlatformConnectionClient {
 };
 
 }  // namespace magma
+
+#endif  // SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_LINUX_LINUX_PLATFORM_CONNECTION_CLIENT_H_

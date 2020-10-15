@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef INFLIGHT_LIST_H
-#define INFLIGHT_LIST_H
+#ifndef SRC_GRAPHICS_LIB_MAGMA_TESTS_HELPER_INFLIGHT_LIST_H_
+#define SRC_GRAPHICS_LIB_MAGMA_TESTS_HELPER_INFLIGHT_LIST_H_
 
 #include <deque>
 
@@ -40,7 +40,10 @@ class InflightList {
   // Wait for a completion; returns true if a completion was
   // received before |timeout_ms|.
   magma::Status WaitForCompletion(magma_connection_t connection, int64_t timeout_ns) {
-    return magma::Status(magma_wait_notification_channel(connection, timeout_ns));
+    magma_poll_item_t item = {.handle = magma_get_notification_channel_handle(connection),
+                              .type = MAGMA_POLL_TYPE_HANDLE,
+                              .condition = MAGMA_POLL_CONDITION_READABLE};
+    return magma::Status(magma_poll(&item, 1, timeout_ns));
   }
 
   // Read all outstanding completions and update the inflight list.
@@ -70,4 +73,4 @@ class InflightList {
 
 }  // namespace magma
 
-#endif  // INFLIGHT_LIST_H
+#endif  // SRC_GRAPHICS_LIB_MAGMA_TESTS_HELPER_INFLIGHT_LIST_H_

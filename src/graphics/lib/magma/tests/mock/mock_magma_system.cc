@@ -232,10 +232,6 @@ magma_status_t magma_read_notification_channel(magma_connection_t connection, vo
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_wait_notification_channel(magma_connection_t connection, int64_t timeout_ns) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t magma_buffer_collection_import(magma_sysmem_connection_t connection, uint32_t handle,
                                               magma_buffer_collection_t* collection_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;

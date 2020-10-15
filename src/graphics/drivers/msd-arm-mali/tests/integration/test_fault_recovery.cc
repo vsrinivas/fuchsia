@@ -85,7 +85,10 @@ class TestConnection : public magma::TestDeviceBase {
     magma_execute_immediate_commands2(connection_, context_id_, 1, &command_buffer);
 
     constexpr uint64_t kOneSecondPerNs = 1000000000;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_wait_notification_channel(connection_, kOneSecondPerNs));
+    magma_poll_item_t item = {.handle = magma_get_notification_channel_handle(connection_),
+                              .type = MAGMA_POLL_TYPE_HANDLE,
+                              .condition = MAGMA_POLL_CONDITION_READABLE};
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(&item, 1, kOneSecondPerNs));
 
     magma_arm_mali_status status;
     uint64_t status_size;

@@ -393,16 +393,6 @@ magma_handle_t magma_get_notification_channel_handle(
     magma_connection_t connection);
 
 ///
-/// \brief DEPRECATED. Returns MAGMA_STATUS_OK if a message is available on the notification channel
-///        before the given timeout expires.
-/// \param connection An open connection.
-/// \param timeout_ns Time to wait before returning MAGMA_STATUS_TIMED_OUT.
-///
-magma_status_t magma_wait_notification_channel(
-    magma_connection_t connection,
-    int64_t timeout_ns);
-
-///
 /// \brief Reads a notification from the channel into the given buffer.
 /// \param connection An open connection.
 /// \param buffer Buffer into which to read notification data.

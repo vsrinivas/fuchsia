@@ -733,24 +733,6 @@
         ]
       },
       {
-        "ordinal": 43,
-        "name": "magma_wait_notification_channel",
-        "type": "magma_status_t",
-        "description": "DEPRECATED. Returns MAGMA_STATUS_OK if a message is available on the notification channel before the given timeout expires.",
-        "arguments": [
-          {
-            "name": "connection",
-            "type": "magma_connection_t",
-            "description": "An open connection."
-          },
-          {
-            "name": "timeout_ns",
-            "type": "int64_t",
-            "description": "Time to wait before returning MAGMA_STATUS_TIMED_OUT."
-          }
-        ]
-      },
-      {
         "ordinal": 44,
         "name": "magma_read_notification_channel",
         "type": "magma_status_t",

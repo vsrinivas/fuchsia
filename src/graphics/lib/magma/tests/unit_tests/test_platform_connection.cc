@@ -12,6 +12,8 @@
 
 #include "platform_connection.h"
 #include "platform_connection_client.h"
+#include "platform_handle.h"
+#include "platform_port.h"
 
 #if defined(__Fuchsia__)
 #include "zircon/zircon_platform_connection_client.h"  // nogncheck
@@ -250,24 +252,37 @@ class TestPlatformConnection {
   void TestNotificationChannel() {
     FlowControlSkip();
 
-    constexpr uint64_t kFiveSecondsInNs = 5000000000;
-    magma_status_t status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
-    ASSERT_EQ(MAGMA_STATUS_OK, status);
+    // A notification is written when the Ipc thread starts up (SetNotificationCallback),
+    // so wait for it.
+    {
+      // Handle ownership isn't transferred, so we release it below.
+      auto handle =
+          magma::PlatformHandle::Create(client_connection_->GetNotificationChannelHandle());
+      ASSERT_TRUE(handle);
+
+      auto port = magma::PlatformPort::Create();
+      ASSERT_TRUE(port);
+
+      uint64_t key;
+      ASSERT_TRUE(handle->WaitAsync(port.get(), &key));
+
+      uint64_t signalled_key;
+      constexpr uint64_t kFiveSecondsInMs = 5000;
+      EXPECT_TRUE(port->Wait(&signalled_key, kFiveSecondsInMs));
+      EXPECT_EQ(key, signalled_key);
+
+      handle->release();
+    }
 
     uint32_t out_data;
     uint64_t out_data_size;
-    // Data was written when the channel was created, so it should be
-    // available.
-    status =
+    magma_status_t status =
         client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
     EXPECT_EQ(MAGMA_STATUS_OK, status);
     EXPECT_EQ(sizeof(out_data), out_data_size);
     EXPECT_EQ(5u, out_data);
 
     // No more data to read.
-    status = client_connection_->WaitNotificationChannel(0);
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, status);
-
     status =
         client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
     EXPECT_EQ(MAGMA_STATUS_OK, status);
@@ -278,10 +293,6 @@ class TestPlatformConnection {
     connection_.reset();
     ipc_thread_.join();
     EXPECT_TRUE(shared_data.got_null_notification);
-
-    // Poll should still terminate early.
-    status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
-    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
 
     status =
         client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);

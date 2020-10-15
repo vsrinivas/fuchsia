@@ -758,21 +758,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     }
   }
 
-  magma_status_t WaitNotificationChannel(int64_t timeout_ns) override {
-    zx_signals_t pending;
-    zx_status_t status =
-        notification_channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                       zx::deadline_after(zx::nsec(timeout_ns)), &pending);
-    if (status != ZX_OK)
-      return DRET(MagmaChannelStatus(status));
-    if (pending & ZX_CHANNEL_READABLE)
-      return MAGMA_STATUS_OK;
-    if (pending & ZX_CHANNEL_PEER_CLOSED)
-      return DRET(MAGMA_STATUS_CONNECTION_LOST);
-    DASSERT(false);
-    return MAGMA_STATUS_INTERNAL_ERROR;
-  }
-
   std::pair<uint64_t, uint64_t> GetFlowControlCounts() override {
     return {client_.inflight_count(), client_.inflight_bytes()};
   }

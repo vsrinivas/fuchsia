@@ -197,14 +197,6 @@ class TestConnection {
     EXPECT_EQ(handle, handle2);
   }
 
-  void WaitNotificationChannel() {
-    ASSERT_TRUE(connection_);
-
-    constexpr uint64_t kOneSecondInNs = 1000000000;
-    magma_status_t status = magma_wait_notification_channel(connection_, kOneSecondInNs);
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, status);
-  }
-
   void ReadNotificationChannel() {
     ASSERT_TRUE(connection_);
 

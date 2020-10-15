@@ -100,10 +100,6 @@ magma_status_t LinuxPlatformConnectionClient::ReadNotificationChannel(void* buff
   return DRET(MAGMA_STATUS_UNIMPLEMENTED);
 }
 
-magma_status_t LinuxPlatformConnectionClient::WaitNotificationChannel(int64_t timeout_ns) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 void LinuxPlatformConnectionClient::ExecuteCommandBufferWithResources(
     uint32_t context_id, magma_system_command_buffer* command_buffer,
     magma_system_exec_resource* resources, uint64_t* semaphores) {
