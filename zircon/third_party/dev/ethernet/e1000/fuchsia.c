@@ -191,7 +191,7 @@ static size_t eth_tx_queued(struct adapter* adapter) {
 
 static void e1000_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
                           uint8_t suspend_reason) {
-  DEBUGOUT("entry\n");
+  DEBUGOUT("entry");
   struct adapter* adapter = ctx;
   mtx_lock(&adapter->lock);
   adapter->state = ETH_SUSPENDING;
@@ -210,7 +210,7 @@ static void e1000_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
     iterations++;
     mtx_lock(&adapter->lock);
   } while (iterations < 10);
-  DEBUGOUT("timed out waiting for tx queue to drain when suspending\n");
+  DEBUGOUT("timed out waiting for tx queue to drain when suspending");
 
 tx_done:
   eth_disable_tx(adapter);
@@ -221,7 +221,7 @@ tx_done:
 }
 
 static void e1000_resume(void* ctx, uint32_t requested_perf_state) {
-  DEBUGOUT("entry\n");
+  DEBUGOUT("entry");
   struct adapter* adapter = ctx;
   mtx_lock(&adapter->lock);
   e1000_power_up_phy(&adapter->hw);
@@ -233,7 +233,7 @@ static void e1000_resume(void* ctx, uint32_t requested_perf_state) {
 }
 
 static void e1000_release(void* ctx) {
-  DEBUGOUT("entry\n");
+  DEBUGOUT("entry");
   struct adapter* adapter = ctx;
   e1000_reset_hw(&adapter->hw);
   pci_enable_bus_master(&adapter->osdep.pci, false);
@@ -380,7 +380,7 @@ static int e1000_irq_thread(void* arg) {
     zx_status_t r;
     r = zx_interrupt_wait(adapter->irqh, NULL);
     if (r != ZX_OK) {
-      DEBUGOUT("irq wait failed? %d\n", r);
+      DEBUGOUT("irq wait failed? %d", r);
       break;
     }
     mtx_lock(&adapter->lock);
@@ -403,7 +403,7 @@ static int e1000_irq_thread(void* arg) {
     if (irq & E1000_ICR_LSC) {
       bool was_online = adapter->online;
       bool online = e1000_status_online(adapter);
-      DEBUGOUT("ETH_IRQ_LSC fired: %d->%d\n", was_online, online);
+      DEBUGOUT("ETH_IRQ_LSC fired: %d->%d", was_online, online);
       if (online != was_online) {
         adapter->online = online;
         if (adapter->ifc.ops) {
@@ -456,7 +456,7 @@ static zx_status_t e1000_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
 
 zx_status_t eth_tx(struct adapter* adapter, const void* data, size_t len) {
   if (len > ETH_TXBUF_DSIZE) {
-    DEBUGOUT("unsupported packet length %zu\n", len);
+    DEBUGOUT("unsupported packet length %zu", len);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -597,7 +597,7 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
 }
 
 void e1000_setup_buffers(struct adapter* adapter, void* iomem, zx_paddr_t iophys) {
-  DEBUGOUT("iomem @%p (phys %" PRIxPTR ")\n", iomem, iophys);
+  DEBUGOUT("iomem @%p (phys %" PRIxPTR ")", iomem, iophys);
 
   list_initialize(&adapter->free_frames);
   list_initialize(&adapter->busy_frames);
@@ -654,7 +654,7 @@ static void em_initialize_transmit_unit(struct adapter* adapter) {
   E1000_WRITE_REG(hw, E1000_TDT(0), 0);
   E1000_WRITE_REG(hw, E1000_TDH(0), 0);
 
-  DEBUGOUT("Base = %x, Length = %x\n", E1000_READ_REG(&adapter->hw, E1000_TDBAL(0)),
+  DEBUGOUT("Base = %x, Length = %x", E1000_READ_REG(&adapter->hw, E1000_TDBAL(0)),
            E1000_READ_REG(&adapter->hw, E1000_TDLEN(0)));
 
   txdctl = 0;        /* clear txdctl */
@@ -911,7 +911,7 @@ static int em_if_set_promisc(struct adapter* adapter, int flags) {
 }
 
 static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
-  DEBUGOUT("bind entry\n");
+  DEBUGOUT("bind entry");
 
   struct adapter* adapter = calloc(1, sizeof *adapter);
   if (!adapter) {
@@ -937,6 +937,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   status = pci_get_bti(pci, 0, &adapter->btih);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to get BTI");
     goto fail;
   }
 
@@ -1028,7 +1029,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   /* Check SOL/IDER usage */
   if (e1000_check_reset_block(hw)) {
-    DEBUGOUT("PHY reset is blocked due to SOL/IDER session.\n");
+    DEBUGOUT("PHY reset is blocked due to SOL/IDER session.");
   }
 
   /*
@@ -1058,7 +1059,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  DEBUGOUT("MAC address %02x:%02x:%02x:%02x:%02x:%02x\n", hw->mac.addr[0], hw->mac.addr[1],
+  DEBUGOUT("MAC address %02x:%02x:%02x:%02x:%02x:%02x", hw->mac.addr[0], hw->mac.addr[1],
            hw->mac.addr[2], hw->mac.addr[3], hw->mac.addr[4], hw->mac.addr[5]);
 
   /* Disable ULP support */
@@ -1066,7 +1067,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   status =
       io_buffer_init(&adapter->buffer, adapter->btih, ETH_ALLOC, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status < 0) {
+  if (status != ZX_OK) {
     zxlogf(ERROR, "cannot alloc io-buffer %d", status);
     goto fail;
   }
@@ -1094,7 +1095,8 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
       .proto_ops = &e1000_ethernet_impl_ops,
   };
 
-  if (device_add(dev, &args, &adapter->zxdev)) {
+  if ((status = device_add(dev, &args, &adapter->zxdev)) != ZX_OK) {
+    zxlogf(ERROR, "device_add failed: %d", status);
     goto fail;
   }
 
@@ -1105,7 +1107,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   u32 ims_mask = IMS_ENABLE_MASK;
   E1000_WRITE_REG(hw, E1000_IMS, ims_mask);
 
-  DEBUGOUT("online\n");
+  DEBUGOUT("online");
   return ZX_OK;
 
 fail:
