@@ -3,8 +3,4 @@
 
 executable("convert_image") {
   sources = [ "convert_image.cc" ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
