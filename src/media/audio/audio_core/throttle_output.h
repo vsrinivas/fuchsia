@@ -103,7 +103,11 @@ class ThrottleOutput : public AudioOutput {
     FX_DCHECK(false);
   }
 
-  zx::duration MixDeadline() const override { return zx::msec(1); }
+  zx::duration MixDeadline() const override {
+    // Since we never actually mix (StartMixJob always returns nullopt), this number doesn't matter.
+    // Return infinity to avoid spurious "underflow" messages.
+    return zx::duration::infinite();
+  }
 
   // AudioDevice implementation.
   // No one should ever be trying to apply gain limits for a throttle output.
