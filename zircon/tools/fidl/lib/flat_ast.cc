@@ -3050,7 +3050,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       }
       break;
     case Decl::Kind::kUnion:
-      for (const auto& member : static_cast<const Table*>(decl)->members) {
+      for (const auto& member : static_cast<const Union*>(decl)->members) {
         const auto& used = member.maybe_used;
         if (used &&
             EffectiveResourceness(used->type_ctor->type) == types::Resourceness::kResource) {
