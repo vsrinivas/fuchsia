@@ -22,7 +22,6 @@ triage_files = [
   "intl.flutter_jit_product.triage",
   "intl.triage",
   "memory.triage",
-  "sandboxing.triage",
   "scenic.triage",
   "stash.triage",
   "stash_secure.triage",
