@@ -272,8 +272,6 @@ group("deprecated_package_underscore") {
     "//src/diagnostics/tool:diag_tool_tests",
     "//src/diagnostics/triage:triage_tests",
     "//src/experiences/benchmarks/bin/button_flutter:button_flutter_pkg",
-    "//src/experiences/bin/simple_browser:simple_browser_pkg",
-    "//src/experiences/bin/simple_browser:simple_browser_target_test_pkg",
     "//src/experiences/session_shells/ermine/login_shell:userpicker_base_shell_pkg",
     "//src/experiences/session_shells/ermine/session:workstation_session",
     "//src/experiences/session_shells/ermine/session:workstation_session_tests",
