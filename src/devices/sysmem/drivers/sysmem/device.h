@@ -119,6 +119,10 @@ class Device final : public DdkDeviceType,
   const zx_device_t* device() const { return zxdev_; }
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
+  // Run the loop until idle (on the loop thread). This can be used to ensure all pending messages,
+  // channel closures, and VMO closures are processed before the device is unbound.
+  void RunLoopUntilIdle();
+
   // Test hook
   std::unordered_set<LogicalBufferCollection*>& logical_buffer_collections() {
     return logical_buffer_collections_;

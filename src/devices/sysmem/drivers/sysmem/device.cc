@@ -683,6 +683,10 @@ MemoryAllocator* Device::GetAllocator(
   return iter->second.get();
 }
 
+void Device::RunLoopUntilIdle() {
+  async::PostTask(loop_.dispatcher(), [this]() { loop_.RunUntilIdle(); });
+}
+
 const llcpp::fuchsia::sysmem2::HeapProperties& Device::GetHeapProperties(
     llcpp::fuchsia::sysmem2::HeapType heap) const {
   ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());

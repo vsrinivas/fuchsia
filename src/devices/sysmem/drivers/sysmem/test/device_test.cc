@@ -351,6 +351,40 @@ TEST_F(FakeDdkSysmem, MaxSize) {
                                                                           &status, &info));
 }
 
+// Check that teardown doesn't leak any memory (detected through LSAN).
+TEST_F(FakeDdkSysmem, TeardownLeak) {
+  zx::channel collection_client = AllocateNonSharedCollection();
+
+  fuchsia_sysmem_BufferCollectionConstraints constraints{};
+  constraints.min_buffer_count = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
+
+  EXPECT_OK(
+      fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, &constraints));
+
+  fuchsia_sysmem_BufferCollectionInfo_2 info;
+  zx_status_t status;
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(), &status,
+                                                                   &info));
+  EXPECT_OK(status);
+  for (uint32_t i = 0; i < info.buffer_count; i++) {
+    zx_handle_close(info.buffers[i].vmo);
+  }
+  collection_client.reset();
+  // We need to run the loop until idle to work around an issue:  On device unbind the channel error
+  // handler is run, which causes all the VMOs to be released. However, since the loop is being torn
+  // down TrackedParentVmo.zero_children_wait_ is canceled, which means that TrackedParentVmo
+  // continues to hold a reference to the LogicalBufferCollection and that causes a memory leak.
+
+  // Tearing down sysmem doesn't happen on a production system, so we can just add a workaround for
+  // the fuzzer. If we run the loop until idle after closing the VMO and channel handles then
+  // everything should work properly
+  sysmem_.RunLoopUntilIdle();
+}
+
 TEST_F(FakeDdkSysmemPbus, Register) { EXPECT_EQ(ZX_PROTOCOL_SYSMEM, pbus_.registered_proto_id()); }
 
 }  // namespace
