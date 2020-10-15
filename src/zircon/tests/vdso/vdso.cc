@@ -90,7 +90,7 @@ TEST(VdsoTests, vdso_map_change_test) {
 
   // Changing protections on the code pages is forbidden.
   EXPECT_EQ(
-      vdso_vmar.protect(scratch.vdso_code_address(), scratch.vdso_code_size(), ZX_VM_PERM_READ),
+      vdso_vmar.protect2(ZX_VM_PERM_READ, scratch.vdso_code_address(), scratch.vdso_code_size()),
       ZX_ERR_ACCESS_DENIED, "zx_vmar_protect on vDSO code");
 
   zx::vmo vmo;

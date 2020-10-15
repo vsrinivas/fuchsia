@@ -215,16 +215,6 @@ TEST(ZxTestCase, EventPair) {
   // TODO(cpu): test more.
 }
 
-TEST(ZxTestCase, VmarDeprecated) {
-  zx::vmar vmar;
-  const size_t size = getpagesize();
-  uintptr_t addr;
-  ASSERT_OK(zx::vmar::root_self()->allocate(0u, size, ZX_VM_CAN_MAP_READ, &vmar, &addr));
-  ASSERT_OK(validate_handle(vmar.get()));
-  ASSERT_OK(vmar.destroy());
-  // TODO(teisenbe): test more.
-}
-
 TEST(ZxTestCase, Vmar) {
   zx::vmar vmar;
   const size_t size = getpagesize();

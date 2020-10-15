@@ -8,8 +8,8 @@
 
 namespace zx {
 
-zx_status_t vmar::allocate(size_t offset, size_t size, zx_vm_option_t options, vmar* child,
-                           uintptr_t* child_addr) const {
+zx_status_t vmar::allocate2(uint32_t options, size_t offset, size_t size, vmar* child,
+                            uintptr_t* child_addr) const {
   // Allow for aliasing of |child| to the same container as |this|.
   vmar h;
   zx_status_t status =

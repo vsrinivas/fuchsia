@@ -222,8 +222,8 @@ bool ZirconPlatformBuffer::MapCpuConstrained(void** va_out, uint64_t length, uin
         static_cast<zx_vm_option_t>(alignment_log2 << ZX_VM_ALIGN_BASE);
     const zx_vm_option_t flags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC |
                                  ZX_VM_OFFSET_IS_UPPER_LIMIT | alignment_flag;
-    zx_status_t status = parent_vmar_->get()->allocate(upper_limit_offset, length + padding_size_,
-                                                       flags, &child_vmar, &child_addr);
+    zx_status_t status = parent_vmar_->get()->allocate2(flags, upper_limit_offset, length + padding_size_,
+                                                        &child_vmar, &child_addr);
     if (status != ZX_OK) {
       return DRETF(false,
                    "failed to make vmar: base_addr=0x%zx upper_limit=0x%zx size=0x%zx "
