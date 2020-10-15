@@ -26,4 +26,7 @@ zx_host_tool("lz4") {
   defines = [ "XXH_NAMESPACE=LZ4_" ]
   include_dirs = [ "$lz4_lib" ]
   sdk_migrated = true
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
 }

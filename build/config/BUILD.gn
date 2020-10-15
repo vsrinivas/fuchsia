@@ -952,6 +952,7 @@ config("Wno-conversion") {
     "//zircon/tools/blobfs/*",
     "//zircon/tools/fvm/*",
     "//zircon/tools/ktrace-dump/*",
+    "//zircon/tools/lz4/*",
     "//zircon/tools/merkleroot/*",
     "//zircon/tools/minfs/*",
     "//zircon/tools/mtd-redundant-storage/*",

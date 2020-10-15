@@ -8,6 +8,12 @@ board_name = "COR_AL00_VD"
 
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/kirin970/package-image.sh"
+custom_signing_script_deps =
+    [ "//zircon/kernel/target/arm64/boot-shim:kirin970" ]
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
 
 # partitions for fx flash to flash
 zircon_a_partition = "boot"

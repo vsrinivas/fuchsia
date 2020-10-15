@@ -10,6 +10,17 @@ declare_args() {
   # the output signed zbi path. The path must be in GN-label syntax (i.e.
   # starts with //).
   custom_signing_script = ""
+
+  # If `custom_signing_script` is not empty, a list of dependencies for the script.
+  custom_signing_script_deps = []
+
+  # If `custom signing script` is not empty, a list of host tool labels, without
+  # a toolchain, that the script depends on. The reason why these are not in
+  # `custom_signing_script_deps` is because these definitions are typically in
+  # board-specific .gni files where `host_os` or `host_toolchain` are not
+  # defined yet. Because these are imported from `args.gn` before `BUILDCONFIG.gn`
+  # is actually parsed.
+  custom_signing_script_tools = []
 }
 
 # Template for producing signed ZBI images given a custom signing script.
@@ -71,6 +82,17 @@ template("custom_signed_zbi") {
 
     output_file = "$root_out_dir/$output_file"
     script = custom_signing_script
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (defined(custom_signing_script_deps)) {
+      deps += custom_signing_script_deps
+      foreach(tool, custom_signing_script_tools) {
+        deps += [ "$tool($host_toolchain)" ]
+      }
+    }
 
     inputs = zbi
     outputs = [ output_file ]

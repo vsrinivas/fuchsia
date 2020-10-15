@@ -12,6 +12,16 @@ board_zedboot_cmdline_args = [ "kernel.bypass-debuglog=true" ]
 # depthcharge bootloader packaging
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/c18/package-image.sh"
+custom_signing_script_deps = [ "//zircon/kernel/target/arm64/boot-shim:c18" ]
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
+
+# NOTE: The signing script also depends on the "mkimage" tool being installed
+# on your Ubuntu system. The latter is not provided by the Fuchsia build. To get
+# it see instructions as in:
+# https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_odroid-c2-board_arm64-kernel.md
 
 # required tool for packaging script
 board_package_labels += [ "//tools/vboot_reference:futility_host" ]

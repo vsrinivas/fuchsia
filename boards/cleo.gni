@@ -8,6 +8,11 @@ board_name = "cleo"
 
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/cleo/package-image.sh"
+custom_signing_script_deps = [ "//zircon/kernel/target/arm64/boot-shim:cleo" ]
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
 
 board_system_image_deps += [ "//garnet/packages/prod:magma-img-rgx-mt8167" ]
 

@@ -17,6 +17,14 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/msm8998/package-image.sh"
 
+custom_signing_script_deps =
+    [ "//zircon/kernel/target/arm64/boot-shim:msm8998" ]
+
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
+
 use_vbmeta = true
 avb_key = "//zircon/third_party/tools/android/avb/test/data/testkey_atx_psk.pem"
 avb_atx_metadata =
@@ -29,4 +37,3 @@ zircon_b_partition = "boot_b"
 vbmeta_a_partition = "vbmeta_a"
 vbmeta_b_partition = "vbmeta_b"
 active_partition = "a"
-signed_image = true

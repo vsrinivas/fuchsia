@@ -8,6 +8,12 @@ board_name = "mt8167s_ref"
 
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/mt8167s_ref/package-image.sh"
+custom_signing_script_deps =
+    [ "//zircon/kernel/target/arm64/boot-shim:mt8167s_ref" ]
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
 
 _common_bootfs_deps = [
   "//src/connectivity/bluetooth/hci/vendor/mediatek:bt-hci-mediatek",

@@ -44,5 +44,11 @@ board_package_labels = [
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/as370/package-as370-image.sh"
 
+custom_signing_script_deps = [ "//zircon/kernel/target/arm64/boot-shim:as370" ]
+custom_signing_script_tools = [
+  "//zircon/tools/lz4",
+  "//zircon/tools/zbi",
+]
+
 zircon_a_partition = "boot"
 pre_erase_flash = true
