@@ -70,7 +70,7 @@ struct PresentArgs {
   std::vector<zx::event> release_fences;
 
   // Arguments to the PRESENT_WITH_ARGS macro.
-  bool skip_session_update = false;
+  bool skip_session_update_and_release_fences = false;
 };
 
 }  // namespace
@@ -89,6 +89,11 @@ struct PresentArgs {
 // trigger an error.
 #define PRESENT_WITH_ARGS(flatland, args, expect_success)                                    \
   {                                                                                          \
+    bool had_acquire_fences = !args.acquire_fences.empty();                                  \
+    if (expect_success) {                                                                    \
+      EXPECT_CALL(*mock_flatland_presenter_,                                                 \
+                  RegisterPresent(flatland.GetRoot().GetInstanceId(), _));                   \
+    }                                                                                        \
     bool processed_callback = false;                                                         \
     flatland.Present(args.requested_presentation_time.get(), std::move(args.acquire_fences), \
                      std::move(args.release_fences), [&](Flatland_Present_Result result) {   \
@@ -102,10 +107,16 @@ struct PresentArgs {
                        processed_callback = true;                                            \
                      });                                                                     \
     EXPECT_TRUE(processed_callback);                                                         \
-    /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */          \
-    RunLoopUntilIdle();                                                                      \
-    if (!args.skip_session_update) {                                                         \
-      mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();                        \
+    if (expect_success) {                                                                    \
+      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */         \
+      if (!had_acquire_fences) {                                                             \
+        EXPECT_CALL(*mock_flatland_presenter_,                                               \
+                    ScheduleUpdateForSession(args.requested_presentation_time, _));          \
+      }                                                                                      \
+      RunLoopUntilIdle();                                                                    \
+      if (!args.skip_session_update_and_release_fences) {                                    \
+        ApplySessionUpdatesAndSignalFences();                                                \
+      }                                                                                      \
     }                                                                                        \
   }
 
@@ -188,10 +199,41 @@ class FlatlandTest : public gtest::TestLoopFixture {
         link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())) {}
 
   void SetUp() override {
-    mock_flatland_presenter_ = new MockFlatlandPresenter(uber_struct_system_.get());
+    mock_flatland_presenter_ = new ::testing::StrictMock<MockFlatlandPresenter>();
+
+    ON_CALL(*mock_flatland_presenter_, RegisterPresent(_, _))
+        .WillByDefault(::testing::Invoke(
+            [&](scheduling::SessionId session_id, std::vector<zx::event> release_fences) {
+              const auto next_present_id = scheduling::GetNextPresentId();
+
+              // Store all release fences.
+              pending_release_fences_[{session_id, next_present_id}] = std::move(release_fences);
+
+              return next_present_id;
+            }));
+
+    ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _))
+        .WillByDefault(::testing::Invoke(
+            [&](zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair) {
+              // The ID must be already registered.
+              EXPECT_TRUE(pending_release_fences_.find(id_pair) != pending_release_fences_.end());
+
+              // Ensure IDs are strictly increasing.
+              auto current_id_kv = pending_session_updates_.find(id_pair.session_id);
+              EXPECT_TRUE(current_id_kv == pending_session_updates_.end() ||
+                          current_id_kv->second < id_pair.present_id);
+
+              // Only save the latest PresentId: the UberStructSystem will flush all Presents prior
+              // to it.
+              pending_session_updates_[id_pair.session_id] = id_pair.present_id;
+
+              // Store all requested presentation times to verify in test.
+              requested_presentation_times_[id_pair] = requested_presentation_time;
+            }));
+
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
 
-    mock_renderer_ = new MockRenderer();
+    mock_renderer_ = new ::testing::StrictMock<MockRenderer>();
     renderer_ = std::shared_ptr<Renderer>(mock_renderer_);
   }
 
@@ -214,6 +256,55 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return Flatland(session_id, flatland_presenter_, renderer_, link_system_,
                     uber_struct_system_->AllocateQueueForSession(session_id),
                     std::move(sysmem_allocator));
+  }
+
+  // Applies the most recently scheduled session update for each session and signals the release
+  // fences of all Presents up to and including that update.
+  void ApplySessionUpdatesAndSignalFences() {
+    uber_struct_system_->UpdateSessions(pending_session_updates_);
+
+    // Signal all release fences up to and including the PresentId in |pending_session_updates_|.
+    for (const auto& [session_id, present_id] : pending_session_updates_) {
+      auto begin = pending_release_fences_.lower_bound({session_id, 0});
+      auto end = pending_release_fences_.upper_bound({session_id, present_id});
+      for (auto fences_kv = begin; fences_kv != end; ++fences_kv) {
+        for (auto& event : fences_kv->second) {
+          event.signal(0, ZX_EVENT_SIGNALED);
+        }
+      }
+      pending_release_fences_.erase(begin, end);
+    }
+
+    pending_session_updates_.clear();
+    requested_presentation_times_.clear();
+  }
+
+  // Gets the list of registered PresentIds for a particular |session_id|.
+  std::vector<scheduling::PresentId> GetRegisteredPresents(scheduling::SessionId session_id) const {
+    std::vector<scheduling::PresentId> present_ids;
+
+    auto begin = pending_release_fences_.lower_bound({session_id, 0});
+    auto end = pending_release_fences_.upper_bound({session_id + 1, 0});
+    for (auto fence_kv = begin; fence_kv != end; ++fence_kv) {
+      present_ids.push_back(fence_kv->first.present_id);
+    }
+
+    return present_ids;
+  }
+
+  // Returns true if |session_id| currently has a session update pending.
+  bool HasSessionUpdate(scheduling::SessionId session_id) const {
+    return pending_session_updates_.count(session_id);
+  }
+
+  // Returns the requested presentation time for a particular |id_pair|, or std::nullopt if that
+  // pair has not had a presentation scheduled for it.
+  std::optional<zx::time> GetRequestedPresentationTime(scheduling::SchedulingIdPair id_pair) {
+    auto iter = requested_presentation_times_.find(id_pair);
+    if (iter == requested_presentation_times_.end()) {
+      return std::nullopt;
+    }
+    return iter->second;
   }
 
   void SetDisplayPixelScale(const glm::vec2& pixel_scale) { display_pixel_scale_ = pixel_scale; }
@@ -296,8 +387,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
                                                     BufferCollectionId collection_id,
                                                     ImageProperties properties) {
     sysmem_util::GlobalBufferCollectionId global_collection_id = sysmem_util::kInvalidId;
-    ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-        .WillByDefault(testing::Invoke(
+    EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+        .WillOnce(testing::Invoke(
             [&global_collection_id](
                 sysmem_util::GlobalBufferCollectionId collection_id,
                 fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -332,8 +423,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  MockFlatlandPresenter* mock_flatland_presenter_;
-  MockRenderer* mock_renderer_;
+  ::testing::StrictMock<MockFlatlandPresenter>* mock_flatland_presenter_;
+  ::testing::StrictMock<MockRenderer>* mock_renderer_;
   std::shared_ptr<Renderer> renderer_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
 
@@ -341,6 +432,11 @@ class FlatlandTest : public gtest::TestLoopFixture {
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
+
+  // Storage for |mock_flatland_presenter_|.
+  std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> pending_release_fences_;
+  std::map<scheduling::SchedulingIdPair, zx::time> requested_presentation_times_;
+  std::unordered_map<scheduling::SessionId, scheduling::PresentId> pending_session_updates_;
 };
 
 }  // namespace
@@ -371,8 +467,7 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // updates shouldn't signal the release fence.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  auto registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
@@ -383,10 +478,9 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // doesn't update, and the release fence isn't signaled.
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  ApplySessionUpdatesAndSignalFences();
 
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
@@ -397,11 +491,13 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // applied), the UberStructSystem contains an UberStruct for the instance, and the release fence
   // is signaled.
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
-  RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
 
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
+  RunLoopUntilIdle();
+
+  ApplySessionUpdatesAndSignalFences();
+
+  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_TRUE(registered_presents.empty());
 
   EXPECT_NE(GetUberStruct(flatland), nullptr);
@@ -424,27 +520,30 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
   // FlatlandPresenter. There should be no requested presentation time.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  auto registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
   const auto id_pair = scheduling::SchedulingIdPair({
       .session_id = flatland.GetRoot().GetInstanceId(),
       .present_id = registered_presents[0],
   });
-  EXPECT_EQ(mock_flatland_presenter_->GetRequestedPresentationTime(id_pair), zx::time(0));
+
+  auto maybe_presentation_time = GetRequestedPresentationTime(id_pair);
+  EXPECT_FALSE(maybe_presentation_time.has_value());
 
   // Signal the fence and ensure the Present is still registered, but now with a requested
   // presentation time.
   acquire_copy.signal(0, ZX_EVENT_SIGNALED);
+
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
   RunLoopUntilIdle();
 
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
-  EXPECT_EQ(mock_flatland_presenter_->GetRequestedPresentationTime(id_pair),
-            requested_presentation_time);
+  maybe_presentation_time = GetRequestedPresentationTime(id_pair);
+  EXPECT_TRUE(maybe_presentation_time.has_value());
+  EXPECT_EQ(maybe_presentation_time.value(), requested_presentation_time);
 }
 
 TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
@@ -463,11 +562,13 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
   acquire_copy.signal(0, ZX_EVENT_SIGNALED);
 
   // The PresentId is no longer registered because it has been applied, the UberStructSystem should
-  // update immediately, and the release fence should be signaled.
+  // update immediately, and the release fence should be signaled. The PRESENT macro only expects
+  // the ScheduleUpdateForSession() call when no acquire fences are present, but since this test
+  // specifically tests pre-signaled fences, the EXPECT_CALL must be added here.
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  auto registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_TRUE(registered_presents.empty());
 
   EXPECT_NE(GetUberStruct(flatland), nullptr);
@@ -491,8 +592,7 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // empty, and the release fence is unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args1), true);
 
-  auto registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
@@ -518,8 +618,7 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // UberStructSystem is still empty and both release fences are unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args2), true);
 
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 2ul);
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
@@ -532,10 +631,9 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // signaled.
   acquire2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  ApplySessionUpdatesAndSignalFences();
 
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 2ul);
 
   EXPECT_EQ(GetUberStruct(flatland), nullptr);
@@ -546,11 +644,13 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // Signal the fence for the first Present(). This should trigger both Presents(), resulting no
   // registered Presents and an UberStruct with a 2-element topology: the local root, and kId.
   acquire1_copy.signal(0, ZX_EVENT_SIGNALED);
-  RunLoopUntilIdle();
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
 
-  registered_presents =
-      mock_flatland_presenter_->GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _)).Times(2);
+  RunLoopUntilIdle();
+
+  ApplySessionUpdatesAndSignalFences();
+
+  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
   EXPECT_TRUE(registered_presents.empty());
 
   auto uber_struct = GetUberStruct(flatland);
@@ -1199,6 +1299,8 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
 
   // Signal the acquire fence to unbind the link.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
+
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(graph_link.is_bound());
@@ -1354,6 +1456,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
 
   // Signal the acquire fence to unbind the links.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
+
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
@@ -1384,6 +1488,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
 
   // Signal the acquire fence to unbind the links.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
+
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
@@ -2205,6 +2311,8 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
 
   // Signal the acquire fence to unbind the link.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
+
+  EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
@@ -2718,8 +2826,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
   // Setup a valid buffer collection.
   const BufferCollectionId kBufferCollectionId = 1;
   sysmem_util::GlobalBufferCollectionId global_collection_id;
-  ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-      .WillByDefault(
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
           testing::Invoke([&global_collection_id](
                               sysmem_util::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3044,8 +3152,8 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionErrorCases) {
 
   // A buffer collection cannot be deregistered twice.
   sysmem_util::GlobalBufferCollectionId global_collection_id;
-  ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-      .WillByDefault(
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
           testing::Invoke([&global_collection_id](
                               sysmem_util::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3073,8 +3181,8 @@ TEST_F(FlatlandTest, DeregisterMultipleBufferCollectionsSameEvent) {
 
   // Register the first buffer collection.
   sysmem_util::GlobalBufferCollectionId global_collection_id_1;
-  ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-      .WillByDefault(
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
           testing::Invoke([&global_collection_id_1](
                               sysmem_util::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3091,8 +3199,8 @@ TEST_F(FlatlandTest, DeregisterMultipleBufferCollectionsSameEvent) {
 
   // Register the second buffer collection.
   sysmem_util::GlobalBufferCollectionId global_collection_id_2;
-  ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-      .WillByDefault(
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
           testing::Invoke([&global_collection_id_2](
                               sysmem_util::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3118,13 +3226,13 @@ TEST_F(FlatlandTest, DeregisterMultipleBufferCollectionsSameEvent) {
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_2)).Times(0);
 
   PresentArgs args;
-  args.skip_session_update = true;
+  args.skip_session_update_and_release_fences = true;
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   // Signal the release fence.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_1)).Times(1);
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_2)).Times(1);
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
 
@@ -3133,8 +3241,8 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
 
   // Create a valid BufferCollectionId.
   sysmem_util::GlobalBufferCollectionId global_collection_id_1;
-  ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-      .WillByDefault(
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
           testing::Invoke([&global_collection_id_1](
                               sysmem_util::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3158,14 +3266,14 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
     EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_1)).Times(0);
 
     PresentArgs args;
-    args.skip_session_update = true;
+    args.skip_session_update_and_release_fences = true;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
   // Register another buffer collection with that same ID.
   sysmem_util::GlobalBufferCollectionId global_collection_id_2;
-  ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-      .WillByDefault(
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
           testing::Invoke([&global_collection_id_2](
                               sysmem_util::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3182,14 +3290,14 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
     EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_1)).Times(0);
 
     PresentArgs args;
-    args.skip_session_update = true;
+    args.skip_session_update_and_release_fences = true;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
   // Signal the release fences, which should result deregister the first one from the renderer.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_1)).Times(1);
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id_2)).Times(0);
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 
   // Deregister the second one, signal the release fences, and verify the second global ID was
@@ -3242,12 +3350,12 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   flatland.SetContentOnTransform(0, kTransformId);
 
   PresentArgs args;
-  args.skip_session_update = true;
+  args.skip_session_update_and_release_fences = true;
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
   // Signal the release fences, which triggers the deregistration call.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(1);
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
 
@@ -3257,8 +3365,8 @@ TEST_F(FlatlandTest, DeregisterCollectionCompletesAfterFlatlandDestruction) {
     Flatland flatland = CreateFlatland();
 
     // Register a buffer collection.
-    ON_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
-        .WillByDefault(testing::Invoke(
+    EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+        .WillOnce(testing::Invoke(
             [&global_collection_id](
                 sysmem_util::GlobalBufferCollectionId collection_id,
                 fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -3280,7 +3388,7 @@ TEST_F(FlatlandTest, DeregisterCollectionCompletesAfterFlatlandDestruction) {
     EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(0);
 
     PresentArgs args;
-    args.skip_session_update = true;
+    args.skip_session_update_and_release_fences = true;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
     // |flatland| falls out of scope.
@@ -3292,7 +3400,7 @@ TEST_F(FlatlandTest, DeregisterCollectionCompletesAfterFlatlandDestruction) {
   // Signal the release fences, which triggers the deregistration call, even though the Flatland
   // instance and Renderer associated with the call have been cleaned up.
   EXPECT_CALL(*mock_renderer_, DeregisterCollection(global_collection_id)).Times(1);
-  mock_flatland_presenter_->ApplySessionUpdatesAndSignalFences();
+  ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
 
