@@ -50,27 +50,36 @@ bits Operations : uint64 {
     ADMIN = 0x100000000000000;
 };
 
+/// Right Aliases - Useful constants for commonly used collections of
+/// rights. Currently FIDL doesn't support expressions on assignment so
+/// these cannot be defined. They are left here as documentation.
+/// Alias for directory permission alias r*
+/// CONNECT | ENUMERATE | TRAVERSE | READ_BYTES | GET_ATTRIBUTES
+const uint64 R_STAR_DIR = 0xD3;
+
+/// Alias for directory permission alias rw*
+/// CONNECT | ENUMERATE | TRAVERSE | READ_BYTES | WRITE_BYTES |
+/// MODIFY_DIRECTORY | GET_ATTRIBUTES | UPDATE_ATTRIBUTES
+const uint64 RW_STAR_DIR = 0x1F7;
+
+/// Alias for directory permission alias rx*
+/// CONNECT | ENUMERATE | TRAVERSE | READ_BYTES | GET_ATTRIBUTES | EXECUTE
+const uint64 RX_STAR_DIR = 0xDB;
+
+/// Alias for directory permission alias w*
+/// CONNECT | ENUMERATE | TRAVERSE | WRITE_BYTES | MODIFY_DIRECTORY |
+/// UPDATE_ATTRIBUTES
+const uint64 W_STAR_DIR = 0x1E5;
+
+/// Alias for directory permission alias x*
+/// CONNECT | ENUMERATE | TRAVERSE | EXECUTE
+const uint64 X_STAR_DIR = 0xC9;
+
 /// Rights are properties specific to a connection. They limit which operations
 /// are allowed on a connection.
 ///
 /// Invoking an operation without the corresponding right results in a
 /// `ZX_ERR_ACCESS_DENIED` error.
-///
-/// Right Aliases - Useful constants for commonly used collections of rights.
-/// Currently FIDL doesn't support expressions on assignment so these cannot
-/// be defined. They are left here as documentation.
-///
-/// "r*" a collection of rights to read from a directory.
-/// const Rights R_STAR_DIR = CONNECT | ENUMERATE | TRAVERSE |
-///                         READ_BYTES | GET_ATTRIBUTES;
-///
-/// "w*" a collection of rights to write to a directory.
-/// const Rights W_STAR_DIR = CONNECT | ENUMERATE | TRAVERSE |
-///                           MODIFY_DIRECTORY | WRITE_BYTES |
-///                           UPDATE_ATTRIBUTES;
-///
-/// "x*" a collection of rights to execute from a directory.
-/// const Rights X_STAR_DIR = CONNECT | ENUMERATE | TRAVERSE | EXECUTE;
 using Rights = Operations;
 
 /// Abilities are properties intrinsic to a node. They specify which operations
