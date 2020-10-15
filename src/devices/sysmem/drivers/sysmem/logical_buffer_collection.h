@@ -104,7 +104,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   FidlAllocator& fidl_allocator() { return allocator_; }
 
   std::optional<std::string> name() const {
-    return name_ ? std::make_optional(name_->second) : std::optional<std::string>();
+    return name_ ? std::make_optional(name_->name) : std::optional<std::string>();
   }
 
   inspect::Node& node() { return node_; }
@@ -121,6 +121,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
     llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder builder;
     ClientInfo client;
+  };
+
+  struct CollectionName {
+    uint32_t priority{};
+    std::string name;
   };
 
   LogicalBufferCollection(Device* parent_device);
@@ -238,7 +243,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   std::optional<llcpp::fuchsia::sysmem2::BufferCollectionInfo> allocation_result_info_;
 
   MemoryAllocator* memory_allocator_ = nullptr;
-  std::optional<std::pair<uint32_t /*priority*/, std::string>> name_;
+  std::optional<CollectionName> name_;
 
   // Information about the current client - only valid while aggregating state for a particular
   // client.

@@ -394,8 +394,8 @@ void LogicalBufferCollection::OnSetConstraints() {
 }
 
 void LogicalBufferCollection::SetName(uint32_t priority, std::string name) {
-  if (!name_ || (priority > name_->first)) {
-    name_ = std::make_pair(priority, name);
+  if (!name_ || (priority > name_->priority)) {
+    name_ = CollectionName{priority, name};
     name_property_ = node_.CreateString("name", name);
   }
 }
@@ -532,7 +532,7 @@ void LogicalBufferCollection::LogErrorStatic(const ClientInfo* client_info, cons
 
 void LogicalBufferCollection::VLogClientError(const ClientInfo* client_info, const char* format,
                                               va_list args) {
-  const char* collection_name = name_ ? name_->second.c_str() : "Unknown";
+  const char* collection_name = name_ ? name_->name.c_str() : "Unknown";
   fbl::String formatted = fbl::StringVPrintf(format, args);
   if (client_info && !client_info->name.empty()) {
     fbl::String client_name =
@@ -2014,7 +2014,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   zx::vmo raw_parent_vmo;
   std::optional<std::string> name;
   if (name_) {
-    name = fbl::StringPrintf("%s:%d", name_->second.c_str(), index).c_str();
+    name = fbl::StringPrintf("%s:%d", name_->name.c_str(), index).c_str();
   }
   zx_status_t status = allocator->Allocate(rounded_size_bytes, name, &raw_parent_vmo);
   if (status != ZX_OK) {
@@ -2156,7 +2156,7 @@ void LogicalBufferCollection::CreationTimedOut(async_dispatcher_t* dispatcher,
   if (status != ZX_OK)
     return;
 
-  std::string name = name_ ? name_->second : "Unknown";
+  std::string name = name_ ? name_->name : "Unknown";
 
   LogError("Allocation of %s timed out. Waiting for tokens: ", name.c_str());
   for (auto& token : token_views_) {
