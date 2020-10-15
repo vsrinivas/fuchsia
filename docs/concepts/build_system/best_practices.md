@@ -566,3 +566,20 @@ scope. You’ll encounter this pattern:
 forward_variables_from(invoker, "*", [ "visibility" ])
 forward_variables_from(invoker, [ "visibility" ])
 ```
+### `exec_script()` {#exec-script}
+
+GN's built-in function
+[exec_script](https://gn.googlesource.com/gn/+/master/docs/reference.md#func_exec_script)
+is a powerful tool for augmenting GN's abilities. Like `action()`,
+`exec_script()` can invoke an external tool. Unlike `action()`, `exec_script()`
+can invoke the tool **synchronously** with build generation, meaning that you
+can use the output of the tool in your `BUILD.gn` logic.
+
+Since this creates a performance bottleneck in gen time (i.e. `fx set` takes
+longer), this feature must be used with care.
+For more information, refer to
+[this writeup](https://chromium.googlesource.com/chromium/src/+/ab1c69b1814d3c905fdab7b0d177b478eecf40a3/.gn#291)
+by the Chromium team.
+
+An allowlist has been set up in `//.gn`. Please consult `OWNERS` for changes
+made to this allowlist.

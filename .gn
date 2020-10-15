@@ -35,6 +35,22 @@ default_args = {
 }
 
 # Enable checking for all source code we control.
-no_check_targets = [
-  "//third_party/*",
+no_check_targets = [ "//third_party/*" ]
+
+# Use of `exec_script()` is discouraged for performance reasons.
+# https://fuchsia.dev/fuchsia-src/concepts/build_system/best_practices#exec-script
+exec_script_whitelist = [
+  "//BUILD.gn",
+  "//build/config/clang/clang.gni",
+  "//build/config/mac/mac_sdk.gni",
+  "//build/config/sanitizers/BUILD.gn",
+  "//build/dart/dart_library.gni",
+  "//build/toolchain/concurrent_jobs.gni",
+  "//build/toolchain/zircon/zircon_toolchain.gni",
+  "//build/unification/lib/zircon_runtime_library.gni",
+  "//src/developer/ffx/build/ffx_plugin.gni",
+  "//src/graphics/lib/compute/spinel-rs-sys/BUILD.gn",
+  "//tools/fidl/fidldoc/BUILD.gn",
+  "//topaz/runtime/sky_engine/BUILD.gn",
+  "//topaz/tools/protobuf/protobuf_dart.gni",
 ]
