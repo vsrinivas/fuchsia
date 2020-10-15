@@ -3,15 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_component.gni")
+import("//build/flutter/flutter_test_component.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/flutter_driver.gni")
-import("//topaz/runtime/dart/dart_fuchsia_test.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
-
-import("//build/dart/dart_library.gni")
-import("//build/flutter/flutter_component.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//topaz/runtime/dart/flutter_test.gni")
 
 dart_library("lib") {
   package_name = "simple_browser"
@@ -108,15 +108,9 @@ flutter_test("simple_browser_unittests") {
   ]
 }
 
-# fx run-test simple_browser_target_test
-dart_fuchsia_test("simple_browser_target_test") {
-  meta = [
-    {
-      path = rebase_path("meta/simple_browser_target_test.cmx")
-      dest = "simple_browser_target_test.cmx"
-    },
-  ]
-
+flutter_test_component("target-test-component") {
+  component_name = "simple-browser-target-test"
+  manifest = "meta/simple_browser_target_test.cmx"
   sources = [ "simple_browser_target_test.dart" ]
 
   deps = [
@@ -124,8 +118,14 @@ dart_fuchsia_test("simple_browser_target_test") {
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/test",
   ]
+}
 
-  environments = basic_envs
+# fx test simple-browser-target-test
+fuchsia_test_package("simple-browser-target-test") {
+  test_components = [ ":target-test-component" ]
+  test_specs = {
+    environments = basic_envs
+  }
 }
 
 config_data("web_engine_config") {

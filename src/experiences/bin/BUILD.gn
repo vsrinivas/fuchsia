@@ -9,7 +9,7 @@ group("bin") {
 group("dart_target_tests") {
   testonly = true
 
-  deps = [ "simple_browser:simple_browser_target_test" ]
+  deps = [ "simple_browser:simple-browser-target-test" ]
 }
 
 group("dart_unittests") {

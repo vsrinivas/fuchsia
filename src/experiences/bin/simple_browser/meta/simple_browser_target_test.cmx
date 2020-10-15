@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/simple_browser_target_test"
+        "data": "data/simple-browser-target-test"
     },
     "sandbox": {
         "services": [
