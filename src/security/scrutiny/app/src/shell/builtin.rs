@@ -8,6 +8,7 @@ use std::collections::VecDeque;
 pub enum Builtin {
     PluginLoad,
     PluginUnload,
+    Print,
     Clear,
     Exit,
     Help,
@@ -30,12 +31,13 @@ impl BuiltinCommand {
         let args: Vec<String> = tokens.iter().map(|s| s.to_string()).collect();
 
         match program {
-            "plugin.load" => Some(Self { program: Builtin::PluginLoad, args }),
-            "plugin.unload" => Some(Self { program: Builtin::PluginUnload, args }),
             "clear" => Some(Self { program: Builtin::Clear, args }),
             "exit" => Some(Self { program: Builtin::Exit, args }),
             "h" | "help" => Some(Self { program: Builtin::Help, args }),
             "history" => Some(Self { program: Builtin::History, args }),
+            "plugin.load" => Some(Self { program: Builtin::PluginLoad, args }),
+            "plugin.unload" => Some(Self { program: Builtin::PluginUnload, args }),
+            "print" => Some(Self { program: Builtin::Print, args }),
             _ => None,
         }
     }
@@ -43,12 +45,13 @@ impl BuiltinCommand {
     /// Vector of all builtin commands used for tab completion.
     pub fn commands() -> Vec<String> {
         vec![
-            "plugin.load".to_string(),
-            "plugin.unload".to_string(),
             "clear".to_string(),
+            "exit".to_string(),
             "help".to_string(),
             "history".to_string(),
-            "exit".to_string(),
+            "plugin.load".to_string(),
+            "plugin.unload".to_string(),
+            "print".to_string(),
         ]
     }
 
@@ -62,6 +65,7 @@ Builtin Commands:
   clear                     - Clears the screen.
   plugin.load               - Loads a registered plugin.
   plugin.unload             - Unloads a loaded plugin.
+  print                     - prints all arguments passed to it.
   exit                      - Exits the program.
   help                      - Prints help information for a command.
   history                   - Prints the command history for the shell."
@@ -77,6 +81,7 @@ mod tests {
     fn test_builtin_parse() {
         assert_eq!(BuiltinCommand::parse("plugin.load").unwrap().program, Builtin::PluginLoad);
         assert_eq!(BuiltinCommand::parse("plugin.unload").unwrap().program, Builtin::PluginUnload);
+        assert_eq!(BuiltinCommand::parse("print").unwrap().program, Builtin::Print);
         assert_eq!(BuiltinCommand::parse("clear").unwrap().program, Builtin::Clear);
         assert_eq!(BuiltinCommand::parse("exit").unwrap().program, Builtin::Exit);
         assert_eq!(BuiltinCommand::parse("help").unwrap().program, Builtin::Help);
@@ -89,5 +94,9 @@ mod tests {
     fn test_builtin_args() {
         assert_eq!(BuiltinCommand::parse("plugin.load foo").unwrap().args, vec!["foo"]);
         assert_eq!(BuiltinCommand::parse("plugin.load foo bar").unwrap().args, vec!["foo", "bar"]);
+        assert_eq!(
+            BuiltinCommand::parse("print foo bar baz").unwrap().args,
+            vec!["foo", "bar", "baz"]
+        );
     }
 }

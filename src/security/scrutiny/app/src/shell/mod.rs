@@ -179,6 +179,10 @@ impl Shell {
                         println!("Error: {}", e);
                     }
                 }
+                Builtin::Print => {
+                    let message = builtin.args.join(" ");
+                    println!("{}", message);
+                }
                 Builtin::Help => {
                     // Provide usage for a specific command.
                     if builtin.args.len() == 1 {
