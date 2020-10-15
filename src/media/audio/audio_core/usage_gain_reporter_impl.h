@@ -40,13 +40,14 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
       fidl::InterfaceHandle<fuchsia::media::UsageGainListener> usage_gain_listener_handler) final;
 
  private:
-  friend class UsageGainReporterTest;
-
   class Listener final : public StreamVolume {
    public:
-    Listener(UsageGainReporterImpl& parent,
-             const DeviceConfig::OutputDeviceProfile& output_device_profile,
-             fuchsia::media::Usage usage, fuchsia::media::UsageGainListenerPtr usage_gain_listener);
+    Listener(const DeviceConfig::OutputDeviceProfile& output_device_profile,
+             fuchsia::media::Usage usage, fuchsia::media::UsageGainListenerPtr usage_gain_listener)
+        : loudness_transform_(output_device_profile.loudness_transform()),
+          independent_volume_control_(output_device_profile.independent_volume_control()),
+          usage_(std::move(usage)),
+          usage_gain_listener_(std::move(usage_gain_listener)) {}
 
    private:
     // |media::audio::StreamVolume|
@@ -54,7 +55,6 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
     bool GetStreamMute() const final { return false; }
     void RealizeVolume(VolumeCommand volume_command) final;
 
-    UsageGainReporterImpl& parent_;
     std::shared_ptr<LoudnessTransform> loudness_transform_;
     bool independent_volume_control_;
     fuchsia::media::Usage usage_;
@@ -70,7 +70,7 @@ class UsageGainReporterImpl : public fuchsia::media::UsageGainReporter {
   DeviceRegistry& device_registry_;
   StreamVolumeManager& stream_volume_manager_;
   const ProcessConfig& process_config_;
-  std::unordered_map<Listener*, std::unique_ptr<Listener>> listeners_;
+  std::unordered_set<std::unique_ptr<Listener>> listeners_;
   fidl::BindingSet<fuchsia::media::UsageGainReporter, UsageGainReporterImpl*> bindings_;
 };
 

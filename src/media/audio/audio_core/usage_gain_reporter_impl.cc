@@ -34,22 +34,11 @@ void UsageGainReporterImpl::RegisterListener(
 
   const auto& device_config = process_config_.device_config();
   const auto& output_device_profile = device_config.output_device_profile(deserialized_id);
-  auto listener = std::make_unique<Listener>(*this, output_device_profile, std::move(usage),
+  auto listener = std::make_unique<Listener>(output_device_profile, std::move(usage),
                                              std::move(usage_gain_listener));
   stream_volume_manager_.AddStream(listener.get());
 
-  listeners_[listener.get()] = std::move(listener);
-}
-
-UsageGainReporterImpl::Listener::Listener(
-    UsageGainReporterImpl& parent, const DeviceConfig::OutputDeviceProfile& output_device_profile,
-    fuchsia::media::Usage usage, fuchsia::media::UsageGainListenerPtr usage_gain_listener)
-    : parent_(parent),
-      loudness_transform_(output_device_profile.loudness_transform()),
-      independent_volume_control_(output_device_profile.independent_volume_control()),
-      usage_(std::move(usage)),
-      usage_gain_listener_(std::move(usage_gain_listener)) {
-  usage_gain_listener_.set_error_handler([this](zx_status_t) { parent_.listeners_.erase(this); });
+  listeners_.insert(std::move(listener));
 }
 
 void UsageGainReporterImpl::Listener::RealizeVolume(VolumeCommand volume_command) {

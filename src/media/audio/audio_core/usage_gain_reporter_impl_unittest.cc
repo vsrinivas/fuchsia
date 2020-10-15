@@ -28,8 +28,6 @@ class FakeGainListener : public fuchsia::media::UsageGainListener {
     return binding_.NewBinding();
   }
 
-  void CloseBinding() { binding_.Close(0); }
-
   bool muted() const { return last_muted_; }
 
   float gain_dbfs() const { return last_gain_dbfs_; }
@@ -68,8 +66,6 @@ class TestDeviceRegistry : public DeviceRegistry {
   std::vector<fuchsia::media::AudioDeviceInfo> device_info_;
 };
 
-}  // namespace
-
 class UsageGainReporterTest : public gtest::TestLoopFixture {
  protected:
   UsageGainReporterTest()
@@ -102,8 +98,6 @@ class UsageGainReporterTest : public gtest::TestLoopFixture {
 
     return fake_gain_listener;
   }
-
-  size_t NumListeners() { return under_test_->listeners_.size(); }
 
   std::unique_ptr<StreamVolumeManager> stream_volume_manager_;
   std::unique_ptr<UsageGainReporterImpl> under_test_;
@@ -152,15 +146,5 @@ TEST_F(UsageGainReporterTest, NoUpdateIndependentVolumeControlSingleListener) {
   EXPECT_EQ(fake_listener->call_count(), 0u);
 }
 
-TEST_F(UsageGainReporterTest, HandlesClosedChannel) {
-  auto fake_listener = Listen(DEVICE_ID_STRING);
-  RunLoopUntilIdle();
-  EXPECT_EQ(fake_listener->call_count(), 1u);
-  EXPECT_EQ(NumListeners(), 1ul);
-
-  fake_listener->CloseBinding();
-  RunLoopUntilIdle();
-  EXPECT_EQ(NumListeners(), 0ul);
-}
-
+}  // namespace
 }  // namespace media::audio
