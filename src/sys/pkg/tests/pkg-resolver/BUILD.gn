@@ -475,6 +475,7 @@ rustc_test("system_cache_fallback") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde_json",
   ]
 

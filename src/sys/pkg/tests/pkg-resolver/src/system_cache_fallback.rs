@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 use {
-    blobfs_ramdisk::BlobfsRamdisk,
+    blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_hash::Hash,
@@ -16,6 +16,8 @@ use {
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
+    rand::prelude::*,
+    std::io::Read,
     std::sync::Arc,
 };
 
@@ -255,6 +257,136 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     // Check that get_hash fallback behavior matches resolve.
     let hash = env.get_hash(pkg_url).await;
     assert_eq!(hash.unwrap(), cache_pkg.meta_far_merkle_root().clone().into());
+
+    env.stop().await;
+}
+
+// If pkgfs is out of space, pkg-resolver currently falls back to cache_packages if it's asked
+// to resolve a new version of a package in that list.
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_out_of_space_falls_back_to_cache_packages() {
+    let pkg_name = "test_pkgfs_out_of_space_fallback_to_cache_packages";
+
+    // A very small package to cache.
+    let cache_pkg = test_package(pkg_name, "cache").await;
+
+    let system_image_package =
+        SystemImageBuilder::new().cache_packages(&[&cache_pkg]).build().await;
+
+    // Create a 2MB blobfs (4096 blocks * 512 bytes / block), which is about the minimum size blobfs
+    // will fit in and still be able to write our small package.
+    // See https://fuchsia.dev/fuchsia-src/concepts/filesystems/blobfs for information on the
+    // blobfs format and metadata overhead.
+    let very_small_blobfs = Ramdisk::builder()
+        .block_count(4096)
+        .into_blobfs_builder()
+        .expect("made blobfs builder")
+        .start()
+        .expect("started blobfs");
+    system_image_package
+        .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote system image to blobfs"));
+    cache_pkg
+        .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote cache package to blobfs"));
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(very_small_blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .expect("started pkgfs");
+
+    // A very large version of the same package, to put in the repo.
+    // Critically, this package contains an incompressible 4MB blob, which is larger than our
+    // blobfs, and attempting to resolve this package will result in blobfs returning out of space.
+    let mut rng = StdRng::from_seed([0u8; 32]);
+    let rng = &mut rng as &mut dyn RngCore;
+    let repo_pkg = PackageBuilder::new(pkg_name)
+        .add_resource_at("p/t/o", rng.take(4 * 1024 * 1024))
+        .build()
+        .await
+        .expect("build large package");
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&repo_pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let served_repository = repo.server().start().unwrap();
+    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
+
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
+    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+
+    // We should have fallen back to the package which was cached on the device.
+    // This behavior will change with fxbug.dev/60507, which will refuse to fall back if there's a
+    // resolve error due to pkgfs out of space.
+    cache_pkg.verify_contents(&package_dir).await.unwrap();
+
+    env.stop().await;
+}
+
+// If pkgfs is out of space, we shouldn't fall back to a previously-resolved version of an ephemeral
+// package.
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_package() {
+    let pkg_name = "test_pkgfs_out_of_space_fallback_to_previous_version";
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
+
+    let very_small_blobfs = Ramdisk::builder()
+        .block_count(4096)
+        .into_blobfs_builder()
+        .expect("made blobfs builder")
+        .start()
+        .expect("started blobfs");
+    let pkgfs = PkgfsRamdisk::builder().blobfs(very_small_blobfs).start().expect("started pkgfs");
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+
+    let small_pkg = test_package(pkg_name, "cache").await;
+    let repo_with_small_package = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&small_pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = repo_with_small_package.server().start().unwrap();
+    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
+
+    // Resolving and caching a small package should work fine.
+    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    small_pkg.verify_contents(&package_dir).await.unwrap();
+
+    // Stop the running repository, fire up a new one with a very large package in it,
+    // which won't fit in blobfs.
+    let () = served_repository.stop().await;
+
+    // A very large version of the same package, to put in the repo.
+    // Critically, this package contains an incompressible 4MB blob, which is larger than our
+    // blobfs, and attempting to resolve this package will result in blobfs returning out of space.
+    let mut rng = StdRng::from_seed([0u8; 32]);
+    let rng = &mut rng as &mut dyn RngCore;
+    let large_pkg = PackageBuilder::new(pkg_name)
+        .add_resource_at("p/t/o", rng.take(4 * 1024 * 1024))
+        .build()
+        .await
+        .expect("build large package");
+
+    let repo_with_large_package = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&large_pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let served_repository = repo_with_large_package.server().start().unwrap();
+    env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
+
+    // pkg-resolver should refuse to fall back to a previous version of the package.
+    // TODO(60507): make this error status more representative of a NO_SPACE error.
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::IO));
 
     env.stop().await;
 }
