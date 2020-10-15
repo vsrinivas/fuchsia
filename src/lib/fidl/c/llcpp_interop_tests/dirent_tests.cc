@@ -93,10 +93,10 @@ class Server {
       return encode_result.status;
     }
     auto& message = encode_result.message;
-    fidl_msg_t msg = {.bytes = message.bytes().data(),
-                      .handles = message.handles().data(),
-                      .num_bytes = message.bytes().actual(),
-                      .num_handles = message.handles().actual()};
+    fidl_outgoing_msg_t msg = {.bytes = message.bytes().data(),
+                               .handles = message.handles().data(),
+                               .num_bytes = message.bytes().actual(),
+                               .num_handles = message.handles().actual()};
     zx_status_t status = txn->reply(txn, &msg);
     message.ReleaseBytesAndHandles();
     return status;
@@ -163,7 +163,7 @@ class Server {
   }
 
   template <typename FidlType>
-  static fidl::DecodeResult<FidlType> DecodeAs(fidl_msg_t* msg) {
+  static fidl::DecodeResult<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
     if (msg->num_handles > fidl::EncodedMessage<FidlType>::kResolvedMaxHandles) {
       zx_handle_close_many(msg->handles, msg->num_handles);
       return fidl::DecodeResult<FidlType>(ZX_ERR_INVALID_ARGS, "too many handles");
@@ -171,7 +171,8 @@ class Server {
     return fidl::Decode(fidl::EncodedMessage<FidlType>(msg));
   }
 
-  static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const void* ops) {
+  static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
+                                  const void* ops) {
     if (msg->num_bytes < sizeof(fidl_message_header_t)) {
       zx_handle_close_many(msg->handles, msg->num_handles);
       return ZX_ERR_INVALID_ARGS;

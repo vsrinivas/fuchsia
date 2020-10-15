@@ -46,7 +46,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
   // DDK device implementation
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &CAMERA_FIDL_THUNKS);
   }
   ~UsbVideoStream();

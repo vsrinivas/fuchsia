@@ -278,7 +278,7 @@ TEST(AmlUsbPhy, FIDLWrites) {
   ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
   fake_ddk::FidlMessenger fidl;
   fidl.SetMessageOp(root_device->devices.front().get(),
-                    [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+                    [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
                       auto dev = static_cast<zx_device_t*>(ctx);
                       return dev->dev_ops.message(dev->pdev_ops.ctx, msg, txn);
                     });

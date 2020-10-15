@@ -87,7 +87,8 @@ static zx_status_t init(void** /*out_ctx*/) {
 static zx_status_t connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                            zx_handle_t request) {
   if (strcmp(service_name, fuchsia_scheduler_ProfileProvider_Name) == 0) {
-    auto callback_adapter = [](void* ctx, fidl_txn* txn, fidl_msg* msg, const void* ops) -> int {
+    auto callback_adapter = [](void* ctx, fidl_txn* txn, fidl_incoming_msg* msg,
+                               const void* ops) -> int {
       const auto* provider_ops = static_cast<const fuchsia_scheduler_ProfileProvider_ops_t*>(ops);
       return fuchsia_scheduler_ProfileProvider_dispatch(ctx, txn, msg, provider_ops);
     };

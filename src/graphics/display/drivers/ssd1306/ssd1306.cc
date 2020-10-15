@@ -32,7 +32,7 @@ zx_status_t Ssd1306::FidlSetScreen(void* ctx, const uint8_t* screen_buffer_list,
   return fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplaySetScreen_reply(txn, status);
 }
 
-zx_status_t Ssd1306::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Ssd1306::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   static const fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplay_ops_t kOps = {
       .GetConfig = Ssd1306::FidlGetConfig,
       .SetScreen = Ssd1306::FidlSetScreen,

@@ -64,7 +64,7 @@ class OpteeController : public OpteeControllerBase,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   zx_status_t Bind();
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);

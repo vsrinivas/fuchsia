@@ -286,7 +286,7 @@ void Protocol::RequestFlexibleResponseStrictResponseContext::OnReply(
 }
 
 std::optional<::fidl::UnbindInfo> Protocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -335,7 +335,8 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Protocol::TryDispatch(Interface* impl,
+                                             fidl_incoming_msg_t* msg,
                                              ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Protocol,
@@ -343,7 +344,8 @@ namespace entries {
           sizeof(entries::Protocol) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Protocol::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Protocol::Dispatch(Interface* impl,
+                                          fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

@@ -32,7 +32,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   TestDevice(zx_device_t* parent) : TestDeviceType(parent) {}
 
   // Methods required by the ddk mixins
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
 
@@ -62,7 +62,7 @@ class TestRootDevice : public TestRootDeviceType {
   zx_status_t Bind() { return DdkAdd("test"); }
 
   // Methods required by the ddk mixins
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -133,7 +133,7 @@ static zx_status_t fidl_Destroy(void* ctx) {
   return ZX_OK;
 }
 
-zx_status_t TestDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t TestDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   static const fuchsia_device_test_Device_ops_t kOps = {
       .RunTests = fidl_RunTests,
       .SetOutputSocket = fidl_SetOutputSocket,
@@ -196,7 +196,7 @@ zx_status_t TestRootDevice::FidlCreateDevice(void* ctx, const char* name_data, s
   return fuchsia_device_test_RootDeviceCreateDevice_reply(txn, status, path, path_size);
 }
 
-zx_status_t TestRootDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t TestRootDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   static const fuchsia_device_test_RootDevice_ops_t kOps = {
       .CreateDevice = TestRootDevice::FidlCreateDevice,
   };

@@ -30,7 +30,7 @@ class DevfsVnode : public fs::Vnode, public llcpp::fuchsia::device::Controller::
   fs::VnodeProtocolSet GetProtocols() const override;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) override;
-  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) override;
+  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override;
 
   // llcpp::fuchsia::device::Controller::Interface methods
   void Bind(::fidl::StringView driver, BindCompleter::Sync& _completer) override;

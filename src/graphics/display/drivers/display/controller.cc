@@ -938,7 +938,7 @@ void Controller::OpenController(zx::channel device, zx::channel controller,
   _completer.Reply(CreateClient(false /* is_vc */, std::move(device), std::move(controller)));
 }
 
-zx_status_t Controller::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Controller::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fidl_display::Provider::Dispatch(this, msg, &transaction);
   return transaction.Status();

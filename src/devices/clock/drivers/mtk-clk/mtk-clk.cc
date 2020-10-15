@@ -354,7 +354,7 @@ zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInf
 
 uint32_t MtkClk::GetClkCount() { return static_cast<uint32_t>(std::size(clks)); }
 
-zx_status_t MtkClk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t MtkClk::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 

@@ -34,7 +34,7 @@ void ControllerDevice::DdkUnbind(ddk::UnbindTxn txn) {
 
 void ControllerDevice::DdkRelease() { delete this; }
 
-zx_status_t ControllerDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_camera_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 

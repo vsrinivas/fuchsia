@@ -135,7 +135,7 @@ class InsntraceDevice : public DeviceType, fuchsia_insntrace::Controller::Interf
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   // Low level routines
@@ -1108,7 +1108,7 @@ zx_status_t InsntraceDevice::DdkClose(uint32_t flags) {
   return ZX_OK;
 }
 
-zx_status_t InsntraceDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t InsntraceDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   mtx_lock(&lock_);
   fuchsia_insntrace::Controller::Dispatch(this, msg, &transaction);

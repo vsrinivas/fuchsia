@@ -709,7 +709,7 @@ static const fuchsia_hardware_ethernet_Device_ops_t* FIDLOps() {
   return &kOps;
 }
 
-zx_status_t EthDev::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t EthDev::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   if (state_ & kStateDead) {
     return ZX_ERR_BAD_STATE;

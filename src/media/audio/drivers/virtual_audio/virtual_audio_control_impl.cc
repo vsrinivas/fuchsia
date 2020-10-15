@@ -52,7 +52,8 @@ void VirtualAudioControlImpl::DdkRelease(void* ctx) {
 
 // static
 //
-zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_incoming_msg_t* msg,
+                                                fidl_txn_t* txn) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
 
   return fuchsia_virtualaudio_Forwarder_dispatch(ctx, txn, msg, &fidl_ops_);

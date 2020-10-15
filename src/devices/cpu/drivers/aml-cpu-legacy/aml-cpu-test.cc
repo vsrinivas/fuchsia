@@ -203,13 +203,13 @@ class FakeAmlThermal : TestDeviceType, fuchsia_thermal::Device::Interface {
 
   // Manage the Fake FIDL Message Loop
   zx_status_t Init(std::optional<zx::channel> remote);
-  static zx_status_t MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
+  static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx::channel& GetMessengerChannel() { return messenger_.local(); }
 
   // Accessor
   uint16_t ActiveOperatingPoint() const { return active_operating_point_; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() {}
 
   void set_device_info(const fuchsia_thermal::ThermalDeviceInfo& device_info) {
@@ -237,7 +237,7 @@ class FakeAmlThermal : TestDeviceType, fuchsia_thermal::Device::Interface {
   fuchsia_thermal::ThermalDeviceInfo device_info_;
 };
 
-zx_status_t FakeAmlThermal::MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t FakeAmlThermal::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return static_cast<FakeAmlThermal*>(ctx)->DdkMessage(msg, txn);
 }
 
@@ -245,7 +245,7 @@ zx_status_t FakeAmlThermal::Init(std::optional<zx::channel> remote) {
   return messenger_.SetMessageOp(this, FakeAmlThermal::MessageOp, std::move(remote));
 }
 
-zx_status_t FakeAmlThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t FakeAmlThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fuchsia_thermal::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
@@ -405,7 +405,7 @@ class AmlCpuTest : public AmlCpu {
   AmlCpuTest(ThermalSyncClient thermal) : AmlCpu(nullptr, std::move(thermal), kBigClusterIdx) {}
 
   zx_status_t Init();
-  static zx_status_t MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
+  static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx::channel& GetMessengerChannel() { return messenger_.local(); }
 
   zx::vmo inspect_vmo() { return inspector_.DuplicateVmo(); }
@@ -414,7 +414,7 @@ class AmlCpuTest : public AmlCpu {
   fake_ddk::FidlMessenger messenger_;
 };
 
-zx_status_t AmlCpuTest::MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t AmlCpuTest::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return static_cast<AmlCpuTest*>(ctx)->DdkMessage(msg, txn);
 }
 

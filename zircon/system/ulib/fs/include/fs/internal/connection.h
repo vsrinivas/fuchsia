@@ -111,17 +111,19 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     // |protocol_impl| should be the |this| pointer when used from a subclass.
     template <typename Protocol>
     static FidlProtocol Create(typename Protocol::Interface* protocol_impl) {
-      return FidlProtocol(static_cast<void*>(protocol_impl), [](void* impl, fidl_msg_t* msg,
-                                                                fidl::Transaction* txn) {
-        return Protocol::TryDispatch(static_cast<typename Protocol::Interface*>(impl), msg, txn);
-      });
+      return FidlProtocol(static_cast<void*>(protocol_impl),
+                          [](void* impl, fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
+                            return Protocol::TryDispatch(
+                                static_cast<typename Protocol::Interface*>(impl), msg, txn);
+                          });
     }
 
     // Dispatches |message| on |Protocol|.
     // The function consumes the message and returns true if the method was
     // recognized by the protocol. Otherwise, it leaves the message intact
     // and returns false.
-    ::fidl::DispatchResult TryDispatch(fidl_msg_t* message, fidl::Transaction* transaction) {
+    ::fidl::DispatchResult TryDispatch(fidl_incoming_msg_t* message,
+                                       fidl::Transaction* transaction) {
       return dispatch_fn_(protocol_impl_, message, transaction);
     }
 
@@ -132,7 +134,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
     ~FidlProtocol() = default;
 
    private:
-    using TypeErasedDispatchFn = ::fidl::DispatchResult (*)(void* impl, fidl_msg_t*,
+    using TypeErasedDispatchFn = ::fidl::DispatchResult (*)(void* impl, fidl_incoming_msg_t*,
                                                             fidl::Transaction*);
 
     FidlProtocol() = delete;

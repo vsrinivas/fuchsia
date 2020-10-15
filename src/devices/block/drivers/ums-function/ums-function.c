@@ -604,7 +604,7 @@ fuchsia_hardware_usb_peripheral_block_Device_ops_t usb_cache_proto = {
     .SetWritebackCacheReported = usb_ums_set_writeback_cache_reported,
 };
 
-static zx_status_t usb_ums_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t usb_ums_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_usb_peripheral_block_Device_dispatch(ctx, txn, msg, &usb_cache_proto);
 }
 

@@ -22,7 +22,7 @@ namespace fs_pty {
 namespace internal {
 
 void DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
-                              fidl_msg_t* msg, fidl::Transaction* txn);
+                              fidl_incoming_msg_t* msg, fidl::Transaction* txn);
 
 }
 
@@ -61,7 +61,7 @@ class Service : public fs::Vnode {
   }
 
   // From fs::Vnode
-  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) override {
+  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override {
     auto pty_device_interface =
         static_cast<llcpp::fuchsia::hardware::pty::Device::Interface*>(&pty_device_impl_);
     internal::DispatchPtyDeviceMessage(pty_device_interface, msg, txn);

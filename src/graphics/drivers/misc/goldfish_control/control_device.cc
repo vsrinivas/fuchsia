@@ -640,7 +640,7 @@ void Control::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Control::DdkRelease() { delete this; }
 
-zx_status_t Control::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Control::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::goldfish::ControlDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();

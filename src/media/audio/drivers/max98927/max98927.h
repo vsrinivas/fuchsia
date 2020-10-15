@@ -28,7 +28,7 @@ class Max98927Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_
   zx_status_t Initialize();
 
   // Methods required by the ddk mixins
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

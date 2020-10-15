@@ -87,7 +87,7 @@ const fidl_test_llcpp_basictypes_TestInterface_ops_t kOps = {
     .ConsumeSimpleStruct = ConsumeSimpleStruct,
 };
 
-zx_status_t ServerDispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg,
+zx_status_t ServerDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
                            const fidl_test_llcpp_basictypes_TestInterface_ops_t* ops) {
   zx_status_t status = fidl_test_llcpp_basictypes_TestInterface_try_dispatch(ctx, txn, msg, ops);
   if (status == ZX_ERR_NOT_SUPPORTED) {

@@ -55,7 +55,7 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   zx_status_t SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo);
   zx_status_t SdioDoRwTxnNew(const sdio_rw_txn_new_t* txn);
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::hardware::sdio::Device::Dispatch(this, msg, &transaction);
     return transaction.Status();

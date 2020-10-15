@@ -158,7 +158,7 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
   return ZX_OK;
 }
 
-zx_status_t PlatformBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t PlatformBus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::sysinfo::SysInfo::Dispatch(this, msg, &transaction);
   return transaction.Status();

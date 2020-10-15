@@ -75,7 +75,7 @@ void DsiDwBase::SendCmd(::llcpp::fuchsia::hardware::dsi::MipiDsiCmd cmd,
   _completer.ReplySuccess(std::move(rsp_data));
 }
 
-zx_status_t DsiDwBase::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t DsiDwBase::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fidl_dsi::DsiBase::Dispatch(this, msg, &transaction);
   return transaction.Status();

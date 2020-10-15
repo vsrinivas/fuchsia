@@ -48,7 +48,7 @@ class ProtocolTestDriver : public ProtocolTestDriverType, public TestObserver {
   static ProtocolTestDriver* GetInstance() { return instance_; }
   const ddk::PciProtocolClient& pci() { return pci_; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
 
  private:

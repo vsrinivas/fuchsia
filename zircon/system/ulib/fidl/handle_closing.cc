@@ -122,8 +122,3 @@ zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char*
 
   return handle_closer.status();
 }
-
-zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
-                                   const char** out_error_msg) {
-  return fidl_close_handles(type, msg->bytes, out_error_msg);
-}

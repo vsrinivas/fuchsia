@@ -86,9 +86,10 @@ class SimpleBinding {
   SimpleBinding(async_dispatcher_t* dispatcher, Stub* ops_ctx, const Ops* ops,
                 uint32_t concurrency_cap)
       : dispatcher_(dispatcher), ops_ctx_(ops_ctx), ops_(ops), concurrency_cap_(concurrency_cap) {
-    static_assert(std::is_same<decltype(Dispatch), zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*,
-                                                                   const Ops* ops)>::value,
-                  "Invalid dispatch function");
+    static_assert(
+        std::is_same<decltype(Dispatch), zx_status_t (*)(void*, fidl_txn_t*, fidl_incoming_msg_t*,
+                                                         const Ops* ops)>::value,
+        "Invalid dispatch function");
     ZX_DEBUG_ASSERT(dispatcher_);
     ZX_DEBUG_ASSERT(ops_ctx_);
     ZX_DEBUG_ASSERT(ops_);
@@ -340,14 +341,14 @@ class SimpleBinding {
     Txn& operator=(const Txn& to_copy) = delete;
 
     // This function is our fidl_txn_t.reply() function.
-    static zx_status_t FidlReplyRaw(fidl_txn_t* raw_txn, const fidl_msg_t* msg) {
+    static zx_status_t FidlReplyRaw(fidl_txn_t* raw_txn, const fidl_outgoing_msg_t* msg) {
       Txn* txn =
           reinterpret_cast<Txn*>(reinterpret_cast<uint8_t*>(raw_txn) - offsetof(Txn, raw_txn_));
       ZX_DEBUG_ASSERT(&txn->raw_txn_ == raw_txn);
       return txn->FidlReplyCooked(msg);
     }
 
-    zx_status_t FidlReplyCooked(const fidl_msg_t* msg) {
+    zx_status_t FidlReplyCooked(const fidl_outgoing_msg_t* msg) {
       // Client code must not pass in nullptr.
       ZX_DEBUG_ASSERT(msg);
       // Client code must be sending a message that isn't broken.
@@ -474,7 +475,7 @@ class SimpleBinding {
     // We want to do all the reading before any closing due to peer closed.
     if (signal->observed & ZX_CHANNEL_READABLE) {
       for (uint64_t i = 0; i < signal->count; i++) {
-        fidl_msg_t msg = {
+        fidl_incoming_msg_t msg = {
             .bytes = bytes_,
             .handles = handles_,
             .num_bytes = 0u,

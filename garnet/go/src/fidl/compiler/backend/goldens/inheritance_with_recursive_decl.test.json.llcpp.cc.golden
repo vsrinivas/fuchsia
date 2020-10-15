@@ -56,7 +56,7 @@ Parent::UnownedResultOf::First::First(zx_handle_t _client,
 }
 
 std::optional<::fidl::UnbindInfo> Parent::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -89,7 +89,8 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Parent::TryDispatch(Interface* impl,
+                                           fidl_incoming_msg_t* msg,
                                            ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Parent,
@@ -97,7 +98,8 @@ namespace entries {
           sizeof(entries::Parent) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Parent::Dispatch(Interface* impl,
+                                        fidl_incoming_msg_t* msg,
                                         ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
@@ -199,7 +201,7 @@ Child::UnownedResultOf::Second::Second(zx_handle_t _client,
 }
 
 std::optional<::fidl::UnbindInfo> Child::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -242,7 +244,8 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Child::TryDispatch(Interface* impl,
+                                          fidl_incoming_msg_t* msg,
                                           ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Child,
@@ -250,7 +253,8 @@ namespace entries {
           sizeof(entries::Child) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Child::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Child::Dispatch(Interface* impl,
+                                       fidl_incoming_msg_t* msg,
                                        ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

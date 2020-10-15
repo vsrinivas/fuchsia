@@ -44,7 +44,7 @@ fuchsia_hardware_intel_hda_CodecDevice_ops_t CodecConnection::CODEC_FIDL_THUNKS 
 zx_protocol_device_t CodecConnection::CODEC_DEVICE_THUNKS = []() {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
-  ops.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+  ops.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
     return fuchsia_hardware_intel_hda_CodecDevice_dispatch(ctx, txn, msg,
                                                            &CodecConnection::CODEC_FIDL_THUNKS);
   };

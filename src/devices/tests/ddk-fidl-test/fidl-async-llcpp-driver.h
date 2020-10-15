@@ -30,7 +30,7 @@ class DdkFidlDevice : public DeviceType,
   zx_status_t Bind();
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   void GetChannel(GetChannelCompleter::Sync& completer) override;

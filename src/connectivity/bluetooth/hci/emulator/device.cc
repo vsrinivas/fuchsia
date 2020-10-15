@@ -86,7 +86,7 @@ static zx_protocol_device_t bt_emulator_device_ops = {
     },
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .message = [](void* ctx, fidl_msg_t* msg,
+    .message = [](void* ctx, fidl_incoming_msg_t* msg,
                   fidl_txn_t* txn) { return DEV(ctx)->EmulatorMessage(msg, txn); }};
 
 // NOTE: We do not implement unbind and release. The lifecycle of the bt-hci
@@ -98,7 +98,7 @@ static zx_protocol_device_t bt_hci_device_ops = {
     .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto) -> zx_status_t {
       return DEV(ctx)->GetProtocol(proto_id, out_proto);
     },
-    .message = [](void* ctx, fidl_msg_t* msg,
+    .message = [](void* ctx, fidl_incoming_msg_t* msg,
                   fidl_txn_t* txn) { return DEV(ctx)->HciMessage(msg, txn); }};
 
 static bt_hci_protocol_ops_t hci_protocol_ops = {
@@ -181,12 +181,12 @@ void Device::Unbind() {
   emulator_dev_ = nullptr;
 }
 
-zx_status_t Device::HciMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Device::HciMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   logf(TRACE, "HciMessage\n");
   return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &hci_fidl_ops_);
 }
 
-zx_status_t Device::EmulatorMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Device::EmulatorMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   logf(TRACE, "EmulatorMessage\n");
   return fuchsia_hardware_bluetooth_Emulator_dispatch(this, txn, msg, &emul_fidl_ops_);
 }

@@ -75,7 +75,7 @@ class SpiChild : public SpiChildType,
                  public llcpp::fuchsia::hardware::spi::Device::Interface,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
 ...
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 ...
   // FIDL methods.
   void Transmit(fidl::VectorView<uint8_t> data, TransmitCompleter::Sync completer) override;

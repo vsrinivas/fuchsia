@@ -4,16 +4,18 @@
 
 #include "device.h"
 
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <lib/zx/vmo.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+
+#include <future>
+
 #include <ddk/protocol/usb.h>
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
-#include <lib/zx/vmo.h>
-#include <future>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
 
 #include "logging.h"
 
@@ -37,16 +39,10 @@ static zx_protocol_device_t dev_proto = {
     .get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) -> zx_status_t {
       return static_cast<Device*>(ctx)->DdkGetProtocol(proto_id, protocol);
     },
-    .init = [](void* ctx) {
-      return static_cast<Device*>(ctx)->DdkInit();
-    },
-    .unbind = [](void* ctx) {
-      return static_cast<Device*>(ctx)->DdkUnbind();
-    },
-    .release = [](void* ctx) {
-      return static_cast<Device*>(ctx)->DdkRelease();
-    },
-    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    .init = [](void* ctx) { return static_cast<Device*>(ctx)->DdkInit(); },
+    .unbind = [](void* ctx) { return static_cast<Device*>(ctx)->DdkUnbind(); },
+    .release = [](void* ctx) { return static_cast<Device*>(ctx)->DdkRelease(); },
+    .message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return static_cast<Device*>(ctx)->DdkMessage(msg, txn);
     },
 };
@@ -295,7 +291,6 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
   return vmo;
 }
 
-
 void Device::DdkInit() {
   auto f = std::async(std::launch::async, [=]() { LoadFirmware(); });
 }
@@ -333,7 +328,7 @@ zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t channel) {
   return bt_hci_open_snoop_channel(&self.hci_, channel);
 }
 
-zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &fidl_ops_);
 }
 

@@ -188,7 +188,7 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -323,7 +323,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult Transitional::TryDispatch(Interface* impl,
-                                                 fidl_msg_t* msg,
+                                                 fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Transitional,
@@ -331,7 +331,8 @@ namespace entries {
                                   sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Transitional::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Transitional::Dispatch(Interface* impl,
+                                              fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
@@ -644,7 +645,7 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
 }
 
 std::optional<::fidl::UnbindInfo> ChannelProtocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -791,7 +792,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult ChannelProtocol::TryDispatch(Interface* impl,
-                                                    fidl_msg_t* msg,
+                                                    fidl_incoming_msg_t* msg,
                                                     ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::ChannelProtocol,
@@ -800,7 +801,7 @@ namespace entries {
 }
 
 ::fidl::DispatchResult ChannelProtocol::Dispatch(Interface* impl,
-                                                 fidl_msg_t* msg,
+                                                 fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
@@ -1403,7 +1404,8 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
 }
 
 std::optional<::fidl::UnbindInfo>
-WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(fidl_msg_t* msg) {
+WithAndWithoutRequestResponse::ClientImpl::DispatchEvent(
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -1628,7 +1630,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult WithAndWithoutRequestResponse::TryDispatch(
-    Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::WithAndWithoutRequestResponse,
       entries::WithAndWithoutRequestResponse +
@@ -1637,7 +1639,7 @@ namespace entries {
 }
 
 ::fidl::DispatchResult WithAndWithoutRequestResponse::Dispatch(
-    Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -2131,7 +2133,7 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
 }
 
 std::optional<::fidl::UnbindInfo> WithErrorSyntax::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -2185,7 +2187,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult WithErrorSyntax::TryDispatch(Interface* impl,
-                                                    fidl_msg_t* msg,
+                                                    fidl_incoming_msg_t* msg,
                                                     ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::WithErrorSyntax,
@@ -2194,7 +2196,7 @@ namespace entries {
 }
 
 ::fidl::DispatchResult WithErrorSyntax::Dispatch(Interface* impl,
-                                                 fidl_msg_t* msg,
+                                                 fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

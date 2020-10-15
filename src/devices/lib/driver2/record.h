@@ -20,7 +20,7 @@ struct DriverRecordV1 {
   // |dispatcher| is the default async dispatcher on which to run the driver.
   // The driver is free to ignore this and use its own.
   // |driver| provides a place to store the opaque driver structure.
-  zx_status_t (*start)(fidl_msg_t* msg, async_dispatcher_t* dispatcher, void** driver);
+  zx_status_t (*start)(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver);
 
   // Pointer to a function that can stop execution of the driver. This function
   // is executed on the shared driver thread within a `driver_host`.

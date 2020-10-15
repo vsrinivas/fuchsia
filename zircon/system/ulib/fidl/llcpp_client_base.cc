@@ -77,7 +77,7 @@ void ClientBase::ReleaseResponseContextsWithError() {
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(fidl_msg_t* msg) {
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl_incoming_msg_t* msg) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
 
   if (hdr->ordinal == kFidlOrdinalEpitaph) {
@@ -133,15 +133,16 @@ zx::channel ChannelRefTracker::WaitForChannel() {
   {
     std::scoped_lock lock(lock_);
     // Ensure that only one thread receives the channel.
-    if (!channel_) return channel;
+    if (!channel_)
+      return channel;
     channel.reset(channel_->ReleaseOnDelete(&on_delete));
     channel_ = nullptr;  // Allow the ChannelRef to be destroyed.
   }
 
   // Wait for all ChannelRefs to be released.
   auto status = sync_completion_wait(&on_delete, ZX_TIME_INFINITE);
-  ZX_ASSERT_MSG(status == ZX_OK,
-                "%s: Error waiting for channel to be released: %u.\n", __func__, status);
+  ZX_ASSERT_MSG(status == ZX_OK, "%s: Error waiting for channel to be released: %u.\n", __func__,
+                status);
   return channel;
 }
 

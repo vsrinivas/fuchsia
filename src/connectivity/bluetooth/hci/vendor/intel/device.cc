@@ -4,12 +4,14 @@
 
 #include "device.h"
 
-#include <fbl/string_printf.h>
-#include <future>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <future>
+
+#include <fbl/string_printf.h>
 
 #include "firmware_loader.h"
 #include "logging.h"
@@ -127,7 +129,7 @@ zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t in) {
   return self.BtHciOpenSnoopChannel(zx::channel(in));
 }
 
-zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &fidl_ops_);
 }
 

@@ -25,7 +25,7 @@ typedef struct fidl_connection {
   fidl_binding_t* binding;
 } fidl_connection_t;
 
-static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   fidl_connection_t* conn = (fidl_connection_t*)txn;
   if (conn->txid == 0u)
     return ZX_ERR_BAD_STATE;
@@ -57,7 +57,7 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
     char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
-      fidl_msg_t msg = {
+      fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
           .num_bytes = 0u,

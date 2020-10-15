@@ -528,7 +528,8 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
 
   // For the sake of catching bugs, disabling a clock that has never
   // been enabled is a bug.
-  ZX_ASSERT_MSG((enable == true || enable_count > 0), "Cannot disable already disabled clock. clk = %u", clk);
+  ZX_ASSERT_MSG((enable == true || enable_count > 0),
+                "Cannot disable already disabled clock. clk = %u", clk);
 
   // Update the refcounts.
   if (enable) {
@@ -883,7 +884,7 @@ static const fuchsia_hardware_clock_Device_ops_t fidl_ops_ = {
     .GetCount = fidl_clk_get_count,
 };
 
-zx_status_t AmlClock::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t AmlClock::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 

@@ -131,7 +131,7 @@ void SimpleProtocol::AddResponseContext::OnReply(uint8_t* reply) {
 }
 
 std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -165,7 +165,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult SimpleProtocol::TryDispatch(Interface* impl,
-                                                   fidl_msg_t* msg,
+                                                   fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::SimpleProtocol,
@@ -174,7 +174,7 @@ namespace entries {
 }
 
 ::fidl::DispatchResult SimpleProtocol::Dispatch(Interface* impl,
-                                                fidl_msg_t* msg,
+                                                fidl_incoming_msg_t* msg,
                                                 ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

@@ -8,7 +8,7 @@ namespace fidl {
 
 namespace internal {
 
-::fidl::DispatchResult TryDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn,
+::fidl::DispatchResult TryDispatch(void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn,
                                    MethodEntry* begin, MethodEntry* end) {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   while (begin < end) {

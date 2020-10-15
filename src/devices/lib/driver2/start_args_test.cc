@@ -58,7 +58,14 @@ TEST(StartArgsTest, Encode_Decode) {
   EXPECT_TRUE(encode_result.is_ok());
 
   // Decode
-  auto decode_result = start_args::Decode(&encode_result.value(), &error);
+  fidl_outgoing_msg_t outgoing_msg = encode_result.value();
+  fidl_incoming_msg_t incoming_msg = {
+      .bytes = outgoing_msg.bytes,
+      .handles = outgoing_msg.handles,
+      .num_bytes = outgoing_msg.num_bytes,
+      .num_handles = outgoing_msg.num_handles,
+  };
+  auto decode_result = start_args::Decode(&incoming_msg, &error);
   EXPECT_TRUE(decode_result.is_ok());
 
   // Verify output.

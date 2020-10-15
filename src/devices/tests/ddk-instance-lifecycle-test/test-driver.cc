@@ -36,7 +36,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
   void CreateDevice(zx::channel lifecycle_client, zx::channel instance_client,
                     CreateDeviceCompleter::Sync& completer) override;
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();

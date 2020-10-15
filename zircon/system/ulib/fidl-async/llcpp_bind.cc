@@ -4,9 +4,9 @@
 
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/trace.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 
@@ -49,7 +49,7 @@ void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t*
     char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
-      fidl_msg_t msg = {
+      fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
           .num_bytes = 0u,
@@ -63,8 +63,8 @@ void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t*
 
       // Do basic validation on the message.
       status = msg.num_bytes < sizeof(fidl_message_header_t)
-          ? ZX_ERR_INVALID_ARGS
-          : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
+                   ? ZX_ERR_INVALID_ARGS
+                   : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
       if (status != ZX_OK) {
         zx_handle_close_many(msg.handles, msg.num_handles);
         return;

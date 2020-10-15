@@ -158,7 +158,7 @@ void UsbMidiSink::GetInfo(GetInfoCompleter::Sync& completer) {
   completer.Reply(info);
 }
 
-zx_status_t UsbMidiSink::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t UsbMidiSink::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::midi::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

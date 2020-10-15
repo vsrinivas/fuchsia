@@ -171,10 +171,10 @@ class ClientBase {
 
   // Dispatch function invoked by AsyncClientBinding on incoming message. Invokes the virtual
   // DispatchEvent().
-  std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg);
+  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg);
 
   // Generated client event dispatcher function.
-  virtual std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) = 0;
+  virtual std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) = 0;
 
  private:
   ChannelRefTracker channel_tracker_;

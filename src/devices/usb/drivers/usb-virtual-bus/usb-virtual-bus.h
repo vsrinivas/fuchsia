@@ -42,7 +42,7 @@ class UsbVirtualBus : public UsbVirtualBusType,
 
   // Device protocol implementation.
   void DdkInit(ddk::InitTxn txn);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

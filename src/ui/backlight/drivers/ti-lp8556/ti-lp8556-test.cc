@@ -64,7 +64,8 @@ class Lp8556DeviceTest : public zxtest::Test {
         &ac, fake_ddk::kFakeParent, ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
     ASSERT_TRUE(ac.check());
 
-    const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
+                               fidl_txn_t* txn) -> zx_status_t {
       return static_cast<Lp8556Device*>(ctx)->DdkMessage(msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));

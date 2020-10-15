@@ -67,7 +67,7 @@ class AmlGpu final : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   zx_status_t Bind();
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
   zx_status_t SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn);

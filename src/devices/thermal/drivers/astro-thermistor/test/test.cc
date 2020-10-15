@@ -116,7 +116,8 @@ class ThermistorDeviceTest : public zxtest::Test {
     thermistor_ = std::make_unique<ThermistorChannel>(fake_ddk::kFakeParent, adc_, 0, ntc_info[0],
                                                       kPullupValue);
 
-    const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
+                               fidl_txn_t* txn) -> zx_status_t {
       return static_cast<ThermistorChannel*>(ctx)->DdkMessage(msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(thermistor_.get(), message_op));

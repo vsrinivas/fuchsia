@@ -31,7 +31,7 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
 
   void Unbind();
   void Release();
-  zx_status_t Message(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   virtual void Query(QueryCallback callback) override;
   virtual void CreateIface(::fuchsia::wlan::device::CreateIfaceRequest req,

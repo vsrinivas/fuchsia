@@ -49,7 +49,7 @@ class AmlCpu : public DeviceType,
   zx_status_t Init();
 
   // Implements ddk::Messageable
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Implements DDK Device Ops
   void DdkRelease();

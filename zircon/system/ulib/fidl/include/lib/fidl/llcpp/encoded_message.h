@@ -105,7 +105,7 @@ class EncodedMessage final
 
   // Construct an |EncodedMessage| borrowing the bytes and taking ownership of handles in |msg|.
   // The number of handles in |msg| must not exceed |kResolvedMaxHandles|.
-  explicit EncodedMessage(fidl_msg_t* msg)
+  explicit EncodedMessage(fidl_incoming_msg_t* msg)
       : message_(BytePart(static_cast<uint8_t*>(msg->bytes), msg->num_bytes, msg->num_bytes),
                  HandlePart(Super::handle_storage(), kResolvedMaxHandles)) {
     ZX_ASSERT(msg->num_handles <= kResolvedMaxHandles);

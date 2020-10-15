@@ -31,7 +31,7 @@ class OpteeDeviceInfo : public OpteeDeviceInfoBase,
   explicit OpteeDeviceInfo(const OpteeController* controller)
       : OpteeDeviceInfoBase(controller->zxdev()), controller_(controller) {}
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // `DeviceInfo` FIDL protocol

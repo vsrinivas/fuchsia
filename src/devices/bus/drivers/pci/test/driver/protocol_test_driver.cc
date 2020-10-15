@@ -531,7 +531,7 @@ zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
   return fuchsia_device_test_DeviceRunTests_reply(txn, ZX_OK, &driver->report());
 }
 
-zx_status_t ProtocolTestDriver::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t ProtocolTestDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   static const fuchsia_device_test_Test_ops_t kOps = {
       .RunTests = fidl_RunTests,
   };

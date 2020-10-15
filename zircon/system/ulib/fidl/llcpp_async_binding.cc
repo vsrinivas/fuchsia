@@ -56,8 +56,7 @@ void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindI
     // If the peer was not closed, and the user invoked Close() or there was a dispatch error,
     // overwrite the unbound reason and recover the epitaph or error status. Note that
     // UnbindInfo::kUnbind is simply the default value for unbind_info_.reason.
-    if (info.reason != UnbindInfo::kPeerClosed &&
-        unbind_info_.reason != UnbindInfo::kUnbind) {
+    if (info.reason != UnbindInfo::kPeerClosed && unbind_info_.reason != UnbindInfo::kUnbind) {
       info = unbind_info_;
     }
   }
@@ -75,7 +74,7 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
     char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
-      fidl_msg_t msg = {
+      fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
           .num_bytes = 0u,
@@ -89,8 +88,8 @@ void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* 
 
       // Do basic validation on the message.
       status = msg.num_bytes < sizeof(fidl_message_header_t)
-          ? ZX_ERR_INVALID_ARGS
-          : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
+                   ? ZX_ERR_INVALID_ARGS
+                   : fidl_validate_txn_header(reinterpret_cast<fidl_message_header_t*>(msg.bytes));
       if (status != ZX_OK) {
         zx_handle_close_many(msg.handles, msg.num_handles);
         return OnUnbind(std::move(keep_alive_), {UnbindInfo::kUnexpectedMessage, status});
@@ -161,7 +160,7 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, U
   // OnUnbind(). Release our reference and return to unblock that caller.
   if (unbind_)
     return;
-  unbind_ = true;  // Indicate that waits should no longer be added to the dispatcher.
+  unbind_ = true;       // Indicate that waits should no longer be added to the dispatcher.
   unbind_info_ = info;  // Store the reason for unbinding.
 
   // Attempt to add a task to unbind the channel. On failure, the dispatcher was shutdown,
@@ -189,16 +188,17 @@ std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(
   return ret;
 }
 
-AsyncServerBinding::AsyncServerBinding(
-    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn)
+AsyncServerBinding::AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel channel,
+                                       void* impl, TypeErasedServerDispatchFn dispatch_fn,
+                                       TypeErasedOnUnboundFn on_unbound_fn)
     : AsyncBinding(dispatcher, channel.borrow()),
       channel_(std::move(channel)),
       interface_(impl),
       dispatch_fn_(dispatch_fn),
       on_unbound_fn_(std::move(on_unbound_fn)) {}
 
-std::optional<UnbindInfo> AsyncServerBinding::Dispatch(fidl_msg_t* msg, bool* binding_released) {
+std::optional<UnbindInfo> AsyncServerBinding::Dispatch(fidl_incoming_msg_t* msg,
+                                                       bool* binding_released) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   AsyncTransaction txn(hdr->txid, dispatch_fn_, binding_released);
   return txn.Dispatch(std::move(keep_alive_), msg);
@@ -229,24 +229,26 @@ void AsyncServerBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_re
     on_unbound_fn(intf, info, std::move(channel));
 }
 
-std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
-    async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-    std::shared_ptr<ClientBase> client, OnClientUnboundFn on_unbound_fn) {
+std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_t* dispatcher,
+                                                               std::shared_ptr<ChannelRef> channel,
+                                                               std::shared_ptr<ClientBase> client,
+                                                               OnClientUnboundFn on_unbound_fn) {
   auto ret = std::shared_ptr<AsyncClientBinding>(new AsyncClientBinding(
       dispatcher, std::move(channel), std::move(client), std::move(on_unbound_fn)));
   ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
   return ret;
 }
 
-AsyncClientBinding::AsyncClientBinding(
-    async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-    std::shared_ptr<ClientBase> client, OnClientUnboundFn on_unbound_fn)
+AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
+                                       std::shared_ptr<ChannelRef> channel,
+                                       std::shared_ptr<ClientBase> client,
+                                       OnClientUnboundFn on_unbound_fn)
     : AsyncBinding(dispatcher, zx::unowned_channel(channel->handle())),
       channel_(std::move(channel)),
       client_(std::move(client)),
       on_unbound_fn_(std::move(on_unbound_fn)) {}
 
-std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl_msg_t* msg, bool*) {
+std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl_incoming_msg_t* msg, bool*) {
   return client_->Dispatch(msg);
 }
 

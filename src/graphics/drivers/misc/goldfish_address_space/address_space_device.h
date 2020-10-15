@@ -67,7 +67,7 @@ class AddressSpaceDevice
 
   // Device protocol implementation.
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   zx_status_t OpenChildDriver(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
@@ -116,7 +116,7 @@ class AddressSpaceChildDriver
   void Ping(llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverPingMessage ping,
             PingCompleter::Sync& completer) override;
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   struct Block {

@@ -53,7 +53,7 @@ class RewriteTransaction : public fidl::Transaction {
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
     zx_handle_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
     reinterpret_cast<fidl_message_header_t*>(&real_msg_bytes[0])->txid = txid_;
-    fidl_msg_t real_msg = {
+    fidl_outgoing_msg_t real_msg = {
         .bytes = &real_msg_bytes[0],
         .handles = &real_msg_handles[0],
         .num_bytes = 0u,
@@ -235,7 +235,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
     }
     if (signal->observed & ZX_CHANNEL_READABLE) {
       for (uint64_t i = 0; i < signal->count; i++) {
-        fidl_msg_t msg = {
+        fidl_incoming_msg_t msg = {
             .bytes = &bytes_[0],
             .handles = &handles_[0],
             .num_bytes = 0u,

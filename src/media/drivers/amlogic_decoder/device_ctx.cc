@@ -35,7 +35,7 @@ const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
           return ZX_OK;
         }};
 
-static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t amlogic_video_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
 }
 

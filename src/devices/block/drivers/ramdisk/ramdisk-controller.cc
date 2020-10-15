@@ -28,7 +28,7 @@ class RamdiskController : public RamdiskControllerDeviceType {
   RamdiskController(zx_device_t* parent) : RamdiskControllerDeviceType(parent) {}
 
   // Device Protocol
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
 
  private:
@@ -58,7 +58,7 @@ class RamdiskController : public RamdiskControllerDeviceType {
   }
 };
 
-zx_status_t RamdiskController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t RamdiskController::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_ramdisk_RamdiskController_dispatch(this, txn, msg, Ops());
 }
 

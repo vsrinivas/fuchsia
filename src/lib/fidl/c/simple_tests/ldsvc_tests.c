@@ -56,7 +56,7 @@ typedef struct ldsvc_connection {
   uint32_t reply_count;
 } ldsvc_connection_t;
 
-static zx_status_t ldsvc_server_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+static zx_status_t ldsvc_server_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   ldsvc_connection_t* conn = (ldsvc_connection_t*)txn;
   if (msg->num_bytes < sizeof(fidl_message_header_t))
     return ZX_ERR_INVALID_ARGS;
@@ -85,7 +85,7 @@ static void ldsvc_server(zx_handle_t channel_handle) {
       ASSERT_EQ(ZX_OK, status, "");
       char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
       zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-      fidl_msg_t msg = {
+      fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
           .num_bytes = 0u,
@@ -230,7 +230,7 @@ TEST(LdsvcTests, ldmsg_functions_are_consistent) {
                           &fuchsia_ldsvc_LoaderConfigRequestTable);
 }
 
-static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+static zx_status_t validate_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   EXPECT_EQ(msg->num_bytes, ldmsg_rsp_get_size((ldmsg_rsp_t*)msg->bytes), "");
   return ZX_OK;
 }

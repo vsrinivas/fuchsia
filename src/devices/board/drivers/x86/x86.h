@@ -34,7 +34,7 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
 
   // Device protocol implementation.
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_msg*, fidl_txn*);
+  zx_status_t DdkMessage(fidl_incoming_msg*, fidl_txn*);
 
   // ACPI protocol FIDL interface implementation.
   void ListTableEntries(ListTableEntriesCompleter::Sync& completer) override;

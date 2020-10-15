@@ -42,7 +42,7 @@ class UsbMidiSource : public UsbMidiSourceBase,
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
   zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // FIDL methods.
   void GetInfo(GetInfoCompleter::Sync& completer) final;

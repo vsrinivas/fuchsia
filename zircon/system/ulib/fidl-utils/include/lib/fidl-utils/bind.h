@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FIDL_UTILS_BIND_H_
+#define LIB_FIDL_UTILS_BIND_H_
 
-#include <functional>
-#include <type_traits>
-
-#include <fbl/macros.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
+
+#include <functional>
+#include <type_traits>
+
+#include <fbl/macros.h>
 
 namespace fidl {
 
@@ -125,9 +127,10 @@ struct Binder {
   template <auto Dispatch, typename Ops>
   static zx_status_t BindOps(async_dispatcher_t* dispatcher, zx::channel channel, T* ctx,
                              const Ops* ops) {
-    static_assert(std::is_same<decltype(Dispatch), zx_status_t (*)(void*, fidl_txn_t*, fidl_msg_t*,
-                                                                   const Ops* ops)>::value,
-                  "Invalid dispatch function");
+    static_assert(
+        std::is_same<decltype(Dispatch), zx_status_t (*)(void*, fidl_txn_t*, fidl_incoming_msg_t*,
+                                                         const Ops* ops)>::value,
+        "Invalid dispatch function");
     return fidl_bind(dispatcher, channel.release(), reinterpret_cast<fidl_dispatch_t*>(Dispatch),
                      ctx, ops);
   }
@@ -206,3 +209,5 @@ class AsyncTransaction {
 };
 
 }  // namespace fidl
+
+#endif  // LIB_FIDL_UTILS_BIND_H_

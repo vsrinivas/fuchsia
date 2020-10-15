@@ -758,7 +758,7 @@ class {{ .Name }} final {
   // Only used with |fidl::BindServer| to reduce template expansion.
   // Do not call this method manually. Use |Dispatch| instead.
   static ::fidl::DispatchResult TypeErasedDispatch(
-      void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+      void* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 

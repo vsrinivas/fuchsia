@@ -24,7 +24,7 @@ class Ssd1306 : public DeviceType,
   Ssd1306(zx_device_t* parent) : DeviceType(parent), frame_buffer_(), i2c_(parent) {}
 
   zx_status_t Bind(ddk::I2cChannel i2c);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 

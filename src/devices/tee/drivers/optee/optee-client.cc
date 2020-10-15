@@ -303,7 +303,7 @@ void OpteeClient::Shutdown() {
   controller_ = nullptr;
 }
 
-zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t OpteeClient::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   if (controller_ == nullptr) {
     return ZX_ERR_PEER_CLOSED;
   }

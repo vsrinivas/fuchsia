@@ -63,7 +63,7 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void DevfsVnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) {
+void DevfsVnode::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   if (dev_->Unbound()) {
     txn->Close(ZX_ERR_IO_NOT_PRESENT);
     return;
@@ -344,7 +344,7 @@ void DevfsVnode::Resume(ResumeCompleter::Sync& completer) {
 namespace {
 
 // Reply originating from driver.
-zx_status_t DdkReply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+zx_status_t DdkReply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   fidl::OutgoingMessage message(msg);
 
   // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting

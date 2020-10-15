@@ -242,7 +242,7 @@ TEST_F(DeviceInspectTestCase, CallStats) {
   // Make op calls
   device->ReadOp(nullptr, 0, 0, nullptr);
   device->WriteOp(nullptr, 0, 0, nullptr);
-  fidl_msg_t dummy_msg = {};
+  fidl_incoming_msg_t dummy_msg = {};
   fidl_message_header_t dummy_hdr = {};
   dummy_msg.bytes = static_cast<void*>(&dummy_hdr);
   device->MessageOp(&dummy_msg, nullptr);

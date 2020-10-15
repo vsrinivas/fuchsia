@@ -376,12 +376,12 @@ typedef struct fidl_message_header {
 
 #define FIDL_TXID_NO_RESPONSE 0ul
 
-// A FIDL message.
-typedef struct fidl_msg {
+// An outgoing FIDL message.
+typedef struct fidl_outgoing_msg {
   // The bytes of the message.
   //
   // The bytes of the message might be in the encoded or decoded form.
-  // Functions that take a |fidl_msg_t| as an argument should document whether
+  // Functions that take a |fidl_outgoing_msg_t| as an argument should document whether
   // the expect encoded or decoded messages.
   //
   // See |num_bytes| for the number of bytes in the message.
@@ -397,11 +397,30 @@ typedef struct fidl_msg {
 
   // The number of handles in |handles|.
   uint32_t num_handles;
-} fidl_msg_t;
+} fidl_outgoing_msg_t;
 
-// TODO(fxb/61909) Replace with struct definitions.
-typedef fidl_msg_t fidl_incoming_msg_t;
-typedef fidl_msg_t fidl_outgoing_msg_t;
+// An incoming FIDL message.
+typedef struct fidl_incoming_msg {
+  // The bytes of the message.
+  //
+  // The bytes of the message might be in the encoded or decoded form.
+  // Functions that take a |fidl_incoming_msg_t| as an argument should document whether
+  // the expect encoded or decoded messages.
+  //
+  // See |num_bytes| for the number of bytes in the message.
+  void* bytes;
+
+  // The handles of the message.
+  //
+  // See |num_bytes| for the number of bytes in the message.
+  zx_handle_t* handles;
+
+  // The number of bytes in |bytes|.
+  uint32_t num_bytes;
+
+  // The number of handles in |handles|.
+  uint32_t num_handles;
+} fidl_incoming_msg_t;
 
 // An outstanding FIDL transaction.
 typedef struct fidl_txn fidl_txn_t;
@@ -415,7 +434,7 @@ struct fidl_txn {
   // Call |reply| only once for each |txn| object. After |reply| returns, the
   // |txn| object is considered invalid and might have been freed or reused
   // for another purpose.
-  zx_status_t (*reply)(fidl_txn_t* txn, const fidl_msg_t* msg);
+  zx_status_t (*reply)(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg);
 };
 
 // An epitaph is a message that a server sends just prior to closing the

@@ -77,7 +77,7 @@ void Instance::OpenPipe(zx::channel pipe_request, OpenPipeCompleter::Sync& compl
   completer.Close(ZX_OK);
 }
 
-zx_status_t Instance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Instance::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::goldfish::PipeDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();

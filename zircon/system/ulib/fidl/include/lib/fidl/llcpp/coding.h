@@ -190,7 +190,7 @@ struct MaybeSelectResponseType<true, RequestType, ResponseType> {
 }  // namespace
 
 template <typename FidlType>
-DecodeResult<FidlType> DecodeAs(fidl_msg_t* msg) {
+DecodeResult<FidlType> DecodeAs(fidl_incoming_msg_t* msg) {
   static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
   if (msg->num_handles > EncodedMessage<FidlType>::kResolvedMaxHandles) {
     zx_handle_close_many(msg->handles, msg->num_handles);

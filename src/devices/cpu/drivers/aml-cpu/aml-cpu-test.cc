@@ -21,19 +21,19 @@ namespace amlogic_cpu {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using CpuCtrlClient = fuchsia_cpuctrl::Device::SyncClient;
 
-#define MHZ(x) ((x) * 1000000) 
+#define MHZ(x) ((x)*1000000)
 
 const std::vector<operating_point_t> kTestOperatingPoints = {
-    { .freq_hz = MHZ(10), .volt_uv = 1500, .pd_id = 0 },
-    { .freq_hz = MHZ(9),  .volt_uv = 1350, .pd_id = 0 },
-    { .freq_hz = MHZ(8),  .volt_uv = 1200, .pd_id = 0 },
-    { .freq_hz = MHZ(7),  .volt_uv = 1050, .pd_id = 0 },
-    { .freq_hz = MHZ(6),  .volt_uv = 900,  .pd_id = 0 },
-    { .freq_hz = MHZ(5),  .volt_uv = 750,  .pd_id = 0 },
-    { .freq_hz = MHZ(4),  .volt_uv = 600,  .pd_id = 0 },
-    { .freq_hz = MHZ(3),  .volt_uv = 450,  .pd_id = 0 },
-    { .freq_hz = MHZ(2),  .volt_uv = 300,  .pd_id = 0 },
-    { .freq_hz = MHZ(1),  .volt_uv = 150,  .pd_id = 0 },
+    {.freq_hz = MHZ(10), .volt_uv = 1500, .pd_id = 0},
+    {.freq_hz = MHZ(9), .volt_uv = 1350, .pd_id = 0},
+    {.freq_hz = MHZ(8), .volt_uv = 1200, .pd_id = 0},
+    {.freq_hz = MHZ(7), .volt_uv = 1050, .pd_id = 0},
+    {.freq_hz = MHZ(6), .volt_uv = 900, .pd_id = 0},
+    {.freq_hz = MHZ(5), .volt_uv = 750, .pd_id = 0},
+    {.freq_hz = MHZ(4), .volt_uv = 600, .pd_id = 0},
+    {.freq_hz = MHZ(3), .volt_uv = 450, .pd_id = 0},
+    {.freq_hz = MHZ(2), .volt_uv = 300, .pd_id = 0},
+    {.freq_hz = MHZ(1), .volt_uv = 150, .pd_id = 0},
 };
 
 class InspectTestHelper {
@@ -59,23 +59,14 @@ class InspectTestHelper {
 };
 
 class AmlCpuTest : public AmlCpu {
-  public:
-    AmlCpuTest(
-      const ddk::ClockProtocolClient&& plldiv16,
-      const ddk::ClockProtocolClient&& cpudiv16,
-      const ddk::ClockProtocolClient&& cpuscaler,
-      const ddk::PowerProtocolClient&& pwr,
-      const std::vector<operating_point_t> operating_points
-    ) : AmlCpu(
-        nullptr,
-        std::move(plldiv16),
-        std::move(cpudiv16),
-        std::move(cpuscaler),
-        std::move(pwr),
-        operating_points
-      )  {}
+ public:
+  AmlCpuTest(const ddk::ClockProtocolClient&& plldiv16, const ddk::ClockProtocolClient&& cpudiv16,
+             const ddk::ClockProtocolClient&& cpuscaler, const ddk::PowerProtocolClient&& pwr,
+             const std::vector<operating_point_t> operating_points)
+      : AmlCpu(nullptr, std::move(plldiv16), std::move(cpudiv16), std::move(cpuscaler),
+               std::move(pwr), operating_points) {}
 
-  static zx_status_t MessageOp(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return static_cast<AmlCpuTest*>(ctx)->DdkMessage(msg, txn);
   }
   zx_status_t InitTest() { return messenger_.SetMessageOp(this, AmlCpuTest::MessageOp); }
@@ -84,67 +75,62 @@ class AmlCpuTest : public AmlCpu {
 
   zx::vmo inspect_vmo() { return inspector_.DuplicateVmo(); }
 
-  private:
-    fake_ddk::FidlMessenger messenger_;
+ private:
+  fake_ddk::FidlMessenger messenger_;
 };
-
 
 class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
-  public:
-    AmlCpuTestFixture() 
-    : dut_(
-      ddk::ClockProtocolClient(pll_clock_.GetProto()),
-      ddk::ClockProtocolClient(cpu_clock_.GetProto()),
-      ddk::ClockProtocolClient(scaler_clock_.GetProto()),
-      ddk::PowerProtocolClient(power_.GetProto()),
-      kTestOperatingPoints
-    ), operating_points_(kTestOperatingPoints) {}
+ public:
+  AmlCpuTestFixture()
+      : dut_(ddk::ClockProtocolClient(pll_clock_.GetProto()),
+             ddk::ClockProtocolClient(cpu_clock_.GetProto()),
+             ddk::ClockProtocolClient(scaler_clock_.GetProto()),
+             ddk::PowerProtocolClient(power_.GetProto()), kTestOperatingPoints),
+        operating_points_(kTestOperatingPoints) {}
 
-    void SetUp() override {
-      ASSERT_OK(dut_.InitTest());
-      // Notes on AmlCpu Initialization:
-      //  + Should enable the CPU and PLL clocks.
-      //  + Should initially assume that the device is in it's lowest performance state.
-      //  + Should configure the device to it's highest performance state.
-      pll_clock_.ExpectEnable(ZX_OK);
-      cpu_clock_.ExpectEnable(ZX_OK);
+  void SetUp() override {
+    ASSERT_OK(dut_.InitTest());
+    // Notes on AmlCpu Initialization:
+    //  + Should enable the CPU and PLL clocks.
+    //  + Should initially assume that the device is in it's lowest performance state.
+    //  + Should configure the device to it's highest performance state.
+    pll_clock_.ExpectEnable(ZX_OK);
+    cpu_clock_.ExpectEnable(ZX_OK);
 
-      const operating_point_t& slowest = operating_points_.back();
-      const operating_point_t& fastest = operating_points_.front();
+    const operating_point_t& slowest = operating_points_.back();
+    const operating_point_t& fastest = operating_points_.front();
 
-      // The DUT should initialize.
-      power_.ExpectGetSupportedVoltageRange(ZX_OK, slowest.volt_uv, fastest.volt_uv);
-      power_.ExpectRegisterPowerDomain(ZX_OK, slowest.volt_uv, fastest.volt_uv);
-      
-      // The DUT scales up to the fastest available pstate.
-      power_.ExpectRequestVoltage(ZX_OK, fastest.volt_uv, fastest.volt_uv);
-      scaler_clock_.ExpectSetRate(ZX_OK, fastest.freq_hz);
+    // The DUT should initialize.
+    power_.ExpectGetSupportedVoltageRange(ZX_OK, slowest.volt_uv, fastest.volt_uv);
+    power_.ExpectRegisterPowerDomain(ZX_OK, slowest.volt_uv, fastest.volt_uv);
 
-      ASSERT_OK(dut_.Init());
+    // The DUT scales up to the fastest available pstate.
+    power_.ExpectRequestVoltage(ZX_OK, fastest.volt_uv, fastest.volt_uv);
+    scaler_clock_.ExpectSetRate(ZX_OK, fastest.freq_hz);
 
-      cpu_client_ = std::make_unique<CpuCtrlClient>(std::move(dut_.GetMessengerChannel()));
-    }
+    ASSERT_OK(dut_.Init());
 
+    cpu_client_ = std::make_unique<CpuCtrlClient>(std::move(dut_.GetMessengerChannel()));
+  }
 
-  protected:
-    void VerifyAll() {
-      ASSERT_NO_FATAL_FAILURES(pll_clock_.VerifyAndClear());
-      ASSERT_NO_FATAL_FAILURES(cpu_clock_.VerifyAndClear());
-      ASSERT_NO_FATAL_FAILURES(scaler_clock_.VerifyAndClear());
-      ASSERT_NO_FATAL_FAILURES(power_.VerifyAndClear());
-    }
+ protected:
+  void VerifyAll() {
+    ASSERT_NO_FATAL_FAILURES(pll_clock_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURES(cpu_clock_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURES(scaler_clock_.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURES(power_.VerifyAndClear());
+  }
 
-    ddk::MockClock pll_clock_;
-    ddk::MockClock cpu_clock_;
-    ddk::MockClock scaler_clock_;
-    ddk::MockPower power_;
+  ddk::MockClock pll_clock_;
+  ddk::MockClock cpu_clock_;
+  ddk::MockClock scaler_clock_;
+  ddk::MockPower power_;
 
-    AmlCpuTest dut_;
-    std::unique_ptr<CpuCtrlClient> cpu_client_;
+  AmlCpuTest dut_;
+  std::unique_ptr<CpuCtrlClient> cpu_client_;
 
-    const std::vector<operating_point_t> operating_points_;
+  const std::vector<operating_point_t> operating_points_;
 };
-
 
 TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
   // Make sure that we can get information about all the supported pstates.
@@ -159,10 +145,8 @@ TEST_F(AmlCpuTestFixture, TestGetPerformanceStateInfo) {
     ASSERT_FALSE(pstateInfo->result.is_err());
 
     // Then make sure that we're getting the expected frequency and voltage values.
-    EXPECT_EQ(pstateInfo->result.response().info.frequency_hz,
-              kTestOperatingPoints[i].freq_hz);
-    EXPECT_EQ(pstateInfo->result.response().info.voltage_uv,
-              kTestOperatingPoints[i].volt_uv);
+    EXPECT_EQ(pstateInfo->result.response().info.frequency_hz, kTestOperatingPoints[i].freq_hz);
+    EXPECT_EQ(pstateInfo->result.response().info.voltage_uv, kTestOperatingPoints[i].volt_uv);
   }
 
   // Make sure that we can't get any information about pstates that don't

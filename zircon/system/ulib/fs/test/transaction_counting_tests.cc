@@ -44,7 +44,7 @@ class TestVnode : public fs::Vnode {
   // The test code below sends a message unrecognized by fs::Vnode, and we use that to make this
   // transaction asynchronous and enqueue the transaction to be completed when desired by the test
   // logic.
-  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) override {
+  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) override {
     std::unique_lock<std::mutex> guard(transactions_lock_);
     transactions_.push_back(txn->TakeOwnership());
     transactions_cv_.notify_all();

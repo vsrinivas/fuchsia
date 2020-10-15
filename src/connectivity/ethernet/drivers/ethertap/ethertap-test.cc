@@ -102,9 +102,10 @@ class EthertapTests : public zxtest::Test {
   }
 
   void SetupTapCtlMessenger() {
-    messenger_.SetMessageOp(ddk_.tap_ctl(), [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-      return static_cast<eth::TapCtl*>(ctx)->DdkMessage(msg, txn);
-    });
+    messenger_.SetMessageOp(ddk_.tap_ctl(),
+                            [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+                              return static_cast<eth::TapCtl*>(ctx)->DdkMessage(msg, txn);
+                            });
   }
 
  protected:
@@ -151,8 +152,8 @@ TEST_F(EthertapTests, UnbindSignalsWorkerThread) {
   zx::channel tap, req;
   ASSERT_OK(zx::channel::create(0, &tap, &req));
   zx_status_t status;
-  ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), "",
-                                                           0, &config, tap.release(), &status));
+  ASSERT_OK(fuchsia_hardware_ethertap_TapControlOpenDevice(messenger_.local().get(), "", 0, &config,
+                                                           tap.release(), &status));
   ASSERT_OK(status);
 
   // This should run the device unbind hook, which signals the worker thread to reply to the

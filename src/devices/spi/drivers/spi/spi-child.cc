@@ -34,7 +34,7 @@ void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Syn
   completer.Reply(ZX_OK, std::move(rx_vector));
 }
 
-zx_status_t SpiChild::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::spi::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

@@ -12,7 +12,7 @@ namespace fidl {
 
 namespace internal {
 
-void ChannelTransaction::Dispatch(fidl_msg_t msg) {
+void ChannelTransaction::Dispatch(fidl_incoming_msg_t msg) {
   binding_->dispatch_fn_(binding_->interface_, &msg, this);
 }
 

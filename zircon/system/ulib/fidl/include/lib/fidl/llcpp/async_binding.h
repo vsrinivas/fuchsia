@@ -35,7 +35,8 @@ enum class __attribute__((enum_extensibility(closed))) DispatchResult {
 
 namespace internal {
 
-using TypeErasedServerDispatchFn = DispatchResult (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
+using TypeErasedServerDispatchFn = DispatchResult (*)(void*, fidl_incoming_msg_t*,
+                                                      ::fidl::Transaction*);
 using TypeErasedOnUnboundFn = fit::callback<void(void*, UnbindInfo, zx::channel)>;
 
 class AsyncTransaction;
@@ -90,7 +91,7 @@ class AsyncBinding : private async_wait_t {
 
   // Implemented separately for client and server. If `*binding_released` is set, the calling code
   // no longer has ownership of `this` and so must not access state.
-  virtual std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, bool* binding_released) = 0;
+  virtual std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) = 0;
 
   // Used by both Close() and Unbind().
   void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
@@ -139,7 +140,7 @@ class AsyncServerBinding final : public AsyncBinding {
   AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
                      TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
 
-  std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, bool* binding_released) override;
+  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
 
   void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 
@@ -162,7 +163,7 @@ class AsyncClientBinding final : public AsyncBinding {
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
                      std::shared_ptr<ClientBase> client, OnClientUnboundFn on_unbound_fn);
 
-  std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, bool* binding_released) override;
+  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
 
   void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 

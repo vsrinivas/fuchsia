@@ -593,11 +593,11 @@ typedef struct zircon_sample_number_Number_ops {
 
 // (6) dispatch prototypes
 zx_status_t
-zircon_sample_number_Number_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg,
+zircon_sample_number_Number_dispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
                                      const zircon_sample_number_Number_ops_t* ops);
 
 zx_status_t
-zircon_sample_number_Number_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg,
+zircon_sample_number_Number_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
                                          const zircon_sample_number_Number_ops_t* ops);
 
 // (7) reply prototype
@@ -741,7 +741,7 @@ static zircon_sample_number_Number_ops_t number_fidl_ops = {
     .SetNumber = fidl_SetNumber,
 };
 
-static zx_status_t number_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t number_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     zx_status_t status = zircon_sample_number_Number_dispatch(ctx, txn, msg, &number_fidl_ops);
     return status;
 }

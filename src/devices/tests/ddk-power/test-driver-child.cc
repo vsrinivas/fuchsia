@@ -50,7 +50,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();

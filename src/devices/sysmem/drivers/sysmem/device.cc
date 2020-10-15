@@ -224,7 +224,7 @@ fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
 
 }  // namespace
 
-zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_sysmem_DriverConnector_dispatch(this, txn, msg, &driver_connector_ops);
 }
 

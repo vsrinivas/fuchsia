@@ -103,7 +103,7 @@ void GpioLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb
   completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::NOT_SUPPORTED);
 }
 
-zx_status_t GpioLight::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t GpioLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::light::Light::Dispatch(this, msg, &transaction);
   return transaction.Status();

@@ -4,11 +4,11 @@
 
 #include "fidl-handler.h"
 
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fidl/txn_header.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -16,7 +16,7 @@
 namespace fs {
 namespace {
 
-zx_status_t Reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+zx_status_t Reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   auto connection = FidlConnection::FromTxn(txn);
   auto header = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   header->txid = connection->Txid();
@@ -26,7 +26,7 @@ zx_status_t Reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
 
 // Don't actually send anything on a channel when completing this operation.
 // This is useful for mocking out "close" requests.
-zx_status_t NullReply(fidl_txn_t* reply, const fidl_msg_t* msg) { return ZX_OK; }
+zx_status_t NullReply(fidl_txn_t* reply, const fidl_outgoing_msg_t* msg) { return ZX_OK; }
 
 }  // namespace
 
@@ -34,7 +34,7 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
   ZX_ASSERT(zx_object_get_info(h, ZX_INFO_HANDLE_VALID, NULL, 0, NULL, NULL) == ZX_OK);
   uint8_t bytes[ZXFIDL_MAX_MSG_BYTES];
   zx_handle_t handles[ZXFIDL_MAX_MSG_HANDLES];
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = bytes,
       .handles = handles,
       .num_bytes = 0,
@@ -67,7 +67,7 @@ zx_status_t CloseMessage(FidlDispatchFunction dispatch) {
   fuchsia_io_NodeCloseRequest request;
   memset(&request, 0, sizeof(request));
   fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseOrdinal);
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = NULL,
       .num_bytes = sizeof(request),

@@ -42,7 +42,7 @@ class Instance : public InstanceType,
   zx_status_t FidlOpenPipe(zx_handle_t pipe_request_handle);
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
 

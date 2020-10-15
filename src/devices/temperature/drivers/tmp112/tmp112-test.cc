@@ -27,7 +27,8 @@ class Tmp112DeviceTest : public zxtest::Test {
     dev_ = std::make_unique<Tmp112Device>(fake_ddk::kFakeParent,
                                           ddk::I2cChannel(mock_i2c_.GetProto()));
 
-    const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
+                               fidl_txn_t* txn) -> zx_status_t {
       return static_cast<Tmp112Device*>(ctx)->DdkMessage(msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));

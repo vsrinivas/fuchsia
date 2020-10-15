@@ -209,7 +209,7 @@ void AmlLight::SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync
   completer.ReplyError(LightError::INVALID_INDEX);
 }
 
-zx_status_t AmlLight::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t AmlLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   Light::Dispatch(this, msg, &transaction);
   return transaction.Status();

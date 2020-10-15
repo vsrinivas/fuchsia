@@ -49,7 +49,7 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t ShutDown();
   zx_status_t Reset();
 

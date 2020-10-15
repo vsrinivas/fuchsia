@@ -499,8 +499,8 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
                           out_actual_handles, out_error_msg, close_handle_dispositions_op);
 }
 
-zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg, uint32_t* out_actual_handles,
-                            const char** out_error_msg) {
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_t* msg,
+                            uint32_t* out_actual_handles, const char** out_error_msg) {
   return fidl_encode(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
                      out_actual_handles, out_error_msg);
 }
@@ -523,8 +523,8 @@ zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, 
                                         out_num_actual_bytes, out_num_actual_handles, out_error_msg,
                                         close_handle_dispositions_op);
 }
-zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value, fidl_msg_t* msg,
-                                          uint32_t* out_num_actual_bytes,
+zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
+                                          fidl_outgoing_msg_t* msg, uint32_t* out_num_actual_bytes,
                                           uint32_t* out_num_actual_handles,
                                           const char** out_error_msg) {
   return fidl_linearize_and_encode(type, value, reinterpret_cast<uint8_t*>(msg->bytes),

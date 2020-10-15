@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unordered_set>
-#include <fbl/auto_lock.h>
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -15,8 +11,12 @@
 #include <lib/zx/vmo.h>
 
 #include <thread>
+#include <unordered_set>
 
 #include <block-client/cpp/remote-block-device.h>
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
 #include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 
@@ -53,11 +53,12 @@ class MockBlockDevice {
   // Manually dispatch to emulate the non-standard behavior of the block device,
   // which implements both the block device APIs, the Node API, and (optionally)
   // the FVM API.
-  static zx_status_t FidlDispatch(void* context, fidl_txn_t* txn, fidl_msg_t* msg, const void*) {
+  static zx_status_t FidlDispatch(void* context, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
+                                  const void*) {
     return reinterpret_cast<MockBlockDevice*>(context)->HandleMessage(txn, msg);
   }
 
-  zx_status_t HandleMessage(fidl_txn_t* txn, fidl_msg_t* msg) {
+  zx_status_t HandleMessage(fidl_txn_t* txn, fidl_incoming_msg_t* msg) {
     zx_status_t status = fuchsia_hardware_block_Block_try_dispatch(this, txn, msg, BlockOps());
     if (status != ZX_ERR_NOT_SUPPORTED) {
       return status;
@@ -271,8 +272,8 @@ TEST(RemoteBlockDeviceTest, LargeThreadCountSuceeds) {
   fbl::ConditionVariable condition;
   int done = 0;
   for (int i = 0; i < kThreadCount; ++i) {
-    threads[i] = std::thread(
-        [device = device.get(), &mutex, &done, &condition, vmoid = vmoid.get()]() {
+    threads[i] =
+        std::thread([device = device.get(), &mutex, &done, &condition, vmoid = vmoid.get()]() {
           block_fifo_request_t request = {};
           request.opcode = BLOCKIO_READ;
           request.vmoid = vmoid;
@@ -341,14 +342,13 @@ TEST(RemoteBlockDeviceTest, NoHangForErrorsWithMultipleThreads) {
     ASSERT_EQ(kGoldenVmoid, vmoid.get());
 
     for (int i = 0; i < kThreadCount; ++i) {
-      threads[i] = std::thread(
-          [device = device.get(), vmoid = vmoid.get()]() {
-            block_fifo_request_t request = {};
-            request.opcode = BLOCKIO_READ;
-            request.vmoid = vmoid;
-            request.length = 1;
-            ASSERT_EQ(ZX_ERR_PEER_CLOSED, device->FifoTransaction(&request, 1));
-          });
+      threads[i] = std::thread([device = device.get(), vmoid = vmoid.get()]() {
+        block_fifo_request_t request = {};
+        request.opcode = BLOCKIO_READ;
+        request.vmoid = vmoid;
+        request.length = 1;
+        ASSERT_EQ(ZX_ERR_PEER_CLOSED, device->FifoTransaction(&request, 1));
+      });
     }
     vmoid.TakeId();  // We don't need the vmoid any more.
 

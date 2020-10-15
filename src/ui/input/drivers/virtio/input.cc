@@ -76,7 +76,7 @@ static bool IsQemuTouchscreen(const virtio_input_config_t& config) {
   return false;
 }
 
-zx_status_t InputDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t InputDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_pty_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 

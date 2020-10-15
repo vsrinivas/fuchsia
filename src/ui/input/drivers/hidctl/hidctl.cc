@@ -68,7 +68,7 @@ zx_status_t HidCtl::FidlMakeHidDevice(void* ctx, const fuchsia_hardware_hidctl_H
   return fuchsia_hardware_hidctl_DeviceMakeHidDevice_reply(txn, report_socket);
 }
 
-zx_status_t HidCtl::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t HidCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   static const fuchsia_hardware_hidctl_Device_ops_t kOps = {
       .MakeHidDevice = HidCtl::FidlMakeHidDevice,
   };

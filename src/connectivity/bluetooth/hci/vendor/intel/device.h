@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
+
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
+
+#include <optional>
 
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/bt/hci.h>
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
-#include <optional>
 
 #include "vendor_hci.h"
 
@@ -17,8 +20,8 @@ namespace btintel {
 
 class Device;
 
-using DeviceType = ddk::Device<Device, ddk::Initializable, ddk::GetProtocolable,
-                               ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Device, ddk::Initializable, ddk::GetProtocolable, ddk::Unbindable,
+                               ddk::Messageable>;
 
 class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
@@ -41,7 +44,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   zx_status_t BtHciOpenCommandChannel(zx::channel in);
   zx_status_t BtHciOpenAclDataChannel(zx::channel in);
@@ -81,3 +84,5 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
 };
 
 }  // namespace btintel
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_

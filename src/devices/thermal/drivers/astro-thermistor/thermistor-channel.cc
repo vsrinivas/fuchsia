@@ -21,13 +21,13 @@ void ThermistorChannel::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sy
   }
 }
 
-zx_status_t ThermistorChannel::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t ThermistorChannel::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   FidlTemperature::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
-zx_status_t RawChannel::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t RawChannel::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   FidlAdc::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

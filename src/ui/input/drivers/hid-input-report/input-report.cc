@@ -30,7 +30,7 @@ namespace hid_input_report_dev {
 
 void InputReport::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
-zx_status_t InputReport::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t InputReport::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fuchsia_input_report::InputDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();

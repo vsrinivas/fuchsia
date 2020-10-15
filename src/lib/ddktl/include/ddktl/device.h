@@ -60,7 +60,7 @@
 // | ddk::AutoSuspendable    | zx_status_t DdkConfigureAutoSuspend(bool enable,   |
 // |                         |                      uint8_t requested_sleep_state)|
 // |                         |                                                    |
-// | ddk::Messageable        | zx_status_t DdkMessage(fidl_msg_t* msg,            |
+// | ddk::Messageable        | zx_status_t DdkMessage(fidl_incoming_msg_t* msg,   |
 // |                         |                        fidl_txn_t* txn)            |
 // |                         |                                                    |
 // | ddk::Suspendable        | void DdkSuspend(ddk::SuspendTxn txn)               |
@@ -269,7 +269,7 @@ class Messageable : public base_mixin {
   }
 
  private:
-  static zx_status_t Message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return static_cast<D*>(ctx)->DdkMessage(msg, txn);
   }
 };

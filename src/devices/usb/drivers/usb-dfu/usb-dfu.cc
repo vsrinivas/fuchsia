@@ -201,7 +201,7 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
   return usb_reset_device(&usb_);
 }
 
-zx_status_t Dfu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Dfu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_usb_fwloader_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 

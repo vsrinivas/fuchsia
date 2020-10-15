@@ -169,7 +169,7 @@ void Directory::Sync(SyncCallback closure) {
 
 #ifdef __Fuchsia__
 
-void Directory::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) {
+void Directory::HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
   llcpp::fuchsia::blobfs::Blobfs::Dispatch(this, msg, txn);
 }
 

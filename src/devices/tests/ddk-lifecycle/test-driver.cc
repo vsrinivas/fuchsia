@@ -49,7 +49,7 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
   void CompleteUnbind(uint64_t child_id, CompleteUnbindCompleter::Sync& completer) override;
   void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync& completer) override;
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();

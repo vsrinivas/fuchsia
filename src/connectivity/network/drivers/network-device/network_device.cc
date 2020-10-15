@@ -76,7 +76,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t NetworkDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t NetworkDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   ::llcpp::fuchsia::hardware::network::DeviceInstance::Dispatch(this, msg, &transaction);
   return transaction.Status();

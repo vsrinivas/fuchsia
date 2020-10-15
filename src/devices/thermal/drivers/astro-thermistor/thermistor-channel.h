@@ -34,7 +34,7 @@ class ThermistorChannel : public DeviceType2,
       : DeviceType2(device), adc_(adc), adc_channel_(ch), ntc_(ntc_info, pullup_ohms) {}
 
   void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -59,7 +59,7 @@ class RawChannel : public DeviceType3,
   void GetSample(GetSampleCompleter::Sync& completer) override;
   void GetNormalizedSample(GetNormalizedSampleCompleter::Sync& completer) override;
   void GetResolution(GetResolutionCompleter::Sync& completer) override;
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 

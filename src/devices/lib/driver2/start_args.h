@@ -21,12 +21,12 @@ struct Storage {
 };
 
 // Encodes |start_args| into |storage|.
-zx::status<fidl_msg_t> Encode(Storage* storage,
-                              llcpp::fuchsia::driver::framework::DriverStartArgs start_args,
-                              const char** error);
+zx::status<fidl_outgoing_msg_t> Encode(
+    Storage* storage, llcpp::fuchsia::driver::framework::DriverStartArgs start_args,
+    const char** error);
 
 // Decodes |msg| and return a DriverStartArgs.
-zx::status<llcpp::fuchsia::driver::framework::DriverStartArgs*> Decode(fidl_msg_t* msg,
+zx::status<llcpp::fuchsia::driver::framework::DriverStartArgs*> Decode(fidl_incoming_msg_t* msg,
                                                                        const char** error);
 
 template <typename T>

@@ -229,7 +229,8 @@ static void device_unbind(void* context) {
   device_unbind_reply(gpu->zx_device);
 }
 
-static zx_status_t device_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction) {
+static zx_status_t device_message(void* context, fidl_incoming_msg_t* message,
+                                  fidl_txn_t* transaction) {
   gpu_device* device = get_gpu_device(context);
 
   if (!device->magma_system_device) {

@@ -172,7 +172,7 @@ static fuchsia_hardware_gpu_clock_Clock_ops_t fidl_ops = {
     .SetFrequencySource = fidl::Binder<AmlGpu>::BindMember<&AmlGpu::SetFrequencySource>,
 };
 
-zx_status_t AmlGpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_gpu_clock_Clock_dispatch(this, txn, msg, &fidl_ops);
 }
 

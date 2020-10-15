@@ -34,7 +34,7 @@ SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(zx_handle_t _client) {
 }
 
 std::optional<::fidl::UnbindInfo> SecondProtocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -68,7 +68,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult SecondProtocol::TryDispatch(Interface* impl,
-                                                   fidl_msg_t* msg,
+                                                   fidl_incoming_msg_t* msg,
                                                    ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::SecondProtocol,
@@ -77,7 +77,7 @@ namespace entries {
 }
 
 ::fidl::DispatchResult SecondProtocol::Dispatch(Interface* impl,
-                                                fidl_msg_t* msg,
+                                                fidl_incoming_msg_t* msg,
                                                 ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {
@@ -116,7 +116,7 @@ FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(zx_handle_t _client) {
 }
 
 std::optional<::fidl::UnbindInfo> FirstProtocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -150,7 +150,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult FirstProtocol::TryDispatch(Interface* impl,
-                                                  fidl_msg_t* msg,
+                                                  fidl_incoming_msg_t* msg,
                                                   ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::FirstProtocol,
@@ -158,7 +158,8 @@ namespace entries {
                                    sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult FirstProtocol::Dispatch(Interface* impl,
+                                               fidl_incoming_msg_t* msg,
                                                ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

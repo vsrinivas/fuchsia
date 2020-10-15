@@ -105,7 +105,7 @@ zx_status_t AmlogicSecureMemDevice::Bind() {
   return status;
 }
 
-zx_status_t AmlogicSecureMemDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t AmlogicSecureMemDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::securemem::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

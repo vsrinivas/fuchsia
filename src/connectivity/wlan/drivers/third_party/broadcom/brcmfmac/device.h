@@ -42,7 +42,7 @@ class Device : public ::ddk::Device<Device, ddk::Messageable>,
   const brcmf_pub* drvr() const;
 
   // ::ddk::Device implementation.
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // WlanphyImpl interface implementation.

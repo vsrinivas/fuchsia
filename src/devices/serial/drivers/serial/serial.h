@@ -39,7 +39,7 @@ class SerialDevice : public DeviceType,
   zx_status_t DdkClose(uint32_t flags);
   zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // Serial protocol implementation.

@@ -51,7 +51,7 @@ class MockDevice : public MockDeviceType {
   zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkResume(ddk::ResumeTxn txn);
   zx_status_t DdkRxrpc(zx_handle_t channel);
@@ -293,7 +293,7 @@ zx_off_t MockDevice::DdkGetSize() {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t MockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t MockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   auto result = controller_.Message(ConstructHookInvocation());
   ZX_ASSERT(result.ok());
   ProcessActionsContext ctx(controller_.channel(), true, this, zxdev());

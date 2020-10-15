@@ -51,7 +51,7 @@ class Vs680Thermal : public DeviceType,
 
   void DdkRelease();
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Visible for testing.
   zx_status_t Init();

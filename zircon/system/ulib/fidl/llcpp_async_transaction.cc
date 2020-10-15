@@ -12,7 +12,7 @@ namespace fidl {
 namespace internal {
 
 std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBinding>&& binding,
-                                                     fidl_msg_t* msg) {
+                                                     fidl_incoming_msg_t* msg) {
   ZX_ASSERT(!owned_binding_);
   ZX_ASSERT(!moved_);
   bool moved = false;

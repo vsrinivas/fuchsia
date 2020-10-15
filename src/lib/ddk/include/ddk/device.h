@@ -400,7 +400,7 @@ typedef struct zx_protocol_device {
   // ZX_ERR_ASYNC, the underlying connection is closed.
   //
   // This hook will only be executed on the devhost's main thread.
-  zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t (*message)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   //@ ## child_pre_release
   // The child_pre_release hook is used to signal that a child device

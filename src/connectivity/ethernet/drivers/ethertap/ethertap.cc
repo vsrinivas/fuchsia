@@ -71,7 +71,7 @@ zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
 
 void TapCtl::DdkRelease() { delete this; }
 
-zx_status_t TapCtl::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t TapCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_ethertap_TapControl_dispatch(this, txn, msg, &tap_ctl_ops_);
 }
 
@@ -337,13 +337,13 @@ typedef struct tap_device_txn {
   TapDevice* device;
 } tap_device_txn_t;
 
-static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   static_assert(offsetof(tap_device_txn_t, txn) == 0, "FidlConnection must be convertable to txn");
   auto* ptr = reinterpret_cast<tap_device_txn_t*>(txn);
   return ptr->device->Reply(ptr->txid, msg);
 }
 
-zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_msg_t* msg) {
+zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_outgoing_msg_t* msg) {
   auto header = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   header->txid = txid;
   return channel_.write(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
@@ -357,7 +357,7 @@ int TapDevice::Thread() {
   std::unique_ptr<uint8_t[]> data_buff(new uint8_t[buff_size]);
   zx_handle_t handles_buff[handle_count];
 
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = data_buff.get(),
       .handles = handles_buff,
       .num_bytes = buff_size,

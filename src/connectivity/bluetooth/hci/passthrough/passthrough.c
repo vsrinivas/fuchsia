@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/bt/hci.h>
+#include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/bt/hci.h>
 
 typedef struct {
   zx_device_t* dev;
@@ -21,8 +22,7 @@ typedef struct {
   bt_hci_protocol_t hci;
 } passthrough_t;
 
-static zx_status_t bt_hci_passthrough_get_protocol(void* ctx, uint32_t proto_id,
-                                                   void* out_proto) {
+static zx_status_t bt_hci_passthrough_get_protocol(void* ctx, uint32_t proto_id, void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -61,15 +61,15 @@ zx_status_t fidl_bt_hci_open_snoop_channel(void* ctx, zx_handle_t channel) {
 }
 
 const fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops = {
-  .OpenCommandChannel = fidl_bt_hci_open_command_channel,
-  .OpenAclDataChannel = fidl_bt_hci_open_acl_data_channel,
-  .OpenSnoopChannel = fidl_bt_hci_open_snoop_channel,
+    .OpenCommandChannel = fidl_bt_hci_open_command_channel,
+    .OpenAclDataChannel = fidl_bt_hci_open_acl_data_channel,
+    .OpenSnoopChannel = fidl_bt_hci_open_snoop_channel,
 };
 
-static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_incoming_msg_t* msg,
+                                                   fidl_txn_t* txn) {
   return fuchsia_hardware_bluetooth_Hci_dispatch(ctx, txn, msg, &fidl_ops);
 }
-
 
 static zx_protocol_device_t passthrough_device_proto = {
     .version = DEVICE_OPS_VERSION,
@@ -87,11 +87,9 @@ static zx_status_t bt_hci_passthrough_bind(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status =
-      device_get_protocol(device, ZX_PROTOCOL_BT_HCI, &passthrough->hci);
+  zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_BT_HCI, &passthrough->hci);
   if (status != ZX_OK) {
-    printf("bt_hci_passthrough_bind: failed protocol: %s\n",
-           zx_status_get_string(status));
+    printf("bt_hci_passthrough_bind: failed protocol: %s\n", zx_status_get_string(status));
     return status;
   }
 

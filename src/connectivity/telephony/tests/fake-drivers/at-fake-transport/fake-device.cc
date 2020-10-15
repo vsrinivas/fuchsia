@@ -45,7 +45,7 @@ static zx_protocol_device_t at_fake_device_ops = {
     },
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    .message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return DEV(ctx)->DdkMessage(msg, txn);
     },
 };
@@ -85,8 +85,8 @@ void AtDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint
   if (0 == memcmp(req, kAtCmdReqAtdStr.c_str(), kAtCmdReqAtdStr.size())) {
     resp_size = std::min(kAtCmdRespNoCarrier.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespNoCarrier.c_str(), resp_size);
-    zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u", resp[0], resp[1], resp[2],
-           resp[3], resp_size);
+    zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u", resp[0], resp[1], resp[2], resp[3],
+           resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
     SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
 

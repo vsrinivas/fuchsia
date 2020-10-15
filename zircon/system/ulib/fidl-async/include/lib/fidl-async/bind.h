@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_BIND_H_
-#define LIB_FIDL_BIND_H_
+#ifndef LIB_FIDL_ASYNC_BIND_H_
+#define LIB_FIDL_ASYNC_BIND_H_
 
 #include <lib/async/dispatcher.h>
 #include <zircon/fidl.h>
@@ -22,7 +22,8 @@ __BEGIN_CDECLS
 //
 //  fidl_bind(dispatcher, channel, (fidl_dispatch_t*)spaceship_SpaceShip_dispatch, ctx, &kOps);
 //
-typedef zx_status_t(fidl_dispatch_t)(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const void* ops);
+typedef zx_status_t(fidl_dispatch_t)(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg,
+                                     const void* ops);
 
 // Binds a |dispatch| function to |channel| using |dispatcher|.
 //
@@ -97,4 +98,4 @@ zx_status_t fidl_async_txn_complete(fidl_async_txn_t* async_txn, bool rebind);
 
 __END_CDECLS
 
-#endif  // LIB_FIDL_BIND_H_
+#endif  // LIB_FIDL_ASYNC_BIND_H_

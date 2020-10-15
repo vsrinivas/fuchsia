@@ -11,7 +11,7 @@ namespace {
 static_assert(alignof(fidl::Transaction) > 1);
 constexpr uintptr_t kTransactionIsBoxed = 0x1;
 
-zx_status_t DdkReply(fidl_txn_t* txn, const fidl_msg_t* msg) {
+zx_status_t DdkReply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   fidl::OutgoingMessage message(msg);
   // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting
   // this scope.
@@ -55,7 +55,7 @@ std::variant<::fidl::Transaction*, std::unique_ptr<::fidl::Transaction>> FromDdk
   return ptr;
 }
 
-::fidl::DispatchResult FidlMessenger::Dispatch(fidl_msg_t* msg, ::fidl::Transaction* txn) {
+::fidl::DispatchResult FidlMessenger::Dispatch(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
   auto ddk_txn = MakeDdkInternalTransaction(txn);
   auto status = message_op_(op_ctx_, msg, ddk_txn.Txn());
   const bool found = status == ZX_OK || status == ZX_ERR_ASYNC;

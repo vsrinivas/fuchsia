@@ -54,9 +54,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     });
   }
 
-  void TearDown() override {
-    dut_.StopWorkerThread();
-  }
+  void TearDown() override { dut_.StopWorkerThread(); }
 
   void QueueBlockOps();
   void QueueRpmbRequests();
@@ -103,7 +101,8 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 
     ASSERT_TRUE(user_.is_valid());
 
-    const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
+                               fidl_txn_t* txn) -> zx_status_t {
       return static_cast<decltype(ddk_)*>(ctx)->MessageChild(RPMB_PARTITION, msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(&ddk_, message_op));
@@ -1125,7 +1124,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   AddDevice();
 
   fake_ddk::FidlMessenger messenger;
-  const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+  const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
     return static_cast<decltype(ddk_)*>(ctx)->MessageChild(1, msg, txn);
   };
   ASSERT_OK(messenger.SetMessageOp(&ddk_, message_op));

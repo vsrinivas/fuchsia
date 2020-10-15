@@ -73,7 +73,7 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   }
 
   // All methods related to the fuchsia.hardware.pci service.
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   virtual void GetDevices(GetDevicesCompleter::Sync& completer) final;
   virtual void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
 

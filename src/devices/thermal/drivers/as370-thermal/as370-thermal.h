@@ -40,7 +40,7 @@ class As370Thermal : public DeviceType,
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Visible for testing.
   void GetInfo(GetInfoCompleter::Sync& completer) override;

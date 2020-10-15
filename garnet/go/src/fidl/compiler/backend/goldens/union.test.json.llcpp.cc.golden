@@ -414,7 +414,7 @@ TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
 }
 
 std::optional<::fidl::UnbindInfo> TestProtocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -463,7 +463,7 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult TestProtocol::TryDispatch(Interface* impl,
-                                                 fidl_msg_t* msg,
+                                                 fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::TestProtocol,
@@ -471,7 +471,8 @@ namespace entries {
                                   sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult TestProtocol::Dispatch(Interface* impl,
+                                              fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

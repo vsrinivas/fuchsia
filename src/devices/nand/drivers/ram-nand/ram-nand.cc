@@ -211,7 +211,7 @@ void NandDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t NandDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t NandDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   {
     fbl::AutoLock lock(&lock_);
     if (dead_) {

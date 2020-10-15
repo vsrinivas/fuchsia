@@ -49,7 +49,7 @@ void Handles::_CloseHandles() {
 namespace {}  // namespace
 
 std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -70,12 +70,13 @@ namespace entries {
 }  // namespace entries
 
 ::fidl::DispatchResult SomeProtocol::TryDispatch(Interface* impl,
-                                                 fidl_msg_t* msg,
+                                                 fidl_incoming_msg_t* msg,
                                                  ::fidl::Transaction* txn) {
   return ::fidl::DispatchResult::kNotFound;
 }
 
-::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl,
+                                              fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   zx_handle_close_many(msg->handles, msg->num_handles);
   txn->InternalError(

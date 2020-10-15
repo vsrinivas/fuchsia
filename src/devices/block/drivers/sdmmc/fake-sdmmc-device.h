@@ -65,7 +65,7 @@ class Bind : public fake_ddk::Bind {
     return ZX_OK;
   }
 
-  zx_status_t MessageChild(size_t index, fidl_msg_t* msg, fidl_txn_t* txn) const {
+  zx_status_t MessageChild(size_t index, fidl_incoming_msg_t* msg, fidl_txn_t* txn) const {
     if (index >= children_ops_.size()) {
       return ZX_ERR_OUT_OF_RANGE;
     }
@@ -96,7 +96,7 @@ class Bind : public fake_ddk::Bind {
     void* const proto_ops;
     zx_status_t (*const get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
     void (*const release)(void* ctx);
-    zx_status_t (*const message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
+    zx_status_t (*const message)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   };
 
   zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);

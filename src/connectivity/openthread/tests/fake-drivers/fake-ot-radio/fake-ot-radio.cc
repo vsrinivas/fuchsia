@@ -160,7 +160,7 @@ FakeOtRadioDevice::FakeOtRadioDevice(zx_device_t* device)
     : ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>(device),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-zx_status_t FakeOtRadioDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t FakeOtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   lowpan_spinel_fidl::DeviceSetup::Dispatch(this, msg, &transaction);
   return transaction.Status();

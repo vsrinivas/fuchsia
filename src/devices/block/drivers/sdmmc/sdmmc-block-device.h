@@ -110,7 +110,7 @@ class RpmbDevice : public RpmbDeviceType,
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void RpmbConnectServer(zx::channel server);
 

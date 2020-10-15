@@ -39,7 +39,7 @@ TEST(ServerTests, dispatch_test) {
   request.thread = FIDL_HANDLE_PRESENT;
 
   zx_handle_t handles[2];
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
       .num_bytes = sizeof(request),
@@ -112,7 +112,7 @@ typedef struct my_connection {
   size_t count;
 } my_connection_t;
 
-static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_msg_t* msg) {
+static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   my_connection_t* my_txn = (my_connection_t*)txn;
   EXPECT_EQ(sizeof(fidl_test_echo_EchoEchoResponse), msg->num_bytes, "");
   EXPECT_EQ(0u, msg->num_handles, "");
@@ -153,7 +153,7 @@ TEST(ServerTests, error_test) {
   request.thread = FIDL_HANDLE_PRESENT;
 
   zx_handle_t handles[2];
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
       .num_bytes = sizeof(request),
@@ -183,7 +183,7 @@ TEST(ServerTests, incompatible_magic_test) {
   request.thread = FIDL_HANDLE_PRESENT;
 
   zx_handle_t handles[2];
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
       .num_bytes = sizeof(request),

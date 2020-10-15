@@ -55,7 +55,7 @@ class PlatformBus : public PlatformBusType,
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Platform bus protocol implementation.
   zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);

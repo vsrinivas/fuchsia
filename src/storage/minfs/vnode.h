@@ -103,7 +103,7 @@ class VnodeMinfs : public fs::Vnode,
 
   // fs::Vnode interface (invoked publicly).
 #ifdef __Fuchsia__
-  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) final;
+  void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) final;
 #endif
   using fs::Vnode::Open;
   zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;

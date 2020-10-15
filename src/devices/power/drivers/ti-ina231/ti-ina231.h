@@ -30,7 +30,7 @@ class Ina231Device : public DeviceType,
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override;
 

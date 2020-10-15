@@ -46,7 +46,7 @@ Device::~Device() = default;
 
 void Device::DdkRelease() { delete this; }
 
-zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   wlan_llcpp::Iovar::Dispatch(this, msg, &transaction);
   return transaction.Status();

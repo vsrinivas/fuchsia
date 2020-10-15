@@ -64,7 +64,7 @@ void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl
   // Create the data buffer and copy the data into it.
   const uint32_t buf_size = kMaxFidlMsgSize;
   std::unique_ptr<uint8_t[]> buf(new uint8_t[buf_size]);
-  fidl_msg_t fidl_msg = {
+  fidl_incoming_msg_t fidl_msg = {
       .bytes = buf.get(),
       .handles = nullptr,
       .num_bytes = buf_size,

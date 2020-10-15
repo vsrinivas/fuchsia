@@ -55,7 +55,7 @@ void Driver::set_binding(
   binding_ = std::make_optional(std::move(binding));
 }
 
-zx::status<> Driver::Start(fidl_msg_t* msg, async_dispatcher_t* dispatcher) {
+zx::status<> Driver::Start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher) {
   zx_status_t status = record_->start(msg, dispatcher, &opaque_);
   return zx::make_status(status);
 }
@@ -131,9 +131,16 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   // this callback to extend its lifetime.
   fidl::Client<fio::File> file(std::move(client_end), loop_->dispatcher());
   auto file_ptr = file.get();
+  fidl_outgoing_msg_t outgoing_msg = encode.value();
+  fidl_incoming_msg_t incoming_msg = {
+      .bytes = outgoing_msg.bytes,
+      .handles = outgoing_msg.handles,
+      .num_bytes = outgoing_msg.num_bytes,
+      .num_handles = outgoing_msg.num_handles,
+  };
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    binary = std::move(binary.value()), storage = std::move(storage),
-                   msg = encode.value(),
+                   msg = incoming_msg,
                    file = std::move(file)](zx_status_t status, auto buffer) mutable {
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),

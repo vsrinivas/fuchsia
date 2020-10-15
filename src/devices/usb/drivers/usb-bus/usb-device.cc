@@ -771,7 +771,7 @@ void UsbDevice::SetConfiguration(uint8_t configuration,
   completer.Reply(status);
 }
 
-zx_status_t UsbDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t UsbDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::usb::device::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

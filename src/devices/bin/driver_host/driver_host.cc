@@ -629,7 +629,7 @@ zx_status_t DevhostControllerConnection::HandleRead() {
     return status;
   }
 
-  fidl_msg_t fidl_msg = {
+  fidl_incoming_msg_t fidl_msg = {
       .bytes = msg,
       .handles = hin,
       .num_bytes = msize,

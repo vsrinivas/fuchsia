@@ -8,9 +8,9 @@ namespace fdf = llcpp::fuchsia::driver::framework;
 
 namespace start_args {
 
-zx::status<fidl_msg_t> Encode(Storage* storage, fdf::DriverStartArgs start_args,
-                              const char** error) {
-  fidl_msg_t msg = {
+zx::status<fidl_outgoing_msg_t> Encode(Storage* storage, fdf::DriverStartArgs start_args,
+                                       const char** error) {
+  fidl_outgoing_msg_t msg = {
       .bytes = storage->bytes,
       .handles = storage->handles,
       .num_bytes = sizeof(storage->bytes),
@@ -24,7 +24,7 @@ zx::status<fidl_msg_t> Encode(Storage* storage, fdf::DriverStartArgs start_args,
   return zx::ok(msg);
 }
 
-zx::status<fdf::DriverStartArgs*> Decode(fidl_msg_t* msg, const char** error) {
+zx::status<fdf::DriverStartArgs*> Decode(fidl_incoming_msg_t* msg, const char** error) {
   zx_status_t status = fidl_decode_msg(fdf::DriverStartArgs::Type, msg, error);
   if (status != ZX_OK) {
     return zx::error(status);

@@ -103,7 +103,7 @@ static fuchsia_hardware_rtc_Device_ops_t fidl_ops = {
     .Set = fidl_Set,
 };
 
-static zx_status_t pcf8563_rtc_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t pcf8563_rtc_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_rtc_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 

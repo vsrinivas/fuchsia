@@ -40,7 +40,7 @@ class DeviceManager final : public DeviceManagerType {
   void DdkRelease();
 
   // ddk::Messageable methods
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
 
   // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
   zx_status_t Unseal(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) __TA_EXCLUDES(mtx_);

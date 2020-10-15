@@ -83,7 +83,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
 zx_status_t AmlThermal::StartConnectDispatchThread() { return loop_.StartThread(); }
 
-zx_status_t AmlThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t AmlThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
 }
 

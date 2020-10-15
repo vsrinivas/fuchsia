@@ -44,8 +44,8 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   void Unbind();
   void Release();
 
-  zx_status_t HciMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  zx_status_t EmulatorMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t HciMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t EmulatorMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t GetProtocol(uint32_t proto_id, void* out_proto);
   zx_status_t OpenChan(Channel chan_type, zx_handle_t chan);
 

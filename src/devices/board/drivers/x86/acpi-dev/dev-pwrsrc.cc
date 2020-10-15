@@ -105,7 +105,7 @@ static fuchsia_hardware_power_Source_ops_t fidl_ops = []() {
   return ops;
 }();
 
-static zx_status_t fuchsia_hardware_power_message_instance(void* ctx, fidl_msg_t* msg,
+static zx_status_t fuchsia_hardware_power_message_instance(void* ctx, fidl_incoming_msg_t* msg,
                                                            fidl_txn_t* txn) {
   return fuchsia_hardware_power_Source_dispatch(ctx, txn, msg, &fidl_ops);
 }

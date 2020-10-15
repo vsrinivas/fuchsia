@@ -268,16 +268,16 @@ static void fidl_message_cb(async_dispatcher_t* dispatcher, async::Wait* wait, z
     return;
   }
 
-  status =
-      fs::ReadMessage(wait->object(), [dispatcher](fidl_msg_t* message, fs::FidlConnection* txn) {
-        static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps{
-            .CreateSession = new_vc_cb,
-            .HasPrimaryConnected = has_primary_cb,
-        };
+  status = fs::ReadMessage(wait->object(),
+                           [dispatcher](fidl_incoming_msg_t* message, fs::FidlConnection* txn) {
+                             static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps{
+                                 .CreateSession = new_vc_cb,
+                                 .HasPrimaryConnected = has_primary_cb,
+                             };
 
-        return fuchsia_virtualconsole_SessionManager_dispatch(
-            dispatcher, reinterpret_cast<fidl_txn_t*>(txn), message, &kOps);
-      });
+                             return fuchsia_virtualconsole_SessionManager_dispatch(
+                                 dispatcher, reinterpret_cast<fidl_txn_t*>(txn), message, &kOps);
+                           });
 
   if (status != ZX_OK) {
     printf("Failed to dispatch fidl message from client: %s\n", zx_status_get_string(status));

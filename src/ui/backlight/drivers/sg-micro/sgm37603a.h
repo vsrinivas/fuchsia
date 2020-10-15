@@ -50,7 +50,7 @@ class Sgm37603a : public DeviceType,
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Visible for testing.
   Sgm37603a(zx_device_t* parent, ddk::I2cChannel i2c, ddk::GpioProtocolClient reset_gpio)

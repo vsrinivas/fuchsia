@@ -34,7 +34,7 @@ zx_status_t MagmaPerformanceCounterDevice::Bind(
   return DRET(status);
 }
 
-zx_status_t MagmaPerformanceCounterDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t MagmaPerformanceCounterDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::gpu::magma::PerformanceCounterAccess::Dispatch(this, msg, &transaction);
   return transaction.Status();

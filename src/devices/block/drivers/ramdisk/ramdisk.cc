@@ -94,7 +94,7 @@ void Ramdisk::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t Ramdisk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Ramdisk::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_ramdisk_Ramdisk_dispatch(this, txn, msg, Ops());
 }
 

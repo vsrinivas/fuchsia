@@ -360,7 +360,7 @@ void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout
   ftdi_mpsse::FtdiI2c::Create(this->zxdev(), &layout, &device);
 }
 
-zx_status_t FtdiDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t FtdiDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   ::llcpp::fuchsia::hardware::ftdi::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

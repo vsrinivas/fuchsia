@@ -40,7 +40,7 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   return ZX_OK;
 }
 
-zx_status_t DdkFidlDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fuchsia::hardware::test::Device::Dispatch(this, msg, &transaction);
   return ZX_ERR_ASYNC;

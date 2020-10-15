@@ -94,7 +94,8 @@ inline FidlConnection FidlConnection::CopyTxn(const fidl_txn_t* txn) {
 // - otherwise, the return value is treated as the status to send
 //   in the rpc response, and msg.len indicates how much valid data
 //   to send.  On error return msg.len will be set to 0.
-using FidlDispatchFunction = fbl::Function<zx_status_t(fidl_msg_t* msg, FidlConnection* txn)>;
+using FidlDispatchFunction =
+    fbl::Function<zx_status_t(fidl_incoming_msg_t* msg, FidlConnection* txn)>;
 
 // Attempts to read and dispatch a FIDL message.
 //

@@ -29,7 +29,7 @@ class TestLifecycleDriverChild : public DeviceType {
     ZX_PANIC("DdkClose reached in device that only returns instances\n");
   }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     ZX_PANIC("DdkMessage reached in device that only returns instances\n");
   }
 
@@ -56,7 +56,7 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   };
   zx_status_t DdkClose(uint32_t flags);
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     InstanceDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();

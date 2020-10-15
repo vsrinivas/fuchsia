@@ -39,7 +39,7 @@ class Vs680ThermalTest : public zxtest::Test {
                                 clock_.GetProto(), power_.GetProto(), zx::msec(1)));
 
     ASSERT_OK(messenger_.SetMessageOp(
-        dut_.get(), [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+        dut_.get(), [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
           return static_cast<Vs680Thermal*>(ctx)->DdkMessage(msg, txn);
         }));
 

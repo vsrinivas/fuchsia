@@ -8,10 +8,11 @@
 #include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
-#include <optional>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <optional>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -26,7 +27,7 @@ class TapCtl : public ddk::Device<TapCtl, ddk::Messageable> {
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t OpenDevice(const char* name, const fuchsia_hardware_ethertap_Config* config,
                          zx::channel device);
 };
@@ -50,7 +51,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
   // No DMA capability, so return invalid handle for get_bti
   void EthernetImplGetBti(zx::bti* bti);
   int Thread();
-  zx_status_t Reply(zx_txid_t, const fidl_msg_t* msg);
+  zx_status_t Reply(zx_txid_t, const fidl_outgoing_msg_t* msg);
 
   zx_status_t Recv(const uint8_t* buffer, uint32_t length);
   void UpdateLinkStatus(bool online);

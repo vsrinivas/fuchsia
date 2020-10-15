@@ -164,7 +164,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
   void EthTxListNodeInit();
 
   // DDK Mixin methods
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

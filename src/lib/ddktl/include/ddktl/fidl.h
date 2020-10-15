@@ -72,7 +72,7 @@ inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
 
 // An implementation of |fidl::Transaction| for using LLCPP bindings in drivers,
 // designed to work with ::DdkMessage.  If can be used to reply synchronously as in:
-// zx_status_t DdkFidlDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+// zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 //     DdkTransaction transaction(txn);
 //     fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
 //     return transaction.Status();
@@ -83,7 +83,7 @@ inline Transaction Transaction::MoveTxn(fidl_txn_t* txn) {
 //
 // And also can be used to reply asynchronously via ToAsync() call as in:
 //
-// zx_status_t DdkFidlDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+// zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 //   DdkTransaction transaction(txn);
 //   fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
 //   return ZX_ERR_AYSNC; // Ownership of transaction was taken, can't use transaction.Status()

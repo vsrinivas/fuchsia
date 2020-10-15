@@ -82,7 +82,7 @@ class TestProtocol {
     explicit ClientImpl(AsyncEventHandlers handlers) {}
 
     // For each event, increment the event count.
-    std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) {
+    std::optional<UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) {
       event_count_++;
       return {};
     }
@@ -326,8 +326,7 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
 class ReleaseTestResponseContext : public internal::ResponseContext {
  public:
   explicit ReleaseTestResponseContext(sync_completion_t* done)
-      : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
-        done_(done) {}
+      : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0), done_(done) {}
   void OnReply(uint8_t* reply) override { delete this; }
   void OnError() override {
     sync_completion_signal(done_);
@@ -462,7 +461,7 @@ TEST(ChannelRefTrackerTestCase, WaitForChannelWithRefs) {
   sync_completion_t running;
   std::thread([&running, channel_ref = std::move(channel_ref)]() mutable {
     sync_completion_signal(&running);  // Let the main thread continue.
-    channel_ref = nullptr;  // Release this reference.
+    channel_ref = nullptr;             // Release this reference.
   }).detach();
 
   ASSERT_OK(sync_completion_wait(&running, ZX_TIME_INFINITE));

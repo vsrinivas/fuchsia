@@ -78,7 +78,7 @@ zx_status_t Max98927Device::FidlSetEnabled(bool enable) {
   return ZX_OK;
 }
 
-zx_status_t Max98927Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Max98927Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   using Binder = fidl::Binder<Max98927Device>;
   static const fuchsia_hardware_audiocodec_Device_ops_t kOps = {
       .SetEnabled = Binder::BindMember<&Max98927Device::FidlSetEnabled>,

@@ -63,7 +63,7 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_rtc_Device_dispatch(this, txn, msg, &fidl_ops_);
   }
 

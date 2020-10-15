@@ -113,7 +113,7 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t As370Thermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t As370Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::thermal::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

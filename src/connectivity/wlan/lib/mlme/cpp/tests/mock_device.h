@@ -56,7 +56,7 @@ struct FidlMessage {
     return {std::move(msg)};
   }
 
-  fidl_msg_t get() {
+  fidl_incoming_msg_t get() {
     return {.bytes = bytes,
             .handles = handles,
             .num_bytes = actual_bytes,

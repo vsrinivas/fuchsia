@@ -23,7 +23,7 @@ class Device : public ::fuchsia::wlan::device::Phy {
   zx_status_t Bind();
 
   // zx_protocol_device_t
-  zx_status_t Message(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void Release();
   void Unbind();
 

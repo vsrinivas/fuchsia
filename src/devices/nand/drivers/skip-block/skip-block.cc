@@ -694,7 +694,7 @@ zx_off_t SkipBlockDevice::DdkGetSize() {
   return GetBlockSize() * GetBlockCountLocked();
 }
 
-zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t SkipBlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::skipblock::SkipBlock::Dispatch(this, msg, &transaction);
   return transaction.Status();

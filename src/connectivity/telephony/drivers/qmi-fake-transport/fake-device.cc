@@ -41,7 +41,7 @@ static zx_protocol_device_t qmi_fake_device_ops = {
     },
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    .message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return DEV(ctx)->DdkMessage(msg, txn);
     },
 };
@@ -159,8 +159,7 @@ zx_status_t QmiDevice::Bind() {
   // create a port to watch qmi messages
   zx_status_t status = zx::port::create(0, &GetCtrlChannelPort());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "qmi-fake-transport: failed to create a port: %s",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "qmi-fake-transport: failed to create a port: %s", zx_status_get_string(status));
     return status;
   }
 

@@ -35,7 +35,7 @@ class InputReport : public DeviceType,
   zx_status_t Bind();
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // HidReportListener functions.
   void HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,

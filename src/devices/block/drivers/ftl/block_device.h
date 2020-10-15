@@ -67,7 +67,7 @@ class BlockDevice : public DeviceType,
 
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return params_.GetSize(); }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t Suspend();
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkResume(ddk::ResumeTxn txn) {

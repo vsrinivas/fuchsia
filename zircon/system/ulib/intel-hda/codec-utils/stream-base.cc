@@ -25,7 +25,7 @@ namespace codecs {
 zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
   zx_protocol_device_t sdt = {};
   sdt.version = DEVICE_OPS_VERSION;
-  sdt.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  sdt.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     IntelHDAStreamBase* thiz = static_cast<IntelHDAStreamBase*>(ctx);
     DdkTransaction transaction(txn);
     llcpp::fuchsia::hardware::audio::Device::Dispatch(thiz, msg, &transaction);

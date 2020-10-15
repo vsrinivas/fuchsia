@@ -52,7 +52,7 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = []() {
   };
   ops.unbind = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceShutdown(); };
   ops.release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceRelease(); };
-  ops.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  ops.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
         ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
   };

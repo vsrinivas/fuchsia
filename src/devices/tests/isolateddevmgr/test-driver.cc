@@ -22,7 +22,7 @@ class IsolatedDevMgrTestDriver : public DeviceType {
   zx_status_t Bind();
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   static zx_status_t FidlGetMetadata(void* ctx, uint32_t type, fidl_txn_t* txn);
@@ -51,7 +51,7 @@ zx_status_t IsolatedDevMgrTestDriver::FidlGetMetadata(void* ctx, uint32_t type, 
                                                                metadata.size());
 }
 
-zx_status_t IsolatedDevMgrTestDriver::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t IsolatedDevMgrTestDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   static const fuchsia_device_manager_test_Metadata_ops_t kOps = {
       .GetMetadata = IsolatedDevMgrTestDriver::FidlGetMetadata,
   };

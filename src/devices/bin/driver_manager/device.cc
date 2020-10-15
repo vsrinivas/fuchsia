@@ -586,7 +586,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
       break;
     }
 
-    fidl_msg_t fidl_msg = {
+    fidl_incoming_msg_t fidl_msg = {
         .bytes = msg_bytes,
         .handles = handles,
         .num_bytes = msize,
@@ -626,7 +626,7 @@ zx_status_t Device::HandleRead() {
     return r;
   }
 
-  fidl_msg_t fidl_msg = {
+  fidl_incoming_msg_t fidl_msg = {
       .bytes = msg,
       .handles = hin,
       .num_bytes = msize,

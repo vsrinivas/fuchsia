@@ -25,8 +25,8 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
                             zx_handle_disposition_t* handle_dispositions,
                             uint32_t max_handle_dispositions,
                             uint32_t* out_actual_handle_dispositions, const char** out_error_msg);
-zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg, uint32_t* out_actual_handles,
-                            const char** out_error_msg);
+zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_t* msg,
+                            uint32_t* out_actual_handles, const char** out_error_msg);
 
 // fidl_linearize_and_encode converts an object and its children to a FIDL wire-format
 // compatible byte array.
@@ -55,8 +55,8 @@ zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, 
                                           uint32_t num_handles, uint32_t* out_num_actual_bytes,
                                           uint32_t* out_num_actual_handles,
                                           const char** out_error_msg);
-zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value, fidl_msg_t* msg,
-                                          uint32_t* out_num_actual_bytes,
+zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
+                                          fidl_outgoing_msg_t* msg, uint32_t* out_num_actual_bytes,
                                           uint32_t* out_num_actual_handles,
                                           const char** out_error_msg);
 
@@ -74,14 +74,15 @@ zx_status_t fidl_decode_skip_unknown_union_handles(const fidl_type_t* type, void
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                             const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
                             const char** error_msg_out);
-zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg, const char** out_error_msg);
+zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
+                            const char** out_error_msg);
 
 // Validates an encoded message against the given |type|.
 //
 // The |bytes| are not modified.
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
                           uint32_t num_handles, const char** out_error_msg);
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_t* msg,
                               const char** out_error_msg);
 
 // Validates a FIDL string, and verifies that it is a well-formed UTF-8 code
@@ -111,8 +112,6 @@ size_t fidl_format_type_name(const fidl_type_t* type, char* buffer, size_t capac
 //
 // Handle values in |value| are replaced with ZX_HANDLE_INVALID.
 zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char** out_error_msg);
-zx_status_t fidl_close_handles_msg(const fidl_type_t* type, const fidl_msg_t* msg,
-                                   const char** out_error_msg);
 
 #endif
 

@@ -78,14 +78,14 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
 
   explicit ClientImpl(AsyncEventHandlers handlers) : handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };
 {{- end }}
 
 {{- define "ClientDispatchDefinition" }}
-std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
   {{- range FilterMethodsWithoutResps .Methods }}

@@ -45,9 +45,8 @@ class BlockDevice;
 namespace {
 
 using storage_metrics::BlockDeviceMetrics;
-using BlockDeviceType =
-    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable, ddk::Unbindable,
-                ddk::Readable, ddk::Writable, ddk::GetSizable>;
+using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable,
+                                    ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable>;
 
 struct StatsCookie {
   zx::ticks start_tick;
@@ -83,7 +82,7 @@ class BlockDevice : public BlockDeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
@@ -233,7 +232,7 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   }
 }
 
-zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t BlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   if (parent_volume_protocol_.is_valid()) {
     return fuchsia_hardware_block_volume_Volume_dispatch(this, txn, msg, VolumeOps());
   } else if (parent_partition_protocol_.is_valid()) {

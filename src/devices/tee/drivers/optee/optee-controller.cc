@@ -355,7 +355,7 @@ zx_status_t OpteeController::Bind() {
   return ZX_OK;
 }
 
-zx_status_t OpteeController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t OpteeController::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fuchsia_hardware_tee::DeviceConnector::Dispatch(this, msg, &transaction);
   return transaction.Status();

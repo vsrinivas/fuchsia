@@ -200,7 +200,7 @@ struct zx_device
     return Dispatch(ops_->get_size, 0lu);
   }
 
-  zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
     inspect_->MessageOpStats().Update();

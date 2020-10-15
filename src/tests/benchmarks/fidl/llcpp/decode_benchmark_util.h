@@ -42,7 +42,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     test_handles.resize(handles.size());
     memcpy(test_bytes.data(), bytes.data(), bytes.actual());
     memcpy(test_handles.data(), handles.data(), handles.actual() * sizeof(zx_handle_t));
-    fidl_msg_t msg = {
+    fidl_incoming_msg_t msg = {
         .bytes = &test_bytes[0],
         .handles = &test_handles[0],
         .num_bytes = (uint32_t)test_bytes.size(),

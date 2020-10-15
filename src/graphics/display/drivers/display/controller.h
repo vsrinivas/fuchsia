@@ -86,7 +86,7 @@ class Controller : public ControllerParent,
   static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(std::unique_ptr<display::Controller>* device_ptr);

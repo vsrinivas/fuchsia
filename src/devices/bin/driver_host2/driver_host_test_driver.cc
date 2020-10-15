@@ -56,7 +56,8 @@ class TestDriver {
   svc::Outgoing outgoing_;
 };
 
-zx_status_t test_driver_start(fidl_msg_t* msg, async_dispatcher_t* dispatcher, void** driver) {
+zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
+                              void** driver) {
   const char* error;
   auto decode_result = start_args::Decode(msg, &error);
   if (decode_result.is_error()) {

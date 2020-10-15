@@ -160,7 +160,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   // Claims ownership of |*h| on success
   static zx_status_t Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* h);
 
-  static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie,
+  static zx_status_t DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* txn, void* cookie,
                                       async_dispatcher_t* dispatcher);
 
   static void HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
@@ -757,7 +757,7 @@ void devfs_connect_diagnostics(zx::unowned_channel h) { diagnostics_channel = h;
 #define DEFINE_REQUEST(MSG, METHOD) \
   fuchsia_io_##METHOD##Request* request = (fuchsia_io_##METHOD##Request*)MSG->bytes;
 
-zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie,
+zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* txn, void* cookie,
                                         async_dispatcher_t* dispatcher) {
   auto ios = static_cast<DcIostate*>(cookie);
   Devnode* dn = ios->devnode_;
@@ -790,7 +790,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
       fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeDescribeOrdinal);
       SetNodeInfoAsDirectory(&msg.primary.node_info);
 
-      fidl_msg_t raw_msg = {
+      fidl_outgoing_msg_t raw_msg = {
           .bytes = reinterpret_cast<uint8_t*>(&msg),
           .handles = nullptr,
           .num_bytes = sizeof(msg),
@@ -889,7 +889,7 @@ void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* di
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     status = fs::ReadMessage(
-        wait->object(), [&ios, dispatcher](fidl_msg_t* msg, fs::FidlConnection* txn) {
+        wait->object(), [&ios, dispatcher](fidl_incoming_msg_t* msg, fs::FidlConnection* txn) {
           return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
         });
     if (status == ZX_OK) {
@@ -897,7 +897,7 @@ void DcIostate::HandleRpc(std::unique_ptr<DcIostate> ios, async_dispatcher_t* di
       return;
     }
   } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    fs::CloseMessage([&ios, dispatcher](fidl_msg_t* msg, fs::FidlConnection* txn) {
+    fs::CloseMessage([&ios, dispatcher](fidl_incoming_msg_t* msg, fs::FidlConnection* txn) {
       return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
     });
   } else {

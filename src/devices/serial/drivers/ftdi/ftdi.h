@@ -92,7 +92,7 @@ class FtdiDevice : public DeviceType,
   zx_status_t DdkWrite(const void* buf, size_t length, zx_off_t off, size_t* actual);
   zx_status_t DdkRead(void* data, size_t len, zx_off_t off, size_t* actual);
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   static zx_status_t Bind(zx_device_t* device);
 

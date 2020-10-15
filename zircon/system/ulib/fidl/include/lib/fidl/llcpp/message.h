@@ -24,7 +24,7 @@ class OutgoingMessage final : public ::fidl::Result {
   // |handles_| is undefined.
   OutgoingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
                   zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual);
-  explicit OutgoingMessage(const fidl_msg_t* msg)
+  explicit OutgoingMessage(const fidl_outgoing_msg_t* msg)
       : ::fidl::Result(ZX_OK, nullptr),
         message_(*msg),
         byte_capacity_(msg->num_bytes),
@@ -44,7 +44,7 @@ class OutgoingMessage final : public ::fidl::Result {
   uint32_t handle_actual() const { return message_.num_handles; }
   uint32_t byte_capacity() const { return byte_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
-  fidl_msg_t* message() { return &message_; }
+  fidl_outgoing_msg_t* message() { return &message_; }
 
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.
@@ -106,7 +106,7 @@ class OutgoingMessage final : public ::fidl::Result {
             uint32_t result_capacity, zx_time_t deadline);
 #endif
 
-  fidl_msg_t message_;
+  fidl_outgoing_msg_t message_;
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;
 };
@@ -120,7 +120,7 @@ class IncomingMessage final : public ::fidl::Result {
   // |IncomingMessage| is destructed.
   IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
                   zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual);
-  explicit IncomingMessage(const fidl_msg_t* msg)
+  explicit IncomingMessage(const fidl_incoming_msg_t* msg)
       : ::fidl::Result(ZX_OK, nullptr),
         message_(*msg),
         byte_capacity_(msg->num_bytes),
@@ -140,7 +140,7 @@ class IncomingMessage final : public ::fidl::Result {
   uint32_t handle_actual() const { return message_.num_handles; }
   uint32_t byte_capacity() const { return byte_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
-  fidl_msg_t* message() { return &message_; }
+  fidl_incoming_msg_t* message() { return &message_; }
 
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.
@@ -160,7 +160,7 @@ class IncomingMessage final : public ::fidl::Result {
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type);
 
-  fidl_msg_t message_;
+  fidl_incoming_msg_t message_;
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;
 };

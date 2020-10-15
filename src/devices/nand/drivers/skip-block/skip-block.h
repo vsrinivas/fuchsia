@@ -50,7 +50,7 @@ class SkipBlockDevice : public DeviceType,
 
   // Device protocol implementation.
   zx_off_t DdkGetSize();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 

@@ -25,7 +25,7 @@ class AmlogicTestDevice : public llcpp::fuchsia::hardware::mediacodec::Tester::I
   zx_status_t Bind() { return DdkAdd("test_amlogic_video"); }
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     llcpp::fuchsia::hardware::mediacodec::Tester::Dispatch(this, msg, &transaction);
     return transaction.Status();

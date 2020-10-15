@@ -6,7 +6,7 @@ package codegen
 
 const fragmentSyncServerTmpl = `
 {{- define "SyncServerDispatchMethodSignature" -}}
-(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
+(Interface* impl, fidl_incoming_msg_t* msg, ::fidl::Transaction* txn)
 {{- end }}
 
 {{- define "SyncServerDispatchMoveParams" }}

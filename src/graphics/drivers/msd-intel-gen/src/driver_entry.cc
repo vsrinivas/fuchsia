@@ -161,7 +161,8 @@ static void sysdrv_gpu_init(void* context) {
   device_init_reply(gpu->zx_device_gpu, ZX_OK, nullptr);
 }
 
-static zx_status_t sysdrv_gpu_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction) {
+static zx_status_t sysdrv_gpu_message(void* context, fidl_incoming_msg_t* message,
+                                      fidl_txn_t* transaction) {
   sysdrv_device_t* device = get_device(context);
   DdkTransaction ddk_transaction(transaction);
   llcpp::fuchsia::gpu::magma::Device::Dispatch(device, message, &ddk_transaction);

@@ -692,7 +692,7 @@ VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
 
 // Device protocol (FVM)
 
-zx_status_t VPartitionManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t VPartitionManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_block_volume_VolumeManager_dispatch(this, txn, msg, Ops());
 }
 

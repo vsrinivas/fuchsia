@@ -86,7 +86,7 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
     }
   };
 
-  static zx_status_t DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  static zx_status_t DdkMessage(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     auto self = static_cast<WlantapCtl*>(ctx);
 
     DdkTransaction transaction(txn);

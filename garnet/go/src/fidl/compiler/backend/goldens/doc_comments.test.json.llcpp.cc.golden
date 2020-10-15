@@ -50,7 +50,7 @@ Interface::ResultOf::Method::Method(zx_handle_t _client) {
 }
 
 std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
-    fidl_msg_t* msg) {
+    fidl_incoming_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
@@ -170,7 +170,8 @@ namespace entries {
 
 }  // namespace entries
 
-::fidl::DispatchResult Interface::TryDispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Interface::TryDispatch(Interface* impl,
+                                              fidl_incoming_msg_t* msg,
                                               ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, txn, entries::Interface,
@@ -178,7 +179,8 @@ namespace entries {
           sizeof(entries::Interface) / sizeof(::fidl::internal::MethodEntry));
 }
 
-::fidl::DispatchResult Interface::Dispatch(Interface* impl, fidl_msg_t* msg,
+::fidl::DispatchResult Interface::Dispatch(Interface* impl,
+                                           fidl_incoming_msg_t* msg,
                                            ::fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kNotFound) {

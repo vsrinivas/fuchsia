@@ -168,7 +168,7 @@ class PerfmonDevice : public DeviceType, public fidl_perfmon::Controller::Interf
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   static void FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t num_allocated);

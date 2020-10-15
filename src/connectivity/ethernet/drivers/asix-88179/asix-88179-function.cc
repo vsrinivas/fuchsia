@@ -58,7 +58,7 @@ class FakeUsbAx88179Function : public DeviceType,
   // |ddk::Device| mix-in implementations.
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // UsbFunctionInterface:
   size_t UsbFunctionInterfaceGetDescriptorsSize();
@@ -250,7 +250,7 @@ void FakeUsbAx88179Function::DdkUnbind(ddk::UnbindTxn txn) {
 
 void FakeUsbAx88179Function::DdkRelease() { delete this; }
 
-zx_status_t FakeUsbAx88179Function::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t FakeUsbAx88179Function::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   ::llcpp::fuchsia::hardware::ax88179::Hooks::Dispatch(this, msg, &transaction);
   return transaction.Status();

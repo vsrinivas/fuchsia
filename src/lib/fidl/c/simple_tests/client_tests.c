@@ -87,7 +87,7 @@ TEST(ClientTests, magic_number_request_test) {
 
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_msg_t msg = {
+  fidl_incoming_msg_t msg = {
       .bytes = bytes,
       .handles = handles,
       .num_bytes = 0u,

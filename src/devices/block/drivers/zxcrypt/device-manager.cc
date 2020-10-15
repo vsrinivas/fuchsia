@@ -96,7 +96,7 @@ zx_status_t Shred(void* ctx, fidl_txn_t* txn) {
 static fuchsia_hardware_block_encrypted_DeviceManager_ops_t fidl_ops = {
     .Unseal = Unseal, .Seal = Seal, .Shred = Shred};
 
-zx_status_t DeviceManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t DeviceManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_block_encrypted_DeviceManager_dispatch(this, txn, msg, &fidl_ops);
 }
 

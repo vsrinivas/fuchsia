@@ -215,7 +215,8 @@ static fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops = {
     .OpenSnoopChannel = fidl_bt_hci_open_snoop_channel,
 };
 
-static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t fuchsia_bt_hci_message_instance(void* ctx, fidl_incoming_msg_t* msg,
+                                                   fidl_txn_t* txn) {
   return fuchsia_hardware_bluetooth_Hci_dispatch(ctx, txn, msg, &fidl_ops);
 }
 

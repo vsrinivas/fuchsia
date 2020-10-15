@@ -363,14 +363,14 @@ void EmitServerMethodDecl(std::ostream* file, std::string_view method_name,
 
 void EmitServerDispatchDecl(std::ostream* file, std::string_view protocol_name) {
   *file << "zx_status_t " << protocol_name
-        << "_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const " << protocol_name
+        << "_dispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg, const " << protocol_name
         << "_ops_t* ops)";
 }
 
 void EmitServerTryDispatchDecl(std::ostream* file, std::string_view protocol_name) {
   *file << "zx_status_t " << protocol_name
-        << "_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const " << protocol_name
-        << "_ops_t* ops)";
+        << "_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* msg, const "
+        << protocol_name << "_ops_t* ops)";
 }
 
 void EmitServerReplyDecl(std::ostream* file, std::string_view method_name,
@@ -1551,7 +1551,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
       file_ << kIndent << "zx_handle_t _handles[" << hcount << "];\n";
       handle_value = "_handles";
     }
-    file_ << kIndent << "fidl_msg_t _msg = {\n";
+    file_ << kIndent << "fidl_outgoing_msg_t _msg = {\n";
     file_ << kIndent << kIndent << ".bytes = _wr_bytes,\n";
     file_ << kIndent << kIndent << ".handles = " << handle_value << ",\n";
     file_ << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";

@@ -66,7 +66,7 @@ zx_off_t DdkGetSize() { return 0; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Messageable)
-zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) { return ZX_OK; }
+zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) { return ZX_OK; }
 END_SUCCESS_CASE
 
 BEGIN_SUCCESS_CASE(Suspendable)

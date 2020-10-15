@@ -24,7 +24,7 @@ class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
   static zx_status_t Create(void*, zx_device_t* parent);
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void GetKoid(GetKoidCompleter::Sync& completer);
   void Crash(CrashCompleter::Sync&) { __builtin_abort(); }
@@ -43,7 +43,7 @@ zx_status_t TestBti::Create(void*, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t TestBti::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t TestBti::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   ::llcpp::fuchsia::hardware::btitest::BtiDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();

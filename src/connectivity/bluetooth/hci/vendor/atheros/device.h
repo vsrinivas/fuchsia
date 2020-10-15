@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
-#define GARNET_DRIVERS_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
 
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/sync/completion.h>
@@ -51,7 +51,7 @@ class Device {
   void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t channel);
@@ -107,4 +107,4 @@ class Device {
 
 }  // namespace btatheros
 
-#endif  // GARNET_DRIVERS_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_ATHEROS_DEVICE_H_

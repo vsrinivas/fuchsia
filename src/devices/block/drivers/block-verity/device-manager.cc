@@ -91,7 +91,7 @@ void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
 
 void DeviceManager::DdkRelease() { delete this; }
 
-zx_status_t DeviceManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t DeviceManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::block::verified::DeviceManager::Dispatch(this, msg, &transaction);
   return ZX_ERR_ASYNC;

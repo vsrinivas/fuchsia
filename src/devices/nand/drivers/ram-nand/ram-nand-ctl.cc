@@ -31,7 +31,7 @@ class RamNandCtl : public RamNandCtlDeviceType {
   zx_status_t Bind() { return DdkAdd("nand-ctl"); }
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   zx_status_t CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info, const char** name);
 
@@ -49,7 +49,7 @@ zx_status_t CreateDevice(void* ctx, const fuchsia_hardware_nand_RamNandInfo* inf
 
 fuchsia_hardware_nand_RamNandCtl_ops_t fidl_ops = {.CreateDevice = CreateDevice};
 
-zx_status_t RamNandCtl::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t RamNandCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_nand_RamNandCtl_dispatch(this, txn, msg, &fidl_ops);
 }
 

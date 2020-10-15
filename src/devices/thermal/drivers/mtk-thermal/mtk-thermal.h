@@ -34,7 +34,7 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
 
   void DdkRelease();
 
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Visible for testing.
   uint16_t get_dvfs_opp() { return current_op_idx_; }

@@ -60,7 +60,7 @@ class DeviceManager final
   void DdkRelease();
 
   // ddk::Messageable methods
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
 
   // ddk::ChildPreRelease methods
   void DdkChildPreRelease(void* child_ctx);

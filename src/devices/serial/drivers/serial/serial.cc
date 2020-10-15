@@ -352,7 +352,7 @@ void SerialDevice::SetConfig(fuchsia::hardware::serial::Config config,
   completer.Reply(status);
 }
 
-zx_status_t SerialDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t SerialDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();

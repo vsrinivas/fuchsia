@@ -69,7 +69,7 @@ class Broker : public DeviceType {
 
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // fidl interface.
   zx_status_t GetInfo(fuchsia_hardware_nand_Info* info) { return Query(info); }
@@ -146,7 +146,7 @@ zx_status_t Broker::Bind() {
   return DdkAdd("broker");
 }
 
-zx_status_t Broker::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t Broker::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_nand_Broker_dispatch(this, txn, msg, &fidl_ops);
 }
 

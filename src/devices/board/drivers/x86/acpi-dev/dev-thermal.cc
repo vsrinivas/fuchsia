@@ -186,7 +186,7 @@ fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
     .SetFanLevel = fidl_SetFanLevel,
 };
 
-static zx_status_t acpi_thermal_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+static zx_status_t acpi_thermal_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_thermal_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 

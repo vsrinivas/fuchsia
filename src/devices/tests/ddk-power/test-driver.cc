@@ -35,7 +35,7 @@ class TestPowerDriver : public DeviceType,
     suspend_complete_event_.signal(0, ZX_USER_SIGNAL_0);
     txn.Reply(ZX_OK, txn.requested_state());
   }
-  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();

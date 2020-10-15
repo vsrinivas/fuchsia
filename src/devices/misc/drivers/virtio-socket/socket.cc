@@ -89,7 +89,7 @@ static fuchsia_hardware_vsock_Device_ops_t fidl_ops = {
     .SendVmo = fidl_SendVmo,
 };
 
-zx_status_t SocketDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+zx_status_t SocketDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   zx_status_t status = fuchsia_hardware_vsock_Device_dispatch(this, txn, msg, &fidl_ops);
   return status;
 }
