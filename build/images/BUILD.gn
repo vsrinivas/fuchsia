@@ -986,7 +986,7 @@ generate_fvm("fvm.blk") {
   if (fvm_image_size != "") {
     args += [
       "--length",
-      fvm_image_size,
+      "${fvm_image_size}",
     ]
   }
   partitions = [
