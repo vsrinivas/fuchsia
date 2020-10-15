@@ -2,275 +2,144 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fidl_fuchsia_ui_input2 as ui_input;
-use fidl_fuchsia_ui_shortcut as ui_shortcut;
-use fidl_fuchsia_ui_views as ui_views;
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
-use fuchsia_zircon as zx;
-use futures::lock::Mutex;
-use futures::StreamExt;
-use std::sync::{Arc, Weak};
-use std::vec::Vec;
+use {
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_shortcut as ui_shortcut,
+    fidl_fuchsia_ui_views as ui_views,
+    futures::lock::{Mutex, MutexGuard},
+    std::collections::HashSet,
+    std::ops::Deref,
+    std::sync::{Arc, Weak},
+    std::vec::Vec,
+};
 
+/// Describes a shortcut activation listener.
 pub struct Subscriber {
     pub view_ref: ui_views::ViewRef,
     pub listener: fidl_fuchsia_ui_shortcut::ListenerProxy,
 }
 
+/// Describes all data related to a single connected client:
+/// - shortcut activation listener
+/// - shortcuts installed
 #[derive(Default)]
 pub struct ClientRegistry {
     pub subscriber: Option<Subscriber>,
-    pub shortcuts: Vec<ui_shortcut::Shortcut>,
+    pub shortcuts: Vec<Shortcut>,
 }
 
+/// Describes all shortcuts and listeners.
+#[derive(Clone)]
 pub struct RegistryStore {
+    inner: Arc<Mutex<RegistryStoreInner>>,
+}
+
+#[derive(Default)]
+struct RegistryStoreInner {
     // Weak ref for ClientRegistry to allow shortcuts to be dropped out
     // of collection once client connection is removed.
     registries: Vec<Weak<Mutex<ClientRegistry>>>,
-
-    // Held down modifiers that were matched by activated shortcuts.
-    // Used to match Trigger.KeyPressedAndReleased shortcuts.
-    matched_modifiers: ui_input::Modifiers,
-}
-
-const DEFAULT_SHORTCUT_ID: u32 = 2;
-const DEFAULT_LISTENER_TIMEOUT_SECONDS: i64 = 3;
-
-// Validates event modifiers applicability for shortcut modifiers.
-// Examples:
-//  CapsLock shouldn't affect matching of Ctrl+C.
-//  Modifier with Shift should match both LeftShift and RightShift
-fn are_modifiers_applicable(
-    shortcut_modifiers: Option<ui_input::Modifiers>,
-    event_modifiers: Option<ui_input::Modifiers>,
-) -> bool {
-    match (shortcut_modifiers, event_modifiers) {
-        (Some(shortcut_modifiers), Some(event_modifiers)) => {
-            let masks = [
-                vec![
-                    ui_input::Modifiers::Shift,
-                    ui_input::Modifiers::LeftShift | ui_input::Modifiers::RightShift,
-                ],
-                vec![
-                    ui_input::Modifiers::Alt,
-                    ui_input::Modifiers::LeftAlt | ui_input::Modifiers::RightAlt,
-                ],
-                vec![
-                    ui_input::Modifiers::Meta,
-                    ui_input::Modifiers::LeftMeta | ui_input::Modifiers::RightMeta,
-                ],
-                vec![
-                    ui_input::Modifiers::Control,
-                    ui_input::Modifiers::LeftControl | ui_input::Modifiers::RightControl,
-                ],
-                // TODO: locks affecting shortcuts?
-            ];
-
-            masks.iter().all(|variations| {
-                // if shortcut has modifiers from the variation, event should have the same.
-                variations.iter().all(|&mask| {
-                    !shortcut_modifiers.intersects(mask)
-                        || shortcut_modifiers & mask == event_modifiers & mask
-                })
-            })
-        }
-        (None, None) => true,
-        _ => false,
-    }
-}
-
-async fn handle(
-    registry: Arc<Mutex<ClientRegistry>>,
-    event: ui_input::KeyEvent,
-    matched_modifiers: ui_input::Modifiers,
-) -> Result<bool, Error> {
-    let registry = registry.lock().await;
-    let shortcuts = registry.get_matching_shortuts(event, matched_modifiers)?;
-
-    for shortcut in shortcuts {
-        if let Some(Subscriber { ref listener, .. }) = &registry.subscriber {
-            let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
-            let was_handled = fasync::TimeoutExt::on_timeout(
-                listener.on_shortcut(id),
-                fasync::Time::after(zx::Duration::from_seconds(DEFAULT_LISTENER_TIMEOUT_SECONDS)),
-                || Ok(false),
-            );
-            if was_handled.await? {
-                return Ok(true);
-            }
-        }
-    }
-    Ok(false)
-}
-
-impl ClientRegistry {
-    fn get_matching_shortuts(
-        &self,
-        event: ui_input::KeyEvent,
-        matched_modifiers: ui_input::Modifiers,
-    ) -> Result<Vec<&ui_shortcut::Shortcut>, Error> {
-        let shortcuts = self
-            .shortcuts
-            .iter()
-            .filter(|s| {
-                match (s.trigger, event.phase) {
-                    (
-                        Some(ui_shortcut::Trigger::KeyPressed),
-                        Some(ui_input::KeyEventPhase::Pressed),
-                    )
-                    | (
-                        Some(ui_shortcut::Trigger::KeyPressedAndReleased),
-                        Some(ui_input::KeyEventPhase::Released),
-                    ) => {}
-                    _ => return false,
-                };
-                // Exclude modifier keys from key event, because
-                // modifier shortcuts are matched based on event.modifiers field.
-                let event_key = match event.key {
-                    Some(ui_input::Key::LeftShift)
-                    | Some(ui_input::Key::RightShift)
-                    | Some(ui_input::Key::LeftCtrl)
-                    | Some(ui_input::Key::RightCtrl)
-                    | Some(ui_input::Key::LeftAlt)
-                    | Some(ui_input::Key::RightAlt)
-                    | Some(ui_input::Key::LeftMeta)
-                    | Some(ui_input::Key::RightMeta)
-                    | Some(ui_input::Key::CapsLock)
-                    | Some(ui_input::Key::NumLock)
-                    | Some(ui_input::Key::ScrollLock) => None,
-                    _ => event.key,
-                };
-                if let Some(ui_input::KeyEventPhase::Pressed) = event.phase {
-                    event_key == s.key && are_modifiers_applicable(s.modifiers, event.modifiers)
-                } else {
-                    // For Released shortcuts, exclude modifiers matched during Pressed phase.
-                    event_key == s.key
-                        && are_modifiers_applicable(
-                            s.modifiers,
-                            event.modifiers.map(|m| m & !matched_modifiers),
-                        )
-                }
-            })
-            .collect();
-        Ok(shortcuts)
-    }
-}
-
-impl Default for RegistryStore {
-    fn default() -> Self {
-        let matched_modifiers = ui_input::Modifiers::empty();
-        let registries = Default::default();
-        RegistryStore { matched_modifiers, registries }
-    }
 }
 
 impl RegistryStore {
+    pub fn new() -> Self {
+        let inner = Arc::new(Mutex::new(RegistryStoreInner::default()));
+        RegistryStore { inner }
+    }
+
+    /// Add a new client registry to the store.
+    /// Newly added client registry is returned.
+    pub async fn add_new_registry(&self) -> Arc<Mutex<ClientRegistry>> {
+        self.inner.lock().await.add_new_registry()
+    }
+
+    /// Get all client registries.
+    /// Returned reference contains `MutexGuard`, and as a result it prevents
+    /// other uses of client registry store (e.g. adding new, removing) until goes
+    /// out of scope.
+    pub async fn get_registries<'a>(&'a self) -> LockedRegistries<'a> {
+        LockedRegistries(self.inner.lock().await)
+    }
+}
+
+impl RegistryStoreInner {
     /// Create and add new client registry of shortcuts to the store.
-    pub fn add_new_registry(&mut self) -> Arc<Mutex<ClientRegistry>> {
+    fn add_new_registry(&mut self) -> Arc<Mutex<ClientRegistry>> {
         let registry = Arc::new(Mutex::new(ClientRegistry::default()));
         self.registries.push(Arc::downgrade(&registry));
         registry
     }
+}
 
-    /// Detect shortcut and route it to the client.
-    /// Returns true if key event triggers a shortcut and was handled.
-    pub async fn handle_key_event(&mut self, event: ui_input::KeyEvent) -> Result<bool, Error> {
-        if event.modifiers.is_none() {
-            self.matched_modifiers = ui_input::Modifiers::empty();
-        }
+/// Holds `MutexGuard` in order to provide exclusive access to vector
+/// of client registries.
+/// Implements `Deref` and can be used as `Vec<Weak<Mutex<ClientRegistry>>>`.
+pub struct LockedRegistries<'a>(MutexGuard<'a, RegistryStoreInner>);
 
-        // Clone, upgrade, and filter out stale Weak pointers.
-        let registries = self.registries.iter().cloned().filter_map(|r| r.upgrade()).into_iter();
+impl<'a> Deref for LockedRegistries<'a> {
+    type Target = Vec<Weak<Mutex<ClientRegistry>>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0.registries
+    }
+}
 
-        // TODO: sort according to ViewRef hierarchy
-        // TODO: resolve accounting for use_priority
+/// Abstraction wrapper for FIDL `fuchsia.ui.shortcut.Shortcut`.
+/// Implements `Deref` and can be used as `fidl_fuchsia_ui_shortcut::Shortcut`.
+#[derive(Debug)]
+pub struct Shortcut {
+    inner: ui_shortcut::Shortcut,
 
-        let was_handled = futures::stream::iter(registries)
-            .fold(false, {
-                // Capture variables by reference, since `async` non-`move` closures with
-                // arguments are not currently supported
-                let (key, phase, modifiers) = (event.key, event.phase, event.modifiers);
-                let matched_modifiers = self.matched_modifiers;
-                move |was_handled, registry| async move {
-                    let event = ui_input::KeyEvent {
-                        key,
-                        phase,
-                        modifiers,
-                        semantic_key: None,
-                        physical_key: None,
-                    };
-                    let handled = handle(registry, event, matched_modifiers).await.unwrap_or_else(
-                        |e: anyhow::Error| {
-                            fx_log_err!("shortcut handle error: {:?}", e);
-                            false
-                        },
-                    );
-                    handled || was_handled
-                }
-            })
-            .await;
+    /// Set of required keys to be pressed to activate this shortcut.
+    pub keys_required_hash: Option<HashSet<input::Key>>,
+}
 
-        if was_handled {
-            if let Some(modifiers) = event.modifiers {
-                self.matched_modifiers.insert(modifiers);
-            }
-        }
-        Ok(was_handled)
+impl Shortcut {
+    pub fn new(shortcut: ui_shortcut::Shortcut) -> Self {
+        let keys_required_hash: Option<HashSet<_>> = shortcut
+            .keys_required
+            .as_ref()
+            .cloned()
+            .map(|keys_required| keys_required.into_iter().collect::<HashSet<_>>());
+        Self { inner: shortcut, keys_required_hash }
+    }
+}
+
+impl Deref for Shortcut {
+    type Target = ui_shortcut::Shortcut;
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fuchsia_async as fasync};
 
-    #[test]
-    fn shortcut_matching() {
-        let shortcut_modifier = Some(ui_input::Modifiers::Shift);
-        let event_modifier = Some(ui_input::Modifiers::Shift | ui_input::Modifiers::LeftShift);
-        assert_eq!(true, are_modifiers_applicable(shortcut_modifier, event_modifier));
+    #[fasync::run_singlethreaded(test)]
+    async fn new_registry_adds_registry() {
+        let store = RegistryStore::new();
+        let client_registry = store.add_new_registry().await;
+        let all_registries = store.get_registries().await;
 
-        let shortcut_modifier = Some(ui_input::Modifiers::Shift);
-        let event_modifier = Some(ui_input::Modifiers::Shift | ui_input::Modifiers::RightShift);
-        assert_eq!(true, are_modifiers_applicable(shortcut_modifier, event_modifier));
+        assert_eq!(1, all_registries.len());
 
-        // Locks should not affect modifier matching.
-        let shortcut_modifier = Some(ui_input::Modifiers::Shift);
-        let event_modifier = Some(
-            ui_input::Modifiers::Shift
-                | ui_input::Modifiers::LeftShift
-                | ui_input::Modifiers::CapsLock,
-        );
-        assert_eq!(true, are_modifiers_applicable(shortcut_modifier, event_modifier));
+        let first_registry = all_registries.first().unwrap().upgrade().unwrap();
 
-        let shortcut_modifier = Some(ui_input::Modifiers::Shift);
-        let event_modifier = Some(
-            ui_input::Modifiers::Shift
-                | ui_input::Modifiers::LeftShift
-                | ui_input::Modifiers::NumLock,
-        );
-        assert_eq!(true, are_modifiers_applicable(shortcut_modifier, event_modifier));
+        assert!(Arc::ptr_eq(&client_registry, &first_registry));
+    }
 
-        let shortcut_modifier = Some(ui_input::Modifiers::Shift);
-        let event_modifier = Some(
-            ui_input::Modifiers::Shift
-                | ui_input::Modifiers::LeftShift
-                | ui_input::Modifiers::ScrollLock,
-        );
-        assert_eq!(true, are_modifiers_applicable(shortcut_modifier, event_modifier));
-
-        let shortcut_modifier = Some(ui_input::Modifiers::Shift);
-        let event_modifier = Some(ui_input::Modifiers::ScrollLock);
-        assert_eq!(false, are_modifiers_applicable(shortcut_modifier, event_modifier));
-
-        let shortcut_modifier = Some(ui_input::Modifiers::LeftShift);
-        let event_modifier = Some(ui_input::Modifiers::ScrollLock);
-        assert_eq!(false, are_modifiers_applicable(shortcut_modifier, event_modifier));
-
-        let shortcut_modifier =
-            Some(ui_input::Modifiers::LeftShift | ui_input::Modifiers::RightShift);
-        let event_modifier = Some(ui_input::Modifiers::LeftShift);
-        assert_eq!(false, are_modifiers_applicable(shortcut_modifier, event_modifier));
+    #[fasync::run_singlethreaded(test)]
+    async fn shortcut_populates_keys_hash() {
+        let fidl_shortcut = ui_shortcut::Shortcut {
+            keys_required: Some(vec![input::Key::A, input::Key::B]),
+            id: None,
+            modifiers: None,
+            key: None,
+            use_priority: None,
+            trigger: None,
+            key3: None,
+        };
+        let shortcut = Shortcut::new(fidl_shortcut);
+        let keys_required_hash = Some([input::Key::A, input::Key::B].iter().cloned().collect());
+        assert_eq!(shortcut.keys_required_hash, keys_required_hash);
     }
 }

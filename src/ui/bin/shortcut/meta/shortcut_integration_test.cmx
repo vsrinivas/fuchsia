@@ -8,7 +8,10 @@
         }
     },
     "program": {
-        "binary": "test/shortcut_test_bin"
+        "args": [
+            "--test-threads=1"
+        ],
+        "binary": "test/shortcut_integration_test"
     },
     "sandbox": {
         "services": [

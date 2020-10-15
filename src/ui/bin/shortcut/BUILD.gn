@@ -22,13 +22,20 @@ group("configs") {
   deps = [ ":ui_sysmgr.config" ]
 }
 
+config_data("ui_sysmgr.config") {
+  for_pkg = "sysmgr"
+  sources = [ "config/ui_sysmgr.config" ]
+}
+
 rustc_binary("bin") {
   name = "shortcut"
   with_unit_tests = true
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -43,14 +50,12 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/input2_service.rs",
     "src/main.rs",
     "src/registry.rs",
+    "src/router.rs",
+    "src/service.rs",
   ]
-}
-
-config_data("ui_sysmgr.config") {
-  for_pkg = "sysmgr"
-  sources = [ "config/ui_sysmgr.config" ]
 }
 
 package("shortcut") {
@@ -70,12 +75,14 @@ package("shortcut") {
   ]
 }
 
-rustc_test("shortcut_test_bin") {
+rustc_test("shortcut_integration_test") {
   edition = "2018"
 
   deps = [
     ":bin",
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -89,18 +96,22 @@ rustc_test("shortcut_test_bin") {
   ]
   source_root = "tests/tests.rs"
 
-  sources = [ "tests/tests.rs" ]
+  sources = [
+    "tests/test_helpers.rs",
+    "tests/tests.rs",
+    "tests/v2_tests.rs",
+  ]
 }
 
 test_package("shortcut_test") {
   deps = [
     ":bin_test",
-    ":shortcut_test_bin",
+    ":shortcut_integration_test",
   ]
 
   tests = [
     {
-      name = "shortcut_test_bin"
+      name = "shortcut_integration_test"
       environments = basic_envs
     },
     {
