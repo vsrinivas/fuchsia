@@ -327,8 +327,7 @@ mod tests {
                     absolute_y_range: None,
                 },
             ),
-            event_time: zx::Time::get(zx::ClockId::Monotonic).into_nanos()
-                as input_device::EventTime,
+            event_time: zx::Time::get_monotonic().into_nanos() as input_device::EventTime,
         };
         match sender.try_send(input_event.clone()) {
             Err(_) => assert!(false),

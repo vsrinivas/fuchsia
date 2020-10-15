@@ -92,9 +92,9 @@ pub async fn launch_session(session_url: &str) -> Result<(), StartupError> {
     let realm =
         connect_to_service::<fsys::RealmMarker>().map_err(|_| StartupError::RealmConnection)?;
 
-    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+    let start_time = zx::Time::get_monotonic();
     set_session(&session_url, realm).await?;
-    let end_time = zx::Time::get(zx::ClockId::Monotonic);
+    let end_time = zx::Time::get_monotonic();
 
     let url = session_url.to_string();
     fasync::Task::local(async move {

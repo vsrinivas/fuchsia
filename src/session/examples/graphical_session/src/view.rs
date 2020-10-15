@@ -10,7 +10,7 @@ use {
         AmbientLight, Camera, DisplayCompositor, EntityNode, HostImage, HostMemory, Layer,
         LayerStack, Material, Rectangle, Renderer, Scene, SessionPtr, ShapeNode,
     },
-    fuchsia_zircon::{ClockId, Time},
+    fuchsia_zircon::Time,
     png,
     std::f32::consts::PI,
     std::fs::File,
@@ -79,8 +79,8 @@ impl Context {
     /// A `Context` instance wrapped in an `Arc` and `Mutex`.
     pub fn new_ptr(session: SessionPtr, display_info: DisplayInfo) -> ContextPtr {
         Arc::new(Mutex::new(Context {
-            presentation_time: Time::get(ClockId::Monotonic),
-            start_time: Time::get(ClockId::Monotonic),
+            presentation_time: Time::get_monotonic(),
+            start_time: Time::get_monotonic(),
             session,
             display_info,
         }))

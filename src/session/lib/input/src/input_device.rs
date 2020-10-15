@@ -235,7 +235,7 @@ pub fn get_device_from_dir_entry_path(
 pub fn event_time_or_now(event_time: Option<i64>) -> EventTime {
     match event_time {
         Some(time) => time as EventTime,
-        None => zx::Time::get(zx::ClockId::Monotonic).into_nanos() as EventTime,
+        None => zx::Time::get_monotonic().into_nanos() as EventTime,
     }
 }
 

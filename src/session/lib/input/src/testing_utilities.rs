@@ -16,7 +16,7 @@ use {
 /// Returns the current time as an i64 for InputReports and input_device::EventTime for InputEvents.
 #[cfg(test)]
 pub fn event_times() -> (i64, input_device::EventTime) {
-    let event_time = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+    let event_time = zx::Time::get_monotonic().into_nanos();
     (event_time, event_time as input_device::EventTime)
 }
 

@@ -9,7 +9,7 @@ use {
     fuchsia_async::{self as fasync},
     fuchsia_component::client::connect_to_service,
     fuchsia_scenic, fuchsia_syslog as syslog,
-    fuchsia_zircon::{ClockId, Duration, Time},
+    fuchsia_zircon::{Duration, Time},
     futures::{StreamExt, TryFutureExt},
 };
 
@@ -83,7 +83,7 @@ impl App {
     /// Updates the `View` associated with this `App`. This method is expected to be called in a
     /// loop, as each `update` produces a single new "frame."
     fn update(&mut self) {
-        self.context.lock().unwrap().presentation_time = Time::get(ClockId::Monotonic);
+        self.context.lock().unwrap().presentation_time = Time::get_monotonic();
 
         self.view.update(self.context.clone());
 

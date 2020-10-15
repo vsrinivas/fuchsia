@@ -295,8 +295,7 @@ mod tests {
         .expect("Failed to create TouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
@@ -347,8 +346,7 @@ mod tests {
         .expect("Failed to create TouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Up
@@ -399,8 +397,7 @@ mod tests {
         .expect("Failed to create TouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add

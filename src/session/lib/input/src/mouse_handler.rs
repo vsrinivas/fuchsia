@@ -293,8 +293,7 @@ mod tests {
         let cursor_relative_position = Position { x: 50.0, y: 75.0 };
         let cursor_location = mouse::MouseLocation::Relative(cursor_relative_position);
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
             fidl_ui_input::PointerEventPhase::Move,
@@ -351,8 +350,7 @@ mod tests {
             y: SCENIC_DISPLAY_HEIGHT + 2.0,
         });
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
             fidl_ui_input::PointerEventPhase::Move,
@@ -406,8 +404,7 @@ mod tests {
 
         let cursor_location = mouse::MouseLocation::Relative(Position { x: -20.0, y: -15.0 });
         let descriptor = mouse_device_descriptor(DEVICE_ID);
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
             fidl_ui_input::PointerEventPhase::Move,
@@ -479,8 +476,7 @@ mod tests {
             absolute_x_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
             absolute_y_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
         });
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
             fidl_ui_input::PointerEventPhase::Move,

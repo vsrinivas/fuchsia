@@ -211,8 +211,7 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(false);
         let modifiers = None;
         let key = Key::A;
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
         let was_handled = press_key(key, modifiers, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
@@ -235,8 +234,7 @@ mod tests {
     /// Tests that a press key shortcut is consumed.
     #[fasync::run_singlethreaded(test)]
     async fn press_key_activates_shortcut() {
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let shortcut_handler = create_shortcut_handler(true);
         let was_handled = press_key(
             Key::LeftShift,
@@ -254,8 +252,7 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(false);
         let key = Key::A;
         let modifiers = None;
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
         let was_handled = release_key(key, modifiers, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
@@ -279,8 +276,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn release_key_triggers_shortcut() {
         let shortcut_handler = create_shortcut_handler(true);
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
 
         let was_handled = release_key(
             Key::LeftShift,

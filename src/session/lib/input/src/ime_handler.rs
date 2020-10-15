@@ -14,7 +14,7 @@ use {
     fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    fuchsia_zircon::{ClockId, Time},
+    fuchsia_zircon::Time,
     futures::StreamExt,
     input_synthesis::usages::key_to_hid_usage,
 };
@@ -228,7 +228,7 @@ fn create_keyboard_event(event: fidl_ui_input2::KeyEvent) -> fidl_ui_input::Keyb
     let hid_usage = event.physical_key.map(key_to_hid_usage).unwrap_or_default();
 
     fidl_ui_input::KeyboardEvent {
-        event_time: Time::get(ClockId::Monotonic).into_nanos() as input_device::EventTime,
+        event_time: Time::get_monotonic().into_nanos() as input_device::EventTime,
         device_id: 1,
         phase,
         hid_usage,
@@ -420,8 +420,7 @@ mod tests {
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
                 keys: vec![Key::A],
             });
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![testing_utilities::create_keyboard_event(
             vec![Key::A],
             vec![],
@@ -461,8 +460,7 @@ mod tests {
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
                 keys: vec![Key::A],
             });
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![testing_utilities::create_keyboard_event(
             vec![],
             vec![Key::A],
@@ -502,8 +500,7 @@ mod tests {
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
                 keys: vec![Key::A, Key::B],
             });
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
                 vec![Key::A],
@@ -570,8 +567,7 @@ mod tests {
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
                 keys: vec![Key::A, Key::LeftShift],
             });
-        let event_time =
-            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events: Vec<input_device::InputEvent> = vec![
             testing_utilities::create_keyboard_event(
                 vec![Key::LeftShift],
