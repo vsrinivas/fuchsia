@@ -19,4 +19,4 @@ $ fx test fuchsia-diagnostic-streams-unittests
 Public members of the library are exposed in `lib/streams.dart`. Private
 implementations are in `lib/src/*`. Unit tests may be found in `test/*`.
 
-[encoding]:/docs/development/logs/encodings.md
+[encoding]: /docs/reference/diagnostics/logs/encoding.md

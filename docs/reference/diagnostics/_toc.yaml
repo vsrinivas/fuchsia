@@ -1,0 +1,111 @@
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer
+toc:
+
+# TODO(fxbug.dev/60819)
+# - title: "Glossary"
+#   path: /docs/reference/diagnostics/glossary.md
+
+# TODO(fxbug.dev/60821)
+# - title: "Data"
+#   path: /docs/reference/diagnostics/data.md
+
+# TODO(fxbug.dev/60763)
+# - title: "Access"
+#   path: /docs/reference/diagnostics/access.md
+
+# TODO(fxbug.dev/60811)
+# - title: "Selectors"
+#   path: /docs/reference/diagnostics/selectors.md
+
+# TODO(fxbug.dev/60812)
+# - title: "Product Integration"
+#   path: /docs/reference/diagnostics/products.md
+
+# TODO(fxbug.dev/60768)
+# - title: "Component Lifecycle"
+#   path: /docs/reference/diagnostics/lifecycle.md
+
+- title: "Inspect"
+  section:
+  - title: "Overview"
+    path: /docs/reference/diagnostics/inspect
+
+  # TODO(fxbug.dev/60817)
+  # - title: "Access"
+  #   path: /docs/reference/diagnostics/inspect/access.md
+
+  - title: "VMO Format"
+    path: /docs/reference/diagnostics/inspect/vmo-format.md
+  - title: "Extending the VMO format"
+    path: /docs/reference/diagnostics/inspect/updating-vmo-format.md
+
+  # TODO(fxbug.dev/60816)
+  # - title: "VMO Lifecycle"
+  #   path: /docs/reference/diagnostics/inspect/lifecycle.md
+
+  - title: "Hosting Inspect VMOs"
+    path: /docs/reference/diagnostics/inspect/tree.md
+  - title: "Validating Implementations"
+    section:
+    - title: "Validator"
+      path: /docs/reference/diagnostics/inspect/validator/README.md
+    - title: "Puppet"
+      path: /docs/reference/diagnostics/inspect/validator/puppet.md
+- title: "Logs"
+  section:
+  - title: "Overview"
+    path: /docs/reference/diagnostics/logs
+
+  # TODO(fxbug.dev/60814)
+  # - title: "Connections & Lifecycle"
+  #   path: /docs/reference/diagnostics/logs/connections.md
+
+  - title: "Message Encoding"
+    path: /docs/reference/diagnostics/logs/encoding.md
+
+  # TODO(fxbug.dev/60815)
+  # - title: "Access"
+  #   path: /docs/reference/diagnostics/logs/access.md
+
+# TODO(fxbug.dev/60813)
+# - title: "Producers"
+#   path: /docs/reference/diagnostics/producers.md
+
+- title: "Consumers"
+  section:
+  # - title: "Analysis"
+  #   section:
+
+  # TODO(fxbug.dev/60826)
+  #   - title: "Detect"
+  #     path: /docs/reference/diagnostics/consumers/detect.md
+
+  # TODO(fxbug.dev/53921)
+  #   - title: "Log Stats"
+  #     path: /docs/reference/diagnostics/consumers/log-stats.md
+
+  # - title: "Forwarding"
+  #   section:
+
+  # TODO(fxbug.dev/60825)
+  #   - title: "Forensics"
+  #     path: /docs/reference/diagnostics/consumers/forensics.md
+
+  # TODO(fxbug.dev/60823)
+  #   - title: "System Monitor"
+  #     path: /docs/reference/diagnostics/consumers/system-monitor.md
+
+  - title: "Local/Development"
+    section:
+    - title: "iquery"
+      path: /docs/reference/diagnostics/consumers/iquery.md
+
+    # TODO(fxbug.dev/60824)
+    # - title: "log_listener"
+    #   path: /docs/reference/diagnostics/consumers/log_listener.md
+
+    # TODO(fxbug.dev/60828)
+    # - title: "triage tool"
+    #   path: /docs/reference/diagnostics/consumers/triage.md

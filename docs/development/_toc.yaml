@@ -31,12 +31,6 @@ toc:
 - title: "Develop components"
   section:
   - include: /docs/development/components/_toc.yaml
-- title: "Inspect components"
-  section:
-  - include: /docs/development/inspect/_toc.yaml
-- title: "Analyze problems with Triage"
-  section:
-  - include: /docs/development/triage/_toc.yaml
 - title: "Develop using the IDK"
   section:
   - include: /docs/development/idk/_toc.yaml
@@ -50,9 +44,9 @@ toc:
 - title: "Test"
   section:
   - include: /docs/development/testing/_toc.yaml
-- title: "Log"
+- title: "Diagnose"
   section:
-  - include: /docs/development/logs/_toc.yaml
+  - include: /docs/development/diagnostics/_toc.yaml
 - title: "Benchmark"
   section:
   - include: /docs/development/benchmarking/_toc.yaml

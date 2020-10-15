@@ -179,7 +179,7 @@ example:
 
 ### Inspecting Component State
 
-The Bluetooth system supports inspection through the [Inspect API](/docs/development/inspect).
+The Bluetooth system supports inspection through the [Inspect API](/docs/development/diagnostics/inspect).
 bt-gap, bt-host, bt-a2dp-sink, and bt-snoop all expose information though Inspect.
 
 #### Usage
@@ -190,7 +190,7 @@ bt-gap, bt-host, bt-a2dp-sink, and bt-snoop all expose information though Inspec
 * bt-snoop: `fx iquery show bt-snoop` exposes information about which hci devices are being logged and how much data is stored.
 * All Bluetooth components: `fx iquery show bt-*`
 
-See the [iquery documentation](/docs/development/inspect/iquery) for complete instructions on using `iquery`.
+See the [iquery documentation](/docs/development/diagnostics/inspect/iquery) for complete instructions on using `iquery`.
 
 ### Respectful Code
 

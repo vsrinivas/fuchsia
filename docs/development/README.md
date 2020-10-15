@@ -97,7 +97,6 @@ This section covers Fuchsia-wide conventions and best practices.
 ## Miscellaneous
 
  - [CTU analysis in Zircon](kernel/ctu_analysis.md)
- - [Component Inspection](inspect/README.md)
  - [Packet capture](debugging/packet_capture.md)
  - [Editor configurations](/docs/development/editors/README.md)
  - [Using the Fuchsia Installer](/docs/development/hardware/installer.md)

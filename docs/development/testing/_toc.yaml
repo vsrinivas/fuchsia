@@ -8,6 +8,11 @@ toc:
   path: /docs/development/testing/run_an_end_to_end_test.md
 - title: "Create a new end-to-end test"
   path: /docs/development/testing/create_a_new_end_to_end_test.md
+
+# TODO(fxbug.dev/60809)
+# - title: "Test with Diagnostics"
+#   path: /docs/development/testing/diagnostics.md
+
 - title: "Testing Scenic and Escher"
   path: /docs/development/testing/scenic_testing.md
 - title: "Questions and answers"

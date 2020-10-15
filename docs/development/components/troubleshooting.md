@@ -338,7 +338,7 @@ offer: [
 [doc-ftf-runner]: /docs/concepts/testing/test_runner_framework.md#test-runners
 [doc-ftf]: /docs/concepts/testing/test_runner_framework.md
 [doc-intro]: /docs/concepts/components/v2/introduction.md
-[doc-logs]: /docs/development/logs/concepts.md
+[doc-logs]: /docs/concepts/diagnostics/logs/README.md
 [doc-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-monikers]: /docs/concepts/components/v2/monikers.md

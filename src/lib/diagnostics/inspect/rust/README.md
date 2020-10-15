@@ -1,7 +1,7 @@
 # `fuchsia_inspect`
 
 `fuchsia_inspect` is a library for writing and reading Inspect-formatted
-VMOs. Docs are available [here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/inspect/vmo-format/README.md).
+VMOs. Docs are available [here](/docs/reference/diagnostics/inspect/vmo-format.md).
 
 ## Building
 

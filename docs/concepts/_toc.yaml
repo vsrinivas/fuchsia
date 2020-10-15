@@ -25,6 +25,9 @@ toc:
 - title: "Components v2 (component framework)"
   section:
   - include: /docs/concepts/components/v2/_toc.yaml
+- title: "Diagnostics"
+  section:
+  - include: /docs/concepts/diagnostics/_toc.yaml
 - title: "Drivers"
   section:
   - include: /docs/concepts/drivers/_toc.yaml

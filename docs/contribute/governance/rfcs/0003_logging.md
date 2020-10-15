@@ -14,7 +14,7 @@ Reviewed  | 2020-06-10
 
 ## Summary
 
-[Logging](/docs/development/logs/concepts.md) is used extensively throughout
+[Logging](/docs/concepts/diagnostics/logs/README.md) is used extensively throughout
 Fuchsia’s code, but messages are logged with inconsistent severities. This
 diminishes the value of information in the logs. Below we propose semantic
 meaning for different log severity levels, and implications for logging at
@@ -95,7 +95,7 @@ entry). As with higher log levels, these logs will be consumed by
 other teams for diagnosis and so context is critical.
 
 Long-lasting states should be reported using
-[Component Inspection](/docs/development/inspect).
+[Component Inspection](/docs/development/diagnostics/inspect).
 Such conditions should not be logged if they have not changed. For example,
 instead of logging "[INFO] no configs found" at a fixed interval, the Inspect
 data could contain a flag "configs_found = false," or even "config_count = 0."

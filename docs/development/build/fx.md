@@ -401,7 +401,7 @@ also always available in "bringup" product configurations, as such, `fx klog`
 is most useful when working on low-level software, such as the Zircon kernel,
 or drivers.
 
-See [Viewing Logs](/docs/development/logs/viewing.md) for more information.
+See [Viewing Logs](/docs/development/diagnostics/logs/viewing.md) for more information.
 
 ### Copying files {#copying-files}
 

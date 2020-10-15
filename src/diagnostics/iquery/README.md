@@ -27,5 +27,5 @@ $ fx run-test iquery_tests
 The entrypoint is located in `main.rs`, with the rest of the implementation
 living in top-level `.rs` files. Tests are located in the `testing/` directory.
 
-[inspect]: /docs/development/inspect/README.md
-[iquery]: /docs/development/inspect/iquery.md
+[inspect]: /docs/development/diagnostics/inspect/README.md
+[iquery]: /docs/reference/diagnostics/consumers/iquery.md

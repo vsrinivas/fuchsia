@@ -62,7 +62,7 @@ the following reasons:
 *  You're trying to open a file that is requesting too many rights.
 
 If this is the case, verify that you are requesting an existing file, or that the file and directory
-have the appropriate rights. You can learn more about 
+have the appropriate rights. You can learn more about
 [directory rights and how they're specified](/docs/concepts/components/v2/component_manifests.md#directory-rights).
 
 ### Peer has crashed and the process has been terminated
@@ -70,7 +70,7 @@ have the appropriate rights. You can learn more about
 If the peer crashes, the system processes the crash and terminates the process that generated
 the error and all associated objects, leading to a `zx_err_peer_closed` error.
 
-You can [view logs](/docs/development/logs/viewing.md) to confirm if the peer
+You can [view logs](/docs/development/diagnostics/logs/viewing.md) to confirm if the peer
 has crashed. If this is the case, you can debug the peer using the
 [Just in Time Debugger](/docs/development/debugging/just_in_time_debugging.md) to find
 the source of the crash, and try the operation again.

@@ -298,18 +298,18 @@ to use this)
 ## Logging
 
 You can have a driver send log messages to the
-[syslog](/docs/development/logs/recording.md) through the use of the
+[syslog](/docs/development/diagnostics/logs/recording.md) through the use of the
 `zxlogf(<log_level>,...)` macro, which is defined in
 [ddk/debug.h](/src/lib/ddk/include/ddk/debug.h).
 
 Depending on the type of log level, by default, log messages are sent to the
 following logs:
 
-* [syslog](/docs/development/logs/recording.md#logsinksyslog):
+* [syslog](/docs/development/diagnostics/logs/recording.md#logsinksyslog):
   * `ERROR`
   * `WARNING`
   * `INFO`
-* [debuglog](/docs/development/logs/recording.md#debuglog_handles):
+* [debuglog](/docs/development/diagnostics/logs/recording.md#debuglog_handles):
   * `SERIAL`
 
 To control which log levels are sent to the syslog (other than `SERIAL`), the
@@ -324,7 +324,7 @@ This can be used to filter the output of the syslog whilst searching for
 particular logs.
 
 For further information on how to view driver logs, see
-[viewing logs](/docs/development/logs/viewing.md).
+[viewing logs](/docs/development/diagnostics/logs/viewing.md).
 
 ## Driver testing
 

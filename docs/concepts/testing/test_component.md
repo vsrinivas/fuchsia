@@ -284,7 +284,7 @@ demonstrated above.
 
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [run-test-component]: /docs/development/testing/run_fuchsia_tests.md
-[syslogs]: /docs/development/logs/concepts.md
+[syslogs]: /docs/development/diagnostics/logs/README.md
 [test-packages]: /docs/development/components/build.md#test-packages
 [legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity
 [ftf]: test_runner_framework.md

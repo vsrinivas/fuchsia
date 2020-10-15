@@ -3,7 +3,7 @@
 Dart programs on Fuchsia generally write log messages with the `lib.logging` package, consuming and
 initializing it through the `fuchsia_logger` package.
 
-See the [language agnostic logging docs](/docs/development/logs/concepts.md) for more information
+See the [language agnostic logging docs] for more information
 about recording and viewing logs.
 
 ## Requirements
@@ -87,7 +87,8 @@ See [`stdout` & `stderr`] in the language-agnostic logging docs for details on t
 streams in the system.
 
 [Logger]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
-[`fx log`]: /docs/development/logs/viewing.md
+[`fx log`]: /docs/development/diagnostics/logs/viewing.md
 [dart-dev]: /docs/development/languages/dart/README.md
 [`.cmx` file]: /docs/concepts/components/v1/component_manifests.md
-[`stdout` & `stderr`]: /docs/development/logs/recording.md#stdout-stderr
+[`stdout` & `stderr`]: /docs/development/diagnostics/logs/recording.md#stdout-stderr
+[language agnostic logging docs]: /docs/concepts/diagnostics/logs/README.md

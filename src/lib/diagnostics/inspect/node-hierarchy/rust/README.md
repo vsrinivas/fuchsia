@@ -1,7 +1,7 @@
 # `fuchsia_inspect_node_hierarchy`
 
 `fuchsia_inspect_node_hierarchy` is a library that contains the Node Hierarchy that is read out of
-an Inspect VMO. Docs are available [here](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/inspect/vmo-format/README.md).
+an Inspect VMO. Docs are available [here](/docs/reference/diagnostics/inspect/vmo-format.md).
 
 ## Building
 

@@ -88,7 +88,7 @@ The hub is organized as follows:
 > their own, which are not reflected here.
 
 **\<component instance id\>/system\_objects**: system-level component inspection
-> A directory tree exposing objects conforming to the [Inspect API](/docs/development/inspect/README.md).
+> A directory tree exposing objects conforming to the [Inspect API](/docs/reference/diagnostics/inspect/README.md).
 > This directory tree is managed by the system to expose system-level
 > information about the components.
 
@@ -121,7 +121,7 @@ The hub is organized as follows:
 > objects.
 
 **\<component instance id\>/out/diagnostics**: component’s diagnostics data
-> A directory tree exposing objects conforming to the [Inspect API](/docs/development/inspect/README.md).
+> A directory tree exposing objects conforming to the [Inspect API](/docs/development/diagnostics/inspect/README.md).
 > This directory tree is exposed by the component itself to allow inspection
 > of component-specific data.
 

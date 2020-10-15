@@ -3,7 +3,7 @@
 Rust programs on Fuchsia generally use the [log crate] and its `info!/warn!/error!` macros. The
 [`fuchsia_syslog`] crate is used for initialization.
 
-See the [language agnostic logging docs](/docs/development/logs/concepts.md) for more information
+See the [language agnostic logging docs](/docs/concepts/diagnostics/logs/README.md) for more information
 about recording and viewing logs.
 
 ## Requirements
@@ -115,4 +115,4 @@ streams in the system.
 [initialized in main]: /docs/development/languages/rust/add-logging.md
 [rust-dev]: /docs/development/languages/rust/README.md
 [`.cmx` file]: /docs/concepts/components/v1/component_manifests.md
-[`stdout` & `stderr`]: /docs/development/logs/recording.md#stdout-stderr
+[`stdout` & `stderr`]: /docs/development/diagnostics/logs/recording.md#stdout-stderr
