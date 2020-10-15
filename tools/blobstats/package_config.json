@@ -57,7 +57,7 @@
       "rootUri": "../../third_party/dart-pkg/pub/test"
     },
     {
-      "languageVersion": "2.10",
+      "languageVersion": "2.3",
       "name": "args",
       "packageUri": "lib",
       "rootUri": "../../third_party/dart-pkg/pub/args"

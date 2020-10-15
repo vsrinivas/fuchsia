@@ -111,6 +111,8 @@ export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 
 _args=(
   "${PREBUILT_DART_DIR}/bin/dart"
+  "--enable-experiment=non-nullable"
+  "--no-sound-null-safety"
   "--packages=${FUCHSIA_DIR}/scripts/fxtest/package_config.json"
   "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart"
 )

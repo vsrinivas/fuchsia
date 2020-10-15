@@ -22,12 +22,6 @@
     },
     {
       "languageVersion": "2.3",
-      "name": "edit_distance",
-      "packageUri": "lib",
-      "rootUri": "../../third_party/dart-pkg/pub/edit_distance"
-    },
-    {
-      "languageVersion": "2.3",
       "name": "meta",
       "packageUri": "lib",
       "rootUri": "../../third_party/dart-pkg/pub/meta"
@@ -57,7 +51,7 @@
       "rootUri": "../../third_party/dart-pkg/pub/test"
     },
     {
-      "languageVersion": "2.10",
+      "languageVersion": "2.3",
       "name": "args",
       "packageUri": "lib",
       "rootUri": "../../third_party/dart-pkg/pub/args"

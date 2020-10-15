@@ -16,5 +16,7 @@ fx-config-read
 cd "${FUCHSIA_BUILD_DIR}"
 
 exec "${PREBUILT_DART_DIR}/bin/dart" \
+  --enable-experiment=non-nullable \
+  --no-sound-null-safety \
   --packages="${FUCHSIA_DIR}/scripts/status/package_config.json" \
   "${FUCHSIA_DIR}/scripts/status/bin/main.dart" "$@"
