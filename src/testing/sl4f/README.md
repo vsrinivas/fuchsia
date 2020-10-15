@@ -9,7 +9,7 @@ equivalent (FIDL) commands.
 ## SL4F Includes
 
 To include SL4F by default to the build include it with your build:
-`--with garnet/bin/sl4f:bin`
+`--with src/testing/sl4f:bin`
 
 ## Pushing incremental changes
 
@@ -29,7 +29,7 @@ making them available for a test to later verify.
 
 ## Logging
 
-In `garnet/bin/sl4f/server/sl4f.rs` there is a macro called `with_line`. Use
+In `src/testing/sl4f/server/sl4f.rs` there is a macro called `with_line`. Use
 this with your tag in your log lines.
 
 Example:

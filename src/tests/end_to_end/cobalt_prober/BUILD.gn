@@ -38,7 +38,7 @@ group("tests") {
 
   deps = [
     ":cobalt_prober($host_toolchain)",
-    "//garnet/bin/sl4f",
     "//src/cobalt/bin:cobalt-prober-do-not-run-manually",
+    "//src/testing/sl4f",
   ]
 }

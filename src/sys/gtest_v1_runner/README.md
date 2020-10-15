@@ -13,7 +13,7 @@ can be added to builds by including `--with //src/sys/gtest_v1_runner` to the
 
 ## Running
 
-This would be eventually executed from [test executor](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/sl4f/src/test).
+This would be eventually executed from [test executor](https://fuchsia.googlesource.com/fuchsia/+/master/src/testing/sl4f/src/test).
 
 ## Testing
 

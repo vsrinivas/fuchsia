@@ -9,7 +9,7 @@ use crate::{
 use anyhow::Error;
 // Auto generated fidl crate:
 use fidl_fuchsia_hardware_ram_metrics::{BandwidthMeasurementConfig, DeviceMarker, DeviceProxy};
-use fuchsia_syslog::macros::{fx_log_err};
+use fuchsia_syslog::macros::fx_log_err;
 use glob::glob;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 

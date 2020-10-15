@@ -38,7 +38,6 @@ group("all") {
     "//garnet/bin/sched:tests",
     "//garnet/bin/setui:tests",
     "//garnet/bin/setui_client:tests",
-    "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/bin/stash_ctl:stash_ctl_tests",
     "//garnet/bin/sysmem_connector:sysmem_connector_test",

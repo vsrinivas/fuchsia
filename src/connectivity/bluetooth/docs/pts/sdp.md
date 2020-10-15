@@ -5,7 +5,7 @@ Tools used to pass SDP tests in PTS:
 * ACTS (see \<fuchsia_root\>/src/connectivity/bluetooth/docs/pts/acts_pts_setup.md)
 	* Use the BluetoothCmdLineTest tool for all tests:
 		* act.py -c \<config\> -tc BluetoothCmdLineTest
-* SL4F (see \<fuchsia_root\>/garnet/bin/sl4f/README.md)
+* SL4F (see \<fuchsia_root\>/src/testing/sl4f/README.md)
 
 ## IXIT Values
 Use PTS defaults.

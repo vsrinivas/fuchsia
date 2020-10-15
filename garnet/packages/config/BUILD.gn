@@ -39,11 +39,6 @@ group("amber") {
   public_deps = [ "//garnet/packages/config:network" ]
 }
 
-group("sl4f") {
-  testonly = true
-  public_deps = [ "//garnet/bin/sl4f:sl4f_sysmgr_config" ]
-}
-
 # WARNING: Known to infrastructure.
 group("amber_auto_ota") {
   testonly = true

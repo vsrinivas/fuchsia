@@ -486,7 +486,7 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
     }
 }
 
-/// The full test coverage of this library lives at //garnet/bin/sl4f/tests/test_framework
+/// The full test coverage of this library lives at //src/testing/sl4f/tests/test_framework
 /// They test that this library is able to handle various kind of tests launches and able to collect
 /// and pass back results.
 /// TODO(anmittal): move some of those tests here as unit tests.

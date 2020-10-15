@@ -7,6 +7,7 @@
 #[macro_use]
 extern crate anyhow;
 
+pub mod adc;
 pub mod audio;
 pub mod backlight;
 pub mod basemgr;
@@ -34,7 +35,6 @@ pub mod kernel;
 pub mod light;
 pub mod location;
 pub mod logging;
-pub mod adc;
 pub mod netstack;
 pub mod paver;
 pub mod proxy;

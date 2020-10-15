@@ -63,7 +63,7 @@ if (is_host) {
         [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/reboot_test" ]
     environments = [ disabled_env ]
     deps = [ ":system_tests_lib" ]
-    non_go_deps = [ "//garnet/bin/sl4f" ]
+    non_go_deps = [ "//src/testing/sl4f" ]
   }
 
   go_test("system_tests_tracking") {
@@ -72,7 +72,7 @@ if (is_host) {
     ]
     environments = [ disabled_env ]
     deps = [ ":system_tests_lib" ]
-    non_go_deps = [ "//garnet/bin/sl4f" ]
+    non_go_deps = [ "//src/testing/sl4f" ]
   }
 
   go_test("system_tests_upgrade") {
@@ -80,7 +80,7 @@ if (is_host) {
         [ "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/upgrade_test" ]
     environments = [ disabled_env ]
     deps = [ ":system_tests_lib" ]
-    non_go_deps = [ "//garnet/bin/sl4f" ]
+    non_go_deps = [ "//src/testing/sl4f" ]
   }
 }
 

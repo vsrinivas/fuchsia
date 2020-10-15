@@ -27,5 +27,5 @@ group("all") {
 # WARNING: Known to infrastructure.
 group("sl4f") {
   testonly = true
-  public_deps = [ "//garnet/bin/sl4f" ]
+  public_deps = [ "//src/testing/sl4f" ]
 }

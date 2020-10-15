@@ -179,7 +179,7 @@ group("touch_input_test") {
 
   deps = [
     ":touch_input_latency_benchmarks_test($host_toolchain)",
-    "//garnet/bin/sl4f",
+    "//src/testing/sl4f",
     "//src/ui/tests/e2e_input_tests/touch:tests",
   ]
 }

@@ -1,6 +1,6 @@
 # Scripting Layer for Fuchsia (SL4F)
 
-Scripting Layer for Fuchsia ([SL4F](/garnet/bin/sl4f/)) is an HTTP server that
+Scripting Layer for Fuchsia ([SL4F](/src/testing/sl4f/)) is an HTTP server that
 allows end-to-end tests to access [driver services](#facades-in-sl4f) (for
 instance, Audio, Screen, Input, Diagnostics, and WebDriver) on a Fuchsia device.
 
@@ -40,7 +40,7 @@ right on the screen” action on a Fuchsia device:
 1.  SL4F listens for HTTP requests on port 80 on the device.
 1.  The test sends a JSON-RPC request to SL4F, asking the “swipe right on the
     screen” action on the device.
-1.  SL4F’s [Input facade](/garnet/bin/sl4f/src/input/facade.rs#) parses the
+1.  SL4F’s [Input facade](/src/testing/sl4f/src/input/facade.rs#) parses the
     request into a FIDL command.
 1.  The device performs the “swipe right on the screen” action.
 

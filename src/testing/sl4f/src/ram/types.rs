@@ -5,8 +5,8 @@
 use fidl_fuchsia_hardware_ram_metrics::{
     BandwidthInfo, BandwidthMeasurementConfig, GrantedCyclesResult,
 };
-use serde::{Deserialize, Serialize};
 use fuchsia_zircon as zx;
+use serde::{Deserialize, Serialize};
 
 pub enum RamMethod {
     MeasureBandwidth,

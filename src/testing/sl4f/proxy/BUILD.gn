@@ -11,12 +11,12 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/bin/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-hyper",
     "//src/lib/syslog/rust:syslog",
+    "//src/testing/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",

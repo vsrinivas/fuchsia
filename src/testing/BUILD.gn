@@ -17,5 +17,6 @@ group("tests") {
   deps = [
     "fuzzing:tests",
     "loadbench:tests",
+    "sl4f:tests",
   ]
 }

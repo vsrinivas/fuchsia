@@ -28,7 +28,6 @@ group("bin") {
     "sched",
     "setui",
     "setui_client",
-    "sl4f",
     "sshd-host",
     "stash",
     "stash_ctl",

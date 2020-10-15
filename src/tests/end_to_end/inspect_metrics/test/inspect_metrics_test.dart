@@ -24,7 +24,7 @@ void main() {
   withLongTimeout(() {
     test('inspect metrics tests inspection nodes written by metrics', () async {
       // The test will read each of the node for disk usages
-      // fx set ... --release --with=//src/tests/end_to_end/inspect_metrics:test --with garnet/bin/sl4f:bin
+      // fx set ... --release --with=//src/tests/end_to_end/inspect_metrics:test --with src/testing/sl4f:bin
       // fx build
       // fx run-e2e-tests inspect_metrics_test # which sets FUCHSIA_IPV4_ADDR automatically
 
