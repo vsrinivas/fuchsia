@@ -125,7 +125,7 @@ bool TimeServerConfig::Parse(std::string config_file) {
         char hex[3] = {0};
         hex[0] = public_key_str.at(k * 2);
         hex[1] = public_key_str.at(k * 2 + 1);
-        public_key[k] = strtoul(hex, NULL, 16);
+        public_key[k] = (uint8_t)strtoul(hex, NULL, 16);
       }
 
       RoughTimeServer server(name, std::move(address_str), public_key, roughtime::kPublicKeyLength);
