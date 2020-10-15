@@ -77,7 +77,7 @@ impl ScrutinyApp {
     /// command line.
     pub fn args(inline_arguments: Option<Vec<String>>) -> ArgMatches<'static> {
         let app = App::new("scrutiny")
-            .version("0.1")
+            .version("1.0")
             .author("Fuchsia Authors")
             .about("An extendable security auditing framework")
             .arg(
