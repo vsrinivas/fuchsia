@@ -1,0 +1,18 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.recovery.policy;
+
+/// A protocol for controlling whether factory reset can be triggered by holding
+/// the physical button.
+/// This protocol will be used by Settings service to make root_presenter aware
+/// of a new FactoryReset policy.
+[Discoverable]
+protocol Device {
+    /// Sets whether local factory reset is enabled, and persists the setting
+    /// after reboot.
+    /// If this function has never been called on this device, then local
+    /// factory reset is allowed by default.
+    SetIsLocalResetAllowed(bool allowed);
+};
