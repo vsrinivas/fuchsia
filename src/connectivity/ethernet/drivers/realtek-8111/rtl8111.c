@@ -11,7 +11,6 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -20,6 +19,8 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
 #include <hw/reg.h>
+
+#include "src/connectivity/ethernet/drivers/realtek-8111/realtek_rtl8111-bind.h"
 
 #define WRITE32(a, v) MmioWrite32(v, edev->mmio.vaddr + (a))
 #define READ32(a) MmioRead32(edev->mmio.vaddr + (a))
@@ -441,9 +442,4 @@ static zx_driver_ops_t rtl8111_ethernet_driver_ops = {
     .bind = rtl8111_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(realtek_rtl8111, rtl8111_ethernet_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, REALTEK_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, RTL8111_DID),
-ZIRCON_DRIVER_END(realtek_rtl8111)
+ZIRCON_DRIVER(realtek_rtl8111, rtl8111_ethernet_driver_ops, "zircon", "0.1")

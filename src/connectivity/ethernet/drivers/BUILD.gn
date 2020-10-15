@@ -10,6 +10,8 @@ group("tests") {
     "asix-88179:tests",
     "ethernet:tests",
     "ethertap:tests",
+    "realtek-8111:tests",
+    "realtek-8211f:tests",
     "rndis-function:rndis-function-test-package",
     "usb-cdc-ecm:tests",
     "usb-cdc-function:tests",

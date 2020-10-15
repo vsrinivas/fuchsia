@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("rtl8211f_bind") {
+  rules = "rtl8211f.bind"
+  output = "rtl8211f-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("realtek-8211f") {
   configs += [
@@ -16,15 +24,18 @@ driver_module("realtek-8211f") {
   ]
   sources = [ "rtl8211f.cc" ]
   deps = [
+    ":rtl8211f_bind",
     "//sdk/banjo/ddk.protocol.ethernet.mac",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":rtl8211f_bind_test" ]
 }

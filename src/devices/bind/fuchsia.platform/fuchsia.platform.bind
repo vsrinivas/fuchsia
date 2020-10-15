@@ -41,10 +41,12 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
-  AMLOGIC_ETH = 9,
+  AMLOGIC_ETH = 0x09,
+  ETH_PHY = 0x11,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  RTL8211F = 0x01,
   AMLOGIC_S912 = 0x02,
   AMLOGIC_A311D = 0x06,
 };

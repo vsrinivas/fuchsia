@@ -9,13 +9,13 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
 #include "mdio-regs.h"
+#include "src/connectivity/ethernet/drivers/realtek-8211f/rtl8211f-bind.h"
 
 namespace phy {
 
@@ -122,10 +122,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace phy
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(rtl8211f, phy::driver_ops, "rtl8211-phy", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_REALTEK),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_RTL8211F),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_PHY),
-ZIRCON_DRIVER_END(rtl8211f)
-    // clang-format on
+ZIRCON_DRIVER(rtl8211f, phy::driver_ops, "rtl8211-phy", "0.1")

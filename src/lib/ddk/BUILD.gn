@@ -105,8 +105,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/connectivity/ethernet/drivers/asix-88179:fake-asix-88179",
     "//src/connectivity/ethernet/drivers/asix-88772b:*",
     "//src/connectivity/ethernet/drivers/dwmac:*",
-    "//src/connectivity/ethernet/drivers/realtek-8111:*",
-    "//src/connectivity/ethernet/drivers/realtek-8211f:*",
     "//src/connectivity/ethernet/drivers/rndis-host:*",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:*",
     "//src/connectivity/ethernet/drivers/virtio:*",

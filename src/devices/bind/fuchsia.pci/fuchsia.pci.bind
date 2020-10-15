@@ -17,6 +17,10 @@ extend uint fuchsia.BIND_PCI_VID {
   INTEL = 0x8086,
 };
 
+extend uint fuchsia.BIND_PCI_DID {
+  RTL8111 = 0x8168,
+}
+
 extend uint fuchsia.BIND_PCI_CLASS {
   UNCLASSIFIED = 0x00,
   MASS_STORAGE = 0x01,
