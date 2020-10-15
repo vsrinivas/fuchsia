@@ -145,5 +145,21 @@ TEST(VolumeCurveTest, DefaultCurveWithMuteGainDoesNotAbort) {
   VolumeCurve::DefaultForMinGain(fuchsia::media::audio::MUTED_GAIN_DB);
 }
 
+TEST(VolumeCurveTest, Interpolate) {
+  auto result = VolumeCurve::FromMappings({
+      VolumeCurve::VolumeMapping(0.0, -120.0),
+      VolumeCurve::VolumeMapping(0.5, -10.0),
+      VolumeCurve::VolumeMapping(1.0, 0.0),
+  });
+  ASSERT_TRUE(result.is_ok());
+  auto curve = result.take_value();
+
+  EXPECT_FLOAT_EQ((-120.0 - 10.0) / 2, curve.VolumeToDb(0.25f));
+  EXPECT_FLOAT_EQ((-10.0 - 0.0) / 2, curve.VolumeToDb(0.75f));
+
+  EXPECT_FLOAT_EQ(0.25f, curve.DbToVolume((-120.0 - 10.0) / 2));
+  EXPECT_FLOAT_EQ(0.75f, curve.DbToVolume((-10.0 - 0.0) / 2));
+}
+
 }  // namespace
 }  // namespace media::audio
