@@ -52,9 +52,8 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   // published service.
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
 
-  // Bind a new client. Closes |request| with the ZX_ERR_ALREADY_BOUND epitaph if |exclusive| is
-  // set and clients already exist.
-  void Bind(fidl::InterfaceRequest<fuchsia::camera3::Device> request, bool exclusive);
+  // Posts a task to bind a new client.
+  void Bind(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
 
   // Called if the underlying controller disconnects.
   void OnControllerDisconnected(zx_status_t status);

@@ -140,23 +140,14 @@ fidl::InterfaceRequestHandler<fuchsia::camera3::Device> DeviceImpl::GetHandler()
 }
 
 void DeviceImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
-  Bind(std::move(request), true);
+  Bind(std::move(request));
 }
 
-void DeviceImpl::Bind(fidl::InterfaceRequest<fuchsia::camera3::Device> request, bool exclusive) {
-  if (exclusive && !clients_.empty()) {
-#if CAMERA_POLICY_ALLOW_REPLACEMENT_CONNECTIONS
-    FX_LOGS(WARNING) << "!!!! CAMERA POLICY OVERRIDE FORCING DISCONNECT OF " << clients_.size()
-                     << " EXISTING CLIENTS !!!!";
-    clients_.clear();
-#else
-    request.Close(ZX_ERR_ALREADY_BOUND);
-    return;
-#endif
-  }
+void DeviceImpl::Bind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
+  bool first_client = clients_.empty();
   auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
   clients_.emplace(client_id_next_++, std::move(client));
-  if (exclusive) {
+  if (first_client) {
     SetConfiguration(0);
   }
 }

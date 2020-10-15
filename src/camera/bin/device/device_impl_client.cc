@@ -99,5 +99,5 @@ void DeviceImpl::Client::ConnectToStream(uint32_t index,
 }
 
 void DeviceImpl::Client::Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
-  device_.Bind(std::move(request), false);
+  device_.Bind(std::move(request));
 }

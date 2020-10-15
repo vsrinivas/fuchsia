@@ -403,35 +403,18 @@ TEST_F(DeviceImplTest, RequestStreamFromController) {
   RunLoopUntilIdle();
 }
 
-// TODO(fxbug.dev/58063): Restore camera default exclusivity policy.
-TEST_F(DeviceImplTest, DISABLED_DeviceClientDisconnect) {
+TEST_F(DeviceImplTest, MultipleDeviceClients) {
   // Create the first client.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");
   device_->GetHandler()(device.NewRequest());
+  Sync(device);
 
-  // Try to connect a second client, which should fail.
+  // Try to connect a second client, which should succeed.
   fuchsia::camera3::DevicePtr device2;
-  bool error_received = false;
-  device2.set_error_handler([&](zx_status_t status) {
-    EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
-    error_received = true;
-  });
+  SetFailOnError(device2, "Device");
   device_->GetHandler()(device2.NewRequest());
-  RunLoopUntilFailureOr(error_received);
-
-  // Disconnect the first client, then try to connect the second again.
-  device = nullptr;
-  bool callback_received = false;
-  while (!HasFailure() && !callback_received) {
-    error_received = false;
-    device_->GetHandler()(device2.NewRequest());
-    // Call a returning API to verify the connection status.
-    device2->GetIdentifier([&](fidl::StringPtr identifier) { callback_received = true; });
-    RunLoopUntil([&] { return error_received || callback_received; });
-  }
-
-  RunLoopUntilFailureOr(callback_received);
+  Sync(device2);
 }
 
 TEST_F(DeviceImplTest, StreamClientDisconnect) {
@@ -607,27 +590,11 @@ TEST_F(DeviceImplTest, OrphanStream) {
     stream_error_received = true;
   });
 
-  // Connect to the device as a new client. There is no way for a client to know when an existing
-  // exclusive client disconnects, so it must retry periodically.
+  // Connect to the device as a new client and set the configuration.
   fuchsia::camera3::DevicePtr device2;
-  bool device_acquired = false;
-  while (!device_acquired) {
-    bool error_received = false;
-    device2.set_error_handler([&](zx_status_t status) {
-      EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
-      error_received = true;
-    });
-    device_->GetHandler()(device2.NewRequest());
-    device2->GetIdentifier([&](fidl::StringPtr identifier) { device_acquired = true; });
-    while (!HasFailure() && !device_acquired && !error_received) {
-      RunLoopUntilIdle();
-    }
-    if (!device_acquired) {
-      // Brief timeout to reduce logspam.
-      zx::nanosleep(zx::deadline_after(zx::msec(100)));
-    }
-  }
   SetFailOnError(device2, "Device2");
+  device_->GetHandler()(device2.NewRequest());
+  device2->SetCurrentConfiguration(0);
 
   // Make sure the first stream is closed when the new device connects.
   RunLoopUntilFailureOr(stream_error_received);
