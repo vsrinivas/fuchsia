@@ -4,7 +4,7 @@
 
 import("//build/test/test_package.gni")
 
-test_package("fidl-c-tests") {
+unittest_package("fidl-c-tests") {
   deps = [
     "coding_tables_tests:bin",
     "llcpp_interop_tests:bin",
