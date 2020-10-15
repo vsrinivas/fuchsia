@@ -354,7 +354,7 @@ TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
                                    StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
+TEST_F(SessionShellTest, DISABLED_StoryStopDoesntWaitOnDetachView) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
