@@ -268,7 +268,8 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
   // some minor glitching while access is disabled.
   bool enabled = MmioEnabled() || IoEnabled();
   uint16_t cmd_backup = ReadCmdLocked();
-  ModifyCmdLocked(PCI_CFG_COMMAND_MEM_EN | PCI_CFG_COMMAND_IO_EN, cmd_backup);
+  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_MEM_EN | PCI_CFG_COMMAND_IO_EN,
+                  /*set_bits=*/cmd_backup);
   uint32_t addr_mask = (bar_info.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
 
   // For enabled devices save the original address in the BAR. If the device
@@ -294,9 +295,10 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
     bars_[bar_id + 1].size = 0;
     bars_[bar_id + 1].bar_id = bar_id;
 
-    // Retain the high 32bits of the  address if the device was enabled.
+    // Retain the high 32bits of the 64bit address address if the device was
+    // enabled already.
     if (enabled) {
-      bar_info.address = static_cast<uint64_t>(cfg_->Read(Config::kBar(bar_id + 1))) << 32;
+      bar_info.address |= static_cast<uint64_t>(cfg_->Read(Config::kBar(bar_id + 1))) << 32;
     }
 
     // Get the high 32 bits of size for the 64 bit BAR by repeating the
@@ -391,15 +393,18 @@ zx_status_t Device::AllocateBar(uint8_t bar_id) {
 
   // Now write the allocated address space to the BAR.
   uint16_t cmd_backup = cfg_->Read(Config::kCommand);
-  ModifyCmdLocked(PCI_CFG_COMMAND_MEM_EN | PCI_CFG_COMMAND_IO_EN, cmd_backup);
+  // Figure out the IO type of the bar and disable that while we adjust the bar address.
+  uint16_t mem_io_en_flag = (bar_info.is_mmio) ? PCI_CFG_COMMAND_MEM_EN : PCI_CFG_COMMAND_IO_EN;
+  ModifyCmdLocked(mem_io_en_flag, cmd_backup);
+
   cfg_->Write(Config::kBar(bar_id), static_cast<uint32_t>(bar_info.allocation->base()));
   if (bar_info.is_64bit) {
     uint32_t addr_hi = static_cast<uint32_t>(bar_info.allocation->base() >> 32);
     cfg_->Write(Config::kBar(bar_id + 1), addr_hi);
   }
   bar_info.address = bar_info.allocation->base();
-  AssignCmdLocked(cmd_backup);
-
+  // Flip the IO bit back on for this type of bar
+  AssignCmdLocked(cmd_backup | mem_io_en_flag);
   return ZX_OK;
 }
 
