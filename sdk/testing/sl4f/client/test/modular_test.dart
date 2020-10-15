@@ -243,7 +243,7 @@ void main(List<String> args) {
       if (body['method'] == 'component_facade.Search') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': searchCount == 0 ? 'NotFound' : 'Success',
+          'result': searchCount != 1 ? 'NotFound' : 'Success',
           'error': null,
         }));
         searchCount++;

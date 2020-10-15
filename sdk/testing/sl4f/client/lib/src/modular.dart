@@ -5,8 +5,8 @@
 import 'dart:convert';
 
 import 'package:logging/logging.dart';
-
 import 'component.dart';
+import 'exceptions.dart';
 import 'sl4f_client.dart';
 
 final _log = Logger('modular');
@@ -119,7 +119,15 @@ class Modular {
     _log.info('Shutting down basemgr.');
     await killBasemgr();
     // basemgr and all the agents can take some time to fully die.
-    await Future.delayed(Duration(seconds: 5));
+
+    var retry = 0;
+    while (retry++ <= 30 && await isRunning) {
+      await Future.delayed(const Duration(seconds: 2));
+    }
+
+    if (await isRunning) {
+      throw Sl4fException('Timeout for waiting basemgr to shut down.');
+    }
     _controlsBasemgr = false;
   }
 }
