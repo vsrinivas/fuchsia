@@ -680,8 +680,14 @@ pub mod sync {
         // Underlying channel
         channel: zx::Channel,
 
-        // Reusable buffer for r/w
-        buf: zx::MessageBuf,
+        // Reusable byte buffer for reads / writes.
+        buf_bytes: Vec<u8>,
+
+        // Reusable handle buffer for reads.
+        buf_read_handles: Vec<Handle>,
+
+        // Reusable handle buffer for writes.
+        buf_write_handles: Vec<Handle>,
     }
 
     // TODO: remove this and allow multiple overlapping queries on the same channel.
@@ -693,7 +699,12 @@ pub mod sync {
             // Initialize tracing. This is a no-op if FIDL userspace tracing is
             // disabled or if the function was already called.
             create_trace_provider();
-            Client { channel, buf: zx::MessageBuf::new() }
+            Client {
+                channel,
+                buf_bytes: Vec::new(),
+                buf_read_handles: Vec::new(),
+                buf_write_handles: Vec::new(),
+            }
         }
 
         /// Get the underlying channel out of the client.
@@ -703,12 +714,14 @@ pub mod sync {
 
         /// Send a new message.
         pub fn send<E: Encodable>(&mut self, msg: &mut E, ordinal: u64) -> Result<(), Error> {
-            self.buf.clear();
-            let (buf, handles) = self.buf.split_mut();
+            self.buf_bytes.clear();
+            self.buf_write_handles.clear();
             let msg =
                 &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
-            Encoder::encode(buf, handles, msg)?;
-            self.channel.write(buf, handles).map_err(|e| Error::ClientWrite(e.into()))?;
+            Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
+            self.channel
+                .write(&mut self.buf_bytes, &mut self.buf_write_handles)
+                .map_err(|e| Error::ClientWrite(e.into()))?;
             Ok(())
         }
 
@@ -720,18 +733,21 @@ pub mod sync {
             deadline: zx::Time,
         ) -> Result<D, Error> {
             // Write the message into the channel
-            self.buf.clear();
-            let (buf, handles) = self.buf.split_mut();
+            self.buf_bytes.clear();
+            self.buf_write_handles.clear();
             let msg = &mut TransactionMessage {
                 header: TransactionHeader::new(QUERY_TX_ID, ordinal),
                 body: msg,
             };
-            Encoder::encode(buf, handles, msg)?;
-            self.channel.write(buf, handles).map_err(|e| Error::ClientWrite(e.into()))?;
+            Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
+            self.channel
+                .write(&mut self.buf_bytes, &mut self.buf_write_handles)
+                .map_err(|e| Error::ClientWrite(e.into()))?;
 
             // Read the response
-            self.buf.clear();
-            match self.channel.read(&mut self.buf) {
+            self.buf_bytes.clear();
+            self.buf_read_handles.clear();
+            match self.channel.read_split(&mut self.buf_bytes, &mut self.buf_read_handles) {
                 Ok(()) => {}
                 Err(zx_status::Status::SHOULD_WAIT) => {
                     let signals = self
@@ -745,17 +761,18 @@ pub mod sync {
                         debug_assert!(signals.contains(zx::Signals::CHANNEL_PEER_CLOSED));
                         return Err(Error::ClientRead(zx_status::Status::PEER_CLOSED));
                     }
-                    self.channel.read(&mut self.buf).map_err(|e| Error::ClientRead(e.into()))?;
+                    self.channel
+                        .read_split(&mut self.buf_bytes, &mut self.buf_read_handles)
+                        .map_err(|e| Error::ClientRead(e.into()))?;
                 }
                 Err(e) => return Err(Error::ClientRead(e.into())),
             }
-            let (buf, handles) = self.buf.split_mut();
-            let (header, body_bytes) = decode_transaction_header(buf)?;
+            let (header, body_bytes) = decode_transaction_header(&self.buf_bytes)?;
             if header.tx_id() != QUERY_TX_ID || header.ordinal() != ordinal {
                 return Err(Error::UnexpectedSyncResponse);
             }
             let mut output = D::new_empty();
-            Decoder::decode_into(&header, body_bytes, handles, &mut output)?;
+            Decoder::decode_into(&header, body_bytes, &mut self.buf_read_handles, &mut output)?;
             Ok(output)
         }
     }
