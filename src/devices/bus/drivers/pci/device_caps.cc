@@ -143,9 +143,6 @@ zx_status_t Device::ParseCapabilities() {
   // Walk the pointer list for the standard capabilities table. Check for
   // cycles and invalid pointers.
   while (ReadCapability(*cfg_, cap_offset, &hdr)) {
-    zxlogf(DEBUG, "[%s] capability %s(%#02x) @ %#02x. Next is %#02x", cfg_->addr(),
-           CapabilityIdToName(static_cast<Capability::Id>(hdr.id)), hdr.id, cap_offset, hdr.ptr);
-
     if (CapabilityCycleExists<Capability>(*cfg_, &caps_.list, cap_offset)) {
       zxlogf(ERROR, "%s capability cycle detected", cfg_->addr());
       return ZX_ERR_BAD_STATE;
@@ -223,10 +220,6 @@ zx_status_t Device::ParseExtendedCapabilities() {
   // Walk the pointer list for the standard capabilities table. Check for
   // cycles and invalid pointers.
   while (ReadExtCapability(*cfg_, cap_offset, &hdr)) {
-    zxlogf(TRACE, "%s ext_capability %s(%#02x) @ %#02x. Next is %#02x", cfg_->addr(),
-           ExtCapabilityIdToName(static_cast<ExtCapability::Id>(hdr.id)), hdr.id, cap_offset,
-           hdr.ptr);
-
     if (CapabilityCycleExists<ExtCapability>(*cfg_, &caps_.ext_list, cap_offset)) {
       zxlogf(TRACE, "%s ext_capability cycle detected", cfg_->addr());
       return ZX_ERR_BAD_STATE;
