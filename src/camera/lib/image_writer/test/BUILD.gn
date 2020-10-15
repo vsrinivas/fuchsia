@@ -22,7 +22,4 @@ executable("test") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

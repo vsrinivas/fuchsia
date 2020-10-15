@@ -46,9 +46,9 @@ void ColorSource::FillARGB(void* start, size_t buffer_size) {
               << static_cast<int>(b);
   uint32_t color = kAlphaValue << kAlphaShift | r << kRedShift | g << kGreenShift | b;
   ZX_DEBUG_ASSERT(buffer_size % 4 == 0);
-  uint32_t num_pixels = buffer_size / 4;
+  size_t num_pixels = buffer_size / 4;
   auto* pixels = reinterpret_cast<uint32_t*>(start);
-  for (unsigned int i = 0; i < num_pixels; i++) {
+  for (uint32_t i = 0; i < num_pixels; i++) {
     pixels[i] = color;
   }
 

@@ -72,7 +72,7 @@ void WriteSingleColorImage(Rgba rgba, const fuchsia::sysmem::ImageFormat_2& form
 }
 
 zx_status_t HsvGenerator(void* start, const fuchsia::sysmem::ImageFormat_2& format,
-                         uint64_t frame_index) {
+                         uint32_t frame_index) {
   // Currently only support RGB colors
   if (!IsSupportedPixelFormat(format.pixel_format.type)) {
     FX_LOGS(ERROR) << "Unsupported format";

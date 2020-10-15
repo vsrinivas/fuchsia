@@ -54,8 +54,8 @@ zx_status_t Raw12Writer::Write(zx::vmo* vmo, uint16_t r, uint16_t g, uint16_t b)
 
   // Value for colors on the first column/row will be zero, increase by constant factor up to
   // maximum value for every column/row after that.
-  const float_t kGreenStepFactor = (height() == 1) ? 0 : b / (height() - 1);
-  const float_t kBlueStepFactor = (width() == 1) ? 0 : g / (width() - 1);
+  const uint16_t kGreenStepFactor = (height() == 1) ? 0 : b / (height() - 1);
+  const uint16_t kBlueStepFactor = (width() == 1) ? 0 : g / (width() - 1);
   uint16_t green_pixel = 0;
   uint16_t blue_pixel = 0;
 

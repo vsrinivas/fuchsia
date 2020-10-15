@@ -15,8 +15,8 @@ namespace camera {
 constexpr uint8_t kOneByteMask = 0xff;
 
 uint8_t BitWidthToByteMask(uint8_t bit_width) {
-  ZX_ASSERT(bit_width <= 8);
-  return 0xff << (8 - bit_width);
+  ZX_DEBUG_ASSERT(bit_width <= 8);
+  return static_cast<uint8_t>(0xff << (8 - bit_width));
 }
 
 Rgba Min(const Rgba &a, const Rgba &b) {

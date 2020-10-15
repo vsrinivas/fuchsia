@@ -16,7 +16,7 @@ namespace camera {
 // a buffer provided, in the image format specified.
 // Currently only RGB types are supported
 zx_status_t HsvGenerator(void* start, const fuchsia::sysmem::ImageFormat_2& format,
-                         uint64_t frame_index);
+                         uint32_t frame_index);
 
 // Converts a packed RGB(A) format into 4 individual values.
 // For formats that have fewer than 8 bits per color, the color values are shifted
