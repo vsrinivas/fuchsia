@@ -496,6 +496,7 @@ TEST_F(DynamicIfTest, StopAPDoesntAffectClientIF) {
   TestApStop(false);
   // Verify that we didn't shut down our client interface
   EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 0U);
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 0U);
 }
 
 // Start both client and SoftAP interfaces simultaneously and check if stopping the AP with iovar
@@ -503,7 +504,7 @@ TEST_F(DynamicIfTest, StopAPDoesntAffectClientIF) {
 TEST_F(DynamicIfTest, UsingCdownDisconnectsClient) {
   TestApStop(true);
   // Verify that the client interface was also shut down
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
 }
 
 TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {

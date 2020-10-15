@@ -1116,33 +1116,113 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
   return err;
 }
 
+static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_address[ETH_ALEN]) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth confirm callback");
+    return;
+  }
+
+  wlanif_deauth_confirm_t resp = {};
+  memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
+
+  BRCMF_DBG(WLANIF, "Sending deauth confirm to SME. address: " MAC_FMT_STR "",
+            MAC_FMT_ARGS(peer_sta_address));
+
+  wlanif_impl_ifc_deauth_conf(&ndev->if_proto, &resp);
+}
+
+static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc confirm callback");
+    return;
+  }
+
+  wlanif_disassoc_confirm_t resp = {};
+  resp.status = status;
+  BRCMF_DBG(WLANIF, "Sending disassoc confirm to SME. status: %" PRIu32 "", status);
+  wlanif_impl_ifc_disassoc_conf(&ndev->if_proto, &resp);
+}
+
+// Send deauth_ind to SME (can be from client or softap)
+static void brcmf_notify_deauth_ind(net_device* ndev, const uint8_t mac_addr[ETH_ALEN],
+                                    uint16_t reason, bool locally_initiated) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth ind callback");
+    return;
+  }
+
+  wlanif_deauth_indication_t ind = {};
+  BRCMF_DBG(WLANIF,
+            "Link Down: Sending deauth ind to SME. address: " MAC_FMT_STR
+            ",  "
+            "reason: %" PRIu16,
+            MAC_FMT_ARGS(mac_addr), reason);
+
+  memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
+  ind.reason_code = reason;
+  ind.locally_initiated = locally_initiated;
+  wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
+}
+
+// Send disassoc_ind to SME (can be from client or softap)
+static void brcmf_notify_disassoc_ind(net_device* ndev, const uint8_t mac_addr[ETH_ALEN],
+                                      uint16_t reason, bool locally_initiated) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc ind callback");
+    return;
+  }
+
+  wlanif_disassoc_indication_t ind = {};
+
+  BRCMF_DBG(WLANIF,
+            "Link Down: Sending disassoc ind to SME. address: " MAC_FMT_STR
+            ",  "
+            "reason: %" PRIu16,
+            MAC_FMT_ARGS(mac_addr), reason);
+  memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
+  ind.reason_code = reason;
+  ind.locally_initiated = locally_initiated;
+  wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &ind);
+}
+
 static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
-                                  bool locally_initiated) {
+                                  uint16_t event_code) {
   struct net_device* ndev = vif->wdev.netdev;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping link down callback");
     return;
   }
-  wlanif_deauth_indication_t ind;
 
-  memcpy(ind.peer_sta_address, vif->profile.bssid, ETH_ALEN);
-  ind.reason_code = event_reason;
-  ind.locally_initiated = locally_initiated;
-
-  BRCMF_DBG(WLANIF,
-            "Link Down: Sending deauth indication to SME. address: " MAC_FMT_STR
-            ",  "
-            "reason: %" PRIu16 "",
-            MAC_FMT_ARGS(ind.peer_sta_address), ind.reason_code);
-  BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d Event reason: %d",
-            MAC_FMT_ARGS(ind.peer_sta_address), ind.reason_code, event_reason);
-
-  wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
+  struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
+  BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d",
+            MAC_FMT_ARGS(vif->profile.bssid), event_reason);
+  if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
+    brcmf_notify_deauth(ndev, vif->profile.bssid);
+    cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
+  } else if (cfg->disconnect_mode == BRCMF_DISCONNECT_DISASSOC) {
+    brcmf_notify_disassoc(ndev, ZX_OK);
+    cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
+  } else {
+    // Not initiated by SME
+    bool locally_initiated = (event_code == BRCMF_E_DEAUTH) || (event_code == BRCMF_E_DISASSOC);
+    // If not initiated by SME we are not likely to get E_DEAUTH but just in case...
+    if (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DEAUTH_IND) {
+      brcmf_notify_deauth_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
+    } else {
+      // This is a catch-all case - could be E_DISASSOC (not likely), E_DISASSOC_IND, E_LINK or
+      // locally initiated (IF delete)
+      brcmf_notify_disassoc_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
+    }
+  }
 }
 
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
-                            bool locally_initiated) {
+                            uint16_t event_code) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
 
@@ -1157,7 +1237,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reaso
                 brcmf_fil_get_errstr(fwerr));
     }
     if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
-      cfg80211_disconnected(vif, event_reason, locally_initiated);
+      cfg80211_disconnected(vif, event_reason, event_code);
     }
   }
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
@@ -1681,35 +1761,6 @@ fail:
 done:
   BRCMF_DBG(TRACE, "Exit");
   return err;
-}
-
-static void brcmf_notify_deauth(struct net_device* ndev, const uint8_t peer_sta_address[ETH_ALEN]) {
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth confirm callback");
-    return;
-  }
-
-  wlanif_deauth_confirm_t resp;
-  memcpy(resp.peer_sta_address, peer_sta_address, ETH_ALEN);
-
-  BRCMF_DBG(WLANIF, "Sending deauth confirm to SME. address: " MAC_FMT_STR "",
-            MAC_FMT_ARGS(peer_sta_address));
-
-  wlanif_impl_ifc_deauth_conf(&ndev->if_proto, &resp);
-}
-
-static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
-  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-  if (ndev->if_proto.ops == nullptr) {
-    BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc confirm callback");
-    return;
-  }
-
-  wlanif_disassoc_confirm_t resp;
-  resp.status = status;
-  BRCMF_DBG(WLANIF, "Sending disassoc confirm to SME. status: %" PRIu32 "", status);
-  wlanif_impl_ifc_disassoc_conf(&ndev->if_proto, &resp);
 }
 
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
@@ -4814,9 +4865,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
 
   brcmf_bss_connect_done(cfg, ndev, connect_status);
   brcmf_disconnect_done(cfg);
-  bool locally_initiated = e->event_code == BRCMF_E_DEAUTH || e->event_code == BRCMF_E_DISASSOC ||
-                           e->event_code == BRCMF_E_LINK;
-  brcmf_link_down(ifp->vif, e->reason, locally_initiated);
+  brcmf_link_down(ifp->vif, e->reason, e->event_code);
   brcmf_init_prof(ndev_to_prof(ndev));
   if (ndev != cfg_to_ndev(cfg)) {
     sync_completion_signal(&cfg->vif_disabled);
@@ -4873,26 +4922,11 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
 
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
-    struct net_device* ndev = ifp->ndev;
-    std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-    if (ndev->if_proto.ops == nullptr) {
-      BRCMF_DBG(WLANIF, "interface stopped -- skipping deauth indication callback");
-      return ZX_OK;
-    }
-    wlanif_deauth_indication_t deauth_ind_params;
-
-    memset(&deauth_ind_params, 0, sizeof(deauth_ind_params));
-    memcpy(deauth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
-    deauth_ind_params.reason_code = e->reason;
-
-    BRCMF_DBG(WLANIF,
-              "Sending deauth indication to SME. address: " MAC_FMT_STR
-              ", type: %s reason: %" PRIu16 "\n",
-              MAC_FMT_ARGS(deauth_ind_params.peer_sta_address),
-              (e->event_code == BRCMF_E_DEAUTH_IND) ? "DEAUTH_IND" : "DEAUTH",
-              deauth_ind_params.reason_code);
-
-    wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
+    if (e->event_code == BRCMF_E_DEAUTH_IND)
+      brcmf_notify_deauth_ind(ifp->ndev, e->addr, e->reason, false);
+    else
+      // E_DEAUTH
+      brcmf_notify_deauth(ifp->ndev, e->addr);
     return ZX_OK;
   }
 
@@ -4913,24 +4947,11 @@ static zx_status_t brcmf_process_disassoc_ind_event(struct brcmf_if* ifp,
 
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
-    struct net_device* ndev = ifp->ndev;
-    std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
-    if (ndev->if_proto.ops == nullptr) {
-      BRCMF_DBG(WLANIF, "interface stopped -- skipping disassoc indication callback");
-      return ZX_OK;
-    }
-    wlanif_disassoc_indication_t disassoc_ind_params;
-
-    memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
-    memcpy(disassoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
-    disassoc_ind_params.reason_code = e->reason;
-
-    BRCMF_DBG(WLANIF,
-              "Sending disassoc indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16,
-              MAC_FMT_ARGS(disassoc_ind_params.peer_sta_address), disassoc_ind_params.reason_code);
-
-    wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &disassoc_ind_params);
-
+    if (e->event_code == BRCMF_E_DISASSOC_IND)
+      brcmf_notify_disassoc_ind(ifp->ndev, e->addr, e->reason, false);
+    else
+      // E_DISASSOC
+      brcmf_notify_disassoc(ifp->ndev, ZX_OK);
     return ZX_OK;
   }
   return brcmf_indicate_client_disconnect(ifp, e, data, BRCMF_CONNECT_STATUS_DISASSOCIATING);
@@ -5327,7 +5348,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
    * from AP to save power
    */
   if (check_vif_up(ifp->vif)) {
-    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, true);
+    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, 0);
 
     /* Make sure WPA_Supplicant receives all the event
        generated due to DISASSOC call to the fw to keep

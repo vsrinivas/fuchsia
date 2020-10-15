@@ -318,7 +318,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             // Deauthenticate also disassocs the client
             SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS,
                               softap_ifidx_.value(), nullptr, 0, 0, *req_mac);
-            SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS,
+            SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC, BRCMF_E_STATUS_SUCCESS,
                               softap_ifidx_.value(), nullptr, 0, 0, *req_mac);
             iface_tbl_[softap_ifidx_.value()].ap_config.clients.remove(client);
             status = ZX_OK;
@@ -1297,16 +1297,10 @@ void SimFirmware::HandleDisconnectForClientIF(
 void SimFirmware::SetStateToDisassociated(uint32_t reason, bool locally_initiated) {
   // Disable beacon watchdog that triggers disconnect
   DisableBeaconWatchdog();
-  uint32_t disassoc_event = BRCMF_E_DISASSOC;
-
-  // Firmware sends DISASSOC_IND when AP initiates the disassociation.
-  if (!locally_initiated) {
-    disassoc_event = BRCMF_E_DISASSOC_IND;
-  }
-
-  // Proprogate disassociation to driver code
-  SendEventToDriver(0, nullptr, disassoc_event, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
-                    reason, assoc_state_.opts->bssid, kDisassocEventDelay);
+  // Send the appropriate event to driver.
+  SendEventToDriver(0, nullptr, locally_initiated ? BRCMF_E_DISASSOC : BRCMF_E_DISASSOC_IND,
+                    BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0, reason,
+                    assoc_state_.opts->bssid, kDisassocEventDelay);
   SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
                     reason, assoc_state_.opts->bssid, kLinkEventDelay);
 }

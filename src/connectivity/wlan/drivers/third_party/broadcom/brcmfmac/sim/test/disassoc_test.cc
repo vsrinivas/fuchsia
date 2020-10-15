@@ -38,12 +38,12 @@ TEST_F(SimTest, Disassoc) {
   EXPECT_EQ(ap.GetNumAssociatedClient(), 0U);
 
   // Verify that we get appropriate notification
-  ASSERT_EQ(client_ifc.stats_.deauth_indications.size(), 1U);
-  const wlanif_deauth_indication_t& deauth_ind = client_ifc.stats_.deauth_indications.front();
+  ASSERT_EQ(client_ifc.stats_.disassoc_indications.size(), 1U);
+  const wlanif_disassoc_indication_t& disassoc_ind = client_ifc.stats_.disassoc_indications.front();
   // Verify reason code is propagated
-  EXPECT_EQ(deauth_ind.reason_code, kDisassocReason);
-  // Deauthenticated by AP so not locally initiated
-  EXPECT_EQ(deauth_ind.locally_initiated, false);
+  EXPECT_EQ(disassoc_ind.reason_code, kDisassocReason);
+  // Disassociated by AP so not locally initiated
+  EXPECT_EQ(disassoc_ind.locally_initiated, false);
 }
 
 }  // namespace wlan::brcmfmac

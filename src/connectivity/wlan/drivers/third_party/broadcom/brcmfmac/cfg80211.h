@@ -330,7 +330,11 @@ struct brcmf_cfg80211_wowl {
   bool nd_enabled;
 };
 
-enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC };
+enum brcmf_disconnect_mode {
+  BRCMF_DISCONNECT_NONE,
+  BRCMF_DISCONNECT_DEAUTH,
+  BRCMF_DISCONNECT_DISASSOC
+};
 
 /**
  * struct brcmf_cfg80211_info - dongle private data of cfg80211 interface

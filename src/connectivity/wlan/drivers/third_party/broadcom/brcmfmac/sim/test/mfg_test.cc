@@ -108,9 +108,9 @@ TEST_F(MfgTest, CheckConnections) {
   // Check if the client's assoc with FakeAP succeeded
   EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
-  // Deletion of the client IF should have resulted in deauth of the
-  // client (as IF is stopped if started as part of cleanup during delete).
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
+  // Deletion of the client IF should have resulted in disassoc of the
+  // client (cleanup during IF delete).
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
   // Verify Assoc with SoftAP succeeded
   ASSERT_EQ(softap_ifc_.stats_.assoc_indications.size(), 1U);
   ASSERT_EQ(softap_ifc_.stats_.auth_indications.size(), 1U);

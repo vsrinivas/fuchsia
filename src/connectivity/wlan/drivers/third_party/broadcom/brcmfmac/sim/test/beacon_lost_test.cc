@@ -95,7 +95,7 @@ TEST_F(BeaconLostTest, NoBeaconDisassocTest) {
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // A disassociation should have occured due a beacon timeout
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
 }
 
 // Verify that deauthorization occurs after moving away from associated AP
@@ -129,7 +129,7 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // A disassociation should have occured due to moving away from the AP
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
 }
 
 // Verify that losing a beacon from an unassociated ap does not cause any disassociation

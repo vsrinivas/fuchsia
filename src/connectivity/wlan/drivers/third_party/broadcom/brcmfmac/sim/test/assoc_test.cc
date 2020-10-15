@@ -99,6 +99,8 @@ class AssocTest : public SimTest {
     size_t assoc_resp_count = 0;
     // Track number of disassociation confs (initiated from self)
     size_t disassoc_conf_count = 0;
+    // Track number of disassoc indications (initiated from AP)
+    size_t disassoc_ind_count = 0;
     // Track number of deauth indications (initiated from AP)
     size_t deauth_ind_count = 0;
     // Number of deauth confirmations (when initiated by self)
@@ -162,6 +164,7 @@ class AssocTest : public SimTest {
   void OnJoinConf(const wlanif_join_confirm_t* resp);
   void OnAuthConf(const wlanif_auth_confirm_t* resp);
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
+  void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
   void OnDisassocConf(const wlanif_disassoc_confirm_t* resp);
   void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
@@ -202,6 +205,10 @@ wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
     .disassoc_conf =
         [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnDisassocConf(resp);
+        },
+    .disassoc_ind =
+        [](void* cookie, const wlanif_disassoc_indication_t* ind) {
+          static_cast<AssocTest*>(cookie)->OnDisassocInd(ind);
         },
     .signal_report =
         [](void* cookie, const wlanif_signal_report_indication* ind) {
@@ -260,6 +267,7 @@ void AssocTest::Init() {
   context_.assoc_resp_count = 0;
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;
+  context_.disassoc_ind_count = 0;
   context_.signal_ind_count = 0;
   context_.signal_ind_rssi = 0;
   context_.signal_ind_snr = 0;
@@ -320,6 +328,11 @@ void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.dea
 void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   context_.deauth_ind_count++;
   client_ifc_.stats_.deauth_indications.push_back(*ind);
+}
+
+void AssocTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
+  context_.disassoc_ind_count++;
+  client_ifc_.stats_.disassoc_indications.push_back(*ind);
 }
 
 void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
@@ -987,11 +1000,12 @@ TEST_F(AssocTest, DisassocFromAPTest) {
   env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
-  EXPECT_EQ(context_.deauth_ind_count, 1U);
+  EXPECT_EQ(context_.disassoc_ind_count, 1U);
 
-  EXPECT_EQ(client_ifc_.stats_.deauth_indications.size(), 1U);
-  const wlanif_deauth_indication_t& deauth_ind = client_ifc_.stats_.deauth_indications.front();
-  EXPECT_EQ(deauth_ind.locally_initiated, false);
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
+  const wlanif_disassoc_indication_t& disassoc_ind =
+      client_ifc_.stats_.disassoc_indications.front();
+  EXPECT_EQ(disassoc_ind.locally_initiated, false);
 }
 
 // After assoc & disassoc, send disassoc again to test event handling
@@ -1015,7 +1029,7 @@ TEST_F(AssocTest, LinkEventTest) {
   // Send Deauth frame after disassociation
   DeauthFromAp();
   EXPECT_EQ(context_.assoc_resp_count, 1U);
-  EXPECT_EQ(context_.deauth_ind_count, 1U);
+  EXPECT_EQ(context_.disassoc_ind_count, 1U);
 }
 
 // After assoc, send a deauth from ap - client should disassociate

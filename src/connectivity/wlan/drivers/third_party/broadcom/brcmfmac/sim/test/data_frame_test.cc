@@ -159,6 +159,7 @@ class DataFrameTest : public SimTest {
   void OnJoinConf(const wlanif_join_confirm_t* resp);
   void OnAuthConf(const wlanif_auth_confirm_t* resp);
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
+  void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
   void OnEapolConf(const wlanif_eapol_confirm_t* resp);
   void OnEapolInd(const wlanif_eapol_indication_t* ind);
   void OnDataRecv(const void* data_buffer, size_t data_size);
@@ -195,6 +196,10 @@ wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
     .disassoc_conf =
         [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
           // Ignore
+        },
+    .disassoc_ind =
+        [](void* cookie, const wlanif_disassoc_indication_t* ind) {
+          static_cast<DataFrameTest*>(cookie)->OnDisassocInd(ind);
         },
     .eapol_conf =
         [](void* cookie, const wlanif_eapol_confirm_t* resp) {
@@ -295,6 +300,8 @@ void DataFrameTest::OnEapolInd(const wlanif_eapol_indication_t* ind) {
   }
   eapol_ind_count++;
 }
+
+void DataFrameTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
 
 void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   std::vector<uint8_t> resp;

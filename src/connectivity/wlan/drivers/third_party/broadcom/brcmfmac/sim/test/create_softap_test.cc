@@ -50,8 +50,10 @@ class CreateSoftAPTest : public SimTest {
 
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
+  bool deauth_conf_recv_ = false;
   bool deauth_ind_recv_ = false;
   bool disassoc_ind_recv_ = false;
+  bool disassoc_conf_recv_ = false;
   bool start_conf_received_ = false;
   bool stop_conf_received_ = false;
   uint8_t start_conf_status_;
@@ -74,7 +76,9 @@ class CreateSoftAPTest : public SimTest {
 
   void OnAuthInd(const wlanif_auth_ind_t* ind);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
+  void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
+  void OnDisassocConf(const wlanif_disassoc_confirm_t* resp);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
   void OnStartConf(const wlanif_start_confirm_t* resp);
   void OnStopConf(const wlanif_stop_confirm_t* resp);
@@ -100,6 +104,10 @@ wlanif_impl_ifc_protocol_ops_t CreateSoftAPTest::sme_ops_ = {
         [](void* cookie, const wlanif_auth_ind_t* ind) {
           static_cast<CreateSoftAPTest*>(cookie)->OnAuthInd(ind);
         },
+    .deauth_conf =
+        [](void* cookie, const wlanif_deauth_confirm_t* resp) {
+          static_cast<CreateSoftAPTest*>(cookie)->OnDeauthConf(resp);
+        },
     .deauth_ind =
         [](void* cookie, const wlanif_deauth_indication_t* ind) {
           static_cast<CreateSoftAPTest*>(cookie)->OnDeauthInd(ind);
@@ -107,6 +115,10 @@ wlanif_impl_ifc_protocol_ops_t CreateSoftAPTest::sme_ops_ = {
     .assoc_ind =
         [](void* cookie, const wlanif_assoc_ind_t* ind) {
           static_cast<CreateSoftAPTest*>(cookie)->OnAssocInd(ind);
+        },
+    .disassoc_conf =
+        [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
+          static_cast<CreateSoftAPTest*>(cookie)->OnDisassocConf(resp);
         },
     .disassoc_ind =
         [](void* cookie, const wlanif_disassoc_indication_t* ind) {
@@ -239,9 +251,16 @@ void CreateSoftAPTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
   deauth_ind_recv_ = true;
 }
+void CreateSoftAPTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) {
+  ASSERT_EQ(std::memcmp(resp->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
+  deauth_conf_recv_ = true;
+}
 void CreateSoftAPTest::OnAssocInd(const wlanif_assoc_ind_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
   assoc_ind_recv_ = true;
+}
+void CreateSoftAPTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
+  disassoc_conf_recv_ = true;
 }
 void CreateSoftAPTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, ind_expect_mac_.byte, ETH_ALEN), 0);
@@ -462,9 +481,8 @@ TEST_F(CreateSoftAPTest, DisassociateClientFromSoftAP) {
   SCHEDULE_CALL(zx::msec(50), &CreateSoftAPTest::VerifyAssoc, this);
   SCHEDULE_CALL(zx::msec(60), &CreateSoftAPTest::DeauthClient, this, kFakeMac);
   env_->Run();
-  // Should have received deauth and disassoc indications.
-  EXPECT_EQ(deauth_ind_recv_, true);
-  EXPECT_EQ(disassoc_ind_recv_, true);
+  // Should have received disassoc conf.
+  EXPECT_EQ(disassoc_conf_recv_, true);
   VerifyNumOfClient(0);
 }
 
