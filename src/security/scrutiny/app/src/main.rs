@@ -16,7 +16,7 @@ use {
 };
 
 fn main() -> Result<()> {
-    let mut app = ScrutinyApp::new(ScrutinyApp::args())?;
+    let mut app = ScrutinyApp::new(ScrutinyApp::args(None))?;
     app.plugin(CorePlugin::new())?;
     app.plugin(SearchPlugin::new())?;
     app.plugin(EnginePlugin::new(app.scheduler(), app.dispatcher(), app.plugin_manager()))?;

@@ -17,7 +17,7 @@ use {
     simplelog::{Config, LevelFilter, WriteLogger},
     std::env,
     std::fs::File,
-    std::io::{self, ErrorKind},
+    std::io::{self, BufRead, BufReader, ErrorKind},
     std::sync::{Arc, Mutex, RwLock},
 };
 
@@ -45,7 +45,10 @@ impl ScrutinyApp {
             "trace" => LevelFilter::Trace,
             _ => LevelFilter::Off,
         };
-        if log_level != LevelFilter::Off && args.value_of("command").is_none() {
+        if log_level != LevelFilter::Off
+            && args.value_of("command").is_none()
+            && args.value_of("script").is_none()
+        {
             logo::print_logo();
         }
         WriteLogger::init(
@@ -69,9 +72,11 @@ impl ScrutinyApp {
         Ok(Self { manager, dispatcher, scheduler, visualizer, shell, args })
     }
 
-    /// Parses all the commond line arguments passed in and returns.
-    pub fn args() -> ArgMatches<'static> {
-        App::new("scrutiny")
+    /// Parses all the commond line arguments passed in and returns. If
+    /// arguments are passed as a vector they will be read instead of the
+    /// command line.
+    pub fn args(inline_arguments: Option<Vec<String>>) -> ArgMatches<'static> {
+        let app = App::new("scrutiny")
             .version("0.1")
             .author("Fuchsia Authors")
             .about("An extendable security auditing framework")
@@ -101,6 +106,13 @@ impl ScrutinyApp {
                     .default_value("8080"),
             )
             .arg(
+                Arg::with_name("script")
+                    .short("s")
+                    .help("Run a file as a scrutiny script")
+                    .value_name("script")
+                    .takes_value(true),
+            )
+            .arg(
                 Arg::with_name("verbosity")
                     .short("v")
                     .help("The verbosity level of logging")
@@ -116,8 +128,12 @@ impl ScrutinyApp {
                     be served relative to the scrutiny service root.",
                     )
                     .default_value("/scripts/scrutiny"),
-            )
-            .get_matches()
+            );
+        if let Some(inline_arguments) = inline_arguments {
+            app.get_matches_from(inline_arguments)
+        } else {
+            app.get_matches()
+        }
     }
 
     /// Utility function to register a plugin.
@@ -151,6 +167,13 @@ impl ScrutinyApp {
             // Spin lock on the schedulers to finish.
             while !self.scheduler.lock().unwrap().all_idle() {}
             self.shell.execute(command.to_string());
+        } else if let Some(script) = self.args.value_of("script") {
+            // Spin lock on the schedulers to finish.
+            while !self.scheduler.lock().unwrap().all_idle() {}
+            let script_file = BufReader::new(File::open(script)?);
+            for line in script_file.lines() {
+                self.shell.execute(line?);
+            }
         } else {
             if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
                 RestService::spawn(self.dispatcher.clone(), self.visualizer.clone(), port);
@@ -164,5 +187,20 @@ impl ScrutinyApp {
             self.shell.run();
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_help_arguments() {
+        ScrutinyApp::args(Some(vec!["--help".to_string()]));
+    }
+
+    #[test]
+    fn test_script_arguments() {
+        ScrutinyApp::args(Some(vec!["--script foo".to_string()]));
     }
 }

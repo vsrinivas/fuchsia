@@ -344,7 +344,7 @@ impl Shell {
 
     /// Executes a single command.
     pub fn execute(&mut self, command: String) {
-        if command.is_empty() {
+        if command.is_empty() || command.starts_with("#") {
             return;
         }
         info!("Command: {}", command);
