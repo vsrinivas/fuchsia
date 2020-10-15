@@ -120,4 +120,41 @@ std::ostringstream DebugPrintQuery(const Dockyard& /*dockyard*/,
   return out;
 }
 
+// The following DockyardServiceImpl entries are for building with `--variant
+// host_asan-ubsan`. They need to be defined to support RTTI used in ubsan.
+grpc::Status DockyardServiceImpl::Init(grpc::ServerContext* context,
+                  const dockyard_proto::InitRequest* request,
+                  dockyard_proto::InitReply* reply) {
+  return grpc::Status();
+}
+
+grpc::Status DockyardServiceImpl::SendInspectJson(
+    grpc::ServerContext* context,
+    grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
+                             dockyard_proto::InspectJson>* stream) {
+  return grpc::Status();
+}
+
+grpc::Status DockyardServiceImpl::SendSample(
+    grpc::ServerContext* context,
+    grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
+                             dockyard_proto::RawSample>* stream) {
+  return grpc::Status();
+}
+
+// Handler for the Harvester calling `SendSamples()`.
+grpc::Status DockyardServiceImpl::SendSamples(
+    grpc::ServerContext* context,
+    grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
+                             dockyard_proto::RawSamples>* stream) {
+  return grpc::Status();
+}
+
+grpc::Status DockyardServiceImpl::GetDockyardIdsForPaths(
+    grpc::ServerContext* context,
+    const dockyard_proto::DockyardPaths* request,
+    dockyard_proto::DockyardIds* reply) {
+  return grpc::Status();
+}
+
 }  // namespace dockyard
