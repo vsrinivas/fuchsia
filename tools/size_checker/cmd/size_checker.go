@@ -553,9 +553,13 @@ See //tools/size_checker for more details.`)
 		var startColorCharacter string
 		var endColorCharacter string
 
+		// If any component is overbudget, then size_checker will fail.
+		if componentSize.Size > componentSize.Budget {
+			overBudget = true
+		}
+
 		if showBudgetOnly {
 			if componentSize.Size > componentSize.Budget {
-				overBudget = true
 				// Red
 				startColorCharacter = "\033[31m"
 			} else {
@@ -564,6 +568,7 @@ See //tools/size_checker for more details.`)
 			}
 			endColorCharacter = "\033[0m"
 		}
+
 		totalSize += componentSize.Size
 		totalBudget += componentSize.Budget
 		totalRemaining += remainingBudget
