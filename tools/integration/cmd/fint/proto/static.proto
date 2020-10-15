@@ -90,4 +90,8 @@ message Static {
   // instead. It's not specific to the current build config, but it can be
   // assumed to always exist.
   string default_test_durations_file = 27;
+
+  // Whether to use goma for running ninja. Will be ignored (and goma will not
+  // be used) when building with some experimental toolchain versions.
+  bool use_goma = 28;
 }

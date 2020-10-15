@@ -33,4 +33,17 @@ message Context {
 
   // Passed through to the sdk_id gn arg.
   string sdk_id = 5;
+
+  // A cache directory that's persisted between builds.
+  string cache_dir = 6;
+
+  // Passed through to the `build_info_version` gn arg.
+  string release_version = 7;
+
+  // Paths to directories that contain alternate versions of these toolchains.
+  // For each one, if set, we'll use the toolchain version at the specified path
+  // instead of the version included in the checkout.
+  string clang_toolchain_dir = 8;
+  string gcc_toolchain_dir = 9;
+  string rust_toolchain_dir = 10;
 }
