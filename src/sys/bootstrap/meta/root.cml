@@ -127,11 +127,16 @@
                 "/svc/fuchsia.device.manager.BindDebugger",
                 "/svc/fuchsia.device.manager.DebugDumper",
                 "/svc/fuchsia.device.NameProvider",
+                "/svc/fuchsia.diagnostics.ArchiveAccessor",
+                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.paver.Paver",
                 "/svc/fuchsia.scheduler.ProfileProvider",
                 "/svc/fuchsia.sysinfo.SysInfo",
@@ -144,15 +149,14 @@
             to: [ "#core" ],
         },
 
-        // Non-zircon services for svchost
+        // Non-zircon services for archivist and svchost
         {
             protocol: [
                 "/svc/fuchsia.amber.Control",
                 "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.diagnostics.internal.LogStatsController",
                 "/svc/fuchsia.exception.Handler",
                 "/svc/fuchsia.feedback.CrashReporter",
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.net.NameLookup",
                 "/svc/fuchsia.net.stack.Log",
                 "/svc/fuchsia.net.stack.Stack",
@@ -163,6 +167,8 @@
                 "/svc/fuchsia.posix.socket.Provider",
                 "/svc/fuchsia.process.Resolver",
                 "/svc/fuchsia.sys.Environment",
+                "/svc/fuchsia.sys.internal.ComponentEventProvider",
+                "/svc/fuchsia.sys.internal.LogConnector",
                 "/svc/fuchsia.sys.Launcher",
                 "/svc/fuchsia.sys.Loader",
                 "/svc/fuchsia.tracing.controller.Controller",
@@ -189,7 +195,7 @@
             to: [ "#core" ],
         },
 
-        // Offer events to `core` for diagnostics usage.
+        // Offer events to `bootstrap` for diagnostics usage.
         {
             event: [
                 "running",
@@ -197,13 +203,18 @@
                 "stopped",
             ],
             from: "framework",
-            to: [ "#core" ],
+            to: [ "#bootstrap" ],
         },
         {
             event: "capability_ready",
             from: "framework",
-            to: [ "#core" ],
+            to: [ "#bootstrap" ],
             filter: { path: "/diagnostics" },
+        },
+        {
+            protocol: [ "/svc/fuchsia.sys2.EventSource" ],
+            from: "parent",
+            to: [ "#bootstrap" ],
         },
     ],
     expose: [

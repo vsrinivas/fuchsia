@@ -423,7 +423,7 @@ Add the following entries to the rules.triage file:
 ```json5
 select: {
     ...
-    actual_components: "INSPECT:core/archivist:root/event_stats:components_started",
+    actual_components: "INSPECT:bootstrap/archivist:root/event_stats:components_started",
 }
 ```
 

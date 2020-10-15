@@ -6,10 +6,6 @@
             name: "appmgr",
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
         },
-        {
-            name: "archivist",
-            url: "fuchsia-boot:///#meta/archivist.cm",
-        },
 
         // Children below this line may be present on some but not all product configurations (whereas
         // children above it are expected to be present on all configs that include core.cml)
@@ -52,12 +48,6 @@
             ],
             from: "parent",
             to: [ "#debug_serial" ],
-        },
-        {
-            protocol: [ "/svc/fuchsia.diagnostics.internal.LogStatsController" ],
-            from: "#log-stats",
-            to: [ "#archivist" ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: "/svc/fuchsia.hardware.serial.NewDeviceProxy",
@@ -115,29 +105,12 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.sys2.EventSource",
-            ],
-            from: "parent",
-            to: [ "#archivist" ],
-        },
-        {
-            protocol: [
-                "/svc/fuchsia.sys.internal.ComponentEventProvider",
-                "/svc/fuchsia.sys.internal.LogConnector",
-            ],
-            from: "#appmgr",
-            to: [ "#archivist" ],
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
                 "/svc/fuchsia.diagnostics.ArchiveAccessor",
                 "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
                 "/svc/fuchsia.logger.Log",
             ],
-            from: "#archivist",
+            from: "parent",
             to: [
                 "#appmgr",
                 "#log-stats",
@@ -145,7 +118,7 @@
         },
         {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
-            from: "#archivist",
+            from: "parent",
             to: [
                 "#debug_serial",
                 "#font_provider",
@@ -153,11 +126,6 @@
                 "#remote-control",
                 "#test_manager",
             ],
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "#archivist",
-            to: [ "#font_provider" ],
         },
         {
             protocol: [
@@ -186,18 +154,6 @@
             ],
             from: "parent",
             to: [ "#remote-control" ],
-        },
-        {
-            storage: "data",
-            from: "self",
-            to: [ "#archivist" ],
-        },
-        {
-            directory: "/boot",
-            from: "parent",
-            as: "/config/data",
-            to: [ "#archivist" ],
-            subdir: "config/archivist",
         },
         {
             directory: "config-data",
@@ -290,23 +246,6 @@
                 "#remote-control",
             ],
         },
-
-        // Offer lifecycle events to the archivist for diagnostics.
-        {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
-            from: "parent",
-            to: [ "#archivist" ],
-        },
-        {
-            event: "capability_ready",
-            from: "parent",
-            to: [ "#archivist" ],
-            filter: { path: "/diagnostics" },
-        },
     ],
     expose: [
         // Non-zircon services for svchost
@@ -326,6 +265,8 @@
                 "/svc/fuchsia.posix.socket.Provider",
                 "/svc/fuchsia.process.Resolver",
                 "/svc/fuchsia.sys.Environment",
+                "/svc/fuchsia.sys.internal.ComponentEventProvider",
+                "/svc/fuchsia.sys.internal.LogConnector",
                 "/svc/fuchsia.sys.Launcher",
                 "/svc/fuchsia.sys.Loader",
                 "/svc/fuchsia.tracing.controller.Controller",
@@ -338,19 +279,9 @@
             protocol: [ "fuchsia.appmgr.Startup" ],
             from: "#appmgr",
         },
-
-        // Expose LogSink for use by components in other realms. The archivist
-        // exposes LogSink, components use it and when component_manager routes
-        // the protocol it'll defer the binding to the archivist through
-        // capabiltiy requested for attribution.
         {
-            protocol: [
-                "/svc/fuchsia.diagnostics.ArchiveAccessor",
-                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
-            ],
-            from: "#archivist",
+            protocol: [ "/svc/fuchsia.diagnostics.internal.LogStatsController" ],
+            from: "#log-stats",
         },
 
         // device_manager needs the hub for the serial console

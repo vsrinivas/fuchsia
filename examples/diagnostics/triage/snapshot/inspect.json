@@ -7,7 +7,7 @@
         "component_url": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cm",
         "timestamp": 39085389926
       },
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "all_archive_accessor_node": {

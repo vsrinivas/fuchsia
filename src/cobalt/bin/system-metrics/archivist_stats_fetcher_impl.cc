@@ -13,8 +13,8 @@
 namespace cobalt {
 
 namespace {
-constexpr const char kAllSelector[] = "core/archivist:root/all_archive_accessor:*";
-constexpr const char kFeedbackSelector[] = "core/archivist:root/feedback_archive_accessor:*";
+constexpr const char kAllSelector[] = "bootstrap/archivist:root/all_archive_accessor:*";
+constexpr const char kFeedbackSelector[] = "bootstrap/archivist:root/feedback_archive_accessor:*";
 }  // namespace
 
 using Pipeline = fuchsia_component_diagnostics::ComponentDiagnosticsMetricDimensionPipeline;

@@ -115,8 +115,8 @@ pub struct LogStats {
 impl LogStats {
     pub async fn new(min_severity: LogSeverity) -> Result<Self, Error> {
         let mut response = ArchiveReader::new()
-            .add_selector("core/archivist:root/log_stats/by_component/*:*")
-            .add_selector("core/archivist:root/event_stats/recent_events/*:*")
+            .add_selector("bootstrap/archivist:root/log_stats/by_component/*:*")
+            .add_selector("bootstrap/archivist:root/event_stats/recent_events/*:*")
             .snapshot::<Inspect>()
             .await?;
 

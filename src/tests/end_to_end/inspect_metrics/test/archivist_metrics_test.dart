@@ -6,9 +6,10 @@ import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
 
-const String allNode = 'core/archivist:root/all_archive_accessor:*';
+const String allNode = 'bootstrap/archivist:root/all_archive_accessor:*';
 
-const String feedbackNode = 'core/archivist:root/feedback_archive_accessor:*';
+const String feedbackNode =
+    'bootstrap/archivist:root/feedback_archive_accessor:*';
 
 void main() {
   sl4f.Sl4f sl4fDriver;

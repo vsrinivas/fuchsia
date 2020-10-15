@@ -45,9 +45,9 @@ LogStatsFetcherImpl::LogStatsFetcherImpl(
     fit::function<fuchsia::diagnostics::ArchiveAccessorPtr()> connector,
     std::unordered_map<std::string, ComponentEventCode> component_code_map, abs_clock::Clock* clock)
     : executor_(dispatcher),
-      archive_reader_(connector(), {"core/archivist:root/log_stats:*",
-                                    "core/archivist:root/log_stats/by_component/*:error_logs",
-                                    "core/archivist:root/log_stats/granular_stats"}),
+      archive_reader_(connector(), {"bootstrap/archivist:root/log_stats:*",
+                                    "bootstrap/archivist:root/log_stats/by_component/*:error_logs",
+                                    "bootstrap/archivist:root/log_stats/granular_stats"}),
       component_code_map_(std::move(component_code_map)),
       clock_(clock) {
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only

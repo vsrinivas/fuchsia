@@ -1,6 +1,10 @@
 {
     children: [
         {
+            name: "archivist",
+            url: "fuchsia-boot:///#meta/archivist.cm",
+        },
+        {
             name: "device_name_provider",
             url: "fuchsia-boot:///#meta/device-name-provider.cm",
         },
@@ -299,7 +303,7 @@
         // Offer the log services to the console
         {
             protocol: [ "/svc/fuchsia.logger.Log" ],
-            from: "parent",
+            from: "#archivist",
             to: [ "#console" ],
         },
 
@@ -422,7 +426,6 @@
         {
             protocol: [
                 "/svc/fuchsia.exception.Handler",
-                "/svc/fuchsia.logger.Log",
                 "/svc/fuchsia.net.NameLookup",
                 "/svc/fuchsia.net.stack.Log",
                 "/svc/fuchsia.net.stack.Stack",
@@ -444,8 +447,16 @@
             ],
         },
         {
+            protocol: "/svc/fuchsia.logger.Log",
+            from: "#archivist",
+            to: [
+                "#console-launcher",
+                "#driver_manager",
+            ],
+        },
+        {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
-            from: "parent",
+            from: "#archivist",
             to: [
                 "#console-launcher",
                 "#driver_manager",
@@ -486,6 +497,59 @@
             from: "#fshost",
             to: [ "#miscsvc" ],
         },
+
+        // -- Archivist offers below here --
+
+        // Required events
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            event: "capability_ready",
+            from: "parent",
+            to: [ "#archivist" ],
+            filter: { path: "/diagnostics" },
+        },
+
+        // Required services
+        {
+            protocol: [
+                "/svc/fuchsia.boot.ReadOnlyLog",
+                "/svc/fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+
+        // Weak services from appmgr and log-stats
+        {
+            protocol: [
+                "/svc/fuchsia.diagnostics.internal.LogStatsController",
+                "/svc/fuchsia.sys.internal.ComponentEventProvider",
+                "/svc/fuchsia.sys.internal.LogConnector",
+            ],
+            from: "parent",
+            to: [ "#archivist" ],
+            dependency: "weak_for_migration",
+        },
+
+        // Configuration
+        {
+            directory: "/boot",
+            from: "parent",
+            as: "/config/data",
+            to: [ "#archivist" ],
+            rights: [ "r*" ],
+            subdir: "config/archivist",
+        },
+
+        // -- End Archivist offers --
     ],
     expose: [
         // This handle is used by component manager to resolve packages from the
@@ -580,6 +644,16 @@
                 "/svc/fuchsia.thermal.Controller",
             ],
             from: "#power_manager",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.diagnostics.ArchiveAccessor",
+                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            from: "#archivist",
         },
     ],
     environments: [

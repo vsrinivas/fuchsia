@@ -56,7 +56,7 @@ void main() {
       expect(
           await getInspectValues(
             inspect,
-            'core/archivist:root/fuchsia.inspect.Health:status',
+            'bootstrap/archivist:root/fuchsia.inspect.Health:status',
             pipeline: sl4f.InspectPipeline.feedback,
           ),
           equals(['OK']));

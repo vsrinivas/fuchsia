@@ -18,7 +18,7 @@ const std::unordered_map<std::string, ComponentEventCode> kComponentCodeMap = {
 
 const char kBaselineArchive[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {
@@ -78,7 +78,7 @@ class LogStatsFetcherImplTest : public gtest::TestLoopFixture {
 TEST_F(LogStatsFetcherImplTest, Simple) {
   const char archive[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {
@@ -115,7 +115,7 @@ TEST_F(LogStatsFetcherImplTest, Simple) {
 TEST_F(LogStatsFetcherImplTest, CountDrops) {
   const char archive[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {
@@ -152,7 +152,7 @@ TEST_F(LogStatsFetcherImplTest, CountDrops) {
 TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
   const char archive[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {
@@ -191,7 +191,7 @@ TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
 TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
   const char archive[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {
@@ -230,7 +230,7 @@ TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
 TEST_F(LogStatsFetcherImplTest, GranularStats) {
   const char archive[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {
@@ -275,7 +275,7 @@ TEST_F(LogStatsFetcherImplTest, GranularStats) {
   // Bucket 1 is created. It should not be reported until at least 30 minutes has passed.
   const char archive2[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "log_stats": {

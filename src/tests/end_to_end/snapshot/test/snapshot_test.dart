@@ -25,7 +25,7 @@ void main() {
     final result = snapshot.inspect
         .where((entry) =>
             entry.containsKey('moniker') &&
-            entry['moniker'] == 'core/archivist')
+            entry['moniker'] == 'bootstrap/archivist')
         .toList();
     expect(result, hasLength(1));
     final archivistInspect = result[0];

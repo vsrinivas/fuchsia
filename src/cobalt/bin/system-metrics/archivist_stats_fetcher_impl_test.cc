@@ -21,7 +21,7 @@ const uint64_t kExpectedMetricCount = 22;
 
 const char kExpectedArchiveOutput[] = R"(
 {
-  "moniker": "core/archivist",
+  "moniker": "bootstrap/archivist",
   "payload": {
     "root": {
       "all_archive_accessor": {
@@ -150,7 +150,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   std::vector<uint64_t> values;
   fake_archive_ = cobalt::FakeArchive(R"(
     {
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "all_archive_accessor": {
@@ -171,7 +171,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
     {
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "all_archive_accessor": {
@@ -192,7 +192,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
     {
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "all_archive_accessor": {
@@ -213,7 +213,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
     {
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "all_archive_accessor": {
@@ -235,7 +235,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
     {
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "all_archive_accessor": {
@@ -259,7 +259,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
     {
-      "moniker": "core/archivist",
+      "moniker": "bootstrap/archivist",
       "payload": {
         "root": {
           "feedback_archive_accessor": {
