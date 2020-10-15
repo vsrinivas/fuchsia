@@ -33,7 +33,7 @@
 #include "capabilities/msix.h"
 #include "capabilities/pci_express.h"
 #include "config.h"
-#include "device_proxy.h"
+#include "device_rpc.h"
 #include "ref_counted.h"
 
 namespace pci {

@@ -5,20 +5,21 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/interrupt.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
+// TODO(fxbug.dev/33713): Stop depending on the types in this file.
+#include <zircon/syscalls/pci.h>
+#include <zircon/types.h>
 
 #include <ddk/protocol/pci.h>
 
 #include "common.h"
 #include "device.h"
-// TODO(fxbug.dev/33713): Stop depending on the types in this file.
-#include <lib/zx/status.h>
-#include <zircon/assert.h>
-#include <zircon/errors.h>
-#include <zircon/status.h>
-#include <zircon/syscalls/pci.h>
-#include <zircon/types.h>
+#include "device_rpc.h"
 
 #define RPC_ENTRY zxlogf(DEBUG, "[%s] %s: entry", cfg_->addr(), __func__)
 
