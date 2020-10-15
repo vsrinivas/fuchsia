@@ -43,15 +43,9 @@ zx_status_t PciRootAllocator::AllocateWindow(zx_paddr_t in_base, size_t size,
   return ZX_OK;
 }
 
-zx_status_t PciRootAllocator::GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) {
-  // PciRootAllocations will free any space they hold when they are destroyed,
-  // and nothing grants anything to PciRootAllocator.
-  alloc.release();
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t PciRegionAllocator::AllocateWindow(zx_paddr_t base, size_t size,
                                                std::unique_ptr<PciAllocation>* out_alloc) {
+  ZX_DEBUG_ASSERT(backing_alloc_);
   if (!backing_alloc_) {
     return ZX_ERR_NO_MEMORY;
   }

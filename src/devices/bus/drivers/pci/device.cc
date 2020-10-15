@@ -222,7 +222,8 @@ zx_status_t Device::EnableBusMaster(bool enabled) {
     return ZX_ERR_BAD_STATE;
   }
 
-  ModifyCmdLocked(enabled ? 0 : PCI_CFG_COMMAND_BUS_MASTER_EN, enabled ? PCI_CFG_COMMAND_BUS_MASTER_EN : 0);
+  ModifyCmdLocked(enabled ? /*clr_bits=*/0 : /*set_bits=*/PCI_CFG_COMMAND_BUS_MASTER_EN,
+                  enabled ? /*clr_bits=*/PCI_CFG_COMMAND_BUS_MASTER_EN : /*set_bits=*/0);
   return upstream_->EnableBusMasterUpstream(enabled);
 }
 
@@ -346,7 +347,7 @@ zx_status_t Device::AllocateBar(uint8_t bar_id) {
   // then the below code could potentially fail because it received an address that didn't fit
   // in 32 bits.
   if (bar_info.is_mmio) {
-    if (bar_info.is_64bit || bar_info.is_prefetchable) {
+    if (bar_info.is_prefetchable) {
       allocator = &upstream_->pf_mmio_regions();
     } else {
       allocator = &upstream_->mmio_regions();
@@ -364,13 +365,9 @@ zx_status_t Device::AllocateBar(uint8_t bar_id) {
       // our metadata already matches what we requested from the allocator.
       zxlogf(TRACE, "[%s] preserved BAR %u's existing allocation.", cfg_->addr(), bar_info.bar_id);
       return ZX_OK;
-    } else {
-      zxlogf(TRACE, "[%s] failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
-             bar_info.bar_id, bar_info.address, status);
-      bar_info.address = 0;
     }
 
-    zxlogf(TRACE, "%s failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
+    zxlogf(TRACE, "[%s] failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
            bar_info.bar_id, bar_info.address, status);
     bar_info.address = 0;
   }

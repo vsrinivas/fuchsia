@@ -8,11 +8,11 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <ddk/debug.h>
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/macros.h>
 #include <region-alloc/region-alloc.h>
 
-#include "allocation.h"
 #include "ref_counted.h"
 
 // PciAllocations and PciAllocators are concepts internal to UpstreamNodes which
@@ -144,8 +144,12 @@ class PciAllocator {
     return AllocateWindow(/* base */ 0, size, out_alloc);
   }
   // Provide this allocator with a PciAllocation, granting it ownership of that
-  // range of address space for calls to AllocateWindow.
-  virtual zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) = 0;
+  // range of address space for calls to AllocateWindow. This is not necessary
+  // for a PciRootAllocator since all of its windows are allocated over the
+  // Pciroot Protocol.
+  virtual zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
  protected:
   PciAllocator() = default;
@@ -160,7 +164,6 @@ class PciRootAllocator : public PciAllocator {
       : pciroot_(proto), type_(type), low_(low) {}
   zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
                              std::unique_ptr<PciAllocation>* out_alloc) final;
-  zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) final;
 
  private:
   // The bus driver outlives allocator objects.
@@ -181,9 +184,6 @@ class PciRegionAllocator : public PciAllocator {
   zx_status_t AllocateWindow(zx_paddr_t base, size_t size,
                              std::unique_ptr<PciAllocation>* out_alloc) final;
   zx_status_t GrantAddressSpace(std::unique_ptr<PciAllocation> alloc) final;
-  // Called by bridges to create a RegionPool for any windows they allocate
-  // through calls to AllocateWindow.
-  void SetRegionPool(RegionAllocator::RegionPool::RefPtr pool) { allocator_.SetRegionPool(pool); }
 
  private:
   std::unique_ptr<PciAllocation> backing_alloc_;

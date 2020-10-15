@@ -288,6 +288,7 @@ zx_status_t pci_root_host_init() {
 
   st = scan_acpi_tree_for_resources(get_root_resource());
   if (st != ZX_OK) {
+    zxlogf(ERROR, "Scanning acpi resources failed: %s", zx_status_get_string(st));
     return st;
   }
 

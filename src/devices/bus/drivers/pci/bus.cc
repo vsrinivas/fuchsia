@@ -4,6 +4,8 @@
 
 #include "bus.h"
 
+#include <zircon/status.h>
+
 #include <list>
 
 #include <ddk/debug.h>
@@ -191,6 +193,8 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
         uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
         status = Bridge::Create(zxdev(), std::move(config), upstream, this, mbus_id, &bridge);
         if (status != ZX_OK) {
+          zxlogf(ERROR, "failed to create Bridge at %s: %s", config->addr(),
+                 zx_status_get_string(status));
           continue;
         }
 
@@ -215,10 +219,10 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
         scan_list->push_back(bridge_entry);
         // Quit this scan and pick up again based on the scan entries found.
         return;
-      } else {
-        // Create a device
-        pci::Device::Create(zxdev(), std::move(config), upstream, this);
       }
+
+      // We're at a leaf node in the topology so create a normal device
+      pci::Device::Create(zxdev(), std::move(config), upstream, this);
     }
 
     // Reset _func_id to zero here so that after we resume a single function

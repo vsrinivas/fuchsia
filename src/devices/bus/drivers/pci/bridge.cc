@@ -103,27 +103,6 @@ zx_status_t Bridge::Init() {
     return status;
   }
 
-  // Allocate enough space in a region pool to account for the worst case
-  // scenario of having the max number of functions under a bridge. Bridge
-  // window allocations aren't a problem because the max bars per device is 6,
-  // which is larger than the 5 allocations a bridge might need for 2 bars and
-  // 3 window allocations. Presently, this comes out to a a max of ~132 KB of
-  // space if we were to meet that upper bound. RegionPools are slab
-  // allocators that scale up as needed, so the initial allocation is roughly
-  // a page, and will grow as necessary so we won't pay this cost unless we
-  // need to.
-  constexpr uint32_t pool_size =
-      sizeof(RegionAllocator::Region) * (PCI_MAX_FUNCTIONS_PER_BUS * PCI_MAX_BAR_REGS);
-  constexpr uint32_t pool_size_aligned = fbl::round_up(pool_size, PAGE_SIZE * 1u);
-  auto allocator_pool_ = RegionAllocator::RegionPool::Create(pool_size_aligned);
-  if (allocator_pool_ == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  mmio_regions_.SetRegionPool(allocator_pool_);
-  pf_mmio_regions_.SetRegionPool(allocator_pool_);
-  pio_regions_.SetRegionPool(allocator_pool_);
-
   // Things went well and the device is in a good state. Add ourself to the upstream
   // graph and mark as plugged in.
   upstream_->LinkDevice(static_cast<pci::Device*>(this));
@@ -173,15 +152,16 @@ zx_status_t Bridge::ParseBusWindowsLocked() {
 void Bridge::Dump() const {
   pci::Device::Dump();
 
-  zxlogf(INFO, "  managed bus id: %#02x", managed_bus_id());
+  zxlogf(INFO, "[%s]  managed bus id: %#02x", cfg_->addr(), managed_bus_id());
   if (io_limit() > io_base()) {
-    zxlogf(INFO, "       io window: [%#04x-%#04x]", io_base(), io_limit());
+    zxlogf(INFO, "[%s]       io window: [%#04x-%#04x]", cfg_->addr(), io_base(), io_limit());
   }
   if (mem_limit() > mem_base()) {
-    zxlogf(INFO, "     mmio window: [%#08x-%#08x]", mem_base(), mem_limit());
+    zxlogf(INFO, "[%s]     mmio window: [%#08x-%#08x]", cfg_->addr(), mem_base(), mem_limit());
   }
   if (pf_mem_limit() > pf_mem_base()) {
-    zxlogf(INFO, "  pf-mmio window: [%#" PRIx64 "-%#" PRIx64 "]", pf_mem_base(), pf_mem_limit());
+    zxlogf(INFO, "[%s]  pf-mmio window: [%#" PRIx64 "-%#" PRIx64 "]", cfg_->addr(), pf_mem_base(),
+           pf_mem_limit());
   }
 }
 
@@ -223,15 +203,15 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   // those ranges to their own allocators. Those are then used to allocate for
   // bridges and device endpoints further downstream.
   //
-  // TODO(cja) : support dynamic configuration of bridge windows.  Its going
+  // TODO(cja) : support dynamic configuration of bridge windows.  It's going
   // to be important when we need to support hot-plugging.  See fxbug.dev/30281
 
   zx_status_t status;
-  std::unique_ptr<PciAllocation> alloc;
 
   // Every window is configured the same butwith different allocators and registers.
-  auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, auto base, auto limit,
+  auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, uint64_t base, size_t limit,
                               auto label) {
+    std::unique_ptr<PciAllocation> alloc;
     if (base <= limit) {
       uint64_t size = static_cast<uint64_t>(limit) - base + 1;
       status = upstream_alloc.AllocateWindow(base, size, &alloc);
@@ -243,6 +223,8 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
       }
 
       ZX_DEBUG_ASSERT(alloc != nullptr);
+      zxlogf(DEBUG, "[%s] Granting [ %#lx-%#lx ] to %s (%p)", cfg_->addr(), base, base + size,
+             label, &dest_alloc);
       return dest_alloc.GrantAddressSpace(std::move(alloc));
     }
     return ZX_OK;

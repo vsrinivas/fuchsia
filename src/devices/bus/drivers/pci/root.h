@@ -56,6 +56,7 @@ class PciRoot : public UpstreamNode {
         pf_mmio_regions_(proto, PCI_ADDRESS_SPACE_MEMORY, false),
         pio_regions_(proto, PCI_ADDRESS_SPACE_IO, false) {}
 
+ private:
   PciRootAllocator mmio_regions_;
   PciRootAllocator pf_mmio_regions_;
   PciRootAllocator pio_regions_;
