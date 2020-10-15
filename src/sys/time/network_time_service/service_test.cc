@@ -5,12 +5,15 @@
 #include "src/sys/time/network_time_service/service.h"
 
 #include <fcntl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <time.h>
@@ -21,6 +24,7 @@
 #include "src/sys/time/lib/network_time/test/common.h"
 #include "src/sys/time/lib/network_time/test/local_roughtime_server.h"
 #include "src/sys/time/lib/network_time/time_server_config.h"
+#include "src/sys/time/network_time_service/inspect.h"
 #include "third_party/roughtime/protocol.h"
 
 namespace time_external = fuchsia::time::external;
@@ -35,6 +39,9 @@ const int64_t kExpectedTimeNanos = 7'000'000'000'000;
 const uint64_t kTestNanosAfterPoll = 100;
 
 class PushSourceTest : public gtest::TestLoopFixture {
+ public:
+  PushSourceTest() : executor_(dispatcher()) {}
+
  protected:
   void TearDown() override {
     TestLoopFixture::TearDown();
@@ -42,6 +49,11 @@ class PushSourceTest : public gtest::TestLoopFixture {
       local_roughtime_server_->Stop();
     }
     time_service_.reset();
+  }
+
+  void RunPromiseToCompletion(fit::promise<> promise) {
+    executor_.schedule_task(std::move(promise));
+    RunLoopUntilIdle();
   }
 
   std::shared_ptr<time_server::LocalRoughtimeServer> local_roughtime_server_ = nullptr;
@@ -63,16 +75,18 @@ class PushSourceTest : public gtest::TestLoopFixture {
     return port_number;
   }
 
+  // Launch a TimeServiceImpl that polls a roughtime server listening on `roughtime_port`.
+  void LaunchService(uint16_t roughtime_port, inspect::Node node) {
+    time_server::TimeServerConfig config = ConfigForLocalServer(roughtime_port);
+    time_server::RoughTimeServer server = config.ServerList()[0];
+    network_time_service::RetryConfig retry_config(kTestNanosAfterPoll, 0, 1, kTestNanosAfterPoll);
+    network_time_service::Inspect inspect(std::move(node));
+    time_service_.reset(new TimeServiceImpl(provider_.TakeContext(), server, dispatcher(),
+                                            std::move(inspect), retry_config));
+  }
+
   // Connect to the PushSource protocol of a TimeServiceImpl. Launches it if not already launched.
-  time_external::PushSourcePtr ConnectToService(uint16_t roughtime_port) {
-    if (!time_service_) {
-      time_server::TimeServerConfig config = ConfigForLocalServer(roughtime_port);
-      time_server::RoughTimeServer server = config.ServerList()[0];
-      network_time_service::RetryConfig retry_config(kTestNanosAfterPoll, 0, 1,
-                                                     kTestNanosAfterPoll);
-      time_service_.reset(
-          new TimeServiceImpl(provider_.TakeContext(), server, dispatcher(), retry_config));
-    }
+  time_external::PushSourcePtr ConnectToService() {
     time_external::PushSourcePtr push_source;
     provider_.ConnectToPublicService(push_source.NewRequest());
     return push_source;
@@ -91,15 +105,17 @@ class PushSourceTest : public gtest::TestLoopFixture {
 
   std::unique_ptr<TimeServiceImpl> time_service_;
   sys::testing::ComponentContextProvider provider_;
+  async::Executor executor_;
 };
 
 TEST_F(PushSourceTest, PushSourceRejectsMultipleClients) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kTestPrivateKey);
   local_roughtime_server_->SetTime(kExpectedTimeNanos / 1000);
-  auto first_client = ConnectToService(roughtime_port);
+  LaunchService(roughtime_port, inspect::Node());
+  auto first_client = ConnectToService();
 
   // Currently the PushSource implementation accepts only one client at a time - see fxbug.dev/58068
-  auto second_client = ConnectToService(roughtime_port);
+  auto second_client = ConnectToService();
   bool error_handler_called = false;
   second_client.set_error_handler([&](zx_status_t status) {
     EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
@@ -119,9 +135,10 @@ TEST_F(PushSourceTest, PushSourceRejectsMultipleClients) {
 TEST_F(PushSourceTest, PushSourceStateResetOnDisconnect) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kTestPrivateKey);
   local_roughtime_server_->SetTime(kExpectedTimeNanos / 1000);
+  LaunchService(roughtime_port, inspect::Node());
   time_external::TimeSample original_sample;
 
-  auto first_client = ConnectToService(roughtime_port);
+  auto first_client = ConnectToService();
   bool first_call_complete = false;
   first_client->WatchSample([&](time_external::TimeSample sample) {
     original_sample = std::move(sample);
@@ -135,7 +152,7 @@ TEST_F(PushSourceTest, PushSourceStateResetOnDisconnect) {
   // last sent state for previous client should not be retained, so call should
   // return immediately with the same result.
   bool second_call_complete = false;
-  auto second_client = ConnectToService(roughtime_port);
+  auto second_client = ConnectToService();
   second_client->WatchSample([&](time_external::TimeSample sample) {
     EXPECT_EQ(original_sample.monotonic(), sample.monotonic());
     EXPECT_EQ(original_sample.utc(), sample.utc());
@@ -147,7 +164,9 @@ TEST_F(PushSourceTest, PushSourceStateResetOnDisconnect) {
 
 TEST_F(PushSourceTest, WatchSample) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kTestPrivateKey);
-  auto proxy = ConnectToService(roughtime_port);
+  inspect::Inspector inspector;
+  LaunchService(roughtime_port, std::move(inspector.GetRoot()));
+  auto proxy = ConnectToService();
   local_roughtime_server_->SetTime(kExpectedTimeNanos / 1000);
 
   bool first_call_complete = false;
@@ -164,6 +183,17 @@ TEST_F(PushSourceTest, WatchSample) {
   });
   RunLoopUntilIdle();
   EXPECT_TRUE(first_call_complete);
+  bool now = false;
+  RunPromiseToCompletion(
+      inspect::ReadFromInspector(inspector).then([&](fit::result<inspect::Hierarchy>& hierarchy) {
+        ASSERT_TRUE(hierarchy.is_ok());
+        auto* success_count =
+            hierarchy.value().node().get_property<inspect::UintPropertyValue>("success_count");
+        ASSERT_TRUE(success_count);
+        ASSERT_EQ(1u, success_count->value());
+        now = true;
+      }));
+  ASSERT_TRUE(now);
 
   bool second_call_complete = false;
   mono_before = zx_clock_get_monotonic();
@@ -182,11 +212,20 @@ TEST_F(PushSourceTest, WatchSample) {
   EXPECT_FALSE(second_call_complete);
   RunLoopFor(zx::nsec(kTestNanosAfterPoll));
   EXPECT_TRUE(second_call_complete);
+  RunPromiseToCompletion(
+      inspect::ReadFromInspector(inspector).then([&](fit::result<inspect::Hierarchy>& hierarchy) {
+        ASSERT_TRUE(hierarchy.is_ok());
+        auto* success_count =
+            hierarchy.value().node().get_property<inspect::UintPropertyValue>("success_count");
+        ASSERT_TRUE(success_count);
+        ASSERT_EQ(2u, success_count->value());
+      }));
 }
 
 TEST_F(PushSourceTest, WatchStatus) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kTestPrivateKey);
-  auto proxy = ConnectToService(roughtime_port);
+  LaunchService(roughtime_port, inspect::Node());
+  auto proxy = ConnectToService();
   bool call_complete = false;
   proxy->WatchStatus([&](time_external::Status status) {
     EXPECT_EQ(status, time_external::Status::OK);
@@ -206,7 +245,9 @@ TEST_F(PushSourceTest, WatchStatus) {
 TEST_F(PushSourceTest, WatchStatusUnhealthy) {
   // Connect to a roughtime server signing with a bad key to simulate unhealthy.
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kWrongPrivateKey);
-  auto proxy = ConnectToService(roughtime_port);
+  inspect::Inspector inspector;
+  LaunchService(roughtime_port, std::move(inspector.GetRoot()));
+  auto proxy = ConnectToService();
   // First call always indicates OK
   proxy->WatchStatus(
       [&](time_external::Status status) { EXPECT_EQ(status, time_external::Status::OK); });
@@ -221,12 +262,22 @@ TEST_F(PushSourceTest, WatchStatusUnhealthy) {
   });
   RunLoopUntilIdle();
   EXPECT_TRUE(second_call_complete);
+  RunPromiseToCompletion(
+      inspect::ReadFromInspector(inspector).then([&](fit::result<inspect::Hierarchy>& hierarchy) {
+        ASSERT_TRUE(hierarchy.is_ok());
+        auto* failure_node = hierarchy.value().GetByPath({"failure_count"});
+        auto* bad_response =
+            failure_node->node().get_property<inspect::UintPropertyValue>("bad_response");
+        ASSERT_TRUE(bad_response);
+        ASSERT_EQ(1u, bad_response->value());
+      }));
 }
 
 TEST_F(PushSourceTest, ChannelClosedOnConcurrentWatchStatus) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kWrongPrivateKey);
+  LaunchService(roughtime_port, inspect::Node());
   bool error_handler_called = false;
-  auto proxy = ConnectToService(roughtime_port);
+  auto proxy = ConnectToService();
   proxy.set_error_handler([&](zx_status_t status) {
     EXPECT_EQ(status, ZX_ERR_BAD_STATE);
     error_handler_called = true;
@@ -244,8 +295,9 @@ TEST_F(PushSourceTest, ChannelClosedOnConcurrentWatchStatus) {
 
 TEST_F(PushSourceTest, ChannelClosedOnConcurrentWatchSample) {
   uint16_t roughtime_port = LaunchLocalRoughtimeServer(time_server::kWrongPrivateKey);
+  LaunchService(roughtime_port, inspect::Node());
   bool error_handler_called = false;
-  auto proxy = ConnectToService(roughtime_port);
+  auto proxy = ConnectToService();
   proxy.set_error_handler([&](zx_status_t status) {
     EXPECT_EQ(status, ZX_ERR_BAD_STATE);
     error_handler_called = true;

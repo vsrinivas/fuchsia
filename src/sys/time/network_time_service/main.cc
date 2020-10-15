@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -13,6 +14,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/sys/time/lib/network_time/time_server_config.h"
+#include "src/sys/time/network_time_service/inspect.h"
 #include "src/sys/time/network_time_service/service.h"
 
 constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
@@ -35,9 +37,12 @@ int main(int argc, char** argv) {
   time_server::RoughTimeServer server = server_config.ServerList()[0];
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  sys::ComponentInspector inspector(context.get());
+
   network_time_service::TimeServiceImpl svc(
-      sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(server),
-      loop.dispatcher());
+      std::move(context), std::move(server), loop.dispatcher(),
+      network_time_service::Inspect(std::move(inspector.root())));
   loop.Run();
   return 0;
 }

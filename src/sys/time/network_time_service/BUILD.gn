@@ -16,6 +16,8 @@ group("network_time_service") {
 
 source_set("lib") {
   sources = [
+    "inspect.cc",
+    "inspect.h",
     "service.cc",
     "service.h",
     "watcher.h",
@@ -24,6 +26,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.time.external",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/sys/time/lib/network_time:lib",
@@ -90,6 +93,7 @@ executable("network_time_service_unittests") {
   testonly = true
 
   sources = [
+    "inspect_test.cc",
     "service_test.cc",
     "watcher_test.cc",
   ]
@@ -97,6 +101,7 @@ executable("network_time_service_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/files",
     "//src/lib/fxl",

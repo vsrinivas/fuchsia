@@ -14,6 +14,7 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/sys/time/lib/network_time/time_server_config.h"
+#include "src/sys/time/network_time_service/inspect.h"
 #include "src/sys/time/network_time_service/watcher.h"
 
 const uint64_t kMinNanosBetweenFailures = 1 * 1'000'000'000u;
@@ -63,7 +64,7 @@ class TimeServiceImpl : public time_external::PushSource {
   // Constructs the time service with a caller-owned application context.
   TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
                   time_server::RoughTimeServer rough_time_server, async_dispatcher_t* dispatcher,
-                  RetryConfig retry_config = RetryConfig());
+                  Inspect inspect, RetryConfig retry_config = RetryConfig());
   ~TimeServiceImpl();
 
   // |PushSource|:
@@ -87,6 +88,7 @@ class TimeServiceImpl : public time_external::PushSource {
 
   std::unique_ptr<sys::ComponentContext> context_;
   time_server::RoughTimeServer rough_time_server_;
+  Inspect inspect_;
 
   fidl::Binding<time_external::PushSource> push_source_binding_;
   Watcher<time_external::Status> status_watcher_;

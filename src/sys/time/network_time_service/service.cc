@@ -14,9 +14,11 @@ namespace network_time_service {
 
 TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
                                  time_server::RoughTimeServer rough_time_server,
-                                 async_dispatcher_t* dispatcher, RetryConfig retry_config)
+                                 async_dispatcher_t* dispatcher, Inspect inspect,
+                                 RetryConfig retry_config)
     : context_(std::move(context)),
       rough_time_server_(std::move(rough_time_server)),
+      inspect_(std::move(inspect)),
       push_source_binding_(this),
       status_watcher_(time_external::Status::OK),
       dispatcher_(dispatcher),
@@ -58,23 +60,20 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
     dispatcher_last_success_time_.emplace(async::Now(dispatcher));
     status = time_external::Status::OK;
     consecutive_poll_failures_ = 0;
+    inspect_.Success();
   } else {
     switch (ret.first) {
       case time_server::OK:
         status = time_external::Status::UNKNOWN_UNHEALTHY;
-        FX_LOGS(ERROR) << "Time server indicated OK status but did not return a time";
         break;
       case time_server::BAD_RESPONSE:
-        FX_LOGS(INFO) << "Failed to poll time with BAD_RESPONSE";
         status = time_external::Status::PROTOCOL;
         break;
       case time_server::NETWORK_ERROR:
-        FX_LOGS(INFO) << "Failed to poll time with NETWORK_ERROR";
         status = time_external::Status::NETWORK;
         break;
       case time_server::NOT_SUPPORTED:
       default:
-        FX_LOGS(INFO) << "Failed to poll time";
         status = time_external::Status::UNKNOWN_UNHEALTHY;
         break;
     }
@@ -82,6 +81,7 @@ void TimeServiceImpl::AsyncPollSamples(async_dispatcher_t* dispatcher, async::Ta
         async::Now(dispatcher_) + retry_config_.WaitAfterFailure(consecutive_poll_failures_);
     ScheduleAsyncPoll(next_poll_time);
     consecutive_poll_failures_++;
+    inspect_.Failure(ret.first);
   }
 
   status_watcher_.Update(status);
