@@ -261,7 +261,7 @@ impl<'a> ProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut f: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ProtocolEncoder::encode_request_strict_response_flexible_response(
                 bytes_,
                 handles_,
@@ -279,7 +279,7 @@ impl<'a> ProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut f: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ProtocolEncoder::encode_request_flexible_response_strict_response(
                 bytes_,
                 handles_,
@@ -348,7 +348,7 @@ impl futures::Stream for ProtocolRequestStream {
         if this.is_terminated {
             panic!("polled ProtocolRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -669,7 +669,7 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse");
             ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
@@ -747,7 +747,7 @@ impl ProtocolRequestFlexibleResponseStrictResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse");
             ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());

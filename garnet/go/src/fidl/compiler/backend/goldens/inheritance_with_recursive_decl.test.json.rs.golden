@@ -232,7 +232,7 @@ impl futures::Stream for ParentRequestStream {
         if this.is_terminated {
             panic!("polled ParentRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -602,7 +602,7 @@ impl futures::Stream for ChildRequestStream {
         if this.is_terminated {
             panic!("polled ChildRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,

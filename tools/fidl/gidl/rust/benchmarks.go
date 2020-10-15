@@ -21,7 +21,7 @@ var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 #![allow(unused_imports)]
 use {
 	fidl::{
-		encoding::{Context, Decodable, Decoder, Encoder, with_tls_coding_bufs},
+		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf},
 		handle::Handle,
 	},
 	fidl_benchmarkfidl{{ .CrateSuffix }} as benchmarkfidl{{ .CrateSuffix }},
@@ -86,9 +86,9 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 		},
 		|value| {
 			{{- /* Encode to TLS buffers since that's what the bindings do in practice. */}}
-			with_tls_coding_bufs(|bytes, handles| {
+			with_tls_encode_buf(|bytes, handles| {
 				Encoder::encode_with_context(_V1_CONTEXT, bytes, handles, value).unwrap();
-				{{- /* Return the underlying heap storage of handles, since with_tls_coding_bufs
+				{{- /* Return the underlying heap storage of handles, since with_tls_encode_buf
 					clears it after calling this closure, which otherwise would close all the
 					handles. By returning the actual handles, we avoid including handle close
 					time in the benchmark. Note that this means the handle vector must reallocate

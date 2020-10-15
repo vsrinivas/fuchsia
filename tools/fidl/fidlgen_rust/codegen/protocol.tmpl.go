@@ -350,7 +350,7 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+		::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
 			{{ $protocol.Name }}Encoder::encode_{{ $method.Name }}_response(
 				bytes_, handles_,
 				{{- range $index, $param := $method.Response -}}
@@ -370,7 +370,7 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+		::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
 			{{ $protocol.Name }}Encoder::encode_{{ $method.Name }}_response(
 				bytes_, handles_,
 				txid.as_raw_id(),
@@ -445,7 +445,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 		if this.is_terminated {
 			panic!("polled {{ $protocol.Name }}RequestStream after completion");
 		}
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+		::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
 			match this.inner.channel().read(cx, bytes, handles) {
 				std::task::Poll::Ready(Ok(())) => {},
 				std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -859,7 +859,7 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 			body: &mut response,
 		};
 
-		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+		::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
 			fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Response");
 			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
 			fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());

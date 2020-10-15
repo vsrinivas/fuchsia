@@ -217,7 +217,7 @@ impl Client {
         F: for<'a, 'b> FnOnce(Txid, &'a mut Vec<u8>, &'b mut Vec<Handle>) -> Result<(), Error>,
     {
         let id = self.inner.register_msg_interest();
-        crate::encoding::with_tls_coding_bufs(|bytes, handles| {
+        crate::encoding::with_tls_encode_buf(|bytes, handles| {
             msg_from_id(Txid::from_interest_id(id), bytes, handles)?;
             match self.inner.channel.write(bytes, handles) {
                 Ok(()) => Ok(()),
@@ -840,7 +840,11 @@ mod tests {
             send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
         });
         let response_data = client
-            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL, zx::Time::after(5.seconds()))
+            .send_query::<u8, u8>(
+                &mut SEND_DATA.clone(),
+                SEND_ORDINAL,
+                zx::Time::after(5.seconds()),
+            )
             .context("sending query")?;
         assert_eq!(SEND_DATA, response_data);
         Ok(())

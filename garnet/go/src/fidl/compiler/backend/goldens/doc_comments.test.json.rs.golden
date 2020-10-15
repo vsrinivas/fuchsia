@@ -309,7 +309,7 @@ impl<'a> InterfaceServerSender<'a> {
         Self { channel }
     }
     pub fn send_on_event(&self) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_coding_bufs(|bytes_, handles_| {
+        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             InterfaceEncoder::encode_on_event_response(bytes_, handles_)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -373,7 +373,7 @@ impl futures::Stream for InterfaceRequestStream {
         if this.is_terminated {
             panic!("polled InterfaceRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,

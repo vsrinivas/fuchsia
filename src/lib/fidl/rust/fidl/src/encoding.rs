@@ -6,31 +6,62 @@
 
 use crate::invoke_for_handle_types;
 use {
-    crate::handle::{Handle, HandleBased, MessageBuf},
+    crate::handle::{Handle, HandleBased},
     crate::{Error, Result},
     bitflags::bitflags,
     fuchsia_zircon_status as zx_status,
     static_assertions::{assert_not_impl_any, assert_obj_safe},
-    std::{cell::RefCell, cmp, mem, ptr, str, u32, u64},
+    std::{cell::RefCell, cell::RefMut, cmp, mem, ptr, str, u32, u64},
 };
 
-thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
+struct TlsBuf {
+    bytes: Vec<u8>,
+    encode_handles: Vec<Handle>,
+    decode_handles: Vec<Handle>,
+}
 
-const MIN_TLS_CODING_BUF_SIZE: usize = 512;
+impl TlsBuf {
+    fn new() -> TlsBuf {
+        TlsBuf { bytes: Vec::new(), encode_handles: Vec::new(), decode_handles: Vec::new() }
+    }
+}
 
-/// Acquire a mutable reference to the thread-local encoding buffers.
+thread_local!(static TLS_BUF: RefCell<TlsBuf> = RefCell::new(TlsBuf::new()));
+
+const MIN_TLS_BUF_BYTES_SIZE: usize = 512;
+
+/// Acquire a mutable reference to the thread-local buffers used for encoding.
 ///
 /// This function may not be called recursively.
 #[inline]
-pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> R) -> R {
-    CODING_BUF.with(|buf| {
-        let mut buf = buf.borrow_mut();
-        let (bytes, handles) = buf.split_mut();
+pub fn with_tls_encode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> R) -> R {
+    TLS_BUF.with(|buf| {
+        let (mut bytes, mut handles) =
+            RefMut::map_split(buf.borrow_mut(), |b| (&mut b.bytes, &mut b.encode_handles));
         if bytes.capacity() == 0 {
-            bytes.reserve(MIN_TLS_CODING_BUF_SIZE);
+            bytes.reserve(MIN_TLS_BUF_BYTES_SIZE);
         }
-        let res = f(bytes, handles);
-        buf.clear();
+        let res = f(&mut bytes, &mut handles);
+        bytes.clear();
+        handles.clear();
+        res
+    })
+}
+
+/// Acquire a mutable reference to the thread-local buffers used for decoding.
+///
+/// This function may not be called recursively.
+#[inline]
+pub fn with_tls_decode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> R) -> R {
+    TLS_BUF.with(|buf| {
+        let (mut bytes, mut handles) =
+            RefMut::map_split(buf.borrow_mut(), |b| (&mut b.bytes, &mut b.decode_handles));
+        if bytes.capacity() == 0 {
+            bytes.reserve(MIN_TLS_BUF_BYTES_SIZE);
+        }
+        let res = f(&mut bytes, &mut handles);
+        bytes.clear();
+        handles.clear();
         res
     })
 }
@@ -43,7 +74,7 @@ pub fn with_tls_encoded<T, E: From<Error>>(
     val: &mut impl Encodable,
     f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> std::result::Result<T, E>,
 ) -> std::result::Result<T, E> {
-    with_tls_coding_bufs(|bytes, handles| {
+    with_tls_encode_buf(|bytes, handles| {
         Encoder::encode(bytes, handles, val)?;
         f(bytes, handles)
     })
