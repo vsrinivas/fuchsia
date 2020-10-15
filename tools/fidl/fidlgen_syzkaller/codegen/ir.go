@@ -6,7 +6,6 @@ package codegen
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
@@ -256,11 +255,10 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	// TODO(fxbug.dev/45007): Syzkaller does not support enum member references.
 	// When this changes, we need to remove all special handling such as
 	// ignoring specific files in the codegen test, or in the regen script.
-	t, ok := primitiveTypes[val]
-	if !ok {
-		log.Fatal("Unknown primitive type: ", val)
+	if t, ok := primitiveTypes[val]; ok {
+		return Type(t)
 	}
-	return Type(t)
+	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
 func (c *compiler) compilePrimitiveSubtypeRange(val types.PrimitiveSubtype, valRange string) Type {
@@ -271,8 +269,7 @@ func (c *compiler) compileHandleSubtype(val types.HandleSubtype) Type {
 	if t, ok := handleSubtypes[val]; ok {
 		return Type(t)
 	}
-	log.Fatal("Unknown handle type: ", val)
-	return Type("")
+	panic(fmt.Sprintf("unknown handle type: %v", val))
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
@@ -404,7 +401,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 	case types.IdentifierType:
 		declType, ok := c.decls[p.Type.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier: ", p.Type.Identifier)
+			panic(fmt.Sprintf("unknown identifier: %v", p.Type.Identifier))
 		}
 
 		switch declType {

@@ -6,7 +6,6 @@ package cpp
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -881,7 +880,7 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 func (c *compiler) compileTableType(eci types.EncodedCompoundIdentifier) string {
 	val := types.ParseCompoundIdentifier(eci)
 	if c.isInExternalLibrary(val) {
-		log.Fatal("Can't create table type for external identifier: ", val)
+		panic(fmt.Sprintf("can't create table type for external identifier: %v", val))
 	}
 
 	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
@@ -923,8 +922,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 	case types.DefaultLiteral:
 		return "default"
 	default:
-		log.Fatal("Unknown literal kind: ", val.Kind)
-		return ""
+		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))
 	}
 }
 
@@ -935,8 +933,7 @@ func (c *compiler) compileConstant(val types.Constant, t *Type, typ types.Type, 
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal, typ)
 	default:
-		log.Fatal("Unknown constant kind: ", val.Kind)
-		return ""
+		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}
 }
 
@@ -944,8 +941,7 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown primitive type: ", val)
-	return ""
+	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
 func (c *compiler) compileType(val types.Type) Type {
@@ -1014,7 +1010,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier: ", val.Identifier)
+			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		if declType == types.ProtocolDeclType {
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
@@ -1052,7 +1048,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.LLFamily = Reference
 				r.LLClass = ft
 			default:
-				log.Fatal("Unknown declaration type: ", declType)
+				panic(fmt.Sprintf("unknown declaration type: %v", declType))
 			}
 
 			if val.Nullable {
@@ -1072,7 +1068,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			}
 		}
 	default:
-		log.Fatal("Unknown type kind: ", val.Kind)
+		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
 	}
 	return r
 }
@@ -1504,17 +1500,17 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 	if val.Attributes.HasAttribute("Result") {
 		if len(r.Members) != 2 {
-			log.Fatal("A Result union must have two members: ", val.Name)
+			panic(fmt.Sprintf("result union must have two members: %v", val.Name))
 		}
 		if val.Members[0].Type.Kind != types.IdentifierType {
-			log.Fatal("Value member of result union must be an identifier", val.Name)
+			panic(fmt.Sprintf("value member of result union must be an identifier: %v", val.Name))
 		}
 		valueStructDeclType, ok := c.decls[val.Members[0].Type.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier: ", val.Members[0].Type.Identifier)
+			panic(fmt.Sprintf("unknown identifier: %v", val.Members[0].Type.Identifier))
 		}
 		if valueStructDeclType != "struct" {
-			log.Fatal("First member of result union not a struct: ", val.Name)
+			panic(fmt.Sprintf("first member of result union not a struct: %v", val.Name))
 		}
 		result := Result{
 			ResultDecl:      r.Name,

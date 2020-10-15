@@ -6,7 +6,6 @@ package codegen
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"strconv"
@@ -572,7 +571,7 @@ func (c *compiler) computeHandleSubtype(t types.Type) (types.ObjectType, bool) {
 	case types.IdentifierType:
 		declType, ok := c.decls[t.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier: ", t.Identifier)
+			panic(fmt.Sprintf("unknown identifier: %v", t.Identifier))
 		}
 		if declType == types.ProtocolDeclType {
 			return types.ObjectTypeChannel, true
@@ -626,8 +625,7 @@ func (_ *compiler) compileLiteral(val types.Literal) string {
 	case types.StringLiteral:
 		return strconv.Quote(val.Value)
 	default:
-		log.Fatal("Unknown literal kind: ", val.Kind)
-		return ""
+		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))
 	}
 }
 
@@ -638,15 +636,14 @@ func (c *compiler) compileConstant(val types.Constant) string {
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
-		log.Fatal("Unknown constant kind: ", val.Kind)
-		return ""
+		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}
 }
 
 func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	t, ok := primitiveTypes[val]
 	if !ok {
-		log.Fatal("Unknown primitive type: ", val)
+		panic(fmt.Sprintf("unknown primitive type: %v", val))
 	}
 	return Type(t)
 }
@@ -710,7 +707,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 		e := c.compileCompoundIdentifier(val.Identifier, true, "")
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier: ", val.Identifier)
+			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		switch declType {
 		case types.BitsDeclType:
@@ -730,10 +727,10 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 				r = Type(e)
 			}
 		default:
-			log.Fatal("Unknown declaration type: ", declType)
+			panic(fmt.Sprintf("unknown declaration type: %v", declType))
 		}
 	default:
-		log.Fatal("Unknown type kind: ", val.Kind)
+		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
 	}
 	return
 }

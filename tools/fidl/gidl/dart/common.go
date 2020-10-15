@@ -6,7 +6,6 @@ package dart
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -29,7 +28,7 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 		case fidlir.Event:
 			builder.WriteString(fmt.Sprint("HandleSubtype.channel,"))
 		default:
-			log.Fatal("unsupported handle subtype ", d.Subtype)
+			panic(fmt.Sprintf("unknown handle subtype: %v", d.Subtype))
 		}
 		// Write indices corresponding to the .gidl file handle_defs block.
 		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
@@ -73,7 +72,7 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			// Dart does not support events, so events are mapped to bare handles
 			return rawHandle
 		default:
-			log.Fatal("Handle subtype not supported ", handleDecl.Subtype())
+			panic(fmt.Sprintf("unknown handle subtype: %v", handleDecl.Subtype()))
 		}
 	case gidlir.Record:
 		switch decl := decl.(type) {
