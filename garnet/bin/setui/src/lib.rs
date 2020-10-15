@@ -11,6 +11,7 @@ use {
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
+    crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
@@ -27,6 +28,7 @@ use {
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
     crate::night_mode::night_mode_controller::NightModeController,
+    crate::policy::policy_proxy::PolicyProxy,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
     crate::service_context::GenerateService,
@@ -306,9 +308,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             _ => (HashSet::new(), HashSet::new(), HashSet::new()),
         };
 
-        // TODO(fxb/59747): use this hub to communicate with policy components.
-        let _policy_messenger_factory = internal::policy::message::create_hub();
-
         let event_messenger_factory = internal::event::message::create_hub();
         let service_context =
             ServiceContext::create(self.generate_service, Some(event_messenger_factory.clone()));
@@ -513,6 +512,20 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
+    // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
+    // configured policy types.
+    // TODO(fxbug.dev/59747): don't hardcode handler creation
+    let mut policy_proxies = HashMap::new();
+    policy_proxies.insert(
+        SettingType::Audio,
+        PolicyProxy::create(
+            SettingType::Audio,
+            Box::new(AudioPolicyHandler::create()),
+            core_messenger_factory.clone(),
+            policy_messenger_factory.clone(),
+        ),
+    );
+
     let mut proxies = HashMap::new();
 
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
@@ -653,7 +666,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         Setup
     );
 
-    // TODO(fxbug.dev/fxb/60925): allow configuration of policy API
+    // TODO(fxbug.dev/60925): allow configuration of policy API
     service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
         crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(
             policy_messenger_factory.clone(),

@@ -13,13 +13,20 @@ use bitflags::bitflags;
 
 use crate::switchboard::base::AudioStreamType;
 
+pub mod audio_policy_handler;
+pub mod volume_policy_fidl_handler;
+
 pub type PropertyTarget = AudioStreamType;
 
 /// Unique identifier for a policy.
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct PolicyId(u32);
 
-pub mod volume_policy_fidl_handler;
+impl PolicyId {
+    pub fn create(policy_id: u32) -> Self {
+        Self(policy_id)
+    }
+}
 
 /// `StateBuilder` is used to construct a new [`State`] as the internal
 /// modification of properties should not be available post construction.
