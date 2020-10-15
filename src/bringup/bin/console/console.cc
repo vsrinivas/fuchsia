@@ -93,9 +93,9 @@ void Console::DebugReaderThread() {
 }
 
 zx_status_t Console::Log(llcpp::fuchsia::logger::LogMessage log) {
-  fbl::StringBuffer<kMaxWriteSize> prefix;
+  fbl::StringBuffer<kMaxWriteSize> buffer;
   auto time = zx::nsec(log.time);
-  prefix.AppendPrintf("[%05ld.%03ld] %05lu:%05lu> [", time.to_secs(), time.to_msecs() % 1000,
+  buffer.AppendPrintf("[%05ld.%03ld] %05lu:%05lu> [", time.to_secs(), time.to_msecs() % 1000,
                       log.pid, log.tid);
   auto count = log.tags.count();
   for (auto& tag : log.tags) {
@@ -104,43 +104,35 @@ zx_status_t Console::Log(llcpp::fuchsia::logger::LogMessage log) {
         return ZX_OK;
       }
     }
-    prefix.AppendPrintf("%.*s", static_cast<int>(tag.size()), tag.data());
+    buffer.Append(tag.data(), tag.size());
     if (--count > 0) {
-      prefix.Append(", ");
+      buffer.Append(", ");
     }
   }
   switch (log.severity) {
     case FX_LOG_TRACE:
-      prefix.Append("] TRACE: ");
+      buffer.Append("] TRACE: ");
       break;
     case FX_LOG_DEBUG:
-      prefix.Append("] DEBUG: ");
+      buffer.Append("] DEBUG: ");
       break;
     case FX_LOG_INFO:
-      prefix.Append("] INFO: ");
+      buffer.Append("] INFO: ");
       break;
     case FX_LOG_WARNING:
-      prefix.Append("] WARNING: ");
+      buffer.Append("] WARNING: ");
       break;
     case FX_LOG_ERROR:
-      prefix.Append("] ERROR: ");
+      buffer.Append("] ERROR: ");
       break;
     case FX_LOG_FATAL:
-      prefix.Append("] FATAL: ");
+      buffer.Append("] FATAL: ");
       break;
     default:
-      prefix.AppendPrintf("] VLOG(%d): ", FX_LOG_INFO - log.severity);
+      buffer.AppendPrintf("] VLOG(%d): ", FX_LOG_INFO - log.severity);
   }
-
-  zx_status_t status = tx_sink_(reinterpret_cast<const uint8_t*>(prefix.data()), prefix.size());
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = tx_sink_(reinterpret_cast<const uint8_t*>(log.msg.data()), log.msg.size());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return tx_sink_(reinterpret_cast<const uint8_t*>("\n"), 1);
+  buffer.Append(log.msg.data(), log.msg.size()).Append('\n');
+  return tx_sink_(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size());
 }
 
 void Console::Log(llcpp::fuchsia::logger::LogMessage log, LogCompleter::Sync& completer) {
