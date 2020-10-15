@@ -946,7 +946,7 @@ func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, v
 	if val.HasRequest && val.RequestPayload != "" {
 		requestStruct, ok := c.requestResponseStructs[val.RequestPayload]
 		if !ok {
-			log.Panic("Unknown request struct: ", val.RequestPayload)
+			panic(fmt.Sprintf("unknown request struct: %v", val.RequestPayload))
 		}
 		requestStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Request")
 		r.Request = &requestStruct
@@ -954,7 +954,7 @@ func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, v
 	if val.HasResponse && val.ResponsePayload != "" {
 		responseStruct, ok := c.requestResponseStructs[val.ResponsePayload]
 		if !ok {
-			log.Panic("Unknown response struct: ", val.ResponsePayload)
+			panic(fmt.Sprintf("unknown response struct: %v", val.ResponsePayload))
 		}
 		responseStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Response")
 		r.Response = &responseStruct

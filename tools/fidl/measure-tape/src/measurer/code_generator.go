@@ -6,7 +6,6 @@ package measurer
 
 import (
 	"fmt"
-	"log"
 )
 
 // CodeGenerator represents a code generator which takes a graph of
@@ -84,7 +83,7 @@ func (mt *MeasuringTape) assertOnlyStructUnionTable() {
 	case Table:
 		return
 	default:
-		log.Panicf("should not be reachable for kind %v", mt.kind)
+		panic(fmt.Sprintf("should not be reachable for kind %v", mt.kind))
 	}
 }
 

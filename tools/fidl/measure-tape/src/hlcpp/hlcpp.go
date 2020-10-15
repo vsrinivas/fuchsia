@@ -7,7 +7,6 @@ package hlcpp
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -166,7 +165,7 @@ func (p *Printer) newTmplParams(targetMt *measurer.MeasuringTape) tmplParams {
 
 func (p *Printer) WriteH(buf *bytes.Buffer, targetMt *measurer.MeasuringTape) {
 	if err := header.Execute(buf, p.newTmplParams(targetMt)); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
@@ -182,7 +181,7 @@ func (p *Printer) WriteCc(buf *bytes.Buffer,
 	sort.Strings(params.CcIncludes)
 
 	if err := ccTop.Execute(buf, params); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
 	cb := codeBuffer{buf: buf, level: 1}
@@ -192,7 +191,7 @@ func (p *Printer) WriteCc(buf *bytes.Buffer,
 	})
 
 	if err := ccBottom.Execute(buf, params); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
@@ -325,8 +324,7 @@ func fmtMethodKind(kind measurer.MethodKind) string {
 	case measurer.MeasureHandles:
 		return "MeasureHandles"
 	default:
-		log.Panicf("should not be reachable for method kind %v", kind)
-		return ""
+		panic(fmt.Sprintf("should not be reachable for method kind %v", kind))
 	}
 }
 

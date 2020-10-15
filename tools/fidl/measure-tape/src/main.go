@@ -96,7 +96,7 @@ func main() {
 	m := measurer.NewMeasurer(roots)
 	targetMt, err := m.MeasuringTapeFor(*targetType)
 	if err != nil {
-		log.Panic(err.Error())
+		panic(err)
 	}
 
 	allMethods := measurer.NewCodeGenerator(targetMt).Generate()
@@ -129,18 +129,18 @@ func hlcppGen(m *measurer.Measurer, targetMt *measurer.MeasuringTape,
 
 func writeFile(path string, data []byte) {
 	if err := ioutil.WriteFile(path, data, 0644); err != nil {
-		log.Panic(err.Error())
+		panic(err)
 	}
 }
 
 func verifyMeasureTape(expectedH, expectedCc []byte) {
 	actualH, err := ioutil.ReadFile(*outH)
 	if err != nil {
-		log.Panic(err.Error())
+		panic(err)
 	}
 	actualCc, err := ioutil.ReadFile(*outCc)
 	if err != nil {
-		log.Panic(err.Error())
+		panic(err)
 	}
 	if bytes.Compare(actualH, expectedH) != 0 || bytes.Compare(actualCc, expectedCc) != 0 {
 		fmt.Fprintf(os.Stderr, "%s and/or %s is out of date! Please run the following\n\n", *outH, *outCc)

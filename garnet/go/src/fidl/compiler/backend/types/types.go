@@ -757,14 +757,14 @@ func (enum *Enum) UnknownValueForTmpl() interface{} {
 	if enum.Type.IsSigned() {
 		unknownValue, err := enum.UnknownValueAsInt64()
 		if err != nil {
-			panic(err.Error())
+			panic(err)
 		}
 		return unknownValue
 	}
 
 	unknownValue, err := enum.UnknownValueAsUint64()
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 	return unknownValue
 }

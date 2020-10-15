@@ -4,9 +4,7 @@
 
 package measurer
 
-import (
-	"log"
-)
+import "fmt"
 
 // Expression represents an expression. It can be one of:
 //
@@ -91,8 +89,7 @@ func (expr *exprImpl) AssertKind(kinds ...TapeKind) TapeKind {
 			return kind
 		}
 	}
-	log.Panicf("expected %v, was %v", kinds, expr.kind)
-	return TapeKind(0)
+	panic(fmt.Sprintf("expected %v, was %v", kinds, expr.kind))
 }
 
 func (expr *exprImpl) Nullable() bool {
@@ -116,8 +113,7 @@ func (expr *exprImpl) Fmt(formatter ExpressionFormatter) string {
 	case mult:
 		return formatter.CaseMult(expr.lhs, expr.rhs)
 	}
-	log.Panicf("unexpected expressionKind %v", expr.discriminator)
-	return ""
+	panic(fmt.Sprintf("unexpected expressionKind %v", expr.discriminator))
 }
 
 func exprNum(n int) Expression {

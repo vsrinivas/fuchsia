@@ -5,7 +5,7 @@
 package measurer
 
 import (
-	"log"
+	"fmt"
 	"sort"
 
 	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
@@ -98,7 +98,7 @@ func (stmt *Statement) Visit(formatter StatementFormatter) {
 	case setMaxOrdinal:
 		formatter.CaseSetMaxOrdinal(stmt.args[0], stmt.args[1])
 	default:
-		log.Panicf("unexpected statementKind %v", stmt.kind)
+		panic(fmt.Sprintf("unexpected statementKind %v", stmt.kind))
 	}
 }
 

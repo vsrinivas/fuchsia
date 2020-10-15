@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -492,8 +491,7 @@ func compileLiteral(val types.Literal, typ types.Type) string {
 	case types.DefaultLiteral:
 		return "::Default::default()"
 	default:
-		log.Panic("Unknown literal kind: ", val.Kind)
-		return ""
+		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))
 	}
 }
 
@@ -514,8 +512,7 @@ func (c *compiler) compileConstant(val types.Constant, typ types.Type) string {
 	case types.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	default:
-		log.Panic("Unknown constant kind: ", val.Kind)
-		return ""
+		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}
 }
 
@@ -544,16 +541,14 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
-	log.Panic("Unknown primitive type: ", val)
-	return ""
+	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
 func compileHandleSubtype(val types.HandleSubtype) string {
 	if t, ok := handleSubtypes[val]; ok {
 		return t
 	}
-	log.Panic("Unknown handle type: ", val)
-	return ""
+	panic(fmt.Sprintf("unknown handle type: %v", val))
 }
 
 func (c *compiler) compileType(val types.Type, borrowed bool) Type {
@@ -620,7 +615,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		t := c.compileCamelCompoundIdentifier(val.Identifier)
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
-			log.Panic("unknown identifier: ", val.Identifier)
+			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		switch declType {
 		case types.BitsDeclType, types.EnumDeclType:
@@ -655,10 +650,10 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 				r = fmt.Sprintf("Option<%s>", r)
 			}
 		default:
-			log.Panic("Unknown declaration type in protocol: ", declType)
+			panic(fmt.Sprintf("unknown declaration type: %v", declType))
 		}
 	default:
-		log.Panic("Unknown type kind: ", val.Kind)
+		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
 	}
 
 	return Type{
@@ -710,7 +705,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier) []Parameter {
 	val, ok := c.requestResponsePayload[payload]
 	if !ok {
-		log.Panic("Unknown request/response struct: ", payload)
+		panic(fmt.Sprintf("unknown request/response struct: %v", payload))
 	}
 
 	var parameters []Parameter
@@ -826,7 +821,7 @@ func (c *compiler) populateFullStructMaskForType(mask []byte, typ *types.Type, f
 		if declType == types.StructDeclType {
 			st, ok := c.structs[typ.Identifier]
 			if !ok {
-				log.Panic("struct not found: ", typ.Identifier)
+				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
 			}
 			c.populateFullStructMaskForStruct(mask, st, flatten)
 		}
@@ -939,7 +934,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *types.Type) bool {
 		case types.StructDeclType:
 			st, ok := c.structs[typ.Identifier]
 			if !ok {
-				log.Panic("struct not found: ", typ.Identifier)
+				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
 			}
 			return c.computeUseFidlStructCopyForStruct(st)
 		case types.UnionDeclType:
@@ -947,12 +942,11 @@ func (c *compiler) computeUseFidlStructCopy(typ *types.Type) bool {
 		case types.TableDeclType:
 			return false
 		default:
-			log.Panic("Unknown declaration type ", declType)
+			panic(fmt.Sprintf("unknown declaration type: %v", declType))
 		}
 	default:
-		log.Panic("Unknown kind: ", typ.Kind)
+		panic(fmt.Sprintf("unknown type kind: %v", typ.Kind))
 	}
-	panic("shouldn't reach")
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
@@ -1208,9 +1202,7 @@ typeSwitch:
 	switch declType {
 	case types.ConstDeclType:
 		panic("const decl should never have derives")
-	case types.BitsDeclType:
-		fallthrough
-	case types.EnumDeclType:
+	case types.BitsDeclType, types.EnumDeclType:
 		// Enums and bits are always simple, non-float primitives which
 		// implement all derivable traits except zerocopy.
 		derivesOut = derivesAllButZerocopy
@@ -1220,7 +1212,7 @@ typeSwitch:
 	case types.StructDeclType:
 		st := dc.root.findStruct(eci)
 		if st == nil {
-			log.Panic("struct not found: ", eci)
+			panic(fmt.Sprintf("struct not found: %v", eci))
 		}
 		// Check if the derives have already been calculated
 		if deriveStatus.complete {
@@ -1238,7 +1230,7 @@ typeSwitch:
 	case types.TableDeclType:
 		table := dc.root.findTable(eci)
 		if table == nil {
-			log.Panic("table not found: ", eci)
+			panic(fmt.Sprintf("table not found: %v", eci))
 		}
 		// Check if the derives have already been calculated
 		if deriveStatus.complete {
@@ -1258,7 +1250,7 @@ typeSwitch:
 			result = dc.root.findResult(eci)
 		}
 		if union == nil && result == nil {
-			log.Panic("union not found: ", eci)
+			panic(fmt.Sprintf("union not found: %v", eci))
 		}
 		if union != nil {
 			// It's a union, not a result
@@ -1290,7 +1282,7 @@ typeSwitch:
 			result.Derives = derivesOut
 		}
 	default:
-		log.Panic("Unknown declaration type filling derives: ", declType)
+		panic(fmt.Sprintf("unknown declaration type: %v", declType))
 	}
 	if topMostCall || !dc.didShortCircuitOnRecursion {
 		// Our completed result is only valid if it's either at top-level
@@ -1331,9 +1323,7 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 		return derivesAllButZerocopy.remove(derivesCopy).and(dc.fillDerivesForType(*ogType.ElementType))
 	case types.StringType:
 		return derivesAllButZerocopy.remove(derivesCopy)
-	case types.HandleType:
-		fallthrough
-	case types.RequestType:
+	case types.HandleType, types.RequestType:
 		return derivesAllButZerocopy.remove(derivesCopy, derivesClone)
 	case types.PrimitiveType:
 		switch ogType.PrimitiveSubtype {
@@ -1346,20 +1336,19 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 		case types.Float32, types.Float64:
 			// Floats don't have a total ordering due to NAN and its multiple representations.
 			return derivesAllButZerocopy.remove(derivesEq, derivesOrd, derivesHash)
+		default:
+			panic(fmt.Sprintf("unknown primitive type: %v", ogType.PrimitiveSubtype))
 		}
 	case types.IdentifierType:
 		internalTypeDerives := dc.fillDerivesForECI(ogType.Identifier)
 		if ogType.Nullable {
 			// Nullable identifier types are put in an Option<Box<...>> and so aren't Copy
 			return internalTypeDerives.remove(derivesCopy, derivesAsBytes, derivesFromBytes)
-		} else {
-			return internalTypeDerives
 		}
+		return internalTypeDerives
 	default:
-		log.Panic("Unknown type kind in fillDerivesForType: ", ogType.Kind)
+		panic(fmt.Sprintf("unknown type kind: %v", ogType.Kind))
 	}
-	log.Panic("unreachable")
-	return 0
 }
 
 func Compile(r types.Root) Root {

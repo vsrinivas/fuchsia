@@ -7,7 +7,6 @@ package rust
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"text/template"
@@ -23,7 +22,7 @@ func WriteRs(buf *bytes.Buffer,
 	allMethods map[measurer.MethodID]*measurer.Method) {
 
 	if err := topOfRs.Execute(buf, newTmplParams(m, targetMt)); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
 	cb := codeBuffer{buf: buf}
@@ -68,8 +67,7 @@ func toTraitAndMethodName(kind measurer.MethodKind) (string, string) {
 	case measurer.MeasureHandles:
 		return "MeasurableHandles", "measure_handles"
 	default:
-		log.Panicf("should not be reachable for method kind %v", kind)
-		return "", ""
+		panic(fmt.Sprintf("should not be reachable for method kind %v", kind))
 	}
 }
 

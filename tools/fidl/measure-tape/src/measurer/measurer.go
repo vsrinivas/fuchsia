@@ -6,7 +6,6 @@ package measurer
 
 import (
 	"fmt"
-	"log"
 
 	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
@@ -172,7 +171,7 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 			inlineNumHandles: decl.elementCount * elementMt.inlineNumHandles,
 		}
 	default:
-		log.Panicf("unexpected decl, was %+v", kd.decl)
+		panic(fmt.Sprintf("unexpected decl, was %+v", kd.decl))
 	}
 	if err != nil {
 		return nil, err
@@ -319,13 +318,12 @@ func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
 	case fidlir.IdentifierType:
 		kd, ok := m.lookup(fidlcommon.MustReadName(string(typ.Identifier)))
 		if !ok {
-			log.Panicf("%v", typ)
+			panic(typ)
 		}
 		kd.nullable = typ.Nullable
 		return kd
 	default:
-		log.Panic("not reachable")
-		return keyedDecl{}
+		panic("unreachable")
 	}
 }
 

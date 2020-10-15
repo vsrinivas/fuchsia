@@ -73,7 +73,7 @@ func ReadLibraryName(fullyQualifiedName string) (LibraryName, error) {
 func MustReadLibraryName(fullyQualifiedName string) LibraryName {
 	name, err := ReadLibraryName(fullyQualifiedName)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 	return name
 }
@@ -103,7 +103,7 @@ func ReadName(fullyQualifiedName string) (Name, error) {
 func MustReadName(fullyQualifiedName string) Name {
 	name, err := ReadName(fullyQualifiedName)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 	return name
 }

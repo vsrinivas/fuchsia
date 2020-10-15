@@ -294,7 +294,7 @@ func (p *printer) print(testCase interface{}, overrideBindingsAllowlist string) 
 func (p *printer) printValidCase(params map[string]interface{}) {
 	var buf bytes.Buffer
 	if err := successTmpl.Execute(&buf, params); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 	fmt.Println(buf.String())
 }
@@ -302,7 +302,7 @@ func (p *printer) printValidCase(params map[string]interface{}) {
 func (p *printer) printInvalidCase(params map[string]interface{}) {
 	var buf bytes.Buffer
 	if err := decodeFailureTmpl.Execute(&buf, params); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 	fmt.Println(buf.String())
 }
