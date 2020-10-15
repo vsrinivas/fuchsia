@@ -25,19 +25,16 @@ WeakStubController::WeakStubController(StubController* controller)
 WeakStubController::~WeakStubController() = default;
 
 void WeakStubController::AddRef() {
-  ZX_DEBUG_ASSERT_COND(IsCurrentThreadOk());
-  ZX_DEBUG_ASSERT(ref_count_ != 0);
-  ++ref_count_;
+  auto old = ref_count_.fetch_add(1, std::memory_order_relaxed);
+  ZX_DEBUG_ASSERT(old != 0);
 }
 
 void WeakStubController::Release() {
-  // We have to allow !controller_ here, due to async::Loop::Shutdown() calling Invalidate(),
-  // Release() from a thread other than async::Loop::StartThread(), after the
-  // async::Loop::StartThread() thread has been joined.
-  ZX_DEBUG_ASSERT_COND(IsCurrentThreadOk() || !controller_);
-  ZX_DEBUG_ASSERT(ref_count_ > 0);
-  if (--ref_count_ == 0)
+  auto old = ref_count_.fetch_sub(1, std::memory_order_acq_rel);
+  ZX_DEBUG_ASSERT(old > 0);
+  if (old == 1) {
     delete this;
+  }
 }
 
 void WeakStubController::Invalidate() {
