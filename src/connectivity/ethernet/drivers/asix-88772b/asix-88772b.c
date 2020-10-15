@@ -13,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,6 +20,8 @@
 #include <ddk/protocol/usb.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/connectivity/ethernet/drivers/asix-88772b/ethernet_ax88772b-bind.h"
 
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
@@ -728,6 +729,4 @@ static zx_driver_ops_t ax88772b_driver_ops = {
     .bind = ax88772b_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB), BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID), ZIRCON_DRIVER_END(ethernet_ax88772b)
+ZIRCON_DRIVER(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1")

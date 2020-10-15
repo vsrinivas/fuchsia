@@ -1,0 +1,63 @@
+[
+    {
+        "name": "All Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_PROTOCOL": "0"
+        }
+    },
+    {
+        "name": "Missing Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_PROTOCOL": "0"
+        }
+    },
+    {
+        "name": "Missing USB VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_PROTOCOL": "0"
+        }
+    },
+    {
+        "name": "Missing USB Class",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET",
+            "fuchsia.BIND_USB_PROTOCOL": "0"
+        }
+    },
+    {
+        "name": "Missing USB Subclass",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
+            "fuchsia.BIND_USB_PROTOCOL": "0"
+        }
+    },
+    {
+        "name": "Missing USB Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.COMM",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.BIND_USB_SUBCLASS.ETHERNET"
+        }
+    }
+]

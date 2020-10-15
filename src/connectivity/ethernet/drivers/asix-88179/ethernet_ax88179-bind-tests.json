@@ -1,0 +1,35 @@
+[
+    {
+        "name": "All Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_PID": "fuchsia.usb.BIND_USB_PID.AX88179"
+        }
+    },
+    {
+        "name": "Missing Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX",
+            "fuchsia.BIND_USB_PID": "fuchsia.usb.BIND_USB_PID.AX88179"
+        }
+    },
+    {
+        "name": "Missing USB VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_USB_PID": "fuchsia.usb.BIND_USB_PID.AX88179"
+        }
+    },
+    {
+        "name": "Missing USB PID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_USB_VID": "fuchsia.usb.BIND_USB_VID.ASIX"
+        }
+    }
+]

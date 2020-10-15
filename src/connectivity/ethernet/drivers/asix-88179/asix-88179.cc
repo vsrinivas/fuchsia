@@ -15,7 +15,6 @@
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -23,6 +22,7 @@
 #include <fbl/auto_call.h>
 
 #include "asix-88179-regs.h"
+#include "src/connectivity/ethernet/drivers/asix-88179/ethernet_ax88179-bind.h"
 
 static constexpr uint8_t kMediaMode[6][2] = {
     {0x30, 0x01},  // 10 Mbps, half-duplex
@@ -997,8 +997,4 @@ static constexpr zx_driver_ops_t ax88179_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ethernet_ax88179, ax88179_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
-    BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, AX88179_PID),
-ZIRCON_DRIVER_END(ethernet_ax88179)
+ZIRCON_DRIVER(ethernet_ax88179, ax88179_driver_ops, "zircon", "0.1")

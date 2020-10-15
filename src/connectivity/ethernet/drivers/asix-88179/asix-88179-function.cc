@@ -15,7 +15,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -32,6 +31,7 @@
 #include <usb/usb.h>
 
 #include "asix-88179-regs.h"
+#include "src/connectivity/ethernet/drivers/asix-88179/fake_usb_ax88179-bind.h"
 
 namespace fake_usb_ax88179_function {
 namespace {
@@ -276,12 +276,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace
 }  // namespace fake_usb_ax88179_function
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_ax88179_function, fake_usb_ax88179_function::driver_ops, "zircon", "0.1", 5)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-  BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_COMM),
-  BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_CDC_SUBCLASS_ETHERNET),
-  BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
-  BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-ZIRCON_DRIVER_END(fake_usb_ax88179)
-    // clang-format on
+ZIRCON_DRIVER(fake_usb_ax88179, fake_usb_ax88179_function::driver_ops, "zircon", "0.1")

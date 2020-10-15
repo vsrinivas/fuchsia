@@ -21,6 +21,11 @@ extend uint fuchsia.BIND_USB_VID {
   INTEL = 0x8087,
 };
 
+extend uint fuchsia.BIND_USB_PID {
+  ASIX = 0x772B,
+  AX88179 = 0x1790,
+};
+
 // See https://www.usb.org/defined-class-codes
 extend uint fuchsia.BIND_USB_CLASS {
   AUDIO = 0x01,
