@@ -87,7 +87,7 @@ fn register_device(
     Ok(input_device_client.into_proxy()?)
 }
 
-fn register_touchscreen(
+fn make_touchscreen_device(
     injector: &mut dyn Injector,
     width: u32,
     height: u32,
@@ -110,7 +110,7 @@ fn register_touchscreen(
     )
 }
 
-fn register_keyboard(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
+fn make_keyboard_device(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
     register_device(
         injector,
         UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
@@ -119,7 +119,7 @@ fn register_keyboard(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Er
     )
 }
 
-fn register_media_buttons(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
+fn make_media_buttons_device(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
     register_device(
         injector,
         UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
@@ -160,9 +160,7 @@ pub(crate) fn media_button_event(
     pause: bool,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_media_buttons(injector)?;
-
-    input_device
+    make_media_buttons_device(injector)?
         .dispatch_report(&mut media_buttons(
             volume_up,
             volume_down,
@@ -179,7 +177,7 @@ pub(crate) fn keyboard_event(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_keyboard(injector)?;
+    let input_device = make_keyboard_device(injector)?;
 
     repeat_with_delay(
         1,
@@ -204,7 +202,7 @@ pub(crate) fn text(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_keyboard(injector)?;
+    let input_device = make_keyboard_device(injector)?;
     let key_sequence = InverseKeymap::new(keymaps::QWERTY_MAP)
         .derive_key_sequence(&input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
@@ -235,7 +233,7 @@ pub(crate) fn tap_event(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_touchscreen(injector, width, height)?;
+    let input_device = make_touchscreen_device(injector, width, height)?;
     let tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -262,7 +260,7 @@ pub(crate) fn multi_finger_tap_event(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = register_touchscreen(injector, width, height)?;
+    let input_device = make_touchscreen_device(injector, width, height)?;
     let multi_finger_tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -325,7 +323,7 @@ pub(crate) fn multi_finger_swipe(
         "fingers exceed capacity of `finger_id`!"
     );
 
-    let input_device = register_touchscreen(injector, width, height)?;
+    let input_device = make_touchscreen_device(injector, width, height)?;
 
     // Note: coordinates are coverted to `f64` before subtraction, because u32 subtraction
     // would overflow when swiping from higher coordinates to lower coordinates.
