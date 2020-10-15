@@ -278,7 +278,7 @@ zx_status_t pci_root_host_init() {
 
   if (!RootHost) {
     RootHost = std::make_unique<PciRootHost>(zx::unowned_resource(get_root_resource()),
-                                             PCI_ADDRESS_SPACE_MEMORY);
+                                             /*io_type=*/PCI_ADDRESS_SPACE_IO);
   }
 
   zx_status_t st = read_mcfg_table(&RootHost->mcfgs());
