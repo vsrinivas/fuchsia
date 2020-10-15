@@ -14,12 +14,15 @@ use crate::rfcomm::{
         mux_commands::{Decodable, Encodable},
         FrameParseError,
     },
-    types::DLCI,
+    types::{DLCI, MAX_RFCOMM_FRAME_SIZE},
 };
 
 /// The length (in bytes) of a DLC Parameter Negotiation command.
 /// Defined in GSM 7.10 Section 5.4.6.3.1.
 const DLC_PARAMETER_NEGOTIATION_LENGTH: usize = 8;
+
+/// The default amount of credits used for a parameter negotiation command.
+const DEFAULT_INITIAL_CREDITS: u8 = 8;
 
 pub_decodable_enum! {
     /// The Credit Based Flow Handshake variants defined in RFCOMM Table 5.3.
@@ -60,6 +63,27 @@ pub struct ParameterNegotiationParams {
     pub max_frame_size: u16,
     // TODO(fxbug.dev/58668): Update to explicit type when Credit Based Flow is implemented.
     pub initial_credits: u8,
+}
+
+impl ParameterNegotiationParams {
+    /// Returns the default parameters for a Parameter Negotiation command.
+    // TODO(fxbug.dev/59585): Remove this when the PN command is used in production.
+    #[allow(unused)]
+    pub fn default_command(dlci: DLCI) -> Self {
+        Self {
+            dlci,
+            credit_based_flow_handshake: CreditBasedFlowHandshake::SupportedRequest,
+            priority: 1,
+            max_frame_size: u16::try_from(MAX_RFCOMM_FRAME_SIZE).expect("should convert"),
+            initial_credits: DEFAULT_INITIAL_CREDITS,
+        }
+    }
+
+    /// Returns true if credit-based flow control is supported by the parameters.
+    pub fn credit_based_flow(&self) -> bool {
+        self.credit_based_flow_handshake == CreditBasedFlowHandshake::SupportedRequest
+            || self.credit_based_flow_handshake == CreditBasedFlowHandshake::SupportedResponse
+    }
 }
 
 impl Decodable for ParameterNegotiationParams {

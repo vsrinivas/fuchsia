@@ -23,6 +23,8 @@ pub enum RfcommError {
     ChannelAlreadyEstablished(DLCI),
     #[error("Multiplexer has already started")]
     MultiplexerAlreadyStarted,
+    #[error("Multiplexer has not started")]
+    MultiplexerNotStarted,
     #[error("Error parsing frame: {:?}", .0)]
     Frame(FrameParseError),
     #[error("Invalid DLCI: {:?}", .0)]

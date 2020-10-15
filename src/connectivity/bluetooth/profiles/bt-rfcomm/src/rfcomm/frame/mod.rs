@@ -483,13 +483,14 @@ impl Frame {
         }
     }
 
-    pub fn make_mux_command_response(role: Role, mux_response: MuxCommand) -> Self {
+    pub fn make_mux_command(role: Role, data: MuxCommand) -> Self {
+        let command_response = data.command_response;
         Self {
             role,
             dlci: DLCI::MUX_CONTROL_DLCI,
-            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_response)),
-            poll_final: false, // Always unset for UIH response, GSM 7.10 Section 5.4.3.1.
-            command_response: CommandResponse::Response,
+            data: FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)),
+            poll_final: false, // Always unset for UIH frames, GSM 5.4.3.1.
+            command_response,
             credits: None,
         }
     }

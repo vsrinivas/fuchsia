@@ -29,7 +29,7 @@ pub use self::{
 use crate::pub_decodable_enum;
 use crate::rfcomm::{
     frame::{Decodable, Encodable, FrameParseError},
-    types::CommandResponse,
+    types::{CommandResponse, DLCI},
 };
 
 pub_decodable_enum! {
@@ -108,7 +108,7 @@ pub enum MuxCommandParams {
 }
 
 impl MuxCommandParams {
-    fn marker(&self) -> MuxCommandMarker {
+    pub fn marker(&self) -> MuxCommandMarker {
         match self {
             Self::ParameterNegotiation(_) => MuxCommandMarker::ParameterNegotiation,
             Self::FlowControlOn(_) => MuxCommandMarker::FlowControlOn,
@@ -202,6 +202,12 @@ fn length_to_ea_format(mut length: usize) -> Vec<u8> {
     octets.iter().map(|l| l.0).collect()
 }
 
+/// The unique identifier associated with a MuxCommand.
+/// Some MuxCommands are associated with a DLCI - we uniquely identify such a command by it's
+/// optional DLCI and command type.
+#[derive(Debug, Eq, Hash, PartialEq)]
+pub struct MuxCommandIdentifier(Option<DLCI>, MuxCommandMarker);
+
 /// Represents an RFCOMM multiplexer command.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MuxCommand {
@@ -210,6 +216,30 @@ pub struct MuxCommand {
 
     /// Whether this is a command or response Mux frame.
     pub command_response: CommandResponse,
+}
+
+impl MuxCommand {
+    /// Returns the DLCI that the MuxCommand is referring to.
+    ///
+    /// Note: This is different from the DLCI that the MuxCommand is sent over. All RFCOMM Mux
+    /// Commands are sent over the Mux Control DLCI. The DLCI that the command itself is referring
+    /// to is different. Some commands are generic (i.e Test Command) and do not refer to a
+    /// particular DLCI; in these cases, None is returned.
+    pub fn dlci(&self) -> Option<DLCI> {
+        match &self.params {
+            MuxCommandParams::ParameterNegotiation(pn) => Some(pn.dlci),
+            MuxCommandParams::ModemStatus(status) => Some(status.dlci),
+            MuxCommandParams::RemoteLineStatus(rls) => Some(rls.dlci),
+            MuxCommandParams::RemotePortNegotiation(rpn) => Some(rpn.dlci),
+            _ => None,
+        }
+    }
+
+    /// Returns the "identifier" for this MuxCommand. Namely, it is the combination
+    /// of the (optional) DLCI for this command and its command type.
+    pub fn identifier(&self) -> MuxCommandIdentifier {
+        MuxCommandIdentifier(self.dlci(), self.params.marker())
+    }
 }
 
 impl Decodable for MuxCommand {

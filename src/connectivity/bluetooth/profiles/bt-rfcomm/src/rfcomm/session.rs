@@ -20,7 +20,8 @@ use {
 use crate::rfcomm::channel::SessionChannel;
 use crate::rfcomm::frame::{
     mux_commands::{
-        CreditBasedFlowHandshake, MuxCommand, MuxCommandParams, NonSupportedCommandParams,
+        CreditBasedFlowHandshake, MuxCommand, MuxCommandIdentifier, MuxCommandParams,
+        NonSupportedCommandParams, ParameterNegotiationParams,
     },
     Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
 };
@@ -103,6 +104,84 @@ impl ParameterNegotiationState {
         let updated = self.parameters().negotiated(&new);
         *self = Self::Negotiated(updated);
         updated
+    }
+}
+
+/// Maintains the set of outstanding frames that have been sent to the remote peer.
+/// Provides an API for inserting and removing sent Frames that expect a response.
+struct OutstandingFrames {
+    /// Outstanding command frames that have been sent to the remote peer and are awaiting
+    /// responses. These are non-UIH frames. Per GSM 7.10 5.4.4.1, there shall only be one
+    /// such outstanding command frame per DLCI.
+    commands: HashMap<DLCI, Frame>,
+
+    /// Outstanding mux command frames that have been sent to the remote peer and are awaiting
+    /// responses. Per RFCOMM 5.5, there can be multiple outstanding mux command frames
+    /// awaiting responses. However, there can only be one of each type per DLCI. Some
+    /// MuxCommands are associated with a DLCI - we uniquely identify such a command by it's
+    /// optional DLCI and command type. See the `mux_commands` mod for more details.
+    mux_commands: HashMap<MuxCommandIdentifier, MuxCommand>,
+}
+
+impl OutstandingFrames {
+    fn new() -> Self {
+        Self { commands: HashMap::new(), mux_commands: HashMap::new() }
+    }
+
+    /// Potentially registers a new `frame` with the `OutstandingFrames` manager. Returns
+    /// true if the frame requires a response and is registered, false if no response
+    /// is needed, or an error if the frame was unable to be processed.
+    fn register_frame(&mut self, frame: &Frame) -> Result<bool, RfcommError> {
+        // We don't care about Response frames as we don't expect a response for them.
+        if frame.command_response == CommandResponse::Response {
+            return Ok(false);
+        }
+
+        // MuxCommands are a special case. Namely, there can be multiple outstanding MuxCommands
+        // at once. Our implementation will not attempt to send duplicate MuxCommands,
+        if let FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)) = &frame.data {
+            return match self.mux_commands.entry(data.identifier()) {
+                Entry::Occupied(_) => {
+                    Err(RfcommError::Other(format_err!("MuxCommand outstanding")))
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(data.clone());
+                    Ok(true)
+                }
+            };
+        }
+
+        // Otherwise, it's a non-MuxCommand frame. We only care about frames that require a
+        // response (i.e Command frames with the P bit set).
+        // See GSM 5.4.4.1 and 5.4.4.2 for the exact interpretation of the poll_final bit.
+        if frame.poll_final {
+            return match self.commands.entry(frame.dlci) {
+                Entry::Occupied(_) => {
+                    // There can only be one outstanding command frame with P/F = 1 per DLCI.
+                    // TODO(fxbug.dev/60900): Our implementation should never try to send more
+                    // than one command frame on the same DLCI. However, it may make sense to
+                    // make this more intelligent and queue for later.
+                    Err(RfcommError::Other(format_err!("Command Frame outstanding")))
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(frame.clone());
+                    Ok(true)
+                }
+            };
+        }
+        Ok(false)
+    }
+
+    /// Attempts to find and remove the outstanding command frame associated with
+    /// the provided `dlci`. Returns None if no such frame exists.
+    fn remove_frame(&mut self, dlci: &DLCI) -> Option<Frame> {
+        self.commands.remove(dlci)
+    }
+
+    /// Attempts to find and remove the outstanding MuxCommand associated with the
+    /// provided `key`. Returns None if no such MuxCommand exists.
+    fn remove_mux_command(&mut self, key: &MuxCommandIdentifier) -> Option<MuxCommand> {
+        self.mux_commands.remove(key)
     }
 }
 
@@ -280,7 +359,7 @@ pub struct SessionInner {
     multiplexer: SessionMultiplexer,
 
     /// Outstanding frames that have been sent to the remote peer and are awaiting responses.
-    outstanding_frames: HashMap<DLCI, Frame>,
+    outstanding_frames: OutstandingFrames,
 
     /// Sender used to relay outgoing frames to be sent to the remote peer.
     outgoing_frame_sender: mpsc::Sender<Frame>,
@@ -303,7 +382,7 @@ impl SessionInner {
     ) -> impl Future<Output = Result<(), Error>> {
         let session = Self {
             multiplexer: SessionMultiplexer::create(),
-            outstanding_frames: HashMap::new(),
+            outstanding_frames: OutstandingFrames::new(),
             outgoing_frame_sender,
             channel_opened_fn,
         };
@@ -357,6 +436,23 @@ impl SessionInner {
         }
     }
 
+    /// Finishes parameter negotiation for the Session with the provided `params` and
+    /// reserves the specified DLCI.
+    fn finish_parameter_negotiation(&mut self, params: &ParameterNegotiationParams) {
+        // Update the session-specific parameters - currently only credit-based flow control
+        // and max frame size are negotiated.
+        let requested_parameters = SessionParameters {
+            credit_based_flow: params.credit_based_flow(),
+            max_frame_size: usize::from(params.max_frame_size),
+        };
+        self.multiplexer().negotiate_parameters(requested_parameters);
+
+        // Reserve the DLCI if it doesn't exist.
+        self.multiplexer().find_or_create_session_channel(params.dlci);
+        // TODO(fxbug.dev/58668): Modify the reserved channel with the parsed credits when
+        // credit-based flow control is implemented.
+    }
+
     /// Relays the `channel` opened for the provided `server_channel` to the local clients
     /// of the session.
     async fn relay_channel_to_client(
@@ -383,6 +479,26 @@ impl SessionInner {
         // Send an SABM command to initiate mux startup with the remote peer.
         let sabm_command = Frame::make_sabm_command(self.role(), DLCI::MUX_CONTROL_DLCI);
         self.send_frame(sabm_command).await;
+        Ok(())
+    }
+
+    /// Attempts to initiate the parameter negotiation (PN) procedure as defined in RFCOMM 5.5.3
+    /// for the given `dlci`.
+    // TODO(fxbug.dev/59585): Remove this when full initiator role is supported.
+    #[cfg(test)]
+    async fn start_parameter_negotiation(&mut self, dlci: DLCI) -> Result<(), RfcommError> {
+        if !self.multiplexer().started() {
+            warn!("ParameterNegotiation request before multiplexer startup");
+            return Err(RfcommError::MultiplexerNotStarted);
+        }
+
+        let pn_params = ParameterNegotiationParams::default_command(dlci);
+        let pn_command = MuxCommand {
+            params: MuxCommandParams::ParameterNegotiation(pn_params),
+            command_response: CommandResponse::Command,
+        };
+        let pn_frame = Frame::make_mux_command(self.role(), pn_command);
+        self.send_frame(pn_frame).await;
         Ok(())
     }
 
@@ -444,10 +560,29 @@ impl SessionInner {
     /// frame to the remote peer. Returns an error if the `mux_command` couldn't be handled.
     async fn handle_mux_command(&mut self, mux_command: &MuxCommand) -> Result<(), RfcommError> {
         trace!("Handling MuxCommand: {:?}", mux_command);
-        // TODO(fxbug.dev/59585): Handle response frames when Initiator role is supported.
+
+        // For responses, validate that we were expecting the response and finish the operation.
         if mux_command.command_response == CommandResponse::Response {
-            trace!("Received MuxCommand response: {:?}", mux_command);
-            return Err(RfcommError::NotImplemented);
+            return match self.outstanding_frames.remove_mux_command(&mux_command.identifier()) {
+                Some(_) => {
+                    match &mux_command.params {
+                        MuxCommandParams::ParameterNegotiation(pn_response) => {
+                            // Finish parameter negotiation based on remote peer's response.
+                            self.finish_parameter_negotiation(&pn_response);
+                            Ok(())
+                        }
+                        _ => {
+                            // TODO(fxbug.dev/59585): We currently don't send any other mux commands,
+                            // add other handlers here when implemented.
+                            Err(RfcommError::NotImplemented)
+                        }
+                    }
+                }
+                None => {
+                    warn!("Received unexpected MuxCommand response: {:?}", mux_command);
+                    Err(RfcommError::Other(format_err!("Unexpected response").into()))
+                }
+            };
         }
 
         let mux_response = match &mux_command.params {
@@ -458,24 +593,14 @@ impl SessionInner {
                     return Ok(());
                 }
 
-                // Update the session-specific parameters.
-                let requested_parameters = SessionParameters {
-                    credit_based_flow: pn_command.credit_based_flow_handshake
-                        == CreditBasedFlowHandshake::SupportedRequest,
-                    max_frame_size: usize::from(pn_command.max_frame_size),
-                };
-                let updated_parameters =
-                    self.multiplexer().negotiate_parameters(requested_parameters);
-
-                // Reserve the DLCI if it doesn't exist.
-                self.multiplexer().find_or_create_session_channel(pn_command.dlci);
-                // TODO(fxbug.dev/58668): Modify the reserved channel with the parsed credits when
-                // credit-based flow control is implemented.
+                // Update the session specific parameters.
+                self.finish_parameter_negotiation(&pn_command);
 
                 // Reply back with the negotiated parameters as a response - most parameters
                 // are simply echoed. Only credit-based flow control and max frame size are
                 // negotiated in this implementation.
                 let mut pn_response = pn_command.clone();
+                let updated_parameters = self.multiplexer().parameters();
                 pn_response.credit_based_flow_handshake = if updated_parameters.credit_based_flow {
                     CreditBasedFlowHandshake::SupportedResponse
                 } else {
@@ -494,7 +619,7 @@ impl SessionInner {
         };
         let response =
             MuxCommand { params: mux_response, command_response: CommandResponse::Response };
-        self.send_frame(Frame::make_mux_command_response(self.role(), response)).await;
+        self.send_frame(Frame::make_mux_command(self.role(), response)).await;
         Ok(())
     }
 
@@ -534,7 +659,7 @@ impl SessionInner {
 
     /// Handles an UnnumberedAcknowledgement response over the provided `dlci`.
     fn handle_ua_response(&mut self, dlci: DLCI) {
-        match self.outstanding_frames.remove(&dlci) {
+        match self.outstanding_frames.remove_frame(&dlci) {
             Some(frame) => {
                 match frame.data {
                     FrameData::SetAsynchronousBalancedMode if dlci.is_mux_control() => {
@@ -594,7 +719,7 @@ impl SessionInner {
         // parsing error.
         match e {
             FrameParseError::UnsupportedMuxCommandType(val) => {
-                let non_supported_response = Frame::make_mux_command_response(
+                let non_supported_response = Frame::make_mux_command(
                     self.role(),
                     MuxCommand {
                         params: MuxCommandParams::NonSupported(NonSupportedCommandParams {
@@ -622,19 +747,14 @@ impl SessionInner {
 
     /// Sends the `frame` to the remote peer using the `outgoing_frame_sender`.
     async fn send_frame(&mut self, frame: Frame) {
-        // There can only be one outstanding command frame with P/F = 1 per DLCI. See GSM 5.4.4.1.
-        if frame.command_response == CommandResponse::Command && frame.poll_final {
-            match self.outstanding_frames.entry(frame.dlci) {
-                Entry::Occupied(_) => {
-                    // TODO(fxbug.dev/60900): Our implementation should never try to send more
-                    // than one command frame on the same DLCI. However, it may make sense to
-                    // queue the frame to be sent later.
-                    error!("Attempting to send frame when outstanding frame exists.");
-                    return;
-                }
-                Entry::Vacant(entry) => entry.insert(frame.clone()),
-            };
+        // Potentially save the frame-to-be-sent in the OutstandingFrames manager. This
+        // bookkeeping step will allow us to easily match received responses to our sent
+        // commands.
+        if let Err(e) = self.outstanding_frames.register_frame(&frame) {
+            warn!("Couldn't send frame: {:?}", e);
+            return;
         }
+
         // Result of this send doesn't matter since failure indicates
         // peer disconnection.
         let _ = self.outgoing_frame_sender.send(frame).await;
@@ -855,7 +975,7 @@ mod tests {
         let (outgoing_frame_sender, outgoing_frames) = mpsc::channel(0);
         let session = SessionInner {
             multiplexer: SessionMultiplexer::create(),
-            outstanding_frames: HashMap::new(),
+            outstanding_frames: OutstandingFrames::new(),
             outgoing_frame_sender,
             channel_opened_fn,
         };
@@ -911,6 +1031,76 @@ mod tests {
             Poll::Ready(Some(channel)) => channel,
             x => panic!("Expected a channel but got {:?}", x),
         }
+    }
+
+    #[test]
+    fn test_outstanding_frame_manager() {
+        let mut outstanding_frames = OutstandingFrames::new();
+
+        // Always sets poll_final = true, and therefore requires a response.
+        let sabm_command = Frame::make_sabm_command(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        assert_matches!(outstanding_frames.register_frame(&sabm_command), Ok(true));
+        // Inserting the same frame on the same DLCI should be rejected since
+        // there is already one outstanding.
+        assert_matches!(outstanding_frames.register_frame(&sabm_command), Err(_));
+
+        // Inserting same type of frame, but different DLCI is OK.
+        let user_sabm = Frame::make_sabm_command(Role::Initiator, DLCI::try_from(3).unwrap());
+        assert_matches!(outstanding_frames.register_frame(&user_sabm), Ok(true));
+
+        // Response frames shouldn't be registered.
+        let ua_response = Frame::make_ua_response(Role::Responder, DLCI::MUX_CONTROL_DLCI);
+        assert_matches!(outstanding_frames.register_frame(&ua_response), Ok(false));
+
+        // Random DLCI - no frame should exist.
+        let random_dlci = DLCI::try_from(8).unwrap();
+        assert_eq!(outstanding_frames.remove_frame(&random_dlci), None);
+        // SABM command should be retrievable.
+        assert_eq!(outstanding_frames.remove_frame(&DLCI::MUX_CONTROL_DLCI), Some(sabm_command));
+
+        // User data frames shouldn't be registered - poll_final = false always for user data frames.
+        let user_data = Frame::make_user_data_frame(
+            Role::Initiator,
+            random_dlci,
+            UserData { information: vec![] },
+        );
+        assert_matches!(outstanding_frames.register_frame(&user_data), Ok(false));
+
+        // Two different MuxCommands on the same DLCI is OK.
+        let data = MuxCommand {
+            params: MuxCommandParams::FlowControlOff(FlowControlParams {}),
+            command_response: CommandResponse::Command,
+        };
+        let mux_command = Frame::make_mux_command(Role::Initiator, data);
+        assert_matches!(outstanding_frames.register_frame(&mux_command), Ok(true));
+        let data2 = MuxCommand {
+            params: MuxCommandParams::FlowControlOn(FlowControlParams {}),
+            command_response: CommandResponse::Command,
+        };
+        let mux_command2 = Frame::make_mux_command(Role::Initiator, data2.clone());
+        assert_matches!(outstanding_frames.register_frame(&mux_command2), Ok(true));
+        // Removing MuxCommand is OK.
+        assert_eq!(outstanding_frames.remove_mux_command(&data2.identifier()), Some(data2));
+
+        // Same MuxCommand but on different DLCIs is OK.
+        let user_dlci1 = DLCI::try_from(10).unwrap();
+        let data1 = MuxCommand {
+            params: MuxCommandParams::ParameterNegotiation(
+                ParameterNegotiationParams::default_command(user_dlci1),
+            ),
+            command_response: CommandResponse::Command,
+        };
+        let mux_command1 = Frame::make_mux_command(Role::Initiator, data1);
+        assert_matches!(outstanding_frames.register_frame(&mux_command1), Ok(true));
+        let user_dlci2 = DLCI::try_from(15).unwrap();
+        let data2 = MuxCommand {
+            params: MuxCommandParams::ParameterNegotiation(
+                ParameterNegotiationParams::default_command(user_dlci2),
+            ),
+            command_response: CommandResponse::Command,
+        };
+        let mux_command2 = Frame::make_mux_command(Role::Initiator, data2);
+        assert_matches!(outstanding_frames.register_frame(&mux_command2), Ok(true));
     }
 
     #[test]
@@ -1244,7 +1434,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
 
         // We expect an NSC Frame response.
-        let expected_frame = Frame::make_mux_command_response(
+        let expected_frame = Frame::make_mux_command(
             Role::Responder,
             MuxCommand {
                 params: MuxCommandParams::NonSupported(NonSupportedCommandParams {
@@ -1378,5 +1568,52 @@ mod tests {
         // Multiplexer startup should finish with the initiator role.
         assert!(session.multiplexer().started());
         assert_eq!(session.role(), Role::Initiator);
+    }
+
+    #[test]
+    fn test_initiating_parameter_negotiation_expects_response() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (mut session, mut outgoing_frames) = setup_session();
+        let mut expected_outgoing_frames = Box::pin(outgoing_frames.next());
+
+        // Attempting to negotiate parameters before mux startup should fail.
+        assert!(!session.multiplexer().started());
+        let user_dlci = DLCI::try_from(3).unwrap();
+        {
+            let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
+            assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Err(_)));
+        }
+
+        assert!(session.multiplexer().start(Role::Initiator).is_ok());
+        // Initiating PN should be OK now. Upon receiving response, the session parameters
+        // should get set.
+        {
+            let mut pn_fut = Box::pin(session.start_parameter_negotiation(user_dlci));
+            assert!(exec.run_until_stalled(&mut pn_fut).is_pending());
+            match exec.run_until_stalled(&mut expected_outgoing_frames) {
+                Poll::Ready(Some(frame)) => {
+                    assert_matches!(
+                        frame.data,
+                        FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(_))
+                    );
+                }
+                x => panic!("Expected frame but got: {:?}", x),
+            }
+            assert_matches!(exec.run_until_stalled(&mut pn_fut), Poll::Ready(Ok(_)));
+        }
+        // Simulate peer responding positively - the parameters should be negotiated.
+        {
+            let mut handle_fut = Box::pin(session.handle_frame(make_dlc_pn_frame(
+                CommandResponse::Response,
+                true, // Peer supports credit-based flow control.
+                100,  // Peer supports max-frame-size of 100.
+            )));
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(_)));
+        }
+        assert!(session.multiplexer().parameters_negotiated());
+        let expected_parameters =
+            SessionParameters { credit_based_flow: true, max_frame_size: 100 };
+        assert_eq!(session.multiplexer().parameters(), expected_parameters);
     }
 }
