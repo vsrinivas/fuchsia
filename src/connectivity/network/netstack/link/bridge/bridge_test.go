@@ -501,6 +501,14 @@ func TestBridgeRouting(t *testing.T) {
 }
 
 func TestBridge(t *testing.T) {
+	const (
+		s1NICID = 1
+		s2NICID = 10
+
+		sbEP2NICID   = 2
+		sbOtherNICID = 9000
+	)
+
 	for _, testCase := range []struct {
 		name            string
 		protocolFactory stack.NetworkProtocolFactory
@@ -526,19 +534,16 @@ func TestBridge(t *testing.T) {
 			ep5, ep6 := pipe(linkAddr5, linkAddr6)
 			s1addr := tcpip.Address(bytes.Repeat([]byte{1}, testCase.addressSize))
 			s1subnet := util.PointSubnet(s1addr)
-			s1, err := makeStackWithEndpoint(ep1, testCase.protocolFactory, testCase.protocolNumber, s1addr)
+			s1, err := makeStackWithEndpoint(s1NICID, ep1, testCase.protocolFactory, testCase.protocolNumber, s1addr)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			baddr := tcpip.Address(bytes.Repeat([]byte{2}, testCase.addressSize))
 			bsubnet := util.PointSubnet(baddr)
-			sb, b := makeStackWithBridgedEndpoints(t, testCase.protocolFactory, testCase.protocolNumber, baddr, ep5, ep2, ep3)
+			sb, b, bridgeNICID := makeStackWithBridgedEndpoints(t, testCase.protocolFactory, testCase.protocolNumber, baddr, ep5, ep2, ep3)
 
-			const ep2nicid = 2
-
-			// It's over 9000!
-			if err := sb.CreateNIC(9001, ep6); err != nil {
+			if err := sb.CreateNIC(sbOtherNICID, ep6); err != nil {
 				t.Fatal(err)
 			}
 
@@ -548,7 +553,7 @@ func TestBridge(t *testing.T) {
 
 			s2addr := tcpip.Address(bytes.Repeat([]byte{3}, testCase.addressSize))
 			s2subnet := util.PointSubnet(s2addr)
-			s2, err := makeStackWithEndpoint(ep4, testCase.protocolFactory, testCase.protocolNumber, s2addr)
+			s2, err := makeStackWithEndpoint(s2NICID, ep4, testCase.protocolFactory, testCase.protocolNumber, s2addr)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -558,40 +563,44 @@ func TestBridge(t *testing.T) {
 			// that constituent links are still routable.
 			bcaddr := tcpip.Address(bytes.Repeat([]byte{4}, testCase.addressSize))
 			bcsubnet := util.PointSubnet(bcaddr)
-			if err := sb.AddAddress(ep2nicid, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
+			if err := sb.AddAddress(sbEP2NICID, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
-			if err := sb.AddAddress(ep2nicid, testCase.protocolNumber, bcaddr); err != nil {
+			if err := sb.AddAddress(sbEP2NICID, testCase.protocolNumber, bcaddr); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
 
+			// Make sure s1 can communicate with all the addresses we configured
+			// above.
 			s1.SetRouteTable([]tcpip.Route{
 				{
 					Destination: s2subnet,
-					NIC:         1,
+					NIC:         s1NICID,
 				},
 				{
 					Destination: bsubnet,
-					NIC:         1,
+					NIC:         s1NICID,
 				},
 				{
 					Destination: bcsubnet,
-					NIC:         1,
+					NIC:         s1NICID,
 				},
 			})
-
 			sb.SetRouteTable([]tcpip.Route{
 				{
 					Destination: s1subnet,
-					NIC:         ep2nicid,
+					NIC:         sbEP2NICID,
+				},
+				{
+					Destination: s1subnet,
+					NIC:         bridgeNICID,
 				},
 			})
-
 			s2.SetRouteTable(
 				[]tcpip.Route{
 					{
 						Destination: s1subnet,
-						NIC:         2,
+						NIC:         s2NICID,
 					},
 				},
 			)
@@ -865,7 +874,7 @@ func (*endpoint) ARPHardwareType() header.ARPHardwareType {
 func (*endpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
-func makeStackWithEndpoint(ep stack.LinkEndpoint, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address) (*stack.Stack, error) {
+func makeStackWithEndpoint(nicID tcpip.NICID, ep stack.LinkEndpoint, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address) (*stack.Stack, error) {
 	if testing.Verbose() {
 		ep = sniffer.New(ep)
 	}
@@ -879,19 +888,19 @@ func makeStackWithEndpoint(ep stack.LinkEndpoint, protocolFactory stack.NetworkP
 			tcp.NewProtocol,
 		},
 	})
-	if err := s.CreateNIC(1, ep); err != nil {
+	if err := s.CreateNIC(nicID, ep); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	if err := s.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
+	if err := s.AddAddress(nicID, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
-	if err := s.AddAddress(1, protocolNumber, addr); err != nil {
+	if err := s.AddAddress(nicID, protocolNumber, addr); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 	return s, nil
 }
 
-func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, baddr tcpip.Address, eps ...stack.LinkEndpoint) (*stack.Stack, *bridge.Endpoint) {
+func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, baddr tcpip.Address, eps ...stack.LinkEndpoint) (*stack.Stack, *bridge.Endpoint, tcpip.NICID) {
 	t.Helper()
 	if testing.Verbose() {
 		for i := range eps {
@@ -934,7 +943,7 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkPr
 		t.Fatalf("AddAddress failed: %s", err)
 	}
 
-	return stk, bridgeEP
+	return stk, bridgeEP, bID
 }
 
 func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolFactory stack.NetworkProtocolFactory, protocolNumber tcpip.NetworkProtocolNumber, addr tcpip.Address, payload string) ([]byte, error) {
