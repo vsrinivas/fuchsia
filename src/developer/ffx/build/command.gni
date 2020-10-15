@@ -20,7 +20,6 @@ template("command") {
   }
 
   generated_file = "$target_gen_dir/" + output_name
-  outputs = [ generated_file ]
 
   template = "command.md"
   lib_str = string_join(",", libraries)
@@ -37,5 +36,6 @@ template("command") {
 
     # Rebuild if the template changes
     inputs = [ "//src/developer/ffx/build/templates/command.md" ]
+    outputs = [ generated_file ]
   }
 }

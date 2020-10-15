@@ -20,7 +20,6 @@ template("plugins") {
   }
 
   generated_file = "$target_gen_dir/" + output_name
-  outputs = [ generated_file ]
 
   script_args = [
     "--out",
@@ -59,5 +58,6 @@ template("plugins") {
 
     # Rebuild if the template changes
     inputs = [ "//src/developer/ffx/build/templates/plugins.md" ]
+    outputs = [ generated_file ]
   }
 }
