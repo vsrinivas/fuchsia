@@ -43,6 +43,7 @@ rustc_library("fuchsia-audio-codec") {
     "src/buffer_collection_constraints.rs",
     "src/lib.rs",
     "src/stream_processor.rs",
+    "src/sysmem_allocator.rs",
   ]
 }
 
