@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -602,8 +606,7 @@ static int stub_timerfd_create(int clockid, int flags) {
 }
 weak_alias(stub_timerfd_create, timerfd_create);
 
-static int stub_timerfd_settime(int fd, int flags,
-                                const struct itimerspec* new_value,
+static int stub_timerfd_settime(int fd, int flags, const struct itimerspec* new_value,
                                 struct itimerspec* old_value) {
   libc_io_functions_not_implemented_use_fdio_instead();
   errno = ENOSYS;

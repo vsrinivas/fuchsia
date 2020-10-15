@@ -96,6 +96,7 @@ if (zx != "/" && zircon_toolchain == false) {
       "$zx/third_party/ulib/musl",
       "sanitizers",
       "setjmp",
+      "stubs",
       "zircon",
     ]
 

@@ -118,7 +118,6 @@ if ((zx == "/" && toolchain.base_environment == "user") ||
       "src/thread",
       "src/time",
       "src/unistd",
-      "stubs",
       "third_party/smoothsort",
       "third_party/tre",
     ]
