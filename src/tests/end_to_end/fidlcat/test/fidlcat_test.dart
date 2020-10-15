@@ -752,5 +752,18 @@ void main(List<String> arguments) {
               'Channel:9b71d5c7(dir:/svc/fuchsia.feedback.DataProvider))\n'),
           reason: instance.additionalResult);
     });
+
+    test('Test --with=messages and unknown message', () async {
+      final String snapshotProto =
+          Platform.script.resolve('runtime_deps/snapshot.proto').toFilePath();
+      var instance = RunFidlcat();
+      await instance.run(log, sl4fDriver, fidlcatPath, RunMode.withoutAgent,
+          ['--messages=.*x.*', '--from=$snapshotProto']);
+
+      /// We only check that fidlcat didn't crash.
+      expect(instance.stdout,
+          contains('Stop monitoring exceptions.cmx koid=19884\n'),
+          reason: instance.additionalResult);
+    });
   }, timeout: _timeout);
 }

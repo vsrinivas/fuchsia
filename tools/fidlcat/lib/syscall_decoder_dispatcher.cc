@@ -629,7 +629,7 @@ void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> inv
   if (!display_started()) {
     // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
     const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();
-    if ((message == nullptr) ||
+    if ((message == nullptr) || (message->method() == nullptr) ||
         !decode_options().IsTrigger(message->method()->fully_qualified_name())) {
       return;
     }
@@ -640,7 +640,7 @@ void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> inv
     // We have filters and this is a syscalls with a FIDL message.
     // Only display the syscall if the message satifies the conditions.
     const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();
-    if ((message == nullptr) ||
+    if ((message == nullptr) || (message->method() == nullptr) ||
         !decode_options().SatisfiesMessageFilters(message->method()->fully_qualified_name())) {
       return;
     }
@@ -686,7 +686,7 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
       // The user specified a trigger. Check if this is a message which satisfies one of the
       // triggers.
       const fidl_codec::FidlMessageValue* message = output_event->GetMessage();
-      if ((message == nullptr) ||
+      if ((message == nullptr) || (message->method() == nullptr) ||
           !decode_options().IsTrigger(message->method()->fully_qualified_name())) {
         return;
       }
@@ -696,7 +696,7 @@ void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> outpu
       // We have filters and this is a syscalls with a FIDL message.
       // Only display the syscall if the message satifies the conditions.
       const fidl_codec::FidlMessageValue* message = output_event->GetMessage();
-      if ((message == nullptr) ||
+      if ((message == nullptr) || (message->method() == nullptr) ||
           !decode_options().SatisfiesMessageFilters(message->method()->fully_qualified_name())) {
         return;
       }
