@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+zx_library("boot-options") {
+  kernel = true
+  host = true
+
+  sources = [
+    "boot-options.cc",
+    "word-view.cc",
+  ]
+  deps = [ "$zx/system/ulib/uart" ]
+  public_deps = [ "$zx/system/ulib/uart:headers" ]
+
+  if (is_kernel) {
+    deps += [
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+    ]
+    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+  }
+}

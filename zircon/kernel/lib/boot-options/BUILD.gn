@@ -1,0 +1,34 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx_build/public/gn/migrated_targets.gni")
+
+zx_library("boot-options") {
+  kernel = true
+  host = true
+
+  sources = [
+    "boot-options.cc",
+    "word-view.cc",
+  ]
+  deps = [ "$zx/system/ulib/uart" ]
+  public_deps = [ "$zx/system/ulib/uart:headers" ]
+
+  if (is_kernel) {
+    deps += [
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+    ]
+    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+  }
+
+  # TODO: revisit the following three specifications after the zircon-to-fuchsia
+  # build migration. They seem currently required in order to export the host
+  # compilation of this library to the fuchsia build.
+  static = true
+  sdk = "source"
+  sdk_headers = []
+}

@@ -28,6 +28,7 @@ source_set("phys") {
   ]
   deps = [
     ":zbitl",
+    "$zx/kernel/lib/boot-options/tests",
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/libc",
     "$zx/kernel/lib/unittest",

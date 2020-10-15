@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/boot-option-tests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

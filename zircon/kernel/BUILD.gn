@@ -155,6 +155,7 @@ if (is_kernel) {
     deps = [
       "dev/coresight/tests($host_toolchain)",
       "lib/acpi_lite:tests",
+      "lib/boot-options/tests",
       "lib/devicetree/tests",
       "lib/heap/cmpctmalloc/tests($host_toolchain)",
     ]

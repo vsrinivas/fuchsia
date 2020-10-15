@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+assert(is_kernel, "this only should only be evaluated in a kernel environment")
+
+source_set("tests") {
+  testonly = toolchain.environment == "kernel.phys"  # TODO: testonly = true
+
+  sources = [ "kernel-tests.cc" ]
+
+  deps = [
+    "$zx/kernel/lib/boot-options",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/unittest",
+  ]
+}

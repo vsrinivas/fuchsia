@@ -1,0 +1,44 @@
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":boot-option-test-package",
+    ":boot-option-tests($host_toolchain)",
+  ]
+}
+
+test("boot-option-tests") {
+  sources = [ "user-tests.cc" ]
+  deps = [
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test_package("boot-option-test-package") {
+  package_name = "boot-option-tests"
+  tests = [
+    {
+      name = "boot-option-tests"
+    },
+  ]
+  deps = [ ":boot-option-tests" ]
+}
