@@ -10,10 +10,12 @@ source_set("input-report-reader") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//src/lib/ddk",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 

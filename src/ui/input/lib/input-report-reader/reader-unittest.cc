@@ -14,19 +14,14 @@ namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 struct MouseReport {
   int64_t movement_x;
   int64_t movement_y;
-  fuchsia_input_report::InputReport ToFidlInputReport(fidl::Allocator& allocator) {
+  void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
+                         fidl::Allocator& allocator) {
     auto mouse = fuchsia_input_report::MouseInputReport::Builder(
         allocator.make<fuchsia_input_report::MouseInputReport::Frame>());
     mouse.set_movement_x(allocator.make<int64_t>(this->movement_x));
     mouse.set_movement_y(allocator.make<int64_t>(this->movement_y));
 
-    auto time = allocator.make<zx_time_t>(0);
-
-    return fuchsia_input_report::InputReport::Builder(
-               allocator.make<fuchsia_input_report::InputReport::Frame>())
-        .set_event_time(std::move(time))
-        .set_mouse(allocator.make<fuchsia_input_report::MouseInputReport>(mouse.build()))
-        .build();
+    builder.set_mouse(allocator.make<fuchsia_input_report::MouseInputReport>(mouse.build()));
   }
 };
 
@@ -170,6 +165,35 @@ TEST_F(InputReportReaderTests, ReadInputReportsTest) {
   ASSERT_EQ(0x200, mouse_report.movement_y());
 
   ASSERT_FALSE(mouse_report.has_pressed_buttons());
+}
+
+TEST_F(InputReportReaderTests, ReaderAddsRequiredFields) {
+  // Get an InputReportsReader.
+  fuchsia_input_report::InputReportsReader::SyncClient reader;
+  {
+    zx::channel server, client;
+    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    input_device_.GetInputReportsReader(std::move(server));
+    reader = fuchsia_input_report::InputReportsReader::SyncClient(std::move(client));
+    mouse_.WaitForNextReader(zx::duration::infinite());
+  }
+
+  // Send a report.
+  MouseReport report;
+  report.movement_x = 0x100;
+  report.movement_y = 0x200;
+  mouse_.SendReport(report);
+
+  // Get the report.
+  auto result = reader.ReadInputReports();
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+  auto& reports = result->result.response().reports;
+
+  ASSERT_EQ(1, reports.count());
+
+  ASSERT_TRUE(reports[0].has_event_time());
+  ASSERT_TRUE(reports[0].has_trace_id());
 }
 
 TEST_F(InputReportReaderTests, TwoReaders) {

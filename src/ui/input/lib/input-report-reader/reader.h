@@ -10,6 +10,7 @@
 
 #include <list>
 
+#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
@@ -37,7 +38,8 @@ class InputReportReader;
 //   struct TouchScreenReport {
 //      int64_t x;
 //      int64_t y;
-//      fuchsia_input_report::InputReport ToFidlInputReport(fidl::Allocator& allocator);
+//      void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
+//                             fidl::Allocator& allocator);
 //   };
 //
 //   InputReportReaderManager<TouchScreenReport> input_report_readers_;
@@ -46,13 +48,15 @@ template <class Report>
 class InputReportReaderManager {
  public:
   // Assert that our template type `Report` has the following function:
-  //   fuchsia_input_report::InputReport ToFidlInputReport(fidl::Allocator& allocator);
+  //      void ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
+  //                             fidl::Allocator& allocator);
   DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(
       has_to_fidl_input_report, ToFidlInputReport,
-      fuchsia_input_report::InputReport (C::*)(fidl::Allocator& allocator));
-  static_assert(has_to_fidl_input_report<Report>::value,
-                "Report must implement fuchsia_input_report::InputReport "
-                "ToFidlInputReport(fidl::Allocator&);");
+      void (C::*)(fuchsia_input_report::InputReport::Builder& builder, fidl::Allocator& allocator));
+  static_assert(
+      has_to_fidl_input_report<Report>::value,
+      "Report must implement void ToFidlInputReport(fuchsia_input_report::InputReportBuilder& "
+      "builder, fidl::Allocator&);");
 
   // This class can't be moved because the InputReportReaders are pointing to the main class.
   DISALLOW_COPY_ASSIGN_AND_MOVE(InputReportReaderManager);
@@ -62,10 +66,12 @@ class InputReportReaderManager {
   // Create a new InputReportReader that is managed by this InputReportReaderManager.
   zx_status_t CreateReader(async_dispatcher_t* dispatcher, zx::channel server) {
     fbl::AutoLock lock(&readers_lock_);
-    auto reader = InputReportReader<Report>::Create(this, dispatcher, std::move(server));
+    auto reader =
+        InputReportReader<Report>::Create(this, next_reader_id_, dispatcher, std::move(server));
     if (!reader) {
       return ZX_ERR_INTERNAL;
     }
+    next_reader_id_++;
     readers_list_.push_back(std::move(reader));
     return ZX_OK;
   }
@@ -92,6 +98,7 @@ class InputReportReaderManager {
 
  private:
   fbl::Mutex readers_lock_;
+  size_t next_reader_id_ TA_GUARDED(readers_lock_) = 1;
   std::list<std::unique_ptr<InputReportReader<Report>>> readers_list_ TA_GUARDED(readers_lock_);
 };
 
@@ -105,11 +112,12 @@ class InputReportReader : public fuchsia_input_report::InputReportsReader::Inter
  public:
   // Create the InputReportReader. `manager` and `dispatcher` must outlive this InputReportReader.
   static std::unique_ptr<InputReportReader<Report>> Create(
-      InputReportReaderManager<Report>* manager, async_dispatcher_t* dispatcher,
+      InputReportReaderManager<Report>* manager, size_t reader_id, async_dispatcher_t* dispatcher,
       zx::channel server);
 
   // This is only public to make std::unique_ptr work.
-  explicit InputReportReader(InputReportReaderManager<Report>* manager) : manager_(manager) {}
+  explicit InputReportReader(InputReportReaderManager<Report>* manager, size_t reader_id)
+      : reader_id_(reader_id), manager_(manager) {}
 
   void ReceiveReport(const Report& report) TA_EXCL(&report_lock_);
 
@@ -127,13 +135,15 @@ class InputReportReader : public fuchsia_input_report::InputReportsReader::Inter
   fbl::RingBuffer<Report, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT> reports_data_
       __TA_GUARDED(report_lock_);
 
+  const size_t reader_id_;
   InputReportReaderManager<Report>* manager_;
 };
 
 // Template Implementation.
 template <class Report>
 std::unique_ptr<InputReportReader<Report>> InputReportReader<Report>::Create(
-    InputReportReaderManager<Report>* manager, async_dispatcher_t* dispatcher, zx::channel server) {
+    InputReportReaderManager<Report>* manager, size_t reader_id, async_dispatcher_t* dispatcher,
+    zx::channel server) {
   fidl::OnUnboundFn<fuchsia_input_report::InputReportsReader::Interface> unbound_fn(
       [](fuchsia_input_report::InputReportsReader::Interface* interface, fidl::UnbindInfo info,
          zx::channel channel) {
@@ -141,7 +151,7 @@ std::unique_ptr<InputReportReader<Report>> InputReportReader<Report>::Create(
         reader->manager_->RemoveReaderFromList(reader);
       });
 
-  auto reader = std::make_unique<InputReportReader<Report>>(manager);
+  auto reader = std::make_unique<InputReportReader<Report>>(manager, reader_id);
 
   auto binding = fidl::BindServer(
       dispatcher, std::move(server),
@@ -188,9 +198,26 @@ void InputReportReader<Report>::ReplyWithReports(ReadInputReportsCompleterBase& 
   std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports;
 
+  TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", reader_id_);
   size_t num_reports = 0;
   for (; !reports_data_.empty() && num_reports < reports.size(); num_reports++) {
-    reports[num_reports] = reports_data_.front().ToFidlInputReport(report_allocator_);
+    fidl::Allocator& allocator = report_allocator_;
+    // Build the report.
+    auto builder = fuchsia_input_report::InputReport::Builder(
+        allocator.make<fuchsia_input_report::InputReport::Frame>());
+    reports_data_.front().ToFidlInputReport(builder, report_allocator_);
+
+    // Add some common fields if they weren't already set.
+    if (!builder.has_trace_id()) {
+      builder.set_trace_id(allocator.make<uint64_t>(TRACE_NONCE()));
+    }
+    if (!builder.has_event_time()) {
+      builder.set_event_time(allocator.make<zx_time_t>(zx_clock_get_monotonic()));
+    }
+
+    reports[num_reports] = builder.build();
+
+    TRACE_FLOW_BEGIN("input", "input_report", reports[num_reports].trace_id());
     reports_data_.pop();
   }
 

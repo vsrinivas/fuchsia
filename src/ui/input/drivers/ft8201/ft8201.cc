@@ -96,7 +96,8 @@ constexpr uint16_t ExpectedWriteStatus(const uint32_t address, const size_t pack
 
 namespace touch {
 
-fuchsia_input_report::InputReport Ft8201InputReport::ToFidlInputReport(fidl::Allocator& allocator) {
+void Ft8201InputReport::ToFidlInputReport(fuchsia_input_report::InputReport::Builder& builder,
+                                          fidl::Allocator& allocator) {
   auto input_contacts = allocator.make<fuchsia_input_report::ContactInputReport[]>(num_contacts);
   for (size_t i = 0; i < num_contacts; i++) {
     auto contact = fuchsia_input_report::ContactInputReport::Builder(
@@ -116,11 +117,8 @@ fuchsia_input_report::InputReport Ft8201InputReport::ToFidlInputReport(fidl::All
 
   auto time = allocator.make<zx_time_t>(event_time.get());
 
-  return fuchsia_input_report::InputReport::Builder(
-             allocator.make<fuchsia_input_report::InputReport::Frame>())
-      .set_event_time(std::move(time))
-      .set_touch(allocator.make<fuchsia_input_report::TouchInputReport>(touch_report.build()))
-      .build();
+  builder.set_event_time(std::move(time))
+      .set_touch(allocator.make<fuchsia_input_report::TouchInputReport>(touch_report.build()));
 }
 
 zx::status<Ft8201Device*> Ft8201Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
