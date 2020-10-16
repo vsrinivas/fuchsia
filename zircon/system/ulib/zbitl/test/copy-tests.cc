@@ -10,38 +10,21 @@
 
 #ifdef __Fuchsia__
 #include "vmo-tests.h"
-#define FUCHSIA_ONLY(...) __VA_ARGS__
-#else
-#define FUCHSIA_ONLY(...)
 #endif
 
-// clang-format off
-#define FOR_ALL_SRC_TYPES(macro, ...)                           \
-  macro(__VA_ARGS__, StringTestTraits, String)                  \
-  macro(__VA_ARGS__, ByteViewTestTraits, ByteView)              \
-  macro(__VA_ARGS__, FblByteArrayTestTraits, ByteArray)         \
-  macro(__VA_ARGS__, FdTestTraits, Fd)                          \
-  macro(__VA_ARGS__, StdioTestTraits, Stdio)                    \
-  FUCHSIA_ONLY(                                                 \
-    macro(__VA_ARGS__, VmoTestTraits, Vmo)                      \
-    macro(__VA_ARGS__, UnownedVmoTestTraits, UnownedVmo)        \
-    macro(__VA_ARGS__, MapOwnedVmoTestTraits, MapOwnedVmo)      \
-    macro(__VA_ARGS__, MapUnownedVmoTestTraits, MapUnownedVmo))
+#if !defined(SRC_STORAGE_TYPE)
+#error preprocessor variable `SRC_STORAGE_TYPE` must be defined
+#elif !defined(DEST_STORAGE_TYPE)
+#error preprocessor variable `DEST_STORAGE_TYPE` must be defined
+#endif
 
-// Recall that only writable storage types may be copy destinations.
-#define FOR_ALL_DEST_TYPES(macro, ...)                          \
-  macro(__VA_ARGS__, FblByteArrayTestTraits, ByteArray)         \
-  macro(__VA_ARGS__, FdTestTraits, Fd)                          \
-  macro(__VA_ARGS__, StdioTestTraits, Stdio)                    \
-  FUCHSIA_ONLY(                                                 \
-    macro(__VA_ARGS__, VmoTestTraits, Vmo)                      \
-    macro(__VA_ARGS__, UnownedVmoTestTraits, UnownedVmo)        \
-    macro(__VA_ARGS__, MapOwnedVmoTestTraits, MapOwnedVmo)      \
-    macro(__VA_ARGS__, MapUnownedVmoTestTraits, MapUnownedVmo))
-// clang-format on
+#define PASTE(a, b) PASTE_1(a, b)
+#define PASTE_1(a, b) a##b
+#define TEST_TRAITS(x) PASTE(x, TestTraits)
 
 namespace {
 
-FOR_ALL_SRC_TYPES(FOR_ALL_DEST_TYPES, TEST_COPYING, ZbitlViewCopyTests)
+TEST_COPYING(ZbitlViewCopyTests, TEST_TRAITS(SRC_STORAGE_TYPE), SRC_STORAGE_TYPE,
+             TEST_TRAITS(DEST_STORAGE_TYPE), DEST_STORAGE_TYPE)
 
 }  // namespace

@@ -40,10 +40,57 @@ if (is_host) {
   }
 }
 
+# We define a translation unit per (src, dest) storage type pair, which
+# parametrize the tests for the copy APIs. The number of test cases is subject
+# to combinatorial explosion and in putting all such cases in a single TU we
+# see a significant build bottleneck arise, as well as stack overflow for
+# certain instrumentation and optimization levels (due to the global
+# constructors defined by the zxtest framework).
+#
+# For each storage type, we expect <type>TestTraits to coincide with the name
+# of its associated test traits type.
+src_storage_types = [
+  "String",
+  "ByteView",
+  "FblByteArray",
+  "Fd",
+  "Stdio",
+]
+if (is_fuchsia) {
+  src_storage_types += [
+    "Vmo",
+    "UnownedVmo",
+    "MapOwnedVmo",
+    "MapUnownedVmo",
+  ]
+}
+dest_storage_types = src_storage_types - [  # Non-writable types.
+                       "String",
+                       "ByteView",
+                     ]
+
+copy_test_deps = []
+foreach(src, src_storage_types) {
+  foreach(dest, dest_storage_types) {
+    source_set_name = "copy_tests.${src}-to-${dest}"
+    source_set(source_set_name) {
+      sources = [ "copy-tests.cc" ]
+      deps = [
+        "//zircon/public/lib/zxtest",
+        "//zircon/system/ulib/zbitl",
+      ]
+      defines = [
+        "SRC_STORAGE_TYPE=${src}",
+        "DEST_STORAGE_TYPE=${dest}",
+      ]
+    }
+    copy_test_deps += [ ":${source_set_name}" ]
+  }
+}
+
 test("zbitl-unittests") {
   sources = [
     "checking-tests.cc",
-    "copy-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
     "memory-tests.cc",
@@ -60,6 +107,8 @@ test("zbitl-unittests") {
     # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
+  deps += copy_test_deps
+
   if (is_fuchsia) {
     sources += [ "vmo-tests.cc" ]
     configs += [ "//build/unification/config:zircon-migrated" ]
