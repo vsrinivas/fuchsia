@@ -157,13 +157,14 @@ static_library("symbols") {
     "//src/developer/debug/zxdb/common",
     "//src/lib/elflib",
     "//src/lib/fxl",
+
+    # LLVMDebugInfoDWARF is made a public dep instead of a dep to propagate the
+    # no_rtti config from llvm_library targets.
+    "//src/lib/llvm:LLVMDebugInfoDWARF",
     "//third_party/googletest:gtest_prod",
   ]
 
-  deps = [
-    "//src/lib/elflib",
-    "//src/lib/llvm:LLVMDebugInfoDWARF",
-  ]
+  deps = [ "//src/lib/elflib" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

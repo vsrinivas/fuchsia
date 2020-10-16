@@ -25,6 +25,14 @@ template("llvm_library") {
   group(target_name) {
     forward_variables_from(invoker, [ "deps" ])
     public_configs = [ ":${target_name}_config" ]
+
+    # LLVM prebuilts are currently not built with RTTI, so if UBSan is enabled,
+    # we should make sure RTTI vptr checks should not be done on these libraries
+    # and anyone who depends on these libraries.
+    # Note that this doesn't remove the rtti config (or the -frtti flag), but
+    # this works because inherited configs will apply after the config set on the
+    # target, so the last RTTI setting on the command line wins.
+    public_configs += [ "//build/config:no_rtti" ]
   }
 }
 
