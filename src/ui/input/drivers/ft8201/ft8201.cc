@@ -123,79 +123,6 @@ fuchsia_input_report::InputReport Ft8201InputReport::ToFidlInputReport(fidl::All
       .build();
 }
 
-std::unique_ptr<Ft8201InputReportsReader> Ft8201InputReportsReader::Create(
-    Ft8201Device* const base, async_dispatcher_t* dispatcher, zx::channel server) {
-  fidl::OnUnboundFn<fuchsia_input_report::InputReportsReader::Interface> unbound_fn(
-      [](fuchsia_input_report::InputReportsReader::Interface* dev, fidl::UnbindInfo info,
-         zx::channel channel) {
-        auto* device = static_cast<Ft8201InputReportsReader*>(dev);
-
-        {
-          fbl::AutoLock lock(&device->report_lock_);
-          if (device->completer_) {
-            device->completer_.reset();
-          }
-        }
-
-        device->base_->RemoveReaderFromList(device);
-      });
-
-  auto reader = std::make_unique<Ft8201InputReportsReader>(base);
-
-  auto binding = fidl::BindServer(
-      dispatcher, std::move(server),
-      static_cast<fuchsia_input_report::InputReportsReader::Interface*>(reader.get()),
-      std::move(unbound_fn));
-  if (binding.is_error()) {
-    zxlogf(ERROR, "Ft8201: BindServer failed: %d\n", binding.error());
-    return nullptr;
-  }
-
-  return reader;
-}
-
-void Ft8201InputReportsReader::ReceiveReport(const Ft8201InputReport& report) {
-  fbl::AutoLock lock(&report_lock_);
-  if (reports_data_.full()) {
-    reports_data_.pop();
-  }
-
-  reports_data_.push(report);
-
-  if (completer_) {
-    ReplyWithReports(*completer_);
-    completer_.reset();
-  }
-}
-
-void Ft8201InputReportsReader::ReadInputReports(ReadInputReportsCompleter::Sync& completer) {
-  fbl::AutoLock lock(&report_lock_);
-  if (completer_) {
-    completer.ReplyError(ZX_ERR_ALREADY_BOUND);
-  } else if (reports_data_.empty()) {
-    completer_.emplace(completer.ToAsync());
-  } else {
-    ReplyWithReports(completer);
-  }
-}
-
-void Ft8201InputReportsReader::ReplyWithReports(ReadInputReportsCompleterBase& completer) {
-  std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
-      reports;
-
-  size_t num_reports = 0;
-  for (; !reports_data_.empty() && num_reports < reports.size(); num_reports++) {
-    reports[num_reports] = reports_data_.front().ToFidlInputReport(report_allocator_);
-    reports_data_.pop();
-  }
-
-  completer.ReplySuccess(fidl::VectorView(fidl::unowned_ptr(reports.data()), num_reports));
-
-  if (reports_data_.empty()) {
-    report_allocator_.inner_allocator().reset();
-  }
-}
-
 zx::status<Ft8201Device*> Ft8201Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
@@ -297,10 +224,8 @@ void Ft8201Device::DdkUnbind(ddk::UnbindTxn txn) {
 
 void Ft8201Device::GetInputReportsReader(zx::channel server,
                                          GetInputReportsReaderCompleter::Sync& completer) {
-  fbl::AutoLock lock(&readers_lock_);
-  auto reader = Ft8201InputReportsReader::Create(this, loop_.dispatcher(), std::move(server));
-  if (reader) {
-    readers_list_.push_back(std::move(reader));
+  zx_status_t status = input_report_readers_.CreateReader(loop_.dispatcher(), std::move(server));
+  if (status == ZX_OK) {
     sync_completion_signal(&next_reader_wait_);  // Only for tests.
   }
 }
@@ -379,16 +304,6 @@ void Ft8201Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) 
 void Ft8201Device::SetFeatureReport(fuchsia_input_report::FeatureReport report,
                                     SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-}
-
-void Ft8201Device::RemoveReaderFromList(Ft8201InputReportsReader* reader) {
-  fbl::AutoLock lock(&readers_lock_);
-  for (auto iter = readers_list_.begin(); iter != readers_list_.end(); ++iter) {
-    if (iter->get() == reader) {
-      readers_list_.erase(iter);
-      break;
-    }
-  }
 }
 
 void Ft8201Device::WaitForNextReader() {
@@ -894,10 +809,7 @@ int Ft8201Device::Thread() {
       report.contacts[i] = ParseContact(&contacts_buffer[i * kContactSize]);
     }
 
-    fbl::AutoLock lock(&readers_lock_);
-    for (auto& reader : readers_list_) {
-      reader->ReceiveReport(report);
-    }
+    input_report_readers_.SendReportToAllReaders(report);
   }
 
   return thrd_success;

@@ -21,6 +21,8 @@
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
 
+#include "src/ui/input/lib/input-report-reader/reader.h"
+
 namespace touch {
 
 constexpr uint32_t kNumContacts = 10;
@@ -43,34 +45,6 @@ struct Ft8201InputReport {
 };
 
 class Ft8201Device;
-
-class Ft8201InputReportsReader : public fuchsia_input_report::InputReportsReader::Interface {
- public:
-  static std::unique_ptr<Ft8201InputReportsReader> Create(Ft8201Device* base,
-                                                          async_dispatcher_t* dispatcher,
-                                                          zx::channel server);
-
-  explicit Ft8201InputReportsReader(Ft8201Device* const base) : base_(base) {}
-  ~Ft8201InputReportsReader() override = default;
-
-  void ReadInputReports(ReadInputReportsCompleter::Sync& completer) TA_EXCL(&report_lock_) override;
-
-  void ReceiveReport(const Ft8201InputReport& report) TA_EXCL(&report_lock_);
-
- private:
-  static constexpr size_t kInputReportBufferSize = 4096 * 4;
-
-  void ReplyWithReports(ReadInputReportsCompleterBase& completer) TA_REQ(&report_lock_);
-
-  fbl::Mutex report_lock_;
-  std::optional<ReadInputReportsCompleter::Async> completer_ TA_GUARDED(&report_lock_);
-  fidl::BufferThenHeapAllocator<kInputReportBufferSize> report_allocator_
-      __TA_GUARDED(report_lock_);
-  fbl::RingBuffer<Ft8201InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT> reports_data_
-      __TA_GUARDED(report_lock_);
-
-  Ft8201Device* const base_;
-};
 
 class Ft8201Device;
 using DeviceType = ddk::Device<Ft8201Device, ddk::Messageable, ddk::Unbindable>;
@@ -109,8 +83,6 @@ class Ft8201Device : public DeviceType,
   void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
   void SetFeatureReport(fuchsia_input_report::FeatureReport report,
                         SetFeatureReportCompleter::Sync& completer) override;
-
-  void RemoveReaderFromList(Ft8201InputReportsReader* reader) TA_EXCL(readers_lock_);
 
   // Visible for testing.
   void WaitForNextReader();
@@ -166,8 +138,7 @@ class Ft8201Device : public DeviceType,
 
   thrd_t thread_ = {};
 
-  fbl::Mutex readers_lock_;
-  std::list<std::unique_ptr<Ft8201InputReportsReader>> readers_list_ TA_GUARDED(readers_lock_);
+  input::InputReportReaderManager<Ft8201InputReport> input_report_readers_;
   sync_completion_t next_reader_wait_;
   async::Loop loop_;
 };
