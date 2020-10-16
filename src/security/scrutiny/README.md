@@ -1,9 +1,52 @@
 # Scrutiny
 The Scrutiny Framework provides an extensible plugin based architecture
 for building security auditing tools for Fuchsia. The primary goal is to have a
-common base for these tools to prevent code duplication.
+common base for these tools to prevent code duplication. I encourage you to
+work through the Getting Started section to get a quick overview of the
+framework and how you can use it and write your own plugins!
 
-## Data Model
+## Getting Started
+To get started you can launch Scrutiny with the command `fx scrutiny`. If the
+tool isn't available on your path you can build it by simply adding:
+`--with //src/security/scrutiny` or `--with //bundles:tools` to your fx
+set command.
+
+When you initially launch Scrutiny you will be greeted with a shell interface.
+This shell supports history, tab completions etc. The first command you will
+want to try out in the shell is:
+
+```
+help
+```
+
+This will list all of the currently available commands in Scrutiny. Each
+individual command can then be further dug into by using:
+
+```
+help command_name
+```
+
+With just these two instructions you should be able to get a pretty good idea
+of the different commands but to see some common workflows check out the
+`examples` directory which contains a selection of Scrutiny scripts (.sc).
+
+### Running Scripts
+Scrutiny scripts (.sc) can be run with the `fx scrutiny -s script_name` command.
+This will output the content of your script to the screen as it runs through.
+To get started try out the following example:
+
+`fx scrutiny -s examples/zbi_inspect.sc`
+
+This script will extract the ZBI into your /tmp/ and allow you to see some of
+the inner workings of how the Zircon Boot Image is packaged.
+
+## Framework Architecture
+### Overview
+This section of the guide provides a deep overview of the architecture behind
+the framework which should be useful to anyone looking to build a more complex
+plugin or who is looking to develop and improve the framework itself.
+
+### Data Model
 The core of the framework revolves around the `DataModel` and is split into
 three categories:
 
@@ -20,9 +63,9 @@ three categories:
    independent of how the underlying data is collected. This provides
    flexability and compatability even if the underlying system changes.
 
-Source: `src/model` for the implementation of these three categories.
+Source: `framework/src/model` for the implementation of these three categories.
 
-## Plugin Management
+### Plugin Management
 Plugins take a set of `DataCollectors` and `DataControllers` and register them
 with the `PluginManager`. This is the primary interface you will work with
 when adding new features to the framework. Currently plugins must be built into
@@ -37,11 +80,12 @@ A Scrutiny plugin has three core functions:
    This allows developers to build lightweight plugins that build ontop of the
    work of other plugins.
 
-The abstract interface defined in `src/engine/plugin.rs` allows the developer to
-focus on developing the plugin and can benefit from a shared architecture for
-integrating their plugin into both a REST service and a DataCollector worker pool.
+The abstract interface defined in `framework/src/engine/plugin.rs` allows the
+developer to focus on developing the plugin and can benefit from a shared
+architecture for integrating their plugin into both a REST service and a
+DataCollector worker pool.
 
-## REST Service
+### REST Service
 The REST service provides a way for `DataVisualizers` to access `DataControllers`
 over the network through REST JSON. This provides the greatest flexability as
 `DataVisualizers` can be written in any language or framework as long as they
