@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::inspect::InspectDiagnostics;
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_time_external::{Properties, Status, TimeSample};
@@ -10,7 +11,7 @@ use fuchsia_zircon as zx;
 use futures::{channel::mpsc::Sender, lock::Mutex, SinkExt};
 use httpdate_hyper::{HttpsDateError, NetworkTimeClient};
 use hyper::Uri;
-use log::{error, info, warn};
+use log::{error, warn};
 use push_source::{Update, UpdateAlgorithm};
 
 /// A definition of how long an algorithm should wait between polls. Defines a fixed wait duration
@@ -66,6 +67,8 @@ pub struct HttpsDateUpdateAlgorithm<C: HttpsDateClient + Send> {
     request_uri: Uri,
     /// Client used to make requests.
     client: Mutex<C>,
+    /// Object managing inspect output.
+    inspect: InspectDiagnostics,
 }
 
 #[async_trait]
@@ -87,51 +90,65 @@ impl<C: HttpsDateClient + Send> UpdateAlgorithm for HttpsDateUpdateAlgorithm<C> 
 
 impl HttpsDateUpdateAlgorithm<NetworkTimeClient> {
     /// Create a new |HttpsDateUpdateAlgorithm|.
-    pub fn new(retry_strategy: RetryStrategy, request_uri: Uri) -> Self {
-        Self::with_client(retry_strategy, request_uri, NetworkTimeClient::new())
+    pub fn new(
+        retry_strategy: RetryStrategy,
+        request_uri: Uri,
+        inspect: InspectDiagnostics,
+    ) -> Self {
+        Self::with_client(retry_strategy, request_uri, inspect, NetworkTimeClient::new())
     }
 }
 
 impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
-    fn with_client(retry_strategy: RetryStrategy, request_uri: Uri, client: C) -> Self {
-        Self { retry_strategy, request_uri, client: Mutex::new(client) }
+    fn with_client(
+        retry_strategy: RetryStrategy,
+        request_uri: Uri,
+        inspect: InspectDiagnostics,
+        client: C,
+    ) -> Self {
+        Self { retry_strategy, request_uri, client: Mutex::new(client), inspect }
     }
 
     /// Repeatedly poll for a time until one sample is successfully retrieved. Pushes updates to
     /// |sink|.
     async fn poll_time_until_successful(&self, sink: &mut Sender<Update>) -> Result<(), Error> {
-        info!("Attempting to poll time");
         let mut attempt_iter = 0u32..;
+        let mut last_error = None;
         loop {
             let attempt = attempt_iter.next().unwrap_or(u32::MAX);
             match self.poll_time_once().await {
                 Ok(sample) => {
+                    self.inspect.success();
                     sink.send(Status::Ok.into()).await?;
                     sink.send(sample.into()).await?;
                     return Ok(());
                 }
                 Err(http_error) => {
-                    let status = match http_error {
-                        HttpsDateError::InvalidHostname | HttpsDateError::SchemeNotHttps => {
-                            // TODO(fxbug.dev/59771) - decide how to surface irrecoverable errors
-                            // to clients
-                            error!(
-                                "Got an unexpected error {:?}, which indicates a bad \
-                                configuration.",
-                                http_error
-                            );
-                            Status::UnknownUnhealthy
-                        }
-                        HttpsDateError::NetworkError => {
-                            warn!("Failed to poll time: {:?}", http_error);
-                            Status::Network
-                        }
-                        _ => {
-                            warn!("Failed to poll time: {:?}", http_error);
-                            Status::Protocol
-                        }
-                    };
-                    sink.send(status.into()).await?;
+                    self.inspect.failure(http_error);
+                    if Some(http_error) != last_error {
+                        last_error = Some(http_error);
+                        let status = match http_error {
+                            HttpsDateError::InvalidHostname | HttpsDateError::SchemeNotHttps => {
+                                // TODO(fxbug.dev/59771) - decide how to surface irrecoverable
+                                // errors to clients
+                                error!(
+                                    "Got an unexpected error {:?}, which indicates a bad \
+                                    configuration.",
+                                    http_error
+                                );
+                                Status::UnknownUnhealthy
+                            }
+                            HttpsDateError::NetworkError => {
+                                warn!("Failed to poll time: {:?}", http_error);
+                                Status::Network
+                            }
+                            _ => {
+                                warn!("Failed to poll time: {:?}", http_error);
+                                Status::Protocol
+                            }
+                        };
+                        sink.send(status.into()).await?;
+                    }
                 }
             }
             fasync::Timer::new(fasync::Time::after(self.retry_strategy.backoff_duration(attempt)))
@@ -163,6 +180,7 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use futures::{
         channel::{mpsc::channel, oneshot},
         future::pending,
@@ -257,8 +275,13 @@ mod test {
 
         let (client, _response_complete_fut) =
             TestClient::with_responses(vec![Ok(zx::Time::from_nanos(2030))]);
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::with_client(TEST_RETRY_STRATEGY, TEST_URI.clone(), client);
+        let inspect = InspectDiagnostics::new(Inspector::new().root());
+        let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
+            TEST_RETRY_STRATEGY,
+            TEST_URI.clone(),
+            inspect,
+            client,
+        );
         let (sender, mut receiver) = channel(0);
         let mut update_fut = update_algorithm.generate_updates(sender);
 
@@ -294,8 +317,13 @@ mod test {
         ];
         let (client, response_complete_fut) =
             TestClient::with_responses(reported_utc_times.iter().map(|utc| Ok(*utc)));
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::with_client(TEST_RETRY_STRATEGY, TEST_URI.clone(), client);
+        let inspector = Inspector::new();
+        let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
+            TEST_RETRY_STRATEGY,
+            TEST_URI.clone(),
+            InspectDiagnostics::new(inspector.root()),
+            client,
+        );
 
         let monotonic_before = zx::Time::get_monotonic().into_nanos();
 
@@ -328,6 +356,12 @@ mod test {
             assert!(sample.monotonic.unwrap() <= monotonic_after);
             assert_eq!(sample.standard_deviation.unwrap(), STANDARD_DEVIATION.into_nanos());
         }
+        assert_inspect_tree!(
+            inspector,
+            root: contains {
+                success_count: expected_utc_times.len() as u64,
+            }
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -341,8 +375,13 @@ mod test {
             Ok(reported_utc),
         ];
         let (client, response_complete_fut) = TestClient::with_responses(injected_responses);
-        let update_algorithm =
-            HttpsDateUpdateAlgorithm::with_client(TEST_RETRY_STRATEGY, TEST_URI.clone(), client);
+        let inspector = Inspector::new();
+        let update_algorithm = HttpsDateUpdateAlgorithm::with_client(
+            TEST_RETRY_STRATEGY,
+            TEST_URI.clone(),
+            InspectDiagnostics::new(inspector.root()),
+            client,
+        );
 
         let (sender, receiver) = channel(0);
         let _update_task =
@@ -350,12 +389,8 @@ mod test {
         let updates = receiver.take_until(response_complete_fut).collect::<Vec<_>>().await;
 
         // Each status should be reported.
-        let expected_status_updates: Vec<Update> = vec![
-            Status::Network.into(),
-            Status::Network.into(),
-            Status::Protocol.into(),
-            Status::Ok.into(),
-        ];
+        let expected_status_updates: Vec<Update> =
+            vec![Status::Network.into(), Status::Protocol.into(), Status::Ok.into()];
         let received_status_updates =
             updates.iter().filter(|updates| updates.is_status()).cloned().collect::<Vec<_>>();
         assert_eq!(expected_status_updates, received_status_updates);
@@ -366,5 +401,16 @@ mod test {
             Update::Sample(sample) => assert_eq!(sample.utc.unwrap(), expected_utc.into_nanos()),
             Update::Status(_) => panic!("Expected a sample but got an update"),
         }
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                success_count: 1u64,
+                failure_counts: {
+                    NoCertificatesPresented: 1u64,
+                    NetworkError: 2u64,
+                },
+            }
+        );
     }
 }

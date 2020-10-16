@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 mod httpsdate;
+mod inspect;
 
 use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
+use crate::inspect::InspectDiagnostics;
 use anyhow::{Context, Error};
 use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
 use fuchsia_async as fasync;
@@ -30,12 +32,16 @@ const REQUEST_URI: &str = "https://clients1.google.com/generate_204";
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging")?;
 
-    let update_algorithm = HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?);
-    let push_source = PushSource::new(update_algorithm, Status::Ok)?;
-    let update_fut = push_source.poll_updates();
-
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
+
+    let inspect = InspectDiagnostics::new(fuchsia_inspect::component::inspector().root());
+    fuchsia_inspect::component::inspector().serve(&mut fs)?;
+
+    let update_algorithm =
+        HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, REQUEST_URI.parse()?, inspect);
+    let push_source = PushSource::new(update_algorithm, Status::Ok)?;
+    let update_fut = push_source.poll_updates();
 
     fs.take_and_serve_directory_handle()?;
     let service_fut = fs.for_each_concurrent(None, |stream| {

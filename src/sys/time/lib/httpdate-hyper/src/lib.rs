@@ -12,7 +12,7 @@ use webpki_roots_fuchsia;
 
 type DateTime = chrono::DateTime<chrono::FixedOffset>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum HttpsDateError {
     InvalidHostname,
     SchemeNotHttps,
