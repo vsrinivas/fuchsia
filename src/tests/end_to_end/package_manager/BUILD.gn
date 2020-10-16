@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//build/host.gni")
+import("//build/python/python_action.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
@@ -38,7 +39,7 @@ dart_test("package_manager_test") {
 }
 
 if (is_host) {
-  action("pm_test_package_gather_deps") {
+  python_action("pm_test_package_gather_deps") {
     metadata = {
       package_barrier = []
     }

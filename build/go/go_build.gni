@@ -5,6 +5,7 @@
 import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 import("//build/host.gni")
+import("//build/python/python_action.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/toolchain/breakpad.gni")
 
@@ -170,7 +171,7 @@ template("go_build") {
       outputs = [ source_listings_path ]
     }
 
-    action(main_target_name) {
+    python_action(main_target_name) {
       forward_variables_from(invoker,
                              [
                                "testonly",

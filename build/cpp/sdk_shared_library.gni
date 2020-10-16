@@ -5,6 +5,7 @@
 import("//build/cpp/extract_public_symbols.gni")
 import("//build/cpp/verify_pragma_once.gni")
 import("//build/cpp/verify_public_symbols.gni")
+import("//build/python/python_action.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
@@ -222,7 +223,7 @@ template("sdk_shared_library") {
   debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"
   debug_lib_file = "$shared_out_dir/lib.unstripped/$lib_name"
 
-  action(metadata_target_name) {
+  python_action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
     inputs = sdk_metas + [ debug_lib_file ]
@@ -334,7 +335,7 @@ template("sdk_shared_library") {
   # runtime dependencies.
   # TODO(fxbug.dev/5365): also check that everything in there is either prebuilt or
   # headers only.
-  action(verify_target_name) {
+  python_action(verify_target_name) {
     script = "//build/cpp/verify_runtime_deps.py"
 
     inputs = [

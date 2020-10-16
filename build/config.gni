@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/python/python_action.gni")
 import("//build/testing/golden_file.gni")
 
 declare_args() {
@@ -118,7 +119,7 @@ template("config_package") {
   }
 
   merged_sysmgr_config = "$target_gen_dir/$target_name.sysmgr"
-  action(validate_sysmgr_config_target_name) {
+  python_action(validate_sysmgr_config_target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # Builds the Bazel SDK.
 #
 # Outputs
@@ -14,7 +16,7 @@
 #     Writes the contents of the Bazel test workspace to the
 #     ${root_out_dir}/sdk/bazel_tests directory.
 template("bazel_workspace") {
-  action("${target_name}") {
+  python_action("${target_name}") {
     testonly = true
 
     forward_variables_from(invoker,

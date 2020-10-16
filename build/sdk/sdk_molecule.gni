@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # Defines a group of SDK elements.
 #
 # Parameters
@@ -34,7 +36,7 @@ template("sdk_molecule") {
   }
 
   # Builds a manifest representing members of the group.
-  action(target_name) {
+  python_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "assert_no_deps",

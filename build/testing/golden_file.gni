@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # Defines a golden file test to be executed during the build. Fails
 # if `golden`'s contents aren't equal to `current`'s.
 #
@@ -18,7 +20,7 @@ template("golden_file") {
   assert(defined(invoker.golden), "golden is a required parameter")
   assert(defined(invoker.current), "current is a required parameter")
 
-  action(target_name) {
+  python_action(target_name) {
     forward_variables_from(invoker, "*")
 
     script = "//build/testing/verify_golden_file.py"

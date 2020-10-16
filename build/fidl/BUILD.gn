@@ -4,6 +4,7 @@
 
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
+import("//build/python/python_action.gni")
 import("//build/toolchain/basic_toolchain.gni")
 
 # A toolchain dedicated to processing FIDL libraries.
@@ -26,7 +27,7 @@ generated_file("all_fidl_json") {
 # fidl_project.json is a declarative file that lists FIDL libraries and their
 # constituent files, dependencies, and build artifacts. It is used by the FIDL
 # LSP Language Server to compile FIDL libraries.
-action("gen_fidl_project") {
+python_action("gen_fidl_project") {
   testonly = true
   script = "//scripts/generate-fidl-project.py"
   deps = [ "//:generated_sources" ]
@@ -49,7 +50,7 @@ validate_json("validate_fidl_project_json") {
 }
 
 normalize_test_stamp = "$target_gen_dir/normalize_unittest.stamp"
-action("normalize_unittest") {
+python_action("normalize_unittest") {
   testonly = true
   script = "normalize_unittest.py"
   inputs = [ "normalize.py" ]

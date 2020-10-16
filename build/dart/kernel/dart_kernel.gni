@@ -5,6 +5,7 @@
 import("//build/dart/config.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
+import("//build/python/python_action.gni")
 
 _gen_kernel_label = "//build/dart/kernel:gen_kernel($host_toolchain)"
 _gen_kernel_path =
@@ -24,7 +25,7 @@ dart_platform_name = "dart_runner"
 template("_convert_kernel_manifest") {
   assert(defined(invoker.manifest), "dart_kernel() requires a manifest")
 
-  action(target_name) {
+  python_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

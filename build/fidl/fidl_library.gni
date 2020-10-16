@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
+import("//build/python/python_action.gni")
 import("//build/sdk/sdk_atom.gni")
 
 declare_args() {
@@ -87,7 +88,7 @@ template("fidl_library") {
     fidl_deps += invoker.public_deps
   }
 
-  action(response_file_target_name) {
+  python_action(response_file_target_name) {
     visibility = [ ":*" ]
 
     script = "//build/fidl/gen_response_file.py"
@@ -338,7 +339,7 @@ template("fidl_library") {
     meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
     meta_target_name = "${target_name}_meta"
 
-    action(meta_target_name) {
+    python_action(meta_target_name) {
       script = "//build/fidl/gen_sdk_meta.py"
 
       inputs = sdk_metas
@@ -364,7 +365,7 @@ template("fidl_library") {
     foreach(file, all_files) {
       to_normalize += [ file.source ]
     }
-    action(api_normalize_target_name) {
+    python_action(api_normalize_target_name) {
       script = "//build/fidl/normalize.py"
       inputs = to_normalize
       outputs = [ normalized_file ]

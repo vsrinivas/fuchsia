@@ -6,6 +6,7 @@ import("//build/dart/dart.gni")
 import("//build/dart/dart_library.gni")
 import("//build/flutter/config.gni")
 import("//build/flutter/internal/flutter_dart_component.gni")
+import("//build/python/python_action.gni")
 
 # Defines a Flutter component which can be used in a fuchsia package
 #
@@ -146,7 +147,7 @@ template("flutter_component") {
     #TODO: need to examine the dart language version of the provided main and
     #match it in our generated code.
     _generate_debug_wrapper_target_name = "${target_name}_gen_debug_wrapper"
-    action(_generate_debug_wrapper_target_name) {
+    python_action(_generate_debug_wrapper_target_name) {
       script = "//build/flutter/gen_debug_wrapper_main.py"
       args = [
         "--main-package=" + _main_package,

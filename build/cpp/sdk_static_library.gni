@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/verify_pragma_once.gni")
+import("//build/python/python_action.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
@@ -201,7 +202,7 @@ template("sdk_static_library") {
 
   metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
 
-  action(metadata_target_name) {
+  python_action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
     inputs = sdk_metas
@@ -278,7 +279,7 @@ template("sdk_static_library") {
   # runtime dependencies.
   # TODO(fxbug.dev/5365): also check that everything in there is either prebuilt or
   # headers only.
-  action(verify_target_name) {
+  python_action(verify_target_name) {
     script = "//build/cpp/verify_runtime_deps.py"
 
     inputs = [

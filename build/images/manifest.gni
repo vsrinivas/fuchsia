@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/dist/distribution_manifest.gni")
+import("//build/python/python_action.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/runtime/toolchain_runtime_deps.gni")
 
@@ -152,7 +153,7 @@ template("generate_manifest") {
     outputs = [ runtime_deps_manifest ]
   }
 
-  action(target_name) {
+  python_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

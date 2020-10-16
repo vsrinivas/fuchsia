@@ -12,6 +12,7 @@ import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
+import("//build/python/python_action.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
@@ -301,7 +302,7 @@ template("assemble_system") {
     sources = [ "$target_out_dir/${image_name}_fvm.blk" ]
   }
 
-  action("${image_name}_devmgr_config.txt") {
+  python_action("${image_name}_devmgr_config.txt") {
     visibility = [ ":*" ]
     testonly = true
     script = "//build/images/manifest.py"

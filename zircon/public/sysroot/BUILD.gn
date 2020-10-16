@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
+import("//build/python/python_action.gni")
 import("//build/sdk/sdk_atom.gni")
 
 sysroot_toolchain = "//build/zircon:sysroot_toolchain"
@@ -122,7 +123,7 @@ write_file("$target_gen_dir/sysroot.meta.in.json",
            },
            "json")
 
-action("sysroot-meta") {
+python_action("sysroot-meta") {
   visibility = [ ":*" ]
   script = "//build/zircon/sdk_build_id.py"
   sources = [ "$target_gen_dir/sysroot.meta.in.json" ]

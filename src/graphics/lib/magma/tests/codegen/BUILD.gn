@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # The tests in this path are used for validating generated code, especially
 # for those files that are not otherwise automatically rebuilt.
 
@@ -58,7 +60,7 @@ action("icd_manifest") {
   outputs = [ generated_icd_manifest_file ]
 }
 
-action("icd_manifest_compare") {
+python_action("icd_manifest_compare") {
   testonly = true
   script = "//src/graphics/lib/magma/scripts/diff_json.py"
   args = [

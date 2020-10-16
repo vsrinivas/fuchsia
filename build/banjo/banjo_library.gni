@@ -4,6 +4,7 @@
 
 import("//build/banjo/toolchain.gni")
 import("//build/compiled_action.gni")
+import("//build/python/python_action.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # Private template to generate an SDK Atom for banjo_library and
@@ -57,7 +58,7 @@ template("_banjo_library_sdk") {
   meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
   meta_target_name = "${target_name}_meta"
 
-  action(meta_target_name) {
+  python_action(meta_target_name) {
     script = "//build/banjo/gen_sdk_meta.py"
 
     inputs = sdk_metas
@@ -201,7 +202,7 @@ template("banjo_library") {
     backend = target[3]
     output = target[4]
 
-    action(target_name) {
+    python_action(target_name) {
       visibility = [ ":*" ]
 
       script = "//build/banjo/gen_response_file.py"
@@ -353,7 +354,7 @@ template("banjo_dummy_library") {
     backend = target[1]
     output = target[2]
 
-    action(response_target_name) {
+    python_action(response_target_name) {
       visibility = [ ":*" ]
 
       script = "//build/banjo/gen_response_file.py"

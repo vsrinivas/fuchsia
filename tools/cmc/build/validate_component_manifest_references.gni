@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # Validates a component manifest against a package manifest.
 # Checks that the component manifest doesn't reference files that are not
 # present in the package.
@@ -38,7 +40,7 @@ template("validate_component_manifest_references") {
   assert(defined(invoker.package_manifest), "Must specify package_manifest")
 
   stamp_file = "$target_gen_dir/$target_name.action.stamp"
-  action(target_name) {
+  python_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
+
 # Generates a manifest containing the list of distributable objects in the given
 # dependency tree.
 #
@@ -88,7 +90,7 @@ template("distribution_manifest") {
   }
 
   # Detect collisions in metadata entries.
-  action(main_target) {
+  python_action(main_target) {
     forward_variables_from(invoker,
                            [
                              "data_deps",

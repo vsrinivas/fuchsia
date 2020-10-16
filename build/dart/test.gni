@@ -4,6 +4,7 @@
 
 import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
+import("//build/python/python_action.gni")
 import("//build/testing/host_test_data.gni")
 import("//build/testing/test_spec.gni")
 
@@ -61,6 +62,7 @@ template("dart_test") {
                            [
                              "deps",
                              "sources",
+                             "testonly",
                            ])
 
     # We want to mimic the package_root being in place of the source_dir. Dart
@@ -89,7 +91,7 @@ template("dart_test") {
   # entrypoint.
   _grouped_main_file = "$target_gen_dir/${_main_target_name}_grouped.dart"
 
-  action(_test_grouping_target_name) {
+  python_action(_test_grouping_target_name) {
     script = "//build/dart/group_tests.py"
     outputs = [ _grouped_main_file ]
     args = [
@@ -189,7 +191,7 @@ template("dart_test") {
   }
 
   # Creates a convenience script to invoke the test.
-  action(_main_target_name) {
+  python_action(_main_target_name) {
     script = "//build/dart/gen_dart_test_invocation.py"
 
     inputs = [ _snapshot ]
