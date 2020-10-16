@@ -116,12 +116,3 @@ group("tests") {
   testonly = true
   deps = [ ":timekeeper-tests" ]
 }
-
-# Packages needed for time synchronization in recovery images
-# TODO(fxbug.dev/56447) - move time sync components and this group to a common directory
-group("recovery") {
-  deps = [
-    ":timekeeper",
-    "//src/sys/time/network_time_service:network-time-service",
-  ]
-}
