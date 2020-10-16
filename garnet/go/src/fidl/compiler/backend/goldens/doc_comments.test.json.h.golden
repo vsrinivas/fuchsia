@@ -7,9 +7,9 @@
 namespace test {
 namespace name {
 
-class Union;
 class Table;
 class Struct;
+class StrictUnion;
 #ifdef __Fuchsia__
 
 /// interface comment #1
@@ -34,159 +34,185 @@ constexpr uint64_t kInterface_OnEvent_Ordinal = 0x914c226136244edlu;
 class Service;
 #endif  // __Fuchsia
 
-/// enum comment #1.
+/// strict enum comment #1.
 ///
-/// enum comment #2.
-enum class MyEnum : uint32_t {
+/// strict enum comment #2.
+enum class MyStrictEnum : uint32_t {
 
-  /// enum Member comment 1.
+  /// FOO member comment #1
+  ///
+  /// FOO member comment #3
   FOO = 1u,
 
+  /// BAR member comment #1
+  ///
+  /// BAR member comment #3
   BAR = 2u,
 };
 
-inline zx_status_t Clone(::test::name::MyEnum value,
-                         ::test::name::MyEnum* result) {
+inline zx_status_t Clone(::test::name::MyStrictEnum value,
+                         ::test::name::MyStrictEnum* result) {
   *result = value;
   return ZX_OK;
 }
 
-/// bits comment #1
+/// strict bits comment #1
 ///
-/// bits comment #2
-enum class MyBits : uint32_t {
+/// strict bits comment #2
+enum class MyStrictBits : uint32_t {
 
-  /// bits member comment #1
+  /// MY_FIRST_BIT member comment #1
   ///
-  /// bits member comment #3
+  /// MY_FIRST_BIT member comment #3
   MY_FIRST_BIT = 1u,
 
+  /// MY_OTHER_BIT member comment #1
+  ///
+  /// MY_OTHER_BIT member comment #3
   MY_OTHER_BIT = 2u,
 };
 
-const static MyBits MyBitsMask = static_cast<MyBits>(3u);
+const static MyStrictBits MyStrictBitsMask = static_cast<MyStrictBits>(3u);
 
-inline zx_status_t Clone(::test::name::MyBits value,
-                         ::test::name::MyBits* result) {
+inline zx_status_t Clone(::test::name::MyStrictBits value,
+                         ::test::name::MyStrictBits* result) {
   *result = value;
   return ZX_OK;
 }
 
-constexpr inline ::test::name::MyBits operator|(::test::name::MyBits _lhs,
-                                                ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(static_cast<uint32_t>(_lhs) |
-                                           static_cast<uint32_t>(_rhs));
+constexpr inline ::test::name::MyStrictBits operator|(
+    ::test::name::MyStrictBits _lhs, ::test::name::MyStrictBits _rhs) {
+  return static_cast<::test::name::MyStrictBits>(static_cast<uint32_t>(_lhs) |
+                                                 static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::name::MyBits& operator|=(::test::name::MyBits& _lhs,
-                                                  ::test::name::MyBits _rhs) {
+constexpr inline ::test::name::MyStrictBits& operator|=(
+    ::test::name::MyStrictBits& _lhs, ::test::name::MyStrictBits _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::name::MyBits operator&(::test::name::MyBits _lhs,
-                                                ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(static_cast<uint32_t>(_lhs) &
-                                           static_cast<uint32_t>(_rhs));
+constexpr inline ::test::name::MyStrictBits operator&(
+    ::test::name::MyStrictBits _lhs, ::test::name::MyStrictBits _rhs) {
+  return static_cast<::test::name::MyStrictBits>(static_cast<uint32_t>(_lhs) &
+                                                 static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::name::MyBits& operator&=(::test::name::MyBits& _lhs,
-                                                  ::test::name::MyBits _rhs) {
+constexpr inline ::test::name::MyStrictBits& operator&=(
+    ::test::name::MyStrictBits& _lhs, ::test::name::MyStrictBits _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::name::MyBits operator^(::test::name::MyBits _lhs,
-                                                ::test::name::MyBits _rhs) {
-  return static_cast<::test::name::MyBits>(static_cast<uint32_t>(_lhs) ^
-                                           static_cast<uint32_t>(_rhs));
+constexpr inline ::test::name::MyStrictBits operator^(
+    ::test::name::MyStrictBits _lhs, ::test::name::MyStrictBits _rhs) {
+  return static_cast<::test::name::MyStrictBits>(static_cast<uint32_t>(_lhs) ^
+                                                 static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::name::MyBits& operator^=(::test::name::MyBits& _lhs,
-                                                  ::test::name::MyBits _rhs) {
+constexpr inline ::test::name::MyStrictBits& operator^=(
+    ::test::name::MyStrictBits& _lhs, ::test::name::MyStrictBits _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::test::name::MyBits operator~(::test::name::MyBits _value) {
-  return static_cast<::test::name::MyBits>(~static_cast<uint32_t>(_value) &
-                                           static_cast<uint32_t>(MyBitsMask));
+constexpr inline ::test::name::MyStrictBits operator~(
+    ::test::name::MyStrictBits _value) {
+  return static_cast<::test::name::MyStrictBits>(
+      ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyStrictBitsMask));
 }
 
-/// union comment #1
+/// flexible enum comment #1.
 ///
-/// union comment #3
-class Union final {
- public:
-  static const fidl_type_t* FidlType;
+/// flexible enum comment #2.
+enum class MyFlexibleEnum : uint32_t {
 
-  Union();
-  ~Union();
-
-  Union(Union&&);
-  Union& operator=(Union&&);
-
-  static Union WithField(int32_t&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-
-    kField = 1,  // 0x1
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<Union> New() {
-    return ::std::make_unique<Union>();
-  }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
-  zx_status_t Clone(Union* result) const;
-
-  bool has_invalid_tag() const { return tag_ == Invalid; }
-
-  bool is_Field() const { return tag_ == Tag::kField; }
-
-  /// union member comment #1
+  /// FOO member comment #1
   ///
-  /// union member comment #3
-  int32_t& Field() {
-    EnsureStorageInitialized(Tag::kField);
-    return Field_;
-  }
+  /// FOO member comment #3
+  FOO = 1u,
 
-  /// union member comment #1
+  /// BAR member comment #1
   ///
-  /// union member comment #3
-  const int32_t& Field() const {
-    ZX_ASSERT(is_Field());
-    return Field_;
-  }
-  Union& set_Field(int32_t value);
-
-  Tag Which() const { return Tag(tag_); }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
-  // only when you need access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const { return tag_; }
-
-  friend ::fidl::Equality<::test::name::Union>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
-  union {
-    int32_t Field_;
-  };
+  /// BAR member comment #3
+  BAR = 2u,
 };
 
-inline zx_status_t Clone(const ::test::name::Union& value,
-                         ::test::name::Union* result) {
-  return value.Clone(result);
+inline zx_status_t Clone(::test::name::MyFlexibleEnum value,
+                         ::test::name::MyFlexibleEnum* result) {
+  *result = value;
+  return ZX_OK;
 }
 
-using UnionPtr = ::std::unique_ptr<Union>;
+/// flexible bits comment #1
+///
+/// flexible bits comment #2
+enum class MyFlexibleBits : uint32_t {
+
+  /// MY_FIRST_BIT member comment #1
+  ///
+  /// MY_FIRST_BIT member comment #3
+  MY_FIRST_BIT = 1u,
+
+  /// MY_OTHER_BIT member comment #1
+  ///
+  /// MY_OTHER_BIT member comment #3
+  MY_OTHER_BIT = 2u,
+};
+
+const static MyFlexibleBits MyFlexibleBitsMask =
+    static_cast<MyFlexibleBits>(3u);
+
+inline zx_status_t Clone(::test::name::MyFlexibleBits value,
+                         ::test::name::MyFlexibleBits* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+constexpr inline ::test::name::MyFlexibleBits operator|(
+    ::test::name::MyFlexibleBits _lhs, ::test::name::MyFlexibleBits _rhs) {
+  return static_cast<::test::name::MyFlexibleBits>(static_cast<uint32_t>(_lhs) |
+                                                   static_cast<uint32_t>(_rhs));
+}
+
+constexpr inline ::test::name::MyFlexibleBits& operator|=(
+    ::test::name::MyFlexibleBits& _lhs, ::test::name::MyFlexibleBits _rhs) {
+  _lhs = _lhs | _rhs;
+  return _lhs;
+}
+
+constexpr inline ::test::name::MyFlexibleBits operator&(
+    ::test::name::MyFlexibleBits _lhs, ::test::name::MyFlexibleBits _rhs) {
+  return static_cast<::test::name::MyFlexibleBits>(static_cast<uint32_t>(_lhs) &
+                                                   static_cast<uint32_t>(_rhs));
+}
+
+constexpr inline ::test::name::MyFlexibleBits& operator&=(
+    ::test::name::MyFlexibleBits& _lhs, ::test::name::MyFlexibleBits _rhs) {
+  _lhs = _lhs & _rhs;
+  return _lhs;
+}
+
+constexpr inline ::test::name::MyFlexibleBits operator^(
+    ::test::name::MyFlexibleBits _lhs, ::test::name::MyFlexibleBits _rhs) {
+  return static_cast<::test::name::MyFlexibleBits>(static_cast<uint32_t>(_lhs) ^
+                                                   static_cast<uint32_t>(_rhs));
+}
+
+constexpr inline ::test::name::MyFlexibleBits& operator^=(
+    ::test::name::MyFlexibleBits& _lhs, ::test::name::MyFlexibleBits _rhs) {
+  _lhs = _lhs ^ _rhs;
+  return _lhs;
+}
+
+constexpr inline ::test::name::MyFlexibleBits operator~(
+    ::test::name::MyFlexibleBits _value) {
+  return static_cast<::test::name::MyFlexibleBits>(
+      ~static_cast<uint32_t>(_value) &
+      static_cast<uint32_t>(MyFlexibleBitsMask));
+}
+
+class FlexibleUnion;
 
 /// table comment #1
 ///
@@ -296,6 +322,82 @@ inline zx_status_t Clone(const ::test::name::Struct& _value,
 }
 
 using StructPtr = ::std::unique_ptr<Struct>;
+
+/// strict union comment #1
+///
+/// strict union comment #3
+class StrictUnion final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  StrictUnion();
+  ~StrictUnion();
+
+  StrictUnion(StrictUnion&&);
+  StrictUnion& operator=(StrictUnion&&);
+
+  static StrictUnion WithField(int32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kField = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<StrictUnion> New() {
+    return ::std::make_unique<StrictUnion>();
+  }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, StrictUnion* value,
+                     size_t offset);
+  zx_status_t Clone(StrictUnion* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
+  bool is_Field() const { return tag_ == Tag::kField; }
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  int32_t& Field() {
+    EnsureStorageInitialized(Tag::kField);
+    return Field_;
+  }
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  const int32_t& Field() const {
+    ZX_ASSERT(is_Field());
+    return Field_;
+  }
+  StrictUnion& set_Field(int32_t value);
+
+  Tag Which() const { return Tag(tag_); }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
+
+  friend ::fidl::Equality<::test::name::StrictUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  union {
+    int32_t Field_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::StrictUnion& value,
+                         ::test::name::StrictUnion* result) {
+  return value.Clone(result);
+}
+
+using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 #ifdef __Fuchsia__
 
 /// interface comment #1
@@ -514,6 +616,101 @@ class Service::Handler final {
 };
 #endif  // __Fuchsia
 
+/// flexible union comment #1
+///
+/// flexible union comment #3
+class FlexibleUnion final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  FlexibleUnion();
+  ~FlexibleUnion();
+
+  FlexibleUnion(FlexibleUnion&&);
+  FlexibleUnion& operator=(FlexibleUnion&&);
+
+  static FlexibleUnion WithField(int32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+
+    kField = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<FlexibleUnion> New() {
+    return ::std::make_unique<FlexibleUnion>();
+  }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
+                     size_t offset);
+  zx_status_t Clone(FlexibleUnion* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
+  bool is_Field() const { return tag_ == Tag::kField; }
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  int32_t& Field() {
+    EnsureStorageInitialized(Tag::kField);
+    return Field_;
+  }
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  const int32_t& Field() const {
+    ZX_ASSERT(is_Field());
+    return Field_;
+  }
+  FlexibleUnion& set_Field(int32_t value);
+  FlexibleUnion& _experimental_set_unknown_data(fidl_xunion_tag_t ordinal,
+                                                std::vector<uint8_t> bytes);
+
+  Tag Which() const {
+    switch (tag_) {
+      case Tag::Invalid:
+      case Tag::kField:
+        return Tag(tag_);
+      default:
+        return Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_.bytes;
+  }
+
+  friend ::fidl::Equality<::test::name::FlexibleUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  union {
+    int32_t Field_;
+    ::fidl::UnknownBytes unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::name::FlexibleUnion& value,
+                         ::test::name::FlexibleUnion* result) {
+  return value.Clone(result);
+}
+
+using FlexibleUnionPtr = ::std::unique_ptr<FlexibleUnion>;
+
 /// const comment #1
 ///
 /// const comment #3
@@ -522,65 +719,6 @@ constexpr int32_t C = 4u;
 }  // namespace test
 namespace fidl {
 
-template <>
-struct IsFidlXUnion<::test::name::Union> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::name::Union>
-    : public EncodableCodingTraits<::test::name::Union, 24> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::name::Union>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<::test::name::Union>* value,
-                     size_t offset) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* decoder,
-                     std::unique_ptr<::test::name::Union>* value,
-                     size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::name::Union);
-
-    ::test::name::Union::Decode(decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::name::Union& value,
-                         ::test::name::Union* result) {
-  return ::test::name::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::name::Union> {
-  bool operator()(const ::test::name::Union& _lhs,
-                  const ::test::name::Union& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::Union::Tag::Invalid):
-        return true;
-      case ::test::name::Union::Tag::kField:
-        return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
-
-      default:
-        return false;
-    }
-  }
-};
 template <>
 struct CodingTraits<::test::name::Table>
     : public EncodableCodingTraits<::test::name::Table, 16> {};
@@ -631,63 +769,248 @@ struct Equality<::test::name::Struct> {
   }
 };
 template <>
-struct CodingTraits<::test::name::MyEnum> {
-  static constexpr size_t inline_size_old = sizeof(::test::name::MyEnum);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyEnum);
-  static void Encode(Encoder* encoder, ::test::name::MyEnum* value,
+struct IsFidlXUnion<::test::name::StrictUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::name::StrictUnion>
+    : public EncodableCodingTraits<::test::name::StrictUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::StrictUnion>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::name::StrictUnion>* value,
+                     size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::test::name::StrictUnion>* value,
+                     size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::StrictUnion);
+
+    ::test::name::StrictUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::StrictUnion& value,
+                         ::test::name::StrictUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::name::StrictUnion> {
+  bool operator()(const ::test::name::StrictUnion& _lhs,
+                  const ::test::name::StrictUnion& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::name::StrictUnion::Tag::Invalid):
+        return true;
+      case ::test::name::StrictUnion::Tag::kField:
+        return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::name::MyStrictEnum> {
+  static constexpr size_t inline_size_old = sizeof(::test::name::MyStrictEnum);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyStrictEnum);
+  static void Encode(Encoder* encoder, ::test::name::MyStrictEnum* value,
                      size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::MyEnum* value,
+  static void Decode(Decoder* decoder, ::test::name::MyStrictEnum* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::name::MyEnum>(underlying);
+    *value = static_cast<::test::name::MyStrictEnum>(underlying);
   }
 };
 
-inline zx_status_t Clone(::test::name::MyEnum value,
-                         ::test::name::MyEnum* result) {
+inline zx_status_t Clone(::test::name::MyStrictEnum value,
+                         ::test::name::MyStrictEnum* result) {
   return ::test::name::Clone(value, result);
 }
 template <>
-struct Equality<::test::name::MyEnum> {
-  bool operator()(const ::test::name::MyEnum& _lhs,
-                  const ::test::name::MyEnum& _rhs) const {
+struct Equality<::test::name::MyStrictEnum> {
+  bool operator()(const ::test::name::MyStrictEnum& _lhs,
+                  const ::test::name::MyStrictEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
-struct CodingTraits<::test::name::MyBits> {
-  static constexpr size_t inline_size_old = sizeof(::test::name::MyBits);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::name::MyBits);
-  static void Encode(Encoder* encoder, ::test::name::MyBits* value,
+struct CodingTraits<::test::name::MyStrictBits> {
+  static constexpr size_t inline_size_old = sizeof(::test::name::MyStrictBits);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyStrictBits);
+  static void Encode(Encoder* encoder, ::test::name::MyStrictBits* value,
                      size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::test::name::MyBits* value,
+  static void Decode(Decoder* decoder, ::test::name::MyStrictBits* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::name::MyBits>(underlying);
+    *value = static_cast<::test::name::MyStrictBits>(underlying);
   }
 };
 
-inline zx_status_t Clone(::test::name::MyBits value,
-                         ::test::name::MyBits* result) {
+inline zx_status_t Clone(::test::name::MyStrictBits value,
+                         ::test::name::MyStrictBits* result) {
   return ::test::name::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::name::MyBits> {
-  bool operator()(const ::test::name::MyBits& _lhs,
-                  const ::test::name::MyBits& _rhs) const {
+struct Equality<::test::name::MyStrictBits> {
+  bool operator()(const ::test::name::MyStrictBits& _lhs,
+                  const ::test::name::MyStrictBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};
+template <>
+struct CodingTraits<::test::name::MyFlexibleEnum> {
+  static constexpr size_t inline_size_old =
+      sizeof(::test::name::MyFlexibleEnum);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyFlexibleEnum);
+  static void Encode(Encoder* encoder, ::test::name::MyFlexibleEnum* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::name::MyFlexibleEnum* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::MyFlexibleEnum>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::MyFlexibleEnum value,
+                         ::test::name::MyFlexibleEnum* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct Equality<::test::name::MyFlexibleEnum> {
+  bool operator()(const ::test::name::MyFlexibleEnum& _lhs,
+                  const ::test::name::MyFlexibleEnum& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
+
+template <>
+struct CodingTraits<::test::name::MyFlexibleBits> {
+  static constexpr size_t inline_size_old =
+      sizeof(::test::name::MyFlexibleBits);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyFlexibleBits);
+  static void Encode(Encoder* encoder, ::test::name::MyFlexibleBits* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::name::MyFlexibleBits* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::MyFlexibleBits>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::MyFlexibleBits value,
+                         ::test::name::MyFlexibleBits* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::name::MyFlexibleBits> {
+  bool operator()(const ::test::name::MyFlexibleBits& _lhs,
+                  const ::test::name::MyFlexibleBits& _rhs) const {
+    uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
+    uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
+    return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};
+template <>
+struct IsFidlXUnion<::test::name::FlexibleUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::name::FlexibleUnion>
+    : public EncodableCodingTraits<::test::name::FlexibleUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::FlexibleUnion>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::name::FlexibleUnion>* value,
+                     size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<::test::name::FlexibleUnion>* value,
+                     size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::FlexibleUnion);
+
+    ::test::name::FlexibleUnion::Decode(decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::name::FlexibleUnion& value,
+                         ::test::name::FlexibleUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::name::FlexibleUnion> {
+  bool operator()(const ::test::name::FlexibleUnion& _lhs,
+                  const ::test::name::FlexibleUnion& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::name::FlexibleUnion::Tag::Invalid):
+        return true;
+      case ::test::name::FlexibleUnion::Tag::kField:
+        return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
   }
 };
 }  // namespace fidl

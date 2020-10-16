@@ -6,141 +6,6 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t test_name_UnionTable;
-const fidl_type_t* Union::FidlType = &test_name_UnionTable;
-
-Union::Union() {}
-
-Union::~Union() { Destroy(); }
-
-Union::Union(Union&& other) : tag_(other.tag_) {
-  switch (tag_) {
-    case Tag::kField:
-      Field_ = std::move(other.Field_);
-      break;
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-      break;
-  }
-}
-
-Union& Union::operator=(Union&& other) {
-  if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-      case Tag::kField:
-        Field_ = std::move(other.Field_);
-        break;
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-        break;
-    }
-  }
-  return *this;
-}
-
-Union Union::WithField(int32_t&& val) {
-  Union result;
-  result.set_Field(std::move(val));
-  return result;
-}
-
-void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
-  const size_t length_before = encoder->CurrentLength();
-  const size_t handles_before = encoder->CurrentHandleCount();
-
-  size_t envelope_offset = 0;
-
-  switch (Which()) {
-    case Tag::kField: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
-      ::fidl::Encode(encoder, &Field_, envelope_offset);
-      break;
-    }
-    default:
-      break;
-  }
-
-  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
-
-  if (envelope_offset) {
-    xunion->tag = tag_;
-    xunion->envelope.num_bytes =
-        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-    xunion->envelope.num_handles =
-        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
-    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-  }
-}
-
-void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
-  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
-
-  if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(
-        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
-    return;
-  }
-
-  value->EnsureStorageInitialized(xunion->tag);
-
-  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
-
-  switch (value->tag_) {
-    case Tag::kField:
-      ::fidl::Decode(decoder, &value->Field_, envelope_offset);
-      break;
-    default:
-      break;
-  }
-}
-
-zx_status_t Union::Clone(Union* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
-    case Tag::Invalid:
-      return ZX_OK;
-    case Tag::kField:
-      return ::fidl::Clone(Field_, &result->Field_);
-    default:
-      return ZX_OK;
-  }
-}
-
-Union& Union::set_Field(int32_t value) {
-  EnsureStorageInitialized(Tag::kField);
-  Field_ = std::move(value);
-  return *this;
-}
-
-void Union::Destroy() {
-  switch (tag_) {
-    case Tag::kField:
-      break;
-
-    default:
-      break;
-  }
-  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
-}
-
-void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-        break;
-      case Tag::kField:
-        new (&Field_) int32_t();
-        break;
-      default:
-        break;
-    }
-  }
-}
 extern "C" const fidl_type_t test_name_TableTable;
 const fidl_type_t* Table::FidlType = &test_name_TableTable;
 
@@ -264,6 +129,142 @@ zx_status_t Struct::Clone(Struct* _result) const {
   zx_status_t _status = ::fidl::Clone(Field, &_result->Field);
   if (_status != ZX_OK) return _status;
   return ZX_OK;
+}
+extern "C" const fidl_type_t test_name_StrictUnionTable;
+const fidl_type_t* StrictUnion::FidlType = &test_name_StrictUnionTable;
+
+StrictUnion::StrictUnion() {}
+
+StrictUnion::~StrictUnion() { Destroy(); }
+
+StrictUnion::StrictUnion(StrictUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kField:
+      Field_ = std::move(other.Field_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
+}
+
+StrictUnion& StrictUnion::operator=(StrictUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kField:
+        Field_ = std::move(other.Field_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+StrictUnion StrictUnion::WithField(int32_t&& val) {
+  StrictUnion result;
+  result.set_Field(std::move(val));
+  return result;
+}
+
+void StrictUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kField: {
+      envelope_offset = encoder->Alloc(
+          ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &Field_, envelope_offset);
+      break;
+    }
+    default:
+      break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+    xunion->envelope.num_handles =
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void StrictUnion::Decode(::fidl::Decoder* decoder, StrictUnion* value,
+                         size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(
+        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case Tag::kField:
+      ::fidl::Decode(decoder, &value->Field_, envelope_offset);
+      break;
+    default:
+      break;
+  }
+}
+
+zx_status_t StrictUnion::Clone(StrictUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
+    case Tag::kField:
+      return ::fidl::Clone(Field_, &result->Field_);
+    default:
+      return ZX_OK;
+  }
+}
+
+StrictUnion& StrictUnion::set_Field(int32_t value) {
+  EnsureStorageInitialized(Tag::kField);
+  Field_ = std::move(value);
+  return *this;
+}
+
+void StrictUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kField:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kField:
+        new (&Field_) int32_t();
+        break;
+      default:
+        break;
+    }
+  }
 }
 #ifdef __Fuchsia__
 namespace {
@@ -405,5 +406,167 @@ zx_status_t Interface_SyncProxy::Method() {
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_name_FlexibleUnionTable;
+const fidl_type_t* FlexibleUnion::FidlType = &test_name_FlexibleUnionTable;
+
+FlexibleUnion::FlexibleUnion() {}
+
+FlexibleUnion::~FlexibleUnion() { Destroy(); }
+
+FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kField:
+      Field_ = std::move(other.Field_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+FlexibleUnion& FlexibleUnion::operator=(FlexibleUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kField:
+        Field_ = std::move(other.Field_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      default:
+        new (&unknown_data_.bytes) decltype(unknown_data_.bytes);
+        unknown_data_.bytes = std::move(other.unknown_data_.bytes);
+        break;
+    }
+  }
+  return *this;
+}
+
+FlexibleUnion FlexibleUnion::WithField(int32_t&& val) {
+  FlexibleUnion result;
+  result.set_Field(std::move(val));
+  return result;
+}
+
+void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kField: {
+      envelope_offset = encoder->Alloc(
+          ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &Field_, envelope_offset);
+      break;
+    }
+    case Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
+      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      break;
+    default:
+      break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+    xunion->envelope.num_handles =
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void FlexibleUnion::Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
+                           size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(
+        static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case Tag::kField:
+      ::fidl::Decode(decoder, &value->Field_, envelope_offset);
+      break;
+    default:
+      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
+      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+      break;
+  }
+}
+
+zx_status_t FlexibleUnion::Clone(FlexibleUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::Invalid:
+      return ZX_OK;
+    case Tag::kField:
+      return ::fidl::Clone(Field_, &result->Field_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+FlexibleUnion& FlexibleUnion::set_Field(int32_t value) {
+  EnsureStorageInitialized(Tag::kField);
+  Field_ = std::move(value);
+  return *this;
+}
+FlexibleUnion& FlexibleUnion::_experimental_set_unknown_data(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_.bytes = std::move(bytes);
+  return *this;
+}
+
+void FlexibleUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kField:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kField:
+        new (&Field_) int32_t();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
 }  // namespace name
 }  // namespace test

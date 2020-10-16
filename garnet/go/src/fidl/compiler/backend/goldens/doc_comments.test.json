@@ -10,17 +10,17 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "test.name/MyBits",
+      "name": "test.name/MyStrictBits",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 10,
-        "column": 6,
-        "length": 6
+        "line": 9,
+        "column": 13,
+        "length": 12
       },
       "maybe_attributes": [
         {
           "name": "Doc",
-          "value": " bits comment #1\n\n bits comment #2\n"
+          "value": " strict bits comment #1\n\n strict bits comment #2\n"
         }
       ],
       "type": {
@@ -33,7 +33,7 @@
           "name": "MY_FIRST_BIT",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 14,
+            "line": 13,
             "column": 5,
             "length": 12
           },
@@ -50,7 +50,7 @@
           "maybe_attributes": [
             {
               "name": "Doc",
-              "value": " bits member comment #1\n\n bits member comment #3\n"
+              "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n"
             }
           ]
         },
@@ -58,7 +58,7 @@
           "name": "MY_OTHER_BIT",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 15,
+            "line": 17,
             "column": 5,
             "length": 12
           },
@@ -71,10 +71,89 @@
               "value": "2",
               "expression": "2"
             }
-          }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n"
+            }
+          ]
         }
       ],
       "strict": true
+    },
+    {
+      "name": "test.name/MyFlexibleBits",
+      "location": {
+        "filename": "doc_comments.test.fidl",
+        "line": 23,
+        "column": 15,
+        "length": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " flexible bits comment #1\n\n flexible bits comment #2\n"
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "3",
+      "members": [
+        {
+          "name": "MY_FIRST_BIT",
+          "location": {
+            "filename": "doc_comments.test.fidl",
+            "line": 27,
+            "column": 5,
+            "length": 12
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n"
+            }
+          ]
+        },
+        {
+          "name": "MY_OTHER_BIT",
+          "location": {
+            "filename": "doc_comments.test.fidl",
+            "line": 31,
+            "column": 5,
+            "length": 12
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n"
+            }
+          ]
+        }
+      ],
+      "strict": false
     }
   ],
   "const_declarations": [
@@ -82,7 +161,7 @@
       "name": "test.name/C",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 22,
+        "line": 37,
         "column": 13,
         "length": 1
       },
@@ -110,17 +189,17 @@
   ],
   "enum_declarations": [
     {
-      "name": "test.name/MyEnum",
+      "name": "test.name/MyStrictEnum",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 28,
-        "column": 6,
-        "length": 6
+        "line": 42,
+        "column": 13,
+        "length": 12
       },
       "maybe_attributes": [
         {
           "name": "Doc",
-          "value": " enum comment #1.\n\n enum comment #2.\n"
+          "value": " strict enum comment #1.\n\n strict enum comment #2.\n"
         }
       ],
       "type": "uint32",
@@ -129,7 +208,7 @@
           "name": "FOO",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 30,
+            "line": 46,
             "column": 5,
             "length": 3
           },
@@ -146,7 +225,7 @@
           "maybe_attributes": [
             {
               "name": "Doc",
-              "value": " enum Member comment 1.\n"
+              "value": " FOO member comment #1\n\n FOO member comment #3\n"
             }
           ]
         },
@@ -154,7 +233,7 @@
           "name": "BAR",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 32,
+            "line": 51,
             "column": 5,
             "length": 3
           },
@@ -167,10 +246,86 @@
               "value": "2",
               "expression": "2"
             }
-          }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " BAR member comment #1\n\n BAR member comment #3\n"
+            }
+          ]
         }
       ],
       "strict": true
+    },
+    {
+      "name": "test.name/MyFlexibleEnum",
+      "location": {
+        "filename": "doc_comments.test.fidl",
+        "line": 57,
+        "column": 15,
+        "length": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " flexible enum comment #1.\n\n flexible enum comment #2.\n"
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "doc_comments.test.fidl",
+            "line": 61,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " FOO member comment #1\n\n FOO member comment #3\n"
+            }
+          ]
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "doc_comments.test.fidl",
+            "line": 66,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " BAR member comment #1\n\n BAR member comment #3\n"
+            }
+          ]
+        }
+      ],
+      "strict": false,
+      "maybe_unknown_value": 4294967295
     }
   ],
   "experimental_resource_declarations": [],
@@ -179,7 +334,7 @@
       "name": "test.name/Interface",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 68,
+        "line": 112,
         "column": 10,
         "length": 9
       },
@@ -195,7 +350,7 @@
           "name": "Method",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 72,
+            "line": 116,
             "column": 5,
             "length": 6
           },
@@ -225,7 +380,7 @@
           "name": "OnEvent",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 77,
+            "line": 121,
             "column": 8,
             "length": 7
           },
@@ -258,7 +413,7 @@
       "name": "test.name/Service",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 83,
+        "line": 127,
         "column": 9,
         "length": 7
       },
@@ -278,7 +433,7 @@
           "name": "interface",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 87,
+            "line": 131,
             "column": 15,
             "length": 9
           },
@@ -297,7 +452,7 @@
       "name": "test.name/Struct",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 38,
+        "line": 72,
         "column": 8,
         "length": 6
       },
@@ -317,7 +472,7 @@
           "name": "Field",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 42,
+            "line": 76,
             "column": 11,
             "length": 5
           },
@@ -351,7 +506,7 @@
       "name": "test.name/Table",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 58,
+        "line": 102,
         "column": 7,
         "length": 5
       },
@@ -372,7 +527,7 @@
           "name": "Field",
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 62,
+            "line": 106,
             "column": 14,
             "length": 5
           },
@@ -400,17 +555,17 @@
   ],
   "union_declarations": [
     {
-      "name": "test.name/Union",
+      "name": "test.name/StrictUnion",
       "location": {
         "filename": "doc_comments.test.fidl",
-        "line": 48,
-        "column": 7,
-        "length": 5
+        "line": 82,
+        "column": 14,
+        "length": 11
       },
       "maybe_attributes": [
         {
           "name": "Doc",
-          "value": " union comment #1\n\n union comment #3\n"
+          "value": " strict union comment #1\n\n strict union comment #3\n"
         }
       ],
       "members": [
@@ -424,7 +579,7 @@
           },
           "location": {
             "filename": "doc_comments.test.fidl",
-            "line": 52,
+            "line": 86,
             "column": 14,
             "length": 5
           },
@@ -448,29 +603,85 @@
         "has_flexible_envelope": false,
         "is_resource": false
       }
+    },
+    {
+      "name": "test.name/FlexibleUnion",
+      "location": {
+        "filename": "doc_comments.test.fidl",
+        "line": 92,
+        "column": 16,
+        "length": 13
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " flexible union comment #1\n\n flexible union comment #3\n"
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "Field",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "doc_comments.test.fidl",
+            "line": 96,
+            "column": 14,
+            "length": 5
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " union member comment #1\n\n union member comment #3\n"
+            }
+          ]
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
     }
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/Union",
     "test.name/Table",
     "test.name/Struct",
+    "test.name/StrictUnion",
     "test.name/Interface",
     "test.name/Service",
-    "test.name/MyEnum",
-    "test.name/MyBits",
+    "test.name/MyStrictEnum",
+    "test.name/MyStrictBits",
+    "test.name/MyFlexibleEnum",
+    "test.name/MyFlexibleBits",
+    "test.name/FlexibleUnion",
     "test.name/C"
   ],
   "declarations": {
-    "test.name/MyBits": "bits",
+    "test.name/MyStrictBits": "bits",
+    "test.name/MyFlexibleBits": "bits",
     "test.name/C": "const",
-    "test.name/MyEnum": "enum",
+    "test.name/MyStrictEnum": "enum",
+    "test.name/MyFlexibleEnum": "enum",
     "test.name/Interface": "interface",
     "test.name/Service": "service",
     "test.name/SomeLongAnonymousPrefix0": "struct",
     "test.name/SomeLongAnonymousPrefix1": "struct",
     "test.name/Struct": "struct",
     "test.name/Table": "table",
-    "test.name/Union": "union"
+    "test.name/StrictUnion": "union",
+    "test.name/FlexibleUnion": "union"
   }
 }

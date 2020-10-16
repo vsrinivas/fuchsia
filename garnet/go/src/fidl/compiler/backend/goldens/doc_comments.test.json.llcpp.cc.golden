@@ -9,18 +9,19 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(Union) == sizeof(fidl_xunion_t));
-  static_assert(offsetof(Union, ordinal_) == offsetof(fidl_xunion_t, tag));
-  static_assert(offsetof(Union, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
-}
-
-void Union::_CloseHandles() {}
-
 void Table::_CloseHandles() {}
 
 void Struct::_CloseHandles() {}
+
+void ::llcpp::test::name::StrictUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(StrictUnion, ordinal_) ==
+                offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(StrictUnion, envelope_) ==
+                offsetof(fidl_xunion_t, envelope));
+}
+
+void StrictUnion::_CloseHandles() {}
 
 namespace {
 
@@ -204,6 +205,25 @@ void Interface::MethodRequest::_InitHeader(zx_txid_t _txid) {
 void Interface::OnEventResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kInterface_OnEvent_Ordinal);
 }
+auto ::llcpp::test::name::FlexibleUnion::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
+  switch (ordinal_) {
+    case Ordinal::kField:
+      return static_cast<Tag>(ordinal_);
+    default:
+      return Tag::kUnknown;
+  }
+}
+
+void ::llcpp::test::name::FlexibleUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(FlexibleUnion, ordinal_) ==
+                offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(FlexibleUnion, envelope_) ==
+                offsetof(fidl_xunion_t, envelope));
+}
+
+void FlexibleUnion::_CloseHandles() {}
 
 }  // namespace name
 }  // namespace test

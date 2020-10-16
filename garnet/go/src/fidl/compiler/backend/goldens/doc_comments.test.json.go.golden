@@ -3,6 +3,7 @@
 package name
 
 import (
+	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -13,30 +14,30 @@ const (
 	C int32 = 4
 )
 
-var _ _bindings.Enum = MyEnum(0)
+var _ _bindings.Enum = MyStrictEnum(0)
 
-// enum comment #1.
+// strict enum comment #1.
 //
-// enum comment #2.
-type MyEnum uint32
+// strict enum comment #2.
+type MyStrictEnum uint32
 
 const (
-	MyEnumFoo MyEnum = 1
-	MyEnumBar MyEnum = 2
+	MyStrictEnumFoo MyStrictEnum = 1
+	MyStrictEnumBar MyStrictEnum = 2
 )
 
-func (_ MyEnum) I_EnumValues() []MyEnum {
-	return []MyEnum{
-		MyEnumFoo,
-		MyEnumBar,
+func (_ MyStrictEnum) I_EnumValues() []MyStrictEnum {
+	return []MyStrictEnum{
+		MyStrictEnumFoo,
+		MyStrictEnumBar,
 	}
 }
 
-func (_ MyEnum) I_EnumIsStrict() bool {
+func (_ MyStrictEnum) I_EnumIsStrict() bool {
 	return true
 }
 
-func (x MyEnum) IsUnknown() bool {
+func (x MyStrictEnum) IsUnknown() bool {
 	switch x {
 	case 1:
 		return true
@@ -47,7 +48,7 @@ func (x MyEnum) IsUnknown() bool {
 	}
 }
 
-func (x MyEnum) String() string {
+func (x MyStrictEnum) String() string {
 	switch x {
 	case 1:
 		return "Foo"
@@ -57,36 +58,122 @@ func (x MyEnum) String() string {
 	return "Unknown"
 }
 
-var _ _bindings.Bits = MyBits(0)
+var _ _bindings.Enum = MyFlexibleEnum(0)
 
-// bits comment #1
+// flexible enum comment #1.
 //
-// bits comment #2
-type MyBits uint32
+// flexible enum comment #2.
+type MyFlexibleEnum uint32
 
 const (
-	MyBitsMyFirstBit MyBits = 1
-	MyBitsMyOtherBit MyBits = 2
-	MyBits_Mask      MyBits = 3
+	MyFlexibleEnumFoo MyFlexibleEnum = 1
+	MyFlexibleEnumBar MyFlexibleEnum = 2
+
+	// MyFlexibleEnum_Unknown is the default unknown placeholder.
+	MyFlexibleEnum_Unknown MyFlexibleEnum = 0xffffffff
 )
 
-func (_ MyBits) I_BitsMask() MyBits {
-	return MyBits_Mask
+func (_ MyFlexibleEnum) I_EnumValues() []MyFlexibleEnum {
+	return []MyFlexibleEnum{
+		MyFlexibleEnumFoo,
+		MyFlexibleEnumBar,
+	}
 }
 
-func (_ MyBits) I_BitsIsStrict() bool {
+func (_ MyFlexibleEnum) I_EnumIsStrict() bool {
+	return false
+}
+
+func (x MyFlexibleEnum) IsUnknown() bool {
+	switch x {
+	case 1:
+		return true
+	case 2:
+		return true
+	default:
+		return false
+	}
+}
+
+func (x MyFlexibleEnum) String() string {
+	switch x {
+	case 1:
+		return "Foo"
+	case 2:
+		return "Bar"
+	}
+	return "Unknown"
+}
+
+var _ _bindings.Bits = MyStrictBits(0)
+
+// strict bits comment #1
+//
+// strict bits comment #2
+type MyStrictBits uint32
+
+const (
+	MyStrictBitsMyFirstBit MyStrictBits = 1
+	MyStrictBitsMyOtherBit MyStrictBits = 2
+	MyStrictBits_Mask      MyStrictBits = 3
+)
+
+func (_ MyStrictBits) I_BitsMask() MyStrictBits {
+	return MyStrictBits_Mask
+}
+
+func (_ MyStrictBits) I_BitsIsStrict() bool {
 	return true
 }
 
-func (x MyBits) HasUnknownBits() bool {
+func (x MyStrictBits) HasUnknownBits() bool {
 	return x.GetUnknownBits() != 0
 }
 
-func (x MyBits) GetUnknownBits() uint64 {
-	return uint64(^MyBits_Mask & x)
+func (x MyStrictBits) GetUnknownBits() uint64 {
+	return uint64(^MyStrictBits_Mask & x)
 }
 
-func (x MyBits) String() string {
+func (x MyStrictBits) String() string {
+	switch x {
+	case 1:
+		return "MyFirstBit"
+	case 2:
+		return "MyOtherBit"
+	}
+	return "Unknown"
+}
+
+var _ _bindings.Bits = MyFlexibleBits(0)
+
+// flexible bits comment #1
+//
+// flexible bits comment #2
+type MyFlexibleBits uint32
+
+const (
+	MyFlexibleBitsMyFirstBit MyFlexibleBits = 1
+	MyFlexibleBitsMyOtherBit MyFlexibleBits = 2
+	MyFlexibleBits_Mask      MyFlexibleBits = 3
+)
+
+func (_ MyFlexibleBits) I_BitsMask() MyFlexibleBits {
+	return MyFlexibleBits_Mask
+}
+
+func (_ MyFlexibleBits) I_BitsIsStrict() bool {
+	return false
+}
+
+func (x MyFlexibleBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x MyFlexibleBits) GetUnknownBits() uint64 {
+	return uint64(^MyFlexibleBits_Mask & x)
+}
+
+func (x MyFlexibleBits) String() string {
 	switch x {
 	case 1:
 		return "MyFirstBit"
@@ -113,38 +200,82 @@ func (msg *Struct) Marshaler() _bindings.Marshaler {
 	return _mStruct
 }
 
-type I_unionTag uint64
+type I_strictUnionTag uint64
 
 const (
-	UnionField = 1 // 0x00000001
+	StrictUnionField = 1 // 0x00000001
 )
 
-// union comment #1
+// strict union comment #1
 //
-// union comment #3
-type Union struct {
-	I_unionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+// strict union comment #3
+type StrictUnion struct {
+	I_strictUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	// union member comment #1
 	//
 	// union member comment #3
 	Field int32 `fidl_ordinal:"1"`
 }
 
-func (_m *Union) Which() I_unionTag {
-	return _m.I_unionTag
+func (_m *StrictUnion) Which() I_strictUnionTag {
+	return _m.I_strictUnionTag
 }
 
-func (_m *Union) Ordinal() uint64 {
-	return uint64(_m.I_unionTag)
+func (_m *StrictUnion) Ordinal() uint64 {
+	return uint64(_m.I_strictUnionTag)
 }
 
-func (_m *Union) SetField(field int32) {
-	_m.I_unionTag = UnionField
+func (_m *StrictUnion) SetField(field int32) {
+	_m.I_strictUnionTag = StrictUnionField
 	_m.Field = field
 }
 
-func UnionWithField(field int32) Union {
-	var _u Union
+func StrictUnionWithField(field int32) StrictUnion {
+	var _u StrictUnion
+	_u.SetField(field)
+	return _u
+}
+
+type I_flexibleUnionTag uint64
+
+const (
+	FlexibleUnion_unknownData = 0 // 0x00000000
+	FlexibleUnionField        = 1 // 0x00000001
+)
+
+// flexible union comment #1
+//
+// flexible union comment #3
+type FlexibleUnion struct {
+	I_flexibleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_unknownData      []byte
+	I_unknownHandles   []_zx.HandleInfo
+	// union member comment #1
+	//
+	// union member comment #3
+	Field int32 `fidl_ordinal:"1"`
+}
+
+func (_m *FlexibleUnion) Which() I_flexibleUnionTag {
+	switch _m.I_flexibleUnionTag {
+	case 1:
+		return FlexibleUnionField
+	default:
+		return FlexibleUnion_unknownData
+	}
+}
+
+func (_m *FlexibleUnion) Ordinal() uint64 {
+	return uint64(_m.I_flexibleUnionTag)
+}
+
+func (_m *FlexibleUnion) SetField(field int32) {
+	_m.I_flexibleUnionTag = FlexibleUnionField
+	_m.Field = field
+}
+
+func FlexibleUnionWithField(field int32) FlexibleUnion {
+	var _u FlexibleUnion
 	_u.SetField(field)
 	return _u
 }

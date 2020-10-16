@@ -3,12 +3,16 @@
 #include <lib/fidl/internal.h>
 
 
-extern const struct FidlCodedXUnion test_name_UnionTable;
-extern const struct FidlCodedXUnion test_name_UnionNullableRefTable;
 extern const struct FidlCodedTable test_name_TableTable;
 extern const struct FidlCodedStruct test_name_StructTable;
-extern const struct FidlCodedEnum test_name_MyEnumTable;
-extern const struct FidlCodedBits test_name_MyBitsTable;
+extern const struct FidlCodedXUnion test_name_StrictUnionTable;
+extern const struct FidlCodedXUnion test_name_StrictUnionNullableRefTable;
+extern const struct FidlCodedEnum test_name_MyStrictEnumTable;
+extern const struct FidlCodedBits test_name_MyStrictBitsTable;
+extern const struct FidlCodedEnum test_name_MyFlexibleEnumTable;
+extern const struct FidlCodedBits test_name_MyFlexibleBitsTable;
+extern const struct FidlCodedXUnion test_name_FlexibleUnionTable;
+extern const struct FidlCodedXUnion test_name_FlexibleUnionNullableRefTable;
 
 
 extern const struct FidlCodedStruct test_name_InterfaceMethodRequestTable;
@@ -18,14 +22,6 @@ extern const struct FidlCodedStruct test_name_InterfaceOnEventEventTable;
 const struct FidlCodedStruct test_name_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/InterfaceOnEventEvent"};
 
 
-static const struct FidlXUnionField Fields15test_name_Union[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
-};
-const struct FidlCodedXUnion test_name_UnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields15test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields26test_name_UnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
-};
-const struct FidlCodedXUnion test_name_UnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields26test_name_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlTableField Fields15test_name_Table[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table), .ordinal=1u}
 };
@@ -33,7 +29,15 @@ const struct FidlCodedTable test_name_TableTable = {.tag=kFidlTypeTable, .fields
 
 const struct FidlCodedStruct test_name_StructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="test.name/Struct"};
 
-static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) {
+static const struct FidlXUnionField Fields21test_name_StrictUnion[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+};
+const struct FidlCodedXUnion test_name_StrictUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields21test_name_StrictUnion, .nullable=kFidlNullability_Nonnullable, .name="test.name/StrictUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields32test_name_StrictUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+};
+const struct FidlCodedXUnion test_name_StrictUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields32test_name_StrictUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/StrictUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) {
   switch (v) {
     case 1ul:
     case 2ul:
@@ -43,7 +47,19 @@ static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_MyEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"};
+const struct FidlCodedEnum test_name_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"};
 
-const struct FidlCodedBits test_name_MyBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="test.name/MyBits"};
+const struct FidlCodedBits test_name_MyStrictBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="test.name/MyStrictBits"};
 
+const struct FidlCodedEnum test_name_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.name/MyFlexibleEnum"};
+
+const struct FidlCodedBits test_name_MyFlexibleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .mask=3ul, .name="test.name/MyFlexibleBits"};
+
+static const struct FidlXUnionField Fields23test_name_FlexibleUnion[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+};
+const struct FidlCodedXUnion test_name_FlexibleUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields23test_name_FlexibleUnion, .nullable=kFidlNullability_Nonnullable, .name="test.name/FlexibleUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields34test_name_FlexibleUnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+};
+const struct FidlCodedXUnion test_name_FlexibleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields34test_name_FlexibleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/FlexibleUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};

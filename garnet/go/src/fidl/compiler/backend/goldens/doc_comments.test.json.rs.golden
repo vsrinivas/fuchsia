@@ -24,19 +24,42 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 bitflags! {
-    /// bits comment #1
+    /// strict bits comment #1
     ///
-    /// bits comment #2
-    pub struct MyBits: u32 {
-        /// bits member comment #1
+    /// strict bits comment #2
+    pub struct MyStrictBits: u32 {
+        /// MY_FIRST_BIT member comment #1
         ///
-        /// bits member comment #3
+        /// MY_FIRST_BIT member comment #3
         const MyFirstBit = 1;
+        /// MY_OTHER_BIT member comment #1
+        ///
+        /// MY_OTHER_BIT member comment #3
         const MyOtherBit = 2;
     }
 }
 fidl_strict_bits! {
-    name: MyBits,
+    name: MyStrictBits,
+    prim_ty: u32,
+}
+
+bitflags! {
+    /// flexible bits comment #1
+    ///
+    /// flexible bits comment #2
+    pub struct MyFlexibleBits: u32 {
+        /// MY_FIRST_BIT member comment #1
+        ///
+        /// MY_FIRST_BIT member comment #3
+        const MyFirstBit = 1;
+        /// MY_OTHER_BIT member comment #1
+        ///
+        /// MY_OTHER_BIT member comment #3
+        const MyOtherBit = 2;
+    }
+}
+fidl_flexible_bits! {
+    name: MyFlexibleBits,
     prim_ty: u32,
 }
 
@@ -45,18 +68,23 @@ fidl_strict_bits! {
 /// const comment #3
 pub const C: i32 = 4;
 
-/// enum comment #1.
+/// strict enum comment #1.
 ///
-/// enum comment #2.
+/// strict enum comment #2.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(u32)]
-pub enum MyEnum {
-    /// enum Member comment 1.
+pub enum MyStrictEnum {
+    /// FOO member comment #1
+    ///
+    /// FOO member comment #3
     Foo = 1,
+    /// BAR member comment #1
+    ///
+    /// BAR member comment #3
     Bar = 2,
 }
 fidl_strict_enum! {
-    name: MyEnum,
+    name: MyStrictEnum,
     prim_ty: u32,
     members: [
         Foo { value: 1, },
@@ -64,11 +92,44 @@ fidl_strict_enum! {
     ],
 }
 
-/// union comment #1
+/// flexible enum comment #1.
 ///
-/// union comment #3
+/// flexible enum comment #2.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[non_exhaustive]
+pub enum MyFlexibleEnum {
+    /// FOO member comment #1
+    ///
+    /// FOO member comment #3
+    Foo,
+    /// BAR member comment #1
+    ///
+    /// BAR member comment #3
+    Bar,
+    #[deprecated = "Use MyFlexibleEnum::unknown() to construct, MyFlexibleEnumUnknown!() to exhaustively match"]
+    __Unknown(u32),
+}
+/// Pattern that matches an unknown MyFlexibleEnum member.
+#[macro_export]
+macro_rules! MyFlexibleEnumUnknown {
+	() => { _ };
+}
+fidl_flexible_enum! {
+    name: MyFlexibleEnum,
+    prim_ty: u32,
+    members: [
+        Foo { value: 1, },
+        Bar { value: 2, },
+    ],
+    unknown_member: __Unknown,
+    default_unknown_value: 0xffffffff,
+}
+
+/// strict union comment #1
+///
+/// strict union comment #3
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum Union {
+pub enum StrictUnion {
     /// union member comment #1
     ///
     /// union member comment #3
@@ -76,13 +137,37 @@ pub enum Union {
 }
 
 fidl_xunion! {
-    name: Union,
+    name: StrictUnion,
     members: [
         Field {
             ty: i32,
             ordinal: 1,
         },
     ],
+}
+
+/// flexible union comment #1
+///
+/// flexible union comment #3
+#[derive(Debug, PartialEq)]
+pub enum FlexibleUnion {
+    /// union member comment #1
+    ///
+    /// union member comment #3
+    Field(i32),
+    #[doc(hidden)]
+    __UnknownVariant { ordinal: u64, bytes: Vec<u8>, handles: Vec<fidl::Handle> },
+}
+
+fidl_xunion! {
+    name: FlexibleUnion,
+    members: [
+        Field {
+            ty: i32,
+            ordinal: 1,
+        },
+    ],
+    unknown_member: __UnknownVariant,
 }
 
 /// struct comment #1

@@ -3,32 +3,66 @@
 /// library comment #2
 library test.name;
 
-
-/// bits comment #1
+/// strict bits comment #1
 ///
-/// bits comment #2
-bits MyBits:uint32 {
-    /// bits member comment #1
+/// strict bits comment #2
+strict bits MyStrictBits : uint32 {
+    /// MY_FIRST_BIT member comment #1
     ///
-    /// bits member comment #3
+    /// MY_FIRST_BIT member comment #3
     MY_FIRST_BIT = 1;
+    /// MY_OTHER_BIT member comment #1
+    ///
+    /// MY_OTHER_BIT member comment #3
     MY_OTHER_BIT = 2;
 };
 
+/// flexible bits comment #1
+///
+/// flexible bits comment #2
+flexible bits MyFlexibleBits : uint32 {
+    /// MY_FIRST_BIT member comment #1
+    ///
+    /// MY_FIRST_BIT member comment #3
+    MY_FIRST_BIT = 1;
+    /// MY_OTHER_BIT member comment #1
+    ///
+    /// MY_OTHER_BIT member comment #3
+    MY_OTHER_BIT = 2;
+};
 
 /// const comment #1
 ///
 /// const comment #3
 const int32 C = 4;
 
-
-/// enum comment #1.
+/// strict enum comment #1.
 ///
-/// enum comment #2.
-enum MyEnum : uint32 {
-    /// enum Member comment 1.
+/// strict enum comment #2.
+strict enum MyStrictEnum : uint32 {
+    /// FOO member comment #1
+    ///
+    /// FOO member comment #3
     FOO = 1;
-    // Internal comment.
+    /// BAR member comment #1
+    ///
+    /// BAR member comment #3
+    // Non doc-comment, should be ignored by FIDL toolchain.
+    BAR = 2;
+};
+
+/// flexible enum comment #1.
+///
+/// flexible enum comment #2.
+flexible enum MyFlexibleEnum : uint32 {
+    /// FOO member comment #1
+    ///
+    /// FOO member comment #3
+    FOO = 1;
+    /// BAR member comment #1
+    ///
+    /// BAR member comment #3
+    // Non doc-comment, should be ignored by FIDL toolchain.
     BAR = 2;
 };
 
@@ -42,10 +76,20 @@ struct Struct {
     int32 Field;
 };
 
-/// union comment #1
+/// strict union comment #1
 ///
-/// union comment #3
-union Union {
+/// strict union comment #3
+strict union StrictUnion {
+    /// union member comment #1
+    ///
+    /// union member comment #3
+    1: int32 Field;
+};
+
+/// flexible union comment #1
+///
+/// flexible union comment #3
+flexible union FlexibleUnion {
     /// union member comment #1
     ///
     /// union member comment #3

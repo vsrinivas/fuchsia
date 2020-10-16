@@ -38,206 +38,282 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-class Union;
 class Table;
 struct Struct;
+class StrictUnion;
 class Interface;
 class Service;
 
-// enum comment #1.
+// strict enum comment #1.
 //
-// enum comment #2.
-enum class MyEnum : uint32_t {
+// strict enum comment #2.
+enum class MyStrictEnum : uint32_t {
 
-  // enum Member comment 1.
+  // FOO member comment #1
+  //
+  // FOO member comment #3
   FOO = 1u,
 
+  // BAR member comment #1
+  //
+  // BAR member comment #3
   BAR = 2u,
 };
 
-// bits comment #1
+// strict bits comment #1
 //
-// bits comment #2
-// |MyBits| is strict, hence is guaranteed to only contain
+// strict bits comment #2
+// |MyStrictBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema.
-class MyBits final {
+class MyStrictBits final {
  public:
-  constexpr MyBits() = default;
-  constexpr MyBits(const MyBits& other) = default;
-  const static MyBits MY_FIRST_BIT;
-  const static MyBits MY_OTHER_BIT;
-  const static MyBits mask;
+  constexpr MyStrictBits() = default;
+  constexpr MyStrictBits(const MyStrictBits& other) = default;
+  const static MyStrictBits MY_FIRST_BIT;
+  const static MyStrictBits MY_OTHER_BIT;
+  const static MyStrictBits mask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
   explicit constexpr inline operator bool() const {
     return static_cast<bool>(value_);
   }
-  constexpr inline bool operator==(const MyBits& other) const {
+  constexpr inline bool operator==(const MyStrictBits& other) const {
     return value_ == other.value_;
   }
-  constexpr inline bool operator!=(const MyBits& other) const {
+  constexpr inline bool operator!=(const MyStrictBits& other) const {
     return value_ != other.value_;
   }
-  constexpr inline MyBits operator~() const;
-  constexpr inline MyBits operator|(const MyBits& other) const;
-  constexpr inline MyBits operator&(const MyBits& other) const;
-  constexpr inline MyBits operator^(const MyBits& other) const;
-  constexpr inline void operator|=(const MyBits& other);
-  constexpr inline void operator&=(const MyBits& other);
-  constexpr inline void operator^=(const MyBits& other);
+  constexpr inline MyStrictBits operator~() const;
+  constexpr inline MyStrictBits operator|(const MyStrictBits& other) const;
+  constexpr inline MyStrictBits operator&(const MyStrictBits& other) const;
+  constexpr inline MyStrictBits operator^(const MyStrictBits& other) const;
+  constexpr inline void operator|=(const MyStrictBits& other);
+  constexpr inline void operator&=(const MyStrictBits& other);
+  constexpr inline void operator^=(const MyStrictBits& other);
 
-  // Constructs an instance of |MyBits| from an underlying primitive value
+  // Constructs an instance of |MyStrictBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
   // FIDL schema. Otherwise, returns |fit::nullopt|.
-  constexpr inline static fit::optional<MyBits> TryFrom(uint32_t value) {
+  constexpr inline static fit::optional<MyStrictBits> TryFrom(uint32_t value) {
     if (value & ~mask.value_) {
       return fit::nullopt;
     }
-    return MyBits(value & MyBits::mask.value_);
+    return MyStrictBits(value & MyStrictBits::mask.value_);
   }
 
-  // Constructs an instance of |MyBits| from an underlying primitive value,
-  // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static MyBits TruncatingUnknown(uint32_t value) {
-    return MyBits(value & MyBits::mask.value_);
+  // Constructs an instance of |MyStrictBits| from an underlying primitive
+  // value, clearing any bit member not defined in the FIDL schema.
+  constexpr inline static MyStrictBits TruncatingUnknown(uint32_t value) {
+    return MyStrictBits(value & MyStrictBits::mask.value_);
   }
 
  private:
-  constexpr explicit MyBits(uint32_t value) : value_(value) {}
+  constexpr explicit MyStrictBits(uint32_t value) : value_(value) {}
 
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::test::name::MyBits MyBits::MY_FIRST_BIT =
-    ::llcpp::test::name::MyBits(1u);
-constexpr const ::llcpp::test::name::MyBits MyBits::MY_OTHER_BIT =
-    ::llcpp::test::name::MyBits(2u);
-constexpr const ::llcpp::test::name::MyBits MyBits::mask =
-    ::llcpp::test::name::MyBits(3u);
+constexpr const ::llcpp::test::name::MyStrictBits MyStrictBits::MY_FIRST_BIT =
+    ::llcpp::test::name::MyStrictBits(1u);
+constexpr const ::llcpp::test::name::MyStrictBits MyStrictBits::MY_OTHER_BIT =
+    ::llcpp::test::name::MyStrictBits(2u);
+constexpr const ::llcpp::test::name::MyStrictBits MyStrictBits::mask =
+    ::llcpp::test::name::MyStrictBits(3u);
 
-constexpr inline ::llcpp::test::name::MyBits MyBits::operator~() const {
-  return ::llcpp::test::name::MyBits(
+constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator~()
+    const {
+  return ::llcpp::test::name::MyStrictBits(
       static_cast<uint32_t>(~this->value_ & mask.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyBits MyBits::operator|(
-    const ::llcpp::test::name::MyBits& other) const {
-  return ::llcpp::test::name::MyBits(
+constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator|(
+    const ::llcpp::test::name::MyStrictBits& other) const {
+  return ::llcpp::test::name::MyStrictBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyBits MyBits::operator&(
-    const ::llcpp::test::name::MyBits& other) const {
-  return ::llcpp::test::name::MyBits(
+constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator&(
+    const ::llcpp::test::name::MyStrictBits& other) const {
+  return ::llcpp::test::name::MyStrictBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::test::name::MyBits MyBits::operator^(
-    const ::llcpp::test::name::MyBits& other) const {
-  return ::llcpp::test::name::MyBits(
+constexpr inline ::llcpp::test::name::MyStrictBits MyStrictBits::operator^(
+    const ::llcpp::test::name::MyStrictBits& other) const {
+  return ::llcpp::test::name::MyStrictBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
-constexpr inline void MyBits::operator|=(
-    const ::llcpp::test::name::MyBits& other) {
+constexpr inline void MyStrictBits::operator|=(
+    const ::llcpp::test::name::MyStrictBits& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void MyBits::operator&=(
-    const ::llcpp::test::name::MyBits& other) {
+constexpr inline void MyStrictBits::operator&=(
+    const ::llcpp::test::name::MyStrictBits& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void MyBits::operator^=(
-    const ::llcpp::test::name::MyBits& other) {
+constexpr inline void MyStrictBits::operator^=(
+    const ::llcpp::test::name::MyStrictBits& other) {
   this->value_ ^= other.value_;
 }
 
-extern "C" const fidl_type_t test_name_UnionTable;
-
-// union comment #1
+// flexible enum comment #1.
 //
-// union comment #3
-class Union {
+// flexible enum comment #2.
+class MyFlexibleEnum final {
  public:
-  Union() : ordinal_(Ordinal::Invalid), envelope_{} {}
+  constexpr MyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
+  constexpr operator uint32_t() const { return value_; };
 
-  Union(Union&&) = default;
-  Union& operator=(Union&&) = default;
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
 
-  ~Union() { reset_ptr(nullptr); }
+      case 2u:
 
-  enum class Tag : fidl_xunion_tag_t {
-    kField = 1,  // 0x1
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_Field() const { return ordinal_ == Ordinal::kField; }
-
-  static Union WithField(::fidl::tracking_ptr<int32_t>&& val) {
-    Union result;
-    result.set_Field(std::move(val));
-    return result;
+        return false;
+      default:
+        return true;
+    }
   }
 
-  // union member comment #1
+  constexpr static MyFlexibleEnum Unknown() {
+    return MyFlexibleEnum(0xffffffff);
+  }
+
+  // FOO member comment #1
   //
-  // union member comment #3
-  void set_Field(::fidl::tracking_ptr<int32_t>&& elem) {
-    ordinal_ = Ordinal::kField;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
+  // FOO member comment #3
+  static const MyFlexibleEnum FOO;
 
-  // union member comment #1
+  // BAR member comment #1
   //
-  // union member comment #3
-  int32_t& mutable_Field() {
-    ZX_ASSERT(ordinal_ == Ordinal::kField);
-    return *static_cast<int32_t*>(envelope_.data.get());
-  }
-  const int32_t& Field() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kField);
-    return *static_cast<int32_t*>(envelope_.data.get());
-  }
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &test_name_UnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
+  // BAR member comment #3
+  static const MyFlexibleEnum BAR;
 
  private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kField = 1,  // 0x1
-  };
+  uint32_t value_;
+};
+constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::llcpp::test::name::MyFlexibleEnum(1u);
+constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::llcpp::test::name::MyFlexibleEnum(2u);
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<int32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<int32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
+// flexible bits comment #1
+//
+// flexible bits comment #2
+// |MyFlexibleBits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+class MyFlexibleBits final {
+ public:
+  constexpr MyFlexibleBits() = default;
+  constexpr MyFlexibleBits(const MyFlexibleBits& other) = default;
+  const static MyFlexibleBits MY_FIRST_BIT;
+  const static MyFlexibleBits MY_OTHER_BIT;
+  const static MyFlexibleBits mask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const MyFlexibleBits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const MyFlexibleBits& other) const {
+    return value_ != other.value_;
+  }
+  constexpr inline MyFlexibleBits operator~() const;
+  constexpr inline MyFlexibleBits operator|(const MyFlexibleBits& other) const;
+  constexpr inline MyFlexibleBits operator&(const MyFlexibleBits& other) const;
+  constexpr inline MyFlexibleBits operator^(const MyFlexibleBits& other) const;
+  constexpr inline void operator|=(const MyFlexibleBits& other);
+  constexpr inline void operator&=(const MyFlexibleBits& other);
+  constexpr inline void operator^=(const MyFlexibleBits& other);
+
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value if the primitive does not contain any unknown members not defined in
+  // the FIDL schema. Otherwise, returns |fit::nullopt|.
+  constexpr inline static fit::optional<MyFlexibleBits> TryFrom(
+      uint32_t value) {
+    if (value & ~mask.value_) {
+      return fit::nullopt;
     }
-
-    envelope_.data = std::move(new_ptr);
+    return MyFlexibleBits(value & MyFlexibleBits::mask.value_);
   }
 
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value, clearing any bit member not defined in the FIDL schema.
+  constexpr inline static MyFlexibleBits TruncatingUnknown(uint32_t value) {
+    return MyFlexibleBits(value & MyFlexibleBits::mask.value_);
+  }
+  // Constructs an instance of |MyFlexibleBits| from an underlying primitive
+  // value, preserving any bit member not defined in the FIDL schema.
+  constexpr inline static MyFlexibleBits AllowingUnknown(uint32_t value) {
+    return MyFlexibleBits(value);
+  }
+
+  constexpr inline MyFlexibleBits unknown_bits() const {
+    return *this & MyFlexibleBits(~mask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const {
+    return static_cast<bool>(unknown_bits());
+  }
+
+ private:
+  constexpr explicit MyFlexibleBits(uint32_t value) : value_(value) {}
+
+  uint32_t value_ = 0;
 };
+constexpr const ::llcpp::test::name::MyFlexibleBits
+    MyFlexibleBits::MY_FIRST_BIT = ::llcpp::test::name::MyFlexibleBits(1u);
+constexpr const ::llcpp::test::name::MyFlexibleBits
+    MyFlexibleBits::MY_OTHER_BIT = ::llcpp::test::name::MyFlexibleBits(2u);
+constexpr const ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::mask =
+    ::llcpp::test::name::MyFlexibleBits(3u);
+
+constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator~()
+    const {
+  return ::llcpp::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(~this->value_ & mask.value_));
+}
+
+constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator|(
+    const ::llcpp::test::name::MyFlexibleBits& other) const {
+  return ::llcpp::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator&(
+    const ::llcpp::test::name::MyFlexibleBits& other) const {
+  return ::llcpp::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::llcpp::test::name::MyFlexibleBits MyFlexibleBits::operator^(
+    const ::llcpp::test::name::MyFlexibleBits& other) const {
+  return ::llcpp::test::name::MyFlexibleBits(
+      static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void MyFlexibleBits::operator|=(
+    const ::llcpp::test::name::MyFlexibleBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void MyFlexibleBits::operator&=(
+    const ::llcpp::test::name::MyFlexibleBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void MyFlexibleBits::operator^=(
+    const ::llcpp::test::name::MyFlexibleBits& other) {
+  this->value_ ^= other.value_;
+}
+
+class FlexibleUnion;
 
 extern "C" const fidl_type_t test_name_TableTable;
 
@@ -400,6 +476,178 @@ class Table::UnownedBuilder final {
  private:
   uint64_t max_ordinal_ = 0;
   Table::Frame frame_;
+};
+
+extern "C" const fidl_type_t test_name_StrictUnionTable;
+
+// strict union comment #1
+//
+// strict union comment #3
+class StrictUnion {
+ public:
+  StrictUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  StrictUnion(StrictUnion&&) = default;
+  StrictUnion& operator=(StrictUnion&&) = default;
+
+  ~StrictUnion() { reset_ptr(nullptr); }
+
+  enum class Tag : fidl_xunion_tag_t {
+    kField = 1,  // 0x1
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_Field() const { return ordinal_ == Ordinal::kField; }
+
+  static StrictUnion WithField(::fidl::tracking_ptr<int32_t>&& val) {
+    StrictUnion result;
+    result.set_Field(std::move(val));
+    return result;
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  void set_Field(::fidl::tracking_ptr<int32_t>&& elem) {
+    ordinal_ = Ordinal::kField;
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  int32_t& mutable_Field() {
+    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    return *static_cast<int32_t*>(envelope_.data.get());
+  }
+  const int32_t& Field() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    return *static_cast<int32_t*>(envelope_.data.get());
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &test_name_StrictUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
+
+  void _CloseHandles();
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kField = 1,  // 0x1
+  };
+
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+      case 1: {
+        ::fidl::tracking_ptr<int32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<int32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::Envelope<void> envelope_;
+};
+
+extern "C" const fidl_type_t test_name_FlexibleUnionTable;
+
+// flexible union comment #1
+//
+// flexible union comment #3
+class FlexibleUnion {
+ public:
+  FlexibleUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  FlexibleUnion(FlexibleUnion&&) = default;
+  FlexibleUnion& operator=(FlexibleUnion&&) = default;
+
+  ~FlexibleUnion() { reset_ptr(nullptr); }
+
+  enum class Tag : fidl_xunion_tag_t {
+    kField = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_Field() const { return ordinal_ == Ordinal::kField; }
+
+  static FlexibleUnion WithField(::fidl::tracking_ptr<int32_t>&& val) {
+    FlexibleUnion result;
+    result.set_Field(std::move(val));
+    return result;
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  void set_Field(::fidl::tracking_ptr<int32_t>&& elem) {
+    ordinal_ = Ordinal::kField;
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  int32_t& mutable_Field() {
+    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    return *static_cast<int32_t*>(envelope_.data.get());
+  }
+  const int32_t& Field() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    return *static_cast<int32_t*>(envelope_.data.get());
+  }
+  Tag which() const;
+
+  static constexpr const fidl_type_t* Type = &test_name_FlexibleUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
+
+  void _CloseHandles();
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kField = 1,  // 0x1
+  };
+
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+      case 1: {
+        ::fidl::tracking_ptr<int32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<int32_t>>(
+                std::move(envelope_.data));
+        break;
+      }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t test_name_StructTable;
@@ -888,12 +1136,6 @@ constexpr int32_t C = 4u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::test::name::Union> : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::test::name::Union> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
-
-template <>
 struct IsFidlType<::llcpp::test::name::Table> : public std::true_type {};
 template <>
 struct IsTable<::llcpp::test::name::Table> : public std::true_type {};
@@ -910,6 +1152,12 @@ static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
 static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
 static_assert(sizeof(::llcpp::test::name::Struct) ==
               ::llcpp::test::name::Struct::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::StrictUnion> : public std::true_type {};
+template <>
+struct IsUnion<::llcpp::test::name::StrictUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::StrictUnion>);
 
 template <>
 struct IsFidlType<::llcpp::test::name::Interface::MethodRequest>
@@ -930,12 +1178,29 @@ static_assert(sizeof(::llcpp::test::name::Interface::OnEventResponse) ==
               ::llcpp::test::name::Interface::OnEventResponse::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyEnum> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::MyStrictEnum> : public std::true_type {};
 
 template <>
-struct IsFidlType<::llcpp::test::name::MyBits> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::test::name::MyBits>);
-static_assert(sizeof(::llcpp::test::name::MyBits) == sizeof(uint32_t));
+struct IsFidlType<::llcpp::test::name::MyStrictBits> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::MyStrictBits>);
+static_assert(sizeof(::llcpp::test::name::MyStrictBits) == sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::llcpp::test::name::MyFlexibleEnum> : public std::true_type {
+};
+
+template <>
+struct IsFidlType<::llcpp::test::name::MyFlexibleBits> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::MyFlexibleBits>);
+static_assert(sizeof(::llcpp::test::name::MyFlexibleBits) == sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::llcpp::test::name::FlexibleUnion> : public std::true_type {
+};
+template <>
+struct IsUnion<::llcpp::test::name::FlexibleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::FlexibleUnion>);
 
 }  // namespace fidl
 
