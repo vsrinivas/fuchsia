@@ -32,8 +32,29 @@ bool IsValidInstanceId(const std::string& instance_id) {
   return true;
 }
 
-fit::result<std::pair<Moniker, ComponentIdIndex::InstanceId>, ComponentIdIndex::Error> ParseEntry(
-    const rapidjson::Value& entry) {
+struct ComponentIdEntry {
+  ComponentIdIndex::InstanceId id;
+  std::vector<Moniker> monikers;
+};
+
+// Parses |json| to append realm path entries to |realm_path_out|.
+// Returns false if |json| does not contain a valid realm path.
+bool ParseRealmPath(const rapidjson::Value& json, std::vector<std::string>* realm_path_out) {
+  realm_path_out->clear();
+  if (!json.IsArray() || json.GetArray().Size() < 1)
+    return false;
+
+  const auto& json_array = json.GetArray();
+  for (const auto& realm_name : json_array) {
+    if (!realm_name.IsString())
+      return false;
+    realm_path_out->push_back(realm_name.GetString());
+  }
+
+  return true;
+}
+
+fit::result<ComponentIdEntry, ComponentIdIndex::Error> ParseEntry(const rapidjson::Value& entry) {
   // Entry must be an object.
   if (!entry.IsObject()) {
     FX_LOGS(ERROR) << "Entry must be an object.";
@@ -66,26 +87,39 @@ fit::result<std::pair<Moniker, ComponentIdIndex::InstanceId>, ComponentIdIndex::
   }
 
   // `realm_path` is a required vector of size >= 1.
-  if (!appmgr_moniker.HasMember("realm_path") || !appmgr_moniker["realm_path"].IsArray() ||
-      appmgr_moniker["realm_path"].GetArray().Size() < 1) {
+  std::vector<std::string> realm_path;
+  if (!appmgr_moniker.HasMember("realm_path") ||
+      !ParseRealmPath(appmgr_moniker["realm_path"], &realm_path)) {
     FX_LOGS(ERROR) << "appmgr_moniker.realm_path is a required, non-empty list.";
     return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
   }
 
-  // `realm_path` elements must be strings.
-  const auto& realm_path_json = appmgr_moniker["realm_path"].GetArray();
-  std::vector<std::string> realm_path;
-  for (const auto& realm_name : realm_path_json) {
-    if (!realm_name.IsString()) {
-      FX_LOGS(ERROR) << "appmgr_moniker.realm_path must be a list of strings.";
+  const std::string& component_url = appmgr_moniker["url"].GetString();
+  ComponentIdEntry component_id_entry{
+      .id = ComponentIdIndex::InstanceId(entry["instance_id"].GetString()),
+      .monikers = {Moniker{.url = component_url, .realm_path = std::move(realm_path)}}};
+
+  // 'transitional_realm_paths' is an optional vector of realm paths.
+  if (appmgr_moniker.HasMember("transitional_realm_paths")) {
+    const auto& transitional_paths = appmgr_moniker["transitional_realm_paths"];
+    if (!transitional_paths.IsArray() || transitional_paths.GetArray().Size() < 1) {
+      FX_LOGS(ERROR) << "appmgr_moniker.transitional_realm_paths is an optional, non-empty list.";
       return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
     }
-    realm_path.push_back(realm_name.GetString());
+
+    for (auto& json : transitional_paths.GetArray()) {
+      if (!ParseRealmPath(json, &realm_path)) {
+        FX_LOGS(ERROR)
+            << "appmgr_moniker.transitional_realm_paths entries must be non-empty string lists.";
+        return fit::error(ComponentIdIndex::Error::INVALID_MONIKER);
+      }
+
+      component_id_entry.monikers.emplace_back(
+          Moniker{.url = component_url, .realm_path = std::move(realm_path)});
+    }
   }
 
-  return fit::ok(std::pair{
-      Moniker{.url = appmgr_moniker["url"].GetString(), .realm_path = std::move(realm_path)},
-      ComponentIdIndex::InstanceId(entry["instance_id"].GetString())});
+  return fit::ok(std::move(component_id_entry));
 }
 }  // namespace
 
@@ -156,18 +190,19 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
       return fit::error(parsed_entry.error());
     }
 
-    auto id_result = instance_id_set.insert(parsed_entry.value().second);
+    auto id_result = instance_id_set.insert(parsed_entry.value().id);
     if (!id_result.second) {
       FX_LOGS(ERROR) << "The set of instance IDs must be unique.";
-      // Instance ID already exists.
       return fit::error(ComponentIdIndex::Error::DUPLICATE_INSTANCE_ID);
     }
 
-    auto result = moniker_to_id.insert(parsed_entry.take_value());
-    if (!result.second) {
-      FX_LOGS(ERROR) << "The set of appmgr_monikers must be unique.";
-      // Moniker already exists in the map.
-      return fit::error(ComponentIdIndex::Error::DUPLICATE_MONIKER);
+    for (Moniker& moniker : parsed_entry.value().monikers) {
+      auto result =
+          moniker_to_id.insert(std::make_pair(std::move(moniker), parsed_entry.value().id));
+      if (!result.second) {
+        FX_LOGS(ERROR) << "The set of appmgr_monikers must be unique.";
+        return fit::error(ComponentIdIndex::Error::DUPLICATE_MONIKER);
+      }
     }
   }
 

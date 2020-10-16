@@ -75,6 +75,41 @@ TEST_F(ComponentIdIndexTest, LookupInstanceId_Exists) {
   EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id);
 }
 
+TEST_F(ComponentIdIndexTest, LookupTransitionalMoniker_Exists) {
+  auto config_dir = MakeAppmgrConfigDirWithIndex(R"({
+    "instances": [
+      {
+        "instance_id": "8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280",
+        "appmgr_moniker": {
+          "realm_path": ["sys"],
+          "transitional_realm_paths": [["sys", "app"]],
+          "url": "fuchsia-pkg://example.com/pkg#meta/component.cmx"
+        }
+      }
+    ]
+  })");
+
+  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+
+  auto index = result.take_value();
+
+  // Verify that the Moniker with |realm_path| resolves even with transitional
+  // paths specified.
+  Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
+                     .realm_path = {"sys"}};
+  auto id = index->LookupMoniker(moniker).value_or("");
+  EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id)
+      << "Id not found via realm_path.";
+
+  // Verify that the transitional Moniker resolves to the same Id.
+  Moniker transitional_moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
+                                  .realm_path = {"sys", "app"}};
+  id = index->LookupMoniker(transitional_moniker).value_or("");
+  EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id)
+      << "Id not found via transitional_realm_paths.";
+}
+
 TEST_F(ComponentIdIndexTest, LookupMonikerNotExists) {
   // the instance_id below is 63 hexchars (252 bits) instead of 64 hexchars (256 bits)
   auto config_dir = MakeAppmgrConfigDirWithIndex(R"({"instances" : []})");
