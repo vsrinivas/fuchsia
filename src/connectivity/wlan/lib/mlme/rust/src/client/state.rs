@@ -1371,6 +1371,7 @@ mod tests {
             peer_sta_address: [0; 6],
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             auth_failure_timeout: 0,
+            sae_password: None,
         }
     }
 

@@ -218,6 +218,9 @@ struct AuthenticateRequest {
     AuthenticationTypes auth_type;
     uint32 auth_failure_timeout;
 
+    // If populated, use this password to perform SAE in the driver/firmware.
+    vector<uint8>? sae_password;
+
     // etc
 };
 

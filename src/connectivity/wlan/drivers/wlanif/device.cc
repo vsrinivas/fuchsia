@@ -332,6 +332,12 @@ void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
   // auth_failure_timeout
   impl_req.auth_failure_timeout = req.auth_failure_timeout;
 
+  // sae_password
+  if (req.sae_password) {
+    impl_req.sae_password_count = req.sae_password->size();
+    impl_req.sae_password_list = &(*req.sae_password)[0];
+  }
+
   wlanif_impl_auth_req(&wlanif_impl_, &impl_req);
 }
 

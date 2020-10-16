@@ -190,6 +190,7 @@ impl Joining {
                             peer_sta_address: self.cmd.bss.bssid.clone(),
                             auth_type,
                             auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
+                            sae_password: None,
                         },
                     ));
                 }

@@ -97,6 +97,9 @@ struct WlanifAuthReq {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanAuthType auth_type;
     uint32 auth_failure_timeout;
+
+    // Used to pass an SAE password when SAE_DRIVER_AUTH is in use.
+    vector<uint8>? sae_password;
 };
 
 struct WlanifAuthInd {
