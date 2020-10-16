@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::synthesizer::{self, UniformDeviceDescriptor},
+    crate::{synthesizer, usages::Usages},
     anyhow::Error,
     fidl::endpoints,
     fidl_fuchsia_ui_input::{
-        self, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy, InputDeviceRegistryMarker,
-        InputReport, KeyboardReport, MediaButtonsReport, Touch, TouchscreenReport,
+        self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
+        InputDeviceRegistryMarker, InputReport, KeyboardDescriptor, KeyboardReport,
+        MediaButtonsDescriptor, MediaButtonsReport, Range, Touch, TouchscreenDescriptor,
+        TouchscreenReport,
     },
     fuchsia_component as app,
 };
@@ -17,9 +19,54 @@ use {
 // pipelines that support the (legacy) `fuchsia.ui.input.InputDeviceRegistry` protocol.
 pub(crate) struct Injector;
 
+// Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
+// allowing us to pass any of them to `self.register_device()`.
+#[derive(Debug)]
+enum UniformDeviceDescriptor {
+    Keyboard(KeyboardDescriptor),
+    MediaButtons(MediaButtonsDescriptor),
+    Touchscreen(TouchscreenDescriptor),
+}
+
 impl synthesizer::Injector for self::Injector {
-    fn register_device(
+    fn make_touchscreen_device(
         &mut self,
+        width: u32,
+        height: u32,
+    ) -> Result<InputDeviceProxy, Error> {
+        self.register_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
+            x: Axis {
+                range: Range { min: 0, max: width as i32 },
+                resolution: 1,
+                scale: AxisScale::Linear,
+            },
+            y: Axis {
+                range: Range { min: 0, max: height as i32 },
+                resolution: 1,
+                scale: AxisScale::Linear,
+            },
+            max_finger_id: 255,
+        }))
+    }
+
+    fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error> {
+        self.register_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
+            keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
+        }))
+    }
+
+    fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error> {
+        self.register_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
+            buttons: fidl_fuchsia_ui_input::MIC_MUTE
+                | fidl_fuchsia_ui_input::VOLUME_DOWN
+                | fidl_fuchsia_ui_input::VOLUME_UP,
+        }))
+    }
+}
+
+impl Injector {
+    fn register_device(
+        &self,
         descriptor: UniformDeviceDescriptor,
     ) -> Result<InputDeviceProxy, Error> {
         let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;

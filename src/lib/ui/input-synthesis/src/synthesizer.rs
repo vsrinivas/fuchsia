@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*, usages::Usages},
+    crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*},
     anyhow::{ensure, Error},
-    fidl_fuchsia_ui_input::{
-        self, Axis, AxisScale, InputDeviceProxy, KeyboardDescriptor, MediaButtonsDescriptor, Range,
-        Touch, TouchscreenDescriptor,
-    },
+    fidl_fuchsia_ui_input::{self, InputDeviceProxy, Touch},
     std::{
         convert::TryFrom,
         thread,
@@ -17,53 +14,13 @@ use {
 };
 
 pub(crate) trait Injector {
-    fn register_device(
+    fn make_touchscreen_device(
         &mut self,
-        descriptor: UniformDeviceDescriptor,
+        width: u32,
+        height: u32,
     ) -> Result<InputDeviceProxy, Error>;
-}
-
-// Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
-// allowing us to pass any of them to `register_device()`.
-#[derive(Debug)]
-pub(crate) enum UniformDeviceDescriptor {
-    Keyboard(KeyboardDescriptor),
-    MediaButtons(MediaButtonsDescriptor),
-    Touchscreen(TouchscreenDescriptor),
-}
-
-fn make_touchscreen_device(
-    injector: &mut dyn Injector,
-    width: u32,
-    height: u32,
-) -> Result<InputDeviceProxy, Error> {
-    injector.register_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
-        x: Axis {
-            range: Range { min: 0, max: width as i32 },
-            resolution: 1,
-            scale: AxisScale::Linear,
-        },
-        y: Axis {
-            range: Range { min: 0, max: height as i32 },
-            resolution: 1,
-            scale: AxisScale::Linear,
-        },
-        max_finger_id: 255,
-    }))
-}
-
-fn make_keyboard_device(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
-    injector.register_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
-        keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
-    }))
-}
-
-fn make_media_buttons_device(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
-    injector.register_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
-        buttons: fidl_fuchsia_ui_input::MIC_MUTE
-            | fidl_fuchsia_ui_input::VOLUME_DOWN
-            | fidl_fuchsia_ui_input::VOLUME_UP,
-    }))
+    fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error>;
+    fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error>;
 }
 
 fn nanos_from_epoch() -> Result<u64, Error> {
@@ -96,7 +53,8 @@ pub(crate) fn media_button_event(
     pause: bool,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    make_media_buttons_device(injector)?
+    injector
+        .make_media_buttons_device()?
         .dispatch_report(&mut media_buttons(
             volume_up,
             volume_down,
@@ -113,7 +71,7 @@ pub(crate) fn keyboard_event(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = make_keyboard_device(injector)?;
+    let input_device = injector.make_keyboard_device()?;
 
     repeat_with_delay(
         1,
@@ -138,7 +96,7 @@ pub(crate) fn text(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = make_keyboard_device(injector)?;
+    let input_device = injector.make_keyboard_device()?;
     let key_sequence = InverseKeymap::new(keymaps::QWERTY_MAP)
         .derive_key_sequence(&input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
@@ -169,7 +127,7 @@ pub(crate) fn tap_event(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = make_touchscreen_device(injector, width, height)?;
+    let input_device = injector.make_touchscreen_device(width, height)?;
     let tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -196,7 +154,7 @@ pub(crate) fn multi_finger_tap_event(
     duration: Duration,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    let input_device = make_touchscreen_device(injector, width, height)?;
+    let input_device = injector.make_touchscreen_device(width, height)?;
     let multi_finger_tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -259,7 +217,7 @@ pub(crate) fn multi_finger_swipe(
         "fingers exceed capacity of `finger_id`!"
     );
 
-    let input_device = make_touchscreen_device(injector, width, height)?;
+    let input_device = injector.make_touchscreen_device(width, height)?;
 
     // Note: coordinates are coverted to `f64` before subtraction, because u32 subtraction
     // would overflow when swiping from higher coordinates to lower coordinates.
@@ -382,14 +340,20 @@ mod tests {
         }
 
         impl Injector for FakeInjector {
-            fn register_device(
+            fn make_touchscreen_device(
                 &mut self,
-                _: UniformDeviceDescriptor,
+                _width: u32,
+                _height: u32,
             ) -> Result<InputDeviceProxy, Error> {
-                let (proxy, event_stream) =
-                    endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-                self.event_stream = Some(event_stream);
-                Ok(proxy)
+                self.make_device()
+            }
+
+            fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error> {
+                self.make_device()
+            }
+
+            fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error> {
+                self.make_device()
             }
         }
 
@@ -415,6 +379,13 @@ mod tests {
                         vec![Err(format!("called get_events() on Injector with no `event_stream`"))]
                     }
                 }
+            }
+
+            fn make_device(&mut self) -> Result<InputDeviceProxy, Error> {
+                let (proxy, event_stream) =
+                    endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+                self.event_stream = Some(event_stream);
+                Ok(proxy)
             }
         }
 
@@ -711,10 +682,17 @@ mod tests {
             matches::assert_matches,
         };
 
-        // An `impl Injector` which provides access to the `UniformDeviceDescriptor`s
-        // which have been registered with the `Injector`.
+        #[derive(Debug)]
+        enum DeviceType {
+            Keyboard,
+            MediaButtons,
+            Touchscreen,
+        }
+
+        // An `impl Injector` which provides access to the `DeviceType`s which have been
+        // registered with the `Injector`.
         struct FakeInjector {
-            device_descriptors: Vec<UniformDeviceDescriptor>,
+            device_types: Vec<DeviceType>,
             // The injector needs to keep the `InputDeviceRequestStream`s around so that
             // the synthesizer can inject input events to the devices. Otherwise,
             // the zx::Channel is closed, and the FIDL call to inject the event will fail.
@@ -722,20 +700,33 @@ mod tests {
         }
 
         impl Injector for FakeInjector {
-            fn register_device(
+            fn make_touchscreen_device(
                 &mut self,
-                device: UniformDeviceDescriptor,
+                _width: u32,
+                _height: u32,
             ) -> Result<InputDeviceProxy, Error> {
-                let (proxy, stream) = endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-                self.device_descriptors.push(device);
-                self.device_request_streams.push(stream);
-                Ok(proxy)
+                self.make_device(DeviceType::Touchscreen)
+            }
+
+            fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error> {
+                self.make_device(DeviceType::Keyboard)
+            }
+
+            fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error> {
+                self.make_device(DeviceType::MediaButtons)
             }
         }
 
         impl FakeInjector {
             fn new() -> Self {
-                Self { device_descriptors: vec![], device_request_streams: vec![] }
+                Self { device_types: vec![], device_request_streams: vec![] }
+            }
+
+            fn make_device(&mut self, device_type: DeviceType) -> Result<InputDeviceProxy, Error> {
+                let (proxy, stream) = endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+                self.device_types.push(device_type);
+                self.device_request_streams.push(stream);
+                Ok(proxy)
             }
         }
 
@@ -743,10 +734,7 @@ mod tests {
         async fn media_button_event_registers_media_buttons_device() -> Result<(), Error> {
             let mut injector = FakeInjector::new();
             media_button_event(false, false, false, false, false, &mut injector)?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::MediaButtons { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::MediaButtons]);
             Ok(())
         }
 
@@ -754,10 +742,7 @@ mod tests {
         async fn keyboard_event_registers_keyboard() -> Result<(), Error> {
             let mut injector = FakeInjector::new();
             keyboard_event(40, Duration::from_millis(0), &mut injector)?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::Keyboard { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::Keyboard]);
             Ok(())
         }
 
@@ -765,10 +750,7 @@ mod tests {
         async fn text_event_registers_keyboard() -> Result<(), Error> {
             let mut injector = FakeInjector::new();
             text("A".to_string(), Duration::from_millis(0), &mut injector)?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::Keyboard { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::Keyboard]);
             Ok(())
         }
 
@@ -776,10 +758,7 @@ mod tests {
         async fn multi_finger_tap_event_registers_touchscreen() -> Result<(), Error> {
             let mut injector = FakeInjector::new();
             multi_finger_tap_event(vec![], 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::Touchscreen { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
 
@@ -787,10 +766,7 @@ mod tests {
         async fn tap_event_registers_touchscreen() -> Result<(), Error> {
             let mut injector = FakeInjector::new();
             tap_event(0, 0, 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::Touchscreen { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
 
@@ -798,10 +774,7 @@ mod tests {
         async fn swipe_registers_touchscreen() -> Result<(), Error> {
             let mut injector = FakeInjector::new();
             swipe(0, 0, 1, 1, 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::Touchscreen { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
 
@@ -817,10 +790,7 @@ mod tests {
                 Duration::from_millis(0),
                 &mut injector,
             )?;
-            assert_matches!(
-                injector.device_descriptors.as_slice(),
-                [UniformDeviceDescriptor::Touchscreen { .. }]
-            );
+            assert_matches!(injector.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
     }
