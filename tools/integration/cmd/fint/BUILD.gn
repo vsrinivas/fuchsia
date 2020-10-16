@@ -19,6 +19,7 @@ go_library("fint_lib") {
     "//tools/lib/color",
     "//tools/lib/command",
     "//tools/lib/logger",
+    "//tools/lib/runner",
   ]
 }
 

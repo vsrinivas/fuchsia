@@ -39,7 +39,9 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		// meaning the process and any of its children.
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
-	logger.Debugf(ctx, "environment of subprocess: %v", cmd.Env)
+	if len(cmd.Env) > 0 {
+		logger.Debugf(ctx, "environment of subprocess: %v", cmd.Env)
+	}
 	logger.Debugf(ctx, "starting: %v", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return err
