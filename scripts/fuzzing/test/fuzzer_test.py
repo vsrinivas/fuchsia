@@ -114,7 +114,8 @@ class FuzzerTest(TestCaseWithFuzzer):
         )
 
     def test_start_with_dictionary(self):
-        self.touch_on_device(self.ns.resource_abspath('dictionary'))
+        self.touch_on_device(
+            self.ns.resource_abspath(self.fuzzer.executable + '/dictionary'))
         self.fuzzer.start()
         self.assertSsh(
             'run',
@@ -126,8 +127,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         )
 
     def test_start_with_seed_corpus(self):
-        self.touch_on_device(self.ns.resource_abspath('corpus/deadbeef'))
-        self.touch_on_device(self.ns.resource_abspath('corpus/feedface'))
+        self.create_fuzzer('start', 'fake-package1/fake-target2')
         self.fuzzer.start()
         self.assertSsh(
             'run',
@@ -135,7 +135,7 @@ class FuzzerTest(TestCaseWithFuzzer):
             '-artifact_prefix=data/',
             '-jobs=1',
             'data/corpus',
-            'pkg/data/fake-target1/corpus',
+            'pkg/data/src/fake/package1/target2-corpus',
         )
 
     def test_start_already_running(self):

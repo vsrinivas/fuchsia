@@ -17,9 +17,8 @@ class NamespaceTest(TestCaseWithFuzzer):
         self.assertEqual(self.ns.data('corpus'), 'data/corpus')
 
     def test_resource(self):
-        self.assertEqual(self.ns.resource(), 'pkg/data/fake-target1/')
-        self.assertEqual(
-            self.ns.resource('dictionary'), 'pkg/data/fake-target1/dictionary')
+        self.assertEqual(self.ns.resource(), 'pkg/data/')
+        self.assertEqual(self.ns.resource('something'), 'pkg/data/something')
 
     def test_base_abspath(self):
         self.assertEqual(
@@ -41,8 +40,7 @@ class NamespaceTest(TestCaseWithFuzzer):
         resource = self.ns.resource(relpath)
         abspath = self.ns.resource_abspath(relpath)
         self.assertEqual(
-            abspath, '{}/data/{}/{}'.format(
-                self.fuzzer.package_path, self.fuzzer.executable, relpath))
+            abspath, '{}/data/{}'.format(self.fuzzer.package_path, relpath))
         self.assertEqual(abspath, self.ns.resource_abspath(resource))
         self.assertEqual(abspath, self.ns.resource_abspath(abspath))
 

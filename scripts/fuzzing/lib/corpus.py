@@ -73,9 +73,9 @@ class Corpus(object):
 
     def find_on_device(self):
         data = self.ns.data('corpus')
-        resource = self.ns.resource('corpus')
         self.ns.mkdir(data)
-        if self.ns.ls(resource):
+        if self.srcdir:
+            resource = self.ns.resource(self.srcdir)
             self._nspaths = [data, resource]
         else:
             self._nspaths = [data]

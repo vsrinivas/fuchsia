@@ -17,19 +17,19 @@ class DictionaryTest(TestCaseWithFuzzer):
         return self.fuzzer.dictionary
 
     def test_find_on_device(self):
-        resource = self.ns.resource('dictionary')
+        resource = self.ns.resource(self.fuzzer.executable + '/dictionary')
 
         self.dictionary.find_on_device()
         self.assertFalse(self.dictionary.nspath)
 
-        self.touch_on_device(self.ns.resource_abspath('dictionary'))
+        self.touch_on_device(self.ns.resource_abspath(resource))
         self.dictionary.find_on_device()
         self.assertEqual(self.dictionary.nspath, resource)
 
     def test_replace(self):
-        resource = self.ns.resource('dictionary')
+        resource = self.ns.resource(self.fuzzer.executable + '/dictionary')
 
-        self.touch_on_device(self.ns.resource_abspath('dictionary'))
+        self.touch_on_device(self.ns.resource_abspath(resource))
         self.assertEqual(self.dictionary.nspath, resource)
 
         # Missing local replacement

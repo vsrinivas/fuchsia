@@ -14,12 +14,12 @@ class CorpusTest(TestCaseWithFuzzer):
 
     def test_find_on_device(self):
         data = self.ns.data('corpus')
-        resource = self.ns.resource('corpus')
+        resource = self.ns.resource('//src/fake/package1/target2-corpus')
 
         self.corpus.find_on_device()
         self.assertEqual(self.corpus.nspaths, [data])
 
-        self.touch_on_device(self.ns.resource_abspath('corpus/deadbeef'))
+        self.create_fuzzer('fake-package1/fake-target2')
         self.corpus.find_on_device()
         self.assertEqual(self.corpus.nspaths, [data, resource])
 

@@ -70,8 +70,7 @@ class Namespace(object):
 
     def resource_abspath(self, relpath):
         """Absolute path to a package resource."""
-        base = '{}/data/{}'.format(
-            self.fuzzer.package_path, self.fuzzer.executable)
+        base = self.fuzzer.package_path + '/data'
         if relpath.startswith(base):
             return relpath
         elif relpath.startswith('/'):
@@ -97,10 +96,10 @@ class Namespace(object):
 
     def resource(self, relpath=''):
         """Returns a namespace path to package resources."""
-        base = 'pkg/data/{}'.format(self.fuzzer.executable)
+        base = 'pkg/data'
         if relpath.startswith(base):
             return relpath
-        return '{}/{}'.format(base, relpath)
+        return '{}/{}'.format(base, relpath.lstrip('/'))
 
     def ls(self, nspath):
         """Lists a directory in the namespace."""

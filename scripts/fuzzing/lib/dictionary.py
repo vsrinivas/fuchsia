@@ -46,8 +46,7 @@ class Dictionary(object):
         return self._nspath
 
     def find_on_device(self):
-        resource = self.ns.resource('dictionary')
-        files = self.ns.ls(resource)
+        resource = self.ns.resource(self.fuzzer.executable + '/dictionary')
         if self.ns.ls(resource):
             self._nspath = resource
 
