@@ -13,7 +13,7 @@ use serde_json::{to_value, Value};
 // Bluetooth-related functionality
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
-use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
+use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
@@ -117,15 +117,17 @@ impl Facade for RwLock<BluetoothFacade> {
 }
 
 #[async_trait(?Send)]
-impl Facade for BluetoothControlFacade {
+impl Facade for BluetoothSysFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "BluetoothAcceptPairing" => {
-                let result = self.accept_pairing().await?;
+                let input = parse_arg!(args, as_str, "input")?;
+                let output = parse_arg!(args, as_str, "output")?;
+                let result = self.accept_pairing(&input.to_string(), &output.to_string()).await?;
                 Ok(to_value(result)?)
             }
-            "BluetoothInitControl" => {
-                let result = self.init_control_interface_proxy().await?;
+            "BluetoothInitSys" => {
+                let result = self.init_access_proxy().await?;
                 Ok(to_value(result)?)
             }
             "BluetoothGetKnownRemoteDevices" => {
@@ -137,35 +139,29 @@ impl Facade for BluetoothControlFacade {
                 let result = self.set_discoverable(discoverable).await?;
                 Ok(to_value(result)?)
             }
-            "BluetoothSetIOCapabilities" => {
-                let input = parse_arg!(args, as_str, "input")?;
-                let output = parse_arg!(args, as_str, "output")?;
-                let result = self.set_io_capabilities(&input.to_string(), &output.to_string())?;
-                Ok(to_value(result)?)
-            }
             "BluetoothSetName" => {
                 let name = parse_arg!(args, as_str, "name")?;
                 let result = self.set_name(name.to_string()).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothForgetDevice" => {
-                let identifier = parse_arg!(args, as_str, "identifier")?;
-                let result = self.forget(identifier.to_string()).await?;
+                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let result = self.forget(identifier).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothConnectDevice" => {
-                let identifier = parse_arg!(args, as_str, "identifier")?;
-                let result = self.connect(identifier.to_string()).await?;
+                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let result = self.connect(identifier).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothDisconnectDevice" => {
-                let identifier = parse_arg!(args, as_str, "identifier")?;
-                let result = self.disconnect(identifier.to_string()).await?;
+                let identifier = parse_arg!(args, as_u64, "identifier")?;
+                let result = self.disconnect(identifier).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothRequestDiscovery" => {
                 let discovery = parse_arg!(args, as_bool, "discovery")?;
-                let result = self.request_discovery(discovery).await?;
+                let result = self.start_discovery(discovery).await?;
                 Ok(to_value(result)?)
             }
             "BluetoothInputPairingPin" => {
@@ -182,7 +178,7 @@ impl Facade for BluetoothControlFacade {
                 Ok(to_value(result)?)
             }
             "BluetoothPairDevice" => {
-                let identifier = parse_arg!(args, as_str, "identifier")?;
+                let identifier = parse_arg!(args, as_u64, "identifier")?;
                 let pairing_security_level =
                     match parse_arg!(args, as_u64, "pairing_security_level") {
                         Ok(v) => Some(v),
@@ -194,9 +190,8 @@ impl Facade for BluetoothControlFacade {
                 };
                 let transport = parse_arg!(args, as_u64, "transport")?;
 
-                let result = self
-                    .pair(identifier.to_string(), pairing_security_level, non_bondable, transport)
-                    .await?;
+                let result =
+                    self.pair(identifier, pairing_security_level, non_bondable, transport).await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method),

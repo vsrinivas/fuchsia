@@ -4,11 +4,11 @@
 
 use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
-use fidl_fuchsia_bluetooth_control::RemoteDevice;
 use fidl_fuchsia_bluetooth_gatt::{
     AttributePermissions, Characteristic, Descriptor, ReadByTypeResult, SecurityRequirements,
     ServiceInfo,
 };
+use fidl_fuchsia_bluetooth_sys::Peer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -182,24 +182,44 @@ impl BleConnectPeripheralResponse {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct CustomRemoteDevice {
-    pub address: String,
-    pub id: String,
+pub struct SerializablePeer {
+    pub address: Option<[u8; 6]>,
+    pub appearance: Option<u32>,
+    pub device_class: Option<u32>,
+    pub id: Option<u64>,
     pub name: Option<String>,
-    pub connected: bool,
-    pub bonded: bool,
-    pub service_uuids: Vec<String>,
+    pub connected: Option<bool>,
+    pub bonded: Option<bool>,
+    pub rssi: Option<i8>,
+    pub services: Option<Vec<[u8; 16]>>,
+    pub technology: Option<u32>,
+    pub tx_power: Option<i8>,
 }
 
-impl From<&RemoteDevice> for CustomRemoteDevice {
-    fn from(device: &RemoteDevice) -> Self {
-        CustomRemoteDevice {
-            address: device.address.clone(),
-            id: device.identifier.clone(),
-            name: device.name.clone(),
-            connected: device.connected,
-            bonded: device.bonded,
-            service_uuids: device.service_uuids.clone(),
+impl From<&Peer> for SerializablePeer {
+    fn from(peer: &Peer) -> Self {
+        let services = match &peer.services {
+            Some(s) => {
+                let mut service_list = Vec::new();
+                for item in s {
+                    service_list.push(item.value);
+                }
+                Some(service_list)
+            }
+            None => None,
+        };
+        SerializablePeer {
+            address: peer.address.map(|a| a.bytes),
+            appearance: peer.appearance.map(|a| a as u32),
+            device_class: peer.device_class.map(|d| d.value),
+            id: peer.id.map(|i| i.value),
+            name: peer.name.clone(),
+            connected: peer.connected,
+            bonded: peer.bonded,
+            rssi: peer.rssi,
+            services: services,
+            technology: peer.technology.map(|t| t as u32),
+            tx_power: peer.tx_power,
         }
     }
 }

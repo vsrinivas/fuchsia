@@ -25,10 +25,11 @@
         ],
         "services": [
             "fuchsia.bluetooth.bredr.Profile",
-            "fuchsia.bluetooth.control.Control",
             "fuchsia.bluetooth.gatt.Server",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.bluetooth.sys.Access",
+            "fuchsia.bluetooth.sys.HostWatcher",
             "fuchsia.boot.Arguments",
             "fuchsia.camera2.hal.Controller",
             "fuchsia.developer.tiles.Controller",

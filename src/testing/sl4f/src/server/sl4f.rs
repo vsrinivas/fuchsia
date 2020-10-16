@@ -42,7 +42,7 @@ use crate::battery_simulator::facade::BatterySimulatorFacade;
 // Bluetooth related includes
 use crate::bluetooth::avdtp_facade::AvdtpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
-use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
+use crate::bluetooth::bt_sys_facade::BluetoothSysFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 
@@ -219,7 +219,7 @@ impl Sl4f {
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),
                 "boot_arguments_facade" => BootArgumentsFacade::new(),
-                "bt_control_facade" => BluetoothControlFacade::new(),
+                "bt_sys_facade" => BluetoothSysFacade::new(),
                 "camera_facade" => CameraFacade::new(),
                 "cpu_ctrl_facade" => CpuCtrlFacade::new(),
                 "component_facade" => ComponentFacade::new(),
