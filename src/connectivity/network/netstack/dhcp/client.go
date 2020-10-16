@@ -167,7 +167,7 @@ func (c *Client) Run(ctx context.Context) {
 	c.sem <- struct{}{}
 	defer func() { <-c.sem }()
 	defer func() {
-		syslog.WarnTf(tag, "client is stopping, cleaning up")
+		_ = syslog.WarnTf(tag, "client is stopping, cleaning up")
 		c.cleanup(&info)
 		// cleanup mutates info.
 		c.info.Store(info)
@@ -216,12 +216,12 @@ func (c *Client) Run(ctx context.Context) {
 			{
 				leaseLength, renewTime, rebindTime := cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime
 				if cfg.LeaseLength == 0 {
-					syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseLength)
+					_ = syslog.WarnTf(tag, "unspecified lease length, setting default=%s", defaultLeaseLength)
 					leaseLength = defaultLeaseLength
 				}
 				switch {
 				case cfg.LeaseLength != 0 && cfg.RenewTime >= cfg.LeaseLength:
-					syslog.WarnTf(tag, "invalid renewal time: renewing=%s, lease=%s", cfg.RenewTime, cfg.LeaseLength)
+					_ = syslog.WarnTf(tag, "invalid renewal time: renewing=%s, lease=%s", cfg.RenewTime, cfg.LeaseLength)
 					fallthrough
 				case cfg.RenewTime == 0:
 					// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.5 * duration_of_lease).
@@ -229,7 +229,7 @@ func (c *Client) Run(ctx context.Context) {
 				}
 				switch {
 				case cfg.RenewTime != 0 && cfg.RebindTime <= cfg.RenewTime:
-					syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s, renewing=%s", cfg.RebindTime, cfg.RenewTime)
+					_ = syslog.WarnTf(tag, "invalid rebinding time: rebinding=%s, renewing=%s", cfg.RebindTime, cfg.RenewTime)
 					fallthrough
 				case cfg.RebindTime == 0:
 					// Based on RFC 2131 Sec. 4.4.5, this defaults to (0.875 * duration_of_lease).
@@ -254,7 +254,7 @@ func (c *Client) Run(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
+			_ = syslog.DebugTf(tag, "%s; retrying", err)
 		}
 
 		// Synchronize info after attempt to acquire is complete.
@@ -310,7 +310,7 @@ func (c *Client) Run(ctx context.Context) {
 		}
 
 		if info.State != initSelecting && next == initSelecting {
-			syslog.WarnTf(tag, "lease time expired, cleaning up")
+			_ = syslog.WarnTf(tag, "lease time expired, cleaning up")
 			c.cleanup(&info)
 		}
 
@@ -528,13 +528,13 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 				}
 				if timedOut {
 					c.stats.RecvOfferTimeout.Increment()
-					syslog.VLogTf(syslog.DebugVerbosity, tag, "recv timeout waiting for %s, retransmitting %s", dhcpOFFER, dhcpDISCOVER)
+					_ = syslog.DebugTf(tag, "recv timeout waiting for %s, retransmitting %s", dhcpOFFER, dhcpDISCOVER)
 					continue retransmitDiscover
 				}
 
 				if typ != dhcpOFFER {
 					c.stats.RecvOfferUnexpectedType.Increment()
-					syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s, want = %s", typ, dhcpOFFER)
+					_ = syslog.DebugTf(tag, "got DHCP type = %s, want = %s", typ, dhcpOFFER)
 					continue
 				}
 				c.stats.RecvOffers.Increment()
@@ -562,7 +562,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 					PrefixLen: prefixLen,
 				}
 
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime)
+				_ = syslog.DebugTf(tag, "got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime)
 
 				break retransmitDiscover
 			}
@@ -611,7 +611,7 @@ retransmitRequest:
 			}
 			if timedOut {
 				c.stats.RecvAckTimeout.Increment()
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "recv timeout waiting for %s, retransmitting %s", dhcpACK, dhcpREQUEST)
+				_ = syslog.DebugTf(tag, "recv timeout waiting for %s, retransmitting %s", dhcpACK, dhcpREQUEST)
 				continue retransmitRequest
 			}
 
@@ -635,7 +635,7 @@ retransmitRequest:
 
 				// Now that we've successfully acquired the address, update the client state.
 				info.Addr = requestedAddr
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with leaseLength=%s", typ, fromAddr.Addr, cfg.LeaseLength)
+				_ = syslog.DebugTf(tag, "got %s from %s with leaseLength=%s", typ, fromAddr.Addr, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
 				if msg := opts.message(); len(msg) != 0 {
@@ -646,7 +646,7 @@ retransmitRequest:
 				return Config{}, fmt.Errorf("empty %s", typ)
 			default:
 				c.stats.RecvAckUnexpectedType.Increment()
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
+				_ = syslog.DebugTf(tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
 				continue
 			}
 		}
@@ -673,7 +673,7 @@ func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts o
 		panic(err)
 	}
 
-	syslog.VLogTf(syslog.DebugVerbosity, tag, "send %s to %s:%d on NIC:%d (bcast=%t ciaddr=%t)", typ, writeOpts.To.Addr, writeOpts.To.Port, writeOpts.To.NIC, broadcast, ciaddr)
+	_ = syslog.DebugTf(tag, "send %s to %s:%d on NIC:%d (bcast=%t ciaddr=%t)", typ, writeOpts.To.Addr, writeOpts.To.Port, writeOpts.To.NIC, broadcast, ciaddr)
 
 	for {
 		payload := tcpip.SlicePayload(h)
