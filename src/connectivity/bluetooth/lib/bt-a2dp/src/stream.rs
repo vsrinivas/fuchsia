@@ -258,6 +258,11 @@ impl Streams {
     pub fn information(&self) -> Vec<avdtp::StreamInformation> {
         self.streams.values().map(|x| x.endpoint().information()).collect()
     }
+
+    /// Returns streams that are in the open (established but not streaming) state
+    pub fn open(&self) -> impl Iterator<Item = &Stream> {
+        self.streams.values().filter(|s| s.endpoint().state() == &avdtp::StreamState::Open)
+    }
 }
 
 impl Inspect for &mut Streams {

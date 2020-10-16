@@ -311,6 +311,11 @@ impl StreamEndpoint {
         Ok(())
     }
 
+    /// Returns the current state of this endpoint.
+    pub fn state(&self) -> &StreamState {
+        &self.state
+    }
+
     /// Start this stream.  This can be done only from the Open State.
     /// Used for the Stream Start procedure, See Section 6.12
     pub fn start(&mut self) -> Result<(), ErrorCode> {
@@ -369,6 +374,11 @@ impl StreamEndpoint {
     /// Returns the local StreamEndpointId for this endpoint.
     pub fn local_id(&self) -> &StreamEndpointId {
         &self.id
+    }
+
+    /// Returns the remote StreamEndpointId for this endpoint, if it's configured.
+    pub fn remote_id(&self) -> Option<&StreamEndpointId> {
+        self.remote_id.as_ref()
     }
 
     /// Make a StreamInformation which represents the current state of this stream.

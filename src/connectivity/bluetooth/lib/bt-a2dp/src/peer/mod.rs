@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         ConnectParameters, L2capParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP,
     },
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         inspect::DebugExt,
         types::{Channel, PeerId},
@@ -20,6 +21,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
+    fuchsia_zircon as zx,
     futures::{
         task::{Context as TaskContext, Poll, Waker},
         Future, StreamExt,
@@ -64,6 +66,9 @@ pub struct Peer {
     /// Cobalt Sender, if we are sending metrics.
     #[inspect(skip)]
     cobalt_sender: Option<CobaltSender>,
+    /// A task waiting to start a stream if it hasn't been started yet.
+    #[inspect(skip)]
+    start_stream_task: Mutex<Option<fasync::Task<avdtp::Result<()>>>>,
 }
 
 impl Peer {
@@ -86,6 +91,7 @@ impl Peer {
             descriptor: Mutex::new(None),
             closed_wakers: Arc::new(Mutex::new(Some(Vec::new()))),
             cobalt_sender,
+            start_stream_task: Mutex::new(None),
         };
         res.start_requests_task();
         res
@@ -95,11 +101,24 @@ impl Peer {
         self.descriptor.lock().replace(descriptor)
     }
 
+    /// How long to wait after a non-local establishment of a stream to start the stream.
+    /// Chosen to produce reasonably quick startup while allowing for peer start.
+    const STREAM_DWELL: zx::Duration = zx::Duration::from_seconds(2);
+
     /// Receive a channel from the peer that was initiated remotely.
     /// This function should be called whenever the peer associated with this opens an L2CAP channel.
+    /// If this completes opening a stream, streams that are suspended will be scheduled to start.
     pub fn receive_channel(&self, channel: Channel) -> avdtp::Result<()> {
         let mut lock = self.inner.lock();
-        lock.receive_channel(channel)
+        if lock.receive_channel(channel)? {
+            let weak = Arc::downgrade(&self.inner);
+            let mut task_lock = self.start_stream_task.lock();
+            task_lock.replace(fasync::Task::local(async move {
+                fasync::Timer::new(Self::STREAM_DWELL.after_now()).await;
+                PeerInner::start_opened(weak).await
+            }));
+        }
+        Ok(())
     }
 
     /// Return a handle to the AVDTP peer, to use as initiator of commands.
@@ -191,7 +210,7 @@ impl Peer {
 
             avdtp.set_configuration(&remote_id, &local_id, &capabilities).await?;
             {
-                let strong = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
+                let strong = PeerInner::upgrade(peer.clone())?;
                 strong.lock().set_opening(&local_id, &remote_id, capabilities.clone())?;
             }
             avdtp.open(&remote_id).await?;
@@ -216,18 +235,11 @@ impl Peer {
             };
 
             {
-                let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
-                let mut strong_peer = strong_peer.lock();
-                strong_peer.receive_channel(channel)?;
+                let strong = PeerInner::upgrade(peer.clone())?;
+                strong.lock().receive_channel(channel)?;
             }
-
-            let to_start = &[remote_id];
-            avdtp.start(to_start).await?;
-            {
-                let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
-                let mut strong_peer = strong_peer.lock();
-                strong_peer.start_local_stream(&local_id)
-            }
+            // Start streams immediately if the channel is locally initiated.
+            PeerInner::start_opened(peer).await
         }
     }
 
@@ -246,9 +258,8 @@ impl Peer {
         async move {
             trace!("Suspending stream {} to remote {}", local_id, remote_id);
             {
-                let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
-                let mut strong_peer = strong_peer.lock();
-                strong_peer.suspend_local_stream(&local_id)?;
+                let strong = PeerInner::upgrade(peer)?;
+                strong.lock().suspend_local_stream(&local_id)?;
             }
             let to_suspend = &[remote_id];
             avdtp.suspend(to_suspend).await
@@ -334,9 +345,8 @@ struct PeerInner {
     peer: Arc<avdtp::Peer>,
     /// The PeerId that this peer is representing
     peer_id: PeerId,
-    /// Some(id) if we are opening a StreamEndpoint but haven't finished yet.
-    /// This is the local ID.
-    /// AVDTP Sec 6.11 - only up to one stream can be in this state.
+    /// Some(local_id) if an endpoint has been configured but hasn't completed opening yet.
+    /// Per AVDTP Sec 6.11 only up to one stream can be in this state.
     opening: Option<StreamEndpointId>,
     /// The local stream endpoint collection
     local: Streams,
@@ -410,6 +420,33 @@ impl PeerInner {
         Ok(())
     }
 
+    fn upgrade(weak: Weak<Mutex<Self>>) -> avdtp::Result<Arc<Mutex<Self>>> {
+        weak.upgrade().ok_or(avdtp::Error::PeerDisconnected)
+    }
+
+    /// Start any streams in the suspended state.
+    async fn start_opened(weak: Weak<Mutex<Self>>) -> avdtp::Result<()> {
+        let (avdtp, stream_pairs): (Arc<avdtp::Peer>, Vec<_>) = {
+            let peer = Self::upgrade(weak.clone())?;
+            let peer = peer.lock();
+            let idle_stream_pairs = peer
+                .local
+                .open()
+                .map(|s| (s.endpoint().local_id().clone(), s.endpoint().remote_id().cloned()))
+                .collect();
+            (peer.peer.clone(), idle_stream_pairs)
+        };
+        for (local_id, remote_id) in stream_pairs {
+            let to_start = &[remote_id.ok_or(avdtp::Error::InvalidState)?];
+            avdtp.start(to_start).await?;
+
+            let peer = Self::upgrade(weak.clone())?;
+            let mut peer = peer.lock();
+            peer.start_local_stream(&local_id)?;
+        }
+        Ok(())
+    }
+
     /// Starts the stream which is in the local Streams with `local_id`
     fn start_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
@@ -430,14 +467,16 @@ impl PeerInner {
     /// Provide a new established L2CAP channel to this remote peer.
     /// This function should be called whenever the remote associated with this peer opens an
     /// L2CAP channel after the first.
-    fn receive_channel(&mut self, channel: Channel) -> avdtp::Result<()> {
+    /// Returns true if this channel completed the opening sequence.
+    fn receive_channel(&mut self, channel: Channel) -> avdtp::Result<bool> {
         let stream_id = self.opening.as_ref().cloned().ok_or(avdtp::Error::InvalidState)?;
         let stream = self.get_mut(&stream_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
-        if !stream.endpoint_mut().receive_channel(channel)? {
+        let done = !stream.endpoint_mut().receive_channel(channel)?;
+        if done {
             self.opening = None;
         }
         info!("Transport channel connected to seid {}", stream_id);
-        Ok(())
+        Ok(done)
     }
 
     /// Handle a single request event from the avdtp peer.
@@ -584,8 +623,6 @@ mod tests {
         ProfileMarker, ProfileRequest, ProfileRequestStream, ServiceClassProfileIdentifier,
     };
     use fidl_fuchsia_cobalt::CobaltEvent;
-    use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::pin_mut;
     use matches::assert_matches;
@@ -1202,6 +1239,28 @@ mod tests {
         };
     }
 
+    fn sbc_capabilities() -> Vec<ServiceCapability> {
+        let sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            /* min_bpv= */ 53,
+            /* max_bpv= */ 53,
+        )
+        .expect("sbc codec info");
+
+        vec![
+            avdtp::ServiceCapability::MediaTransport,
+            avdtp::ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                codec_extra: sbc_codec_info.to_bytes().to_vec(),
+            },
+        ]
+    }
+
     /// Test that the remote end can configure and start a stream.
     #[test]
     fn test_peer_as_acceptor() {
@@ -1258,28 +1317,9 @@ mod tests {
             x => panic!("Get capabilities should be ready but got {:?}", x),
         };
 
-        let sbc_codec_info = SbcCodecInfo::new(
-            SbcSamplingFrequency::FREQ48000HZ,
-            SbcChannelMode::JOINT_STEREO,
-            SbcBlockCount::SIXTEEN,
-            SbcSubBands::EIGHT,
-            SbcAllocation::LOUDNESS,
-            /* min_bpv= */ 53,
-            /* max_bpv= */ 53,
-        )
-        .expect("sbc codec info");
-
-        let capabilities = vec![
-            avdtp::ServiceCapability::MediaTransport,
-            avdtp::ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: sbc_codec_info.to_bytes().to_vec(),
-            },
-        ];
-
+        let sbc_caps = sbc_capabilities();
         let set_config_fut =
-            remote_peer.set_configuration(&sbc_endpoint_id, &sbc_endpoint_id, &capabilities);
+            remote_peer.set_configuration(&sbc_endpoint_id, &sbc_endpoint_id, &sbc_caps);
         pin_mut!(set_config_fut);
 
         match exec.run_until_stalled(&mut set_config_fut) {
@@ -1316,6 +1356,88 @@ mod tests {
         // Should have started the media task
         assert!(media_task.is_started());
 
+        let suspend_fut = remote_peer.suspend(&stream_ids);
+        pin_mut!(suspend_fut);
+        match exec.run_until_stalled(&mut suspend_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Start should be ready but got {:?}", x),
+        };
+
+        // Should have stopped the media task on suspend.
+        assert!(!media_task.is_started());
+    }
+
+    #[test]
+    fn test_peer_starts_waiting_streams() {
+        let mut exec = fasync::Executor::new_with_fake_time().expect("an executor");
+
+        exec.set_fake_time(fasync::Time::from_nanos(5_000_000_000));
+
+        let (avdtp, remote) = setup_avdtp_peer();
+        let (profile_proxy, _requests) =
+            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
+        let mut streams = Streams::new();
+        let mut test_builder = TestMediaTaskBuilder::new();
+        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+        let next_task_fut = test_builder.next_task();
+        pin_mut!(next_task_fut);
+
+        let peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
+        let remote_peer = avdtp::Peer::new(remote);
+
+        let sbc_endpoint_id = 1_u8.try_into().expect("should be able to get sbc endpointid");
+
+        let sbc_caps = sbc_capabilities();
+        let set_config_fut =
+            remote_peer.set_configuration(&sbc_endpoint_id, &sbc_endpoint_id, &sbc_caps);
+        pin_mut!(set_config_fut);
+
+        match exec.run_until_stalled(&mut set_config_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Set capabilities should be ready but got {:?}", x),
+        };
+
+        let open_fut = remote_peer.open(&sbc_endpoint_id);
+        pin_mut!(open_fut);
+        match exec.run_until_stalled(&mut open_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Open should be ready but got {:?}", x),
+        };
+
+        // Establish a media transport stream
+        let (_remote_transport, transport) = Channel::create();
+        assert_eq!(Some(()), peer.receive_channel(transport).ok());
+
+        // The remote end should get a start request after the timeout.
+        let mut remote_requests = remote_peer.take_request_stream();
+        let next_remote_request_fut = remote_requests.next();
+        pin_mut!(next_remote_request_fut);
+
+        // Nothing should happen immediately.
+        assert!(exec.run_until_stalled(&mut next_remote_request_fut).is_pending());
+
+        // After the timeout has passed..
+        exec.set_fake_time(zx::Duration::from_seconds(3).after_now());
+        exec.wake_expired_timers();
+
+        let stream_ids = match exec.run_until_stalled(&mut next_remote_request_fut) {
+            Poll::Ready(Some(Ok(avdtp::Request::Start { responder, stream_ids }))) => {
+                responder.send().unwrap();
+                stream_ids
+            }
+            x => panic!("Expected to receive a start request for the stream, got {:?}", x),
+        };
+
+        // We should start the media task, so the task should be created locally
+        let media_task = match exec.run_until_stalled(&mut next_task_fut) {
+            Poll::Ready(Some(task)) => task,
+            x => panic!("Local task should be created at this point: {:?}", x),
+        };
+
+        // Should have started the media task
+        assert!(media_task.is_started());
+
+        // Remote peer should still be able to suspend the stream.
         let suspend_fut = remote_peer.suspend(&stream_ids);
         pin_mut!(suspend_fut);
         match exec.run_until_stalled(&mut suspend_fut) {
