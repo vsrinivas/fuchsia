@@ -22,7 +22,7 @@ pub struct Estimator {
 
 impl Estimator {
     /// Construct a new estimator inititalized to the supplied sample.
-    pub fn new(track: Track, Sample { utc, monotonic }: Sample) -> Self {
+    pub fn new(track: Track, Sample { utc, monotonic, .. }: Sample) -> Self {
         Estimator { utc, monotonic, track }
     }
 
@@ -46,6 +46,7 @@ mod test {
 
     const OFFSET_1: zx::Duration = zx::Duration::from_nanos(777);
     const OFFSET_2: zx::Duration = zx::Duration::from_nanos(999);
+    const STD_DEV_1: zx::Duration = zx::Duration::from_nanos(2222);
 
     lazy_static! {
         static ref TIME_1: zx::Time = zx::Time::from_nanos(10000);
@@ -55,7 +56,8 @@ mod test {
 
     #[test]
     fn initialize_and_estimate() {
-        let estimator = Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1));
+        let estimator =
+            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
         assert_eq!(estimator.estimate(*TIME_1), *TIME_1 + OFFSET_1);
         assert_eq!(estimator.estimate(*TIME_2), *TIME_2 + OFFSET_1);
     }
@@ -63,8 +65,8 @@ mod test {
     #[test]
     fn update_ignored() {
         let mut estimator =
-            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1));
-        estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2));
+            Estimator::new(Track::Primary, Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
+        estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, STD_DEV_1));
         assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + OFFSET_1);
     }
 }

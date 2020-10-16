@@ -210,6 +210,7 @@ mod tests {
     const SAMPLE_SPACING: zx::Duration = zx::Duration::from_millis(100);
     const OFFSET: zx::Duration = zx::Duration::from_seconds(1111_000);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(2222_000);
+    const STD_DEV: zx::Duration = zx::Duration::from_millis(88);
 
     lazy_static! {
         static ref TEST_TRACK: Track = Track::from(TEST_ROLE);
@@ -273,7 +274,7 @@ mod tests {
         let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
             &clock,
-            vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref)],
+            vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
             Some(rtc.clone()),
             Some(notifier),
             Arc::clone(&diagnostics),
@@ -313,7 +314,7 @@ mod tests {
         let monotonic_ref = zx::Time::get_monotonic();
         let clock_manager = create_clock_manager(
             &clock,
-            vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref)],
+            vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
             None,
             None,
             Arc::clone(&diagnostics),
@@ -351,8 +352,9 @@ mod tests {
                 Sample::new(
                     monotonic_ref - SAMPLE_SPACING + OFFSET,
                     monotonic_ref - SAMPLE_SPACING,
+                    STD_DEV,
                 ),
-                Sample::new(monotonic_ref + OFFSET_2, monotonic_ref),
+                Sample::new(monotonic_ref + OFFSET_2, monotonic_ref, STD_DEV),
             ],
             None,
             None,

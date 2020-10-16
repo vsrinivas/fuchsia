@@ -21,13 +21,15 @@ pub struct Sample {
     pub utc: zx::Time,
     /// The monotonic time at which the UTC was most valid.
     pub monotonic: zx::Time,
+    /// The standard deviation of the UTC error.
+    pub std_dev: zx::Duration,
 }
 
 #[cfg(test)]
 impl Sample {
     /// Constructs a new `Sample`.
-    pub fn new(utc: zx::Time, monotonic: zx::Time) -> Sample {
-        Sample { utc, monotonic }
+    pub fn new(utc: zx::Time, monotonic: zx::Time, std_dev: zx::Duration) -> Sample {
+        Sample { utc, monotonic, std_dev }
     }
 }
 
@@ -97,12 +99,14 @@ impl PushTimeSource {
         }));
         let sample_stream = GeneratedFutureStream::new(Box::new(move || {
             Some(app_and_proxy_clone.1.watch_sample().map(|result| match result {
-                Ok(sample) => match (sample.utc, sample.monotonic) {
-                    (None, _) => Err(anyhow!("sample missing utc")),
-                    (_, None) => Err(anyhow!("sample missing monotonic")),
-                    (Some(utc), Some(monotonic)) => Ok(Event::Sample(Sample {
+                Ok(sample) => match (sample.utc, sample.monotonic, sample.standard_deviation) {
+                    (None, _, _) => Err(anyhow!("sample missing utc")),
+                    (_, None, _) => Err(anyhow!("sample missing monotonic")),
+                    (_, _, None) => Err(anyhow!("sample missing standard deviation")),
+                    (Some(utc), Some(monotonic), Some(std_dev)) => Ok(Event::Sample(Sample {
                         utc: zx::Time::from_nanos(utc),
                         monotonic: zx::Time::from_nanos(monotonic),
+                        std_dev: zx::Duration::from_nanos(std_dev),
                     })),
                 },
                 Err(err) => Err(err.into()),
@@ -208,16 +212,19 @@ mod test {
     const STATUS_1: Status = Status::Initializing;
     const SAMPLE_1_UTC_NANOS: i64 = 1234567;
     const SAMPLE_1_MONO_NANOS: i64 = 222;
+    const SAMPLE_1_STD_DEV_NANOS: i64 = 8888;
 
     lazy_static! {
         static ref STATUS_EVENT_1: Event = Event::StatusChange { status: STATUS_1 };
         static ref SAMPLE_EVENT_1: Event = Event::from(Sample {
             utc: zx::Time::from_nanos(SAMPLE_1_UTC_NANOS),
-            monotonic: zx::Time::from_nanos(SAMPLE_1_MONO_NANOS)
+            monotonic: zx::Time::from_nanos(SAMPLE_1_MONO_NANOS),
+            std_dev: zx::Duration::from_nanos(SAMPLE_1_STD_DEV_NANOS),
         });
         static ref SAMPLE_EVENT_2: Event = Event::from(Sample {
             utc: zx::Time::from_nanos(12345678),
-            monotonic: zx::Time::from_nanos(333)
+            monotonic: zx::Time::from_nanos(333),
+            std_dev: zx::Duration::from_nanos(9999),
         });
     }
 
@@ -289,7 +296,7 @@ mod test {
                         let sample = ftexternal::TimeSample {
                             utc: Some(SAMPLE_1_UTC_NANOS),
                             monotonic: Some(SAMPLE_1_MONO_NANOS),
-                            standard_deviation: None,
+                            standard_deviation: Some(SAMPLE_1_STD_DEV_NANOS),
                         };
                         responder.send(sample).unwrap();
                     }

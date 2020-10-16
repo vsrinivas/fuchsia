@@ -259,6 +259,7 @@ mod test {
 
     const BACKSTOP_FACTOR: i64 = 100;
     const TEST_ROLE: Role = Role::Monitor;
+    const STD_DEV: zx::Duration = zx::Duration::from_millis(22);
 
     lazy_static! {
         static ref ZERO_TIME: zx::Time = zx::Time::from_nanos(0);
@@ -331,6 +332,7 @@ mod test {
         Sample {
             utc: *ZERO_TIME + (MIN_UPDATE_DELAY * utc_factor),
             monotonic: *ZERO_TIME + (MIN_UPDATE_DELAY * monotonic_factor),
+            std_dev: STD_DEV,
         }
     }
 

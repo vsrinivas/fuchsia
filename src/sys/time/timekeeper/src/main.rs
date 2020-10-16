@@ -350,6 +350,7 @@ mod tests {
     const NANOS_PER_SECOND: i64 = 1_000_000_000;
     const OFFSET: zx::Duration = zx::Duration::from_seconds(1111_000);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(1111_333);
+    const STD_DEV: zx::Duration = zx::Duration::from_millis(44);
 
     lazy_static! {
         static ref INVALID_RTC_TIME: zx::Time = zx::Time::from_nanos(111111 * NANOS_PER_SECOND);
@@ -393,10 +394,11 @@ mod tests {
                 clock: duplicate_clock(&primary_clock),
                 time_source: FakeTimeSource::events(vec![
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
-                    TimeSourceEvent::from(Sample {
-                        utc: monotonic_ref + OFFSET,
-                        monotonic: monotonic_ref,
-                    }),
+                    TimeSourceEvent::from(Sample::new(
+                        monotonic_ref + OFFSET,
+                        monotonic_ref,
+                        STD_DEV,
+                    )),
                 ]),
                 notifier: notifier.clone(),
             },
@@ -405,10 +407,11 @@ mod tests {
                 time_source: FakeTimeSource::events(vec![
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Network },
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
-                    TimeSourceEvent::from(Sample {
-                        utc: monotonic_ref + OFFSET_2,
-                        monotonic: monotonic_ref,
-                    }),
+                    TimeSourceEvent::from(Sample::new(
+                        monotonic_ref + OFFSET_2,
+                        monotonic_ref,
+                        STD_DEV,
+                    )),
                 ]),
             }),
             Some(rtc.clone()),
