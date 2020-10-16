@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_time_external::{Properties, Status, TimeSample};
 use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc::Sender, lock::Mutex, SinkExt, TryFutureExt};
+use futures::{channel::mpsc::Sender, lock::Mutex, SinkExt};
 use httpdate_hyper::{HttpsDateError, NetworkTimeClient};
 use hyper::Uri;
 use log::{error, info, warn};
@@ -44,33 +44,15 @@ const STANDARD_DEVIATION: zx::Duration = zx::Duration::from_millis(289);
 pub trait HttpsDateClient {
     /// Obtain the current UTC time. The time is quantized to a second due to the format of the
     /// HTTP date header.
-    async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, Status>;
+    async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, HttpsDateError>;
 }
 
 #[async_trait]
 impl HttpsDateClient for NetworkTimeClient {
-    async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, Status> {
+    async fn request_utc(&mut self, uri: &Uri) -> Result<zx::Time, HttpsDateError> {
         let utc = self
             .get_network_time(uri.clone())
-            .map_err(|e| match e {
-                HttpsDateError::InvalidHostname | HttpsDateError::SchemeNotHttps => {
-                    // TODO(fxbug.dev/59771) - decide how to surface irrecoverable errors to clients
-                    error!("Got an unexpected error {:?}, which indicates a bad configuration.", e);
-                    Status::UnknownUnhealthy
-                }
-                HttpsDateError::NetworkError => {
-                    warn!("Failed to poll time: {:?}", e);
-                    Status::Network
-                }
-                err => {
-                    warn!("Failed to poll time: {:?}", err);
-                    Status::Protocol
-                }
-            })
-            .on_timeout(fasync::Time::after(HTTPS_TIMEOUT), || {
-                warn!("Failed to poll time due to timeout");
-                Err(Status::Network)
-            })
+            .on_timeout(fasync::Time::after(HTTPS_TIMEOUT), || Err(HttpsDateError::NetworkError))
             .await?;
         Ok(zx::Time::from_nanos(utc.timestamp_nanos()))
     }
@@ -128,7 +110,29 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
                     sink.send(sample.into()).await?;
                     return Ok(());
                 }
-                Err(status) => sink.send(status.into()).await?,
+                Err(http_error) => {
+                    let status = match http_error {
+                        HttpsDateError::InvalidHostname | HttpsDateError::SchemeNotHttps => {
+                            // TODO(fxbug.dev/59771) - decide how to surface irrecoverable errors
+                            // to clients
+                            error!(
+                                "Got an unexpected error {:?}, which indicates a bad \
+                                configuration.",
+                                http_error
+                            );
+                            Status::UnknownUnhealthy
+                        }
+                        HttpsDateError::NetworkError => {
+                            warn!("Failed to poll time: {:?}", http_error);
+                            Status::Network
+                        }
+                        _ => {
+                            warn!("Failed to poll time: {:?}", http_error);
+                            Status::Protocol
+                        }
+                    };
+                    sink.send(status.into()).await?;
+                }
             }
             fasync::Timer::new(fasync::Time::after(self.retry_strategy.backoff_duration(attempt)))
                 .await;
@@ -136,7 +140,7 @@ impl<C: HttpsDateClient + Send> HttpsDateUpdateAlgorithm<C> {
     }
 
     /// Poll for time once without retries.
-    async fn poll_time_once(&self) -> Result<TimeSample, Status> {
+    async fn poll_time_once(&self) -> Result<TimeSample, HttpsDateError> {
         let mut client_lock = self.client.lock().await;
 
         let monotonic_before = zx::Time::get_monotonic().into_nanos();
@@ -189,14 +193,14 @@ mod test {
     /// have been given out.
     struct TestClient {
         /// Queue of responses.
-        enqueued_responses: VecDeque<Result<zx::Time, Status>>,
+        enqueued_responses: VecDeque<Result<zx::Time, HttpsDateError>>,
         /// Channel used to signal exhaustion of the enqueued responses.
         completion_notifier: Option<oneshot::Sender<()>>,
     }
 
     #[async_trait]
     impl HttpsDateClient for TestClient {
-        async fn request_utc(&mut self, _uri: &Uri) -> Result<zx::Time, Status> {
+        async fn request_utc(&mut self, _uri: &Uri) -> Result<zx::Time, HttpsDateError> {
             match self.enqueued_responses.pop_front() {
                 Some(result) => result,
                 None => {
@@ -211,7 +215,7 @@ mod test {
         /// Create a test client and a future that resolves when all the contents
         /// of |responses| have been consumed.
         fn with_responses(
-            responses: impl IntoIterator<Item = Result<zx::Time, Status>>,
+            responses: impl IntoIterator<Item = Result<zx::Time, HttpsDateError>>,
         ) -> (Self, impl Future) {
             let (sender, receiver) = oneshot::channel();
             let client = TestClient {
@@ -331,9 +335,9 @@ mod test {
         let reported_utc = zx::Time::from_nanos(2125 * NANOS_IN_SECONDS);
         let expected_utc = zx::Time::from_nanos(2125 * NANOS_IN_SECONDS + HALF_SECOND_NANOS);
         let injected_responses = vec![
-            Err(Status::Network),
-            Err(Status::Network),
-            Err(Status::Resource),
+            Err(HttpsDateError::NetworkError),
+            Err(HttpsDateError::NetworkError),
+            Err(HttpsDateError::NoCertificatesPresented),
             Ok(reported_utc),
         ];
         let (client, response_complete_fut) = TestClient::with_responses(injected_responses);
@@ -349,7 +353,7 @@ mod test {
         let expected_status_updates: Vec<Update> = vec![
             Status::Network.into(),
             Status::Network.into(),
-            Status::Resource.into(),
+            Status::Protocol.into(),
             Status::Ok.into(),
         ];
         let received_status_updates =
