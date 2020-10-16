@@ -16,6 +16,18 @@ impl Facade for TemperatureFacade {
                 let result = self.get_temperature_celsius(args).await?;
                 Ok(to_value(result)?)
             }
+            "StartLogging" => {
+                let result = self.start_logging(args).await?;
+                Ok(to_value(result)?)
+            }
+            "StartLoggingForever" => {
+                let result = self.start_logging_forever(args).await?;
+                Ok(to_value(result)?)
+            }
+            "StopLogging" => {
+                let result = self.stop_logging()?;
+                Ok(to_value(result)?)
+            }
             _ => bail!("Invalid TemperatureFacade FIDL method: {:?}", method),
         }
     }
