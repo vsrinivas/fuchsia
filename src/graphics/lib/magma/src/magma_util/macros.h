@@ -48,30 +48,30 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 static constexpr bool kMagmaDretEnable = kDebug;
 
 #define DRET(ret)                                                                              \
-  (magma::kMagmaDretEnable && ret != 0                                                         \
+  (magma::kMagmaDretEnable && (ret) != 0                                                       \
    ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, "%s:%d Returning error %ld", \
                                 __FILE__, __LINE__, (int64_t)(ret)),                           \
-   ret : ret)
+   (ret) : (ret))
 
 #define DRET_MSG(ret, format, ...)                                                        \
-  (magma::kMagmaDretEnable && ret != 0                                                    \
+  (magma::kMagmaDretEnable && (ret) != 0                                                  \
    ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR,                         \
                                 "%s:%d Returning error %ld: " format, __FILE__, __LINE__, \
-                                (int64_t)ret, ##__VA_ARGS__),                             \
-   ret : ret)
+                                (int64_t)(ret), ##__VA_ARGS__),                           \
+   (ret) : (ret))
 
 #define DRETF(ret, format, ...)                                                       \
   (magma::kMagmaDretEnable && !(ret)                                                  \
    ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR,                     \
                                 "%s:%d Returning false: " format, __FILE__, __LINE__, \
                                 ##__VA_ARGS__),                                       \
-   ret : ret)
+   (ret) : (ret))
 
 #define DRETP(ret, format, ...)                                                                    \
-  (magma::kMagmaDretEnable && (ret == nullptr)                                                     \
+  (magma::kMagmaDretEnable && ((ret) == nullptr)                                                   \
    ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, "%s:%d Returning null: " format, \
                                 __FILE__, __LINE__, ##__VA_ARGS__),                                \
-   ret : ret)
+   (ret) : (ret))
 
 enum LogLevel { LOG_WARNING, LOG_INFO };
 
