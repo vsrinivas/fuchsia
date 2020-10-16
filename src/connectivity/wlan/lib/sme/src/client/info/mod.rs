@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_whether_ping_reaches_new_milestone() {
-        let start = zx::Time::get(zx::ClockId::Monotonic);
+        let start = zx::Time::get_monotonic();
         // First ping reaches Connected milestone
         let ping = ConnectionPingInfo::first_connected(start);
         assert!(ping.reaches_new_milestone());

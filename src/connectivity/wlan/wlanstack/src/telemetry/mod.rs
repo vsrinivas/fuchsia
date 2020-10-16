@@ -1084,7 +1084,7 @@ mod tests {
     }
 
     fn now() -> zx::Time {
-        zx::Time::get(zx::ClockId::Monotonic)
+        zx::Time::get_monotonic()
     }
 
     fn fake_connect_stats() -> ConnectStats {

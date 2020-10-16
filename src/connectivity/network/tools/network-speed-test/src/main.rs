@@ -106,7 +106,7 @@ async fn fetch_and_discard_url(
     loader_proxy: LoaderProxy,
     request: http::Request,
 ) -> Result<IndividualDownload, anyhow::Error> {
-    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+    let start_time = zx::Time::get_monotonic();
     let response =
         loader_proxy.fetch(request).await.context("Error while calling Loader::Fetch")?;
 
@@ -128,7 +128,7 @@ async fn fetch_and_discard_url(
     let mut stdio_sink = AllowStdIo::new(::std::io::sink());
     let bytes_received =
         copy(socket, &mut stdio_sink).await.context("Failed to read bytes from the socket")?;
-    let stop_time = zx::Time::get(zx::ClockId::Monotonic);
+    let stop_time = zx::Time::get_monotonic();
 
     let time_nanos = (stop_time - start_time).into_nanos() as u64;
     let time_seconds = time_nanos as f64 * 1e-9;

@@ -100,7 +100,7 @@ impl Default for PortType {
 struct Time(zx::Time);
 impl Default for Time {
     fn default() -> Self {
-        Time(zx::Time::get(zx::ClockId::Monotonic))
+        Time(zx::Time::get_monotonic())
     }
 }
 

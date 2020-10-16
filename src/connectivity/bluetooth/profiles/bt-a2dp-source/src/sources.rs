@@ -27,7 +27,7 @@ impl futures::Stream for SawWaveStream {
     type Item = fuchsia_audio_device_output::Result<Vec<u8>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let now = zx::Time::get(zx::ClockId::Monotonic);
+        let now = zx::Time::get_monotonic();
         if self.last_frame_time.is_none() {
             self.last_frame_time = Some(now - 1.second());
         }

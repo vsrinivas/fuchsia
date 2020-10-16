@@ -328,7 +328,7 @@ async fn download_and_measure(http_svc: &http::LoaderProxy) -> Result<Measuremen
         body: None,
         deadline: None,
     };
-    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+    let start_time = zx::Time::get_monotonic();
     let http::Response {
         error,
         body,
@@ -347,7 +347,7 @@ async fn download_and_measure(http_svc: &http::LoaderProxy) -> Result<Measuremen
     let bytes = futures::io::copy(socket, &mut futures::io::sink())
         .await
         .context("failed to consume response")?;
-    let end_time = zx::Time::get(zx::ClockId::Monotonic);
+    let end_time = zx::Time::get_monotonic();
     Ok(Measurement { bytes, duration: end_time - start_time })
 }
 

@@ -1187,7 +1187,7 @@ fn send_mlme_assoc_req(
 }
 
 fn now() -> zx::Time {
-    zx::Time::get(zx::ClockId::Monotonic)
+    zx::Time::get_monotonic()
 }
 
 #[cfg(test)]
