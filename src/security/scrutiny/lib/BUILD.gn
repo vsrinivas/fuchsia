@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("lib") {
+  testonly = true
+  if (!is_fuchsia) {
+    public_deps = [
+      "//src/security/scrutiny/lib/framework",
+      "//src/security/scrutiny/lib/frontend",
+      "//src/security/scrutiny/lib/plugins",
+      "//src/security/scrutiny/lib/utils",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "//src/security/scrutiny/lib/framework:tests($host_toolchain)",
+    "//src/security/scrutiny/lib/frontend:tests($host_toolchain)",
+    "//src/security/scrutiny/lib/plugins:tests($host_toolchain)",
+    "//src/security/scrutiny/lib/utils:tests($host_toolchain)",
+  ]
+}

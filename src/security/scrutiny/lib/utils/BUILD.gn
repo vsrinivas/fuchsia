@@ -13,7 +13,7 @@ if (!is_fuchsia) {
     edition = "2018"
     visibility = [ "//src/security/scrutiny/*" ]
     deps = [
-      "//src/security/scrutiny/framework",
+      "//src/security/scrutiny/lib/framework",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:byteorder",
@@ -26,7 +26,7 @@ if (!is_fuchsia) {
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
-      "//src/security/scrutiny/utils/ffi-bridge",
+      "//src/security/scrutiny/lib/utils/ffi-bridge",
       "//zircon/third_party/ulib/zstd",
     ]
 

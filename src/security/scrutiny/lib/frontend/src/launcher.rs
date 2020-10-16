@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod logo;
-mod rest;
-mod scrutiny;
-mod shell;
-
 use {
     crate::scrutiny::ScrutinyApp,
     anyhow::Result,
@@ -15,7 +10,10 @@ use {
     },
 };
 
-fn main() -> Result<()> {
+/// Provides a default launcher for the Scrutiny frontend. This is intended to
+/// be used by binaries that wish to launch a full copy of the Scrutiny
+/// framework with default settings.
+pub fn launch() -> Result<()> {
     let mut app = ScrutinyApp::new(ScrutinyApp::args(None))?;
     app.plugin(CorePlugin::new())?;
     app.plugin(SearchPlugin::new())?;

@@ -2,19 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/host.gni")
-
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
 if (!is_fuchsia) {
-  rustc_binary("bin") {
+  rustc_library("frontend") {
     testonly = true
-    name = "scrutiny"
+    name = "scrutiny_frontend"
     with_unit_tests = true
     edition = "2018"
     deps = [
-      "//src/security/scrutiny/framework",
-      "//src/security/scrutiny/plugins",
+      "//src/security/scrutiny/lib/framework",
+      "//src/security/scrutiny/lib/plugins",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:log",
@@ -35,8 +33,9 @@ if (!is_fuchsia) {
     ]
 
     sources = [
+      "src/launcher.rs",
+      "src/lib.rs",
       "src/logo.rs",
-      "src/main.rs",
       "src/rest/error.rs",
       "src/rest/mod.rs",
       "src/rest/service.rs",
@@ -50,18 +49,7 @@ if (!is_fuchsia) {
   }
 }
 
-install_host_tools("host") {
-  testonly = true
-  deps = [ ":bin" ]
-  outputs = [ "scrutiny" ]
-}
-
-group("scrutiny") {
-  testonly = true
-  public_deps = [ ":host" ]
-}
-
 group("tests") {
   testonly = true
-  public_deps = [ ":bin_test($host_toolchain)" ]
+  public_deps = [ ":frontend_test($host_toolchain)" ]
 }
