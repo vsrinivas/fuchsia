@@ -15,6 +15,7 @@
 #include <zircon/pixelformat.h>
 
 #include <fbl/algorithm.h>
+#include <safemath/safe_conversions.h>
 
 namespace camera {
 
@@ -26,7 +27,8 @@ constexpr auto kTag = "FakeBufferCollection";
 const uint32_t kIspLineAlignment = 128;  // Required alignment of ISP buffers
 
 static void GetFakeBufferSettings(buffer_collection_info_2_t& buffer_collection, size_t vmo_size) {
-  buffer_collection.settings.buffer_settings.size_bytes = vmo_size;
+  buffer_collection.settings.buffer_settings.size_bytes =
+      safemath::checked_cast<uint32_t>(vmo_size);
   buffer_collection.settings.buffer_settings.is_physically_contiguous = true;
   buffer_collection.settings.buffer_settings.is_secure = false;
   // constraints, coherency_domain and heap are unused.

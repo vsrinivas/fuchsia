@@ -26,14 +26,12 @@ source_set("fake_buffer_collection") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("button_checker") {
