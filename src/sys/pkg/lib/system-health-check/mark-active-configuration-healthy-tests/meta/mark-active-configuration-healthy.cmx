@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver"
         ]
     }

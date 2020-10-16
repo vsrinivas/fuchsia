@@ -13,11 +13,13 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/pkg/testing/mock-paver",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
@@ -65,6 +67,9 @@ test_package("mark-active-configuration-healthy-tests") {
       name = "mark_active_configuration_healthy_test"
       dest = "mark-active-configuration-healthy-test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

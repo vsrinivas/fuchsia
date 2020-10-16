@@ -4,11 +4,7 @@
 
 #![cfg(test)]
 use {
-    anyhow::Error,
-    fidl_fuchsia_paver::{
-        BootManagerRequest, BootManagerRequestStream, Configuration, PaverRequest,
-        PaverRequestStream,
-    },
+    fidl_fuchsia_paver::{Configuration, PaverRequestStream},
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -16,8 +12,8 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_zircon::Status,
-    futures::{future::BoxFuture, prelude::*},
-    parking_lot::Mutex,
+    futures::prelude::*,
+    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
     std::sync::Arc,
 };
 
@@ -25,6 +21,7 @@ const PARTITION_MARKER_CMX: &str = "fuchsia-pkg://fuchsia.com/mark-active-config
 
 struct TestEnv {
     env: NestedEnvironment,
+    paver_service: Arc<MockPaverService>,
 }
 
 impl TestEnv {
@@ -32,15 +29,17 @@ impl TestEnv {
         self.env.launcher()
     }
 
-    fn new(paver_service: Arc<dyn PaverService>) -> Self {
+    fn new(paver_init: impl FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder) -> Self {
         let mut fs = ServiceFs::new();
-
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
+        
+        let paver_service = Arc::new(paver_init(MockPaverServiceBuilder::new()).build());
         let paver_service_clone = paver_service.clone();
         fs.add_fidl_service(move |stream: PaverRequestStream| {
-            let paver_service_clone = paver_service_clone.clone();
             fasync::Task::spawn(
                 paver_service_clone
-                    .run_service(stream)
+                    .clone()
+                    .run_paver_service(stream)
                     .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
             )
             .detach()
@@ -51,7 +50,7 @@ impl TestEnv {
             .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
 
-        Self { env }
+        Self { env, paver_service }
     }
 
     async fn run_partition_marker(&self) {
@@ -66,201 +65,52 @@ impl TestEnv {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum PaverEvent {
-    FindBootManager,
-    SetActiveConfigurationHealthy,
-    QueryActiveConfiguration,
-    SetConfigurationUnbootable { config: Configuration },
-    Flush,
-}
-
-trait PaverService: Sync + Send {
-    fn run_service(
-        self: Arc<Self>,
-        stream: PaverRequestStream,
-    ) -> BoxFuture<'static, Result<(), Error>>;
-}
-
-struct PaverServiceState {
-    events: Vec<PaverEvent>,
-    active_config: Configuration,
-}
-
-struct PaverServiceSupportsABR {
-    state: Mutex<PaverServiceState>,
-}
-
-impl PaverServiceSupportsABR {
-    fn new(active_config: Configuration) -> Self {
-        Self { state: Mutex::new(PaverServiceState { events: Vec::new(), active_config }) }
-    }
-
-    fn set_active_configuration(&self, config: Configuration) {
-        self.state.lock().active_config = config;
-    }
-
-    fn take_events(&self) -> Vec<PaverEvent> {
-        std::mem::replace(&mut self.state.lock().events, vec![])
-    }
-
-    fn run_boot_manager_service(
-        self: Arc<Self>,
-        mut stream: BootManagerRequestStream,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        async move {
-            while let Some(req) = stream.try_next().await? {
-                match req {
-                    BootManagerRequest::SetActiveConfigurationHealthy { responder } => {
-                        self.state.lock().events.push(PaverEvent::SetActiveConfigurationHealthy);
-                        let status = match self.state.lock().active_config {
-                            Configuration::Recovery => Status::NOT_SUPPORTED,
-                            _ => Status::OK,
-                        };
-                        responder.send(status.into_raw()).expect("send ok");
-                    }
-                    BootManagerRequest::QueryActiveConfiguration { responder } => {
-                        self.state.lock().events.push(PaverEvent::QueryActiveConfiguration);
-
-                        responder
-                            .send(&mut Ok(self.state.lock().active_config))
-                            .expect("send config");
-                    }
-                    BootManagerRequest::SetConfigurationUnbootable { responder, configuration } => {
-                        self.state
-                            .lock()
-                            .events
-                            .push(PaverEvent::SetConfigurationUnbootable { config: configuration });
-                        responder.send(Status::OK.into_raw()).expect("send ok");
-                    }
-                    BootManagerRequest::Flush { responder } => {
-                        self.state.lock().events.push(PaverEvent::Flush);
-                        responder.send(Status::OK.into_raw()).expect("send ok");
-                    }
-                    req => panic!("unhandled paver request: {:?}", req),
-                }
-            }
-            Ok(())
-        }
-        .boxed()
-    }
-}
-
-impl PaverService for PaverServiceSupportsABR {
-    fn run_service(
-        self: Arc<Self>,
-        mut stream: PaverRequestStream,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        async move {
-            while let Some(req) = stream.try_next().await? {
-                match req {
-                    PaverRequest::FindBootManager { boot_manager, .. } => {
-                        self.state.lock().events.push(PaverEvent::FindBootManager);
-                        let paver_service_clone = self.clone();
-                        fasync::Task::spawn(
-                            paver_service_clone
-                                .run_boot_manager_service(boot_manager.into_stream()?)
-                                .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
-                        )
-                        .detach();
-                    }
-                    req => panic!("unhandled paver request: {:?}", req),
-                }
-            }
-            Ok(())
-        }
-        .boxed()
-    }
+// We should call SetConfigurationUnbootable when the device supports ABR and is not in recovery
+#[fasync::run_singlethreaded(test)]
+async fn test_calls_set_configuration_unbootable_config_a_active() {
+    let env = TestEnv::new(|p| p.active_config(Configuration::A));
+    assert_eq!(env.paver_service.take_events(), Vec::new());
+    env.run_partition_marker().await;
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![
+            PaverEvent::SetActiveConfigurationHealthy,
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush,
+        ]
+    );
 }
 
 // We should call SetConfigurationUnbootable when the device supports ABR and is not in recovery
 #[fasync::run_singlethreaded(test)]
-async fn test_calls_set_configuration_unbootable() {
-    // Works when A is active config
-    let paver_service = Arc::new(PaverServiceSupportsABR::new(Configuration::A));
-    let env = TestEnv::new(paver_service.clone());
-    assert_eq!(paver_service.take_events(), Vec::new());
+async fn test_calls_set_configuration_unbootable_config_b_active() {
+    let env = TestEnv::new(|p| p.active_config(Configuration::B));
+    assert_eq!(env.paver_service.take_events(), Vec::new());
     env.run_partition_marker().await;
     assert_eq!(
-        paver_service.take_events(),
+        env.paver_service.take_events(),
         vec![
-            PaverEvent::FindBootManager,
             PaverEvent::SetActiveConfigurationHealthy,
             PaverEvent::QueryActiveConfiguration,
-            PaverEvent::SetConfigurationUnbootable { config: Configuration::B },
-            PaverEvent::Flush
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::A },
+            PaverEvent::BootManagerFlush,
         ]
     );
-
-    // Works when B is active config
-    paver_service.set_active_configuration(Configuration::B);
-    assert_eq!(paver_service.take_events(), Vec::new());
-    env.run_partition_marker().await;
-    assert_eq!(
-        paver_service.take_events(),
-        vec![
-            PaverEvent::FindBootManager,
-            PaverEvent::SetActiveConfigurationHealthy,
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::SetConfigurationUnbootable { config: Configuration::A },
-            PaverEvent::Flush
-        ]
-    );
-}
-
-struct PaverServiceDoesNotSupportsABR {
-    events: Mutex<Vec<PaverEvent>>,
-}
-
-impl PaverServiceDoesNotSupportsABR {
-    fn new() -> Self {
-        Self { events: Mutex::new(Vec::new()) }
-    }
-
-    fn take_events(&self) -> Vec<PaverEvent> {
-        std::mem::replace(&mut *self.events.lock(), vec![])
-    }
-}
-
-impl PaverService for PaverServiceDoesNotSupportsABR {
-    fn run_service(
-        self: Arc<Self>,
-        mut stream: PaverRequestStream,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        async move {
-            while let Some(req) = stream.try_next().await? {
-                match req {
-                    PaverRequest::FindBootManager { boot_manager, .. } => {
-                        self.events.lock().push(PaverEvent::FindBootManager);
-                        boot_manager.close_with_epitaph(Status::NOT_SUPPORTED)?;
-                    }
-                    req => panic!("unhandled paver request: {:?}", req),
-                }
-            }
-            Ok(())
-        }
-        .boxed()
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_calls_exclusively_set_active_configuration_healthy_when_device_does_not_support_abr()
-{
-    let paver_service = Arc::new(PaverServiceDoesNotSupportsABR::new());
-    let env = TestEnv::new(paver_service.clone());
-    assert_eq!(paver_service.take_events(), Vec::new());
+async fn test_does_not_change_metadata_when_device_does_not_support_abr() {
+    let env = TestEnv::new(|p| p.boot_manager_close_with_epitaph(Status::NOT_SUPPORTED));
+    assert_eq!(env.paver_service.take_events(), Vec::new());
     env.run_partition_marker().await;
-    assert_eq!(paver_service.take_events(), vec![PaverEvent::FindBootManager]);
+    assert_eq!(env.paver_service.take_events(), Vec::new());
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_calls_exclusively_set_active_configuration_healthy_when_device_in_recovery() {
-    let paver_service = Arc::new(PaverServiceSupportsABR::new(Configuration::Recovery));
-    let env = TestEnv::new(paver_service.clone());
-    assert_eq!(paver_service.take_events(), Vec::new());
+    let env = TestEnv::new(|p| p.active_config(Configuration::Recovery));
+    assert_eq!(env.paver_service.take_events(), Vec::new());
     env.run_partition_marker().await;
-    assert_eq!(
-        paver_service.take_events(),
-        vec![PaverEvent::FindBootManager, PaverEvent::SetActiveConfigurationHealthy]
-    );
+    assert_eq!(env.paver_service.take_events(), vec![PaverEvent::SetActiveConfigurationHealthy]);
 }

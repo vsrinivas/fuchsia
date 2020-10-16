@@ -278,7 +278,11 @@ impl MockPaverService {
                     let status = (*self.call_hook)(&event);
                     self.push_event(event);
                     let mut result = if status == Status::OK {
-                        Ok(self.active_config)
+                        if self.active_config == paver::Configuration::Recovery {
+                            Err(Status::NOT_SUPPORTED.into_raw())
+                        } else {
+                            Ok(self.active_config)
+                        }
                     } else {
                         Err(status.into_raw())
                     };
@@ -309,6 +313,14 @@ impl MockPaverService {
                     let event = PaverEvent::SetActiveConfigurationHealthy;
                     let status = (*self.call_hook)(&event);
                     self.push_event(event);
+                    // Return an error if the active config is recovery.
+                    let status = if status == Status::OK
+                        && self.active_config == paver::Configuration::Recovery
+                    {
+                        Status::BAD_STATE
+                    } else {
+                        status
+                    };
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::BootManagerRequest::SetConfigurationActive { configuration, responder } => {
@@ -511,6 +523,17 @@ pub mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    pub async fn test_active_config_when_recovery() -> Result<(), Error> {
+        let paver = MockPaverForTest::new(|p| p.active_config(paver::Configuration::Recovery));
+        assert_eq!(
+            Err(Status::NOT_SUPPORTED.into_raw()),
+            paver.boot_manager.query_active_configuration().await?
+        );
+        assert_eq!(paver.paver.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     pub async fn test_boot_manager_epitaph() -> Result<(), Error> {
         let paver =
             MockPaverForTest::new(|p| p.boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED));
@@ -520,6 +543,17 @@ pub mod tests {
             result,
             Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. })
         );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_set_active_healthy_when_recovery() -> Result<(), Error> {
+        let paver = MockPaverForTest::new(|p| p.active_config(paver::Configuration::Recovery));
+        assert_eq!(
+            Status::BAD_STATE.into_raw(),
+            paver.boot_manager.set_active_configuration_healthy().await?
+        );
+        assert_eq!(paver.paver.take_events(), vec![PaverEvent::SetActiveConfigurationHealthy]);
         Ok(())
     }
 }
