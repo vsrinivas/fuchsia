@@ -604,6 +604,7 @@ void usage(void) {
       "                           Valid values between [1.0 3.0]"
       "                           For Linear gamma, use g = 1\n"
       "--clamp-rgb c            : Set minimum RGB value [0 255].\n"
+      "--configs-per-vsync n    : Number of configs applied per vsync\n"
       "\nTest Modes:\n\n"
       "--bundle N       : Run test from test bundle N as described below\n\n"
       "                   bundle %d: Display a single pattern using single buffer\n"
@@ -731,6 +732,7 @@ int main(int argc, const char* argv[]) {
   bool enable_alpha = false;
   bool enable_compression = false;
   bool apply_config_once = false;
+  uint32_t configs_per_vsync = 1;
 
   while (argc) {
     if (strcmp(argv[0], "--dump") == 0) {
@@ -857,6 +859,10 @@ int main(int argc, const char* argv[]) {
       apply_config_once = true;
       argv += 1;
       argc -= 1;
+    } else if (strcmp(argv[0], "--configs-per-vsync") == 0) {
+      configs_per_vsync = atoi(argv[1]);
+      argv += 2;
+      argc -= 2;
     } else if (strcmp(argv[0], "--help") == 0) {
       usage();
       return 0;
@@ -1090,8 +1096,10 @@ int main(int argc, const char* argv[]) {
       }
     }
     if (i < max_apply_configs) {
-      if (!apply_config()) {
-        return -1;
+      for (uint32_t cpv = 0; cpv < configs_per_vsync; cpv++) {
+        if (!apply_config()) {
+          return -1;
+        }
       }
     }
 

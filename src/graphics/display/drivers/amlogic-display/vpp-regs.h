@@ -116,6 +116,8 @@
 #define VPP_POST_FG_OSD2 (1 << 4)
 
 #define VPP_DUMMY_DATA (0x1d00 << 2)
+#define VPP_DUMMY_DATA1 (0x1d69 << 2)
+#define VPP_OSD_SC_DUMMY_DATA (0x1dc7 << 2)
 
 // Gamma Registers
 #define VPP_GAMMA_CNTL_PORT (0x1400 << 2)
