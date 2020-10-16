@@ -103,9 +103,10 @@ func UnionWithHandleWithH(h _zx.VMO) UnionWithHandle {
 }
 
 type TableWithHandle struct {
-	_        struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	H        _zx.VMO  `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
-	HPresent bool
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	I_unknownData interface{}
+	H             _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
+	HPresent      bool
 }
 
 func (u *TableWithHandle) SetH(h _zx.VMO) {
@@ -130,4 +131,12 @@ func (u *TableWithHandle) HasH() bool {
 
 func (u *TableWithHandle) ClearH() {
 	u.HPresent = false
+}
+
+func (u *TableWithHandle) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableWithHandle) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }

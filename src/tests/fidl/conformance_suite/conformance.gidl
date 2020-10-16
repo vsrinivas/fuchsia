@@ -222,7 +222,10 @@ success("ReverseOrdinalTable") {
     },
 }
 
-decode_success("TableWithUnknownReservedFields") {
+decode_success("TableWithUnknownReservedFieldsNotStored") {
+    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
+    // each binding, they should be added to the denylist here
+    bindings_denylist = [go],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -250,7 +253,10 @@ decode_success("TableWithUnknownReservedFields") {
     },
 }
 
-decode_success("TableWithUnknownTrailingFields") {
+decode_success("TableWithUnknownTrailingFieldsNotStored") {
+    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
+    // each binding, they should be added to the denylist here
+    bindings_denylist = [go],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -280,8 +286,10 @@ decode_success("TableWithUnknownTrailingFields") {
     },
 }
 
-decode_success("TableWithUnknownTrailingFieldsAndHandles") {
-    bindings_allowlist = [go,dart,rust],
+decode_success("TableWithUnknownTrailingFieldsAndHandlesNotStored") {
+    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
+    // each binding, they should be removed from the allowlist here
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),

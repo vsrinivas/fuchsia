@@ -255,6 +255,7 @@ var sections = map[string]sectionMetadata{
 				Encodings:         body.Encodings,
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
 			all.EncodeSuccess = append(all.EncodeSuccess, result)
 		},
@@ -271,6 +272,7 @@ var sections = map[string]sectionMetadata{
 				Encodings:         body.Encodings,
 				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
 			all.DecodeSuccess = append(all.DecodeSuccess, result)
 		},

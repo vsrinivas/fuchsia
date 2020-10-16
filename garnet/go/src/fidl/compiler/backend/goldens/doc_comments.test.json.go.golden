@@ -153,7 +153,8 @@ func UnionWithField(field int32) Union {
 //
 // table comment #3
 type Table struct {
-	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	I_unknownData interface{}
 	// table field comment #1
 	//
 	// table field comment #3
@@ -183,6 +184,14 @@ func (u *Table) HasField() bool {
 
 func (u *Table) ClearField() {
 	u.FieldPresent = false
+}
+
+func (u *Table) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *Table) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
 const (

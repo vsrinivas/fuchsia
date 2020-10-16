@@ -89,9 +89,10 @@ func UnionLargeArrayWithA(a [100]uint32) UnionLargeArray {
 }
 
 type TableSmallArray struct {
-	_        struct{}  `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A        [2]uint32 `fidl_ordinal:"1"`
-	APresent bool
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	I_unknownData interface{}
+	A             [2]uint32 `fidl_ordinal:"1"`
+	APresent      bool
 }
 
 func (u *TableSmallArray) SetA(a [2]uint32) {
@@ -118,10 +119,19 @@ func (u *TableSmallArray) ClearA() {
 	u.APresent = false
 }
 
+func (u *TableSmallArray) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableSmallArray) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
 type TableLargeArray struct {
-	_        struct{}    `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	A        [100]uint32 `fidl_ordinal:"1"`
-	APresent bool
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	I_unknownData interface{}
+	A             [100]uint32 `fidl_ordinal:"1"`
+	APresent      bool
 }
 
 func (u *TableLargeArray) SetA(a [100]uint32) {
@@ -146,4 +156,12 @@ func (u *TableLargeArray) HasA() bool {
 
 func (u *TableLargeArray) ClearA() {
 	u.APresent = false
+}
+
+func (u *TableLargeArray) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableLargeArray) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }

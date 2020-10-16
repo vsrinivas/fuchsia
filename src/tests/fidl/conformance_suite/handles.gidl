@@ -296,9 +296,11 @@ success("ChannelMaxHandles") {
 }
 
 // There should be support for at least 64 handles in unknown fields.
-decode_success("ChannelMaxUnknownHandles") {
-    // TODO(fxb.dev/36441): Implement handles in all backends.
-    bindings_allowlist = [dart,go,rust],
+decode_success("ChannelMaxUnknownHandlesNotStored") {
+    // TODO(fxbug.dev/36441): Implement handles in all backends.
+    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
+    // each binding, they should be removed from the allowlist here
+    bindings_allowlist = [dart,rust],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

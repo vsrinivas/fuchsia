@@ -250,9 +250,10 @@ type UnionMember struct {
 // Table represents a FIDL table as a golang struct.
 type Table struct {
 	types.Attributes
-	Name    string
-	Members []TableMember
-	Tags    Tags
+	Name            string
+	Members         []TableMember
+	Tags            Tags
+	UnknownDataType string
 }
 
 // TableMember represents a FIDL table member as two golang struct members, one
@@ -920,10 +921,11 @@ func (c *compiler) compileTable(val types.Table) Table {
 		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 	}
 	return Table{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		Members:    members,
-		Tags:       tags,
+		Attributes:      val.Attributes,
+		Name:            c.compileCompoundIdentifier(val.Name, true, ""),
+		Members:         members,
+		Tags:            tags,
+		UnknownDataType: fmt.Sprintf("%s.UnknownData", BindingsAlias),
 	}
 }
 
@@ -1059,7 +1061,7 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}
-	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 || len(fidlData.Enums) != 0 || len(fidlData.Protocols) != 0 {
+	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 || len(fidlData.Enums) != 0 || len(fidlData.Protocols) != 0 || len(fidlData.Tables) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Protocols {

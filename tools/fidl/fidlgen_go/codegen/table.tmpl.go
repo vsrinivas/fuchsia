@@ -11,6 +11,7 @@ const tableTmpl = `
 {{- end}}
 type {{ .Name }} struct {
 	_ struct{} ` + "`{{.Tags}}`" + `
+	I_unknownData interface{}
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}
@@ -46,6 +47,14 @@ func (u *{{ $.Name }}) {{ .Clearer }}() {
 	u.{{ .PresenceField }} = false
 }
 {{- end }}
+
+func (u *{{ .Name }}) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *{{ .Name }}) GetUnknownData() map[uint64]{{ .UnknownDataType }} {
+	return u.I_unknownData.(map[uint64]{{ .UnknownDataType }})
+}
 
 {{- end -}}
 `

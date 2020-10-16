@@ -172,7 +172,8 @@ func ExampleXUnionWithVariant(variant uint32) ExampleXUnion {
 
 type ExampleTable struct {
 	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	Member        uint32   `fidl_ordinal:"1"`
+	I_unknownData interface{}
+	Member        uint32 `fidl_ordinal:"1"`
 	MemberPresent bool
 }
 
@@ -198,6 +199,14 @@ func (u *ExampleTable) HasMember() bool {
 
 func (u *ExampleTable) ClearMember() {
 	u.MemberPresent = false
+}
+
+func (u *ExampleTable) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *ExampleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
 const (

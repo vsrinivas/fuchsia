@@ -199,8 +199,8 @@ void Union::Destroy() {
       StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      VectorStringAlsoNeedsConstructor_.~decltype(
-          VectorStringAlsoNeedsConstructor_)();
+      VectorStringAlsoNeedsConstructor_
+          .~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
 
     default:
@@ -454,8 +454,8 @@ void StrictUnion::Destroy() {
       StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      VectorStringAlsoNeedsConstructor_.~decltype(
-          VectorStringAlsoNeedsConstructor_)();
+      VectorStringAlsoNeedsConstructor_
+          .~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
 
     default:
@@ -2946,8 +2946,8 @@ void FlexibleUnion::Destroy() {
       StringNeedsConstructor_.~decltype(StringNeedsConstructor_)();
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      VectorStringAlsoNeedsConstructor_.~decltype(
-          VectorStringAlsoNeedsConstructor_)();
+      VectorStringAlsoNeedsConstructor_
+          .~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
 
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
