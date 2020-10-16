@@ -11,6 +11,7 @@
 #include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
+#include "src/ui/scenic/lib/flatland/tests/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_renderer.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
@@ -112,9 +113,9 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
     mock_renderer_ = new ::testing::StrictMock<MockRenderer>();
     renderer_ = std::shared_ptr<Renderer>(mock_renderer_);
-
-    manager_ = std::make_unique<FlatlandManager>(flatland_presenter_, renderer_,
-                                                 uber_struct_system_, link_system_);
+    manager_ = std::make_unique<FlatlandManager>(
+        flatland_presenter_, renderer_, uber_struct_system_, link_system_,
+        std::vector<std::shared_ptr<flatland::BufferCollectionImporter>>());
   }
 
   void TearDown() override {

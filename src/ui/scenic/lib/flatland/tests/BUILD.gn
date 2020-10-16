@@ -19,6 +19,7 @@ executable("unittests") {
     "global_topology_data_unittest.cc",
     "hanging_get_helper_unittest.cc",
     "link_system_unittest.cc",
+    "mock_buffer_collection_importer.h",
     "mock_flatland_presenter.h",
     "mock_renderer.h",
     "transform_graph_unittest.cc",

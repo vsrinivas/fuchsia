@@ -26,10 +26,12 @@ namespace flatland {
 
 class FlatlandManager {
  public:
-  FlatlandManager(const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                  const std::shared_ptr<Renderer>& renderer,
-                  const std::shared_ptr<UberStructSystem>& uber_struct_system,
-                  const std::shared_ptr<LinkSystem>& link_system);
+  FlatlandManager(
+      const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+      const std::shared_ptr<Renderer>& renderer,
+      const std::shared_ptr<UberStructSystem>& uber_struct_system,
+      const std::shared_ptr<LinkSystem>& link_system,
+      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
 
   void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> flatland);
 
@@ -44,6 +46,7 @@ class FlatlandManager {
   std::shared_ptr<Renderer> renderer_;
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
+  std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
 
   // Represents an individual Flatland session for a client.
   struct FlatlandInstance {

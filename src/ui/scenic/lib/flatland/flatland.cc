@@ -27,17 +27,29 @@ using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
-Flatland::Flatland(scheduling::SessionId session_id,
-                   const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                   const std::shared_ptr<Renderer>& renderer,
-                   const std::shared_ptr<LinkSystem>& link_system,
-                   const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
-                   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+namespace {
+
+GlobalImageId GenerateUniqueImageId() {
+  // This function will be called from multiple threads, and thus needs an atomic
+  // incrementor for the id.
+  static std::atomic<GlobalImageId> image_id = 0;
+  return ++image_id;
+}
+
+}  // namespace
+
+Flatland::Flatland(
+    scheduling::SessionId session_id, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+    const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
+    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
+    const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
+    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
     : session_id_(session_id),
       flatland_presenter_(flatland_presenter),
       renderer_(renderer),
       link_system_(link_system),
       uber_struct_queue_(uber_struct_queue),
+      buffer_collection_importers_(buffer_collection_importers),
       sysmem_allocator_(std::move(sysmem_allocator)),
       transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()) {}
@@ -61,7 +73,9 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
   if (!failure_since_previous_present_) {
     FX_DCHECK(data.sorted_transforms[0].handle == root_handle);
 
-    // Cleanup released resources.
+    // Cleanup released resources. Here we also collect the list of unused images so they can be
+    // released by the buffer collection importers.
+    std::vector<GlobalImageId> images_to_release;
     for (const auto& dead_handle : data.dead_transforms) {
       matrices_.erase(dead_handle);
 
@@ -74,6 +88,10 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
         FX_DCHECK(buffer_data_kv != buffer_collections_.end());
 
         --buffer_data_kv->second.image_count;
+
+        // The importers will release the images in this vector at the same time they release
+        // their buffer collections.
+        images_to_release.push_back(image_kv->second.identifier);
 
         image_metadatas_.erase(image_kv);
       }
@@ -99,37 +117,53 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
       }
     }
 
-    // If there are buffer collections ready for release, create a release fence for the current
-    // Present() and delay release until that fence is reached to ensure that the buffer
-    // collections are no longer referenced in any render data.
-    if (!buffers_to_release.empty()) {
+    // If there are buffer collections and/or images ready for release, create a release fence for
+    // the current Present() and delay release until that fence is reached to ensure that the buffer
+    // collections and/or images are no longer referenced in any render data.
+    if (!images_to_release.empty() || !buffers_to_release.empty()) {
       // Use the default dispatcher, which is the same one this Present() is running on.
       auto dispatcher = async_get_default_dispatcher();
 
-      // Create a release fence specifically for the buffer collections.
-      zx::event buffer_collection_release_fence;
-      zx_status_t status = zx::event::create(0, &buffer_collection_release_fence);
+      // Create a release fence specifically for the buffer collections and their images.
+      zx::event buffer_collection_and_image_release_fence;
+      zx_status_t status = zx::event::create(0, &buffer_collection_and_image_release_fence);
       FX_DCHECK(status == ZX_OK);
 
       // Use a self-referencing async::WaitOnce to perform Renderer deregistration. This is
       // primarily so the handler does not have to live in the Flatland instance, which may be
       // destroyed before the release fence is signaled. WaitOnce moves the handler to the stack
       // prior to invoking it, so it is safe for the handler to delete the WaitOnce on exit.
-      auto wait = std::make_shared<async::WaitOnce>(buffer_collection_release_fence.get(),
+      // Specifically, we move the wait object into the lambda function via |copy_ref = wait| to
+      // ensure that the wait object lives. The callback will not trigger without this.
+      auto wait = std::make_shared<async::WaitOnce>(buffer_collection_and_image_release_fence.get(),
                                                     ZX_EVENT_SIGNALED);
-      status =
-          wait->Begin(dispatcher, [copy_ref = wait, renderer_ref = renderer_, buffers_to_release](
-                                      async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
-                                      const zx_packet_signal_t* /*signal*/) mutable {
+      status = wait->Begin(
+          dispatcher, [copy_ref = wait, renderer_ref = renderer_,
+                       importer_ref = buffer_collection_importers_, buffers_to_release,
+                       images_to_release](async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
+                                          const zx_packet_signal_t* /*signal*/) mutable {
             FX_DCHECK(status == ZX_OK);
+
+            // Release images first, since they need to be released before we release their
+            // associated buffer collections.
+            for (auto& image_id : images_to_release) {
+              for (auto& importer : importer_ref) {
+                importer->ReleaseImage(image_id);
+              }
+            }
+
+            // Now we can release the buffer collections.
             for (const auto& global_collection_id : buffers_to_release) {
               renderer_ref->DeregisterCollection(global_collection_id);
+              for (auto& importer : importer_ref) {
+                importer->ReleaseBufferCollection(global_collection_id);
+              }
             }
           });
       FX_DCHECK(status == ZX_OK);
 
       // Push the new release fence into the user-provided list.
-      release_fences.push_back(std::move(buffer_collection_release_fence));
+      release_fences.push_back(std::move(buffer_collection_and_image_release_fence));
     }
 
     auto uber_struct = std::make_unique<UberStruct>();
@@ -536,8 +570,30 @@ void Flatland::RegisterBufferCollection(
     return;
   }
 
+  if (!token.is_valid()) {
+    FX_LOGS(ERROR) << "Buffer collection token is not valid.";
+    ReportError();
+    return;
+  }
+
   // Grab a new unique global buffer collection id.
   auto global_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+
+  // For every external service we have, duplicate the token and store it in the
+  // |extra_tokens| vector. We will then pass the tokens along to the importers
+  // after we've received the |global_collection_id| from sysmem_util, so that
+  // all handles use the same ID.
+  std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> extra_tokens;
+  for (auto& buffer_importer : buffer_collection_importers_) {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr extra_token;
+    // TODO(fxbug.dev/51213): See if this can become asynchronous.
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = token.BindSync();
+    zx_status_t status =
+        sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), extra_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+    token = sync_token.Unbind();
+    extra_tokens.push_back(std::move(extra_token));
+  }
 
   // Register the texture collection immediately since the client may block on buffers being
   // allocated before calling Present().
@@ -550,7 +606,15 @@ void Flatland::RegisterBufferCollection(
     ReportError();
     return;
   }
-  FX_DCHECK(!buffer_collections_.count(global_collection_id));
+
+  // Now we can set the constraints on each of the importers.
+  for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {
+    auto& buffer_importer = buffer_collection_importers_[i];
+    auto extra_token = std::move(extra_tokens[i]);
+    // Pass along extra token to the external service that needs the buffer collection.
+    buffer_importer->ImportBufferCollection(global_collection_id, sysmem_allocator_.get(),
+                                            std::move(extra_token));
+  }
 
   buffer_collection_ids_[collection_id] = global_collection_id;
   buffer_collections_[global_collection_id] = BufferCollectionData();
@@ -644,10 +708,15 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
   content_handles_[image_id] = handle;
 
   auto& metadata = image_metadatas_[handle];
+  metadata.identifier = GenerateUniqueImageId();
   metadata.collection_id = global_collection_id;
   metadata.vmo_idx = vmo_index;
   metadata.width = width;
   metadata.height = height;
+
+  for (auto& importer : buffer_collection_importers_) {
+    importer->ImportImage(metadata);
+  }
 
   // Increment the buffer's usage count.
   ++buffer_data.image_count;

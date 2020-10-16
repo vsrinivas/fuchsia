@@ -11,14 +11,17 @@
 
 namespace flatland {
 
-FlatlandManager::FlatlandManager(const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                                 const std::shared_ptr<Renderer>& renderer,
-                                 const std::shared_ptr<UberStructSystem>& uber_struct_system,
-                                 const std::shared_ptr<LinkSystem>& link_system)
+FlatlandManager::FlatlandManager(
+    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+    const std::shared_ptr<Renderer>& renderer,
+    const std::shared_ptr<UberStructSystem>& uber_struct_system,
+    const std::shared_ptr<LinkSystem>& link_system,
+    const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers)
     : flatland_presenter_(flatland_presenter),
       renderer_(renderer),
       uber_struct_system_(uber_struct_system),
-      link_system_(link_system) {}
+      link_system_(link_system),
+      buffer_collection_importers_(buffer_collection_importers) {}
 
 void FlatlandManager::CreateFlatland(
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request) {
@@ -30,9 +33,10 @@ void FlatlandManager::CreateFlatland(
                                             sysmem_allocator.NewRequest().TakeChannel().release());
   FX_DCHECK(status == ZX_OK);
 
-  auto flatland = std::make_unique<Flatland>(id, flatland_presenter_, renderer_, link_system_,
-                                             uber_struct_system_->AllocateQueueForSession(id),
-                                             std::move(sysmem_allocator));
+  auto flatland =
+      std::make_unique<Flatland>(id, flatland_presenter_, renderer_, link_system_,
+                                 uber_struct_system_->AllocateQueueForSession(id),
+                                 buffer_collection_importers_, std::move(sysmem_allocator));
 
   auto result = flatland_instances_.emplace(
       id, std::make_unique<FlatlandInstance>(request.channel(), std::move(flatland)));

@@ -28,12 +28,10 @@ source_set("renderer") {
   public_deps = [
     "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/sysmem",
     "//zircon/public/lib/zxc",
   ]
 
-  deps = [
-    "//src/ui/lib/escher",
-    "//src/ui/scenic/lib/display:display",
-  ]
+  deps = [ "//src/ui/lib/escher" ]
 }

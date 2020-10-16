@@ -33,6 +33,8 @@
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
+#include "src/ui/scenic/lib/flatland/buffer_collection_importer.h"
+
 namespace flatland {
 
 // This is a WIP implementation of the 2D Layer API. It currently exists to run unit tests, and to
@@ -46,12 +48,13 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Passing the same LinkSystem and UberStructSystem to multiple Flatland instances will allow
   // them to link to each other through operations that involve tokens and parent/child
   // relationships (e.g., by calling LinkToParent() and CreateLink()).
-  explicit Flatland(scheduling::SessionId session_id,
-                    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                    const std::shared_ptr<Renderer>& renderer,
-                    const std::shared_ptr<LinkSystem>& link_system,
-                    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
-                    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
+  explicit Flatland(
+      scheduling::SessionId session_id,
+      const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+      const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
+      const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
+      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
+      fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -157,6 +160,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // An UberStructSystem shared between Flatland instances. Flatland publishes local data to the
   // UberStructSystem in order to have it seen by the global render loop.
   std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue_;
+
+  // Used to import Flatland buffer collections and images to external services that Flatland does
+  // not have knowledge of. Each importer is used for a different service.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
 
   // A Sysmem allocator to faciliate buffer allocation with the Renderer.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
