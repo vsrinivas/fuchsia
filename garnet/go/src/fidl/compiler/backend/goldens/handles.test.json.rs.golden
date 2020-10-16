@@ -293,11 +293,11 @@ pub struct SomeProtocolSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl SomeProtocolSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
 }
@@ -310,7 +310,7 @@ pub struct SomeProtocolProxy {
 impl fidl::endpoints::Proxy for SomeProtocolProxy {
     type Service = SomeProtocolMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -325,7 +325,7 @@ impl fidl::endpoints::Proxy for SomeProtocolProxy {
 
 impl SomeProtocolProxy {
     /// Create a new Proxy for SomeProtocol
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -349,7 +349,7 @@ pub struct SomeProtocolEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for SomeProtocolEventStream {}
+impl std::marker::Unpin for SomeProtocolEventStream {}
 
 impl futures::stream::FusedStream for SomeProtocolEventStream {
     fn is_terminated(&self) -> bool {
@@ -361,7 +361,7 @@ impl futures::Stream for SomeProtocolEventStream {
     type Item = Result<SomeProtocolEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -398,22 +398,22 @@ impl SomeProtocolEvent {}
 pub struct SomeProtocolServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> SomeProtocolServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
 }
 
 /// A Stream of incoming requests for SomeProtocol
 pub struct SomeProtocolRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for SomeProtocolRequestStream {}
+impl std::marker::Unpin for SomeProtocolRequestStream {}
 
 impl futures::stream::FusedStream for SomeProtocolRequestStream {
     fn is_terminated(&self) -> bool {
@@ -425,8 +425,8 @@ impl fidl::endpoints::RequestStream for SomeProtocolRequestStream {
     type Service = SomeProtocolMarker;
 
     /// Consume a channel to make a SomeProtocolRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -441,7 +441,7 @@ impl fidl::endpoints::RequestStream for SomeProtocolRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -450,7 +450,7 @@ impl futures::Stream for SomeProtocolRequestStream {
     type Item = Result<SomeProtocolRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -461,7 +461,7 @@ impl futures::Stream for SomeProtocolRequestStream {
         if this.is_terminated {
             panic!("polled SomeProtocolRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -532,7 +532,7 @@ impl SomeProtocolEncoder {}
 
 #[derive(Debug, Clone)]
 pub struct SomeProtocolControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl SomeProtocolControlHandle {
@@ -544,5 +544,3 @@ impl SomeProtocolControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
 }
-
-/* beginning of response types */

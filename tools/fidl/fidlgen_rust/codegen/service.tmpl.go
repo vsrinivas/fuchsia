@@ -25,7 +25,7 @@ impl fidl::endpoints::UnifiedServiceMarker for {{ $service.Name }}Marker {
 #[cfg(target_os = "fuchsia")]
 pub enum {{ $service.Name }}Request {
     {{- range $member := $service.Members }}
-    {{- range $service.DocComments }}
+    {{- range $member.DocComments }}
     ///{{ . }}
     {{- end }}
     {{ $member.CamelName }}({{ $member.ProtocolType }}RequestStream),
@@ -36,7 +36,7 @@ pub enum {{ $service.Name }}Request {
 impl fidl::endpoints::UnifiedServiceRequest for {{ $service.Name }}Request {
     type Service = {{ $service.Name }}Marker;
 
-    fn dispatch(name: &str, channel: ::fuchsia_async::Channel) -> Self {
+    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
         match name {
             {{- range $member := $service.Members }}
             "{{ $member.Name }}" => Self::{{ $member.CamelName }}(
@@ -80,7 +80,7 @@ impl {{ $service.Name }}Proxy {
     pub fn {{ $member.SnakeName }}(&self) -> Result<{{ $member.ProtocolType }}Proxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("{{ $member.Name }}", server)?;
-        let proxy = ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
         Ok({{ $member.ProtocolType }}Proxy::new(proxy))
     }
     {{- end }}

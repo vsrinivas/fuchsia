@@ -103,11 +103,11 @@ pub struct ProtocolSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl ProtocolSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn request_strict_response_flexible(
@@ -134,7 +134,7 @@ pub struct ProtocolProxy {
 impl fidl::endpoints::Proxy for ProtocolProxy {
     type Service = ProtocolMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -149,7 +149,7 @@ impl fidl::endpoints::Proxy for ProtocolProxy {
 
 impl ProtocolProxy {
     /// Create a new Proxy for Protocol
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <ProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -200,7 +200,7 @@ pub struct ProtocolEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for ProtocolEventStream {}
+impl std::marker::Unpin for ProtocolEventStream {}
 
 impl futures::stream::FusedStream for ProtocolEventStream {
     fn is_terminated(&self) -> bool {
@@ -212,7 +212,7 @@ impl futures::Stream for ProtocolEventStream {
     type Item = Result<ProtocolEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -249,11 +249,11 @@ impl ProtocolEvent {}
 pub struct ProtocolServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> ProtocolServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_request_strict_response_flexible_response(
@@ -261,7 +261,7 @@ impl<'a> ProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut f: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ProtocolEncoder::encode_request_strict_response_flexible_response(
                 bytes_,
                 handles_,
@@ -279,7 +279,7 @@ impl<'a> ProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut f: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ProtocolEncoder::encode_request_flexible_response_strict_response(
                 bytes_,
                 handles_,
@@ -296,11 +296,11 @@ impl<'a> ProtocolServerSender<'a> {
 
 /// A Stream of incoming requests for Protocol
 pub struct ProtocolRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for ProtocolRequestStream {}
+impl std::marker::Unpin for ProtocolRequestStream {}
 
 impl futures::stream::FusedStream for ProtocolRequestStream {
     fn is_terminated(&self) -> bool {
@@ -312,8 +312,8 @@ impl fidl::endpoints::RequestStream for ProtocolRequestStream {
     type Service = ProtocolMarker;
 
     /// Consume a channel to make a ProtocolRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -328,7 +328,7 @@ impl fidl::endpoints::RequestStream for ProtocolRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -337,7 +337,7 @@ impl futures::Stream for ProtocolRequestStream {
     type Item = Result<ProtocolRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -348,7 +348,7 @@ impl futures::Stream for ProtocolRequestStream {
         if this.is_terminated {
             panic!("polled ProtocolRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -381,7 +381,7 @@ impl futures::Stream for ProtocolRequestStream {
                     Ok(ProtocolRequest::RequestStrictResponseFlexible {
                         s: req,
                         responder: ProtocolRequestStrictResponseFlexibleResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -398,7 +398,7 @@ impl futures::Stream for ProtocolRequestStream {
                     Ok(ProtocolRequest::RequestFlexibleResponseStrict {
                         s: req,
                         responder: ProtocolRequestFlexibleResponseStrictResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -592,7 +592,7 @@ impl ProtocolEncoder {
 
 #[derive(Debug, Clone)]
 pub struct ProtocolControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ProtocolControlHandle {
@@ -604,24 +604,22 @@ impl ProtocolControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ProtocolRequestStrictResponseFlexibleResponder {
-    control_handle: ::std::mem::ManuallyDrop<ProtocolControlHandle>,
+    control_handle: std::mem::ManuallyDrop<ProtocolControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for ProtocolRequestStrictResponseFlexibleResponder {
+impl std::ops::Drop for ProtocolRequestStrictResponseFlexibleResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -636,9 +634,9 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -669,9 +667,9 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -687,19 +685,19 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ProtocolRequestFlexibleResponseStrictResponder {
-    control_handle: ::std::mem::ManuallyDrop<ProtocolControlHandle>,
+    control_handle: std::mem::ManuallyDrop<ProtocolControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for ProtocolRequestFlexibleResponseStrictResponder {
+impl std::ops::Drop for ProtocolRequestFlexibleResponseStrictResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -714,9 +712,9 @@ impl ProtocolRequestFlexibleResponseStrictResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -747,9 +745,9 @@ impl ProtocolRequestFlexibleResponseStrictResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 

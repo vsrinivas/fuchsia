@@ -46,11 +46,11 @@ pub struct Super_SynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl Super_SynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
@@ -66,7 +66,7 @@ pub struct Super_Proxy {
 impl fidl::endpoints::Proxy for Super_Proxy {
     type Service = Super_Marker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -81,7 +81,7 @@ impl fidl::endpoints::Proxy for Super_Proxy {
 
 impl Super_Proxy {
     /// Create a new Proxy for Super_
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <Super_Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -113,7 +113,7 @@ pub struct Super_EventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for Super_EventStream {}
+impl std::marker::Unpin for Super_EventStream {}
 
 impl futures::stream::FusedStream for Super_EventStream {
     fn is_terminated(&self) -> bool {
@@ -125,7 +125,7 @@ impl futures::Stream for Super_EventStream {
     type Item = Result<Super_Event, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -162,11 +162,11 @@ impl Super_Event {}
 pub struct Super_ServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> Super_ServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_foo_response(
@@ -174,7 +174,7 @@ impl<'a> Super_ServerSender<'a> {
         txid: fidl::client::Txid,
         mut y: i64,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             Super_Encoder::encode_foo_response(bytes_, handles_, txid.as_raw_id(), y)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -186,11 +186,11 @@ impl<'a> Super_ServerSender<'a> {
 
 /// A Stream of incoming requests for Super_
 pub struct Super_RequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for Super_RequestStream {}
+impl std::marker::Unpin for Super_RequestStream {}
 
 impl futures::stream::FusedStream for Super_RequestStream {
     fn is_terminated(&self) -> bool {
@@ -202,8 +202,8 @@ impl fidl::endpoints::RequestStream for Super_RequestStream {
     type Service = Super_Marker;
 
     /// Consume a channel to make a Super_RequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -218,7 +218,7 @@ impl fidl::endpoints::RequestStream for Super_RequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -227,7 +227,7 @@ impl futures::Stream for Super_RequestStream {
     type Item = Result<Super_Request, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -238,7 +238,7 @@ impl futures::Stream for Super_RequestStream {
         if this.is_terminated {
             panic!("polled Super_RequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -271,7 +271,7 @@ impl futures::Stream for Super_RequestStream {
                     Ok(Super_Request::Foo {
                         s: req,
                         responder: Super_FooResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -387,7 +387,7 @@ impl Super_Encoder {
 
 #[derive(Debug, Clone)]
 pub struct Super_ControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl Super_ControlHandle {
@@ -399,24 +399,22 @@ impl Super_ControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct Super_FooResponder {
-    control_handle: ::std::mem::ManuallyDrop<Super_ControlHandle>,
+    control_handle: std::mem::ManuallyDrop<Super_ControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for Super_FooResponder {
+impl std::ops::Drop for Super_FooResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -431,9 +429,9 @@ impl Super_FooResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -464,9 +462,9 @@ impl Super_FooResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/superFooResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -502,11 +500,11 @@ pub struct SubSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl SubSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
@@ -522,7 +520,7 @@ pub struct SubProxy {
 impl fidl::endpoints::Proxy for SubProxy {
     type Service = SubMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -537,7 +535,7 @@ impl fidl::endpoints::Proxy for SubProxy {
 
 impl SubProxy {
     /// Create a new Proxy for Sub
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <SubMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -569,7 +567,7 @@ pub struct SubEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for SubEventStream {}
+impl std::marker::Unpin for SubEventStream {}
 
 impl futures::stream::FusedStream for SubEventStream {
     fn is_terminated(&self) -> bool {
@@ -581,7 +579,7 @@ impl futures::Stream for SubEventStream {
     type Item = Result<SubEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -618,11 +616,11 @@ impl SubEvent {}
 pub struct SubServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> SubServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_foo_response(
@@ -630,7 +628,7 @@ impl<'a> SubServerSender<'a> {
         txid: fidl::client::Txid,
         mut y: i64,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             SubEncoder::encode_foo_response(bytes_, handles_, txid.as_raw_id(), y)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -642,11 +640,11 @@ impl<'a> SubServerSender<'a> {
 
 /// A Stream of incoming requests for Sub
 pub struct SubRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for SubRequestStream {}
+impl std::marker::Unpin for SubRequestStream {}
 
 impl futures::stream::FusedStream for SubRequestStream {
     fn is_terminated(&self) -> bool {
@@ -658,8 +656,8 @@ impl fidl::endpoints::RequestStream for SubRequestStream {
     type Service = SubMarker;
 
     /// Consume a channel to make a SubRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -674,7 +672,7 @@ impl fidl::endpoints::RequestStream for SubRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -683,7 +681,7 @@ impl futures::Stream for SubRequestStream {
     type Item = Result<SubRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -694,7 +692,7 @@ impl futures::Stream for SubRequestStream {
         if this.is_terminated {
             panic!("polled SubRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -727,7 +725,7 @@ impl futures::Stream for SubRequestStream {
                     Ok(SubRequest::Foo {
                         s: req,
                         responder: SubFooResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -843,7 +841,7 @@ impl SubEncoder {
 
 #[derive(Debug, Clone)]
 pub struct SubControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl SubControlHandle {
@@ -855,24 +853,22 @@ impl SubControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct SubFooResponder {
-    control_handle: ::std::mem::ManuallyDrop<SubControlHandle>,
+    control_handle: std::mem::ManuallyDrop<SubControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for SubFooResponder {
+impl std::ops::Drop for SubFooResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -887,9 +883,9 @@ impl SubFooResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -920,9 +916,9 @@ impl SubFooResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.json/subFooResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 

@@ -138,11 +138,11 @@ pub struct WithAndWithoutRequestResponseSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl WithAndWithoutRequestResponseSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn no_request_no_response(&mut self) -> Result<(), fidl::Error> {
@@ -184,7 +184,7 @@ pub struct WithAndWithoutRequestResponseProxy {
 impl fidl::endpoints::Proxy for WithAndWithoutRequestResponseProxy {
     type Service = WithAndWithoutRequestResponseMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -199,7 +199,7 @@ impl fidl::endpoints::Proxy for WithAndWithoutRequestResponseProxy {
 
 impl WithAndWithoutRequestResponseProxy {
     /// Create a new Proxy for WithAndWithoutRequestResponse
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name =
             <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
@@ -278,7 +278,7 @@ pub struct WithAndWithoutRequestResponseEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for WithAndWithoutRequestResponseEventStream {}
+impl std::marker::Unpin for WithAndWithoutRequestResponseEventStream {}
 
 impl futures::stream::FusedStream for WithAndWithoutRequestResponseEventStream {
     fn is_terminated(&self) -> bool {
@@ -290,7 +290,7 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
     type Item = Result<WithAndWithoutRequestResponseEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -369,18 +369,18 @@ impl WithAndWithoutRequestResponseEvent {
 pub struct WithAndWithoutRequestResponseServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_no_request_empty_response_response(
         &self,
         txid: fidl::client::Txid,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithAndWithoutRequestResponseEncoder::encode_no_request_empty_response_response(
                 bytes_,
                 handles_,
@@ -397,7 +397,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
         txid: fidl::client::Txid,
         mut ret: &str,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithAndWithoutRequestResponseEncoder::encode_no_request_with_response_response(
                 bytes_,
                 handles_,
@@ -414,7 +414,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
         &self,
         txid: fidl::client::Txid,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithAndWithoutRequestResponseEncoder::encode_with_request_empty_response_response(
                 bytes_,
                 handles_,
@@ -431,7 +431,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
         txid: fidl::client::Txid,
         mut ret: &str,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithAndWithoutRequestResponseEncoder::encode_with_request_with_response_response(
                 bytes_,
                 handles_,
@@ -445,7 +445,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
         })
     }
     pub fn send_on_empty_response(&self) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithAndWithoutRequestResponseEncoder::encode_on_empty_response_response(
                 bytes_, handles_,
             )?;
@@ -456,7 +456,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
         })
     }
     pub fn send_on_with_response(&self, mut ret: &str) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithAndWithoutRequestResponseEncoder::encode_on_with_response_response(
                 bytes_, handles_, ret,
             )?;
@@ -470,11 +470,11 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
 
 /// A Stream of incoming requests for WithAndWithoutRequestResponse
 pub struct WithAndWithoutRequestResponseRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for WithAndWithoutRequestResponseRequestStream {}
+impl std::marker::Unpin for WithAndWithoutRequestResponseRequestStream {}
 
 impl futures::stream::FusedStream for WithAndWithoutRequestResponseRequestStream {
     fn is_terminated(&self) -> bool {
@@ -486,8 +486,8 @@ impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStre
     type Service = WithAndWithoutRequestResponseMarker;
 
     /// Consume a channel to make a WithAndWithoutRequestResponseRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -502,7 +502,7 @@ impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStre
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -511,7 +511,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
     type Item = Result<WithAndWithoutRequestResponseRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -522,7 +522,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
         if this.is_terminated {
             panic!("polled WithAndWithoutRequestResponseRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -567,7 +567,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 					};
 
 					Ok(WithAndWithoutRequestResponseRequest::NoRequestEmptyResponse {responder:WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
 							},})
@@ -583,7 +583,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 					};
 
 					Ok(WithAndWithoutRequestResponseRequest::NoRequestWithResponse {responder:WithAndWithoutRequestResponseNoRequestWithResponseResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
 							},})
@@ -611,7 +611,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 					};
 
 					Ok(WithAndWithoutRequestResponseRequest::WithRequestEmptyResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
 							},})
@@ -627,7 +627,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 					};
 
 					Ok(WithAndWithoutRequestResponseRequest::WithRequestWithResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestWithResponseResponder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
 							},})
@@ -1037,7 +1037,7 @@ impl WithAndWithoutRequestResponseEncoder {
 
 #[derive(Debug, Clone)]
 pub struct WithAndWithoutRequestResponseControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl WithAndWithoutRequestResponseControlHandle {
@@ -1056,7 +1056,7 @@ impl WithAndWithoutRequestResponseControlHandle {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write(&*bytes, &mut *handles)
@@ -1074,7 +1074,7 @@ impl WithAndWithoutRequestResponseControlHandle {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write(&*bytes, &mut *handles)
@@ -1084,24 +1084,22 @@ impl WithAndWithoutRequestResponseControlHandle {
         Ok(())
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
+impl std::ops::Drop for WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -1116,9 +1114,9 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -1149,9 +1147,9 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -1167,19 +1165,19 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseNoRequestWithResponseResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+impl std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -1194,9 +1192,9 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -1227,9 +1225,9 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -1245,19 +1243,19 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
+impl std::ops::Drop for WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -1272,9 +1270,9 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -1305,9 +1303,9 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -1323,19 +1321,19 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithAndWithoutRequestResponseWithRequestWithResponseResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithAndWithoutRequestResponseControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+impl std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -1350,9 +1348,9 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -1383,9 +1381,9 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -1428,11 +1426,11 @@ pub struct WithErrorSyntaxSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl WithErrorSyntaxSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn response_as_struct(
@@ -1463,7 +1461,7 @@ pub struct WithErrorSyntaxProxy {
 impl fidl::endpoints::Proxy for WithErrorSyntaxProxy {
     type Service = WithErrorSyntaxMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -1478,7 +1476,7 @@ impl fidl::endpoints::Proxy for WithErrorSyntaxProxy {
 
 impl WithErrorSyntaxProxy {
     /// Create a new Proxy for WithErrorSyntax
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -1533,7 +1531,7 @@ pub struct WithErrorSyntaxEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for WithErrorSyntaxEventStream {}
+impl std::marker::Unpin for WithErrorSyntaxEventStream {}
 
 impl futures::stream::FusedStream for WithErrorSyntaxEventStream {
     fn is_terminated(&self) -> bool {
@@ -1545,7 +1543,7 @@ impl futures::Stream for WithErrorSyntaxEventStream {
     type Item = Result<WithErrorSyntaxEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -1582,11 +1580,11 @@ impl WithErrorSyntaxEvent {}
 pub struct WithErrorSyntaxServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> WithErrorSyntaxServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_response_as_struct_response(
@@ -1594,7 +1592,7 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
         txid: fidl::client::Txid,
         mut result: &mut WithErrorSyntaxResponseAsStructResult,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithErrorSyntaxEncoder::encode_response_as_struct_response(
                 bytes_,
                 handles_,
@@ -1612,7 +1610,7 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
         txid: fidl::client::Txid,
         mut result: &mut WithErrorSyntaxErrorAsPrimitiveResult,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithErrorSyntaxEncoder::encode_error_as_primitive_response(
                 bytes_,
                 handles_,
@@ -1630,7 +1628,7 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
         txid: fidl::client::Txid,
         mut result: &mut WithErrorSyntaxErrorAsEnumResult,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             WithErrorSyntaxEncoder::encode_error_as_enum_response(
                 bytes_,
                 handles_,
@@ -1647,11 +1645,11 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
 
 /// A Stream of incoming requests for WithErrorSyntax
 pub struct WithErrorSyntaxRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for WithErrorSyntaxRequestStream {}
+impl std::marker::Unpin for WithErrorSyntaxRequestStream {}
 
 impl futures::stream::FusedStream for WithErrorSyntaxRequestStream {
     fn is_terminated(&self) -> bool {
@@ -1663,8 +1661,8 @@ impl fidl::endpoints::RequestStream for WithErrorSyntaxRequestStream {
     type Service = WithErrorSyntaxMarker;
 
     /// Consume a channel to make a WithErrorSyntaxRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -1679,7 +1677,7 @@ impl fidl::endpoints::RequestStream for WithErrorSyntaxRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -1688,7 +1686,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
     type Item = Result<WithErrorSyntaxRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -1699,7 +1697,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
         if this.is_terminated {
             panic!("polled WithErrorSyntaxRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -1731,7 +1729,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
                     Ok(WithErrorSyntaxRequest::ResponseAsStruct {
                         responder: WithErrorSyntaxResponseAsStructResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -1747,7 +1745,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
                     Ok(WithErrorSyntaxRequest::ErrorAsPrimitive {
                         responder: WithErrorSyntaxErrorAsPrimitiveResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -1763,7 +1761,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 
                     Ok(WithErrorSyntaxRequest::ErrorAsEnum {
                         responder: WithErrorSyntaxErrorAsEnumResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -1993,7 +1991,7 @@ impl WithErrorSyntaxEncoder {
 
 #[derive(Debug, Clone)]
 pub struct WithErrorSyntaxControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl WithErrorSyntaxControlHandle {
@@ -2005,24 +2003,22 @@ impl WithErrorSyntaxControlHandle {
         self.inner.shutdown_with_epitaph(status)
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithErrorSyntaxResponseAsStructResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithErrorSyntaxResponseAsStructResponder {
+impl std::ops::Drop for WithErrorSyntaxResponseAsStructResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -2037,9 +2033,9 @@ impl WithErrorSyntaxResponseAsStructResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -2079,9 +2075,9 @@ impl WithErrorSyntaxResponseAsStructResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxResponseAsStructResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -2097,19 +2093,19 @@ impl WithErrorSyntaxResponseAsStructResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithErrorSyntaxErrorAsPrimitiveResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
+impl std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -2124,9 +2120,9 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -2166,9 +2162,9 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsPrimitiveResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -2184,19 +2180,19 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithErrorSyntaxErrorAsEnumResponder {
-    control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
+    control_handle: std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
+impl std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -2211,9 +2207,9 @@ impl WithErrorSyntaxErrorAsEnumResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -2253,9 +2249,9 @@ impl WithErrorSyntaxErrorAsEnumResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/WithErrorSyntaxErrorAsEnumResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -2296,11 +2292,11 @@ pub struct ChannelProtocolSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl ChannelProtocolSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn method_a(&mut self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
@@ -2331,7 +2327,7 @@ pub struct ChannelProtocolProxy {
 impl fidl::endpoints::Proxy for ChannelProtocolProxy {
     type Service = ChannelProtocolMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -2346,7 +2342,7 @@ impl fidl::endpoints::Proxy for ChannelProtocolProxy {
 
 impl ChannelProtocolProxy {
     /// Create a new Proxy for ChannelProtocol
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -2395,7 +2391,7 @@ pub struct ChannelProtocolEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for ChannelProtocolEventStream {}
+impl std::marker::Unpin for ChannelProtocolEventStream {}
 
 impl futures::stream::FusedStream for ChannelProtocolEventStream {
     fn is_terminated(&self) -> bool {
@@ -2407,7 +2403,7 @@ impl futures::Stream for ChannelProtocolEventStream {
     type Item = Result<ChannelProtocolEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -2468,15 +2464,15 @@ impl ChannelProtocolEvent {
 pub struct ChannelProtocolServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> ChannelProtocolServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_event_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ChannelProtocolEncoder::encode_event_a_response(bytes_, handles_, a, b)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -2489,7 +2485,7 @@ impl<'a> ChannelProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut result: i64,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ChannelProtocolEncoder::encode_method_b_response(
                 bytes_,
                 handles_,
@@ -2507,7 +2503,7 @@ impl<'a> ChannelProtocolServerSender<'a> {
         txid: fidl::client::Txid,
         mut b: fidl::Socket,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ChannelProtocolEncoder::encode_mutate_socket_response(
                 bytes_,
                 handles_,
@@ -2524,11 +2520,11 @@ impl<'a> ChannelProtocolServerSender<'a> {
 
 /// A Stream of incoming requests for ChannelProtocol
 pub struct ChannelProtocolRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for ChannelProtocolRequestStream {}
+impl std::marker::Unpin for ChannelProtocolRequestStream {}
 
 impl futures::stream::FusedStream for ChannelProtocolRequestStream {
     fn is_terminated(&self) -> bool {
@@ -2540,8 +2536,8 @@ impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
     type Service = ChannelProtocolMarker;
 
     /// Consume a channel to make a ChannelProtocolRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -2556,7 +2552,7 @@ impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -2565,7 +2561,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
     type Item = Result<ChannelProtocolRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -2576,7 +2572,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
         if this.is_terminated {
             panic!("polled ChannelProtocolRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -2620,7 +2616,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
                         a: req.0,
                         b: req.1,
                         responder: ChannelProtocolMethodBResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -2637,7 +2633,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
                     Ok(ChannelProtocolRequest::MutateSocket {
                         a: req,
                         responder: ChannelProtocolMutateSocketResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -2880,7 +2876,7 @@ impl ChannelProtocolEncoder {
 
 #[derive(Debug, Clone)]
 pub struct ChannelProtocolControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl ChannelProtocolControlHandle {
@@ -2899,7 +2895,7 @@ impl ChannelProtocolControlHandle {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write(&*bytes, &mut *handles)
@@ -2909,24 +2905,22 @@ impl ChannelProtocolControlHandle {
         Ok(())
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ChannelProtocolMethodBResponder {
-    control_handle: ::std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
+    control_handle: std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for ChannelProtocolMethodBResponder {
+impl std::ops::Drop for ChannelProtocolMethodBResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -2941,9 +2935,9 @@ impl ChannelProtocolMethodBResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -2974,9 +2968,9 @@ impl ChannelProtocolMethodBResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMethodBResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -2992,19 +2986,19 @@ impl ChannelProtocolMethodBResponder {
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ChannelProtocolMutateSocketResponder {
-    control_handle: ::std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
+    control_handle: std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for ChannelProtocolMutateSocketResponder {
+impl std::ops::Drop for ChannelProtocolMutateSocketResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -3019,9 +3013,9 @@ impl ChannelProtocolMutateSocketResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -3052,9 +3046,9 @@ impl ChannelProtocolMutateSocketResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/ChannelProtocolMutateSocketResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
@@ -3098,11 +3092,11 @@ pub struct TransitionalSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl TransitionalSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     pub fn request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
@@ -3121,7 +3115,7 @@ pub struct TransitionalProxy {
 impl fidl::endpoints::Proxy for TransitionalProxy {
     type Service = TransitionalMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -3136,7 +3130,7 @@ impl fidl::endpoints::Proxy for TransitionalProxy {
 
 impl TransitionalProxy {
     /// Create a new Proxy for Transitional
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <TransitionalMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -3175,7 +3169,7 @@ pub struct TransitionalEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for TransitionalEventStream {}
+impl std::marker::Unpin for TransitionalEventStream {}
 
 impl futures::stream::FusedStream for TransitionalEventStream {
     fn is_terminated(&self) -> bool {
@@ -3187,7 +3181,7 @@ impl futures::Stream for TransitionalEventStream {
     type Item = Result<TransitionalEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -3248,11 +3242,11 @@ impl TransitionalEvent {
 pub struct TransitionalServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> TransitionalServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_request_response(
@@ -3260,7 +3254,7 @@ impl<'a> TransitionalServerSender<'a> {
         txid: fidl::client::Txid,
         mut y: i64,
     ) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             TransitionalEncoder::encode_request_response(bytes_, handles_, txid.as_raw_id(), y)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -3269,7 +3263,7 @@ impl<'a> TransitionalServerSender<'a> {
         })
     }
     pub fn send_event(&self, mut x: i64) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             TransitionalEncoder::encode_event_response(bytes_, handles_, x)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -3281,11 +3275,11 @@ impl<'a> TransitionalServerSender<'a> {
 
 /// A Stream of incoming requests for Transitional
 pub struct TransitionalRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for TransitionalRequestStream {}
+impl std::marker::Unpin for TransitionalRequestStream {}
 
 impl futures::stream::FusedStream for TransitionalRequestStream {
     fn is_terminated(&self) -> bool {
@@ -3297,8 +3291,8 @@ impl fidl::endpoints::RequestStream for TransitionalRequestStream {
     type Service = TransitionalMarker;
 
     /// Consume a channel to make a TransitionalRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -3313,7 +3307,7 @@ impl fidl::endpoints::RequestStream for TransitionalRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -3322,7 +3316,7 @@ impl futures::Stream for TransitionalRequestStream {
     type Item = Result<TransitionalRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -3333,7 +3327,7 @@ impl futures::Stream for TransitionalRequestStream {
         if this.is_terminated {
             panic!("polled TransitionalRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -3366,7 +3360,7 @@ impl futures::Stream for TransitionalRequestStream {
                     Ok(TransitionalRequest::Request {
                         x: req,
                         responder: TransitionalRequestResponder {
-                            control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
                             ordinal: header.ordinal(),
                         },
@@ -3552,7 +3546,7 @@ impl TransitionalEncoder {
 
 #[derive(Debug, Clone)]
 pub struct TransitionalControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl TransitionalControlHandle {
@@ -3571,7 +3565,7 @@ impl TransitionalControlHandle {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write(&*bytes, &mut *handles)
@@ -3581,24 +3575,22 @@ impl TransitionalControlHandle {
         Ok(())
     }
 }
-
-/* beginning of response types */
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct TransitionalRequestResponder {
-    control_handle: ::std::mem::ManuallyDrop<TransitionalControlHandle>,
+    control_handle: std::mem::ManuallyDrop<TransitionalControlHandle>,
     tx_id: u32,
     ordinal: u64,
 }
 
-impl ::std::ops::Drop for TransitionalRequestResponder {
+impl std::ops::Drop for TransitionalRequestResponder {
     fn drop(&mut self) {
         // Shutdown the channel if the responder is dropped without sending a response
         // so that the client doesn't hang. To prevent this behavior, some methods
         // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
     }
 }
 
@@ -3613,9 +3605,9 @@ impl TransitionalRequestResponder {
     /// to prevent the channel from shutting down.
     pub fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
-        unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
-        ::std::mem::forget(self);
+        std::mem::forget(self);
     }
 
     /// Sends a response to the FIDL transaction.
@@ -3646,9 +3638,9 @@ impl TransitionalRequestResponder {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.name/TransitionalRequestResponse");
-            ::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 

@@ -67,11 +67,11 @@ pub struct {{ $protocol.Name }}SynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl {{ $protocol.Name }}SynchronousProxy {
-	pub fn new(channel: ::fidl::Channel) -> Self {
+	pub fn new(channel: fidl::Channel) -> Self {
 		Self { client: fidl::client::sync::Client::new(channel) }
 	}
 
-	pub fn into_channel(self) -> ::fidl::Channel {
+	pub fn into_channel(self) -> fidl::Channel {
 		self.client.into_channel()
 	}
 
@@ -126,7 +126,7 @@ pub struct {{ $protocol.Name }}Proxy {
 impl fidl::endpoints::Proxy for {{ $protocol.Name }}Proxy {
 	type Service = {{ $protocol.Name }}Marker;
 
-	fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+	fn from_channel(inner: fidl::AsyncChannel) -> Self {
 		Self::new(inner)
 	}
 
@@ -141,7 +141,7 @@ impl fidl::endpoints::Proxy for {{ $protocol.Name }}Proxy {
 
 impl {{ $protocol.Name }}Proxy {
 	/// Create a new Proxy for {{ $protocol.Name }}
-	pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+	pub fn new(channel: fidl::AsyncChannel) -> Self {
 		let service_name = <{{ $protocol.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
 		Self { client: fidl::client::Client::new(channel, service_name) }
 	}
@@ -230,7 +230,7 @@ pub struct {{ $protocol.Name }}EventStream {
 	event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for {{ $protocol.Name }}EventStream {}
+impl std::marker::Unpin for {{ $protocol.Name }}EventStream {}
 
 impl futures::stream::FusedStream for {{ $protocol.Name }}EventStream {
 	fn is_terminated(&self) -> bool {
@@ -241,7 +241,7 @@ impl futures::stream::FusedStream for {{ $protocol.Name }}EventStream {
 impl futures::Stream for {{ $protocol.Name }}EventStream {
 	type Item = Result<{{ $protocol.Name }}Event, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
 		-> std::task::Poll<Option<Self::Item>>
 	{
 		let mut buf = match futures::ready!(
@@ -336,11 +336,11 @@ impl {{ $protocol.Name }}Event {
 pub struct {{ $protocol.Name }}ServerSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
-	channel: &'a ::fidl::Channel,
+	channel: &'a fidl::Channel,
 }
 
 impl <'a> {{ $protocol.Name }}ServerSender<'a> {
-	pub fn new(channel: &'a ::fidl::Channel) -> Self {
+	pub fn new(channel: &'a fidl::Channel) -> Self {
 		Self { channel }
 	}
 	{{- range $method := $protocol.Methods }}
@@ -350,7 +350,7 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+		fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
 			{{ $protocol.Name }}Encoder::encode_{{ $method.Name }}_response(
 				bytes_, handles_,
 				{{- range $index, $param := $method.Response -}}
@@ -370,7 +370,7 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
-		::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+		fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
 			{{ $protocol.Name }}Encoder::encode_{{ $method.Name }}_response(
 				bytes_, handles_,
 				txid.as_raw_id(),
@@ -389,11 +389,11 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 
 /// A Stream of incoming requests for {{ $protocol.Name }}
 pub struct {{ $protocol.Name }}RequestStream {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+	inner: std::sync::Arc<fidl::ServeInner>,
 	is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for {{ $protocol.Name }}RequestStream {}
+impl std::marker::Unpin for {{ $protocol.Name }}RequestStream {}
 
 impl futures::stream::FusedStream for {{ $protocol.Name }}RequestStream {
 	fn is_terminated(&self) -> bool {
@@ -405,9 +405,9 @@ impl fidl::endpoints::RequestStream for {{ $protocol.Name }}RequestStream {
 	type Service = {{ $protocol.Name }}Marker;
 
 	/// Consume a channel to make a {{ $protocol.Name }}RequestStream
-	fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
+	fn from_channel(channel: fidl::AsyncChannel) -> Self {
 		Self {
-			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
+			inner: std::sync::Arc::new(fidl::ServeInner::new(channel)),
 			is_terminated: false,
 		}
 	}
@@ -424,7 +424,7 @@ impl fidl::endpoints::RequestStream for {{ $protocol.Name }}RequestStream {
 		(self.inner, self.is_terminated)
 	}
 
-	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
+	fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
 		-> Self
 	{
 		Self { inner, is_terminated }
@@ -434,7 +434,7 @@ impl fidl::endpoints::RequestStream for {{ $protocol.Name }}RequestStream {
 impl futures::Stream for {{ $protocol.Name }}RequestStream {
 	type Item = Result<{{ $protocol.Name }}Request, fidl::Error>;
 
-	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
+	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
 		-> std::task::Poll<Option<Self::Item>>
 	{
 		let this = &mut *self;
@@ -445,7 +445,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 		if this.is_terminated {
 			panic!("polled {{ $protocol.Name }}RequestStream after completion");
 		}
-		::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+		fidl::encoding::with_tls_decode_buf(|bytes, handles| {
 			match this.inner.channel().read(cx, bytes, handles) {
 				std::task::Poll::Ready(Ok(())) => {},
 				std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -491,7 +491,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 						{{- end -}}
 						{{- if $method.HasResponse -}}
 							responder: {{- $protocol.Name -}}{{- $method.CamelName -}}Responder {
-								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
 							},
@@ -724,7 +724,7 @@ impl {{ $protocol.Name }}Encoder {
 
 #[derive(Debug, Clone)]
 pub struct {{ $protocol.Name }}ControlHandle {
-	inner: ::std::sync::Arc<fidl::ServeInner>,
+	inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl {{ $protocol.Name }}ControlHandle {
@@ -756,7 +756,7 @@ impl {{ $protocol.Name }}ControlHandle {
 			body: &mut response,
 		};
 
-		::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+		fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
 			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
 		})?;
 
@@ -767,25 +767,24 @@ impl {{ $protocol.Name }}ControlHandle {
 
 }
 
-/* beginning of response types */
 {{- range $method := $protocol.Methods }}
 {{- if and $method.HasRequest $method.HasResponse }}
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct {{ $protocol.Name }}{{ $method.CamelName }}Responder {
-	control_handle: ::std::mem::ManuallyDrop<{{ $protocol.Name }}ControlHandle>,
+	control_handle: std::mem::ManuallyDrop<{{ $protocol.Name }}ControlHandle>,
 	tx_id: u32,
 	ordinal: u64,
 }
 
-impl ::std::ops::Drop for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
+impl std::ops::Drop for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	fn drop(&mut self) {
 		// Shutdown the channel if the responder is dropped without sending a response
 		// so that the client doesn't hang. To prevent this behavior, some methods
 		// call "drop_without_shutdown"
 		self.control_handle.shutdown();
 		// Safety: drops once, never accessed again
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
 	}
 }
 
@@ -800,9 +799,9 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	/// to prevent the channel from shutting down.
 	pub fn drop_without_shutdown(mut self) {
 		// Safety: drops once, never accessed again due to mem::forget
-		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
 		// Prevent Drop from running (which would shut down the channel)
-		::std::mem::forget(self);
+		std::mem::forget(self);
 	}
 
 	/// Sends a response to the FIDL transaction.
@@ -859,9 +858,9 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 			body: &mut response,
 		};
 
-		::fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+		fidl::encoding::with_tls_encode_buf(|bytes, handles| {
 			fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Response");
-			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
 			fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
 			fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 

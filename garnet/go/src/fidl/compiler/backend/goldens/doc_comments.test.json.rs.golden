@@ -155,11 +155,11 @@ pub struct InterfaceSynchronousProxy {
 
 #[cfg(target_os = "fuchsia")]
 impl InterfaceSynchronousProxy {
-    pub fn new(channel: ::fidl::Channel) -> Self {
+    pub fn new(channel: fidl::Channel) -> Self {
         Self { client: fidl::client::sync::Client::new(channel) }
     }
 
-    pub fn into_channel(self) -> ::fidl::Channel {
+    pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
     /// method comment #1
@@ -178,7 +178,7 @@ pub struct InterfaceProxy {
 impl fidl::endpoints::Proxy for InterfaceProxy {
     type Service = InterfaceMarker;
 
-    fn from_channel(inner: ::fidl::AsyncChannel) -> Self {
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
     }
 
@@ -193,7 +193,7 @@ impl fidl::endpoints::Proxy for InterfaceProxy {
 
 impl InterfaceProxy {
     /// Create a new Proxy for Interface
-    pub fn new(channel: ::fidl::AsyncChannel) -> Self {
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
         let service_name = <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
         Self { client: fidl::client::Client::new(channel, service_name) }
     }
@@ -228,7 +228,7 @@ pub struct InterfaceEventStream {
     event_receiver: fidl::client::EventReceiver,
 }
 
-impl ::std::marker::Unpin for InterfaceEventStream {}
+impl std::marker::Unpin for InterfaceEventStream {}
 
 impl futures::stream::FusedStream for InterfaceEventStream {
     fn is_terminated(&self) -> bool {
@@ -240,7 +240,7 @@ impl futures::Stream for InterfaceEventStream {
     type Item = Result<InterfaceEvent, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
@@ -301,15 +301,15 @@ impl InterfaceEvent {
 pub struct InterfaceServerSender<'a> {
     // Some protocols don't define events which would render this channel unused.
     #[allow(unused)]
-    channel: &'a ::fidl::Channel,
+    channel: &'a fidl::Channel,
 }
 
 impl<'a> InterfaceServerSender<'a> {
-    pub fn new(channel: &'a ::fidl::Channel) -> Self {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
         Self { channel }
     }
     pub fn send_on_event(&self) -> Result<(), fidl::Error> {
-        ::fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             InterfaceEncoder::encode_on_event_response(bytes_, handles_)?;
             self.channel
                 .write(&*bytes_, &mut *handles_)
@@ -321,11 +321,11 @@ impl<'a> InterfaceServerSender<'a> {
 
 /// A Stream of incoming requests for Interface
 pub struct InterfaceRequestStream {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
     is_terminated: bool,
 }
 
-impl ::std::marker::Unpin for InterfaceRequestStream {}
+impl std::marker::Unpin for InterfaceRequestStream {}
 
 impl futures::stream::FusedStream for InterfaceRequestStream {
     fn is_terminated(&self) -> bool {
@@ -337,8 +337,8 @@ impl fidl::endpoints::RequestStream for InterfaceRequestStream {
     type Service = InterfaceMarker;
 
     /// Consume a channel to make a InterfaceRequestStream
-    fn from_channel(channel: ::fidl::AsyncChannel) -> Self {
-        Self { inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
     /// ControlHandle for the remote connection
@@ -353,7 +353,7 @@ impl fidl::endpoints::RequestStream for InterfaceRequestStream {
         (self.inner, self.is_terminated)
     }
 
-    fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
         Self { inner, is_terminated }
     }
 }
@@ -362,7 +362,7 @@ impl futures::Stream for InterfaceRequestStream {
     type Item = Result<InterfaceRequest, fidl::Error>;
 
     fn poll_next(
-        mut self: ::std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let this = &mut *self;
@@ -373,7 +373,7 @@ impl futures::Stream for InterfaceRequestStream {
         if this.is_terminated {
             panic!("polled InterfaceRequestStream after completion");
         }
-        ::fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
             match this.inner.channel().read(cx, bytes, handles) {
                 std::task::Poll::Ready(Ok(())) => {}
                 std::task::Poll::Pending => return std::task::Poll::Pending,
@@ -520,7 +520,7 @@ impl InterfaceEncoder {
 
 #[derive(Debug, Clone)]
 pub struct InterfaceControlHandle {
-    inner: ::std::sync::Arc<fidl::ServeInner>,
+    inner: std::sync::Arc<fidl::ServeInner>,
 }
 
 impl InterfaceControlHandle {
@@ -539,7 +539,7 @@ impl InterfaceControlHandle {
             body: &mut response,
         };
 
-        ::fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write(&*bytes, &mut *handles)
@@ -549,8 +549,6 @@ impl InterfaceControlHandle {
         Ok(())
     }
 }
-
-/* beginning of response types */
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ServiceMarker;
@@ -569,9 +567,9 @@ impl fidl::endpoints::UnifiedServiceMarker for ServiceMarker {
 /// service comment #3
 #[cfg(target_os = "fuchsia")]
 pub enum ServiceRequest {
-    /// service comment #1
+    /// member comment #1
     ///
-    /// service comment #3
+    /// member comment #3
     Interface(InterfaceRequestStream),
 }
 
@@ -579,7 +577,7 @@ pub enum ServiceRequest {
 impl fidl::endpoints::UnifiedServiceRequest for ServiceRequest {
     type Service = ServiceMarker;
 
-    fn dispatch(name: &str, channel: ::fuchsia_async::Channel) -> Self {
+    fn dispatch(name: &str, channel: fidl::AsyncChannel) -> Self {
         match name {
             "interface" => Self::Interface(
                 <InterfaceRequestStream as fidl::endpoints::RequestStream>::from_channel(channel),
@@ -615,8 +613,7 @@ impl ServiceProxy {
     pub fn interface(&self) -> Result<InterfaceProxy, fidl::Error> {
         let (proxy, server) = zx::Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.0.open_member("interface", server)?;
-        let proxy =
-            ::fuchsia_async::Channel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
+        let proxy = fidl::AsyncChannel::from_channel(proxy).map_err(fidl::Error::AsyncChannel)?;
         Ok(InterfaceProxy::new(proxy))
     }
 }
