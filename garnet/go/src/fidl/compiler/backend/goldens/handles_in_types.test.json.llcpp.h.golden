@@ -39,7 +39,9 @@ namespace test {
 namespace name {
 
 enum class obj_type : uint32_t {
+
   NONE = 0u,
+
   VMO = 3u,
 };
 

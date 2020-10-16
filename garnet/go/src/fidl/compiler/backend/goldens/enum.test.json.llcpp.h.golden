@@ -38,7 +38,9 @@ namespace test {
 namespace name {
 
 enum class MyStrictEnum : uint32_t {
+
   FOO = 1u,
+
   BAR = 2u,
 };
 
@@ -66,8 +68,11 @@ class MyFlexibleEnumWithCustomUnknown final {
   constexpr static MyFlexibleEnumWithCustomUnknown Unknown() {
     return MyFlexibleEnumWithCustomUnknown(0x3);
   }
+
   static const MyFlexibleEnumWithCustomUnknown FOO;
+
   static const MyFlexibleEnumWithCustomUnknown BAR;
+
   static const MyFlexibleEnumWithCustomUnknown CUSTOM_UNKNOWN;
 
  private:
@@ -105,7 +110,9 @@ class MyFlexibleEnum final {
   constexpr static MyFlexibleEnum Unknown() {
     return MyFlexibleEnum(0xffffffff);
   }
+
   static const MyFlexibleEnum FOO;
+
   static const MyFlexibleEnum BAR;
 
  private:

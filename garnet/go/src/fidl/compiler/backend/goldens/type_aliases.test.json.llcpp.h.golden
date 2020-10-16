@@ -39,7 +39,9 @@ namespace llcpp {
 namespace example {
 
 enum class obj_type : uint32_t {
+
   NONE = 0u,
+
   CHANNEL = 4u,
 };
 

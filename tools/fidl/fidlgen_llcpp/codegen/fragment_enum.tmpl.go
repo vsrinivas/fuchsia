@@ -7,12 +7,21 @@ package codegen
 const fragmentEnumTmpl = `
 {{- define "EnumForwardDeclaration" }}
 {{ if .IsStrict }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 enum class {{ .Name }} : {{ .Type }} {
   {{- range .Members }}
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   {{ .Name }} = {{ .Value }},
   {{- end }}
 };
 {{ else }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 class {{ .Name }} final {
 public:
   constexpr {{ .Name }}() : value_(0) {}
@@ -38,6 +47,9 @@ public:
   }
 
   {{- range .Members }}
+  {{range .DocComments}}
+  //{{ . }}
+  {{- end}}
   static const {{ $.Name }} {{ .Name }};
   {{- end }}
 

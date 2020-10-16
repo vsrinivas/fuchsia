@@ -38,7 +38,9 @@ namespace test {
 namespace name {
 
 enum class EnumType : int32_t {
+
   VALUE = 1u,
+
   true_ = 2u,
 };
 

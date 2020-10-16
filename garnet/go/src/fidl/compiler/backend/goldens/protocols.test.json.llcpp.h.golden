@@ -40,7 +40,9 @@ namespace test {
 namespace name {
 
 enum class obj_type : uint32_t {
+
   NONE = 0u,
+
   SOCKET = 14u,
 };
 
@@ -54,7 +56,9 @@ class ChannelProtocol;
 class WithAndWithoutRequestResponse;
 
 enum class ErrorEnun : uint32_t {
+
   ERR_FOO = 1u,
+
   ERR_BAR = 2u,
 };
 
