@@ -32,6 +32,8 @@
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
+#include "src/storage/fs_test/blobfs_test.h"
+#include "src/storage/fs_test/minfs_test.h"
 
 namespace fs_test {
 
@@ -237,6 +239,11 @@ std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options
   return out << options.description;
 }
 
+std::vector<TestFilesystemOptions> AllTestMinfs() {
+  return std::vector<TestFilesystemOptions>{TestFilesystemOptions::DefaultMinfs(),
+                                            TestFilesystemOptions::MinfsWithoutFvm()};
+}
+
 // Note: blobfs is intentionally absent, since it is not intended to run as part of the
 // fs_test suite.
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
@@ -276,8 +283,8 @@ class MinfsInstance : public FilesystemInstance {
  public:
   using Device = std::variant<isolated_devmgr::RamDisk, ramdevice_client::RamNand>;
 
-  MinfsInstance(Device device, const std::string& device_path)
-      : device_(std::move(device)), device_path_(device_path) {}
+  MinfsInstance(Device device, std::string device_path)
+      : device_(std::move(device)), device_path_(std::move(device_path)) {}
 
   zx::status<> Mount(const std::string& mount_path) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_MINFS, default_mount_options);
@@ -298,6 +305,8 @@ class MinfsInstance : public FilesystemInstance {
     return zx::make_status(
         fsck(device_path_.c_str(), DISK_FORMAT_MINFS, &options, launch_stdio_sync));
   }
+
+  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
 
   isolated_devmgr::RamDisk* GetRamDisk() override {
     return std::get_if<isolated_devmgr::RamDisk>(&device_);
@@ -392,7 +401,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
     std::cerr << "Timed out waiting for Minfs partition to show up";
     return status.take_error();
   }
-  return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_nand), std::move(device_path)));
+  return zx::ok(std::make_unique<MinfsInstance>(std::move(ram_nand), device_path));
 }
 
 // -- Memfs --
@@ -435,6 +444,8 @@ class MemfsInstance : public FilesystemInstance {
 
   zx::status<> Fsck() override { return zx::ok(); }
 
+  zx::status<std::string> DevicePath() const override { return zx::error(ZX_ERR_BAD_STATE); }
+
  private:
   async::Loop loop_;
   memfs_filesystem_t* fs_ = nullptr;
@@ -455,8 +466,8 @@ zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
 
 class FatfsInstance : public FilesystemInstance {
  public:
-  FatfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
-      : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
+  FatfsInstance(isolated_devmgr::RamDisk ram_disk, std::string device_path)
+      : ram_disk_(std::move(ram_disk)), device_path_(std::move(device_path)) {}
 
   zx::status<> Mount(const std::string& mount_path) override {
     mount_options_t options = default_mount_options;
@@ -523,6 +534,8 @@ class FatfsInstance : public FilesystemInstance {
         fsck(device_path_.c_str(), DISK_FORMAT_FAT, &options, launch_stdio_sync));
   }
 
+  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
+
  private:
   isolated_devmgr::RamDisk ram_disk_;
   std::string device_path_;
@@ -547,8 +560,8 @@ zx::status<std::unique_ptr<FilesystemInstance>> FatFilesystem::Make(
 
 class BlobfsInstance : public FilesystemInstance {
  public:
-  BlobfsInstance(isolated_devmgr::RamDisk ram_disk, const std::string& device_path)
-      : ram_disk_(std::move(ram_disk)), device_path_(device_path) {}
+  BlobfsInstance(isolated_devmgr::RamDisk ram_disk, std::string device_path)
+      : ram_disk_(std::move(ram_disk)), device_path_(std::move(device_path)) {}
 
   zx::status<> Mount(const std::string& mount_path) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_BLOBFS, default_mount_options);
@@ -570,6 +583,7 @@ class BlobfsInstance : public FilesystemInstance {
         fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, &options, launch_stdio_sync));
   }
 
+  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
   isolated_devmgr::RamDisk* GetRamDisk() override { return &ram_disk_; }
 
  private:
@@ -649,7 +663,7 @@ zx::status<> TestFilesystem::Unmount() {
   if (!filesystem_) {
     return zx::ok();
   }
-  auto status = filesystem_->Unmount(mount_path_.c_str());
+  auto status = filesystem_->Unmount(mount_path_);
   if (status.is_ok()) {
     mounted_ = false;
   }
@@ -657,5 +671,7 @@ zx::status<> TestFilesystem::Unmount() {
 }
 
 zx::status<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
+
+zx::status<std::string> TestFilesystem::DevicePath() const { return filesystem_->DevicePath(); }
 
 }  // namespace fs_test

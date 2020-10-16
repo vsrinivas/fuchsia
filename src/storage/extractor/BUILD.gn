@@ -52,7 +52,8 @@ group("tests") {
   testonly = true
   deps = [
     ":disk-extractor-lib-tests",
-    ":disk_extractor_lib",
     ":disk_extractor_lib_test($host_toolchain)",
+    "c:disk-extractor-c-lib-unit-test",
+    "cxx:disk-extractor-unit-test",
   ]
 }

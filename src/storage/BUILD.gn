@@ -15,6 +15,7 @@ group("tests") {
     "blobfs/test",
     "conformance:tests",
     "ext4:tests",
+    "extractor:tests",
     "factory:tests",
     "fs-management-tests:tests",
     "fs_test:tests",

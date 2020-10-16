@@ -152,7 +152,7 @@ mod test {
 
     #[test]
     fn test_new_with_null_output_argument() {
-        let (_, options, out_file, in_file) = new_file_based_extractor();
+        let (extractor, options, out_file, in_file) = new_file_based_extractor();
         assert_eq!(options, Default::default());
         let result = extractor_new(
             in_file.try_clone().unwrap().into_raw_fd(),
@@ -162,6 +162,7 @@ mod test {
         );
         assert_eq!(result.ok, false);
         assert_eq!(result.kind, Error::InvalidArgument);
+        extractor_delete(extractor);
     }
 
     #[test]
@@ -180,6 +181,7 @@ mod test {
             extractor_add(unsafe { extractor.as_mut().unwrap() }, 10, 0, properties).kind,
             Error::InvalidRange
         );
+        extractor_delete(extractor);
     }
 
     #[test]
@@ -201,5 +203,6 @@ mod test {
         assert_eq!(result.ok, true, "{:?}", result);
         // Assert that something was written to the out_file.
         assert_ne!(out_file.metadata().unwrap().len(), 0);
+        extractor_delete(extractor);
     }
 }

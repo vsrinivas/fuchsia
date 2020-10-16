@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -23,8 +24,6 @@
 #include <ramdevice-client/ramnand.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
-#include "src/storage/blobfs/include/blobfs/format.h"
-#include "src/storage/minfs/format.h"
 
 namespace fs_test {
 
@@ -73,6 +72,10 @@ class FilesystemInstance {
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
   virtual zx::status<> Unmount(const std::string& mount_path) = 0;
   virtual zx::status<> Fsck() = 0;
+
+  // Returns path of the device on which the filesystem is created. For filesystem that are not
+  // block device based, like memfs, the function returns an error.
+  virtual zx::status<std::string> DevicePath() const = 0;
   virtual isolated_devmgr::RamDisk* GetRamDisk() { return nullptr; }
   virtual ramdevice_client::RamNand* GetRamNand() { return nullptr; }
 };
@@ -115,30 +118,6 @@ class FilesystemImpl : public Filesystem {
   static const T& SharedInstance() {
     static const auto* const kInstance = new T();
     return *kInstance;
-  }
-};
-
-// Support for Minfs.
-class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
- public:
-  zx::status<std::unique_ptr<FilesystemInstance>> Make(
-      const TestFilesystemOptions& options) const override;
-  zx::status<std::unique_ptr<FilesystemInstance>> Open(
-      const TestFilesystemOptions& options) const override;
-  const Traits& GetTraits() const override {
-    static Traits traits{
-        .name = "minfs",
-        .can_unmount = true,
-        .timestamp_granularity = zx::nsec(1),
-        .supports_hard_links = true,
-        .supports_mmap = false,
-        .supports_resize = true,
-        .max_file_size = minfs::kMinfsMaxFileSize,
-        .in_memory = false,
-        .is_case_sensitive = true,
-        .supports_sparse_files = true,
-    };
-    return traits;
   }
 };
 
@@ -187,27 +166,6 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
   }
 };
 
-// Support for blobfs.
-class BlobfsFilesystem : public FilesystemImpl<BlobfsFilesystem> {
- public:
-  zx::status<std::unique_ptr<FilesystemInstance>> Make(
-      const TestFilesystemOptions& options) const override;
-  const Traits& GetTraits() const override {
-    static Traits traits{
-        .can_unmount = true,
-        .timestamp_granularity = zx::nsec(1),
-        .supports_hard_links = false,
-        .supports_mmap = true,
-        .supports_resize = false,
-        .max_file_size = blobfs::kBlobfsMaxFileSize,
-        .in_memory = false,
-        .is_case_sensitive = true,
-        .supports_sparse_files = false,
-    };
-    return traits;
-  }
-};
-
 // Helper that creates a test file system with the given options and will clean-up upon destruction.
 class TestFilesystem {
  public:
@@ -235,6 +193,8 @@ class TestFilesystem {
   // called first if that is required.
   zx::status<> Fsck();
 
+  zx::status<std::string> DevicePath() const;
+
   const Filesystem::Traits& GetTraits() const { return options_.filesystem->GetTraits(); }
 
   fbl::unique_fd GetRootFd() const {
@@ -252,9 +212,11 @@ class TestFilesystem {
   static zx::status<TestFilesystem> FromInstance(const TestFilesystemOptions& options,
                                                  std::unique_ptr<FilesystemInstance> instance);
 
-  TestFilesystem(const TestFilesystemOptions& options,
-                 std::unique_ptr<FilesystemInstance> filesystem, const std::string& mount_path)
-      : options_(options), filesystem_(std::move(filesystem)), mount_path_(mount_path) {}
+  TestFilesystem(TestFilesystemOptions options, std::unique_ptr<FilesystemInstance> filesystem,
+                 std::string mount_path)
+      : options_(std::move(options)),
+        filesystem_(std::move(filesystem)),
+        mount_path_(std::move(mount_path)) {}
 
   TestFilesystemOptions options_;
   std::unique_ptr<FilesystemInstance> filesystem_;
