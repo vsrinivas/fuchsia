@@ -176,7 +176,7 @@ impl ScrutinyApp {
             }
         } else {
             if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
-                RestService::spawn(self.dispatcher.clone(), self.visualizer.clone(), port);
+                RestService::spawn(self.dispatcher.clone(), self.visualizer.clone(), port)?;
             } else {
                 error!("Port provided was not a valid port number.");
                 return Err(Error::new(io::Error::new(

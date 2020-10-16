@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::rest::visualizer::*,
-    anyhow::Error,
+    crate::rest::{error::RestError, visualizer::*},
+    anyhow::{Error, Result},
     log::{info, warn},
     rouille::{Request, Response, ResponseBody},
     scrutiny::{
@@ -14,6 +14,7 @@ use {
     serde_json::json,
     std::collections::HashMap,
     std::io::{self, ErrorKind, Read},
+    std::net::TcpStream,
     std::str,
     std::sync::{Arc, RwLock},
     std::thread,
@@ -28,10 +29,16 @@ impl RestService {
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
         visualizer: Arc<RwLock<Visualizer>>,
         port: u16,
-    ) {
+    ) -> Result<()> {
         let addr = format!("127.0.0.1:{}", port);
         println!("• Server: http://{}\n", addr);
-        thread::spawn(move || RestService::run(dispatcher, visualizer, addr));
+
+        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
+            Err(Error::new(RestError::port_in_use(addr)))
+        } else {
+            thread::spawn(move || RestService::run(dispatcher, visualizer, addr));
+            Ok(())
+        }
     }
 
     /// Runs the core REST service loop, parsing URLs and queries to their
