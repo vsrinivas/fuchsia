@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+source_set("algorithms") {
+  sources = [ "blc.cc" ]
+
+  public = [ "blc.h" ]
+
+  public_deps = [ "//src/camera/lib/image_writer" ]
+}
+
 source_set("image_writer") {
   sources = [ "raw12_writer.cc" ]
 

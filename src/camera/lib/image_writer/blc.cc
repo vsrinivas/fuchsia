@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/calibration/algorithms/blc.h"
+#include "src/camera/lib/image_writer/blc.h"
 
 #include <array>
 

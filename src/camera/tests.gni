@@ -9,7 +9,6 @@ camera_tests = {
     "//src/camera/bin/device:unittests",
     "//src/camera/bin/device_watcher/test",
     "//src/camera/bin/factory/test",
-    "//src/camera/calibration/algorithms/test",
     "//src/camera/drivers/controller/sherlock/test",
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
@@ -22,6 +21,7 @@ camera_tests = {
     "//src/camera/lib/fake_stream/test",
     "//src/camera/lib/hanging_get_helper/test",
     "//src/camera/lib/image_writer/test",
+    "//src/camera/lib/image_writer/test:algorithms_test",
     "//src/camera/lib/stream_utils/test",
     "//src/camera/lib/virtual_camera/test",
   ]
@@ -67,7 +67,7 @@ camera_tests = {
     },
     {
       name = "algorithms_test"
-      manifest = "//src/camera/calibration/algorithms/test/meta/algorithms_test.cmx"
+      manifest = "//src/camera/lib/image_writer/test/meta/algorithms_test.cmx"
       environments = basic_envs
     },
     {
