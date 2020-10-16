@@ -573,7 +573,7 @@ func BenchmarkToTraces(b *testing.B) {
 	flow := Flow(steps)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ToTraces(flow, 1)
+		ToTraces(flow, 1, nil)
 	}
 }
 
@@ -591,7 +591,7 @@ func BenchmarkDedupFlowToTraces(b *testing.B) {
 
 		steps := Dedup(njl.Steps)
 		flow := Flow(steps)
-		ToTraces(flow, 1)
+		ToTraces(flow, 1, nil)
 	}
 }
 

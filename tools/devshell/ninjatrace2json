@@ -30,15 +30,8 @@ for dir in "$ZIRCON_BUILDROOT" "$FUCHSIA_BUILD_DIR"; do
   "${HOST_OUT_DIR}/ninjatrace" \
     -ninjalog "${dir}/.ninja_log" \
     -compdb "${artifacts_dir}/compdb.json" \
-    -graph "{$artifacts_dir}/graph.dot" \
-    -trace-json "${dir}/ninjatrace.json"
-  echo "Now visit chrome://tracing and load ${dir}/ninjatrace.json"
-
-  "${HOST_OUT_DIR}/ninjatrace" \
-    -ninjalog "${dir}/.ninja_log" \
-    -compdb "${artifacts_dir}/compdb.json" \
     -graph "${artifacts_dir}/graph.dot" \
-    -trace-json "${dir}/ninjatrace_critical_path.json" \
+    -trace-json "${dir}/ninjatrace.json" \
     -critical-path
-  echo "Now visit chrome://tracing and load ${dir}/ninjatrace_critical_path.json"
+  echo "Now visit chrome://tracing and load ${dir}/ninjatrace.json"
 done
