@@ -41,12 +41,15 @@ async fn get_fastboot_proxy() -> Result<FastbootProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
     let app: Ffx = argh::from_env();
-
-    daemon_proxy
-        .get_fastboot(&app.target.unwrap_or("".to_string()), fastboot_server_end)
-        .await
-        .context("connecting to Fastboot")
-        .map(|_| fastboot_proxy)
+    let event_timeout = Duration::from_secs(ffx_config::get(PROXY_TIMEOUT_SECS).await?);
+    timeout(
+        event_timeout,
+        daemon_proxy.get_fastboot(&app.target.unwrap_or("".to_string()), fastboot_server_end),
+    )
+    .await
+    .context("timeout")?
+    .context("connecting to Fastboot")
+    .map(|_| fastboot_proxy)
 }
 
 async fn get_remote_proxy() -> Result<RemoteControlProxy> {
