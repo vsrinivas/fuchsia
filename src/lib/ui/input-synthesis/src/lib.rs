@@ -30,7 +30,7 @@ pub async fn media_button_event_command(
         mic_mute,
         reset,
         pause,
-        &mut legacy_backend::Injector,
+        &mut legacy_backend::InputDeviceRegistry,
     )
 }
 
@@ -38,7 +38,7 @@ pub async fn media_button_event_command(
 ///
 /// `duration` is the time spent between key-press and key-release events.
 pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<(), Error> {
-    keyboard_event(usage, duration, &mut legacy_backend::Injector)
+    keyboard_event(usage, duration, &mut legacy_backend::InputDeviceRegistry)
 }
 
 /// Simulates `input` being typed on a [qwerty] keyboard by making use of [`InverseKeymap`].
@@ -47,7 +47,7 @@ pub async fn keyboard_event_command(usage: u32, duration: Duration) -> Result<()
 ///
 /// [qwerty]: keymaps/constant.QWERTY_MAP.html
 pub async fn text_command(input: String, duration: Duration) -> Result<(), Error> {
-    text(input, duration, &mut legacy_backend::Injector)
+    text(input, duration, &mut legacy_backend::InputDeviceRegistry)
 }
 
 /// Simulates `tap_event_count` taps at coordinates `(x, y)` for a touchscreen with horizontal
@@ -65,7 +65,15 @@ pub async fn tap_event_command(
     tap_event_count: usize,
     duration: Duration,
 ) -> Result<(), Error> {
-    tap_event(x, y, width, height, tap_event_count, duration, &mut legacy_backend::Injector)
+    tap_event(
+        x,
+        y,
+        width,
+        height,
+        tap_event_count,
+        duration,
+        &mut legacy_backend::InputDeviceRegistry,
+    )
 }
 
 /// Simulates `tap_event_count` times to repeat the multi-finger-taps, for touchscreen with
@@ -88,7 +96,7 @@ pub async fn multi_finger_tap_event_command(
         height,
         tap_event_count,
         duration,
-        &mut legacy_backend::Injector,
+        &mut legacy_backend::InputDeviceRegistry,
     )
 }
 
@@ -111,7 +119,17 @@ pub async fn swipe_command(
     move_event_count: usize,
     duration: Duration,
 ) -> Result<(), Error> {
-    swipe(x0, y0, x1, y1, width, height, move_event_count, duration, &mut legacy_backend::Injector)
+    swipe(
+        x0,
+        y0,
+        x1,
+        y1,
+        width,
+        height,
+        move_event_count,
+        duration,
+        &mut legacy_backend::InputDeviceRegistry,
+    )
 }
 
 /// Simulates swipe with fingers starting at `start_fingers`, and moving to `end_fingers`,
@@ -156,7 +174,7 @@ pub async fn multi_finger_swipe_command(
         height,
         move_event_count,
         duration,
-        &mut legacy_backend::Injector,
+        &mut legacy_backend::InputDeviceRegistry,
     )
 }
 

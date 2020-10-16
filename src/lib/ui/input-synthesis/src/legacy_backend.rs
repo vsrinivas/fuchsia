@@ -15,9 +15,9 @@ use {
     fuchsia_component as app,
 };
 
-// Provides a handle to an `impl synthesizer::Injector`, which works with input
+// Provides a handle to an `impl synthesizer::InputDeviceRegistry`, which works with input
 // pipelines that support the (legacy) `fuchsia.ui.input.InputDeviceRegistry` protocol.
-pub(crate) struct Injector;
+pub(crate) struct InputDeviceRegistry;
 
 // Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
 // allowing us to pass any of them to `self.register_device()`.
@@ -28,13 +28,13 @@ enum UniformDeviceDescriptor {
     Touchscreen(TouchscreenDescriptor),
 }
 
-impl synthesizer::Injector for self::Injector {
-    fn make_touchscreen_device(
+impl synthesizer::InputDeviceRegistry for self::InputDeviceRegistry {
+    fn add_touchscreen_device(
         &mut self,
         width: u32,
         height: u32,
     ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
-        self.make_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
+        self.add_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
             x: Axis {
                 range: Range { min: 0, max: width as i32 },
                 resolution: 1,
@@ -49,14 +49,14 @@ impl synthesizer::Injector for self::Injector {
         }))
     }
 
-    fn make_keyboard_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
-        self.make_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
+    fn add_keyboard_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        self.add_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
             keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
         }))
     }
 
-    fn make_media_buttons_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
-        self.make_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
+    fn add_media_buttons_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        self.add_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
             buttons: fidl_fuchsia_ui_input::MIC_MUTE
                 | fidl_fuchsia_ui_input::VOLUME_DOWN
                 | fidl_fuchsia_ui_input::VOLUME_UP,
@@ -64,8 +64,8 @@ impl synthesizer::Injector for self::Injector {
     }
 }
 
-impl Injector {
-    fn make_device(
+impl InputDeviceRegistry {
+    fn add_device(
         &self,
         descriptor: UniformDeviceDescriptor,
     ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
