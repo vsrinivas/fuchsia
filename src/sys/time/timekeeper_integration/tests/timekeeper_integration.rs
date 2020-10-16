@@ -13,7 +13,7 @@ use fidl_fuchsia_net_interfaces::{StateRequest, StateRequestStream};
 use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
 use fidl_fuchsia_time_external::{Status, TimeSample};
 use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
-use fuchsia_async::{self as fasync, TimeoutExt};
+use fuchsia_async as fasync;
 use fuchsia_cobalt::CobaltEventExt;
 use fuchsia_component::{
     client::{launcher, App, AppBuilder},
@@ -328,51 +328,34 @@ lazy_static! {
     );
 }
 
-/// Timeout waiting for Timekeeper to connect to Cobalt.
-const COBALT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
-/// Timeout when waiting for the RTC to be set. Timekeeper may sleep up to a second before setting
-/// the RTC device to align on the second.
-const RTC_SET_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
-/// Timeout when waiting for the managed clock to be set.
-const CLOCK_SET_TIMEOUT: zx::Duration = zx::Duration::from_millis(250);
-
 fn new_clock() -> Arc<zx::Clock> {
     Arc::new(zx::Clock::create(zx::ClockOpts::empty(), Some(*BACKSTOP_TIME)).unwrap())
 }
 
 /// Retry an async `poll_fn` until it returns Some. Returns the contents of the `Some` value
-/// produced by `poll_fn`, or panics if `timeout` is exceeded before `poll_fn` returns a value.
-async fn poll_until<T, F, Fut>(poll_fn: F, timeout: zx::Duration) -> T
+/// produced by `poll_fn`.
+async fn poll_until<T, F, Fut>(poll_fn: F) -> T
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Option<T>>,
 {
     const RETRY_WAIT_DURATION: zx::Duration = zx::Duration::from_millis(10);
-
-    let poll_fut = async {
-        loop {
-            match poll_fn().await {
-                Some(value) => return value,
-                None => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
-            }
+    loop {
+        match poll_fn().await {
+            Some(value) => return value,
+            None => fasync::Timer::new(fasync::Time::after(RETRY_WAIT_DURATION)).await,
         }
-    };
-
-    poll_fut.on_timeout(fasync::Time::after(timeout), || panic!("Poll produced no value")).await
+    }
 }
 
-/// Poll `poll_fn` until it returns true. Panics if `timeout` is exceeded before `poll_fn` returns
-/// true.
-async fn wait_until<F: Fn() -> bool>(poll_fn: F, timeout: zx::Duration) {
-    poll_until(
-        || async {
-            match poll_fn() {
-                false => None,
-                true => Some(()),
-            }
-        },
-        timeout,
-    )
+/// Poll `poll_fn` until it returns true.
+async fn wait_until<F: Fn() -> bool>(poll_fn: F) {
+    poll_until(|| async {
+        match poll_fn() {
+            false => None,
+            true => Some(()),
+        }
+    })
     .await;
 }
 
@@ -384,15 +367,12 @@ fn create_cobalt_event_stream(
     // mock_cobalt contains a race condition where it returns an error if timekeeper hasn't
     // connected yet (fxbug.dev/45615). Therefore, we retry the first watch.
     let proxy_clone = Arc::clone(&proxy);
-    let first_poll_stream = poll_until(
-        move || {
-            let clone = Arc::clone(&proxy_clone);
-            clone
-                .watch_logs(PROJECT_ID, log_method)
-                .map(|res| res.unwrap().ok().map(|(events, _)| events))
-        },
-        COBALT_TIMEOUT,
-    )
+    let first_poll_stream = poll_until(move || {
+        let clone = Arc::clone(&proxy_clone);
+        clone
+            .watch_logs(PROJECT_ID, log_method)
+            .map(|res| res.unwrap().ok().map(|(events, _)| events))
+    })
     .into_stream();
 
     let subsequent_polls_stream =
@@ -489,8 +469,7 @@ fn test_invalid_rtc_start_clock_from_time_source() {
             assert_geq!(reported_utc, *VALID_TIME);
             assert_leq!(reported_utc, *VALID_TIME + (monotonic_after - sample_monotonic));
             // RTC should also be set.
-            let rtc_update =
-                poll_until(|| async { rtc_updates.to_vec().pop() }, RTC_SET_TIMEOUT).await;
+            let rtc_update = poll_until(|| async { rtc_updates.to_vec().pop() }).await;
             let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
             let rtc_reported_utc = rtc_time_to_zx_time(rtc_update);
             assert_geq!(rtc_reported_utc, *VALID_TIME);
@@ -559,18 +538,16 @@ fn test_start_clock_from_rtc() {
                     standard_deviation: None,
                 })
                 .await;
-            wait_until(
-                || clock.get_details().unwrap().last_value_update_ticks != clock_last_set_ticks,
-                CLOCK_SET_TIMEOUT,
-            )
+            wait_until(|| {
+                clock.get_details().unwrap().last_value_update_ticks != clock_last_set_ticks
+            })
             .await;
             let clock_utc = clock.read().unwrap();
             let monotonic_after_read = zx::Time::get_monotonic();
             assert_geq!(clock_utc, *VALID_TIME);
             assert_leq!(clock_utc, *VALID_TIME + (monotonic_after_read - sample_monotonic));
             // RTC should be set too.
-            let rtc_update =
-                poll_until(|| async { rtc_updates.to_vec().pop() }, RTC_SET_TIMEOUT).await;
+            let rtc_update = poll_until(|| async { rtc_updates.to_vec().pop() }).await;
             let monotonic_after_rtc_set = zx::Time::get(zx::ClockId::Monotonic);
             let rtc_reported_utc = rtc_time_to_zx_time(rtc_update);
             assert_geq!(rtc_reported_utc, *VALID_TIME);
@@ -587,10 +564,4 @@ fn test_start_clock_from_rtc() {
             );
         },
     );
-}
-
-#[fasync::run_singlethreaded(test)]
-#[should_panic(expected = "Poll produced no value")]
-async fn test_poll_until_panics_on_timeout() {
-    poll_until(|| futures::future::pending::<Option<()>>(), CLOCK_SET_TIMEOUT).await
 }
