@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fidl_examples_echo/fidl_async.dart' as fidl_echo;
+import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:intl/intl.dart';
@@ -33,8 +34,8 @@ class _EchoImpl extends fidl_echo.Echo {
   }
 }
 
-void main(List<String> args) {
-  setupLogger(name: 'timestamp_server_dart');
+Future<void> main(List<String> args) async {
+  setupLogger(name: 'timestamp_server_dart', globalTags: ['e2e', 'timezone']);
   log.info('Setting up.');
 
   final context = StartupContext.fromStartupInfo();
@@ -44,5 +45,8 @@ void main(List<String> args) {
       .addPublicService<fidl_echo.Echo>(echo.bind, fidl_echo.Echo.$serviceName);
   assert(status == ZX.OK);
   log.info('Now serving.');
-  // Yes, in dart there is no async loop to wait on.
+  // Serve the Echo endpoint for a little while, then exit.
+  await Future.delayed(const Duration(minutes: 1));
+  log.info('Shutting down.');
+  fuchsia.exit(0);
 }

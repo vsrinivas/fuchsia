@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/timezone_flutter_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fidl.examples.echo.EchoService",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.settings.Intl",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

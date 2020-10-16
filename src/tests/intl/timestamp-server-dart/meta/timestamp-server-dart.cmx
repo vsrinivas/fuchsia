@@ -3,6 +3,9 @@
         "data": "data/timestamp-server-dart"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.intl.PropertyProvider",

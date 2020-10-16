@@ -10,30 +10,42 @@ import("//build/testing/environments.gni")
 
 group("timezone") {
   testonly = true
-  public_deps = [
-    ":tests",
-    "../timestamp-server-dart",
-  ]
+  public_deps = [ ":tests" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":timezone-test" ]
+  public_deps = [
+    ":tests-for-dart",
+    # Intentionally omitted: not all devices can run flutter tests.
+    # ":tests-for-flutter",
+  ]
 }
 
-rustc_test("timezone_bin_test") {
+group("tests-for-dart") {
+  testonly = true
+  public_deps = [
+    ":timezone-test",
+    "../timestamp-server-dart:timestamp-server-dart",
+  ]
+}
+
+rustc_library("lib") {
+  name = "tests_intl_timezone"
+  sources = [ "src/lib.rs" ]
   edition = "2018"
-  source_root = "timezone_test.rs"
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -45,18 +57,69 @@ rustc_test("timezone_bin_test") {
     "//third_party/rust_crates:rust_icu_uloc",
     "//third_party/rust_crates:rust_icu_ustring",
   ]
+}
 
+rustc_test("timezone_bin_test") {
+  edition = "2018"
+  source_root = "timezone_test.rs"
   sources = [ "timezone_test.rs" ]
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+  ]
 }
 
 test_package("timezone-test") {
   public_deps = [
     ":timezone_bin_test",
-    "../timestamp-server-dart",
+    "../timestamp-server-dart:timestamp-server-dart",
   ]
   tests = [
     {
       name = "timezone_bin_test"
+      environments = basic_envs
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
+
+# Essentially same as above, but for flutter runner.
+group("tests-for-flutter") {
+  testonly = true
+  public_deps = [
+    ":timezone-flutter-test",
+    "../timestamp-server-dart:timestamp-server-flutter",
+  ]
+}
+
+rustc_test("timezone_flutter_bin_test") {
+  edition = "2018"
+  source_root = "timezone_flutter_test.rs"
+  sources = [ "timezone_flutter_test.rs" ]
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+test_package("timezone-flutter-test") {
+  public_deps = [
+    ":timezone_flutter_bin_test",
+    "../timestamp-server-dart:timestamp-server-flutter",
+  ]
+  tests = [
+    {
+      name = "timezone_flutter_bin_test"
       environments = basic_envs
     },
   ]

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//topaz/runtime/dart_runner/dart_app.gni")
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 dart_app("timestamp-server-dart") {
   main_dart = "lib/main.dart"
@@ -19,6 +20,38 @@ dart_app("timestamp-server-dart") {
     "//garnet/examples/fidl/services:echo",
     "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia",
+    "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/zircon",
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
+
+# Same as above, except uses the flutter runner. The flutter runner is using
+# exactly the same mechanism as dart, but it is a different runner binary
+# nevertheless.  So we should test both.
+flutter_app("timestamp-server-flutter") {
+  main_dart = "lib/main.dart"
+
+  meta = [
+    {
+      path = rebase_path("meta/timestamp-server-flutter.cmx")
+      dest = "timestamp-server-flutter.cmx"
+    },
+  ]
+
+  sources = [ "main.dart" ]
+  deps = [
+    "//garnet/examples/fidl/services:echo",
+    "//third_party/dart-pkg/pub/intl",
+    "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/zircon",
