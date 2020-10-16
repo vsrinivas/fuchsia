@@ -18,6 +18,8 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+var _ routes.StateWithCtx = (*routesImpl)(nil)
+
 // routesImpl provides implementation for protocols in fuchsia.net.routes.
 type routesImpl struct {
 	stack *stack.Stack

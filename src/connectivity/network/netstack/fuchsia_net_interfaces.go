@@ -67,6 +67,8 @@ func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDef
 	return p
 }
 
+var _ interfaces.WatcherWithCtx = (*interfaceWatcherImpl)(nil)
+
 type interfaceWatcherImpl struct {
 	cancelServe context.CancelFunc
 	ready       chan struct{}
@@ -304,6 +306,8 @@ func (c *interfaceWatcherCollection) onInterfaceRemove(nicid tcpip.NICID) {
 		w.onEvent(interfaces.EventWithRemoved(uint64(nicid)))
 	}
 }
+
+var _ interfaces.StateWithCtx = (*interfaceStateImpl)(nil)
 
 type interfaceStateImpl struct {
 	ns *Netstack

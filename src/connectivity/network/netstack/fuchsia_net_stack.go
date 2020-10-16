@@ -34,6 +34,8 @@ import (
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+var _ stack.StackWithCtx = (*stackImpl)(nil)
+
 type stackImpl struct {
 	ns          *Netstack
 	dnsWatchers *dnsServerWatcherCollection
@@ -510,6 +512,8 @@ func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
 func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServerWatcherWithCtxInterfaceRequest) error {
 	return ni.dnsWatchers.Bind(watcher)
 }
+
+var _ stack.LogWithCtx = (*logImpl)(nil)
 
 type logImpl struct {
 	logger     *syslog.Logger
