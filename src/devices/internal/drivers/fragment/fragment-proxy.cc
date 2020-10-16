@@ -426,14 +426,6 @@ void FragmentProxy::CodecSetDaiFormat(const dai_format_t* format,
   req.op = CodecOp::SET_DAI_FORMAT;
   req.format = *format;
 
-  if (format->channels_to_use_count > kMaxChannels) {
-    callback(cookie, ZX_ERR_INTERNAL);
-    return;
-  }
-  for (size_t i = 0; i < format->channels_to_use_count; ++i) {
-    req.channels_to_use[i] = format->channels_to_use_list[i];
-  }
-
   auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 
   callback(cookie, status);

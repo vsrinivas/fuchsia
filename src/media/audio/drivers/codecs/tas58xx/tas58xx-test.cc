@@ -36,7 +36,7 @@ TEST(Tas58xxTest, GoodSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 2;
-    format.channels_to_use = {0, 1};
+    format.channels_to_use_bitmask = 3;
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
@@ -55,7 +55,7 @@ TEST(Tas58xxTest, GoodSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 2;
-    format.channels_to_use = {0, 1};
+    format.channels_to_use_bitmask = 3;
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
@@ -74,7 +74,7 @@ TEST(Tas58xxTest, GoodSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 4;
-    format.channels_to_use = {2, 3};
+    format.channels_to_use_bitmask = 0xc;
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_TDM1;
     format.frame_rate = 48000;
@@ -118,7 +118,7 @@ TEST(Tas58xxTest, BadSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 2;
-    format.channels_to_use = {0, 1};
+    format.channels_to_use_bitmask = 3;
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail.
     format.frame_rate = 48000;
@@ -136,7 +136,7 @@ TEST(Tas58xxTest, BadSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 1;
-    format.channels_to_use = {0};
+    format.channels_to_use_bitmask = 1;
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 48000;
@@ -154,7 +154,7 @@ TEST(Tas58xxTest, BadSetDai) {
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 2;
-    format.channels_to_use = {0, 1};
+    format.channels_to_use_bitmask = 3;
     format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     format.frame_format = FRAME_FORMAT_I2S;
     format.frame_rate = 1234;

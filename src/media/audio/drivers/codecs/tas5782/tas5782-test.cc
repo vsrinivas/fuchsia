@@ -49,11 +49,9 @@ TEST(Tas5782Test, GoodSetDai) {
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
   Tas5782Test device(nullptr, std::move(i2c), unused_gpio0, unused_gpio1);
 
-  uint32_t channels[] = {0, 1};
   dai_format_t format = {};
   format.number_of_channels = 2;
-  format.channels_to_use_list = channels;
-  format.channels_to_use_count = countof(channels);
+  format.channels_to_use_bitmask = 3;
   format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
   format.frame_format = FRAME_FORMAT_I2S;
   format.frame_rate = 48000;
@@ -76,10 +74,8 @@ TEST(Tas5782Test, BadSetDai) {
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.CodecSetDaiFormat(&format));
 
   // Almost good format (wrong frame_format).
-  uint32_t channels[] = {0, 1};
   format.number_of_channels = 2;
-  format.channels_to_use_list = channels;
-  format.channels_to_use_count = countof(channels);
+  format.channels_to_use_bitmask = 3;
   format.sample_format = SAMPLE_FORMAT_PCM_SIGNED;
   format.frame_format = FRAME_FORMAT_STEREO_LEFT;  // This must fail, only I2S supported.
   format.frame_rate = 48000;

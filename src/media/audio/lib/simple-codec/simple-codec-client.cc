@@ -179,12 +179,7 @@ zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   AsyncOut out = {};
   dai_format_t f;
   f.number_of_channels = format.number_of_channels;
-  f.channels_to_use_count = format.channels_to_use.size();
-  auto channels_to_use = std::make_unique<uint32_t[]>(f.channels_to_use_count);
-  for (size_t j = 0; j < f.channels_to_use_count; ++j) {
-    channels_to_use[j] = format.channels_to_use[j];
-  }
-  f.channels_to_use_list = channels_to_use.get();
+  f.channels_to_use_bitmask = format.channels_to_use_bitmask;
   f.sample_format = format.sample_format;
   f.frame_format = format.frame_format;
   f.frame_format_custom = format.frame_format_custom;

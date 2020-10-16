@@ -236,8 +236,9 @@ std::vector<DaiSupportedFormats> Tas5720::GetDaiFormats() {
 }
 
 zx_status_t Tas5720::SetDaiFormat(const DaiFormat& format) {
-  ZX_ASSERT(format.channels_to_use.size() == 1);  // Mono codec.
-  tdm_slot_ = static_cast<uint8_t>(format.channels_to_use[0]);
+  ZX_ASSERT(format.channels_to_use_bitmask == 1 ||
+            format.channels_to_use_bitmask == 2);  // Mono codec, 2 channel TDM.
+  tdm_slot_ = static_cast<uint8_t>(__builtin_ctzl(format.channels_to_use_bitmask));
   i2s_ = format.frame_format == FRAME_FORMAT_I2S;
   auto status = SetSlot(tdm_slot_);
   if (status != ZX_OK) {

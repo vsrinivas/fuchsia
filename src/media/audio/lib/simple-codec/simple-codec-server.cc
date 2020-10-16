@@ -101,9 +101,7 @@ void SimpleCodecServer::CodecSetDaiFormat(const dai_format_t* format,
                                           codec_set_dai_format_callback callback, void* cookie) {
   DaiFormat format2 = {};
   format2.number_of_channels = format->number_of_channels;
-  for (size_t i = 0; i < format->channels_to_use_count; ++i) {
-    format2.channels_to_use.push_back(format->channels_to_use_list[i]);
-  }
+  format2.channels_to_use_bitmask = format->channels_to_use_bitmask;
   format2.sample_format = format->sample_format;
   format2.frame_format = format->frame_format;
   format2.frame_format_custom = format->frame_format_custom;

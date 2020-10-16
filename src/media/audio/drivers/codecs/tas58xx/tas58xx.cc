@@ -214,17 +214,15 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
     zxlogf(ERROR, "%s unsupported format\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (format.number_of_channels == 2 &&
-      (format.channels_to_use[0] != 0 || format.channels_to_use[1] != 1)) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported %u/%u/%u", __FILE__,
-           format.number_of_channels, format.channels_to_use[0], format.channels_to_use[1]);
+  if (format.number_of_channels == 2 && format.channels_to_use_bitmask != 3) {
+    zxlogf(ERROR, "%s DAI format channels to use not supported %u 0x%lX", __FILE__,
+           format.number_of_channels, format.channels_to_use_bitmask);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (format.number_of_channels == 4 &&
-      ((format.channels_to_use[0] != 0 || format.channels_to_use[1] != 1) &&
-       (format.channels_to_use[0] != 2 || format.channels_to_use[1] != 3))) {
-    zxlogf(ERROR, "%s DAI format channels to use not supported %u/%u/%u", __FILE__,
-           format.number_of_channels, format.channels_to_use[0], format.channels_to_use[1]);
+  if (format.number_of_channels == 4 && format.channels_to_use_bitmask != 3 &&
+      format.channels_to_use_bitmask != 0xc) {
+    zxlogf(ERROR, "%s DAI format channels to use not supported %u 0x%lX", __FILE__,
+           format.number_of_channels, format.channels_to_use_bitmask);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -237,9 +235,10 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
   if (status != ZX_OK) {
     return status;
   }
-  return WriteReg(kRegSapCtrl2, (format.number_of_channels == 4 && format.channels_to_use[0] == 2)
-                                    ? 2 * format.bits_per_slot
-                                    : 0x00);
+  return WriteReg(kRegSapCtrl2,
+                  (format.number_of_channels == 4 && format.channels_to_use_bitmask == 0xc)
+                      ? 2 * format.bits_per_slot
+                      : 0x00);
 }
 
 GainFormat Tas58xx::GetGainFormat() {

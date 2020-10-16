@@ -67,11 +67,9 @@ zx_status_t NelsonAudioStreamOut::InitCodec() {
     return status;
   }
 
-  uint32_t channels[] = {0, 1};
   dai_format_t format = {
       .number_of_channels = 2,
-      .channels_to_use_list = channels,
-      .channels_to_use_count = countof(channels),
+      .channels_to_use_bitmask = 3,
       .sample_format = kWantedSampleFormat,
       .frame_format = kWantedFrameFormat,
       .frame_rate = kWantedFrameRate,

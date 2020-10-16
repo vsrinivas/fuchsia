@@ -20,7 +20,7 @@ namespace {
 audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
-      .channels_to_use = std::vector<uint32_t>{0},  // Use one channel in this mono codec.
+      .channels_to_use_bitmask = 1,  // Use one channel in this mono codec.
       .sample_format = SAMPLE_FORMAT_PCM_SIGNED,
       .frame_format = FRAME_FORMAT_STEREO_LEFT,
       .frame_rate = 24'000,

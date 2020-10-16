@@ -334,8 +334,7 @@ std::vector<DaiSupportedFormats> Tas27xx::GetDaiFormats() {
 }
 
 zx_status_t Tas27xx::SetDaiFormat(const DaiFormat& format) {
-  ZX_ASSERT(format.channels_to_use.size() == 1);  // Mono codec.
-  ZX_ASSERT(format.channels_to_use[0] == 0);      // Use right channel.
+  ZX_ASSERT(format.channels_to_use_bitmask == 1);  // Use right channel.
   return SetRate(format.frame_rate);
 }
 

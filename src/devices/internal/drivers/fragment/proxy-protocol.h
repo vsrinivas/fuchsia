@@ -11,7 +11,6 @@ namespace fragment {
 static constexpr size_t kProxyMaxTransferSize = 4096;
 // TODO(andresoportus): remove these restrictions.
 static constexpr size_t kMaxDaiFormats = 8;
-static constexpr size_t kMaxChannelsToUse = 8;
 static constexpr size_t kMaxChannels = 8;
 static constexpr size_t kMaxSampleFormats = 8;
 static constexpr size_t kMaxFrameFormats = 8;
@@ -131,7 +130,6 @@ struct CodecDaiFormatProxyRequest {
   ProxyRequest header;
   CodecOp op;
   dai_format_t format;
-  uint32_t channels_to_use[kMaxChannelsToUse];
 };
 
 struct CodecPlugStateProxyResponse {

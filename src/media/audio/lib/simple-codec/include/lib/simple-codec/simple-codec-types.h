@@ -51,7 +51,7 @@ struct DaiFormat {
   // Number of channels in the DAI.
   uint32_t number_of_channels;
   // Which channels to use in the DAI.
-  std::vector<uint32_t> channels_to_use;
+  uint64_t channels_to_use_bitmask;
   // The format of all samples in the DAI.
   sample_format_t sample_format;
   // The format of all samples in the DAI.

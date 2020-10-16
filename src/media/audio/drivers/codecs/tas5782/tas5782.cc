@@ -186,8 +186,7 @@ void Tas5782::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;
   }
-  if (format->channels_to_use_count != 2 || format->channels_to_use_list == nullptr ||
-      format->channels_to_use_list[0] != 0 || format->channels_to_use_list[1] != 1) {
+  if (format->channels_to_use_bitmask != 3) {
     zxlogf(ERROR, "%s DAI format channels to use not supported", __FILE__);
     callback(cookie, ZX_ERR_NOT_SUPPORTED);
     return;

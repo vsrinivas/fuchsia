@@ -914,8 +914,7 @@ zx_status_t Fragment::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_
         zx_status_t status;
       } out;
       auto* req = reinterpret_cast<const CodecDaiFormatProxyRequest*>(req_buf);
-      dai_format_t format = req->format;  // Copy format and edit any pointers next.
-      format.channels_to_use_list = req->channels_to_use;
+      dai_format_t format = req->format;
 
       codec_client_.proto_client().SetDaiFormat(
           &format,
