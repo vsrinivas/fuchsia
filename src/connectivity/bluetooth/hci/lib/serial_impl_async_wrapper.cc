@@ -29,5 +29,5 @@ void serial_cancel_all(void* serial) {
   serial_impl_async_cancel_all((serial_impl_async_protocol_t*)serial);
 }
 
-void free_serial_impl_async_protocol(serial_impl_async_protocol_t* serial) { delete serial; }
+void free_serial_impl_async_protocol(serial_impl_async_protocol_t* serial) { free(serial); }
 }

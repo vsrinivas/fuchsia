@@ -67,8 +67,3 @@ unittest_package("bt-hci-lib-tests") {
     },
   ]
 }
-
-group("tests") {
-  testonly = true
-  deps = [ ":bt-hci-lib-tests" ]
-}

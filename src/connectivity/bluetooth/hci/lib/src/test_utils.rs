@@ -106,7 +106,7 @@ impl HwTransport for TestTransport {
     fn take_incoming(&mut self, _proof: IncomingPacketToken, _buffer: Vec<u8>) -> IncomingPacket {
         self.next_packet.take().expect("packet should be ready in test transport")
     }
-    fn unbind(&mut self) {
+    unsafe fn unbind(&mut self) {
         self.unbound.signal();
     }
 }

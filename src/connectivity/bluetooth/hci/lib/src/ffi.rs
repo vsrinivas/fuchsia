@@ -73,7 +73,7 @@ pub unsafe extern "C" fn bt_hci_transport_shutdown(ptr: *mut WorkerHandle, timeo
     if ptr.is_null() {
         return;
     }
-    Box::from_raw(ptr).shutdown((timeout_ms as i64).millis());
+    { Box::from_raw(ptr) }.shutdown((timeout_ms as i64).millis());
 }
 
 /// bt_hci_transport_open_uart takes ownership of serial.
@@ -131,34 +131,6 @@ mod tests {
 
     const TIMEOUT_MS: u64 = 30 * 1000; // 30 seconds
 
-    /// Setup a test worker, starting the thread on creation and stopping it on drop.
-    struct TestWorker {
-        handle: *mut WorkerHandle,
-    }
-
-    impl TestWorker {
-        pub fn start() -> Self {
-            let name = CString::new("test").unwrap();
-            let mut handle = std::ptr::null_mut();
-            let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut handle) };
-            assert_eq!(status, ZX_OK);
-            Self { handle }
-        }
-
-        /// Handle must not be used after the `TestWorker` is dropped.
-        pub unsafe fn handle(&self) -> *mut WorkerHandle {
-            self.handle
-        }
-    }
-
-    impl Drop for TestWorker {
-        fn drop(&mut self) {
-            unsafe {
-                bt_hci_transport_shutdown(self.handle, TIMEOUT_MS);
-            }
-        }
-    }
-
     #[test]
     fn start_worker() {
         let name = CString::new("test").unwrap();
@@ -166,9 +138,6 @@ mod tests {
         let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut worker) };
         assert!(!worker.is_null());
         assert_eq!(status, ZX_OK);
-        unsafe {
-            bt_hci_transport_shutdown(worker, TIMEOUT_MS);
-        }
     }
 
     #[test]
@@ -178,9 +147,6 @@ mod tests {
         let status = unsafe { bt_hci_transport_start(std::ptr::null(), &mut worker) };
         assert_eq!(status, ZX_OK);
         assert!(!worker.is_null());
-        unsafe {
-            bt_hci_transport_shutdown(worker, TIMEOUT_MS);
-        }
     }
 
     #[test]
@@ -197,18 +163,19 @@ mod tests {
 
     #[test]
     fn open_transport_uart() {
-        let worker = TestWorker::start();
+        let name = CString::new("test").unwrap();
+        let mut worker = std::ptr::null_mut();
+        let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut worker) };
+        assert_eq!(status, ZX_OK);
         let serial = Box::new(serial_impl_async_protocol_t::new());
-        let status = unsafe {
-            bt_hci_transport_open_uart(worker.handle(), Box::into_raw(serial), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_uart(worker, Box::into_raw(serial), TIMEOUT_MS) };
         assert_eq!(status, ZX_OK);
 
         // test that errors are mapped through ffi function.
         let serial = Box::new(serial_impl_async_protocol_t::new());
-        let status = unsafe {
-            bt_hci_transport_open_uart(worker.handle(), Box::into_raw(serial), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_uart(worker, Box::into_raw(serial), TIMEOUT_MS) };
         assert_eq!(status, ZX_ERR_ALREADY_BOUND);
     }
 
@@ -221,18 +188,19 @@ mod tests {
 
     #[test]
     fn open_command_channel() {
-        let worker = TestWorker::start();
+        let name = CString::new("test").unwrap();
+        let mut worker = std::ptr::null_mut();
+        let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut worker) };
+        assert_eq!(status, ZX_OK);
         let (cmd, _cmd) = zx::Channel::create().unwrap();
-        let status = unsafe {
-            bt_hci_transport_open_command_channel(worker.handle(), cmd.raw_handle(), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_command_channel(worker, cmd.raw_handle(), TIMEOUT_MS) };
         assert_eq!(status, ZX_OK);
 
         // test that errors are mapped through ffi function.
         let (cmd, _cmd) = zx::Channel::create().unwrap();
-        let status = unsafe {
-            bt_hci_transport_open_command_channel(worker.handle(), cmd.raw_handle(), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_command_channel(worker, cmd.raw_handle(), TIMEOUT_MS) };
         assert_eq!(status, ZX_ERR_ALREADY_BOUND);
     }
 
@@ -247,18 +215,19 @@ mod tests {
 
     #[test]
     fn open_acl_channel() {
-        let worker = TestWorker::start();
+        let name = CString::new("test").unwrap();
+        let mut worker = std::ptr::null_mut();
+        let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut worker) };
+        assert_eq!(status, ZX_OK);
         let (acl, _acl) = zx::Channel::create().unwrap();
-        let status = unsafe {
-            bt_hci_transport_open_acl_data_channel(worker.handle(), acl.raw_handle(), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_acl_data_channel(worker, acl.raw_handle(), TIMEOUT_MS) };
         assert_eq!(status, ZX_OK);
 
         // test that errors are mapped through ffi function.
         let (acl, _acl) = zx::Channel::create().unwrap();
-        let status = unsafe {
-            bt_hci_transport_open_acl_data_channel(worker.handle(), acl.raw_handle(), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_acl_data_channel(worker, acl.raw_handle(), TIMEOUT_MS) };
         assert_eq!(status, ZX_ERR_ALREADY_BOUND);
     }
 
@@ -273,18 +242,19 @@ mod tests {
 
     #[test]
     fn open_snoop_channel() {
-        let worker = TestWorker::start();
+        let name = CString::new("test").unwrap();
+        let mut worker = std::ptr::null_mut();
+        let status = unsafe { bt_hci_transport_start(name.as_ptr(), &mut worker) };
+        assert_eq!(status, ZX_OK);
         let (snoop, _snoop) = zx::Channel::create().unwrap();
-        let status = unsafe {
-            bt_hci_transport_open_snoop_channel(worker.handle(), snoop.raw_handle(), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_snoop_channel(worker, snoop.raw_handle(), TIMEOUT_MS) };
         assert_eq!(status, ZX_OK);
 
         // test that errors are mapped through ffi function.
         let (snoop, _snoop) = zx::Channel::create().unwrap();
-        let status = unsafe {
-            bt_hci_transport_open_snoop_channel(worker.handle(), snoop.raw_handle(), TIMEOUT_MS)
-        };
+        let status =
+            unsafe { bt_hci_transport_open_snoop_channel(worker, snoop.raw_handle(), TIMEOUT_MS) };
         assert_eq!(status, ZX_ERR_ALREADY_BOUND);
     }
 

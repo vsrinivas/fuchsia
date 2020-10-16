@@ -5,6 +5,7 @@
 use {
     fuchsia_zircon::{self as zx, sys::zx_status_t, AsHandleRef},
     parking_lot::Mutex,
+    std::sync::Arc,
 };
 
 use crate::{
@@ -92,10 +93,8 @@ impl Serial {
     }
 
     /// Cancel all outstanding I/O requests.
-    pub fn cancel_all(&self) {
-        unsafe {
-            sys::serial_cancel_all(self.0);
-        }
+    pub unsafe fn cancel_all(&self) {
+        sys::serial_cancel_all(self.0);
     }
 }
 
@@ -113,22 +112,18 @@ unsafe impl Send for Serial {}
 
 impl Drop for Serial {
     fn drop(&mut self) {
-        // Call `cancel_all` before freeing the handle to the underlying serial protocol.
-        // It is the last chance to cancel these requests while there is a handle to the underlying
-        // protocol so we take the opportunity to do so. It is ok if there are no pending read/write
-        // operations to cancel when this is called.
-        self.cancel_all();
         unsafe {
+            sys::serial_cancel_all(self.0);
             sys::free_serial_impl_async_protocol(self.0);
         }
     }
 }
 
-pub type WriteAsyncFn = dyn Fn(&Serial, &[u8], &zx::Event);
+pub type WriteAsyncFn = dyn Fn(&Serial, &[u8], Arc<zx::Event>);
 
 // This is unsafe because it calls into code which reads `serial` which is a
 // `*mut serial_impl_async_read_t`.
-pub fn serial_write_async(serial: &Serial, buffer: &[u8], event: &zx::Event) {
+pub fn serial_write_async(serial: &Serial, buffer: &[u8], event: Arc<zx::Event>) {
     #[cfg(feature = "extra-tracing")]
     trace_duration!("Transport::UartWrite");
     unsafe {
@@ -136,25 +131,21 @@ pub fn serial_write_async(serial: &Serial, buffer: &[u8], event: &zx::Event) {
             serial.as_ptr(),
             buffer.as_ptr(),
             buffer.len(),
-            event as *const zx::Event,
+            Arc::into_raw(event),
         );
     }
 }
 
-pub type ReadAsyncFn = dyn Fn(*mut serial_impl_async_protocol_t, &Mutex<SerialReadState>);
+pub type ReadAsyncFn = dyn Fn(*mut serial_impl_async_protocol_t, Arc<Mutex<SerialReadState>>);
 
-// read_state
 pub fn serial_read_async(
     serial: *mut serial_impl_async_protocol_t,
-    read_state: &parking_lot::Mutex<SerialReadState>,
+    read_state: Arc<parking_lot::Mutex<SerialReadState>>,
 ) {
     #[cfg(feature = "extra-tracing")]
     trace_duration!("Transport::UartRead");
     unsafe {
-        sys::serial_read_async(
-            serial,
-            read_state as *const parking_lot::Mutex<SerialReadState> as *const mutex_serial_read_t,
-        );
+        sys::serial_read_async(serial, Arc::into_raw(read_state) as *const mutex_serial_read_t);
     }
 }
 
@@ -167,8 +158,8 @@ fn status_to_signal(status: zx::Status) -> zx::Signals {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn serial_read_complete(
-    read_state: *const parking_lot::Mutex<SerialReadState>,
+pub extern "C" fn serial_read_complete(
+    arc_read_state: *const parking_lot::Mutex<SerialReadState>,
     status: zx_status_t,
     buffer: *const u8,
     length: usize,
@@ -176,11 +167,10 @@ pub unsafe extern "C" fn serial_read_complete(
     #[cfg(feature = "extra-tracing")]
     trace_duration!("Transport::UartReadComplete");
 
-    // Memory Safety: read_state must point to a live object.
-    // The owner of the `Mutex<SerialReadState>` is responsible for ensuring
-    // that this callback function can no longer be called before freeing that
-    // object.
-    let read_state = read_state.as_ref().expect("non-null read state");
+    let read_state = unsafe {
+        assert!(!arc_read_state.is_null());
+        Arc::from_raw(arc_read_state)
+    };
 
     let status = zx::Status::from_raw(status);
     let signal = status_to_signal(status);
@@ -188,49 +178,39 @@ pub unsafe extern "C" fn serial_read_complete(
         zx::Status::OK => {
             let mut guard = read_state.lock();
             let state: &mut SerialReadState = &mut guard;
-
-            // Memory Safety: It is the responsibility of the caller of this
-            // callback function to guarantee that buffer is a valid buffer of `u8`s with
-            // size `length`.
-            assert!(!buffer.is_null());
-            let buffer = std::slice::from_raw_parts(buffer, length);
-
+            let buffer = unsafe {
+                assert!(!buffer.is_null());
+                std::slice::from_raw_parts(buffer, length)
+            };
             state.push_read_bytes(buffer);
             if state.check_for_next_packet().is_ok() {
-                // Queue up another async read.
+                // Queue another read.
                 let serial_ptr = state.serial_ptr;
                 drop(state);
                 drop(guard);
-
-                // Memory Safety: Because another read is queued immediately in the success
-                // code path, the caller of `serial_read_complete` cannot rely on the return of
-                // the function to be the end of the use of the `read_state` pointer.
                 serial_read_async(serial_ptr, read_state);
             }
         }
         zx::Status::NOT_SUPPORTED => {
             bt_log_warn!("Async read already pending");
             trace_instant!("Transport::UartDoubleRead", fuchsia_trace::Scope::Thread);
-        }
-        zx::Status::CANCELED => {
-            bt_log_warn!("Async read canceled");
-            trace_instant!("Transport::UartReadCanceled", fuchsia_trace::Scope::Thread);
-            let _ = read_state.lock().event.signal_handle(zx::Signals::NONE, signal);
+            std::mem::forget(read_state);
         }
         error_status => {
             bt_log_warn!("Async read error {}", error_status);
             trace_instant!("Transport::UartError", fuchsia_trace::Scope::Thread);
             let _ = read_state.lock().event.signal_handle(zx::Signals::NONE, signal);
+            std::mem::forget(read_state);
         }
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn serial_write_complete(event_ptr: *const zx::Event, status: zx_status_t) {
-    // Memory Safety: event_ptr must point to a live object.
-    // The owner of the `zx::Event` is responsible for ensuring that this
-    // callback function can no longer be called before freeing that object.
-    let event = event_ptr.as_ref().expect("non-null event pointer");
+pub extern "C" fn serial_write_complete(arc_event_ptr: *const zx::Event, status: zx_status_t) {
+    let event = unsafe {
+        assert!(!arc_event_ptr.is_null());
+        Arc::from_raw(arc_event_ptr)
+    };
     let status = zx::Status::from_raw(status);
     if status == zx::Status::NOT_SUPPORTED {
         bt_log_warn!("Async write already pending");
@@ -238,13 +218,13 @@ pub unsafe extern "C" fn serial_write_complete(event_ptr: *const zx::Event, stat
         bt_log_warn!("Async write error {}", status);
     }
     let _ = event.signal_handle(zx::Signals::NONE, status_to_signal(status));
+    std::mem::forget(event);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use fuchsia_zircon::DurationNum;
-    use std::sync::Arc;
 
     // The Drop trait must be implemented for `Serial` to free owned memory.
     // This test will fail to compile if this is not the case.
@@ -272,9 +252,7 @@ mod tests {
     fn serial_write_complete_succeeds() {
         let event = Arc::new(zx::Event::create().unwrap());
         let event_ = event.clone();
-        std::thread::spawn(move || unsafe {
-            serial_write_complete(Arc::as_ptr(&event_), zx::sys::ZX_OK)
-        });
+        std::thread::spawn(move || serial_write_complete(Arc::into_raw(event_), zx::sys::ZX_OK));
         // wait_handle call will be terminated if signal is not set for 5s.
         let res = event.wait_handle(IO_COMPLETE | IO_ERROR, zx::Time::after(5.seconds()));
         assert_eq!(res.unwrap(), IO_COMPLETE);
@@ -282,7 +260,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn serial_write_null_event_panics() {
-        unsafe { serial_write_complete(std::ptr::null(), zx::sys::ZX_OK) };
+    fn serial_write_null_arc_event_panics() {
+        serial_write_complete(std::ptr::null(), zx::sys::ZX_OK);
     }
 }
