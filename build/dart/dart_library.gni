@@ -111,11 +111,7 @@ declare_args() {
 #   }
 if (current_toolchain == dart_toolchain) {
   template("dart_library") {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
+    forward_variables_from(invoker, [ "visibility" ])
 
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
@@ -223,6 +219,8 @@ if (current_toolchain == dart_toolchain) {
                package_name,
                "--deps",
              ] + rebase_path(package_files)
+
+      forward_variables_from(invoker, [ "testonly" ])
     }
 
     _metadata_collection_results_path =
@@ -277,6 +275,7 @@ if (current_toolchain == dart_toolchain) {
     dart_package_config(_dart_package_config_target_name) {
       deps = dart_deps + [ ":$_publish_metadata_target_name" ]
       outputs = [ _packages_path ]
+      forward_variables_from(invoker, [ "testonly" ])
     }
     group_deps += [ ":$_dart_package_config_target_name" ]
 
@@ -312,6 +311,8 @@ if (current_toolchain == dart_toolchain) {
         foreach(source, invoker.sources) {
           args += [ source ]
         }
+
+        forward_variables_from(invoker, [ "testonly" ])
       }
       group_deps += [ ":$source_verification_target_name" ]
     } else {
@@ -373,6 +374,8 @@ if (current_toolchain == dart_toolchain) {
           "--package-name",
           package_name,
         ]
+
+        forward_variables_from(invoker, [ "testonly" ])
       }
 
       analysis_target_name = "${target_name}_analysis"
@@ -420,6 +423,8 @@ if (current_toolchain == dart_toolchain) {
                  ":$dot_packages_target_name",
                  ":$_dart_package_config_target_name",
                ]
+
+        forward_variables_from(invoker, [ "testonly" ])
       }
     } else {
       not_needed(invoker, [ "options_file" ])
@@ -443,6 +448,7 @@ if (current_toolchain == dart_toolchain) {
           },
         ]
       }
+      forward_variables_from(invoker, [ "testonly" ])
     }
 
     generated_file("${invoker.target_name}_dart_build_info") {
@@ -452,6 +458,7 @@ if (current_toolchain == dart_toolchain) {
       output_conversion = "json"
       deps =
           dart_deps + [ ":${invoker.target_name}_dart_build_info_self_marker" ]
+      forward_variables_from(invoker, [ "testonly" ])
     }
 
     _strict_deps_tool_label =
@@ -478,6 +485,7 @@ if (current_toolchain == dart_toolchain) {
         "--packages-file",
         rebase_path(_packages_path, root_build_dir),
       ]
+      forward_variables_from(invoker, [ "testonly" ])
     }
 
     # The strict deps tool is excluded from the strict deps check to
@@ -518,6 +526,7 @@ if (current_toolchain == dart_toolchain) {
       public_deps = group_deps
 
       metadata = _metadata
+      forward_variables_from(invoker, [ "testonly" ])
     }
 
     ################################################
@@ -566,6 +575,7 @@ if (current_toolchain == dart_toolchain) {
                  ":$dot_packages_target_name",
                  runner_label,
                ]
+        forward_variables_from(invoker, [ "testonly" ])
       }
 
       # Verify that the library API file complies with the specified schema.
@@ -652,6 +662,8 @@ if (current_toolchain == dart_toolchain) {
         args += [ "--third-party-specs" ] + third_party_pubspecs
 
         deps = sdk_deps
+
+        forward_variables_from(invoker, [ "testonly" ])
       }
 
       sdk_atom("${target_name}_sdk") {

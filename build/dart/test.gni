@@ -38,8 +38,6 @@ import("//build/testing/test_spec.gni")
 #       like the program/args entry in a component manifest.
 #
 template("dart_test") {
-  testonly = true
-
   assert(defined(invoker.sources), "dart_test() must specify sources")
 
   _main_target_name = target_name
@@ -84,6 +82,7 @@ template("dart_test") {
     }
 
     infer_package_name = true
+    testonly = true
   }
 
   # Create a single, grouped test file, as snapshot files correspond to a single
@@ -103,6 +102,7 @@ template("dart_test") {
         rebase_path("$_source_dir/$src"),
       ]
     }
+    testonly = true
   }
 
   # When using the prebuilt, we copy the dart binary into the build directory
@@ -149,6 +149,7 @@ template("dart_test") {
              ":$_dart_library_target_name",
              ":$_test_grouping_target_name",
            ]
+    testonly = true
   }
 
   if (is_host) {
@@ -228,5 +229,6 @@ template("dart_test") {
              ":$_snapshot_target_name",
              ":$_spec_target_name",
            ]
+    testonly = true
   }
 }
