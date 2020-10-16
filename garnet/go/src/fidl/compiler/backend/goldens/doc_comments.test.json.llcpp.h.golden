@@ -43,6 +43,7 @@ class Table;
 struct Struct;
 class Interface;
 class Service;
+
 enum class MyEnum : uint32_t {
   FOO = 1u,
   BAR = 2u,

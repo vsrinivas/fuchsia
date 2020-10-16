@@ -52,6 +52,7 @@ struct WithErrorSyntax_ErrorAsEnum_Response;
 class Transitional;
 class ChannelProtocol;
 class WithAndWithoutRequestResponse;
+
 enum class ErrorEnun : uint32_t {
   ERR_FOO = 1u,
   ERR_BAR = 2u,

@@ -29,7 +29,7 @@ static bool EnumValidatorFor_test_name_obj_type(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_obj_type, .name="test.name/obj_type"};
+const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_obj_type, .name="test.name/obj_type"};
 
 static const struct FidlXUnionField Fields25test_name_UnionWithHandle[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable)}

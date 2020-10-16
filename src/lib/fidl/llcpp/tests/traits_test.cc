@@ -86,6 +86,9 @@ TEST(Traits, IsFidlType) {
   static_assert(fidl::IsFidlType<test::MoveOnlyStruct>::value);
   static_assert(fidl::IsFidlType<test::EmptyStruct>::value);
   static_assert(fidl::IsFidlType<test::SampleTable>::value);
-  static_assert(fidl::IsFidlType<test::Enum>::value);
+  static_assert(fidl::IsFidlType<test::StrictBits>::value);
+  static_assert(fidl::IsFidlType<test::FlexibleBits>::value);
+  static_assert(fidl::IsFidlType<test::StrictEnum>::value);
+  static_assert(fidl::IsFidlType<test::FlexibleEnum>::value);
   static_assert(!fidl::IsFidlType<NotAFidlType>::value);
 }

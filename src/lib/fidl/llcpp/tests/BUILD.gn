@@ -94,6 +94,7 @@ executable("fidl_llcpp_types_test_bin") {
 
   sources = [
     "bits_test.cc",
+    "enum_test.cc",
     "flexible_test.cc",
     "handle_test.cc",
     "linearized_and_encoded_test.cc",

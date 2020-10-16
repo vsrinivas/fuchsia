@@ -19,30 +19,9 @@ static bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"};
+const struct FidlCodedEnum test_name_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"};
 
-static bool EnumValidatorFor_test_name_MyFlexibleEnumWithCustomUnknown(uint64_t v) {
-  switch (v) {
-    case 1ul:
-    case 2ul:
-    case 3ul:
-      return true;
-    default:
-      return false;
-  }
-}
+const struct FidlCodedEnum test_name_MyFlexibleEnumWithCustomUnknownTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.name/MyFlexibleEnumWithCustomUnknown"};
 
-const struct FidlCodedEnum test_name_MyFlexibleEnumWithCustomUnknownTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyFlexibleEnumWithCustomUnknown, .name="test.name/MyFlexibleEnumWithCustomUnknown"};
-
-static bool EnumValidatorFor_test_name_MyFlexibleEnum(uint64_t v) {
-  switch (v) {
-    case 1ul:
-    case 2ul:
-      return true;
-    default:
-      return false;
-  }
-}
-
-const struct FidlCodedEnum test_name_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyFlexibleEnum, .name="test.name/MyFlexibleEnum"};
+const struct FidlCodedEnum test_name_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.name/MyFlexibleEnum"};
 

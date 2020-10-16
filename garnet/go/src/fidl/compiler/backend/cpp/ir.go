@@ -203,7 +203,7 @@ type BitsMember struct {
 }
 
 type Enum struct {
-	types.Attributes
+	types.Enum
 	Namespace string
 	Type      string
 	Name      string
@@ -221,7 +221,7 @@ func (e *Enum) compileProperties(c compiler) {
 }
 
 type EnumMember struct {
-	types.Attributes
+	types.EnumMember
 	Name  string
 	Value string
 }
@@ -1120,15 +1120,14 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 
 func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 	r := Enum{
-		Attributes: val.Attributes,
-		Namespace:  c.namespace,
-		Type:       c.compilePrimitiveSubtype(val.Type),
-		Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
-		Members:    []EnumMember{},
+		Enum:      val,
+		Namespace: c.namespace,
+		Type:      c.compilePrimitiveSubtype(val.Type),
+		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
-			Attributes: v.Attributes,
+			EnumMember: v,
 			Name:       changeIfReserved(v.Name, ""),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.

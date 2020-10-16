@@ -42,16 +42,79 @@ enum class MyStrictEnum : uint32_t {
   BAR = 2u,
 };
 
-enum class MyFlexibleEnumWithCustomUnknown : uint32_t {
-  FOO = 1u,
-  BAR = 2u,
-  CUSTOM_UNKNOWN = 3u,
-};
+class MyFlexibleEnumWithCustomUnknown final {
+ public:
+  constexpr MyFlexibleEnumWithCustomUnknown() : value_(0) {}
+  constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value)
+      : value_(value) {}
+  constexpr MyFlexibleEnumWithCustomUnknown(
+      const MyFlexibleEnumWithCustomUnknown& other) = default;
+  constexpr operator uint32_t() const { return value_; };
 
-enum class MyFlexibleEnum : uint32_t {
-  FOO = 1u,
-  BAR = 2u,
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+      case 2u:
+
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  constexpr static MyFlexibleEnumWithCustomUnknown Unknown() {
+    return MyFlexibleEnumWithCustomUnknown(0x3);
+  }
+  static const MyFlexibleEnumWithCustomUnknown FOO;
+  static const MyFlexibleEnumWithCustomUnknown BAR;
+  static const MyFlexibleEnumWithCustomUnknown CUSTOM_UNKNOWN;
+
+ private:
+  uint32_t value_;
 };
+constexpr const ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::FOO =
+        ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::BAR =
+        ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
+        ::llcpp::test::name::MyFlexibleEnumWithCustomUnknown(3u);
+
+class MyFlexibleEnum final {
+ public:
+  constexpr MyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
+  constexpr operator uint32_t() const { return value_; };
+
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+      case 2u:
+
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  constexpr static MyFlexibleEnum Unknown() {
+    return MyFlexibleEnum(0xffffffff);
+  }
+  static const MyFlexibleEnum FOO;
+  static const MyFlexibleEnum BAR;
+
+ private:
+  uint32_t value_;
+};
+constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::llcpp::test::name::MyFlexibleEnum(1u);
+constexpr const ::llcpp::test::name::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::llcpp::test::name::MyFlexibleEnum(2u);
 
 }  // namespace name
 }  // namespace test

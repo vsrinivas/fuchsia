@@ -22,7 +22,7 @@ static bool EnumValidatorFor_values_EnumType(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum values_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .validate=&EnumValidatorFor_values_EnumType, .name="values/EnumType"};
+const struct FidlCodedEnum values_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_values_EnumType, .name="values/EnumType"};
 
 static bool EnumValidatorFor_values_Enum(uint64_t v) {
   switch (v) {
@@ -33,7 +33,7 @@ static bool EnumValidatorFor_values_Enum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum values_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_values_Enum, .name="values/Enum"};
+const struct FidlCodedEnum values_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_values_Enum, .name="values/Enum"};
 
 const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=131ul, .name="values/BitsType"};
 

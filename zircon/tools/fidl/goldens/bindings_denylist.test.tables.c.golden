@@ -41,5 +41,5 @@ static bool EnumValidatorFor_test_name_OnlyDart(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_OnlyDartTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_OnlyDart, .name="test.name/OnlyDart"};
+const struct FidlCodedEnum test_name_OnlyDartTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_OnlyDart, .name="test.name/OnlyDart"};
 

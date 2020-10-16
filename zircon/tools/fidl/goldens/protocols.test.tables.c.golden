@@ -150,7 +150,7 @@ static bool EnumValidatorFor_test_name_obj_type(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_obj_type, .name="test.name/obj_type"};
+const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_obj_type, .name="test.name/obj_type"};
 
 const struct FidlCodedStruct test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="test.name/WithErrorSyntax_ResponseAsStruct_Response"};
 
@@ -188,7 +188,7 @@ static bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_ErrorEnunTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_ErrorEnun, .name="test.name/ErrorEnun"};
+const struct FidlCodedEnum test_name_ErrorEnunTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_ErrorEnun, .name="test.name/ErrorEnun"};
 
 static const struct FidlXUnionField Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable)},

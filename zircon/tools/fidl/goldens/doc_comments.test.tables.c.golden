@@ -43,7 +43,7 @@ static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum test_name_MyEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"};
+const struct FidlCodedEnum test_name_MyEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"};
 
 const struct FidlCodedBits test_name_MyBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="test.name/MyBits"};
 

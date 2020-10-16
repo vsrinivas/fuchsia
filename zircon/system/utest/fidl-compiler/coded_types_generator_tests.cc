@@ -775,7 +775,12 @@ TEST(CodedTypesGeneratorTests, CodedTypesOfBits) {
   TestLibrary library(R"FIDL(
 library example;
 
-bits MyBits : uint8 {
+strict bits StrictBits : uint8 {
+    HELLO = 0x1;
+    WORLD = 0x10;
+};
+
+flexible bits FlexibleBits : uint8 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
@@ -786,22 +791,42 @@ bits MyBits : uint8 {
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
   ASSERT_EQ(0, gen.coded_types().size());
-  auto name_bits = fidl::flat::Name::Key(library.library(), "MyBits");
-  auto type_bits = gen.CodedTypeFor(name_bits);
-  ASSERT_NOT_NULL(type_bits);
-  EXPECT_STR_EQ("example_MyBits", type_bits->coded_name.c_str());
-  EXPECT_TRUE(type_bits->is_coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kBits, type_bits->kind);
-  auto type_bits_bits = static_cast<const fidl::coded::BitsType*>(type_bits);
-  EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint8, type_bits_bits->subtype);
-  EXPECT_EQ(0x1u | 0x10u, type_bits_bits->mask);
+  {
+    auto name_bits = fidl::flat::Name::Key(library.library(), "StrictBits");
+    auto type_bits = gen.CodedTypeFor(name_bits);
+    ASSERT_NOT_NULL(type_bits);
+    EXPECT_STR_EQ("example_StrictBits", type_bits->coded_name.c_str());
+    EXPECT_TRUE(type_bits->is_coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kBits, type_bits->kind);
+    auto type_bits_bits = static_cast<const fidl::coded::BitsType*>(type_bits);
+    EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint8, type_bits_bits->subtype);
+    EXPECT_EQ(fidl::types::Strictness::kStrict, type_bits_bits->strictness);
+    EXPECT_EQ(0x1u | 0x10u, type_bits_bits->mask);
+  }
+  {
+    auto name_bits = fidl::flat::Name::Key(library.library(), "FlexibleBits");
+    auto type_bits = gen.CodedTypeFor(name_bits);
+    ASSERT_NOT_NULL(type_bits);
+    EXPECT_STR_EQ("example_FlexibleBits", type_bits->coded_name.c_str());
+    EXPECT_TRUE(type_bits->is_coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kBits, type_bits->kind);
+    auto type_bits_bits = static_cast<const fidl::coded::BitsType*>(type_bits);
+    EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint8, type_bits_bits->subtype);
+    EXPECT_EQ(fidl::types::Strictness::kFlexible, type_bits_bits->strictness);
+    EXPECT_EQ(0x1u | 0x10u, type_bits_bits->mask);
+  }
 }
 
-TEST(CodedTypesGeneratorTests, CodedTypesOfEnum) {
+TEST(CodedTypesGeneratorTests, CodedTypesOfStrictEnum) {
   TestLibrary library(R"FIDL(
 library example;
 
-enum MyEnum : uint16 {
+strict enum StrictEnum : uint16 {
+    HELLO = 0x1;
+    WORLD = 0x10;
+};
+
+flexible enum FlexibleEnum : uint16 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
@@ -812,18 +837,33 @@ enum MyEnum : uint16 {
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
   ASSERT_EQ(0, gen.coded_types().size());
-  auto name_enum = fidl::flat::Name::Key(library.library(), "MyEnum");
-  auto type_enum = gen.CodedTypeFor(name_enum);
-  ASSERT_NOT_NULL(type_enum);
-  EXPECT_STR_EQ("example_MyEnum", type_enum->coded_name.c_str());
-  EXPECT_TRUE(type_enum->is_coding_needed);
+  {
+    auto name_enum = fidl::flat::Name::Key(library.library(), "StrictEnum");
+    auto type_enum = gen.CodedTypeFor(name_enum);
+    ASSERT_NOT_NULL(type_enum);
+    EXPECT_STR_EQ("example_StrictEnum", type_enum->coded_name.c_str());
+    EXPECT_TRUE(type_enum->is_coding_needed);
 
-  ASSERT_EQ(fidl::coded::Type::Kind::kEnum, type_enum->kind);
-  auto type_enum_enum = static_cast<const fidl::coded::EnumType*>(type_enum);
-  EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint16, type_enum_enum->subtype);
-  EXPECT_EQ(2, type_enum_enum->members.size());
-  EXPECT_EQ(0x1, type_enum_enum->members[0]);
-  EXPECT_EQ(0x10, type_enum_enum->members[1]);
+    ASSERT_EQ(fidl::coded::Type::Kind::kEnum, type_enum->kind);
+    auto type_enum_enum = static_cast<const fidl::coded::EnumType*>(type_enum);
+    EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint16, type_enum_enum->subtype);
+    EXPECT_EQ(fidl::types::Strictness::kStrict, type_enum_enum->strictness);
+    EXPECT_EQ(2, type_enum_enum->members.size());
+    EXPECT_EQ(0x1, type_enum_enum->members[0]);
+    EXPECT_EQ(0x10, type_enum_enum->members[1]);
+  }
+  {
+    auto name_enum = fidl::flat::Name::Key(library.library(), "FlexibleEnum");
+    auto type_enum = gen.CodedTypeFor(name_enum);
+    ASSERT_NOT_NULL(type_enum);
+    EXPECT_STR_EQ("example_FlexibleEnum", type_enum->coded_name.c_str());
+    EXPECT_TRUE(type_enum->is_coding_needed);
+
+    ASSERT_EQ(fidl::coded::Type::Kind::kEnum, type_enum->kind);
+    auto type_enum_enum = static_cast<const fidl::coded::EnumType*>(type_enum);
+    EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint16, type_enum_enum->subtype);
+    EXPECT_EQ(fidl::types::Strictness::kFlexible, type_enum_enum->strictness);
+  }
 }
 
 TEST(CodedTypesGeneratorTests, CodedTypesOfUnionsWithReverseOrdinals) {

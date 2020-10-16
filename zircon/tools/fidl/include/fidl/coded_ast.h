@@ -159,15 +159,17 @@ struct PrimitiveType : public Type {
 
 struct EnumType : public Type {
   EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
-           std::vector<uint64_t> members, std::string qname)
+           std::vector<uint64_t> members, std::string qname, types::Strictness strictness)
       : Type(Kind::kEnum, std::move(name), size, true, false),
         subtype(subtype),
         members(std::move(members)),
-        qname(std::move(qname)) {}
+        qname(std::move(qname)),
+        strictness(strictness) {}
 
   const types::PrimitiveSubtype subtype;
   const std::vector<uint64_t> members;
   const std::string qname;
+  types::Strictness strictness;
 };
 
 struct BitsType : public Type {

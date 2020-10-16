@@ -35,7 +35,7 @@ static bool EnumValidatorFor_example_obj_type(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum example_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_example_obj_type, .name="example/obj_type"};
+const struct FidlCodedEnum example_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_example_obj_type, .name="example/obj_type"};
 
 static const struct FidlStructElement Fields29example_ExampleOfUseOfAliases[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},

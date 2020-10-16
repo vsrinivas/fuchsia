@@ -54,7 +54,7 @@ static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum example_ExampleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_example_ExampleEnum, .name="example/ExampleEnum"};
+const struct FidlCodedEnum example_ExampleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_example_ExampleEnum, .name="example/ExampleEnum"};
 
 const struct FidlCodedBits example_ExampleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="example/ExampleBits"};
 

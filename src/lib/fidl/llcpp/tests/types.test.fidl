@@ -90,8 +90,17 @@ table TableWithSubTables {
     3: array<SampleTable>:3 at;
 };
 
-enum Enum : uint32 {
-    VALUE_0 = 0;
+strict enum StrictEnum : uint32 {
+    B = 2;
+    D = 4;
+    E = 8;
+};
+
+flexible enum FlexibleEnum : uint32 {
+    B = 2;
+    D = 4;
+    E = 8;
+    [Unknown] CUSTOM = 56;
 };
 
 struct EmptyStruct {

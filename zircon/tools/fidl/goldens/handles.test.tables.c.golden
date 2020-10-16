@@ -104,7 +104,7 @@ static bool EnumValidatorFor_fidl_test_handles_obj_type(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum fidl_test_handles_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_fidl_test_handles_obj_type, .name="fidl.test.handles/obj_type"};
+const struct FidlCodedEnum fidl_test_handles_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_fidl_test_handles_obj_type, .name="fidl.test.handles/obj_type"};
 
 static const struct FidlStructElement Fields25fidl_test_handles_Handles[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=0u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},

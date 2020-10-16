@@ -43,6 +43,7 @@ class ExampleXUnion;
 class ExampleUnion;
 class ExampleTable;
 struct ExampleStruct;
+
 enum class ExampleEnum : uint32_t {
   MEMBER = 1u,
 };

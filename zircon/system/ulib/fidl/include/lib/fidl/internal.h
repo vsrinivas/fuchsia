@@ -311,6 +311,9 @@ struct FidlCodedPrimitive FIDL_INTERNAL_INHERIT_TYPE_T {
 struct FidlCodedEnum FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
   const FidlCodedPrimitiveSubtype underlying_type;
+  const FidlStrictness strictness;
+  // The validate predicate is only used for strict enums, and is NULL for
+  // flexible enums.
   const EnumValidationPredicate validate;
   const char* name;  // may be nullptr if omitted at compile time
 

@@ -156,24 +156,33 @@ void TablesGenerator::GenerateArray(const Collection& collection) {
 }
 
 void TablesGenerator::Generate(const coded::EnumType& enum_type) {
-  std::string validator_func = std::string("EnumValidatorFor_") + std::string(enum_type.coded_name);
-  Emit(&tables_file_, "static bool ");
-  Emit(&tables_file_, validator_func);
-  Emit(&tables_file_, "(uint64_t v) {\n  switch (v) {\n");
-  for (const auto& member : enum_type.members) {
-    Emit(&tables_file_, "    case ");
-    Emit(&tables_file_, member);
-    Emit(&tables_file_, ":\n");
+  std::string validator_func_ref;
+  if (enum_type.strictness == types::Strictness::kStrict) {
+    std::string validator_func =
+        std::string("EnumValidatorFor_") + std::string(enum_type.coded_name);
+    validator_func_ref = "&" + validator_func;
+    Emit(&tables_file_, "static bool ");
+    Emit(&tables_file_, validator_func);
+    Emit(&tables_file_, "(uint64_t v) {\n  switch (v) {\n");
+    for (const auto& member : enum_type.members) {
+      Emit(&tables_file_, "    case ");
+      Emit(&tables_file_, member);
+      Emit(&tables_file_, ":\n");
+    }
+    Emit(&tables_file_, "      return true;\n");
+    Emit(&tables_file_, "    default:\n      return false;\n");
+    Emit(&tables_file_, "  }\n}\n\n");
+  } else {
+    validator_func_ref = "NULL";
   }
-  Emit(&tables_file_, "      return true;\n");
-  Emit(&tables_file_, "    default:\n      return false;\n");
-  Emit(&tables_file_, "  }\n}\n\n");
 
   Emit(&tables_file_, "const struct FidlCodedEnum ");
   Emit(&tables_file_, NameTable(enum_type.coded_name));
   Emit(&tables_file_, " = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_");
   Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
-  Emit(&tables_file_, ", .validate=&" + validator_func + ", .name=\"");
+  Emit(&tables_file_, ", .strictness=");
+  Emit(&tables_file_, enum_type.strictness);
+  Emit(&tables_file_, ", .validate=" + validator_func_ref + ", .name=\"");
   Emit(&tables_file_, enum_type.qname);
   Emit(&tables_file_, "\"};\n\n");
 }

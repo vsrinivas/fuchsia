@@ -325,10 +325,11 @@ Result Walker<VisitorImpl>::WalkEnum(const FidlCodedEnum* fidl_coded_enum,
     default:
       __builtin_unreachable();
   }
-  if (unlikely(!fidl_coded_enum->validate(value))) {
-    // TODO(fxbug.dev/7847): Make this strictness dependent.
-    visitor_->OnError("not a valid enum member");
-    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+  if (fidl_coded_enum->strictness == kFidlStrictness_Strict) {
+    if (unlikely(!fidl_coded_enum->validate(value))) {
+      visitor_->OnError("not a valid enum member");
+      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+    }
   }
   return Result::kContinue;
 }

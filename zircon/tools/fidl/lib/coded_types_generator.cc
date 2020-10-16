@@ -427,7 +427,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           enum_decl->name,
           std::make_unique<coded::EnumType>(std::move(enum_name), enum_decl->type->subtype,
                                             enum_decl->type->typeshape(wire_format).InlineSize(),
-                                            std::move(members), NameFlatName(enum_decl->name)));
+                                            std::move(members), NameFlatName(enum_decl->name),
+                                            enum_decl->strictness));
       break;
     }
     case flat::Decl::Kind::kProtocol: {
