@@ -25,6 +25,7 @@ source_set("llcpp") {
     "logger.h",
     "namespace.cc",
     "namespace.h",
+    "promise.h",
     "start_args.cc",
     "start_args.h",
   ]
@@ -45,6 +46,7 @@ executable("llcpp_test") {
   sources = [
     "logger_test.cc",
     "namespace_test.cc",
+    "promise_test.cc",
     "start_args_test.cc",
     "test_base.h",
   ]
