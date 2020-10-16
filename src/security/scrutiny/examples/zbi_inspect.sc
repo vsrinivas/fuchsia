@@ -13,6 +13,9 @@
 # files located in BootFS.
 
 # 1. Extract the update package.
+print "Extracting the update package to /tmp/demo/update"
 tool.package.extract --url fuchsia-pkg://fuchsia.com/update --output /tmp/demo/update
+
 # 2. Extract the ZBI from the update package.
+print "Extracting the zbi to /tmp/demo/zbi"
 tool.zbi.extract --input /tmp/demo/update/zbi --output /tmp/demo/zbi
