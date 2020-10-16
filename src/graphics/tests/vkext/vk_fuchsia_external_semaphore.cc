@@ -348,8 +348,8 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
     VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
         .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
         .pNext = nullptr,
-        .flags = flags,
         .semaphore = t2->vk_semaphore_[i],
+        .flags = flags,
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         .handle = import_handle};
 
@@ -426,8 +426,8 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary) 
     VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
         .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
         .pNext = nullptr,
-        .flags = flags,
         .semaphore = t2->vk_semaphore_[i],
+        .flags = flags,
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         .handle = handle[i]};
 
