@@ -2,9 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_ui_input::{
-    self, InputReport, KeyboardReport, MediaButtonsReport, Touch, TouchscreenReport,
+use {
+    crate::synthesizer,
+    anyhow::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_ui_input::{
+        self, DeviceDescriptor, InputDeviceMarker, InputDeviceRegistryMarker, InputReport,
+        KeyboardReport, MediaButtonsReport, Touch, TouchscreenReport,
+    },
+    fuchsia_component as app,
 };
+
+// Provides a handle to an `impl synthesizer::Injector`, which works with input
+// pipelines that support the (legacy) `fuchsia.ui.input.InputDeviceRegistry` protocol.
+pub(crate) struct Injector;
+
+impl synthesizer::Injector for Injector {
+    fn register_device(
+        &mut self,
+        device: &mut DeviceDescriptor,
+        server: ServerEnd<InputDeviceMarker>,
+    ) -> Result<(), Error> {
+        let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;
+        registry.register_device(device, server)?;
+        Ok(())
+    }
+}
 
 pub(crate) fn media_buttons(
     volume_up: bool,

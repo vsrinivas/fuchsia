@@ -2,24 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{
-    convert::TryFrom,
-    thread,
-    time::{Duration, SystemTime},
+use {
+    crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*, usages::Usages},
+    anyhow::{ensure, Error},
+    fidl::endpoints::{self, ServerEnd},
+    fidl_fuchsia_ui_input::{
+        self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
+        KeyboardDescriptor, MediaButtonsDescriptor, Range, Touch, TouchscreenDescriptor,
+    },
+    std::{
+        convert::TryFrom,
+        thread,
+        time::{Duration, SystemTime},
+    },
 };
-
-use anyhow::{ensure, Error};
-
-use fidl::endpoints::{self, ServerEnd};
-
-use fidl_fuchsia_ui_input::{
-    self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
-    InputDeviceRegistryMarker, KeyboardDescriptor, MediaButtonsDescriptor, Range, Touch,
-    TouchscreenDescriptor,
-};
-
-use crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*, usages::Usages};
-use fuchsia_component as app;
 
 pub(crate) trait Injector {
     fn register_device(
@@ -27,21 +23,6 @@ pub(crate) trait Injector {
         device: &mut DeviceDescriptor,
         server: ServerEnd<InputDeviceMarker>,
     ) -> Result<(), Error>;
-}
-
-pub(crate) struct LegacyInjector;
-
-impl Injector for LegacyInjector {
-    fn register_device(
-        &mut self,
-        device: &mut DeviceDescriptor,
-        server: ServerEnd<InputDeviceMarker>,
-    ) -> Result<(), Error> {
-        let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;
-        registry.register_device(device, server)?;
-
-        Ok(())
-    }
 }
 
 // Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
