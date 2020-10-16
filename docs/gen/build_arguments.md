@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1201
+From //build/config/BUILDCONFIG.gn:1258
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -130,7 +130,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//src/intl/intl_services:small", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/log-stats:package", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//src/intl/intl_services:small", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics:device_id_provider_config", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/log-stats:package", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -138,7 +138,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:32
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//src/intl/intl_services:small", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/log-stats:package", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//src/intl/intl_services:small", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics:device_id_provider_config", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/log-stats:package", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -488,7 +488,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:92
+From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
@@ -496,7 +496,7 @@ From //BUILD.gn:40
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:92
+From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
@@ -519,13 +519,6 @@ From //src/camera/bin/camera-gym/BUILD.gn:11
 **Current value (from the default):** `false`
 
 From //src/camera/bin/camera-gym/BUILD.gn:12
-
-### camera_policy_allow_replacement_connections
-TODO(fxbug.dev/58063): Restore camera default exclusivity policy.
-
-**Current value (from the default):** `true`
-
-From //src/camera/bin/device/BUILD.gn:10
 
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
@@ -663,11 +656,30 @@ starts with //).
 
 From //build/images/custom_signing.gni:12
 
+### custom_signing_script_deps
+If `custom_signing_script` is not empty, a list of dependencies for the script.
+
+**Current value (from the default):** `[]`
+
+From //build/images/custom_signing.gni:15
+
+### custom_signing_script_tools
+If `custom signing script` is not empty, a list of host tool labels, without
+a toolchain, that the script depends on. The reason why these are not in
+`custom_signing_script_deps` is because these definitions are typically in
+board-specific .gni files where `host_os` or `host_toolchain` are not
+defined yet. Because these are imported from `args.gn` before `BUILDCONFIG.gn`
+is actually parsed.
+
+**Current value (from the default):** `[]`
+
+From //build/images/custom_signing.gni:23
+
 ### dart_default_app
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/5042b2f2f5ab92732d4f52df03e773bc8aa3c204/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -692,14 +704,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/5042b2f2f5ab92732d4f52df03e773bc8aa3c204/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/5042b2f2f5ab92732d4f52df03e773bc8aa3c204/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -730,6 +742,14 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 **Current value (from the default):** `"debug"`
 
 From //build/config/compiler.gni:43
+
+### dev_build_only_deps
+List of labels for targets that should be built but not included in any
+build outputs that are part of the build API (e.g. zbi's, package servers).
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:14
 
 ### dev_system_image_deps
 List of labels for binaries to include in the system image.
@@ -892,7 +912,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:964
+From //build/config/BUILDCONFIG.gn:1021
 
 ### fastboot_product
 
@@ -940,7 +960,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/5042b2f2f5ab92732d4f52df03e773bc8aa3c204/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -980,14 +1000,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/5042b2f2f5ab92732d4f52df03e773bc8aa3c204/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/f0975269bfe343c67768626f764983ab4a05a75b/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/5042b2f2f5ab92732d4f52df03e773bc8aa3c204/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1525,9 +1545,11 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/scudo"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
+  remove_common_configs = ["//build/config:no_rtti"]
   tags = ["instrumented", "instrumentation-runtime"]
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov"]
+  remove_common_configs = ["//build/config:no_rtti"]
   tags = ["instrumented", "instrumentation-runtime", "sancov"]
 }, {
   configs = ["//build/config/sanitizers:asan"]
@@ -1543,6 +1565,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  remove_common_configs = ["//build/config:no_rtti"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
   toolchain_args = {
   use_scudo = false
@@ -1572,7 +1595,7 @@ Each element of the list is one variant, which is a scope defining:
 }, {
   configs = ["//build/config/fuzzer", "//build/config/sanitizers:ubsan", "//build/config:icf"]
   name = "ubsan-fuzzer"
-  remove_common_configs = ["//build/config:icf"]
+  remove_common_configs = ["//build/config:icf", "//build/config:no_rtti"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   tags = ["fuzzer", "instrumented", "instrumentation-runtime"]
 }, {
@@ -1581,7 +1604,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:874
+From //build/config/BUILDCONFIG.gn:915
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1985,7 +2008,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/core.gni:100
+From //products/core.gni:101
 
 **Overridden from the default:** `[]`
 
@@ -1993,7 +2016,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/core.gni:100
+From //products/core.gni:101
 
 **Overridden from the default:** `[]`
 
@@ -2013,7 +2036,7 @@ A list of binary labels to include in the system_image package.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/connectivity/bluetooth:core-system", "//src/graphics/lib/magma/tests:test-drivers", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//bundles:tools-system"]`
 
-From //products/core.gni:94
+From //products/core.gni:95
 
 **Overridden from the default:** `[]`
 
@@ -2021,7 +2044,7 @@ From //build/product.gni:10
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/bluetooth:core-system", "//src/graphics/lib/magma/tests:test-drivers", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//bundles:tools-system"]`
 
-From //products/core.gni:94
+From //products/core.gni:95
 
 **Overridden from the default:** `[]`
 
@@ -2291,7 +2314,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1191
+From //build/config/BUILDCONFIG.gn:1248
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2300,7 +2323,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1196
+From //build/config/BUILDCONFIG.gn:1253
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2338,7 +2361,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1010
+From //build/config/BUILDCONFIG.gn:1067
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2598,7 +2621,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:984
+From //build/config/BUILDCONFIG.gn:1041
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2610,7 +2633,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
-From //products/core.gni:95
+From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
@@ -2618,7 +2641,7 @@ From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
-From //products/core.gni:95
+From //products/core.gni:96
 
 **Overridden from the default:** `[]`
 
