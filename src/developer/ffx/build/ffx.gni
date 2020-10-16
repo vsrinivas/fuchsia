@@ -27,6 +27,7 @@ template("ffx") {
   suite_name = ffx_name + "_lib"
 
   ffx_plugin(suite_name) {
+    include_main_entrypoint_lib = true
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
     config_data = [ "data/config.json" ]

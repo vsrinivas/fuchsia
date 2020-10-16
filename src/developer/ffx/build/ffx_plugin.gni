@@ -25,6 +25,11 @@ import("plugins.gni")
 #   version
 #     Semver version of the crate as seen on crates.io.
 #
+#   include_main_entrypoint_lib (optional)
+#     Boolean that determines whether to build an executable library in addition
+#     to the plugin suite library. Set this to true if building the "main"
+#     executable plugin with this. Defaults to false.
+#
 #   edition (optional)
 #     Edition of the Rust language to be used.
 #     Options are "2015" and "2018". Defaults to "2018".
@@ -74,6 +79,11 @@ import("plugins.gni")
 #     '--cfg feature=XXX'
 #
 template("ffx_plugin") {
+  include_main_entrypoint_lib = false
+  if (defined(invoker.include_main_entrypoint_lib)) {
+    include_main_entrypoint_lib = invoker.include_main_entrypoint_lib
+  }
+
   output_name = target_name
   if (defined(invoker.name)) {
     output_name = invoker.name
@@ -205,20 +215,10 @@ template("ffx_plugin") {
       lib_deps += invoker.deps
     }
 
-    file_source_root = "src/lib.rs"
-    if (defined(invoker.source_root)) {
-      file_source_root = invoker.source_root
-    }
-
-    source_exists =
-        exec_script("//src/developer/ffx/build/file_exists.sh",
-                    [ rebase_path(file_source_root, root_build_dir) ],
-                    "value")
-
     plugins_name = output_name + "_plugins"
     execution_lib = output_name
     includes_execution = "false"
-    if (source_exists) {
+    if (include_main_entrypoint_lib) {
       includes_execution = "true"
     }
 
@@ -248,7 +248,7 @@ template("ffx_plugin") {
       suite_deps += [ ":" + sub_cmd ]
     }
 
-    if (source_exists) {
+    if (include_main_entrypoint_lib) {
       rustc_library(output_name) {
         deps = lib_deps
         non_rust_deps = [ "//third_party/boringssl" ]
