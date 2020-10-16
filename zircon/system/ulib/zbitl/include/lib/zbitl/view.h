@@ -291,11 +291,6 @@ class View {
 
   class iterator {
    public:
-    using difference_type = ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-    using iterator_category = std::input_iterator_tag;
-
     /// The default-constructed iterator is invalid for all uses except
     /// equality comparison.
     iterator() = default;

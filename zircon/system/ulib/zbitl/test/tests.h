@@ -8,6 +8,7 @@
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
+#include <iterator>
 #include <string>
 #include <type_traits>
 
@@ -56,6 +57,16 @@ std::string GetExpectedJson(TestDataZbiType type);
 
 void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::unique_fd* fd,
                      size_t* num_bytes);
+
+// Annoyingly, we are unable to currently use std::next on zbitl::View's
+// iterator, as that requires the class to define `value_type` in its namespace
+// (among other things) - and neither GCC nor Clang acknowledge that it is
+// ineherited from the parent namespace by default, and GCC can't abide by
+// explicitly redefining it in the former.
+//
+// `auto it` ensures a decayed copy/move into the `it` argument, so a call
+// should not modify the input iterator.
+constexpr auto Next = [](auto it) { return ++it; };
 
 //
 // Each type of storage under test is expected to implement a "test traits"
@@ -349,6 +360,149 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
                error.error_value().item_offset);
 }
 
+// We simply test in this case that we are able to copy-create the byte ranges
+// associated with the item payloads. More strenuous exercise of the interface
+// is done under-the-hood by the other copy-creation tests.
+template <typename TestTraits>
+void TestCopyCreationByByteRange(TestDataZbiType type) {
+  using Storage = typename TestTraits::storage_type;
+  static_assert(zbitl::View<Storage>::CanCopyCreate());
+  using CreationTestTraits = typename TestTraits::creation_traits;
+
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURES(TestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  size_t idx = 0;
+  for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
+    uint32_t payload_size = (*it).header->length;
+    auto result = view.Copy(it.payload_offset(), payload_size);
+    ASSERT_TRUE(result.is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+
+    auto created = std::move(result).value().value();
+
+    Bytes actual;
+    auto created_payload = CreationTestTraits::AsPayload(created);
+    ASSERT_NO_FATAL_FAILURES(
+        CreationTestTraits::Read(created, created_payload, payload_size, &actual));
+    Bytes expected;
+    ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &expected));
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+  }
+  EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
+template <typename TestTraits>
+void TestCopyCreationByIteratorRange(TestDataZbiType type) {
+  using Storage = typename TestTraits::storage_type;
+  static_assert(zbitl::View<Storage>::CanCopyCreate());
+  using CreationTestTraits = typename TestTraits::creation_traits;
+
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURES(TestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  // [begin(), begin() + 1).
+  {
+    auto first = view.begin();
+    auto result = view.Copy(first, Next(first));
+    ASSERT_TRUE(result.is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+
+    auto created = std::move(result).value().value();
+
+    zbitl::View created_view(std::move(created));
+    ASSERT_IS_OK(created_view.container_header());
+
+    size_t idx = 0;
+    for (auto [header, payload] : created_view) {
+      EXPECT_EQ(kItemType, header->type);
+
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURES(
+          CreationTestTraits::Read(created_view.storage(), payload, header->length, &actual));
+      Bytes expected;
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx++, &expected));
+      ASSERT_EQ(expected.size(), actual.size());
+      EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+
+      const uint32_t flags = header->flags;
+      EXPECT_TRUE(flags & ZBI_FLAG_VERSION, "flags: %#x", flags);
+    }
+    EXPECT_EQ(1, idx);
+
+    auto error = created_view.take_error();
+    EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+                 std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+                 error.error_value().item_offset);
+  }
+
+  // [begin() + 1, end()).
+  if (Next(view.begin()) != view.end()) {
+    auto result = view.Copy(Next(view.begin()), view.end());
+    ASSERT_TRUE(result.is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+
+    auto created = std::move(result).value().value();
+
+    zbitl::View created_view(std::move(created));
+    ASSERT_IS_OK(created_view.container_header());
+
+    // We might have filled slop with a single discard element; skip if so.
+    auto first = created_view.begin();
+    if ((*first).header->type == ZBI_TYPE_DISCARD) {
+      ++first;
+    }
+
+    size_t idx = 1;  // Corresponding to begin() + 1.
+    for (auto it = first; it != created_view.end(); ++it, ++idx) {
+      auto [header, payload] = *it;
+      EXPECT_EQ(kItemType, header->type);
+
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURES(
+          CreationTestTraits::Read(created_view.storage(), payload, header->length, &actual));
+      Bytes expected;
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx, &expected));
+      ASSERT_EQ(expected.size(), actual.size());
+      EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+
+      const uint32_t flags = header->flags;
+      EXPECT_TRUE(flags & ZBI_FLAG_VERSION, "flags: %#x", flags);
+    }
+    EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
+
+    auto error = created_view.take_error();
+    EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+                 std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+                 error.error_value().item_offset);
+  }
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
 #define TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, \
                                               with_header, with_header_name)           \
   TEST(suite_name, type_name##CopyCreation##with_header_name) {                        \
@@ -357,7 +511,13 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
 
 #define TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, type_name, type)                        \
   TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, true, WithHeader) \
-  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, false, )
+  TEST_COPY_CREATION_BY_TYPE_AND_OPTION(suite_name, TestTraits, type_name, type, false, )          \
+  TEST(suite_name, type_name##CopyCreationByByteRange) {                                           \
+    ASSERT_NO_FATAL_FAILURES(TestCopyCreationByByteRange<TestTraits>(type));                       \
+  }                                                                                                \
+  TEST(suite_name, type_name##CopyCreationByIteratorRange) {                                       \
+    ASSERT_NO_FATAL_FAILURES(TestCopyCreationByIteratorRange<TestTraits>(type));                   \
+  }
 
 #define TEST_COPY_CREATION(suite_name, TestTraits)                                          \
   TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem) \
@@ -416,6 +576,132 @@ void TestCopying(TestDataZbiType type, bool with_header) {
                error.error_value().item_offset);
 }
 
+// We simply test in this case that we are able to copy the byte ranges
+// associated with the item payloads. More strenuous exercise of the
+// interface is done under-the-hood by the other copy tests.
+template <typename SrcTestTraits, typename DestTestTraits>
+void TestCopyingByByteRange(TestDataZbiType type) {
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  typename SrcTestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURES(SrcTestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  size_t idx = 0;
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    uint32_t payload_size = (*it).header->length;
+
+    typename DestTestTraits::Context copy_context;
+    ASSERT_NO_FATAL_FAILURES(DestTestTraits::Create(payload_size, &copy_context));
+    auto copy = copy_context.TakeStorage();
+
+    auto result = view.Copy(copy, it.payload_offset(), payload_size);
+    ASSERT_TRUE(result.is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+
+    Bytes actual;
+    auto copy_payload = DestTestTraits::AsPayload(copy);
+    ASSERT_NO_FATAL_FAILURES(DestTestTraits::Read(copy, copy_payload, payload_size, &actual));
+
+    Bytes expected;
+    ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx++, &expected));
+    ASSERT_EQ(expected.size(), actual.size());
+    EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+  }
+  EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
+template <typename SrcTestTraits, typename DestTestTraits>
+void TestCopyingByIteratorRange(TestDataZbiType type) {
+  files::ScopedTempDir dir;
+
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURES(OpenTestDataZbi(type, dir.path(), &fd, &size));
+
+  typename SrcTestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURES(SrcTestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  // [begin(), begin() + 1)
+  {
+    typename DestTestTraits::Context copy_context;
+    ASSERT_NO_FATAL_FAILURES(DestTestTraits::Create(kMaxZbiSize, &copy_context));
+    auto copy = copy_context.TakeStorage();
+
+    auto first = view.begin();
+    auto result = view.Copy(copy, first, Next(view.begin()));
+    ASSERT_TRUE(result.is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+
+    zbitl::View copy_view(std::move(copy));
+    ASSERT_IS_OK(copy_view.container_header());
+
+    size_t idx = 0;
+    for (auto [header, payload] : copy_view) {
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURES(
+          DestTestTraits::Read(copy_view.storage(), payload, header->length, &actual));
+      Bytes expected;
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx++, &expected));
+      ASSERT_EQ(expected.size(), actual.size());
+      EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+    }
+    EXPECT_EQ(1, idx);
+
+    auto error = copy_view.take_error();
+    EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+                 std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+                 error.error_value().item_offset);
+  }
+
+  // [begin() + 1, end()).
+  if (Next(view.begin()) != view.end()) {
+    typename DestTestTraits::Context copy_context;
+    ASSERT_NO_FATAL_FAILURES(DestTestTraits::Create(kMaxZbiSize, &copy_context));
+    auto copy = copy_context.TakeStorage();
+
+    auto first = Next(view.begin());
+    auto result = view.Copy(copy, first, view.end());
+    ASSERT_TRUE(result.is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+    ASSERT_TRUE(result.value().is_ok(), "%s", CopyResultErrorMsg(std::move(result)).c_str());
+
+    zbitl::View copy_view(std::move(copy));
+    ASSERT_IS_OK(copy_view.container_header());
+
+    size_t idx = 1;  // Corresponding to begin() + 1.
+    for (auto [header, payload] : copy_view) {
+      Bytes actual;
+      ASSERT_NO_FATAL_FAILURES(
+          DestTestTraits::Read(copy_view.storage(), payload, header->length, &actual));
+      Bytes expected;
+      ASSERT_NO_FATAL_FAILURES(GetExpectedPayload(type, idx++, &expected));
+      ASSERT_EQ(expected.size(), actual.size());
+      EXPECT_BYTES_EQ(expected.data(), actual.data(), expected.size());
+    }
+    EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
+
+    auto error = copy_view.take_error();
+    EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+                 std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+                 error.error_value().item_offset);
+  }
+
+  auto error = view.take_error();
+  EXPECT_FALSE(error.is_error(), "%s at offset %#x",
+               std::string(error.error_value().zbi_error).c_str(),  // No '\0'.
+               error.error_value().item_offset);
+}
+
 #define TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits,       \
                                         dest_name, type_name, type, with_header, with_header_name) \
   TEST(suite_name, type_name##Copy##src_name##to##dest_name##with_header_name) {                   \
@@ -428,7 +714,15 @@ void TestCopying(TestDataZbiType type, bool with_header) {
   TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
                                   type_name, type, true, WithHeader)                              \
   TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
-                                  type_name, type, false, )
+                                  type_name, type, false, )                                       \
+  TEST(suite_name, type_name##Copy##src_name##to##dest_name##ByByteRange) {                       \
+    auto test = TestCopyingByByteRange<SrcTestTraits, DestTestTraits>;                            \
+    ASSERT_NO_FATAL_FAILURES(test(type));                                                         \
+  }                                                                                               \
+  TEST(suite_name, type_name##Copy##src_name##to##dest_name##ByIteratorRange) {                   \
+    auto test = TestCopyingByIteratorRange<SrcTestTraits, DestTestTraits>;                        \
+    ASSERT_NO_FATAL_FAILURES(test(type));                                                         \
+  }
 
 #define TEST_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)               \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \

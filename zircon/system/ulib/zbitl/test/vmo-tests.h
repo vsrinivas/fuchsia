@@ -45,6 +45,8 @@ struct VmoTestTraits {
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
+
+  static const zx::vmo& GetVmo(const storage_type& storage) { return storage; }
 };
 
 struct UnownedVmoTestTraits {
@@ -81,6 +83,8 @@ struct UnownedVmoTestTraits {
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
+
+  static const zx::vmo& GetVmo(const storage_type& storage) { return *storage; }
 };
 
 struct MapOwnedVmoTestTraits {
@@ -114,6 +118,8 @@ struct MapOwnedVmoTestTraits {
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
+
+  static const zx::vmo& GetVmo(const storage_type& storage) { return storage.vmo(); }
 };
 
 struct MapUnownedVmoTestTraits {
@@ -151,6 +157,8 @@ struct MapUnownedVmoTestTraits {
   }
 
   static payload_type AsPayload(const storage_type& storage) { return 0; }
+
+  static const zx::vmo& GetVmo(const storage_type& storage) { return storage.vmo(); }
 };
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VMO_TESTS_H_
