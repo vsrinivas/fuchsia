@@ -273,7 +273,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   // After closing a parameter attribute, we restore the protocol alignment.
   int protocol_method_alignment_size_backup = -1;
 
-  bool has_encountered_param_list_start_;
+  bool has_encountered_param_list_start_ = false;
   // After encountering the opening parenthesis of a `ParameterList`, this denotes whether the first
   // param is on the same line.
   std::optional<bool> is_param_list_first_param_on_same_line_;
