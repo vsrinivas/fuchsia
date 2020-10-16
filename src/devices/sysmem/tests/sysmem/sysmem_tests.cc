@@ -3022,3 +3022,10 @@ TEST(Sysmem, ZeroRequiredMinBytesPerRow_SucceedsOnlyForNow) {
     to_modify->image_format_constraints[0].required_min_bytes_per_row = 0;
   }));
 }
+
+TEST(Sysmem, DuplicateConstraintsFails) {
+  EXPECT_FALSE(BasicAllocationSucceeds([](BufferCollectionConstraints& to_modify) {
+    to_modify->image_format_constraints_count = 2;
+    to_modify->image_format_constraints[1] = to_modify->image_format_constraints[0];
+  }));
+}

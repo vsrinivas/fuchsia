@@ -1042,6 +1042,20 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
       return false;
     }
   }
+
+  if (stage == CheckSanitizeStage::kNotAggregated) {
+    // As an optimization, only check the unaggregated inputs.
+    for (uint32_t i = 0; i < constraints->image_format_constraints().count(); ++i) {
+      for (uint32_t j = i + 1; j < constraints->image_format_constraints().count(); ++j) {
+        if (ImageFormatIsPixelFormatEqual(
+                constraints->image_format_constraints()[i].pixel_format(),
+                constraints->image_format_constraints()[j].pixel_format())) {
+          LogError("image format constraints %d and %d have identical formats", i, j);
+          return false;
+        }
+      }
+    }
+  }
   return true;
 }
 

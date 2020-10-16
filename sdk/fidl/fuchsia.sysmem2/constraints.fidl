@@ -119,7 +119,7 @@ table BufferCollectionConstraints {
     /// Optional constraints on the image format parameters of an image stored
     /// in a buffer of the BufferCollection.  This includes pixel format and
     /// image layout.  These constraints are per-pixel-format, so more than one
-    /// is permitted.
+    /// is permitted. Entries in the list must have unique pixel_formats.
     ///
     /// When aggregating, only pixel formats that are specified by all
     /// particpants with non-zero image_format_constraints_count (and non-Null)
