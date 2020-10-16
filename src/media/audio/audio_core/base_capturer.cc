@@ -59,8 +59,7 @@ BaseCapturer::BaseCapturer(
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
       reporter_(Reporter::Singleton().CreateCapturer()),
-      audio_clock_(
-          AudioClock::CreateAsClientAdjustable(audio::clock::AdjustableCloneOfMonotonic())) {
+      audio_clock_(AudioClock::ClientAdjustable(audio::clock::AdjustableCloneOfMonotonic())) {
   FX_DCHECK(mix_domain_);
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });

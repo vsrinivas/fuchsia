@@ -85,13 +85,13 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
     }
     FX_DCHECK(adjustable_duplicate.is_valid());
 
-    clock_for_packet_queue = AudioClock::CreateAsClientAdjustable(std::move(adjustable_duplicate));
+    clock_for_packet_queue = AudioClock::ClientAdjustable(std::move(adjustable_duplicate));
     adjustable_clock_is_allocated_ = true;
   } else {
     // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
     auto readable_clock = audio::clock::DuplicateClock(raw_clock()).take_value();
 
-    clock_for_packet_queue = AudioClock::CreateAsClientNonadjustable(std::move(readable_clock));
+    clock_for_packet_queue = AudioClock::ClientFixed(std::move(readable_clock));
   }
 
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,

@@ -24,13 +24,20 @@ constexpr double kMicroSrcPFactor = -0.00000007611;
 constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
     .proportional_factor = kMicroSrcPFactor,
     .integral_factor = kMicroSrcPFactor * 2 / kMicroSrcOscillationPeriod,
-    .derivative_factor = kMicroSrcPFactor * kMicroSrcOscillationPeriod / 8};
+    .derivative_factor = kMicroSrcPFactor * kMicroSrcOscillationPeriod / 8,
+};
 
 constexpr clock::PidControl::Coefficients kPidFactorsAdjustClientClock = {
-    .proportional_factor = 0, .integral_factor = 0, .derivative_factor = 0};
+    .proportional_factor = 0,
+    .integral_factor = 0,
+    .derivative_factor = 0,
+};
 
 constexpr clock::PidControl::Coefficients kPidFactorsAdjustHardwareClock = {
-    .proportional_factor = 0, .integral_factor = 0, .derivative_factor = 0};
+    .proportional_factor = 0,
+    .integral_factor = 0,
+    .derivative_factor = 0,
+};
 
 }  // namespace media::audio
 

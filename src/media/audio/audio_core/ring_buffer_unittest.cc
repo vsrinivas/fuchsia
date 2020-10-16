@@ -52,8 +52,8 @@ class InputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
 
-  AudioClock audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                                    AudioClock::kMonotonicDomain);
+  AudioClock audio_clock_ =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 
   int64_t safe_read_frame_ = -1;
 };
@@ -85,8 +85,8 @@ class OutputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<WritableRingBuffer> ring_buffer_;
 
-  AudioClock audio_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                                    AudioClock::kMonotonicDomain);
+  AudioClock audio_clock_ =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
   int64_t safe_write_frame_ = 0;
 };
 

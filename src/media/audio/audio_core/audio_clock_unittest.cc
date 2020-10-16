@@ -18,64 +18,69 @@ class AudioClockTest : public testing::Test {
   static constexpr uint32_t kCustomDomain = 42;
   static constexpr uint32_t kCustomDomain2 = 68;
 
-  void ValidateSyncModeNone(AudioClock& source_clock, AudioClock& dest_clock) {
-    ValidateSyncMode(AudioClock::SyncMode::None, source_clock, dest_clock);
+  // Convenience methods so AudioClock only has to declare one class (AudioClockTest) as friend.
+  void ValidateSyncNone(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::None, AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncModeSourceClock(AudioClock& source_clock, AudioClock& dest_clock) {
-    ValidateSyncMode(AudioClock::SyncMode::AdjustSourceClock, source_clock, dest_clock);
+  void ValidateSyncDestClock(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::AdjustDestClock,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncModeDestClock(AudioClock& source_clock, AudioClock& dest_clock) {
-    ValidateSyncMode(AudioClock::SyncMode::AdjustDestClock, source_clock, dest_clock);
+  void ValidateSyncDestHardware(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::AdjustDestHardware,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncModeSourceHardware(AudioClock& source_clock, AudioClock& dest_clock) {
-    ValidateSyncMode(AudioClock::SyncMode::AdjustSourceHardware, source_clock, dest_clock);
+  void ValidateSyncSourceClock(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::AdjustSourceClock,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncModeDestHardware(AudioClock& source_clock, AudioClock& dest_clock) {
-    ValidateSyncMode(AudioClock::SyncMode::AdjustDestHardware, source_clock, dest_clock);
+  void ValidateSyncSourceHardware(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::AdjustSourceHardware,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
-  void ValidateSyncModeMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
-    ValidateSyncMode(AudioClock::SyncMode::MicroSrc, source_clock, dest_clock);
-  }
-
- private:
-  void ValidateSyncMode(AudioClock::SyncMode mode, AudioClock& source_clock,
-                        AudioClock& dest_clock) {
-    EXPECT_EQ(mode, AudioClock::SynchronizationMode(source_clock, dest_clock));
+  void ValidateSyncMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
+    EXPECT_EQ(AudioClock::SyncMode::MicroSrc,
+              AudioClock::SyncModeForClocks(source_clock, dest_clock));
   }
 };
 
 TEST_F(AudioClockTest, EqualsOperator) {
-  auto clock1 = AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
-  auto clock2 = AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto clock1 = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto clock2 = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
   EXPECT_FALSE(clock1 == clock2);
 
-  auto clock3 = AudioClock::CreateAsClientNonadjustable(clock1.DuplicateClock());
+  auto clock3 = AudioClock::ClientFixed(clock1.DuplicateClock());
   EXPECT_TRUE(clock1 == clock3);
 }
 
-// Clock type (and domain, for Device clocks) can be set after construction.
-TEST_F(AudioClockTest, CreateAs) {
-  auto audio_clock = AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
+TEST_F(AudioClockTest, CreateClientAdjustable) {
+  auto audio_clock = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
   EXPECT_FALSE(audio_clock.is_device_clock());
   EXPECT_TRUE(audio_clock.is_client_clock());
   EXPECT_FALSE(audio_clock.controls_device_clock());
   EXPECT_TRUE(audio_clock.is_adjustable());
   EXPECT_FALSE(audio_clock.controls_device_clock());
+}
 
-  audio_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+TEST_F(AudioClockTest, CreateClientFixed) {
+  auto audio_clock = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   EXPECT_FALSE(audio_clock.is_device_clock());
   EXPECT_TRUE(audio_clock.is_client_clock());
   EXPECT_FALSE(audio_clock.is_adjustable());
   EXPECT_FALSE(audio_clock.controls_device_clock());
+}
 
-  audio_clock =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+TEST_F(AudioClockTest, CreateDeviceAdjustable) {
+  auto audio_clock =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
   EXPECT_TRUE(audio_clock.is_device_clock());
   EXPECT_FALSE(audio_clock.is_client_clock());
   EXPECT_TRUE(audio_clock.is_adjustable());
   EXPECT_FALSE(audio_clock.controls_device_clock());
+}
 
-  audio_clock = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain2);
+TEST_F(AudioClockTest, CreateDeviceFixed) {
+  auto audio_clock = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain2);
   EXPECT_TRUE(audio_clock.is_device_clock());
   EXPECT_FALSE(audio_clock.is_client_clock());
   EXPECT_FALSE(audio_clock.is_adjustable());
@@ -99,19 +104,17 @@ void VerifyCanControlDeviceClock(AudioClock& clock) {
   EXPECT_FALSE(clock.controls_device_clock());
 }
 
-TEST_F(AudioClockTest, set_controls_device_clock) {
-  auto client_adjustable =
-      AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
-  auto dev_adjust =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
-  auto dev_nonadjust =
-      AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain);
+TEST_F(AudioClockTest, ClientControlsDeviceClock) {
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
   VerifyCannotControlDeviceClock(client_adjustable);
-  VerifyCannotControlDeviceClock(dev_adjust);
-  VerifyCannotControlDeviceClock(dev_nonadjust);
+  VerifyCannotControlDeviceClock(device_adjustable);
+  VerifyCannotControlDeviceClock(device_fixed);
 
-  auto client_nonadjust = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  VerifyCanControlDeviceClock(client_nonadjust);
+  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+  VerifyCanControlDeviceClock(client_fixed);
 }
 
 TEST_F(AudioClockTest, ClockMonoToRefClock) {
@@ -121,7 +124,7 @@ TEST_F(AudioClockTest, ClockMonoToRefClock) {
   args.reset().set_rate_adjust(-1000);
   EXPECT_EQ(clock.update(args), ZX_OK) << "clock.update with rate_adjust failed";
 
-  auto audio_clock = AudioClock::CreateAsClientNonadjustable(std::move(clock));
+  auto audio_clock = AudioClock::ClientFixed(std::move(clock));
 
   auto post_update_tl_func = audio_clock.ref_clock_to_clock_mono();
   EXPECT_LT(post_update_tl_func.reference_delta(), post_update_tl_func.subject_delta())
@@ -129,12 +132,12 @@ TEST_F(AudioClockTest, ClockMonoToRefClock) {
 }
 
 TEST_F(AudioClockTest, DuplicateClock) {
-  auto audio_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+  auto audio_clock = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
   auto dupe_raw_clock = audio_clock.DuplicateClock();
   EXPECT_TRUE(dupe_raw_clock.is_valid());
 
-  auto dupe_audio_clock = AudioClock::CreateAsClientNonadjustable(std::move(dupe_raw_clock));
+  auto dupe_audio_clock = AudioClock::ClientFixed(std::move(dupe_raw_clock));
 
   auto time1 = dupe_audio_clock.Read().get();
   auto time2 = dupe_audio_clock.Read().get();
@@ -144,138 +147,155 @@ TEST_F(AudioClockTest, DuplicateClock) {
 
 TEST_F(AudioClockTest, InvalidZxClockHaltsCreate) {
   // Uninitialized clock cannot be passed to CreateAs...
-  ASSERT_DEATH(AudioClock::CreateAsClientNonadjustable(zx::clock()), "");
-  ASSERT_DEATH(AudioClock::CreateAsClientAdjustable(zx::clock()), "");
-  ASSERT_DEATH(AudioClock::CreateAsDeviceNonadjustable(zx::clock(), kCustomDomain), "");
-  ASSERT_DEATH(AudioClock::CreateAsDeviceAdjustable(zx::clock(), kCustomDomain), "");
+  ASSERT_DEATH(AudioClock::ClientFixed(zx::clock()), "");
+  ASSERT_DEATH(AudioClock::ClientAdjustable(zx::clock()), "");
+  ASSERT_DEATH(AudioClock::DeviceFixed(zx::clock(), kCustomDomain), "");
+  ASSERT_DEATH(AudioClock::DeviceAdjustable(zx::clock(), kCustomDomain), "");
 
   // Clock without WRITE rights cannot be passed to CreateAs...Adjustable
-  ASSERT_DEATH(AudioClock::CreateAsClientAdjustable(clock::CloneOfMonotonic()), "");
-  ASSERT_DEATH(AudioClock::CreateAsDeviceAdjustable(clock::CloneOfMonotonic(), kCustomDomain), "");
+  ASSERT_DEATH(AudioClock::ClientAdjustable(clock::CloneOfMonotonic()), "");
+  ASSERT_DEATH(AudioClock::DeviceAdjustable(clock::CloneOfMonotonic(), kCustomDomain), "");
 }
 
-// Validate AudioClock::SynchronizationMode() combinations leading to SyncMode::None
-TEST_F(AudioClockTest, SynchronizationMode_None) {
-  auto cli_nonadjust = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::None
+TEST_F(AudioClockTest, SyncModeNone) {
+  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
-  auto hw_controlling = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+  auto hw_controlling = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   hw_controlling.set_controls_device_clock(true);
 
-  auto cli_adjust = AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
 
-  auto dev_nonadjust =
-      AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain);
-  auto dev_nonadjust_same_domain =
-      AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain);
+  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
+  auto device_fixed_same_domain = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
 
-  auto dev_adjust =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
-  auto dev_adjust_same_domain =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+  auto device_adjustable_same_domain =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
 
   // No synchronization is needed, when reconciling any clock with itself.
-  ValidateSyncModeNone(cli_nonadjust, cli_nonadjust);
-  ValidateSyncModeNone(hw_controlling, hw_controlling);
-  ValidateSyncModeNone(cli_adjust, cli_adjust);
-  ValidateSyncModeNone(dev_nonadjust, dev_nonadjust);
-  ValidateSyncModeNone(dev_adjust, dev_adjust);
+  ValidateSyncNone(client_fixed, client_fixed);
+  ValidateSyncNone(hw_controlling, hw_controlling);
+  ValidateSyncNone(client_adjustable, client_adjustable);
+  ValidateSyncNone(device_fixed, device_fixed);
+  ValidateSyncNone(device_adjustable, device_adjustable);
 
   // No synchronization is needed, when reconciling two device clocks in the same domain.
-  ValidateSyncModeNone(dev_nonadjust, dev_nonadjust_same_domain);
-  ValidateSyncModeNone(dev_nonadjust, dev_adjust_same_domain);
-  ValidateSyncModeNone(dev_adjust, dev_nonadjust_same_domain);
-  ValidateSyncModeNone(dev_adjust, dev_adjust_same_domain);
+  ValidateSyncNone(device_fixed, device_fixed_same_domain);
+  ValidateSyncNone(device_fixed, device_adjustable_same_domain);
+  ValidateSyncNone(device_adjustable, device_fixed_same_domain);
+  ValidateSyncNone(device_adjustable, device_adjustable_same_domain);
 }
 
-// Validate AudioClock::SynchronizationMode() combinations leading to SyncMode::AdjustClientClock
-TEST_F(AudioClockTest, SynchronizationMode_AdjustClientClock) {
-  auto cli_nonadjust = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  auto cli_nonadjust2 = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustSourceClock
+TEST_F(AudioClockTest, SyncModeAdjustSourceClock) {
+  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
-  auto hw_controlling = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  auto hw_controlling2 = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+  auto hw_controlling = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   hw_controlling.set_controls_device_clock(true);
-  hw_controlling2.set_controls_device_clock(true);
 
-  auto cli_adjust = AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
-  auto cli_adjust2 = AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto client_adjustable2 = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
 
-  auto dev_nonadjust =
-      AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain);
+  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
 
-  auto dev_adjust =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
 
   // If a client adjustable clock is used, adjust it so that it matches the other clock.
-  ValidateSyncModeSourceClock(cli_adjust, cli_nonadjust2);
-  ValidateSyncModeSourceClock(cli_adjust, hw_controlling2);
-  ValidateSyncModeSourceClock(cli_adjust, cli_adjust2);
-  ValidateSyncModeSourceClock(cli_adjust, dev_nonadjust);
-  ValidateSyncModeSourceClock(cli_adjust, dev_adjust);
-
-  ValidateSyncModeDestClock(cli_nonadjust, cli_adjust);
-  ValidateSyncModeDestClock(hw_controlling, cli_adjust);
-  ValidateSyncModeDestClock(dev_nonadjust, cli_adjust);
-  ValidateSyncModeDestClock(dev_adjust, cli_adjust);
+  ValidateSyncSourceClock(client_adjustable, client_fixed);
+  ValidateSyncSourceClock(client_adjustable, hw_controlling);
+  ValidateSyncSourceClock(client_adjustable, client_adjustable2);
+  ValidateSyncSourceClock(client_adjustable, device_fixed);
+  ValidateSyncSourceClock(client_adjustable, device_adjustable);
 }
 
-// Validate AudioClock::SynchronizationMode() combinations leading to SyncMode::MicroSrc
-TEST_F(AudioClockTest, SynchronizationMode_MicroSrc) {
-  auto cli_nonadjust = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  auto cli_nonadjust2 = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustSourceClock
+TEST_F(AudioClockTest, SyncModeAdjustDestClock) {
+  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
-  auto hw_controlling = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  auto hw_controlling2 = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+  auto hw_controlling = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+  hw_controlling.set_controls_device_clock(true);
+
+  auto client_adjustable = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+
+  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
+
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+
+  // If a client adjustable clock is used, adjust it so that it matches the other clock.
+  ValidateSyncDestClock(client_fixed, client_adjustable);
+  ValidateSyncDestClock(hw_controlling, client_adjustable);
+  ValidateSyncDestClock(device_fixed, client_adjustable);
+  ValidateSyncDestClock(device_adjustable, client_adjustable);
+}
+
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::MicroSrc
+TEST_F(AudioClockTest, SyncModeMicroSrc) {
+  auto client_fixed = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+  auto client_fixed2 = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+
+  auto hw_controlling = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+  auto hw_controlling2 = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   hw_controlling.set_controls_device_clock(true);
   hw_controlling2.set_controls_device_clock(true);
 
-  auto dev_nonadjust =
-      AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain);
-  auto dev_nonadjust_diff_domain =
-      AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(), kCustomDomain2);
+  auto device_fixed = AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain);
+  auto device_fixed_diff_domain =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), kCustomDomain2);
 
-  auto dev_adjust =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
-  auto dev_adjust_diff_domain =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain2);
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+  auto device_adjustable_diff_domain =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain2);
 
   // If neither is Flexible, and if the clock pair does not include both a adjustable device clock
   // and the software clock designated to control it, then reconcile them using micro-SRC.
-  ValidateSyncModeMicroSrc(cli_nonadjust, cli_nonadjust2);
-  ValidateSyncModeMicroSrc(cli_nonadjust, hw_controlling);
-  ValidateSyncModeMicroSrc(cli_nonadjust, dev_nonadjust);
-  ValidateSyncModeMicroSrc(cli_nonadjust, dev_adjust);
+  ValidateSyncMicroSrc(client_fixed, client_fixed2);
+  ValidateSyncMicroSrc(client_fixed, hw_controlling);
+  ValidateSyncMicroSrc(client_fixed, device_fixed);
+  ValidateSyncMicroSrc(client_fixed, device_adjustable);
 
-  ValidateSyncModeMicroSrc(hw_controlling, cli_nonadjust);
-  ValidateSyncModeMicroSrc(hw_controlling, hw_controlling2);
-  ValidateSyncModeMicroSrc(hw_controlling, dev_nonadjust);
+  ValidateSyncMicroSrc(hw_controlling, client_fixed);
+  ValidateSyncMicroSrc(hw_controlling, hw_controlling2);
+  ValidateSyncMicroSrc(hw_controlling, device_fixed);
 
-  ValidateSyncModeMicroSrc(dev_nonadjust, cli_nonadjust);
-  ValidateSyncModeMicroSrc(dev_nonadjust, hw_controlling);
-  ValidateSyncModeMicroSrc(dev_nonadjust, dev_nonadjust_diff_domain);
-  ValidateSyncModeMicroSrc(dev_nonadjust, dev_adjust_diff_domain);
+  ValidateSyncMicroSrc(device_fixed, client_fixed);
+  ValidateSyncMicroSrc(device_fixed, hw_controlling);
+  ValidateSyncMicroSrc(device_fixed, device_fixed_diff_domain);
+  ValidateSyncMicroSrc(device_fixed, device_adjustable_diff_domain);
 
-  ValidateSyncModeMicroSrc(dev_adjust, cli_nonadjust);
-  ValidateSyncModeMicroSrc(dev_adjust, dev_nonadjust_diff_domain);
-  ValidateSyncModeMicroSrc(dev_adjust, dev_adjust_diff_domain);
+  ValidateSyncMicroSrc(device_adjustable, client_fixed);
+  ValidateSyncMicroSrc(device_adjustable, device_fixed_diff_domain);
+  ValidateSyncMicroSrc(device_adjustable, device_adjustable_diff_domain);
 }
 
-// Validate AudioClock::SynchronizationMode() combinations leading to SyncMode::AdjustHardwareClock
-TEST_F(AudioClockTest, SynchronizationMode_AdjustHardwareClock) {
-  auto hw_controlling = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  auto hw_controlling2 = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustSourceHardware
+TEST_F(AudioClockTest, SyncModeAdjustSourceHardware) {
+  auto hw_controlling = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   hw_controlling.set_controls_device_clock(true);
-  hw_controlling2.set_controls_device_clock(true);
 
-  auto dev_adjust =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
-  auto dev_adjust_diff_domain =
-      AudioClock::CreateAsDeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain2);
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
 
   // If one is a adjustable device clock and the other has been designated to control it, then
   // adjust the hardware so that the device clock matches the other one.
-  ValidateSyncModeSourceHardware(dev_adjust, hw_controlling2);
-  ValidateSyncModeDestHardware(hw_controlling, dev_adjust_diff_domain);
+  ValidateSyncSourceHardware(device_adjustable, hw_controlling);
+}
+
+// Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::AdjustDestHardware
+TEST_F(AudioClockTest, SyncModeAdjustDestHardware) {
+  auto hw_controlling = AudioClock::ClientFixed(clock::CloneOfMonotonic());
+  hw_controlling.set_controls_device_clock(true);
+
+  auto device_adjustable =
+      AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+
+  // If one is a adjustable device clock and the other has been designated to control it, then
+  // adjust the hardware so that the device clock matches the other one.
+  ValidateSyncDestHardware(hw_controlling, device_adjustable);
 }
 
 }  // namespace media::audio

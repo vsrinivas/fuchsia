@@ -31,8 +31,9 @@ class AudioClock {
   // (actual clock hardware related to an audio device).
   //
   // Clock rates can change at any time. Client clock rates are changed by calls to zx_clock_update.
-  // Device clock rates are changed by writes to hardware controls, or if clock hardware drifts. If
-  // AudioCore can control a clock's rate, the clock is Adjustable; otherwise it is NotAdjustable.
+  // Device clock rates change intentionally (by writes to hardware controls) or unintentionally (if
+  // clock hardware drifts). If AudioCore can control a clock's rate, the clock is Adjustable;
+  // otherwise it is NotAdjustable.
   //
   // We describe clocks by a pair (Source, Adjustable). Source is one of {Client, Device}
   // and Adjustable is a boolean. The default constructor creates an Invalid clock, while static
@@ -40,8 +41,7 @@ class AudioClock {
   //
   // Clock Synchronization
   // When two clocks run at slightly different rates, we error-correct to keep them synchronized.
-  // Exactly how we do this depends on their respective types, as explained by the output of the
-  // SynchronizationMode() function.
+  // This is implemented in SynchronizeClocks().
   //
   // Clock domains
   // A clock domain represents a set of clocks that always progress at the same rate (they may
@@ -62,17 +62,14 @@ class AudioClock {
   static constexpr uint32_t kMonotonicDomain = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
   static constexpr uint32_t kInvalidDomain = 0xFFFFFFFE;
 
-  static AudioClock CreateAsClientAdjustable(zx::clock clock);
-  static AudioClock CreateAsClientNonadjustable(zx::clock clock);
-  static AudioClock CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain);
-  static AudioClock CreateAsDeviceNonadjustable(zx::clock clock, uint32_t domain);
+  static AudioClock ClientAdjustable(zx::clock clock);
+  static AudioClock ClientFixed(zx::clock clock);
+  static AudioClock DeviceAdjustable(zx::clock clock, uint32_t domain);
+  static AudioClock DeviceFixed(zx::clock clock, uint32_t domain);
 
   static Mixer::Resampler UpgradeResamplerIfNeeded(Mixer::Resampler resampler_hint,
                                                    AudioClock& source_clock,
                                                    AudioClock& dest_clock);
-
-  AudioClock() = delete;
-  virtual ~AudioClock() = default;
 
   // No copy
   AudioClock(const AudioClock&) = delete;
@@ -103,23 +100,21 @@ class AudioClock {
   zx::clock DuplicateClock() const;
   zx::time Read() const;
 
-  // Audio clocks use a PID control; across a series of external rate adjustments, we track position
-  // (not just rate). Inputs to the feedback control are destination frame as "time" component, and
-  // source position error (in frac frames) as the process variable which we tune to zero. We
-  // regularly tune the feedback by reporting current position error at a given time; the PID
-  // provides the rate adjustment to be applied.
+  // Audio clocks are synchronized so that their positions (not just rates) align. We reconcile any
+  // differences smoothly, using feedback controls. Inputs are destination frame (as time component)
+  // and source position error in frac frames (as "process variable" which is tuned to zero). This
+  // function automatically adjusts the provided clocks as needed.
   //
-  // At a given dest_frame, the source position error is provided (in fractional frames). This is
-  // used to maintain an adjustment_rate() factor that eliminates the error over time.
+  // The return value is the PPM value of any micro-SRC that should subsequently be applied.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
                                    Fixed frac_src_error, int64_t dest_frame);
 
   // Clear internal running state and restart the feedback loop at the given destination frame.
-  virtual void ResetRateAdjustment(int64_t dest_frame);
+  void ResetRateAdjustment(int64_t dest_frame);
 
  private:
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
-  friend class ::media::audio::AudioClockTest;
+  friend class AudioClockTest;
 
   enum class Source { Client, Device };
   enum class SyncMode {
@@ -141,7 +136,7 @@ class AudioClock {
     // clock, if another stream's client clock is already controlling that device clock hardware.
     MicroSrc,
   };
-  static SyncMode SynchronizationMode(AudioClock& source_clock, AudioClock& dest_clock);
+  static SyncMode SyncModeForClocks(AudioClock& source_clock, AudioClock& dest_clock);
   static int32_t ClampPpm(SyncMode sync_mode, int32_t parts_per_million);
 
   static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;

@@ -18,19 +18,19 @@ namespace media::audio {
 //
 // static methods
 //
-AudioClock AudioClock::CreateAsClientAdjustable(zx::clock clock) {
+AudioClock AudioClock::ClientAdjustable(zx::clock clock) {
   return AudioClock(std::move(clock), Source::Client, true);
 }
 
-AudioClock AudioClock::CreateAsClientNonadjustable(zx::clock clock) {
+AudioClock AudioClock::ClientFixed(zx::clock clock) {
   return AudioClock(std::move(clock), Source::Client, false);
 }
 
-AudioClock AudioClock::CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain) {
+AudioClock AudioClock::DeviceAdjustable(zx::clock clock, uint32_t domain) {
   return AudioClock(std::move(clock), Source::Device, true, domain);
 }
 
-AudioClock AudioClock::CreateAsDeviceNonadjustable(zx::clock clock, uint32_t domain) {
+AudioClock AudioClock::DeviceFixed(zx::clock clock, uint32_t domain) {
   return AudioClock(std::move(clock), Source::Device, false, domain);
 }
 
@@ -40,7 +40,7 @@ Mixer::Resampler AudioClock::UpgradeResamplerIfNeeded(Mixer::Resampler initial_r
                                                       AudioClock& source_clock,
                                                       AudioClock& dest_clock) {
   if (initial_resampler_hint == Mixer::Resampler::Default) {
-    auto mode = AudioClock::SynchronizationMode(source_clock, dest_clock);
+    auto mode = AudioClock::SyncModeForClocks(source_clock, dest_clock);
     // If we might need micro-SRC for synchronization, use the higher quality resampler.
     if (mode == AudioClock::SyncMode::MicroSrc ||
         mode == AudioClock::SyncMode::AdjustSourceHardware ||
@@ -52,8 +52,8 @@ Mixer::Resampler AudioClock::UpgradeResamplerIfNeeded(Mixer::Resampler initial_r
   return initial_resampler_hint;
 }
 
-AudioClock::SyncMode AudioClock::SynchronizationMode(AudioClock& source_clock,
-                                                     AudioClock& dest_clock) {
+AudioClock::SyncMode AudioClock::SyncModeForClocks(AudioClock& source_clock,
+                                                   AudioClock& dest_clock) {
   if (source_clock == dest_clock) {
     return SyncMode::None;
   }
@@ -98,7 +98,7 @@ int32_t AudioClock::ClampPpm(SyncMode sync_mode, int32_t parts_per_million) {
 int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
                                       Fixed frac_src_error, int64_t dest_frame) {
   // The two clocks determine the sync mode.
-  auto sync_mode = SynchronizationMode(source_clock, dest_clock);
+  auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
 
   // From the sync mode, determine which clock to tune, and the appropriate PID.
   AudioClock* clock;
@@ -112,8 +112,6 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
     case SyncMode::AdjustSourceHardware:
       // We will adjust the source -- either its zx::clock, or the hardware it represents.
       clock = &source_clock;
-      FX_CHECK(clock->adjustable_feedback_control_.has_value());
-
       feedback_control = &(clock->adjustable_feedback_control_.value());
       break;
 
@@ -121,8 +119,6 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
     case SyncMode::AdjustDestHardware:
       // We will adjust the dest -- either its zx::clock, or the hardware it represents.
       clock = &dest_clock;
-      FX_CHECK(clock->adjustable_feedback_control_.has_value());
-
       feedback_control = &(clock->adjustable_feedback_control_.value());
       break;
 
@@ -172,10 +168,7 @@ AudioClock::AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t
   // If we can read the clock now, we will always be able to. This check covers all error modes (bad
   // handle, wrong object type, no RIGHT_READ, clock not running) short of actually adjusting it.
   zx_time_t now_unused;
-  if (clock_.read(&now_unused) != ZX_OK) {
-    clock_.reset();
-    FX_CHECK(false);
-  }
+  FX_CHECK(clock_.read(&now_unused) == ZX_OK) << "Submitted zx::clock could not be read";
 
   // Set feedback controls (including PID coefficients) for synchronizing this clock.
   if (is_adjustable()) {
@@ -224,7 +217,7 @@ zx::time AudioClock::Read() const {
 void AudioClock::ResetRateAdjustment(int64_t time) {
   microsrc_feedback_control_.Start(time);
   if (adjustable_feedback_control_.has_value()) {
-    adjustable_feedback_control_.value().Start(time);
+    adjustable_feedback_control_->Start(time);
   }
 }
 

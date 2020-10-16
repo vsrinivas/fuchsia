@@ -64,10 +64,6 @@ class MixStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
-  AudioClock CreateClientClock() {
-    return AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
-  }
-
   AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                   testing::PacketFactory& factory);
   void TestMixStageTrim(ClockMode clock_mode);
@@ -88,8 +84,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<MixStage> mix_stage_;
 
-  AudioClock device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                                     AudioClock::kMonotonicDomain);
+  AudioClock device_clock_ =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
 TEST_F(MixStageTest, AddInput_MixerSelection) {
@@ -116,85 +112,84 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
   auto tl_different = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(Fixed(kDiffFrameRate.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  auto adjustable_device_clock = AudioClock::CreateAsDeviceAdjustable(
-      clock::AdjustableCloneOfMonotonic(), AudioClock::kMonotonicDomain + 1);
-  auto adj_device_mix_stage = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline,
-                                                         adjustable_device_clock);
-  auto nonadjustable_device_clock = AudioClock::CreateAsDeviceNonadjustable(
-      clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
-  auto nonadj_device_mix_stage = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames,
-                                                            timeline, nonadjustable_device_clock);
+  auto adjustable_device_clock = AudioClock::DeviceAdjustable(clock::AdjustableCloneOfMonotonic(),
+                                                              AudioClock::kMonotonicDomain + 1);
+  auto adjustable_device_mix_stage = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames,
+                                                                timeline, adjustable_device_clock);
+  auto fixed_device_clock =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  auto fixed_device_mix_stage =
+      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, fixed_device_clock);
 
-  auto adj_client_same_rate = std::make_shared<PacketQueue>(
-      kSameFrameRate, tl_same,
-      AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic()));
-  auto adj_client_diff_rate = std::make_shared<PacketQueue>(
+  auto adjustable_client_same_rate = std::make_shared<PacketQueue>(
+      kSameFrameRate, tl_same, AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()));
+  auto adjustable_client_diff_rate = std::make_shared<PacketQueue>(
       kDiffFrameRate, tl_different,
-      AudioClock::CreateAsClientAdjustable(clock::AdjustableCloneOfMonotonic()));
+      AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic()));
   auto custom_same_rate = std::make_shared<PacketQueue>(
-      kSameFrameRate, tl_same, AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic()));
-  auto controlling_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+      kSameFrameRate, tl_same, AudioClock::ClientFixed(clock::CloneOfMonotonic()));
+  auto controlling_clock = AudioClock::ClientFixed(clock::CloneOfMonotonic());
   controlling_clock.set_controls_device_clock(true);
   ASSERT_TRUE(controlling_clock.controls_device_clock());
   auto controlling =
       std::make_shared<PacketQueue>(kSameFrameRate, tl_same, std::move(controlling_clock));
 
   // client adjustable should lead to Point, if same rate
-  ValidateIsPointSampler(adj_device_mix_stage->AddInput(adj_client_same_rate));
-  ValidateIsPointSampler(nonadj_device_mix_stage->AddInput(adj_client_same_rate));
+  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(adjustable_client_same_rate));
+  ValidateIsPointSampler(fixed_device_mix_stage->AddInput(adjustable_client_same_rate));
 
   // client adjustable should lead to Sinc, if not same rate
-  ValidateIsSincSampler(adj_device_mix_stage->AddInput(adj_client_diff_rate));
-  ValidateIsSincSampler(nonadj_device_mix_stage->AddInput(adj_client_diff_rate));
+  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(adjustable_client_diff_rate));
+  ValidateIsSincSampler(fixed_device_mix_stage->AddInput(adjustable_client_diff_rate));
 
   // custom clock should lead to Sinc, even if same rate, regardless of hardware-control
-  ValidateIsSincSampler(adj_device_mix_stage->AddInput(custom_same_rate));
-  ValidateIsSincSampler(nonadj_device_mix_stage->AddInput(custom_same_rate));
-  ValidateIsSincSampler(adj_device_mix_stage->AddInput(controlling));
-  ValidateIsSincSampler(nonadj_device_mix_stage->AddInput(controlling));
+  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(custom_same_rate));
+  ValidateIsSincSampler(fixed_device_mix_stage->AddInput(custom_same_rate));
+  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(controlling));
+  ValidateIsSincSampler(fixed_device_mix_stage->AddInput(controlling));
 
   // The default heuristic can still be explicitly indicated, and behaves as above.
-  ValidateIsPointSampler(adj_device_mix_stage->AddInput(adj_client_same_rate, std::nullopt,
-                                                        Mixer::Resampler::Default));
-  ValidateIsPointSampler(nonadj_device_mix_stage->AddInput(adj_client_same_rate, std::nullopt,
-                                                           Mixer::Resampler::Default));
-  ValidateIsSincSampler(adj_device_mix_stage->AddInput(adj_client_diff_rate, std::nullopt,
-                                                       Mixer::Resampler::Default));
-  ValidateIsSincSampler(nonadj_device_mix_stage->AddInput(adj_client_diff_rate, std::nullopt,
+  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(
+      adjustable_client_same_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsPointSampler(fixed_device_mix_stage->AddInput(adjustable_client_same_rate, std::nullopt,
                                                           Mixer::Resampler::Default));
+  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(
+      adjustable_client_diff_rate, std::nullopt, Mixer::Resampler::Default));
+  ValidateIsSincSampler(fixed_device_mix_stage->AddInput(adjustable_client_diff_rate, std::nullopt,
+                                                         Mixer::Resampler::Default));
+  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
+                                                              Mixer::Resampler::Default));
   ValidateIsSincSampler(
-      adj_device_mix_stage->AddInput(custom_same_rate, std::nullopt, Mixer::Resampler::Default));
+      fixed_device_mix_stage->AddInput(custom_same_rate, std::nullopt, Mixer::Resampler::Default));
   ValidateIsSincSampler(
-      nonadj_device_mix_stage->AddInput(custom_same_rate, std::nullopt, Mixer::Resampler::Default));
+      adjustable_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
   ValidateIsSincSampler(
-      adj_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
-  ValidateIsSincSampler(
-      nonadj_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
+      fixed_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::Default));
 
   //
   // For all, explicit mixer selection can still countermand our default heuristic
   //
   // WindowedSinc can still be explicitly specified in same-rate no-microSRC situations
-  ValidateIsSincSampler(adj_device_mix_stage->AddInput(adj_client_same_rate, std::nullopt,
-                                                       Mixer::Resampler::WindowedSinc));
-  ValidateIsSincSampler(nonadj_device_mix_stage->AddInput(adj_client_same_rate, std::nullopt,
-                                                          Mixer::Resampler::WindowedSinc));
+  ValidateIsSincSampler(adjustable_device_mix_stage->AddInput(
+      adjustable_client_same_rate, std::nullopt, Mixer::Resampler::WindowedSinc));
+  ValidateIsSincSampler(fixed_device_mix_stage->AddInput(adjustable_client_same_rate, std::nullopt,
+                                                         Mixer::Resampler::WindowedSinc));
 
   // SampleAndHold can still be explicitly specified, even in different-rate situations
-  ValidateIsPointSampler(adj_device_mix_stage->AddInput(adj_client_diff_rate, std::nullopt,
-                                                        Mixer::Resampler::SampleAndHold));
-  ValidateIsPointSampler(nonadj_device_mix_stage->AddInput(adj_client_diff_rate, std::nullopt,
-                                                           Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(
+      adjustable_client_diff_rate, std::nullopt, Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(fixed_device_mix_stage->AddInput(adjustable_client_diff_rate, std::nullopt,
+                                                          Mixer::Resampler::SampleAndHold));
 
   // SampleAndHold can still be explicitly specified, even in microSRC situations
-  ValidateIsPointSampler(adj_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
-                                                        Mixer::Resampler::SampleAndHold));
-  ValidateIsPointSampler(nonadj_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
-                                                           Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
+                                                               Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(fixed_device_mix_stage->AddInput(custom_same_rate, std::nullopt,
+                                                          Mixer::Resampler::SampleAndHold));
+  ValidateIsPointSampler(adjustable_device_mix_stage->AddInput(controlling, std::nullopt,
+                                                               Mixer::Resampler::SampleAndHold));
   ValidateIsPointSampler(
-      adj_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::SampleAndHold));
-  ValidateIsPointSampler(nonadj_device_mix_stage->AddInput(controlling, std::nullopt,
-                                                           Mixer::Resampler::SampleAndHold));
+      fixed_device_mix_stage->AddInput(controlling, std::nullopt, Mixer::Resampler::SampleAndHold));
 }
 
 // TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned
@@ -212,7 +207,7 @@ AudioClock MixStageTest::SetPacketFactoryWithOffsetAudioClock(zx::duration clock
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  return AudioClock::CreateAsClientNonadjustable(std::move(custom_clock));
+  return AudioClock::ClientFixed(std::move(custom_clock));
 }
 
 void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
@@ -224,8 +219,8 @@ void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
   if (clock_mode == ClockMode::SAME) {
-    packet_queue =
-        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
+    packet_queue = std::make_shared<PacketQueue>(
+        kDefaultFormat, timeline_function, AudioClock::ClientFixed(clock::CloneOfMonotonic()));
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
     auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(-2), packet_factory);
 
@@ -288,13 +283,13 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
   testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
-  auto packet_queue1 =
-      std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
+  auto packet_queue1 = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function, AudioClock::ClientFixed(clock::CloneOfMonotonic()));
   std::shared_ptr<PacketQueue> packet_queue2;
 
   if (clock_mode == ClockMode::SAME) {
-    packet_queue2 =
-        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
+    packet_queue2 = std::make_shared<PacketQueue>(
+        kDefaultFormat, timeline_function, AudioClock::ClientFixed(clock::CloneOfMonotonic()));
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
     auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(10), packet_factory2);
 
@@ -478,8 +473,8 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   std::shared_ptr<PacketQueue> packet_queue;
 
   if (clock_mode == ClockMode::SAME) {
-    packet_queue =
-        std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
+    packet_queue = std::make_shared<PacketQueue>(
+        kDefaultFormat, timeline_function, AudioClock::ClientFixed(clock::CloneOfMonotonic()));
   } else if (clock_mode == ClockMode::WITH_OFFSET) {
     auto custom_audio_clock = SetPacketFactoryWithOffsetAudioClock(zx::sec(5), packet_factory);
 
@@ -577,9 +572,8 @@ TEST_F(MixStageTest, MixWithSourceGain) {
 
 TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   // Create a packet queue to use as our source stream.
-  auto stream = std::make_shared<PacketQueue>(
-      kDefaultFormat, timeline_function_,
-      AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic()));
+  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_,
+                                              AudioClock::ClientFixed(clock::CloneOfMonotonic()));
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
@@ -647,7 +641,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
 // src_pos_modulo and next_src_pos_modulo need not change. If denominator DOES change, then
 // src_pos_modulo and next_src_pos_modulo are scaled, from the old denominator to the new one.
 TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
-  auto audio_clock = AudioClock::CreateAsClientNonadjustable(clock::CloneOfMonotonic());
+  auto audio_clock = AudioClock::ClientFixed(clock::CloneOfMonotonic());
 
   auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));

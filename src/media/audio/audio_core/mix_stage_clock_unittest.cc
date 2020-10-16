@@ -152,10 +152,10 @@ class MicroSrcClockTest : public MixStageClockTest {
   }
 
   void SetUpClocks(ClockMode clock_mode, zx::clock raw_clock) {
-    client_clock_ = AudioClock::CreateAsClientNonadjustable(std::move(raw_clock));
+    client_clock_ = AudioClock::ClientFixed(std::move(raw_clock));
 
-    device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                            AudioClock::kMonotonicDomain);
+    device_clock_ =
+        AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
   }
 
   Fixed PrimaryErrorLimit(int32_t rate_adjust_ppm) override {

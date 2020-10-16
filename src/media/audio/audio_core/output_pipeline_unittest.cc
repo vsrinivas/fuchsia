@@ -107,7 +107,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   AudioClock SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
                                                   testing::PacketFactory& factory);
   AudioClock CreateClientClock() {
-    return AudioClock::CreateAsClientNonadjustable(clock::AdjustableCloneOfMonotonic());
+    return AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic());
   }
 
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
@@ -120,8 +120,8 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
   void TestOutputPipelineTrim(ClockMode clock_mode);
   void TestDifferentMixRates(ClockMode clock_mode);
 
-  AudioClock device_clock_ = AudioClock::CreateAsDeviceNonadjustable(clock::CloneOfMonotonic(),
-                                                                     AudioClock::kMonotonicDomain);
+  AudioClock device_clock_ =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
 };
 
 AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
@@ -138,7 +138,7 @@ AudioClock OutputPipelineTest::SetPacketFactoryWithOffsetAudioClock(
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
   factory.SeekToFrame(seek_frame);
 
-  auto custom_audio_clock = AudioClock::CreateAsClientNonadjustable(std::move(custom_clock));
+  auto custom_audio_clock = AudioClock::ClientFixed(std::move(custom_clock));
 
   return custom_audio_clock;
 }
