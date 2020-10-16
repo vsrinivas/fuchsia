@@ -172,7 +172,7 @@ int Astro::Thread() {
     zxlogf(ERROR, "BacklightInit failed: %d", status);
   }
 
-  if ((status == RamCtlInit()) != ZX_OK) {
+  if ((status = RamCtlInit()) != ZX_OK) {
     zxlogf(ERROR, "RamCtlInit failed: %d", status);
   }
 
