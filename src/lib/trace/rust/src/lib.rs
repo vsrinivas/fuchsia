@@ -216,7 +216,7 @@ pub fn alert(category: &'static CStr, name: &'static CStr) {
 ///
 /// ```rust
 /// let id = 555;
-/// counter!(cstr!("foo"), cstr!("bar"), id,
+/// counter(cstr!("foo"), cstr!("bar"), id,
 ///     &[ArgValue::of("x", 5), ArgValue::of("y", 10)]);
 /// ```
 #[macro_export]

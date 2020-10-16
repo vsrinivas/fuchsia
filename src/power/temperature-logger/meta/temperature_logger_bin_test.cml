@@ -1,0 +1,25 @@
+{
+    program: {
+        binary: "test/temperature_logger_bin_test",
+    },
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

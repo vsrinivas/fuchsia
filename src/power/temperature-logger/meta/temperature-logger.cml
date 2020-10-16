@@ -1,0 +1,45 @@
+{
+    program: {
+        binary: "bin/temperature_logger",
+    },
+    capabilities: [
+        { protocol: "fuchsia.thermal.test.TemperatureLogger" },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            directory: "/config/data",
+            rights: [ "r*" ],
+        },
+        {
+            directory: "dev-temperature",
+            rights: [ "r*" ],
+            path: "/dev/class/temperature",
+        },
+        {
+            directory: "dev-thermal",
+            rights: [ "r*" ],
+            path: "/dev/class/thermal",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.device.Controller",
+                "/svc/fuchsia.hardware.temperature.Device",
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.thermal.test.TemperatureLogger",
+            from: "self",
+        },
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+    ],
+}

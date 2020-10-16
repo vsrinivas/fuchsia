@@ -30,6 +30,10 @@
             name: "debug_serial",
             url: "fuchsia-pkg://fuchsia.com/debug-serial#meta/debug-serial.cm",
         },
+        {
+            name: "temperature-logger",
+            url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
+        },
     ],
     capabilities: [
         {
@@ -59,6 +63,11 @@
             from: "#appmgr",
             to: [ "#font_provider" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.thermal.test.TemperatureLogger",
+            from: "#temperature-logger",
+            to: [ "#appmgr" ],
         },
 
         // Passing from root realm to appmgr
@@ -124,6 +133,7 @@
                 "#font_provider",
                 "#log-stats",
                 "#remote-control",
+                "#temperature-logger",
                 "#test_manager",
             ],
         },
@@ -180,6 +190,40 @@
             protocol: "/svc/fuchsia.fonts.Provider",
             from: "#font_provider",
             to: [ "#appmgr" ],
+        },
+        {
+            directory: "/dev",
+            from: "parent",
+            as: "dev-temperature",
+            to: [ "#temperature-logger" ],
+            subdir: "class/temperature",
+        },
+        {
+            directory: "/dev",
+            from: "parent",
+            as: "dev-thermal",
+            to: [ "#temperature-logger" ],
+            subdir: "class/thermal",
+        },
+        {
+            directory: "/config/data",
+            from: "parent",
+            to: [ "#temperature-logger" ],
+            subdir: "temperature-logger",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.device.Controller",
+                "/svc/fuchsia.hardware.temperature.Device",
+            ],
+            from: "parent",
+            to: [ "#temperature-logger" ],
+        },
+        {
+            protocol: "/svc/fuchsia.tracing.provider.Registry",
+            from: "#appmgr",
+            to: [ "#temperature-logger" ],
+            dependency: "weak_for_migration",
         },
         {
             directory: "/boot",

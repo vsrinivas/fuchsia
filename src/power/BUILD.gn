@@ -20,5 +20,6 @@ group("tests") {
     "battery-manager:tests",
     "battery-manager/battery-cli:tests",
     "shutdown-shim/tests",
+    "temperature-logger:tests",
   ]
 }

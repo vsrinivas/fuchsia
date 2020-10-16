@@ -1,0 +1,48 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.thermal.test;
+
+/// Errors associated with TemperatureLogger methods.
+enum TemperatureLoggerError : uint32 {
+    /// Indicates that an invalid argument was provided.
+    INVALID_ARGUMENT = 1;
+    /// Requests to start logging will fail if logging is already active.
+    ALREADY_LOGGING = 2;
+};
+
+/// A protocol for managing on-demand temperature logging.
+[Discoverable]
+protocol TemperatureLogger {
+    /// Initiates logging at the specified interval, for the provided duration. Logging may be
+    /// terminated early with a call to `StopLogging`.
+    ///
+    /// This call will fail if logging is already active. For this reason, a client may wish to
+    /// precede a `StartLogging` call with a `StopLogging` call, after which the only reason for the
+    /// logger to be active would be a conflict with another client.
+    ///
+    /// + request `interval_ms` Length of the polling interval in milliseconds; must be positive.
+    ///     All configured sensors will be polled, and temperatures logged to Inspect and trace, at
+    ///     this interval.
+    /// + request `duration_ms` Duration of logging in milliseconds; must be positive and larger
+    ///     than `interval_ms`. After this duration, temperature polling and logging will cease.
+    /// + error a [fuchsia.thermal.test/TemperatureLoggerError] value indicating why the request
+    ///     failed.
+    StartLogging(uint32 interval_ms, uint32 duration_ms) -> () error TemperatureLoggerError;
+
+    /// Initiates logging at the specifed interval. Logging will only end upon a `StopLogging` call.
+    ///
+    /// `StartLogging` should be preferred for usage in automated tests to ensure that logging
+    /// terminates even if the test crashes.
+    ///
+    /// + request `interval_ms` Length of the polling interval in milliseconds; must be positive.
+    ///     All configured sensors will be polled, and temperatures logged to Inspect and trace, at
+    ///     this interval.
+    /// + error a [fuchsia.thermal.test/TemperatureLoggerError] value indicating why the request
+    ///     failed.
+    StartLoggingForever(uint32 interval_ms) -> () error TemperatureLoggerError;
+
+    /// Terminates logging if active. It is valid to call this method when logging is inactive.
+    StopLogging();
+};

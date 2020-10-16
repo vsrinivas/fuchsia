@@ -196,6 +196,10 @@
             protocol: "/svc/fuchsia.hardware.serial.NewDeviceProxy",
             as: "/svc_for_sys/fuchsia.hardware.serial.NewDeviceProxy",
         },
+        {
+            protocol: "fuchsia.thermal.test.TemperatureLogger",
+            path: "/svc_for_sys/fuchsia.thermal.test.TemperatureLogger",
+        },
 
         // From archivist
         {
