@@ -238,9 +238,10 @@ func TestSSHTester(t *testing.T) {
 				// This is a hack to ensure the shutdown command gets sent to the serial server.
 				// Rather than introduce a new synchronization mechanism, just use the code under test's
 				// existing mechanism for sending commands.
-				serialDiagnosticCmds = append(serialDiagnosticCmds, []string{serialServer.shutdownString})
+
 				// Ensure we don't waste time sleeping in this test.
-				diagnosticToggleDuration = time.Microsecond
+				serialDiagnosticCmds = append(serialDiagnosticCmds,
+					serialDiagnosticCmd{[]string{serialServer.shutdownString}, time.Microsecond})
 				tester.serialSocketPath = serialServer.socketPath
 				defer os.Remove(serialServer.socketPath)
 				eg.Go(serialServer.Serve)
@@ -315,15 +316,15 @@ func TestSSHTester(t *testing.T) {
 				if err = eg.Wait(); err != nil {
 					t.Errorf("serialServer.Serve() failed: %v", err)
 				}
-				// Ignore the shutdown command we appended at the end
+				// Verify that each command was seen in the received data, and in the
+				// proper order. Ignore the shutdown command we appended at the end
+				searchPos := 0
 				for _, cmd := range serialDiagnosticCmds[:len(serialDiagnosticCmds)-2] {
-					firstIndex := bytes.Index(serialServer.received, []byte(asSerialCmd(cmd)))
-					if firstIndex == -1 {
-						t.Errorf("SSHTester did not execute command over serial: %v", cmd)
-					}
-					secondIndex := bytes.Index(serialServer.received[firstIndex+1:], []byte(asSerialCmd(cmd)))
-					if secondIndex == -1 {
-						t.Errorf("SSHTester only executed command over serial once, expected twice: %v, all received: %s", cmd, string(serialServer.received))
+					index := bytes.Index(serialServer.received[searchPos:], []byte(asSerialCmd(cmd.cmd)))
+					if index == -1 {
+						t.Errorf("SSHTester did find the command \"%v\" in the proper order, all received: %s", cmd, string(serialServer.received))
+					} else {
+						searchPos = index + 1
 					}
 				}
 			}

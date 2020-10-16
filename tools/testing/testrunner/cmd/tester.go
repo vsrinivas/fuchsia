@@ -182,8 +182,18 @@ func asSerialCmd(cmd []string) string {
 	return fmt.Sprintf("%s\r\n", strings.Join(cmd, " "))
 }
 
-var serialDiagnosticCmds = [][]string{{"k", "threadload"}, {"k", "threadq"}}
-var diagnosticToggleDuration = 5 * time.Second
+type serialDiagnosticCmd struct {
+	cmd           []string
+	sleepDuration time.Duration
+}
+
+var serialDiagnosticCmds = []serialDiagnosticCmd{
+	{[]string{"k", "threadload"}, 200 * time.Millisecond}, // Turn on threadload
+	{[]string{"k", "threadq"}, 5 * time.Second},           // Turn on threadq and wait 5 sec
+	{[]string{"k", "cpu", "sev"}, 5 * time.Second},        // Send a SEV and wait 5 sec
+	{[]string{"k", "threadload"}, 200 * time.Millisecond}, // Turn off threadload
+	{[]string{"k", "threadq"}, 0},                         // Turn off threadq
+}
 
 func (t *fuchsiaSSHTester) runSerialDiagnostics(ctx context.Context) error {
 	if t.serialSocketPath == "" {
@@ -196,15 +206,15 @@ func (t *fuchsiaSSHTester) runSerialDiagnostics(ctx context.Context) error {
 	}
 	defer socket.Close()
 	for _, cmd := range serialDiagnosticCmds {
-		logger.Debugf(ctx, "to enable diagnostics, running over serial: %v", cmd)
-		if _, err := io.WriteString(socket, asSerialCmd(cmd)); err != nil {
+		logger.Debugf(ctx, "running over serial: %v", cmd.cmd)
+
+		if _, err := io.WriteString(socket, asSerialCmd(cmd.cmd)); err != nil {
 			return fmt.Errorf("failed to write to serial socket: %v", err)
 		}
-		logger.Debugf(ctx, "sleeping for %v", diagnosticToggleDuration)
-		time.Sleep(diagnosticToggleDuration)
-		logger.Debugf(ctx, "to disable diagnostics, running over serial: %v", cmd)
-		if _, err := io.WriteString(socket, asSerialCmd(cmd)); err != nil {
-			return fmt.Errorf("failed to write to serial socket: %v", err)
+
+		if cmd.sleepDuration > 0 {
+			logger.Debugf(ctx, "sleeping for %v", cmd.sleepDuration)
+			time.Sleep(cmd.sleepDuration)
 		}
 	}
 	return nil
