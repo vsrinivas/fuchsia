@@ -233,7 +233,17 @@ fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, proptest::prelude::*};
+    use {
+        super::*,
+        fidl::endpoints,
+        fidl_fuchsia_ui_input::InputDeviceRequest,
+        fuchsia_async as fasync,
+        futures::{pin_mut, StreamExt},
+        matches::{assert_matches, matches},
+        proptest::prelude::*,
+        std::task::Poll,
+        synthesizer::InputDevice as _,
+    };
 
     proptest! {
         #[test]
@@ -245,157 +255,272 @@ mod tests {
             pause: bool,
             event_time: u64
         ) {
-            prop_assert_eq!(
-                media_buttons(volume_up, volume_down, mic_mute, reset, pause, event_time),
-                InputReport {
-                    event_time,
-                    keyboard: None,
-                    media_buttons: Some(Box::new(MediaButtonsReport {
-                        volume_up,
-                        volume_down,
-                        mic_mute,
-                        reset,
-                        pause
-                    })),
-                    mouse: None,
-                    stylus: None,
-                    touchscreen: None,
-                    sensor: None,
-                    trace_id: 0
-                }
+            let test_fut = async {
+                let (fidl_proxy, request_stream) =
+                    match endpoints::create_proxy_and_stream::<InputDeviceMarker>() {
+                        Ok(r) => r,
+                        Err(e) => return Err(anyhow::Error::from(e)) as Result<(), Error>,
+                    };
+                let input_device = InputDevice { fidl_proxy };
+                input_device
+                    .media_buttons(volume_up, volume_down, mic_mute, reset, pause, event_time)?;
+                std::mem::drop(input_device);  // Close channel to terminate stream.
+
+                let reports = request_stream.collect::<Vec<_>>().await;
+                let expected_report = InputReport {
+                        event_time,
+                        keyboard: None,
+                        media_buttons: Some(Box::new(MediaButtonsReport {
+                            volume_up,
+                            volume_down,
+                            mic_mute,
+                            reset,
+                            pause
+                        })),
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: None,
+                        sensor: None,
+                        trace_id: 0
+                };
+                assert!(
+                    matches!(
+                        reports.as_slice(),
+                        [Ok(InputDeviceRequest::DispatchReport { report, .. })]
+                        if *report == expected_report
+                    ), "got {:#?} but expected [Ok(DispatchReport {{\nreport: {:#?},\n ..}})]",
+                    reports,
+                    expected_report
+                );
+                Ok(())
+            };
+            pin_mut!(test_fut);
+            assert_matches!(
+                fasync::Executor::new()
+                    .expect("internal error: failed to create executor")
+                    .run_until_stalled(&mut test_fut),
+                Poll::Ready(_)
             );
         }
     }
 
-    #[test]
-    fn key_press_populates_report_correctly() {
-        assert_eq!(
-            key_press(KeyboardReport { pressed_keys: vec![1, 2, 3] }, 200),
-            InputReport {
-                event_time: 200,
-                keyboard: Some(Box::new(KeyboardReport { pressed_keys: vec![1, 2, 3] })),
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: None,
-                sensor: None,
-                trace_id: 0
-            }
+    #[fasync::run_until_stalled(test)]
+    async fn key_press_populates_report_correctly() -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.key_press(KeyboardReport { pressed_keys: vec![1, 2, 3] }, 200)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 200,
+                        keyboard: Some(report),
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: None,
+                        sensor: None,
+                        trace_id: 0
+                    },
+                ..
+            })] if **report == KeyboardReport { pressed_keys: vec![1, 2, 3] }
         );
+        Ok(())
     }
 
-    #[test]
-    fn key_press_usage_populates_report_correctly_when_a_key_is_pressed() {
-        assert_eq!(
-            key_press_usage(Some(1), 300),
-            InputReport {
-                event_time: 300,
-                keyboard: Some(Box::new(KeyboardReport { pressed_keys: vec![1] })),
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: None,
-                sensor: None,
-                trace_id: 0
-            }
+    #[fasync::run_until_stalled(test)]
+    async fn key_press_usage_populates_report_correctly_when_a_key_is_pressed() -> Result<(), Error>
+    {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.key_press_usage(Some(1), 300)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 300,
+                        keyboard: Some(report),
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: None,
+                        sensor: None,
+                        trace_id: 0
+                    },
+                ..
+            })] if **report == KeyboardReport { pressed_keys: vec![1] }
         );
+        Ok(())
     }
 
-    #[test]
-    fn key_press_usage_populates_report_correctly_when_no_key_is_pressed() {
-        assert_eq!(
-            key_press_usage(None, 400),
-            InputReport {
-                event_time: 400,
-                keyboard: Some(Box::new(KeyboardReport { pressed_keys: vec![] })),
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: None,
-                sensor: None,
-                trace_id: 0
-            }
+    #[fasync::run_until_stalled(test)]
+    async fn key_press_usage_populates_report_correctly_when_no_key_is_pressed() -> Result<(), Error>
+    {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.key_press_usage(None, 400)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 400,
+                        keyboard: Some(report),
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: None,
+                        sensor: None,
+                        trace_id: 0
+                    },
+                ..
+            })] if ** report == KeyboardReport { pressed_keys: vec![] }
         );
+        Ok(())
     }
 
-    #[test]
-    fn tap_populates_report_correctly_when_finger_is_present() {
-        assert_eq!(
-            tap(Some((10, 20)), 500),
-            InputReport {
-                event_time: 500,
-                keyboard: None,
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: Some(Box::new(TouchscreenReport {
-                    touches: vec![Touch { finger_id: 1, x: 10, y: 20, width: 0, height: 0 },]
-                })),
-                sensor: None,
-                trace_id: 0
+    #[fasync::run_until_stalled(test)]
+    async fn tap_populates_report_correctly_when_finger_is_present() -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.tap(Some((10, 20)), 500)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 500,
+                        keyboard: None,
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: Some(report),
+                        sensor: None,
+                        trace_id: 0
+                    },
+                ..
+            })] if **report == TouchscreenReport {
+                touches: vec![Touch { finger_id: 1, x: 10, y: 20, width: 0, height: 0 },]
             }
         );
+        Ok(())
     }
 
-    #[test]
-    fn tap_populates_report_correctly_when_finger_is_absent() {
-        assert_eq!(
-            tap(None, 600),
-            InputReport {
-                event_time: 600,
-                keyboard: None,
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: Some(Box::new(TouchscreenReport { touches: vec![] })),
-                sensor: None,
-                trace_id: 0
-            }
+    #[fasync::run_until_stalled(test)]
+    async fn tap_populates_report_correctly_when_finger_is_absent() -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.tap(None, 600)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 600,
+                        keyboard: None,
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: Some(report),
+                        sensor: None,
+                        trace_id: 0
+                    },
+                    ..
+            })] if **report == TouchscreenReport { touches: vec![] }
         );
+        Ok(())
     }
 
-    #[test]
-    fn multi_finger_tap_populates_report_correctly_when_fingers_are_present() {
-        assert_eq!(
-            multi_finger_tap(
-                Some(vec![
+    #[fasync::run_until_stalled(test)]
+    async fn multi_finger_tap_populates_report_correctly_when_fingers_are_present(
+    ) -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.multi_finger_tap(
+            Some(vec![
+                Touch { finger_id: 1, x: 99, y: 100, width: 10, height: 20 },
+                Touch { finger_id: 2, x: 199, y: 201, width: 30, height: 40 }
+            ]),
+            700,
+        )?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 700,
+                        keyboard: None,
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: Some(report),
+                        sensor: None,
+                        trace_id: 0
+                    },
+                    ..
+            })] if **report == TouchscreenReport {
+                touches: vec![
                     Touch { finger_id: 1, x: 99, y: 100, width: 10, height: 20 },
                     Touch { finger_id: 2, x: 199, y: 201, width: 30, height: 40 }
-                ]),
-                700
-            ),
-            InputReport {
-                event_time: 700,
-                keyboard: None,
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: Some(Box::new(TouchscreenReport {
-                    touches: vec![
-                        Touch { finger_id: 1, x: 99, y: 100, width: 10, height: 20 },
-                        Touch { finger_id: 2, x: 199, y: 201, width: 30, height: 40 }
-                    ]
-                })),
-                sensor: None,
-                trace_id: 0
+                ]
             }
         );
+        Ok(())
     }
 
-    #[test]
-    fn multi_finger_tap_populates_report_correctly_when_no_fingers_are_present() {
-        assert_eq!(
-            multi_finger_tap(None, 800),
-            InputReport {
-                event_time: 800,
-                keyboard: None,
-                media_buttons: None,
-                mouse: None,
-                stylus: None,
-                touchscreen: Some(Box::new(TouchscreenReport { touches: vec![] })),
-                sensor: None,
-                trace_id: 0
-            }
+    #[fasync::run_until_stalled(test)]
+    async fn multi_finger_tap_populates_report_correctly_when_no_fingers_are_present(
+    ) -> Result<(), Error> {
+        let (fidl_proxy, request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let input_device = InputDevice { fidl_proxy };
+        input_device.multi_finger_tap(None, 800)?;
+        std::mem::drop(input_device); // Close channel to terminate stream.
+
+        let reports = request_stream.collect::<Vec<_>>().await;
+        assert_matches!(
+            reports.as_slice(),
+            [Ok(InputDeviceRequest::DispatchReport {
+                report:
+                    InputReport {
+                        event_time: 800,
+                        keyboard: None,
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: Some(report),
+                        sensor: None,
+                        trace_id: 0
+                    },
+                    ..
+            })] if **report == TouchscreenReport { touches: vec![] }
         );
+        Ok(())
     }
 }
