@@ -33,6 +33,15 @@ fitx::result<zx_status_t, zbi_header_t> StorageTraits<zx::vmo>::Header(const zx:
   return fitx::ok(header);
 }
 
+fitx::result<zx_status_t> StorageTraits<zx::vmo>::Read(const zx::vmo& vmo, payload_type payload,
+                                                       void* buffer, uint32_t length) {
+  zx_status_t status = vmo.read(buffer, payload, length);
+  if (status != ZX_OK) {
+    return fitx::error{status};
+  }
+  return fitx::ok();
+}
+
 fitx::result<zx_status_t> StorageTraits<zx::vmo>::Write(const zx::vmo& vmo, uint32_t offset,
                                                         ByteView data) {
   zx_status_t status = vmo.write(data.data(), offset, data.size());

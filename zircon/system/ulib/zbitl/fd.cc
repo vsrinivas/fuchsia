@@ -43,6 +43,25 @@ fitx::result<error_type, zbi_header_t> StorageTraits<fbl::unique_fd>::Header(
   return fitx::ok(header);
 }
 
+fitx::result<error_type> StorageTraits<fbl::unique_fd>::Read(const fbl::unique_fd& fd, off_t offset,
+                                                             void* buffer, uint32_t length) {
+  auto p = static_cast<std::byte*>(buffer);
+  while (length > 0) {
+    ssize_t n = pread(fd.get(), p, length, offset);
+    if (n < 0) {
+      return fitx::error{errno};
+    }
+    if (n == 0) {
+      return fitx::error{ESPIPE};
+    }
+    ZX_DEBUG_ASSERT(static_cast<size_t>(n) <= length);
+    length -= static_cast<uint32_t>(n);
+    p += n;
+    offset += n;
+  }
+  return fitx::ok();
+}
+
 fitx::result<error_type> StorageTraits<fbl::unique_fd>::DoRead(const fbl::unique_fd& fd,
                                                                off_t offset, uint32_t length,
                                                                bool (*cb)(void*, ByteView),

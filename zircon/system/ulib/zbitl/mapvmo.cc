@@ -7,15 +7,16 @@
 
 namespace zbitl {
 
-fitx::result<zx_status_t, ByteView> StorageTraits<MapUnownedVmo>::Read(MapUnownedVmo& zbi,
-                                                                       uint64_t payload,
-                                                                       uint32_t length) {
+fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo& zbi,
+                                                                   uint64_t payload,
+                                                                   uint32_t length, bool write) {
   if (length == 0) {
-    return fitx::ok(ByteView{});
+    return fitx::ok(nullptr);
   }
 
   auto mapped = [&zbi](uint64_t offset_in_mapping, uint32_t length) {
-    return fitx::ok(zbi.mapping_.bytes().substr(offset_in_mapping, length));
+    std::byte* data = zbi.mapping_.data();
+    return fitx::ok(data + static_cast<size_t>(offset_in_mapping));
   };
 
   // Check if the current mapping already covers it.
@@ -23,6 +24,14 @@ fitx::result<zx_status_t, ByteView> StorageTraits<MapUnownedVmo>::Read(MapUnowne
     const uint64_t offset_in_mapping = payload - zbi.mapping_.offset_;
     if (offset_in_mapping < zbi.mapping_.size_ &&
         zbi.mapping_.size_ - offset_in_mapping >= length) {
+      if (write && !zbi.mapping_.write_) {
+        zx_status_t status = zbi.vmar().protect2(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                                 zbi.mapping_.address_, zbi.mapping_.size_);
+        if (status != ZX_OK) {
+          return fitx::error{status};
+        }
+        zbi.mapping_.write_ = true;
+      }
       return mapped(offset_in_mapping, length);
     }
   }
@@ -35,13 +44,15 @@ fitx::result<zx_status_t, ByteView> StorageTraits<MapUnownedVmo>::Read(MapUnowne
   const size_t size = next_page_boundary - previous_page_boundary;
   const uint64_t offset_in_mapping = payload % ZX_PAGE_SIZE;
 
-  if (zx_status_t status = zbi.vmar().map(0, zbi.vmo(), previous_page_boundary, size,
-                                          ZX_VM_PERM_READ, &zbi.mapping_.address_);
+  if (zx_status_t status =
+          zbi.vmar().map(0, zbi.vmo(), previous_page_boundary, size,
+                         ZX_VM_PERM_READ | (write ? ZX_VM_PERM_WRITE : 0), &zbi.mapping_.address_);
       status != ZX_OK) {
     return fitx::error{status};
   }
   zbi.mapping_.offset_ = previous_page_boundary;
   zbi.mapping_.size_ = size;
+  zbi.mapping_.write_ = write;
 
   return mapped(offset_in_mapping, length);
 }

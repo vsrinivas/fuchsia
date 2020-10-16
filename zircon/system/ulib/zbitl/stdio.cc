@@ -39,6 +39,17 @@ fitx::result<error_type, zbi_header_t> StorageTraits<FILE*>::Header(FILE* f, uin
   return fitx::ok(header);
 }
 
+fitx::result<error_type> StorageTraits<FILE*>::Read(FILE* f, payload_type offset, void* buffer,
+                                                    uint32_t length) {
+  if (fseek(f, offset, SEEK_SET) != 0) {
+    return fitx::error{errno};
+  }
+  if (fread(buffer, 1, length, f) != length) {
+    return fitx::error{ferror(f) ? errno : ESPIPE};
+  }
+  return fitx::ok();
+}
+
 fitx::result<error_type> StorageTraits<FILE*>::DoRead(FILE* f, payload_type offset, uint32_t length,
                                                       bool (*cb)(void*, ByteView), void* arg) {
   if (length == 0) {

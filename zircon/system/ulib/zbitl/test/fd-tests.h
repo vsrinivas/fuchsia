@@ -16,6 +16,8 @@ struct FdTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }

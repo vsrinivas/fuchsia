@@ -16,6 +16,8 @@ struct BasicStringViewTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
   static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = false;
 
   struct Context {
     storage_type TakeStorage() const {

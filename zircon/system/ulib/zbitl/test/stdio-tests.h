@@ -15,6 +15,8 @@ struct StdioTestTraits {
   using payload_type = long int;
 
   static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = false;
 
   struct Context {
     ~Context() {

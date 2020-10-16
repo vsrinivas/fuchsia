@@ -32,6 +32,9 @@ class StorageTraits<fbl::unique_fd> {
     return fitx::ok(offset);
   }
 
+  static fitx::result<error_type> Read(const fbl::unique_fd& fd, payload_type payload, void* buffer,
+                                       uint32_t length);
+
   template <typename Callback>
   static auto Read(const fbl::unique_fd& zbi, payload_type payload, uint32_t length,
                    Callback&& callback)

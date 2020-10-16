@@ -66,11 +66,14 @@ class MapUnownedVmo {
       return *this;
     }
 
-    ByteView bytes() const { return {reinterpret_cast<const std::byte*>(address_), size_}; }
+    std::byte* data() const { return reinterpret_cast<std::byte*>(address_); }
+
+    ByteView bytes() const { return {data(), size_}; }
 
     uint64_t offset_ = 0;
     uintptr_t address_ = 0;
     size_t size_ = 0;
+    bool write_ = false;
   };
 
   zx::unowned_vmo vmo_;
@@ -115,6 +118,9 @@ struct StorageTraits<zx::vmo> {
                                                         uint32_t length) {
     return fitx::ok(offset);
   }
+
+  static fitx::result<error_type> Read(const zx::vmo& zbi, payload_type payload, void* buffer,
+                                       uint32_t length);
 
   template <typename Callback>
   static auto Read(const zx::vmo& zbi, payload_type payload, uint32_t length, Callback&& callback)
@@ -174,6 +180,11 @@ struct StorageTraits<zx::unowned_vmo> {
     return Owned::Payload(*vmo, offset, length);
   }
 
+  static fitx::result<error_type> Read(const zx::unowned_vmo& vmo, payload_type payload,
+                                       void* buffer, uint32_t length) {
+    return Owned::Read(*vmo, payload, buffer, length);
+  }
+
   template <typename Callback>
   static auto Read(const zx::unowned_vmo& vmo, payload_type payload, uint32_t length,
                    Callback&& callback) {
@@ -194,7 +205,8 @@ struct StorageTraits<zx::unowned_vmo> {
 };
 
 template <>
-struct StorageTraits<MapUnownedVmo> {
+class StorageTraits<MapUnownedVmo> {
+ public:
   using Owned = StorageTraits<zx::vmo>;
 
   using error_type = Owned::error_type;
@@ -211,10 +223,21 @@ struct StorageTraits<MapUnownedVmo> {
   }
 
   static fitx::result<error_type, ByteView> Read(MapUnownedVmo& zbi, payload_type payload,
-                                                 uint32_t length);
+                                                 uint32_t length) {
+    auto result = Map(zbi, payload, length, false);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    return fitx::ok(ByteView{static_cast<std::byte*>(result.value()), length});
+  }
 
   static auto Write(const MapUnownedVmo& zbi, uint32_t offset, ByteView data) {
     return Owned::Write(zbi.vmo(), offset, data);
+  }
+
+  static fitx::result<error_type, void*> Write(MapUnownedVmo& zbi, uint32_t offset,
+                                               uint32_t length) {
+    return Map(zbi, offset, length, true);
   }
 
   static fitx::result<error_type, MapOwnedVmo> Create(const MapUnownedVmo& proto, size_t size) {
@@ -241,6 +264,10 @@ struct StorageTraits<MapUnownedVmo> {
     }
     return fitx::ok(std::nullopt);
   }
+
+ private:
+  static fitx::result<error_type, void*> Map(MapUnownedVmo& zbi, uint64_t offset, uint32_t length,
+                                             bool write);
 };
 
 template <>

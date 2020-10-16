@@ -104,14 +104,23 @@ struct StorageTraits {
     return fitx::error<error_type>{};
   }
 
+  // Referred to as the "unbuffered read".
+  //
+  // A specialization provides this overload if the payload can be read
+  // directly into a provided buffer for zero-copy operation.
+  static fitx::result<error_type> Read(Storage& zbi, payload_type payload, void* buffer,
+                                       uint32_t length) {
+    return fitx::error<error_type>{};
+  }
+
   // Referred to as the "one-shot read".
   //
   // A specialization only provides this overload if the payload can be
-  // accessed directly in memory.  If this overload is provided, then the
-  // overload using the callback need not be provided.  The returned view is
-  // only guaranteed valid until the next use of the same Storage object.  So
-  // it could e.g. point into a cache that's repurposed by this or other calls
-  // made later using the same object.
+  // accessed directly in memory.  If this overload is provided, then the other
+  // overloads need not be provided.  The returned view is only guaranteed
+  // valid until the next use of the same Storage object.  So it could
+  // e.g. point into a cache that's repurposed by this or other calls made
+  // later using the same object.
   static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
                                                  uint32_t length) {
     return fitx::error<error_type>{};
@@ -127,6 +136,17 @@ struct StorageTraits {
   // the chunk that failed to write might be corrupted in the image and the
   // container will always revalidate everything.
   static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    return fitx::error<error_type>{};
+  }
+
+  // Referred to as the "unbuffered write".
+  //
+  // A specialization may define this if it also defines Write.  It returns a
+  // pointer where the data can be mutated directly in memory.  That pointer is
+  // only guaranteed valid until the next use of the same Storage object.  So
+  // it could e.g. point into a cache that's repurposed by this or other calls
+  // made later using the same object.
+  static fitx::result<error_type, void*> Write(Storage& zbi, uint32_t offset, uint32_t length) {
     return fitx::error<error_type>{};
   }
 
@@ -265,11 +285,17 @@ struct StorageTraits<std::span<T, Extent>> {
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
   static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    memcpy(Write(zbi, offset, static_cast<uint32_t>(data.size())).value(), data.data(),
+           data.size());
+    return fitx::ok();
+  }
+
+  template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
+  static fitx::result<error_type, void*> Write(Storage& zbi, uint32_t offset, uint32_t length) {
     // The caller is supposed to maintain these invariants.
     ZX_DEBUG_ASSERT(offset <= zbi.size_bytes());
-    ZX_DEBUG_ASSERT(data.size() <= zbi.size_bytes() - offset);
-    memcpy(&std::as_writable_bytes(zbi)[offset], data.data(), data.size());
-    return fitx::ok();
+    ZX_DEBUG_ASSERT(length <= zbi.size_bytes() - offset);
+    return fitx::ok(&std::as_writable_bytes(zbi)[offset]);
   }
 };
 #endif  // __cpp_lib_span

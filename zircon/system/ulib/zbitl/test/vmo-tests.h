@@ -18,6 +18,8 @@ struct VmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
@@ -57,6 +59,8 @@ struct UnownedVmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
@@ -96,6 +100,8 @@ struct MapOwnedVmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
@@ -132,6 +138,8 @@ struct MapUnownedVmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectUnbufferedReads = true;
+  static constexpr bool kExpectUnbufferedWrites = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }

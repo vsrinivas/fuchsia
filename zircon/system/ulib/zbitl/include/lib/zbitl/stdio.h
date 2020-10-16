@@ -32,6 +32,9 @@ class StorageTraits<FILE*> {
     return fitx::ok(offset);
   }
 
+  static fitx::result<error_type> Read(FILE* f, payload_type payload, void* buffer,
+                                       uint32_t length);
+
   template <typename Callback>
   static auto Read(FILE* f, payload_type payload, uint32_t length, Callback&& callback)
       -> fitx::result<error_type, decltype(callback(ByteView{}))> {

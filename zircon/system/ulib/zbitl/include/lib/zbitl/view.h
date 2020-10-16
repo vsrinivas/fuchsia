@@ -123,6 +123,12 @@ class View {
     // Whether the one-shot variation of Traits::Read() is defined.
     static constexpr bool CanOneShotRead() { return SfinaeOneShotRead(0); }
 
+    // Whether the unbuffered variation of Traits::Read() is defined.
+    static constexpr bool CanUnbufferedRead() { return SfinaeUnbufferedRead(0); }
+
+    // Whether the unbuffered variation of Traits::Write() is defined.
+    static constexpr bool CanUnbufferedWrite() { return SfinaeUnbufferedWrite(0); }
+
     // Gives an 'example' value of a type convertible to storage& that can be
     // used within a decltype context.
     static storage_type& storage_declval() {
@@ -176,6 +182,31 @@ class View {
 
     // This overload is chosen only if SFINAE detected a missing a one-shot Read method.
     static constexpr bool SfinaeOneShotRead(...) { return false; }
+
+    // SFINAE check for unbuffered Traits::Read method.
+    template <typename T = Traits,
+              typename = decltype(T::Read(storage_declval(), std::declval<payload_type>(), nullptr,
+                                          0))>
+    static constexpr bool SfinaeUnbufferedRead(int ignored) {
+      return true;
+    }
+
+    // This overload is chosen only if SFINAE detected a missing an unbuffered
+    // Read method.
+    static constexpr bool SfinaeUnbufferedRead(...) { return false; }
+
+    // SFINAE check for an unbuffered Traits::Write method.
+    template <typename T = Traits,
+              typename Result = decltype(T::Write(storage_declval(), 0, 0).value())>
+    static constexpr bool SfinaeUnbufferedWrite(int ignored) {
+      static_assert(std::is_convertible_v<Result, void*>,
+                    "Unbuffered StorageTraits::Write has the wrong signature?");
+      return true;
+    }
+
+    // This overload is chosen only if SFINAE detected a missing an unbuffered
+    // Write method.
+    static constexpr bool SfinaeUnbufferedWrite(...) { return false; }
   };
 
   /// The header is represented by an opaque type that can be dereferenced as
@@ -589,31 +620,49 @@ class View {
   template <typename CopyStorage>
   CopyResult<CopyStorage> Copy(CopyStorage&& to, uint32_t offset, uint32_t length,
                                uint32_t to_offset = 0) {
-    using CopyTraits = StorageTraits<std::decay_t<CopyStorage>>;
+    using CopyTraits = typename View<std::decay_t<CopyStorage>, Check>::Traits;
     // TODO(mcgrathr): Support SetCapacity, check for error here.
     ZX_DEBUG_ASSERT(CopyTraits::Capacity(to) >= to_offset + length);
-    auto write = [&to, to_offset](ByteView chunk) mutable  //
-        -> fitx::result<typename CopyTraits::error_type> {
-      if (auto result = CopyTraits::Write(to, to_offset, chunk); result.is_error()) {
-        return std::move(result).take_error();
-      }
-      to_offset += static_cast<uint32_t>(chunk.size());
-      return fitx::ok();
+    auto read_error = [&](auto result) {
+      return fitx::error{Error{
+          "cannot read from storage",
+          offset,
+          std::move(result).error_value(),
+      }};
     };
-    if (auto payload = Traits::Payload(storage(), offset, length); payload.is_error()) {
+    auto payload = Traits::Payload(storage(), offset, length);
+    if (payload.is_error()) {
       return fitx::error{Error{
           "cannot translate ZBI offset to storage",
           offset,
-          std::move(std::move(payload).error_value()),
+          std::move(payload).error_value(),
       }};
+    }
+    if constexpr (Traits::CanUnbufferedRead() && CopyTraits::CanUnbufferedWrite()) {
+      // Combine buffered reading with mapped writing to do it all at once.
+      auto mapped = CopyTraits::Write(to, to_offset, length);
+      if (mapped.is_error()) {
+        // No read error detected because a "write" error was detected first.
+        return fitx::ok(mapped.take_error());
+      }
+      auto result = Traits::Read(storage(), payload.value(), mapped.value(), length);
+      if (result.is_error()) {
+        return read_error(std::move(result));
+      }
+      // No read error, no write error.
+      return fitx::ok(fitx::ok());
     } else {
+      auto write = [&to, to_offset](ByteView chunk) mutable  //
+          -> fitx::result<typename CopyTraits::error_type> {
+        if (auto result = CopyTraits::Write(to, to_offset, chunk); result.is_error()) {
+          return std::move(result).take_error();
+        }
+        to_offset += static_cast<uint32_t>(chunk.size());
+        return fitx::ok();
+      };
       auto result = Read(payload.value(), length, write);
       if (result.is_error()) {
-        return fitx::error{Error{
-            "cannot read from storage",
-            offset,
-            std::move(result).error_value(),
-        }};
+        return read_error(std::move(result));
       }
       return std::move(result).take_value();
     }
@@ -735,9 +784,11 @@ class View {
   // This is public mostly just for tests to assert on it.
   template <typename CopyStorage = Storage>
   static constexpr bool CanZeroCopy() {
-    // One-shot read does a single Write call with no extra copies for any type
-    // of receiver object.
-    return Traits::CanOneShotRead();
+    // Reading directly into buffer has no extra copies for a receiver that can
+    // do unbuffered writes.
+    using CopyTraits = typename View<std::decay_t<CopyStorage>, Check>::Traits;
+    return Traits::CanOneShotRead() ||
+           (Traits::CanUnbufferedRead() && CopyTraits::CanUnbufferedWrite());
   }
 
  private:

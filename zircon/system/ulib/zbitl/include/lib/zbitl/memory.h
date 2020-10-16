@@ -54,12 +54,19 @@ class StorageTraits<fbl::Array<T>> {
     return fitx::ok(bytes);
   }
 
+  template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
   static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    memcpy(Write(zbi, offset, static_cast<uint32_t>(data.size())).value(), data.data(),
+           data.size());
+    return fitx::ok();
+  }
+
+  template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
+  static fitx::result<error_type, void*> Write(Storage& zbi, uint32_t offset, uint32_t length) {
     // The caller is supposed to maintain these invariants.
     ZX_DEBUG_ASSERT(offset <= AsBytes(zbi).size());
-    ZX_DEBUG_ASSERT(data.size() <= AsBytes(zbi).size() - offset);
-    memcpy(&AsBytes(zbi)[offset], data.data(), data.size());
-    return fitx::ok();
+    ZX_DEBUG_ASSERT(length <= AsBytes(zbi).size() - offset);
+    return fitx::ok(&AsBytes(zbi)[offset]);
   }
 
   static fitx::result<error_type, Storage> Create(Storage& old, size_t size) {

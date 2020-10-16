@@ -86,6 +86,12 @@ constexpr auto Next = [](auto it) { return ++it; };
 //     `zbitl::StorageTraits<storage_type>::payload_type`.
 //   * a static constexpr bool `kExpectOneshotReads` giving the expectation of
 //     whether whole payloads can be accessed in memory directly.
+//   * a static constexpr bool `kExpectUnbufferedReads` giving the expectation of
+//     whether whole payloads can be access in memory directly or read into a
+//     provided buffer without copying.
+//   * a static constexpr bool `kExpectUnbufferedWrites` giving the expectation
+//     of whether references to whole payloads can be provided for direct
+//     mutation.
 //
 // If the storage type is default-constructible, the trait must have a static
 // constexpr Boolean member `kDefaultConstructedViewHasStorageError` indicating
@@ -704,7 +710,9 @@ void TestZeroCopying() {
   using DestStorage = typename DestTestTraits::storage_type;
 
   constexpr bool kCanZeroCopy = zbitl::View<SrcStorage>::template CanZeroCopy<DestStorage>();
-  static_assert(kCanZeroCopy == SrcTestTraits::kExpectOneshotReads);
+  constexpr bool kExpectUnbufferedIo =
+      SrcTestTraits::kExpectUnbufferedReads && DestTestTraits::kExpectUnbufferedWrites;
+  static_assert(kCanZeroCopy == SrcTestTraits::kExpectOneshotReads || kExpectUnbufferedIo);
 }
 
 #define TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits,       \
