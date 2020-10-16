@@ -200,12 +200,14 @@ zx_status_t FvmContainer::Verify() const {
   xprintf("Slice size is %" PRIu64 "\n", info_.SliceSize());
   xprintf("Slice count is %" PRIu64 "\n", info_.SuperBlock().pslice_count);
 
-  off_t start = 0;
-  off_t end = disk_offset_ + info_.MetadataSize() * 2;
+  // |end| keeps track of where each partition ends. Initialize it to the first byte of the first
+  // partition (as if there was a partition before this first one).
+  off_t end = disk_offset_ + info_.SuperBlock().GetDataStartOffset();
   size_t slice_index = 1;
   for (size_t vpart_index = 1; vpart_index <= sb.GetPartitionTableEntryCount(); ++vpart_index) {
     fvm::VPartitionEntry* vpart = nullptr;
-    start = end;
+    // The next partition starts where the last ended.
+    off_t start = end;
 
     zx_status_t status;
     if ((status = info_.GetPartition(vpart_index, &vpart)) != ZX_OK) {

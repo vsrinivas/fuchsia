@@ -77,7 +77,7 @@ zx_status_t SparsePaver::Init(std::unique_ptr<fvm::host::FileWrapper> wrapper, s
     return status;
   }
 
-  disk_ptr_ = disk_offset_ + info_.MetadataSize() * 2;
+  disk_ptr_ = disk_offset_ + info_.SuperBlock().GetDataStartOffset();
   if (disk_ptr_ >= disk_offset_ + disk_size_) {
     fprintf(stderr, "FVM metadata size exceeds disk size\n");
     return ZX_ERR_INTERNAL;
