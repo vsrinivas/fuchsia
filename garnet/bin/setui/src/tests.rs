@@ -18,6 +18,7 @@ mod intl_tests;
 mod light_sensor_tests;
 mod light_tests;
 mod message_tests;
+mod message_utils;
 mod night_mode_tests;
 mod policy_proxy_tests;
 mod privacy_tests;

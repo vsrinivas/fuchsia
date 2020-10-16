@@ -7,8 +7,8 @@ use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
     filter, group, Address, Audience, MessageEvent, MessengerType, Payload, Status,
 };
-use crate::message::message_client::MessageClient;
 use crate::message::receptor::Receptor;
+use crate::tests::message_utils::verify_payload;
 use fuchsia_async as fasync;
 use fuchsia_zircon::DurationNum;
 use futures::future::BoxFuture;
@@ -30,30 +30,6 @@ pub enum TestMessage {
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
 pub enum TestAddress {
     Foo(u64),
-}
-
-/// Ensures the payload matches expected value and invokes an action closure.
-/// If a client_fn is not provided, the message is acknowledged.
-async fn verify_payload<P: Payload + PartialEq + 'static, A: Address + PartialEq + 'static>(
-    payload: P,
-    receptor: &mut Receptor<P, A>,
-    client_fn: Option<
-        Box<dyn Fn(&mut MessageClient<P, A>) -> BoxFuture<'_, ()> + Send + Sync + 'static>,
-    >,
-) {
-    while let Some(message_event) = receptor.next().await {
-        if let MessageEvent::Message(incoming_payload, mut client) = message_event {
-            assert_eq!(payload, incoming_payload);
-            if let Some(func) = client_fn {
-                (func)(&mut client).await;
-            } else {
-                client.acknowledge().await;
-            }
-            return;
-        }
-    }
-
-    panic!("Should have received value");
 }
 
 /// Ensures the delivery result matches expected value.

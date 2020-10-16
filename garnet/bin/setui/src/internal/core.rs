@@ -11,6 +11,7 @@ pub enum Address {
 }
 
 // The types of data that can be sent.
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub enum Payload {
     Action(SettingAction),

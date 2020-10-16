@@ -9,22 +9,21 @@ use futures::StreamExt;
 use crate::internal::core;
 use crate::internal::policy;
 use crate::internal::policy::Address;
-use crate::message::base::{MessageEvent, MessengerType};
+use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::policy::base::Request;
-use crate::policy::policy_handler::PolicyHandler;
-use crate::switchboard::base::{SettingAction, SettingActionData, SettingRequest, SettingType};
+use crate::policy::policy_handler::{PolicyHandler, Transform};
+use crate::switchboard::base::{
+    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
+};
+use std::sync::Arc;
 
 /// `PolicyProxy` handles the routing of policy requests and the intercepting of setting requests to
 /// a [`PolicyHandler`].
 ///
-/// [`PolicyHandler`]: trait.PolicyHandler.html
-// TODO(fxbug.dev/59747): remove when used
-#[allow(dead_code)]
+/// [`PolicyHandler`]: ../policy_handler/trait.PolicyHandler.html
 pub struct PolicyProxy {
-    setting_type: SettingType,
     policy_handler: Box<dyn PolicyHandler + Send + Sync + 'static>,
     core_messenger: core::message::Messenger,
-    policy_messenger: policy::message::Messenger,
 }
 
 impl PolicyProxy {
@@ -34,17 +33,30 @@ impl PolicyProxy {
         core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
     ) -> Result<(), Error> {
-        // TODO(fxbug.dev/59747): filter so that we only get the setting requests we care about.
-        let core_messenger_result =
-            core_messenger_factory.create(MessengerType::Broker(None)).await;
+        let core_messenger_result = core_messenger_factory
+            .create(MessengerType::Broker(Some(filter::Builder::single(
+                filter::Condition::Custom(Arc::new(move |message| {
+                    // Only catch messages that were originally sent from the switchboard, and that
+                    // contain a request for the specific setting type we're interested in.
+                    matches!(
+                        message.get_author(),
+                        core::message::Signature::Address(core::Address::Switchboard)
+                    ) && matches!(
+                        message.payload(),
+                        core::Payload::Action(SettingAction {setting_type: s, ..})
+                            if s == setting_type
+                    )
+                })),
+            ))))
+            .await;
         let (core_messenger, core_receptor) = core_messenger_result.map_err(Error::new)?;
 
         let policy_messenger_result = policy_messenger_factory
             .create(MessengerType::Addressable(Address::Policy(setting_type)))
             .await;
-        let (policy_messenger, policy_receptor) = policy_messenger_result.map_err(Error::new)?;
+        let (_, policy_receptor) = policy_messenger_result.map_err(Error::new)?;
 
-        let mut proxy = Self { setting_type, policy_handler, core_messenger, policy_messenger };
+        let mut proxy = Self { policy_handler, core_messenger };
 
         Task::spawn(async move {
             let policy_fuse = policy_receptor.fuse();
@@ -67,13 +79,14 @@ impl PolicyProxy {
                     core_event = core_fuse.select_next_some() => {
                         if let MessageEvent::Message(
                             core::Payload::Action(SettingAction {
+                                id,
                                 data: SettingActionData::Request(request),
                                 ..
                             }),
                             message_client,
                         ) = core_event
                         {
-                            proxy.process_settings_request(request, message_client).await;
+                            proxy.process_settings_request(id, request, message_client).await;
                         }
                     }
 
@@ -98,12 +111,36 @@ impl PolicyProxy {
         message_client.reply(policy::Payload::Response(response)).send();
     }
 
+    /// Passes the given setting request to the [`PolicyHandler`], then take an appropriate action
+    /// based on the [`Transform`], such as ignoring the message, intercepting the message and
+    /// answering the client directly, or forwarding the message with a modified request.
+    ///
+    /// [`PolicyHandler`]: ../policy_handler/trait.PolicyHandler.html
+    /// [`Transform`]: ../policy_handler/enum.Transform.html
     async fn process_settings_request(
-        &self,
-        _request: SettingRequest,
-        _message_client: core::message::Client,
+        &mut self,
+        request_id: u64,
+        request: SettingRequest,
+        message_client: core::message::Client,
     ) {
-        // TODO(fxbug.dev/59747): once we properly filtered just the requests we want, intercept
-        // them and send them to the handler.
+        let handler_result =
+            self.policy_handler.handle_setting_request(request, self.core_messenger.clone()).await;
+        match handler_result {
+            Some(Transform::Request(_modified_request)) => {
+                // Handler provided a modified request to
+                // TODO(fxbug.dev/59747): Implement forwarding of the modified request.
+            }
+            Some(Transform::Result(result)) => {
+                // Handler provided a result to return directly to the client, respond to the
+                // intercepted message with the result. By replying through the MessageClient, the
+                // message doesn't continue to be propagated to the setting handler.
+                message_client
+                    .reply(core::Payload::Event(SettingEvent::Response(request_id, result)))
+                    .send();
+            }
+            // Don't do anything with the message, it'll continue onwards to the handler as
+            // expected.
+            None => return,
+        }
     }
 }
