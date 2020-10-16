@@ -323,6 +323,9 @@ impl Supplicant for MockSupplicant {
     ) -> Result<(), anyhow::Error> {
         unimplemented!()
     }
+    fn get_auth_cfg(&self) -> &auth::Config {
+        unimplemented!()
+    }
     fn get_auth_method(&self) -> auth::MethodName {
         self.auth_method
     }

@@ -34,6 +34,21 @@ pub struct SaeData {
     retransmit_timeout_id: u64,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Config {
+    ComputedPsk(psk::Psk),
+    Sae { password: Vec<u8>, mac: MacAddr, peer_mac: MacAddr },
+}
+
+impl Config {
+    pub fn method_name(&self) -> MethodName {
+        match self {
+            Config::ComputedPsk(_) => MethodName::Psk,
+            Config::Sae { .. } => MethodName::Sae,
+        }
+    }
+}
+
 pub enum Method {
     Psk(psk::Psk),
     Sae(SaeData),
@@ -198,12 +213,6 @@ fn process_sae_updates(
             }
         }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Config {
-    ComputedPsk(psk::Psk),
-    Sae { password: Vec<u8>, mac: MacAddr, peer_mac: MacAddr },
 }
 
 #[cfg(test)]

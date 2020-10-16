@@ -45,7 +45,7 @@ pub use crate::{
 #[derive(Debug)]
 pub struct Supplicant {
     esssa: EssSa,
-    pub auth_method: auth::MethodName,
+    pub auth_cfg: auth::Config,
 }
 
 /// Any information (i.e. info elements) used to negotiate protection on an RSN.
@@ -70,14 +70,11 @@ impl Supplicant {
             role: Role::Supplicant,
             protection: negotiated_protection.clone(),
         }));
-        let auth_method = match &auth_cfg {
-            auth::Config::Sae { .. } => auth::MethodName::Sae,
-            auth::Config::ComputedPsk(_) => auth::MethodName::Psk,
-        };
+
         let esssa = EssSa::new(
             Role::Supplicant,
             negotiated_protection,
-            auth_cfg,
+            auth_cfg.clone(),
             exchange::Config::FourWayHandshake(fourway::Config::new(
                 Role::Supplicant,
                 s_addr,
@@ -90,7 +87,7 @@ impl Supplicant {
             gtk_exch_cfg,
         )?;
 
-        Ok(Supplicant { esssa, auth_method })
+        Ok(Supplicant { esssa, auth_cfg })
     }
 
     /// Starts the Supplicant. A Supplicant must be started after its creation and everytime it was
