@@ -206,7 +206,7 @@ mod test {
 
     const TEST_FIDL_TIME: frtc::Time =
         frtc::Time { year: 2020, month: 8, day: 14, hours: 0, minutes: 0, seconds: 0 };
-    const TEST_OFFSET: zx::Duration = zx::Duration::from_millis(100);
+    const TEST_OFFSET: zx::Duration = zx::Duration::from_millis(250);
 
     lazy_static! {
         static ref TEST_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_363_200_000_000_000);
@@ -258,7 +258,7 @@ mod test {
         let span = zx::Time::get_monotonic() - before;
         // Setting an integer second should not require any delay and therefore should complete
         // very fast - well under a millisecond typically.
-        assert_lt!(span, 10.millis());
+        assert_lt!(span, 50.millis());
     }
 
     #[fasync::run_singlethreaded(test)]
