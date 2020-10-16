@@ -12,7 +12,6 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/assert.h>
-#include <zircon/listnode.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>

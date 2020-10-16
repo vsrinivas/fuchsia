@@ -29,6 +29,7 @@
 #include "ddk/device.h"
 #include "ddk/driver.h"
 #include "e1000_api.h"
+#include "src/lib/listnode/listnode.h"
 
 typedef enum {
   ETH_RUNNING = 0,

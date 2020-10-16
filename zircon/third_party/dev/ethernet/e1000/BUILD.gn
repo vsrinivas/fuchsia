@@ -50,6 +50,7 @@ driver_module("e1000") {
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
+    "//src/lib/listnode",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",

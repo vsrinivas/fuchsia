@@ -33,6 +33,7 @@ source_set("block_lib") {
     "//sdk/banjo/ddk.protocol.block",
     "//src/devices/bus/lib/virtio",
     "//src/lib/ddktl",
+    "//src/lib/listnode",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

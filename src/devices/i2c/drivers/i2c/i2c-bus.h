@@ -14,6 +14,8 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 
+#include "src/lib/listnode/listnode.h"
+
 namespace i2c {
 
 class I2cBus : public fbl::RefCounted<I2cBus> {

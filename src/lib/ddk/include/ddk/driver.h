@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 #include <zircon/compiler.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <ddk/device-power-states.h>

@@ -24,6 +24,7 @@ driver_module("usb-cdc-ecm") {
     "//sdk/banjo/ddk.protocol.usb.request",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/lib/listnode",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",

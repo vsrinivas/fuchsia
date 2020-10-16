@@ -7,7 +7,6 @@
 
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
-#include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 

@@ -14,6 +14,8 @@
 #include <ddk/protocol/ethernet.h>
 #include <usb/usb.h>
 
+#include "src/lib/listnode/listnode.h"
+
 __BEGIN_CDECLS
 
 #define CDC_SUPPORTED_VERSION 0x0110 /* 1.10 */

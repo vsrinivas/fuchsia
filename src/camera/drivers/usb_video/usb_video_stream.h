@@ -25,6 +25,7 @@
 #include "src/camera/drivers/usb_video/camera_control_impl.h"
 #include "src/camera/drivers/usb_video/usb_video.h"
 #include "src/camera/drivers/usb_video/uvc_format.h"
+#include "src/lib/listnode/listnode.h"
 
 namespace video {
 namespace usb {

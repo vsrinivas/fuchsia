@@ -28,6 +28,7 @@ driver_module("i2c") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/lib/listnode",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
@@ -55,6 +56,7 @@ test("i2c-test") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+    "//src/lib/listnode",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
