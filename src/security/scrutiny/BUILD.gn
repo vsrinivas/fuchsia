@@ -4,15 +4,23 @@
 
 group("scrutiny") {
   testonly = true
-  public_deps = [ "//src/security/scrutiny/app:scrutiny" ]
+
+  # TODO(fxbug.dev/61794) - Remove when rust linking is correctly supported on mac.
+  if (!is_mac) {
+    public_deps = [ "//src/security/scrutiny/app:scrutiny" ]
+  }
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "//src/security/scrutiny/app:tests",
-    "//src/security/scrutiny/framework:tests",
-    "//src/security/scrutiny/plugins:tests",
-    "//src/security/scrutiny/utils:tests",
-  ]
+
+  # TODO(fxbug.dev/61794) - Remove when rust linking is correctly supported on mac.
+  if (!is_mac) {
+    public_deps = [
+      "//src/security/scrutiny/app:tests",
+      "//src/security/scrutiny/framework:tests",
+      "//src/security/scrutiny/plugins:tests",
+      "//src/security/scrutiny/utils:tests",
+    ]
+  }
 }

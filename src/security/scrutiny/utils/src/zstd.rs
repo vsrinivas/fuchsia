@@ -28,6 +28,17 @@ extern "C" {
     fn ZSTD_getErrorName(code: size_t) -> *const c_char;
 }
 
+/// "C" externs for ffi-bridged compression functions.
+#[link(name = "ffi-bridge")]
+extern "C" {
+    fn zstd_chunked_decompress(
+        src: *const c_void,
+        src_len: size_t,
+        dst: *mut c_void,
+        dst_capacity: size_t,
+    ) -> size_t;
+}
+
 /// Attempts to compress the `src` buffer returning a Vec<u8> with a capacity which
 /// is at most `dst_capacity`.
 pub fn compress(src: &[u8], dst_capacity: u32, level: i32) -> Result<Vec<u8>> {
@@ -76,6 +87,24 @@ pub fn decompress(src: &[u8], dst_capacity: u32) -> Result<Vec<u8>> {
     }
 }
 
+/// Attempts to use zstd_chunk decompression on the provided source block into
+/// a buffer that is of size `dst_capacity`. Any decompression errors will
+/// result in an empty vector. This function acts as a one-shot decompression
+/// attempting to decompress all compressed chunks in the provided source data.
+pub fn chunked_decompress(src: &[u8], dst_capacity: u32) -> Vec<u8> {
+    unsafe {
+        let src_len = src.len() as size_t;
+        let src_ptr = src.as_ptr() as *const c_void;
+        let dst_len = dst_capacity as size_t;
+        let mut dst = Vec::with_capacity(dst_capacity as usize);
+        let dst_ptr = dst.as_mut_ptr() as *mut c_void;
+
+        let bytes_written = zstd_chunked_decompress(src_ptr, src_len, dst_ptr, dst_len);
+        dst.set_len(bytes_written as usize);
+        dst
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, hex};
@@ -87,5 +116,11 @@ mod tests {
         let compressed = compress(&to_compress, dst_capacity, 3).unwrap();
         let decompressed = decompress(&compressed, dst_capacity).unwrap();
         assert_eq!(decompressed, to_compress);
+    }
+
+    #[test]
+    fn test_chunked_decompress_invalid_data() {
+        let invalid_data = vec![0u8; 128];
+        assert_eq!(chunked_decompress(&invalid_data, 256).len(), 0);
     }
 }
