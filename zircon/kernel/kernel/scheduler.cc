@@ -32,6 +32,7 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/algorithm.h>
+#include <ktl/forward.h>
 #include <ktl/move.h>
 #include <ktl/pair.h>
 #include <object/thread_dispatcher.h>
@@ -66,6 +67,10 @@ using ffl::Round;
 #define LOCAL_KTRACE_FLOW_END(level, string, flow_id, args...)                      \
   ktrace_flow_end(LocalTrace<LOCAL_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Cpu, \
                   KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string), flow_id, ##args)
+
+#define LOCAL_KTRACE_FLOW_STEP(level, string, flow_id, args...)                      \
+  ktrace_flow_step(LocalTrace<LOCAL_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Cpu, \
+                   KTRACE_GRP_SCHEDULER, KTRACE_STRING_REF(string), flow_id, ##args)
 
 #define LOCAL_KTRACE_COUNTER(level, string, value, args...)                           \
   ktrace_counter(LocalTrace<LOCAL_KTRACE_LEVEL_ENABLED(level)>, KTRACE_GRP_SCHEDULER, \
@@ -146,16 +151,6 @@ inline void TraceContextSwitch(const Thread* current_thread, const Thread* next_
   ktrace(TAG_CONTEXT_SWITCH, user_tid, context, current, next);
 }
 
-// Returns a sufficiently unique flow id for a thread based on the thread id and
-// queue generation count. This flow id cannot be used across enqueues because
-// the generation count changes during enqueue.
-inline uint64_t FlowIdFromThreadGeneration(const Thread* thread) {
-  const int kRotationBits = 32;
-  const uint64_t rotated_tid =
-      (thread->user_tid() << kRotationBits) | (thread->user_tid() >> kRotationBits);
-  return rotated_tid ^ thread->scheduler_state().generation();
-}
-
 // Returns true if the given thread is fair scheduled.
 inline bool IsFairThread(const Thread* thread) {
   return thread->scheduler_state().discipline() == SchedDiscipline::Fair;
@@ -210,6 +205,14 @@ inline T Scheduler::ScaleUp(T value) const {
 template <typename T>
 inline T Scheduler::ScaleDown(T value) const {
   return value * performance_scale();
+}
+
+// Returns a new flow id when flow tracing is enabled, zero otherwise.
+inline uint64_t Scheduler::NextFlowId() {
+  if constexpr (LOCAL_KTRACE_LEVEL >= KTRACE_FLOW) {
+    return next_flow_id_.fetch_add(1);
+  }
+  return 0;
 }
 
 // Records details about the threads entering/exiting the run queues for various
@@ -324,7 +327,8 @@ size_t Scheduler::GetRunnableTasks() const {
 
 // Performs an augmented binary search for the task with the earliest finish
 // time that also has a start time equal to or later than the given eligible
-// time.
+// time. An optional predicate may be supplied to filter candidates based on
+// additional conditions.
 //
 // The tree is ordered by start time and is augmented by maintaining an
 // additional invariant: each task node in the tree stores the minimum finish
@@ -336,10 +340,19 @@ size_t Scheduler::GetRunnableTasks() const {
 // See kernel/scheduler_internal.h for an explanation of how the augmented
 // invariant is maintained.
 Thread* Scheduler::FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eligible_time) {
+  return FindEarliestEligibleThread(run_queue, eligible_time, [](const auto iter) { return true; });
+}
+template <typename Predicate>
+Thread* Scheduler::FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eligible_time,
+                                              Predicate&& predicate) {
   // Early out if there is no eligible thread.
   if (run_queue->is_empty() || run_queue->front().scheduler_state().start_time_ > eligible_time) {
     return nullptr;
   }
+
+  // Deduces either Predicate& or const Predicate&, preserving the const
+  // qualification of the predicate.
+  decltype(auto) accept = ktl::forward<Predicate>(predicate);
 
   auto node = run_queue->root();
   auto subtree = run_queue->end();
@@ -368,8 +381,11 @@ Thread* Scheduler::FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eli
     }
   }
 
-  if (!subtree ||
-      subtree->scheduler_state().min_finish_time_ >= path->scheduler_state().finish_time_) {
+  if (!subtree) {
+    return path && accept(path) ? path.CopyPointer() : nullptr;
+  }
+  if (subtree->scheduler_state().min_finish_time_ >= path->scheduler_state().finish_time_ &&
+      accept(path)) {
     return path.CopyPointer();
   }
 
@@ -377,7 +393,8 @@ Thread* Scheduler::FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eli
   // subtree with the smallest minimum finish time.
   node = subtree;
   do {
-    if (subtree->scheduler_state().min_finish_time_ == node->scheduler_state().finish_time_) {
+    if (subtree->scheduler_state().min_finish_time_ == node->scheduler_state().finish_time_ &&
+        accept(node)) {
       return node.CopyPointer();
     }
 
@@ -420,15 +437,103 @@ void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_
 
 // Removes the thread at the head of the first eligible run queue. If there is
 // an eligible deadline thread, it takes precedence over available fair
-// threads.
+// threads. If there is no eligible work, attempt to steal work from other busy
+// CPUs.
 Thread* Scheduler::DequeueThread(SchedTime now) {
   if (IsDeadlineThreadEligible(now)) {
     return DequeueDeadlineThread(now);
-  } else if (likely(!fair_run_queue_.is_empty())) {
-    return DequeueFairThread();
-  } else {
-    return &percpu::Get(this_cpu()).idle_thread;
   }
+  if (likely(!fair_run_queue_.is_empty())) {
+    return DequeueFairThread();
+  }
+  if (Thread* const thread = StealWork(now); thread != nullptr) {
+    return thread;
+  }
+  return &percpu::Get(this_cpu()).idle_thread;
+}
+
+// Attempts to steal work from other busy CPUs and move it to the local run
+// queues. Returns a pointer to the stolen thread that is now associated with
+// the local Scheduler instance, or nullptr is no work was stolen.
+Thread* Scheduler::StealWork(SchedTime now) {
+  LocalTraceDuration<KTRACE_COMMON> trace{"steal_work"_stringref};
+
+  const cpu_num_t current_cpu = this_cpu();
+  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
+  const cpu_mask_t active_cpu_mask = mp_get_active_mask();
+
+  // Returns true if the given thread can run on this CPU.
+  const auto check_affinity = [current_cpu_mask, active_cpu_mask](const Thread& thread) -> bool {
+    return current_cpu_mask & thread.scheduler_state().GetEffectiveCpuMask(active_cpu_mask);
+  };
+
+  const CpuSearchSet& search_set = percpu::Get(current_cpu).search_set;
+  for (const auto& entry : search_set.const_iterator()) {
+    if (entry.cpu != current_cpu && active_cpu_mask & cpu_num_to_mask(entry.cpu)) {
+      Scheduler* const queue = Get(entry.cpu);
+
+      // Only steal across clusters if the target is above the load threshold.
+      if (cluster() != entry.cluster &&
+          queue->predicted_queue_time_ns() <= kInterClusterThreshold) {
+        continue;
+      }
+
+      // Returns true if the given thread in the run queue meets the criteria to
+      // run on this CPU.
+      const auto deadline_predicate = [this, check_affinity](const auto iter) {
+        const SchedulerState& state = iter->scheduler_state();
+        const SchedUtilization scaled_utilization = ScaleUp(state.deadline_.utilization);
+        const bool is_scheduleable = scaled_utilization <= kThreadUtilizationMax;
+        return check_affinity(*iter) && is_scheduleable && !iter->has_migrate_fn();
+      };
+
+      // Attempt to find a deadline thread that can run on this CPU.
+      Thread* thread =
+          FindEarliestEligibleThread(&queue->deadline_run_queue_, now, deadline_predicate);
+      if (thread != nullptr) {
+        DEBUG_ASSERT(!thread->has_migrate_fn());
+        DEBUG_ASSERT(check_affinity(*thread));
+        queue->deadline_run_queue_.erase(*thread);
+        queue->Remove(thread);
+        queue->TraceThreadQueueEvent("tqe_deque_steal_work"_stringref, thread);
+
+        // Associate the thread with this Scheduler, but don't enqueue it. It
+        // will run immediately on this CPU as if dequeued from a local queue.
+        Insert(now, thread, Placement::Association);
+        return thread;
+      }
+
+      // Returns true if the given thread in the run queue meets the criteria to
+      // run on this CPU.
+      const auto fair_predicate = [check_affinity](const auto iter) {
+        return check_affinity(*iter) && !iter->has_migrate_fn();
+      };
+
+      // TODO(eieio): Revisit the eligibility time parameter if/when moving to WF2Q.
+      queue->UpdateTimeline(now);
+      SchedTime eligible_time = queue->virtual_time_;
+      if (!queue->fair_run_queue_.is_empty()) {
+        const auto& earliest_thread = queue->fair_run_queue_.front();
+        const auto earliest_start = earliest_thread.scheduler_state().start_time_;
+        eligible_time = ktl::max(eligible_time, earliest_start);
+      }
+      thread = FindEarliestEligibleThread(&queue->fair_run_queue_, eligible_time, fair_predicate);
+      if (thread != nullptr) {
+        DEBUG_ASSERT(!thread->has_migrate_fn());
+        DEBUG_ASSERT(check_affinity(*thread));
+        queue->fair_run_queue_.erase(*thread);
+        queue->Remove(thread);
+        queue->TraceThreadQueueEvent("tqe_deque_steal_work"_stringref, thread);
+
+        // Associate the thread with this Scheduler, but don't enqueue it. It
+        // will run immediately on this CPU as if dequeued from a local queue.
+        Insert(now, thread, Placement::Association);
+        return thread;
+      }
+    }
+  }
+
+  return nullptr;
 }
 
 // Dequeues the eligible thread with the earliest virtual finish time. The
@@ -841,9 +946,10 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
     // Update the preemption timer if necessary.
     if (timeslice_changed && timeslice_remaining) {
-      const SchedTime slice_deadline_ns = start_of_current_time_slice_ns_ + remaining_time_slice_ns;
-      absolute_deadline_ns_ = ClampToDeadline(slice_deadline_ns);
-      percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
+      absolute_deadline_ns_ = start_of_current_time_slice_ns_ + remaining_time_slice_ns;
+      const SchedTime preemption_time_ns = ClampToDeadline(absolute_deadline_ns_);
+      DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+      percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
     }
 
     current_state->fair_.initial_time_slice_ns = time_slice_ns;
@@ -865,6 +971,9 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
       IsDeadlineThread(current_thread) && now >= current_state->finish_time_;
   const bool timeslice_expired =
       deadline_expired || scaled_total_runtime_ns >= current_state->time_slice_ns_;
+
+  // Check the consistency of the absolute deadline and the current time slice.
+  DEBUG_ASSERT(now < absolute_deadline_ns_ || timeslice_expired);
 
   // Select a thread to run.
   Thread* const next_thread =
@@ -957,7 +1066,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     absolute_deadline_ns_ = GetNextEligibleTime();
     percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
   } else if (timeslice_expired || next_thread != current_thread) {
-    LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{"next_slice: now,abs"_stringref};
+    LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{"next_slice: preempt,abs"_stringref};
 
     // Re-compute the time slice and deadline for the new thread based on the
     // latest state.
@@ -982,54 +1091,49 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     SCHED_LTRACEF("Start preempt timer: current=%s next=%s now=%" PRId64 " deadline=%" PRId64 "\n",
                   current_thread->name(), next_thread->name(), now.raw_value(),
                   absolute_deadline_ns_.raw_value());
-    percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
 
-    trace_start_preemption.End(Round<uint64_t>(now), Round<uint64_t>(absolute_deadline_ns_));
+    // Adjust the preemption time to account for a deadline thread becoming
+    // eligible before the current time slice expires.
+    const SchedTime preemption_time_ns =
+        IsFairThread(next_thread)
+            ? ClampToDeadline(absolute_deadline_ns_)
+            : ClampToEarlierDeadline(absolute_deadline_ns_, next_state->finish_time_);
+    DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+
+    percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
+    trace_start_preemption.End(Round<uint64_t>(preemption_time_ns),
+                               Round<uint64_t>(absolute_deadline_ns_));
 
     // Emit a flow end event to match the flow begin event emitted when the
     // thread was enqueued. Emitting in this scope ensures that thread just
     // came from the run queue (and is not the idle thread).
-    LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(next_thread),
+    LOCAL_KTRACE_FLOW_END(KTRACE_FLOW, "sched_latency", next_state->flow_id(),
                           next_thread->user_tid());
-  } else if (const SchedTime eligible_time_ns = GetNextEligibleTime();
-             eligible_time_ns < absolute_deadline_ns_) {
-    LocalTraceDuration<KTRACE_DETAILED> trace_next_preempt{"next_preempt: early,abs"_stringref};
-
-    // The current thread should continue to run and a throttled deadline thread
-    // will become eligible before its time slice expires. Figure out whether to
-    // set the preemption time to this earlier event.
+  } else {
+    LocalTraceDuration<KTRACE_DETAILED> trace_continue{"continue: preempt,abs"_stringref};
+    // The current thread should continue to run. A throttled deadline thread
+    // might become eligible before the current time slice expires. Figure out
+    // whether to set the preemption time earlier to switch to the newly
+    // eligible thread.
     //
     // The preemption time should be set earlier when either:
-    //   * Current is a fair thread. It should be preempted as soon as the
-    //     deadline thread is eligible.
-    //   * Current is a deadline thread and a thread with an earlier deadline will
-    //     become eligible before its deadline expires.
-    SchedTime preemption_time_ns = absolute_deadline_ns_;
-    if (IsFairThread(next_thread)) {
-      preemption_time_ns = eligible_time_ns;
-    } else {
-      Thread* const future_preempting_thread =
-          FindEarlierDeadlineThread(absolute_deadline_ns_, absolute_deadline_ns_);
-      if (future_preempting_thread != nullptr) {
-        preemption_time_ns = future_preempting_thread->scheduler_state().start_time_;
-      }
-    }
-
+    //   * Current is a fair thread and a deadline thread will become eligible
+    //     before its time slice expires.
+    //   * Current is a deadline thread and a deadline thread with an earlier
+    //     deadline will become eligible before its time slice expires.
+    //
+    // Note that the absolute deadline remains set to the ideal preemption time
+    // for the current task, even if the preemption timer is set earlier. If a
+    // task that becomes eligible is stolen before the early preemption is
+    // handled, this logic will reset to the original absolute deadline.
+    const SchedTime preemption_time_ns =
+        IsFairThread(next_thread)
+            ? ClampToDeadline(absolute_deadline_ns_)
+            : ClampToEarlierDeadline(absolute_deadline_ns_, next_state->finish_time_);
     DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+
     percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
-    trace_next_preempt.End(Round<uint64_t>(preemption_time_ns),
-                           Round<uint64_t>(absolute_deadline_ns_));
-  } else {
-    LocalTraceDuration<KTRACE_DETAILED> trace_continue{"continue: elig,abs"_stringref,
-                                                       Round<uint64_t>(eligible_time_ns),
-                                                       Round<uint64_t>(absolute_deadline_ns_)};
-    // The current thread should continue to run and there are no throttled
-    // deadline threads that will become eligible before the current time slice
-    // expires. Make sure the correct preemption time is set, in case an earlier
-    // time was set previously.
-    // TODO(eieio): Note that this path is also necessary when work stealing is
-    // implemented, as the task might be stolen before servicing the preemption.
-    percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
+    trace_continue.End(Round<uint64_t>(preemption_time_ns), Round<uint64_t>(absolute_deadline_ns_));
   }
 
   // Assert that there is no path beside running the idle thread can leave the
@@ -1116,7 +1220,7 @@ SchedTime Scheduler::ClampToDeadline(SchedTime completion_time) {
 SchedTime Scheduler::ClampToEarlierDeadline(SchedTime completion_time, SchedTime finish_time) {
   Thread* const thread = FindEarlierDeadlineThread(completion_time, finish_time);
   return thread ? ktl::min(completion_time, thread->scheduler_state().start_time_)
-                : ktl::min(completion_time, finish_time);
+                : completion_time;
 }
 
 SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
@@ -1132,16 +1236,14 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
     const SchedDuration remaining_time_slice_ns =
         time_slice_ns * state->fair_.normalized_timeslice_remainder;
 
-    DEBUG_ASSERT(time_slice_ns > SchedDuration{0});
-    DEBUG_ASSERT(remaining_time_slice_ns > SchedDuration{0});
+    DEBUG_ASSERT(time_slice_ns > 0);
+    DEBUG_ASSERT(remaining_time_slice_ns > 0);
 
     state->fair_.initial_time_slice_ns = time_slice_ns;
     state->time_slice_ns_ = remaining_time_slice_ns;
+    absolute_deadline_ns = now + remaining_time_slice_ns;
 
-    const SchedTime slice_deadline_ns = now + remaining_time_slice_ns;
-    absolute_deadline_ns = ClampToDeadline(slice_deadline_ns);
-
-    DEBUG_ASSERT_MSG(state->time_slice_ns_ > SchedDuration{0} && absolute_deadline_ns > now,
+    DEBUG_ASSERT_MSG(state->time_slice_ns_ > 0 && absolute_deadline_ns > now,
                      "time_slice_ns=%" PRId64 " now=%" PRId64 " absolute_deadline_ns=%" PRId64,
                      state->time_slice_ns_.raw_value(), now.raw_value(),
                      absolute_deadline_ns.raw_value());
@@ -1155,12 +1257,11 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
     // Calculate the deadline when the remaining time slice is completed. The
     // time slice is maintained by the deadline queuing logic, no need to update
     // it here. The absolute deadline is based on the time slice scaled by the
-    // performance of the CPU and clamped to the next deadline. This increases
+    // performance of the CPU and clamped to the deadline. This increases
     // capacity on slower processors, however, bandwidth isolation is preserved
     // because CPU selection attempts to keep scaled total capacity below one.
     const SchedDuration scaled_time_slice_ns = ScaleUp(state->time_slice_ns_);
-    const SchedTime slice_deadline_ns = now + scaled_time_slice_ns;
-    absolute_deadline_ns = ClampToEarlierDeadline(slice_deadline_ns, state->finish_time_);
+    absolute_deadline_ns = ktl::min<SchedTime>(now + scaled_time_slice_ns, state->finish_time_);
 
     SCHED_LTRACEF("name=%s capacity=%" PRId64 " deadline=%" PRId64 " period=%" PRId64
                   " scaled_time_slice_ns=%" PRId64 "\n",
@@ -1179,6 +1280,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
 
   DEBUG_ASSERT(thread->state() == THREAD_READY);
   DEBUG_ASSERT(!thread->IsIdle());
+  DEBUG_ASSERT(placement != Placement::Association);
   SCHED_LTRACEF("QueueThread: thread=%s\n", thread->name());
 
   SchedulerState* const state = &thread->scheduler_state();
@@ -1251,17 +1353,25 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
   }
 
   // Only update the generation, enqueue time, and emit a flow event if this
-  // is an insertion or preemption. In contrast, an adjustment only changes the
-  // queue position due to a parameter change and should not perform these
-  // actions.
+  // is an insertion, preemption, or migration. In contrast, an adjustment only
+  // changes the queue position in the same queue due to a parameter change and
+  // should not perform these actions.
   if (placement != Placement::Adjustment) {
-    // Reuse this member to track the time the thread enters the run queue.
-    // It is not read outside of the scheduler unless the thread state is
-    // THREAD_RUNNING.
-    state->last_started_running_ = now;
+    if (placement == Placement::Migration) {
+      // Connect the flow into the previous queue to the new queue.
+      LOCAL_KTRACE_FLOW_STEP(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->user_tid());
+    } else {
+      // Reuse this member to track the time the thread enters the run queue. It
+      // is not read outside of the scheduler unless the thread state is
+      // THREAD_RUNNING.
+      state->last_started_running_ = now;
+      state->flow_id_ = NextFlowId();
+      LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->user_tid());
+    }
+
+    // The generation count must always be updated when changing between CPUs,
+    // as each CPU has its own generation count.
     state->generation_ = ++generation_count_;
-    LOCAL_KTRACE_FLOW_BEGIN(KTRACE_FLOW, "sched_latency", FlowIdFromThreadGeneration(thread),
-                            thread->user_tid());
   }
 
   // Insert the thread into the appropriate run queue after the generation count
@@ -1275,7 +1385,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
   trace.End(Round<uint64_t>(state->start_time_), Round<uint64_t>(state->finish_time_));
 }
 
-void Scheduler::Insert(SchedTime now, Thread* thread) {
+void Scheduler::Insert(SchedTime now, Thread* thread, Placement placement) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"insert"_stringref};
 
   DEBUG_ASSERT(thread->state() == THREAD_READY);
@@ -1305,9 +1415,14 @@ void Scheduler::Insert(SchedTime now, Thread* thread) {
       runnable_deadline_task_count_++;
       DEBUG_ASSERT(runnable_deadline_task_count_ != 0);
     }
-
     TraceTotalRunnableThreads();
-    QueueThread(thread, Placement::Insertion, now);
+
+    if (placement != Placement::Association) {
+      QueueThread(thread, placement, now);
+    } else {
+      // Connect the flow into the previous queue to the new queue.
+      LOCAL_KTRACE_FLOW_STEP(KTRACE_FLOW, "sched_latency", state->flow_id(), thread->user_tid());
+    }
   }
 }
 

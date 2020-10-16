@@ -54,14 +54,14 @@ class Scheduler {
   // CPUs are in different logical clusters. This tunable value approximates the
   // cost of cross-cluster migration due to cache misses, assuming a task has
   // high cache affinity in its current cluster.
-  static constexpr SchedDuration kInterClusterThreshold = SchedUs(50);
+  static constexpr SchedDuration kInterClusterThreshold = SchedUs(75);
 
   // The threshold for early termination when searching for a CPU to place a
   // task. Queues with an estimated runtime below this value are sufficiently
   // unloaded. This tunable value approximates the cost of intra-cluster
   // migration due to cache misses, assuming a task has high cache affinity with
   // the last CPU it ran on.
-  static constexpr SchedDuration kIntraClusterThreshold = SchedUs(50);
+  static constexpr SchedDuration kIntraClusterThreshold = SchedUs(25);
 
   // The per-CPU deadline utilization limit to attempt to honor when selecting a
   // CPU to place a task. It is up to userspace to ensure that the total set of
@@ -184,19 +184,29 @@ class Scheduler {
   static void InheritWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);
 
-  // Specifies how to place a thread in the virtual timeline and run queue.
+  // Specifies how to associate a thread with a Scheduler instance, update
+  // metadata, and whether/where to place the thread in a run queue.
   enum class Placement {
     // Selects a place in the queue based on the current insertion time and
     // thread weight or deadline.
     Insertion,
 
     // Selects a place in the queue based on the original insertion time and
-    // the updated (inherited or changed) weight or deadline.
+    // the updated (inherited or changed) weight or deadline on the same CPU.
     Adjustment,
 
     // Selects a place in the queue based on the original insertion time and
     // the updated time slice due to being preempted by another thread.
     Preemption,
+
+    // Selects a place in the queue based on the insertion time in the original
+    // queue adjusted for the new queue.
+    Migration,
+
+    // Updates the metadata to account for a stolen thread that was just taken
+    // from a different queue. This is distinct from Migration in that the
+    // thread is not also enqueued, it is run immediately by the new CPU.
+    Association,
   };
 
   // Returns the current system time as a SchedTime value.
@@ -261,6 +271,11 @@ class Scheduler {
   Thread* DequeueEarlierDeadlineThread(SchedTime eligible_time, SchedTime finish_time)
       TA_REQ(thread_lock);
 
+  // Attempts to steal work from other busy CPUs. Returns nullptr if no work was
+  // stolen, otherwise returns a pointer to the stolen thread that is now
+  // associated with the local Scheduler instance.
+  Thread* StealWork(SchedTime now) TA_REQ(thread_lock);
+
   // Returns the time that the next deadline task will become eligible or infinite
   // if there are no ready deadline tasks.
   SchedTime GetNextEligibleTime() TA_REQ(thread_lock);
@@ -293,7 +308,8 @@ class Scheduler {
 
   // Makes a thread active on this CPU's scheduler and inserts it into the
   // run queue tree.
-  void Insert(SchedTime now, Thread* thread) TA_REQ(thread_lock);
+  void Insert(SchedTime now, Thread* thread, Placement placement = Placement::Insertion)
+      TA_REQ(thread_lock);
 
   // Removes the thread from this CPU's scheduler. The thread must not be in
   // the run queue tree.
@@ -322,6 +338,9 @@ class Scheduler {
 
   // Update trace counters which track the total number of runnable threads for a CPU
   inline void TraceTotalRunnableThreads() const TA_REQ(thread_lock);
+
+  // Returns a new flow id when flow tracing is enabled, zero otherwise.
+  inline static uint64_t NextFlowId();
 
   // Traits type to adapt the WAVLTree to Thread with node state in the
   // scheduler_state member.
@@ -364,6 +383,12 @@ class Scheduler {
   // Finds the next eligible thread in the given run queue.
   static Thread* FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eligible_time)
       TA_REQ(thread_lock);
+
+  // Finds the next eligible thread in the given run queue that also passes the
+  // given predicate.
+  template <typename Predicate>
+  static Thread* FindEarliestEligibleThread(RunQueue* run_queue, SchedTime eligible_time,
+                                            Predicate&& predicate) TA_REQ(thread_lock);
 
   // Returns the run queue for the given thread's scheduling discipline.
   inline RunQueue& GetRunQueue(Thread* thread) {
@@ -428,9 +453,12 @@ class Scheduler {
   TA_GUARDED(thread_lock)
   SchedTime start_of_current_time_slice_ns_{0};
 
-  // The system time that the current thread should be preempted.
+  // The system time that the current thread should be preempted. Initialized to
+  // ZX_TIME_INFINITE to maintain the assertion that now < absolute_deadline_ns
+  // (or else the current time slice is expired) on the first entry into the
+  // scheduler.
   TA_GUARDED(thread_lock)
-  SchedTime absolute_deadline_ns_{0};
+  SchedTime absolute_deadline_ns_{ZX_TIME_INFINITE};
 
   // The sum of the expected runtimes of all active threads on this CPU. This
   // value is an estimate of the average queuimg time for this CPU, given the
@@ -487,6 +515,9 @@ class Scheduler {
   // cache performance.
   RelaxedAtomic<SchedDuration> exported_total_expected_runtime_ns_{SchedNs(0)};
   RelaxedAtomic<SchedUtilization> exported_total_deadline_utilization_{SchedUtilization{0}};
+
+  // Flow id counter for sched_latency flow events.
+  inline static RelaxedAtomic<uint64_t> next_flow_id_{1};
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_H_

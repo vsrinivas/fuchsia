@@ -9,6 +9,7 @@
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <fbl/alloc_checker.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
@@ -77,6 +78,14 @@ static bool test_dpc_queue() {
 // Test that it's safe to repeatedly queue up the same DPC over and over.
 static bool test_dpc_requeue() {
   BEGIN_TEST;
+
+  // Disable preemption to prevent the DCP worker, which is a deadline thread,
+  // from immediately preempting the test thread. This also ensures that the
+  // test thread remains on the same CPU as the DPC is enqueued on, othewise
+  // work stealing can move the test thread to another CPU while the DPC worker
+  // executes, resulting in a race between the Dpc destructor in the test thread
+  // and the DPC worker.
+  AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> preempt_disable;
 
   ktl::atomic<uint64_t> actual_count = 0;
   Dpc dpc_increment([](Dpc* d) { d->arg<ktl::atomic<uint64_t>>()->fetch_add(1); }, &actual_count);

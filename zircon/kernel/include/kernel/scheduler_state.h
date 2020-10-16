@@ -130,7 +130,7 @@ class SchedulerState {
 
   // Returns the effective mask of CPUs a thread may run on, based on the
   // thread's affinity masks and CPUs currently active on the system.
-  cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask) {
+  cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask) const {
     // The thread may run on any active CPU allowed by both its hard and
     // soft CPU affinity.
     const cpu_mask_t available_mask = active_mask & soft_affinity_ & hard_affinity_;
@@ -153,6 +153,7 @@ class SchedulerState {
   // Returns the generation count from the last time the thread was enqueued
   // in the runnable tree.
   uint64_t generation() const { return generation_; }
+  uint64_t flow_id() const { return flow_id_; }
 
   zx_time_t last_started_running() const { return last_started_running_.raw_value(); }
   zx_duration_t time_slice_ns() const { return time_slice_ns_.raw_value(); }
@@ -291,6 +292,9 @@ class SchedulerState {
   // Takes the value of Scheduler::generation_count_ + 1 at the time this node
   // is added to the run queue.
   uint64_t generation_{0};
+
+  // The current sched_latency flow id for this thread.
+  uint64_t flow_id_{0};
 
   // Flag indicating whether this thread is associated with a run queue.
   bool active_{false};
