@@ -6,7 +6,6 @@ use {
     // TODO(fxbug.dev/51770): FuchsiaInstallPlan should be shared with omaha-client.
     super::install_plan::FuchsiaInstallPlan,
     crate::{cache::Cache, resolver::Resolver, updater::Updater},
-    anyhow::Context,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryMarker,
     futures::future::BoxFuture,
@@ -75,26 +74,24 @@ impl Installer for IsolatedInstaller {
             return async move { Err(IsolatedInstallError::AlreadyRun) }.boxed();
         }
 
-        let update_result = Updater::launch_with_components(
+        let updater = Updater::launch_with_components(
             self.blobfs.take().unwrap(),
             self.paver_connector.take().unwrap(),
             Arc::clone(&self.cache),
             Arc::clone(&self.resolver),
             &self.board_name,
-            Some(install_plan.url.to_string()),
             &self.updater_url,
         );
+        let url = install_plan.url.clone();
+
         async move {
-            let result = update_result
-                .await
-                .map_err(IsolatedInstallError::Failure)?
-                .ok()
-                .context("Running the updater")
-                .map_err(IsolatedInstallError::Failure);
+            let mut updater = updater.await.map_err(IsolatedInstallError::Failure)?;
+            let () =
+                updater.install_update(Some(&url)).await.map_err(IsolatedInstallError::Failure)?;
             if let Some(o) = observer.as_ref() {
                 o.receive_progress(None, 1., None, None);
             }
-            result
+            Ok(())
         }
         .boxed()
     }

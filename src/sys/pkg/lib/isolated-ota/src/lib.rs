@@ -101,7 +101,7 @@ pub async fn download_and_apply_update(
         .map_err(UpdateError::FidlError)?;
 
     if let Some(cfg) = omaha_cfg {
-        omaha::install_update(
+        let () = omaha::install_update(
             blobfs_clone,
             paver_connector,
             cache,
@@ -115,9 +115,12 @@ pub async fn download_and_apply_update(
         .await
         .map_err(UpdateError::InstallError)?;
     } else {
-        Updater::launch(blobfs_clone, paver_connector, cache, resolver, &board_name, None)
-            .await
-            .map_err(UpdateError::InstallError)?;
+        let mut updater =
+            Updater::launch(blobfs_clone, paver_connector, cache, resolver, &board_name)
+                .await
+                .map_err(UpdateError::InstallError)?;
+
+        let () = updater.install_update(None).await.map_err(UpdateError::InstallError)?;
     }
     Ok(())
 }

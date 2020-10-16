@@ -223,7 +223,6 @@ mod tests {
         Ok(UpdaterResult {
             paver_events: updater.paver.take_events(),
             resolver,
-            output: None,
             packages: updater.packages,
         })
     }

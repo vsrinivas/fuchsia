@@ -3,16 +3,22 @@
 // found in the LICENSE file.
 use {
     crate::{cache::Cache, resolver::Resolver},
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     fidl::endpoints::{ClientEnd, DiscoverableService},
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_paver::{BootManagerMarker, Configuration, PaverMarker},
+    fidl_fuchsia_paver::{BootManagerMarker, Configuration, PaverMarker, PaverProxy},
     fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
+    fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy, RebootControllerMarker},
+    fidl_fuchsia_update_installer_ext::{
+        options::{Initiator, Options},
+        start_update, UpdateAttempt,
+    },
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{AppBuilder, Output},
-        server::{ServiceFs, ServiceObj},
+        client::{App, AppBuilder},
+        server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
     std::io::Write,
@@ -22,46 +28,39 @@ use {
 pub const UPDATER_URL: &str =
     "fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/system-updater-isolated.cmx";
 
-pub struct Updater {}
+pub const DEFAULT_UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
+
+pub struct Updater {
+    _system_updater: App,
+    _cache: Arc<Cache>,
+    _resolver: Arc<Resolver>,
+    proxy: InstallerProxy,
+    paver_proxy: PaverProxy,
+    _env: NestedEnvironment,
+}
 
 impl Updater {
-    /// Perform an update using the given components, using the provided board name.
-    /// If `update_package` is Some, use the given package URL as the URL for the update package.
-    /// Otherwise, `system-updater` uses the default URL.
-    /// This will not install any images to the recovery partitions.
+    /// Launch the system updater using the given components and board name.
     pub async fn launch(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
         cache: Arc<Cache>,
         resolver: Arc<Resolver>,
         board_name: &str,
-        update_package: Option<String>,
-    ) -> Result<(), Error> {
-        let output = Updater::launch_with_components(
-            blobfs,
-            paver,
-            cache,
-            resolver,
-            board_name,
-            update_package,
-            UPDATER_URL,
-        )
-        .await?;
-        output.ok().context("Running the updater")?;
-        Ok(())
+    ) -> Result<Self, Error> {
+        Self::launch_with_components(blobfs, paver, cache, resolver, board_name, UPDATER_URL).await
     }
 
-    /// Perform an update. This is the same as `launch`,
-    /// except that it expects the path to the `system-updater` manifest to be provided.
+    /// Launch the system updater. This is the same as `launch`, except that it expects the path
+    /// to the `system-updater` component to be provided.
     pub async fn launch_with_components(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
         cache: Arc<Cache>,
         resolver: Arc<Resolver>,
         board_name: &str,
-        update_package: Option<String>,
         updater_url: &str,
-    ) -> Result<Output, Error> {
+    ) -> Result<Self, Error> {
         let board_info_dir = tempfile::tempdir()?;
         let mut path = board_info_dir.path().to_owned();
         path.push("board");
@@ -69,15 +68,7 @@ impl Updater {
         file.write(board_name.as_bytes())?;
         drop(file);
 
-        let update_package_ref = update_package.as_ref();
-        let mut args = vec!["--skip-recovery", "true", "--reboot", "false", "--oneshot", "true"];
-        if let Some(pkg) = update_package_ref {
-            args.push("--update");
-            args.push(pkg);
-        }
-
         let updater = AppBuilder::new(updater_url)
-            .args(args)
             .add_handle_to_namespace("/blob".to_owned(), blobfs.into_handle())
             .add_dir_to_namespace(
                 "/config/build-info".to_owned(),
@@ -90,30 +81,84 @@ impl Updater {
             .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request())
             .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request());
 
+        let (paver_proxy, remote) =
+            fidl::endpoints::create_proxy::<PaverMarker>().context("Creating paver proxy")?;
+        fdio::service_connect_at(&paver, PaverMarker::SERVICE_NAME, remote.into_channel())
+            .context("Connecting to paver")?;
+
         let env = fs.create_salted_nested_environment("isolated-swd-updater-env")?;
         fasync::Task::spawn(fs.collect()).detach();
 
-        let output = updater
-            .output(env.launcher())
-            .context("launching system updater")?
-            .await
-            .context("waiting for updater to exit")?;
-        if output.ok().is_ok() {
-            Updater::activate_installed_slot(&paver).await.context("activating installed slot")?;
-        }
+        let updater = updater.spawn(env.launcher()).context("launching system updater")?;
 
-        Ok(output)
+        let proxy = updater
+            .connect_to_service::<InstallerMarker>()
+            .context("connect to fuchsia.update.installer.Installer")?;
+
+        Ok(Self {
+            _system_updater: updater,
+            _cache: cache,
+            _resolver: resolver,
+            proxy,
+            paver_proxy,
+            _env: env,
+        })
     }
 
-    async fn activate_installed_slot(paver: &zx::Channel) -> Result<(), Error> {
-        let (proxy, remote) =
-            fidl::endpoints::create_proxy::<PaverMarker>().context("Creating paver proxy")?;
-        fdio::service_connect_at(paver, PaverMarker::SERVICE_NAME, remote.into_channel())
-            .context("Connecting to paver")?;
+    /// Perform an update, skipping the final reboot.
+    /// If `update_package` is Some, use the given package URL as the URL for the update package.
+    /// Otherwise, `system-updater` uses the default URL.
+    /// This will not install any images to the recovery partitions.
+    pub async fn install_update(&mut self, update_package: Option<&PkgUrl>) -> Result<(), Error> {
+        let update_package = match update_package {
+            Some(url) => url.to_owned(),
+            None => DEFAULT_UPDATE_PACKAGE_URL.parse().unwrap(),
+        };
 
+        let (reboot_controller, reboot_controller_server_end) =
+            fidl::endpoints::create_proxy::<RebootControllerMarker>()
+                .context("creating reboot controller proxy")?;
+        let () = reboot_controller.detach().context("disabling automatic reboot")?;
+
+        let attempt = start_update(
+            &update_package,
+            Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: false,
+            },
+            &self.proxy,
+            Some(reboot_controller_server_end),
+        )
+        .await
+        .context("starting system update")?;
+
+        let () = Self::monitor_update_attempt(attempt).await.context("monitoring installation")?;
+
+        let () = Self::activate_installed_slot(&self.paver_proxy)
+            .await
+            .context("activating installed slot")?;
+
+        Ok(())
+    }
+
+    async fn monitor_update_attempt(mut attempt: UpdateAttempt) -> Result<(), Error> {
+        while let Some(state) = attempt.try_next().await.context("fetching next update state")? {
+            println!("Install: {:?}", state);
+            if state.is_success() {
+                return Ok(());
+            } else if state.is_failure() {
+                return Err(anyhow!("update attempt failed"));
+            }
+        }
+
+        Err(anyhow!("unexpected end of update attempt"))
+    }
+
+    async fn activate_installed_slot(paver: &PaverProxy) -> Result<(), Error> {
         let (boot_manager, remote) = fidl::endpoints::create_proxy::<BootManagerMarker>()
             .context("Creating boot manager proxy")?;
-        proxy.find_boot_manager(remote).context("finding boot manager")?;
+        paver.find_boot_manager(remote).context("finding boot manager")?;
 
         let result = boot_manager.query_active_configuration().await;
         if let Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. }) =
@@ -306,22 +351,22 @@ pub mod for_tests {
             fs.serve_connection(server).expect("Failed to start mock paver");
             fasync::Task::spawn(fs.collect()).detach();
 
-            let output = Updater::launch_with_components(
+            let mut updater = Updater::launch_with_components(
                 resolver.cache.pkgfs.blobfs.root_dir_handle().expect("getting blobfs root handle"),
                 ClientEnd::from(client),
                 Arc::clone(&resolver.cache.cache),
                 Arc::clone(&resolver.resolver),
                 "test",
-                None,
                 TEST_UPDATER_URL,
             )
             .await
             .expect("launching updater");
 
+            let () = updater.install_update(None).await.expect("installing update");
+
             UpdaterResult {
                 paver_events: self.paver.take_events(),
                 resolver,
-                output: Some(output),
                 packages: self.packages,
             }
         }
@@ -333,8 +378,6 @@ pub mod for_tests {
         pub paver_events: Vec<PaverEvent>,
         /// The resolver used by the updater.
         pub resolver: ResolverForTest,
-        /// The stdout/stderr output of the system updater.
-        pub output: Option<Output>,
         /// All the packages that should have been resolved by the update.
         pub packages: Vec<Package>,
     }
@@ -368,7 +411,6 @@ pub mod tests {
         super::for_tests::UpdaterBuilder,
         super::*,
         fidl_fuchsia_paver::{Asset, Configuration},
-        fidl_fuchsia_sys::TerminationReason,
         fuchsia_pkg_testing::PackageBuilder,
         mock_paver::PaverEvent,
     };
@@ -395,17 +437,6 @@ pub mod tests {
             .add_image("zedboot.signed", &data)
             .add_image("recovery.vbmeta", &data);
         let result = updater.build_and_run().await;
-
-        let output = result.output.as_ref().unwrap();
-        if !output.stdout.is_empty() {
-            eprintln!("TEST: system updater stdout:\n{}", String::from_utf8_lossy(&output.stdout));
-        }
-        if !output.stderr.is_empty() {
-            eprintln!("TEST: system updater stderr:\n{}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
-        output.ok().context("System updater exited with error")?;
 
         assert_eq!(
             result.paver_events,
