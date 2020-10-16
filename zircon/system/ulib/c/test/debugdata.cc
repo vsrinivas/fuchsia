@@ -72,13 +72,29 @@ struct DebugData : public ::llcpp::fuchsia::debugdata::DebugData::Interface {
   }
 };
 
-void RunHelper(const char* mode, zx::channel svc_handle, int return_code) {
+void RunHelper(const char* mode, const size_t action_count, const fdio_spawn_action_t* fdio_actions,
+               int expected_return_code) {
   zx::job test_job;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &test_job));
   auto auto_call_kill_job = fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
 
   std::string test_helper = std::string(getenv("TEST_ROOT_DIR")) + kTestHelper;
   const char* args[] = {test_helper.c_str(), mode, nullptr};
+
+  zx::process process;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  ASSERT_OK(fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
+                           args[0], args, nullptr, action_count, fdio_actions,
+                           process.reset_and_get_address(), err_msg));
+
+  ASSERT_OK(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
+
+  zx_info_process_t proc_info;
+  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_EQ(expected_return_code, proc_info.return_code);
+}
+
+void RunHelperWithSvc(const char* mode, zx::channel svc_handle, int expected_return_code) {
   fdio_spawn_action_t fdio_actions[] = {
       fdio_spawn_action_t{
           .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
@@ -89,18 +105,11 @@ void RunHelper(const char* mode, zx::channel svc_handle, int return_code) {
               },
       },
   };
+  RunHelper(mode, 1, fdio_actions, expected_return_code);
+}
 
-  zx::process process;
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  ASSERT_OK(fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
-                           args[0], args, nullptr, 1, fdio_actions, process.reset_and_get_address(),
-                           err_msg));
-
-  ASSERT_OK(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
-
-  zx_info_process_t proc_info;
-  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_EQ(return_code, proc_info.return_code);
+void RunHelperWithoutSvc(const char* mode, int expected_return_code) {
+  RunHelper(mode, 0, nullptr, expected_return_code);
 }
 
 TEST(DebugDataTests, PublishData) {
@@ -110,7 +119,7 @@ TEST(DebugDataTests, PublishData) {
   DebugData svc;
   ASSERT_NO_FATAL_FAILURES(svc.Serve(loop.dispatcher(), &vfs, &client));
 
-  ASSERT_NO_FATAL_FAILURES(RunHelper("publish_data", std::move(client), 0));
+  ASSERT_NO_FATAL_FAILURES(RunHelperWithSvc("publish_data", std::move(client), 0));
 
   ASSERT_OK(loop.RunUntilIdle());
 
@@ -123,6 +132,10 @@ TEST(DebugDataTests, PublishData) {
   char content[sizeof(kTestData)];
   ASSERT_OK(it->second.read(content, 0, sizeof(content)));
   ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
+}
+
+TEST(DebugDataTests, PublishDataWithoutSvc) {
+  ASSERT_NO_FATAL_FAILURES(RunHelperWithoutSvc("publish_data", 0));
 }
 
 TEST(DebugDataTests, LoadConfig) {
@@ -139,7 +152,7 @@ TEST(DebugDataTests, LoadConfig) {
 
   svc.configs.emplace(kTestName, std::move(vmo));
 
-  ASSERT_NO_FATAL_FAILURES(RunHelper("load_config", std::move(client), 0));
+  ASSERT_NO_FATAL_FAILURES(RunHelperWithSvc("load_config", std::move(client), 0));
 
   loop.Shutdown();
   vfs.reset();
@@ -153,10 +166,14 @@ TEST(DebugDataTests, LoadConfigNotFound) {
   ASSERT_NO_FATAL_FAILURES(svc.Serve(loop.dispatcher(), &vfs, &client));
   ASSERT_OK(loop.StartThread("debugdata"));
 
-  ASSERT_NO_FATAL_FAILURES(RunHelper("load_config", std::move(client), ZX_ERR_PEER_CLOSED));
+  ASSERT_NO_FATAL_FAILURES(RunHelperWithSvc("load_config", std::move(client), ZX_ERR_PEER_CLOSED));
 
   loop.Shutdown();
   vfs.reset();
+}
+
+TEST(DebugDataTests, LoadConfigWithoutSvc) {
+  ASSERT_NO_FATAL_FAILURES(RunHelperWithoutSvc("load_config", ZX_ERR_BAD_HANDLE));
 }
 
 }  // anonymous namespace

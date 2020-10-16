@@ -142,6 +142,11 @@ zx_handle_t sanitizer_debugdata_connect() {
 
 __EXPORT
 void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
+  if (__zircon_namespace_svc == ZX_HANDLE_INVALID) {
+    _zx_handle_close(vmo);
+    return;
+  }
+
   zx_handle_t h = sanitizer_debugdata_connect();
 
   // The handle is always consumed by the callee.
@@ -153,6 +158,10 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
 
 __EXPORT
 zx_status_t __sanitizer_get_configuration(const char* name, zx_handle_t* out_vmo) {
+  if (__zircon_namespace_svc == ZX_HANDLE_INVALID) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
   zx_handle_t h = sanitizer_debugdata_connect();
 
   zx_status_t status = _fuchsia_debugdata_DebugDataLoadConfig(h, name, strlen(name), out_vmo);
