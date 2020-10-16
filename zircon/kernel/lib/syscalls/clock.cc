@@ -57,7 +57,8 @@ zx_status_t sys_clock_create(uint64_t options, user_in_ptr<const void> user_args
 zx_status_t sys_clock_read(zx_handle_t clock_handle, user_out_ptr<zx_time_t> user_now) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ClockDispatcher> clock;
-  zx_status_t status = up->GetDispatcherWithRights(clock_handle, ZX_RIGHT_READ, &clock);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(clock_handle, ZX_RIGHT_READ, &clock);
   if (status != ZX_OK) {
     return status;
   }
@@ -83,7 +84,8 @@ zx_status_t sys_clock_get_details(zx_handle_t clock_handle, uint64_t options,
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ClockDispatcher> clock;
-  zx_status_t status = up->GetDispatcherWithRights(clock_handle, ZX_RIGHT_READ, &clock);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(clock_handle, ZX_RIGHT_READ, &clock);
   if (status != ZX_OK) {
     return status;
   }
@@ -130,7 +132,7 @@ zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ClockDispatcher> clock;
-  status = up->GetDispatcherWithRights(clock_handle, ZX_RIGHT_WRITE, &clock);
+  status = up->handle_table().GetDispatcherWithRights(clock_handle, ZX_RIGHT_WRITE, &clock);
   if (status != ZX_OK) {
     return status;
   }

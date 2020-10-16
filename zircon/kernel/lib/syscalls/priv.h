@@ -49,13 +49,13 @@ class user_out_handle final {
 
   bool begin_copyout(ProcessDispatcher* current_process, user_out_ptr<zx_handle_t> out) const {
     if (h_)
-      return out.copy_to_user(current_process->MapHandleToValue(h_));
+      return out.copy_to_user(current_process->handle_table().MapHandleToValue(h_));
     return false;
   }
 
   void finish_copyout(ProcessDispatcher* current_process) {
     if (h_)
-      current_process->AddHandle(ktl::move(h_));
+      current_process->handle_table().AddHandle(ktl::move(h_));
   }
 
  private:

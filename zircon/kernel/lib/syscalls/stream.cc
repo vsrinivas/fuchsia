@@ -40,7 +40,7 @@ zx_status_t sys_stream_create(uint32_t options, zx_handle_t vmo_handle, zx_off_t
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<VmObjectDispatcher> vmo;
-  zx_status_t status = up->GetDispatcherWithRights(vmo_handle, vmo_rights, &vmo);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(vmo_handle, vmo_rights, &vmo);
   if (status != ZX_OK)
     return status;
 
@@ -68,7 +68,7 @@ zx_status_t sys_stream_writev(zx_handle_t handle, uint32_t options,
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<StreamDispatcher> stream;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &stream);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &stream);
   if (status != ZX_OK) {
     return status;
   }
@@ -105,7 +105,7 @@ zx_status_t sys_stream_writev_at(zx_handle_t handle, uint32_t options, zx_off_t 
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<StreamDispatcher> stream;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &stream);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &stream);
   if (status != ZX_OK) {
     return status;
   }
@@ -136,7 +136,7 @@ zx_status_t sys_stream_readv(zx_handle_t handle, uint32_t options, user_out_ptr<
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<StreamDispatcher> stream;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &stream);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &stream);
   if (status != ZX_OK) {
     return status;
   }
@@ -168,7 +168,7 @@ zx_status_t sys_stream_readv_at(zx_handle_t handle, uint32_t options, zx_off_t o
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<StreamDispatcher> stream;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &stream);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &stream);
   if (status != ZX_OK) {
     return status;
   }
@@ -192,7 +192,7 @@ zx_status_t sys_stream_seek(zx_handle_t handle, zx_stream_seek_origin_t whence, 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<StreamDispatcher> stream;
   zx_rights_t rights;
-  zx_status_t status = up->GetDispatcherAndRights(handle, &stream, &rights);
+  zx_status_t status = up->handle_table().GetDispatcherAndRights(handle, &stream, &rights);
   if (status != ZX_OK) {
     return status;
   }

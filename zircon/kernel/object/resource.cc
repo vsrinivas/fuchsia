@@ -29,7 +29,7 @@
 zx_status_t validate_resource(zx_handle_t handle, zx_rsrc_kind_t kind) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ResourceDispatcher> resource;
-  auto status = up->GetDispatcher(handle, &resource);
+  auto status = up->handle_table().GetDispatcher(handle, &resource);
   if (status != ZX_OK) {
     return status;
   }
@@ -114,7 +114,7 @@ zx_status_t validate_ranged_resource(zx_handle_t handle, zx_rsrc_kind_t kind, ui
                                      size_t size) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<ResourceDispatcher> resource;
-  auto status = up->GetDispatcher(handle, &resource);
+  auto status = up->handle_table().GetDispatcher(handle, &resource);
   if (status != ZX_OK) {
     return status;
   }

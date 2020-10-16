@@ -351,8 +351,8 @@ void userboot_init(uint) {
   // Inject the user-side channel handle into the process.
   HandleOwner user_handle_owner = Handle::Make(ktl::move(user_handle), rights);
   ASSERT(user_handle_owner);
-  zx_handle_t hv = process->MapHandleToValue(user_handle_owner);
-  process->AddHandle(ktl::move(user_handle_owner));
+  zx_handle_t hv = process->handle_table().MapHandleToValue(user_handle_owner);
+  process->handle_table().AddHandle(ktl::move(user_handle_owner));
 
   // Map in the userboot image along with the vDSO.
   KernelHandle<VmObjectDispatcher> userboot_vmo_kernel_handle;

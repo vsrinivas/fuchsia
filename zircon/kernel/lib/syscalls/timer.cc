@@ -48,7 +48,7 @@ zx_status_t sys_timer_set(zx_handle_t handle, zx_time_t deadline, zx_duration_t 
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<TimerDispatcher> timer;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &timer);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &timer);
   if (status != ZX_OK)
     return status;
 
@@ -64,7 +64,7 @@ zx_status_t sys_timer_cancel(zx_handle_t handle) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<TimerDispatcher> timer;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &timer);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &timer);
   if (status != ZX_OK)
     return status;
 

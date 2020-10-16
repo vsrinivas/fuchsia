@@ -91,11 +91,11 @@ zx_status_t sys_channel_create(uint32_t options, user_out_handle* out0, user_out
 }
 
 static void MapHandleToValue(ProcessDispatcher* up, const Handle* handle, uint32_t* out) {
-  *out = up->MapHandleToValue(handle);
+  *out = up->handle_table().MapHandleToValue(handle);
 }
 
 static void MapHandleToValue(ProcessDispatcher* up, const Handle* handle, zx_handle_info_t* out) {
-  out->handle = up->MapHandleToValue(handle);
+  out->handle = up->handle_table().MapHandleToValue(handle);
   out->type = handle->dispatcher()->get_type();
   out->rights = handle->rights();
   out->unused = 0;
@@ -123,7 +123,7 @@ static __WARN_UNUSED_RESULT zx_status_t msg_get_handles(ProcessDispatcher* up, M
       handle_list[i]->dispatcher()->Cancel(handle_list[i]);
     HandleOwner handle(handle_list[i]);
     // TODO(fxbug.dev/30916): This takes a lock per call. Consider doing these in a batch.
-    up->AddHandle(ktl::move(handle));
+    up->handle_table().AddHandle(ktl::move(handle));
   }
 
   return ZX_OK;
@@ -141,7 +141,8 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<ChannelDispatcher> channel;
-  zx_status_t result = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_READ, &channel);
+  zx_status_t result =
+      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_READ, &channel);
   if (result != ZX_OK)
     return result;
 
@@ -269,7 +270,7 @@ static __WARN_UNUSED_RESULT zx_status_t msg_put_handles(ProcessDispatcher* up, M
     return status;
 
   {
-    Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table_lock()};
+    Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().handle_table_lock()};
 
     for (size_t ix = 0; ix != num_handles; ++ix) {
       zx::status<Handle*> inner_status = get_handle_for_message_locked(up, channel, &handles[ix]);
@@ -314,7 +315,8 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
   }
 
   fbl::RefPtr<ChannelDispatcher> channel;
-  zx_status_t status = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE, &channel);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE, &channel);
   if (status != ZX_OK) {
     return status;
   }
@@ -370,7 +372,8 @@ zx_status_t channel_call_noretry(zx_handle_t handle_value, uint32_t options, zx_
   }
 
   fbl::RefPtr<ChannelDispatcher> channel;
-  status = up->GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE | ZX_RIGHT_READ, &channel);
+  status = up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_WRITE | ZX_RIGHT_READ,
+                                                      &channel);
   if (status != ZX_OK) {
     return status;
   }

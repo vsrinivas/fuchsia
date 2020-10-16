@@ -472,8 +472,8 @@ zx_status_t sys_pci_config_read(zx_handle_t handle, uint16_t offset, size_t widt
 
   // Get the PciDeviceDispatcher from the handle passed in via the pci protocol
   auto up = ProcessDispatcher::GetCurrent();
-  zx_status_t status =
-      up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(
+      handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
   if (status != ZX_OK) {
     return status;
   }
@@ -508,8 +508,8 @@ zx_status_t sys_pci_config_write(zx_handle_t handle, uint16_t offset, size_t wid
 
   // Get the PciDeviceDispatcher from the handle passed in via the pci protocol
   auto up = ProcessDispatcher::GetCurrent();
-  zx_status_t status =
-      up->GetDispatcherWithRights(handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(
+      handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
   if (status != ZX_OK) {
     return status;
   }
@@ -584,7 +584,8 @@ zx_status_t sys_pci_enable_bus_master(zx_handle_t dev_handle, uint32_t enable) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PciDeviceDispatcher> pci_device;
-  zx_status_t status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
   if (status != ZX_OK)
     return status;
 
@@ -602,7 +603,8 @@ zx_status_t sys_pci_reset_device(zx_handle_t dev_handle) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PciDeviceDispatcher> pci_device;
-  zx_status_t status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
   if (status != ZX_OK)
     return status;
 
@@ -619,8 +621,8 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
   // Grab the PCI device object
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<PciDeviceDispatcher> pci_device;
-  zx_status_t status =
-      up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(
+      dev_handle, ZX_RIGHT_READ | ZX_RIGHT_WRITE, &pci_device);
   if (status != ZX_OK) {
     return status;
   }
@@ -700,7 +702,8 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle, int32_t which_irq,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PciDeviceDispatcher> pci_device;
-  zx_status_t status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ, &pci_device);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ, &pci_device);
   if (status != ZX_OK)
     return status;
 
@@ -727,7 +730,8 @@ zx_status_t sys_pci_query_irq_mode(zx_handle_t dev_handle, uint32_t mode,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PciDeviceDispatcher> pci_device;
-  zx_status_t status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ, &pci_device);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(dev_handle, ZX_RIGHT_READ, &pci_device);
   if (status != ZX_OK)
     return status;
 
@@ -757,7 +761,8 @@ zx_status_t sys_pci_set_irq_mode(zx_handle_t dev_handle, uint32_t mode,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PciDeviceDispatcher> pci_device;
-  zx_status_t status = up->GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(dev_handle, ZX_RIGHT_WRITE, &pci_device);
   if (status != ZX_OK)
     return status;
 

@@ -49,7 +49,7 @@ zx_status_t sys_fifo_write(zx_handle_t handle, size_t elem_size, user_in_ptr<con
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<FifoDispatcher> fifo;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &fifo);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &fifo);
   if (status != ZX_OK)
     return status;
 
@@ -72,7 +72,7 @@ zx_status_t sys_fifo_read(zx_handle_t handle, size_t elem_size, user_out_ptr<voi
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<FifoDispatcher> fifo;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &fifo);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &fifo);
   if (status != ZX_OK)
     return status;
 

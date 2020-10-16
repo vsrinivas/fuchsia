@@ -39,7 +39,7 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint6
   // WRITE access is required to create a child resource
   zx_status_t status;
   fbl::RefPtr<ResourceDispatcher> parent;
-  status = up->GetDispatcherWithRights(parent_rsrc, ZX_RIGHT_WRITE, &parent);
+  status = up->handle_table().GetDispatcherWithRights(parent_rsrc, ZX_RIGHT_WRITE, &parent);
   if (status) {
     return status;
   }

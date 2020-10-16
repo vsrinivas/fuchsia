@@ -66,21 +66,21 @@ zx_status_t get_user_handles_to_consume(user_inout_ptr<zx_handle_disposition_t> 
 zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   const zx_handle_t* handle_val) {
-  Handle* source = process->GetHandleLocked(*handle_val);
+  Handle* source = process->handle_table().GetHandleLocked(*handle_val);
 
   auto status = handle_checks_locked(source, channel, ZX_HANDLE_OP_MOVE, ZX_RIGHT_SAME_RIGHTS,
                                      ZX_OBJ_TYPE_NONE);
   if (status != ZX_OK)
     return zx::error(status);
 
-  return zx::ok(process->RemoveHandleLocked(source).release());
+  return zx::ok(process->handle_table().RemoveHandleLocked(source).release());
 }
 
 // This overload is used by zx_channel_write_etc.
 zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   zx_handle_disposition_t* handle_disposition) {
-  Handle* source = process->GetHandleLocked(handle_disposition->handle);
+  Handle* source = process->handle_table().GetHandleLocked(handle_disposition->handle);
 
   const zx_handle_op_t operation = handle_disposition->operation;
   const zx_rights_t desired_rights = handle_disposition->rights;
@@ -94,7 +94,7 @@ zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
   // This if() block is purely an optimization and can be removed without
   // the rest of the function having to change.
   if ((operation == ZX_HANDLE_OP_MOVE) && (desired_rights == ZX_RIGHT_SAME_RIGHTS)) {
-    return zx::ok(process->RemoveHandleLocked(source).release());
+    return zx::ok(process->handle_table().RemoveHandleLocked(source).release());
   }
   // For the non-optimized case, we always need to create a new handle because
   // the rights are a const member of Handle.
@@ -111,7 +111,7 @@ zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
   // Use !ZX_HANDLE_OP_DUPLICATE so that we handle the case where operation
   // is an invalid value.
   if (operation != ZX_HANDLE_OP_DUPLICATE) {
-    process->RemoveHandleLocked(source);
+    process->handle_table().RemoveHandleLocked(source);
   }
   return zx::ok(raw_handle);
 }

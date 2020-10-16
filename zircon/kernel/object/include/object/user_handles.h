@@ -41,7 +41,7 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
       break;
     }
 
-    status = process->RemoveHandles(ktl::span(handles, chunk_size));
+    status = process->handle_table().RemoveHandles(ktl::span(handles, chunk_size));
     offset += chunk_size;
   }
   return status;
@@ -52,11 +52,11 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
 zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   const zx_handle_t* handle_val)
-    TA_REQ(process->handle_table_lock());
+    TA_REQ(process->handle_table().handle_table_lock());
 
 zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   zx_handle_disposition_t* handle_disposition)
-    TA_REQ(process->handle_table_lock());
+    TA_REQ(process->handle_table().handle_table_lock());
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_USER_HANDLES_H_

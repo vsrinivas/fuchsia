@@ -66,7 +66,8 @@ zx_status_t mtrace_perfmon_control(uint32_t action, uint32_t options, user_inout
       fbl::RefPtr<VmObjectDispatcher> vmo;
       zx_rights_t vmo_rights;
       zx_rights_t needed_rights = ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE;
-      status = up->GetDispatcherWithRights(buffer.vmo, needed_rights, &vmo, &vmo_rights);
+      status =
+          up->handle_table().GetDispatcherWithRights(buffer.vmo, needed_rights, &vmo, &vmo_rights);
       if (status != ZX_OK)
         return status;
 

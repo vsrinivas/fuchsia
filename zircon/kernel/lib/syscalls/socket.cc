@@ -56,7 +56,7 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options, user_in_ptr<c
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<SocketDispatcher> socket;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
   if (status != ZX_OK)
     return status;
 
@@ -84,7 +84,7 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<SocketDispatcher> socket;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &socket);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &socket);
   if (status != ZX_OK)
     return status;
 
@@ -110,7 +110,7 @@ zx_status_t sys_socket_shutdown(zx_handle_t handle, uint32_t options) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<SocketDispatcher> socket;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &socket);
   if (status != ZX_OK)
     return status;
 

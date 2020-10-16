@@ -146,12 +146,13 @@ static const char* ObjectTypeToString(zx_obj_type_t type) {
 using HandleTypeCounts = ktl::span<uint32_t, ZX_OBJ_TYPE_UPPER_BOUND>;
 static uint32_t BuildHandleStats(const ProcessDispatcher& pd, HandleTypeCounts handle_types) {
   uint32_t total = 0;
-  pd.ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
-    uint32_t type = static_cast<uint32_t>(disp->get_type());
-    ++handle_types[type];
-    ++total;
-    return ZX_OK;
-  });
+  pd.handle_table().ForEachHandle(
+      [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+        uint32_t type = static_cast<uint32_t>(disp->get_type());
+        ++handle_types[type];
+        ++total;
+        return ZX_OK;
+      });
   return total;
 }
 
@@ -203,22 +204,23 @@ void DumpProcessChannels(fbl::RefPtr<ProcessDispatcher> process) {
   process->get_name(pname);
   printf("%7" PRIu64 " [%s]\n", process->get_koid(), pname);
 
-  process->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
-    if (disp->get_type() == ZX_OBJ_TYPE_CHANNEL) {
-      auto chan = DownCastDispatcher<const ChannelDispatcher>(disp);
-      uint64_t koid, peer_koid, count, max_count;
-      {
-        Guard<Mutex> guard{chan->get_lock()};
-        koid = chan->get_koid();
-        peer_koid = chan->get_related_koid();
-        count = chan->get_message_count();
-        max_count = chan->get_max_message_count();
-      }
-      printf("    chan %7" PRIu64 " %7" PRIu64 " count %" PRIu64 " max %" PRIu64 "\n", koid,
-             peer_koid, count, max_count);
-    }
-    return ZX_OK;
-  });
+  process->handle_table().ForEachHandle(
+      [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+        if (disp->get_type() == ZX_OBJ_TYPE_CHANNEL) {
+          auto chan = DownCastDispatcher<const ChannelDispatcher>(disp);
+          uint64_t koid, peer_koid, count, max_count;
+          {
+            Guard<Mutex> guard{chan->get_lock()};
+            koid = chan->get_koid();
+            peer_koid = chan->get_related_koid();
+            count = chan->get_message_count();
+            max_count = chan->get_max_message_count();
+          }
+          printf("    chan %7" PRIu64 " %7" PRIu64 " count %" PRIu64 " max %" PRIu64 "\n", koid,
+                 peer_koid, count, max_count);
+        }
+        return ZX_OK;
+      });
 }
 
 void DumpProcessIdChannels(zx_koid_t id) {
@@ -293,14 +295,15 @@ void DumpProcessHandles(zx_koid_t id) {
   printf("%7s %10s %10s: {%s} [type]\n", "koid", "handle", "rights", kRightsHeader);
 
   uint32_t total = 0;
-  pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
-    char rights_mask[sizeof(kRightsHeader)];
-    FormatHandleRightsMask(rights, rights_mask, sizeof(rights_mask));
-    printf("%7" PRIu64 " %#10x %#10x: {%s} [%s]\n", disp->get_koid(), handle, rights, rights_mask,
-           ObjectTypeToString(disp->get_type()));
-    ++total;
-    return ZX_OK;
-  });
+  pd->handle_table().ForEachHandle(
+      [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+        char rights_mask[sizeof(kRightsHeader)];
+        FormatHandleRightsMask(rights, rights_mask, sizeof(rights_mask));
+        printf("%7" PRIu64 " %#10x %#10x: {%s} [%s]\n", disp->get_koid(), handle, rights,
+               rights_mask, ObjectTypeToString(disp->get_type()));
+        ++total;
+        return ZX_OK;
+      });
   printf("total: %u handles\n", total);
 }
 
@@ -314,7 +317,8 @@ void DumpHandlesForKoid(zx_koid_t id) {
   uint32_t total_handles = 0;
   auto walker = MakeProcessWalker([&](ProcessDispatcher* process) {
     bool found_handle = false;
-    process->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+    process->handle_table().ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
+                                              const Dispatcher* disp) {
       if (disp->get_koid() != id) {
         return ZX_OK;
       }
@@ -497,23 +501,24 @@ static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
   int count = 0;
   uint64_t total_size = 0;
   uint64_t total_alloc = 0;
-  pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
-    auto vmod = DownCastDispatcher<const VmObjectDispatcher>(disp);
-    if (vmod == nullptr) {
-      return ZX_OK;
-    }
-    auto vmo = vmod->vmo();
-    DumpVmObject(*vmo, format_unit, handle, rights, vmod->get_koid());
+  pd->handle_table().ForEachHandle(
+      [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+        auto vmod = DownCastDispatcher<const VmObjectDispatcher>(disp);
+        if (vmod == nullptr) {
+          return ZX_OK;
+        }
+        auto vmo = vmod->vmo();
+        DumpVmObject(*vmo, format_unit, handle, rights, vmod->get_koid());
 
-    // TODO: Doesn't handle the case where a process has multiple
-    // handles to the same VMO; will double-count all of these totals.
-    count++;
-    total_size += vmo->size();
-    // TODO: Doing this twice (here and in DumpVmObject) is a waste of
-    // work, and can get out of sync.
-    total_alloc += vmo->AttributedPages() * PAGE_SIZE;
-    return ZX_OK;
-  });
+        // TODO: Doesn't handle the case where a process has multiple
+        // handles to the same VMO; will double-count all of these totals.
+        count++;
+        total_size += vmo->size();
+        // TODO: Doing this twice (here and in DumpVmObject) is a waste of
+        // work, and can get out of sync.
+        total_alloc += vmo->AttributedPages() * PAGE_SIZE;
+        return ZX_OK;
+      });
   char size_str[MAX_FORMAT_SIZE_LEN];
   char alloc_str[MAX_FORMAT_SIZE_LEN];
   printf("  total: %d VMOs, size %s, alloc %s\n", count,
@@ -876,7 +881,7 @@ zx_status_t GetProcessVmos(ProcessDispatcher* process, VmoInfoWriter& vmos, size
   size_t available = 0;
   // We may see multiple handles to the same VMO, but leave it to userspace to
   // do deduping.
-  zx_status_t s = process->ForEachHandleBatched(
+  zx_status_t s = process->handle_table().ForEachHandleBatched(
       [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
         auto vmod = DownCastDispatcher<const VmObjectDispatcher>(disp);
         if (vmod == nullptr) {

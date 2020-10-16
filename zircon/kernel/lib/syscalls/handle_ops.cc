@@ -25,7 +25,7 @@ zx_status_t sys_handle_close(zx_handle_t handle_value) {
   if (handle_value == ZX_HANDLE_INVALID)
     return ZX_OK;
   auto up = ProcessDispatcher::GetCurrent();
-  HandleOwner handle(up->RemoveHandle(handle_value));
+  HandleOwner handle(up->handle_table().RemoveHandle(handle_value));
   if (!handle)
     return ZX_ERR_BAD_HANDLE;
   return ZX_OK;
@@ -45,8 +45,8 @@ static zx_status_t handle_dup_replace(bool is_replace, zx_handle_t handle_value,
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table_lock()};
-  auto source = up->GetHandleLocked(handle_value);
+  Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().handle_table_lock()};
+  auto source = up->handle_table().GetHandleLocked(handle_value);
   if (!source)
     return ZX_ERR_BAD_HANDLE;
 
@@ -59,14 +59,14 @@ static zx_status_t handle_dup_replace(bool is_replace, zx_handle_t handle_value,
     rights = source->rights();
   } else if ((source->rights() & rights) != rights) {
     if (is_replace)
-      up->RemoveHandleLocked(source);
+      up->handle_table().RemoveHandleLocked(source);
     return ZX_ERR_INVALID_ARGS;
   }
 
   zx_status_t status = out->dup(source, rights);
 
   if (is_replace)
-    up->RemoveHandleLocked(source);
+    up->handle_table().RemoveHandleLocked(source);
 
   return status;
 }

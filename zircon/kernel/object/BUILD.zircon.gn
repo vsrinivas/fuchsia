@@ -23,6 +23,7 @@ zx_library("object") {
     "futex_context.cc",
     "guest_dispatcher.cc",
     "handle.cc",
+    "handle_table.cc",
     "interrupt_dispatcher.cc",
     "interrupt_event_dispatcher.cc",
     "iommu_dispatcher.cc",

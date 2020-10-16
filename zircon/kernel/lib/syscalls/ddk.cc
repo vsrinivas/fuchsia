@@ -77,7 +77,7 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
   }
 
   fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-  status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+  status = up->handle_table().GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -194,7 +194,7 @@ zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle,
 
   // lookup the dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
-  status = up->GetDispatcher(vmo_handle, &vmo);
+  status = up->handle_table().GetDispatcher(vmo_handle, &vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -324,12 +324,13 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
   fbl::RefPtr<MsiAllocationDispatcher> msi_alloc_disp;
 
   zx_status_t status;
-  if ((status = up->GetDispatcher(msi_alloc, &msi_alloc_disp)) != ZX_OK) {
+  if ((status = up->handle_table().GetDispatcher(msi_alloc, &msi_alloc_disp)) != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<VmObjectDispatcher> vmo_disp;
-  if ((status = up->GetDispatcherWithRights(vmo, ZX_RIGHT_MAP, &vmo_disp)) != ZX_OK) {
+  if ((status = up->handle_table().GetDispatcherWithRights(vmo, ZX_RIGHT_MAP, &vmo_disp)) !=
+      ZX_OK) {
     return status;
   }
 
@@ -376,7 +377,8 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
 
   fbl::RefPtr<IommuDispatcher> iommu_dispatcher;
   // TODO(teisenbe): This should probably have a right on it.
-  zx_status_t status = up->GetDispatcherWithRights(iommu, ZX_RIGHT_NONE, &iommu_dispatcher);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(iommu, ZX_RIGHT_NONE, &iommu_dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -400,7 +402,8 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
                         user_out_handle* pmt) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_MAP, &bti_dispatcher);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_MAP, &bti_dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -411,7 +414,7 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
 
   fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
   zx_rights_t vmo_rights;
-  status = up->GetDispatcherAndRights(vmo, &vmo_dispatcher, &vmo_rights);
+  status = up->handle_table().GetDispatcherAndRights(vmo, &vmo_dispatcher, &vmo_rights);
   if (status != ZX_OK) {
     return status;
   }
@@ -513,7 +516,8 @@ zx_status_t sys_bti_release_quarantine(zx_handle_t handle) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
 
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &bti_dispatcher);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &bti_dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -532,7 +536,7 @@ zx_status_t sys_bti_release_quarantine(zx_handle_t handle) {
 zx_status_t sys_pmt_unpin(zx_handle_t handle) {
   auto up = ProcessDispatcher::GetCurrent();
 
-  HandleOwner handle_owner = up->RemoveHandle(handle);
+  HandleOwner handle_owner = up->handle_table().RemoveHandle(handle);
   if (!handle_owner) {
     return ZX_ERR_BAD_HANDLE;
   }
@@ -587,13 +591,13 @@ zx_status_t sys_interrupt_bind(zx_handle_t handle, zx_handle_t port_handle, uint
   zx_status_t status;
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
-  status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt);
+  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<PortDispatcher> port;
-  status = up->GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
+  status = up->handle_table().GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
   if (status != ZX_OK) {
     return status;
   }
@@ -614,13 +618,14 @@ zx_status_t sys_interrupt_bind_vcpu(zx_handle_t handle, zx_handle_t vcpu, uint32
 
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt_dispatcher;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt_dispatcher);
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt_dispatcher);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher;
-  status = up->GetDispatcherWithRights(vcpu, ZX_RIGHT_WRITE, &vcpu_dispatcher);
+  status = up->handle_table().GetDispatcherWithRights(vcpu, ZX_RIGHT_WRITE, &vcpu_dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -635,7 +640,7 @@ zx_status_t sys_interrupt_ack(zx_handle_t inth) {
   zx_status_t status;
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
-  status = up->GetDispatcherWithRights(inth, ZX_RIGHT_WRITE, &interrupt);
+  status = up->handle_table().GetDispatcherWithRights(inth, ZX_RIGHT_WRITE, &interrupt);
   if (status != ZX_OK) {
     return status;
   }
@@ -649,7 +654,7 @@ zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_t
   zx_status_t status;
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
-  status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WAIT, &interrupt);
+  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WAIT, &interrupt);
   if (status != ZX_OK) {
     return status;
   }
@@ -670,7 +675,7 @@ zx_status_t sys_interrupt_destroy(zx_handle_t handle) {
   zx_status_t status;
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
-  status = up->GetDispatcher(handle, &interrupt);
+  status = up->handle_table().GetDispatcher(handle, &interrupt);
   if (status != ZX_OK) {
     return status;
   }
@@ -689,7 +694,7 @@ zx_status_t sys_interrupt_trigger(zx_handle_t handle, uint32_t options, zx_time_
   zx_status_t status;
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
-  status = up->GetDispatcherWithRights(handle, ZX_RIGHT_SIGNAL, &interrupt);
+  status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_SIGNAL, &interrupt);
   if (status != ZX_OK) {
     return status;
   }

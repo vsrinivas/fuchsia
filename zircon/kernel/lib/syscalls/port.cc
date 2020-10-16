@@ -51,7 +51,7 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PortDispatcher> port;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &port);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &port);
   if (status != ZX_OK)
     return status;
 
@@ -71,7 +71,7 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PortDispatcher> port;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &port);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_READ, &port);
   if (status != ZX_OK)
     return status;
 
@@ -99,13 +99,13 @@ zx_status_t sys_port_cancel(zx_handle_t handle, zx_handle_t source, uint64_t key
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<PortDispatcher> port;
-  zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &port);
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_WRITE, &port);
   if (status != ZX_OK)
     return status;
 
   {
-    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table_lock()};
-    Handle* watched = up->GetHandleLocked(source);
+    Guard<BrwLockPi, BrwLockPi::Reader> guard{up->handle_table().handle_table_lock()};
+    Handle* watched = up->handle_table().GetHandleLocked(source);
     if (!watched)
       return ZX_ERR_BAD_HANDLE;
     if (!watched->HasRights(ZX_RIGHT_WAIT))

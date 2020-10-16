@@ -125,8 +125,8 @@ zx_status_t ValidateFutexOwner(zx_handle_t new_owner_handle,
     return ZX_OK;
   }
   auto up = ProcessDispatcher::GetCurrent();
-  zx_status_t status =
-      up->GetDispatcherWithRightsNoPolicyCheck(new_owner_handle, 0, thread_dispatcher, nullptr);
+  zx_status_t status = up->handle_table().GetDispatcherWithRightsNoPolicyCheck(
+      new_owner_handle, 0, thread_dispatcher, nullptr);
   if (status != ZX_OK) {
     return status;
   }
