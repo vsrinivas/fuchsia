@@ -339,7 +339,26 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output, const Conv
   }
 
   for (auto& element : input->GetArray()) {
-    std::string name = element["label"].GetString();
+    std::string name;
+    if (element.HasMember("test_name")) {
+      name = element["test_name"].GetString();
+    } else if (element.HasMember("label")) {
+      // TODO(fxb/59861): remove this when producers have been converted.
+      name = element["label"].GetString();
+    } else {
+      fprintf(stderr,
+              "Expect json element to have either label field (old version) or test_name field "
+              "(new version). (http://fxb/59861)\n");
+      exit(1);
+    }
+    // TODO (fxb/59861): Make "metric" field required once all the producers provide it.
+    if (element.HasMember("metric")) {
+      std::string metric = element["metric"].GetString();
+      if (metric != "real_time") {
+        name += "/";
+        name += metric;
+      }
+    }
     ConvertSpacesToUnderscores(&name);
 
     // The "test_suite" field in the input becomes the "benchmarks"
