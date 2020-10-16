@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::atomic_future::{AtomicFuture, AttemptPollResult};
+use crate::runtime::fuchsia::instrumentation::{Collector, LocalCollector, WakeupReason};
 use crate::runtime::DurationExt;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
@@ -23,6 +24,11 @@ use std::{cmp, fmt, mem, ops, thread, u64, usize};
 
 const EMPTY_WAKEUP_ID: u64 = u64::MAX;
 const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
+
+/// The id of the main task, which is a virtual task that lives from construction
+/// to destruction of the executor. The main task may correspond to multiple
+/// main futures, in cases where the executor runs multiple times during its lifetime.
+const MAIN_TASK_ID: usize = 0;
 
 /// Spawn a new task to be run on the global executor.
 ///
@@ -310,6 +316,8 @@ where
 
 impl Executor {
     fn new_with_time(time: ExecutorTime) -> Result<Self, zx::Status> {
+        let collector = Collector::new();
+        collector.task_created(MAIN_TASK_ID);
         let executor = Executor {
             inner: Arc::new(Inner {
                 port: zx::Port::create()?,
@@ -317,10 +325,11 @@ impl Executor {
                 threadiness: Threadiness::default(),
                 threads: Mutex::new(Vec::new()),
                 receivers: Mutex::new(PacketReceiverMap::new()),
-                task_count: AtomicUsize::new(0),
+                task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
                 active_tasks: Mutex::new(HashMap::new()),
                 ready_tasks: SegQueue::new(),
                 time: time,
+                collector,
             }),
             next_packet: None,
         };
@@ -373,11 +382,17 @@ impl Executor {
         if let Some(_) = self.next_packet {
             panic!("Error: called `run_singlethreaded` on an executor with a packet waiting");
         }
+        let mut local_collector = self.inner.collector.create_local_collector();
 
         pin_mut!(main_future);
         let waker = self.singlethreaded_main_task_wake();
         let main_cx = &mut Context::from_waker(&waker);
         let mut res = main_future.as_mut().poll(main_cx);
+        local_collector.task_polled(
+            MAIN_TASK_ID,
+            /* complete */ false,
+            /* pending_tasks */ self.inner.ready_tasks.len(),
+        );
 
         loop {
             if let Poll::Ready(res) = res {
@@ -387,9 +402,11 @@ impl Executor {
             let packet = with_local_timer_heap(|timer_heap| {
                 let deadline = next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE);
                 // into_zx: we are using real time, so the time is a monotonic time.
+                local_collector.will_wait();
                 match self.inner.port.wait(deadline.into_zx()) {
                     Ok(packet) => Some(packet),
                     Err(zx::Status::TIMED_OUT) => {
+                        local_collector.woke_up(WakeupReason::Deadline);
                         let time_waker = timer_heap.pop().unwrap();
                         time_waker.wake();
                         None
@@ -403,10 +420,20 @@ impl Executor {
             if let Some(packet) = packet {
                 match packet.key() {
                     EMPTY_WAKEUP_ID => {
+                        local_collector.woke_up(WakeupReason::Notification);
                         res = main_future.as_mut().poll(main_cx);
+                        local_collector.task_polled(
+                            MAIN_TASK_ID,
+                            /* complete */ false,
+                            /* pending_tasks */ self.inner.ready_tasks.len(),
+                        );
                     }
-                    TASK_READY_WAKEUP_ID => self.inner.poll_ready_tasks(),
+                    TASK_READY_WAKEUP_ID => {
+                        local_collector.woke_up(WakeupReason::Notification);
+                        self.inner.poll_ready_tasks(&mut local_collector);
+                    }
                     receiver_key => {
+                        local_collector.woke_up(WakeupReason::Io);
                         self.inner.deliver_packet(receiver_key as usize, packet);
                     }
                 }
@@ -428,11 +455,15 @@ impl Executor {
     where
         F: Future + Unpin,
     {
+        let inner = self.inner.clone();
+        let mut local_collector = inner.collector.create_local_collector();
         self.wake_main_future();
-        while let NextStep::NextPacket = self.next_step(/*fire_timers:*/ false) {
+        while let NextStep::NextPacket =
+            self.next_step(/*fire_timers:*/ false, &mut local_collector)
+        {
             // Will not fail, because NextPacket means there is a
             // packet ready to be processed.
-            let res = self.consume_packet(main_future);
+            let res = self.consume_packet(main_future, &mut local_collector);
             if res.is_ready() {
                 return res;
             }
@@ -464,12 +495,14 @@ impl Executor {
     where
         F: Future + Unpin,
     {
-        match self.next_step(/*fire_timers:*/ true) {
+        let inner = self.inner.clone();
+        let mut local_collector = inner.collector.create_local_collector();
+        match self.next_step(/*fire_timers:*/ true, &mut local_collector) {
             NextStep::WaitUntil(_) => None,
             NextStep::NextPacket => {
                 // Will not fail because NextPacket means there is a
                 // packet ready to be processed.
-                Some(self.consume_packet(main_future))
+                Some(self.consume_packet(main_future, &mut local_collector))
             }
             NextStep::NextTimer => {
                 let next_timer = with_local_timer_heap(|timer_heap| {
@@ -485,16 +518,28 @@ impl Executor {
 
     /// Consumes a packet that has already been dequeued from the port.
     /// This must only be called when there is a packet available.
-    fn consume_packet<F>(&mut self, main_future: &mut F) -> Poll<F::Output>
+    fn consume_packet<F>(
+        &mut self,
+        main_future: &mut F,
+        mut local_collector: &mut LocalCollector<'_>,
+    ) -> Poll<F::Output>
     where
         F: Future + Unpin,
     {
         let packet =
             self.next_packet.take().expect("consume_packet called but no packet available");
         match packet.key() {
-            EMPTY_WAKEUP_ID => self.poll_main_future(main_future),
+            EMPTY_WAKEUP_ID => {
+                let res = self.poll_main_future(main_future);
+                local_collector.task_polled(
+                    MAIN_TASK_ID,
+                    /* complete */ false,
+                    /* pending_tasks */ self.inner.ready_tasks.len(),
+                );
+                res
+            }
             TASK_READY_WAKEUP_ID => {
-                self.inner.poll_ready_tasks();
+                self.inner.poll_ready_tasks(&mut local_collector);
                 Poll::Pending
             }
             receiver_key => {
@@ -513,7 +558,11 @@ impl Executor {
         main_future.poll_unpin(main_cx)
     }
 
-    fn next_step(&mut self, fire_timers: bool) -> NextStep {
+    fn next_step(
+        &mut self,
+        fire_timers: bool,
+        local_collector: &mut LocalCollector<'_>,
+    ) -> NextStep {
         // If a packet is queued from a previous call to next_step, it must be executed first.
         if let Some(_) = self.next_packet {
             return NextStep::NextPacket;
@@ -525,13 +574,22 @@ impl Executor {
         if fire_timers && next_deadline <= self.inner.now() {
             NextStep::NextTimer
         } else {
+            local_collector.will_wait();
             // Try to unqueue a packet from the port.
             match self.inner.port.wait(zx::Time::INFINITE_PAST) {
                 Ok(packet) => {
+                    let reason = match packet.key() {
+                        TASK_READY_WAKEUP_ID | EMPTY_WAKEUP_ID => WakeupReason::Notification,
+                        _ => WakeupReason::Io,
+                    };
+                    local_collector.woke_up(reason);
                     self.next_packet = Some(packet);
                     NextStep::NextPacket
                 }
-                Err(zx::Status::TIMED_OUT) => NextStep::WaitUntil(next_deadline),
+                Err(zx::Status::TIMED_OUT) => {
+                    local_collector.woke_up(WakeupReason::Deadline);
+                    NextStep::WaitUntil(next_deadline)
+                }
                 Err(status) => {
                     panic!("Error calling port wait: {:?}", status);
                 }
@@ -545,7 +603,9 @@ impl Executor {
     /// If this returns `Ready`, `run_one_step` will return `Some(_)`. If there is no pending packet
     /// or timer, `Waiting(Time::INFINITE)` is returned.
     pub fn is_waiting(&mut self) -> WaitState {
-        match self.next_step(/*fire_timers:*/ true) {
+        let inner = self.inner.clone();
+        let mut local_collector = inner.collector.create_local_collector();
+        match self.next_step(/*fire_timers:*/ true, &mut local_collector) {
             NextStep::NextPacket | NextStep::NextTimer => WaitState::Ready,
             NextStep::WaitUntil(t) => WaitState::Waiting(t),
         }
@@ -676,6 +736,7 @@ impl Executor {
     fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
         let executor: EHandle = EHandle { inner: inner.clone() };
         executor.set_local(timers.unwrap_or(TimerHeap::new()));
+        let mut local_collector = inner.collector.create_local_collector();
         loop {
             if inner.done.load(Ordering::SeqCst) {
                 EHandle::rm_local();
@@ -684,10 +745,13 @@ impl Executor {
 
             let packet = with_local_timer_heap(|timer_heap| {
                 let deadline = next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE);
+
+                local_collector.will_wait();
                 // into_zx: we are using real time, so the time is a monotonic time.
                 match inner.port.wait(deadline.into_zx()) {
                     Ok(packet) => Some(packet),
                     Err(zx::Status::TIMED_OUT) => {
+                        local_collector.woke_up(WakeupReason::Deadline);
                         let time_waker = timer_heap.pop().unwrap();
                         time_waker.wake();
                         None
@@ -700,9 +764,13 @@ impl Executor {
 
             if let Some(packet) = packet {
                 match packet.key() {
-                    EMPTY_WAKEUP_ID => {}
-                    TASK_READY_WAKEUP_ID => inner.poll_ready_tasks(),
+                    EMPTY_WAKEUP_ID => local_collector.woke_up(WakeupReason::Notification),
+                    TASK_READY_WAKEUP_ID => {
+                        local_collector.woke_up(WakeupReason::Notification);
+                        inner.poll_ready_tasks(&mut local_collector);
+                    }
                     receiver_key => {
+                        local_collector.woke_up(WakeupReason::Io);
                         inner.deliver_packet(receiver_key as usize, packet);
                     }
                 }
@@ -769,6 +837,9 @@ impl Drop for Executor {
 
         // Drop all of the uncompleted tasks
         while let Ok(_) = self.inner.ready_tasks.pop() {}
+
+        // Synthetic main task marked completed
+        self.inner.collector.task_completed(MAIN_TASK_ID);
 
         // Remove the thread-local executor set in `new`.
         EHandle::rm_local();
@@ -946,6 +1017,7 @@ struct Inner {
     active_tasks: Mutex<HashMap<usize, Arc<Task>>>,
     ready_tasks: SegQueue<Arc<Task>>,
     time: ExecutorTime,
+    collector: Collector,
 }
 
 struct TimeWaker {
@@ -985,10 +1057,12 @@ impl PartialEq for TimeWaker {
 }
 
 impl Inner {
-    fn poll_ready_tasks(&self) {
+    fn poll_ready_tasks(&self, local_collector: &mut LocalCollector<'_>) {
         // TODO: loop but don't starve
         if let Ok(task) = self.ready_tasks.pop() {
-            if task.try_poll() {
+            let complete = task.try_poll();
+            local_collector.task_polled(task.id, complete, self.ready_tasks.len());
+            if complete {
                 // Completed
                 self.active_tasks.lock().remove(&task.id);
             }
@@ -1003,6 +1077,7 @@ impl Inner {
         }
         let next_id = self.task_count.fetch_add(1, Ordering::Relaxed);
         let task = Task::new(next_id, future, self.clone());
+        self.collector.task_created(next_id);
         let waker = task.waker();
         self.active_tasks.lock().insert(next_id, task);
         ArcWake::wake_by_ref(&waker);
@@ -1115,13 +1190,14 @@ impl ArcWake for TaskWaker {
 mod tests {
     use core::task::{Context, Waker};
     use fuchsia_zircon::{self as zx, AsHandleRef, DurationNum};
-    use futures::{future::poll_fn, Future};
+    use futures::{future, Future};
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
     use std::task::Poll;
 
     use super::*;
-    use crate::{handle::on_signals::OnSignals, Timer};
+    use crate::runtime::fuchsia::instrumentation::Snapshot;
+    use crate::{handle::channel::Channel, handle::on_signals::OnSignals, Timer};
 
     fn time_operations_param(zxt1: zx::Time, zxt2: zx::Time, d: zx::Duration) {
         let t1 = Time::from_zx(zxt1);
@@ -1233,7 +1309,7 @@ mod tests {
                 _ => panic!("future called after done"),
             }
         };
-        let fut = poll_fn(fut_fn);
+        let fut = future::poll_fn(fut_fn);
         pin_mut!(fut);
         let mut executor = Executor::new_with_fake_time().unwrap();
         executor.wake_main_future();
@@ -1374,5 +1450,75 @@ mod tests {
             true,
             "executor did not drop pending task during destruction"
         );
+    }
+
+    // This task spawns another tasks, which completes. It should wake up from IO, notification
+    // and deadline at least once each. Min polls is 4.
+    async fn simple_task() {
+        let bytes = &[0, 1, 2, 3];
+        let (tx, rx) = zx::Channel::create().unwrap();
+        let f_rx = Channel::from_channel(rx).unwrap();
+        let mut buffer = zx::MessageBuf::new();
+        let read_fut = f_rx.recv_msg(&mut buffer);
+
+        // This extra poll ensures a happens-before relationship between the read and the write
+        // future in order to trigger an IO wakeup. This registers a waker with the executor
+        // which guarantees that the IO wakeup will be skipped by short circuiting.
+        let pending_read_fut = match future::select(read_fut, future::ready(())).await {
+            future::Either::Right((_, pending)) => pending,
+            _ => panic!("read future complete before write"),
+        };
+        let t = crate::Task::spawn(async move {
+            let mut handles = Vec::new();
+            tx.write(bytes, &mut handles).expect("failed to write message");
+            Timer::new(Time::after(0.nanos())).await;
+        });
+        pending_read_fut.await.expect("read future did not complete");
+        t.await;
+    }
+
+    // Sanity check for running simple_task on an executor. `extra_tasks` represents
+    // synthetic tasks that are added as an impl detail of the execution - e.g. a multithreaded
+    // execution run creates an extra synthetic task for the main future.
+    fn snapshot_sanity_check(snapshot: &Snapshot, extra_tasks: usize) {
+        assert!(snapshot.polls >= 4);
+        assert_eq!(snapshot.tasks_created - extra_tasks, 2);
+        assert_eq!(snapshot.tasks_completed - extra_tasks, 1);
+        assert!(snapshot.wakeups_io >= 1);
+        assert!(snapshot.wakeups_deadline >= 1);
+
+        // Future optimizations of the executor could theoretically lead to notifications
+        // being eliminated in some cases.
+        assert!(snapshot.wakeups_notification >= 1);
+        assert!(snapshot.ticks_awake >= 1);
+        assert!(snapshot.ticks_asleep >= 1);
+    }
+
+    #[test]
+    fn instrumentation_single_sanity_check() {
+        let mut executor = Executor::new().unwrap();
+        executor.run_singlethreaded(simple_task());
+        let snapshot = executor.inner.collector.snapshot();
+        snapshot_sanity_check(&snapshot, 0);
+    }
+
+    #[test]
+    fn instrumentation_multi_sanity_check() {
+        let mut executor = Executor::new().unwrap();
+        executor.run(simple_task(), 2);
+        let snapshot = executor.inner.collector.snapshot();
+        snapshot_sanity_check(&snapshot, /* extra_tasks */ 1);
+    }
+
+    #[test]
+    fn instrumentation_stepwise_sanity_check() {
+        let mut executor = Executor::new().unwrap();
+        let fut = simple_task();
+        pin_mut!(fut);
+        assert!(executor.run_until_stalled(&mut fut).is_pending());
+        executor.wake_expired_timers();
+        assert!(executor.run_until_stalled(&mut fut).is_ready());
+        let snapshot = executor.inner.collector.snapshot();
+        snapshot_sanity_check(&snapshot, 0);
     }
 }
