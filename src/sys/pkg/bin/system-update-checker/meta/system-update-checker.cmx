@@ -19,13 +19,12 @@
         ],
         "services": [
             "fuchsia.cobalt.SystemDataUpdater",
-            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
-            "fuchsia.sys.Launcher"
+            "fuchsia.update.installer.Installer"
         ]
     }
 }
