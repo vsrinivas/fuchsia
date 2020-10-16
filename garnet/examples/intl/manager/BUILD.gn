@@ -7,6 +7,11 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("manager") {
+  testonly = true
+  public_deps = [ ":tests" ]
+}
+
 rustc_binary("intl_property_manager_bin") {
   name = "intl_property_manager"
   edition = "2018"

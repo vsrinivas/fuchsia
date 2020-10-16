@@ -281,7 +281,6 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_syslog::init_with_tags(&[LOG_TAG])?;
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
-    fuchsia_syslog::set_verbosity(LOG_VERBOSITY);
 
     fx_log_info!("Launched component");
 
