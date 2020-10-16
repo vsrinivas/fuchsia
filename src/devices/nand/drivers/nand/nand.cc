@@ -285,7 +285,7 @@ NandDevice::~NandDevice() {
 
 // static
 zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
-  zxlogf(ERROR, "NandDevice::Create: Starting...!");
+  zxlogf(INFO, "NandDevice::Create: Starting...!");
 
   fbl::AllocChecker ac;
   std::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent));
