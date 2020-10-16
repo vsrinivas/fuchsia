@@ -18,16 +18,18 @@ fit::function<ParseResult(ParseResult)> ErSkip(
 
     if (skip && skip.errors() == prefix.errors()) {
       auto pos = message.find(MATCH_REPLACE);
+      auto match_size = skip.offset() - prefix.offset();
 
       if (pos != std::string::npos) {
         std::string modified_message(message);
 
-        modified_message.replace(pos, MATCH_REPLACE.size(), skip.unit().substr(0, skip.offset()));
+        modified_message.replace(pos, MATCH_REPLACE.size(),
+                                 skip.unit().substr(prefix.offset(), match_size));
 
-        return prefix.Skip(skip.offset(), modified_message);
+        return prefix.Skip(match_size, modified_message);
       }
 
-      return prefix.Skip(skip.offset(), message);
+      return prefix.Skip(match_size, message);
     }
 
     return ParseResult::kEnd;

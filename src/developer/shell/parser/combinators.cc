@@ -8,18 +8,37 @@
 #include <map>
 
 namespace shell::parser {
+namespace {
+
+ParseResult Follow(ParseResult a_result, const fit::function<ParseResult(ParseResult)>& b) {
+  if (!a_result) {
+    return ParseResult::kEnd;
+  }
+
+  auto b_result = b(a_result);
+
+  if (b_result && (b_result.errors() == a_result.errors() &&
+                   b_result.parsed_successfully() > a_result.parsed_successfully())) {
+    return b_result;
+  }
+
+  if (auto alt = a_result.error_alternative()) {
+    auto b_alt_result = b(*alt);
+
+    if (b_alt_result &&
+        (!b_result || b_alt_result.parsed_successfully() > b_result.parsed_successfully())) {
+      return b_alt_result;
+    }
+  }
+
+  return b_result;
+}
+
+}  // namespace
 
 fit::function<ParseResult(ParseResult)> Seq(fit::function<ParseResult(ParseResult)> a,
                                             fit::function<ParseResult(ParseResult)> b) {
-  return [a = std::move(a), b = std::move(b)](ParseResult prefix) {
-    auto a_result = a(prefix);
-
-    if (a_result) {
-      return b(a_result);
-    }
-
-    return ParseResult::kEnd;
-  };
+  return [a = std::move(a), b = std::move(b)](ParseResult prefix) { return Follow(a(prefix), b); };
 }
 
 fit::function<ParseResult(ParseResult)> Seq(fit::function<ParseResult(ParseResult)> first) {
@@ -33,23 +52,23 @@ fit::function<ParseResult(ParseResult)> Alt(fit::function<ParseResult(ParseResul
   return [a = std::move(a), b = std::move(b)](ParseResult prefix) {
     auto a_result = a(prefix);
 
-    if (a_result && a_result.errors() == prefix.errors()) {
-      return a_result;
-    } else {
-      auto b_result = b(prefix);
+    if (!a_result) {
+      return b(prefix);
+    }
 
-      if (!b_result) {
-        return a_result;
-      } else if (!a_result) {
-        return b_result;
-      } else if (b_result.errors() == prefix.errors()) {
-        return b_result;
-      } else if (a_result.parsed_successfully() >= b_result.parsed_successfully()) {
-        return a_result;
-      } else {
-        return b_result;
+    if (a_result.errors() != prefix.errors()) {
+      if (auto b_result = b(prefix)) {
+        if (a_result.parsed_successfully() < b_result.parsed_successfully()) {
+          return b_result;
+        }
+
+        if (b_result.errors() == prefix.errors()) {
+          return b_result.WithAlternative(a_result);
+        }
       }
     }
+
+    return a_result;
   };
 }
 
@@ -78,23 +97,40 @@ fit::function<ParseResult(ParseResult)> Not(fit::function<ParseResult(ParseResul
 fit::function<ParseResult(ParseResult)> Multi(size_t min, size_t max,
                                               fit::function<ParseResult(ParseResult)> child) {
   return [child = std::move(child), min, max](ParseResult prefix) {
+    ParseResult result = min == 0 ? prefix : ParseResult::kEnd;
+    ParseResult furthest = prefix;
+
     size_t count = 0;
-    ParseResult result = prefix;
+    while (count < max) {
+      ParseResult next = count == 0 ? child(furthest) : Follow(furthest, child);
 
-    for (ParseResult next = ParseResult::kEnd; result && count < max; ++count) {
-      next = child(result);
-
-      if ((!next || next.errors() > prefix.errors()) && count >= min) {
-        return result;
+      if (!next) {
+        break;
       }
 
-      // If result becomes a null parse result at this point, it means two things:
-      //   1) We've had a hard parse failure. That means parsing failed *and error recovery failed*.
-      //   2) We didn't reach the minimum number of repetitions before that hard failure.
-      //
-      // The next thing that will happen is the loop will end and we will propagate that hard
-      // failure by returning the null parse result.
-      result = next;
+      if (next.parsed_successfully() <= furthest.parsed_successfully()) {
+        break;
+      }
+
+      furthest = next;
+      count++;
+
+      if (count == min || (count > min && furthest.errors() == prefix.errors())) {
+        result = furthest;
+      }
+    }
+
+    if (!result) {
+      if (furthest.errors() > prefix.errors()) {
+        return furthest;
+      }
+
+      return ParseResult::kEnd;
+    }
+
+    if (result.errors() == prefix.errors() &&
+        furthest.parsed_successfully() > result.parsed_successfully()) {
+      return result.WithAlternative(furthest);
     }
 
     return result;

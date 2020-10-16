@@ -25,12 +25,13 @@ class ParseResult {
   };
 
  public:
-  ParseResult(const ParseResult &) = default;
+  ParseResult(const ParseResult&) = default;
   explicit ParseResult(std::string_view text) : ParseResult(text, 0, 0, 0, nullptr, nullptr) {}
 
   bool is_end() const { return frame_ == nullptr; }
   size_t offset() const { return offset_; }
   size_t errors() const { return errors_; }
+  const std::shared_ptr<ParseResult>& error_alternative() const { return error_alternative_; }
   size_t parsed_successfully() const { return parsed_successfully_; }
   std::string_view unit() const { return unit_; }
   std::string_view tail() const { return unit_.substr(offset_); }
@@ -47,19 +48,35 @@ class ParseResult {
                        std::make_shared<T>(offset_, size, tail().substr(0, size)), frame_);
   }
 
-  // Swap the node in the current frame. Essentially this is a Pop() followed by a Push(). Usually
-  // the new node will be some modification of the current node, but instead of popping, modifying,
-  // and pushing, it's usually more efficient to peek the current node with node(), create the
-  // modified node, then do all the stack alteration in one operation.
+  // Set an error alternative on this parse result.
+  ParseResult WithAlternative(ParseResult alternative) {
+    ParseResult ret(*this);
+
+    if (!ret.error_alternative_ ||
+        ret.error_alternative_->parsed_successfully() < alternative.parsed_successfully()) {
+      ret.error_alternative_ = std::make_shared<ParseResult>(std::move(alternative));
+    }
+
+    return ret;
+  }
+
+  // Rewrite the node in the current frame. Essentially this is a Pop(), then the result is passed
+  // to the given closure, then the return value of the closure is Push()ed.
   //
-  // An example use case would be the parser-modifying version of Token(), which parses a new
-  // non-terminal on the stack, then concatenates its children to create a new terminal instead.
-  ParseResult SetNode(std::shared_ptr<ast::Node> node) {
+  // See the parser-modifying version of Token() for example usage.
+  ParseResult MapNode(fit::function<std::shared_ptr<ast::Node>(std::shared_ptr<ast::Node>)> f) {
     if (is_end()) {
       return kEnd;
     }
 
-    return ParseResult(unit_, offset_, parsed_successfully_, errors_, node, frame_->prev);
+    auto ret = ParseResult(unit_, offset_, parsed_successfully_, errors_, f(node()), frame_->prev);
+
+    if (error_alternative_) {
+      ret.error_alternative_ =
+          std::make_shared<ParseResult>(error_alternative_->MapNode(std::move(f)));
+    }
+
+    return ret;
   }
 
   // Insert an error indicating some form was expected. The parse position does not change.
@@ -88,7 +105,15 @@ class ParseResult {
       return kEnd;
     }
 
-    return ParseResult(unit_, offset_, parsed_successfully_, errors_, nullptr, frame_);
+    auto ret = ParseResult(unit_, offset_, parsed_successfully_, errors_, nullptr, frame_);
+
+    if (error_alternative_) {
+      if (auto result = error_alternative_->Mark()) {
+        ret.error_alternative_ = std::make_shared<ParseResult>(result);
+      }
+    }
+
+    return ret;
   }
 
   // Pops from the stack until a marker frame or the top of the stack is encountered, then produces
@@ -111,6 +136,12 @@ class ParseResult {
     if (auto frame = DropMarkerFrame()) {
       ParseResult ret(unit_, offset_, parsed_successfully_, errors_);
       ret.frame_ = frame;
+
+      if (error_alternative_) {
+        if (auto result = error_alternative_->DropMarker()) {
+          ret.error_alternative_ = std::make_shared<ParseResult>(result);
+        }
+      }
       return ret;
     }
 
@@ -168,6 +199,9 @@ class ParseResult {
 
   // Last node that was parsed at this position.
   std::shared_ptr<Frame> frame_;
+
+  // An alternative to this parse result for error processing.
+  std::shared_ptr<ParseResult> error_alternative_;
 };
 
 template <typename T>
@@ -203,7 +237,15 @@ ParseResult ParseResult::Reduce(bool pop_marker) {
 
   auto node = std::make_shared<T>(start, std::move(children));
 
-  return ParseResult(unit_, offset_, parsed_successfully_, errors_, node, cur);
+  auto ret = ParseResult(unit_, offset_, parsed_successfully_, errors_, node, cur);
+
+  if (error_alternative_) {
+    if (auto result = error_alternative_->Reduce<T>(pop_marker)) {
+      ret.error_alternative_ = std::make_shared<ParseResult>(result);
+    }
+  }
+
+  return ret;
 }
 
 }  // namespace shell::parser
