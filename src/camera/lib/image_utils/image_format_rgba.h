@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_LIB_IMAGE_WRITER_IMAGE_FORMAT_RGBA_H_
-#define SRC_CAMERA_LIB_IMAGE_WRITER_IMAGE_FORMAT_RGBA_H_
+#ifndef SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_FORMAT_RGBA_H_
+#define SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_FORMAT_RGBA_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -63,4 +63,4 @@ fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(const fuchsia::sysmem::PixelFor
 fuchsia_sysmem_ImageFormat_2 ConvertImageFormatToC(const fuchsia::sysmem::ImageFormat_2& format);
 }  // namespace camera
 
-#endif  // SRC_CAMERA_LIB_IMAGE_WRITER_IMAGE_FORMAT_RGBA_H_
+#endif  // SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_FORMAT_RGBA_H_

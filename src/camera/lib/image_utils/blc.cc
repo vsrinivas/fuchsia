@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/lib/image_writer/blc.h"
+#include "src/camera/lib/image_utils/blc.h"
 
 #include <array>
 
-#include "src/camera/lib/image_writer/raw12_writer.h"
+#include "src/camera/lib/image_utils/raw12_writer.h"
 
 namespace camera {
 

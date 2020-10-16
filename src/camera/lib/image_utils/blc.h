@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_LIB_IMAGE_WRITER_BLC_H_
-#define SRC_CAMERA_LIB_IMAGE_WRITER_BLC_H_
+#ifndef SRC_CAMERA_LIB_IMAGE_UTILS_BLC_H_
+#define SRC_CAMERA_LIB_IMAGE_UTILS_BLC_H_
 
 #include <lib/zx/vmo.h>
 
@@ -42,4 +42,4 @@ void AddValsFromPairToTargetInts(uint32_t* first_val, uint32_t* second_val,
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_LIB_IMAGE_WRITER_BLC_H_
+#endif  // SRC_CAMERA_LIB_IMAGE_UTILS_BLC_H_

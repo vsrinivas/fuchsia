@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/lib/image_writer/hsv_generator.h"
+#include "src/camera/lib/image_utils/hsv_generator.h"
 
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
@@ -12,8 +12,8 @@
 #include <array>
 #include <iostream>
 
-#include "src/camera/lib/image_writer/color_source.h"
-#include "src/camera/lib/image_writer/image_format_rgba.h"
+#include "src/camera/lib/image_utils/color_source.h"
+#include "src/camera/lib/image_utils/image_format_rgba.h"
 
 namespace camera {
 

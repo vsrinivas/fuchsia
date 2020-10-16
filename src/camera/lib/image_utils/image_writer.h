@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_LIB_IMAGE_WRITER_IMAGE_WRITER_H_
-#define SRC_CAMERA_LIB_IMAGE_WRITER_IMAGE_WRITER_H_
+#ifndef SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_WRITER_H_
+#define SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_WRITER_H_
 
 #include <lib/fzl/vmo-pool.h>
 
@@ -46,4 +46,4 @@ class ImageWriter {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_LIB_IMAGE_WRITER_IMAGE_WRITER_H_
+#endif  // SRC_CAMERA_LIB_IMAGE_UTILS_IMAGE_WRITER_H_

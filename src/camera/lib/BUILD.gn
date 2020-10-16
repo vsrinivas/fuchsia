@@ -15,7 +15,7 @@ group("lib") {
     "fake_logical_buffer_collection",
     "fake_stream",
     "format_conversion",
-    "image_writer",
+    "image_utils",
     "stream_utils",
     "virtual_camera",
   ]

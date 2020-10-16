@@ -4,12 +4,21 @@
 
 import("//build/package.gni")
 
+group("image_utils") {
+  deps = [
+    ":algorithms",
+    ":hsv_color_source",
+    ":image_format_rgba",
+    ":image_writer",
+  ]
+}
+
 source_set("algorithms") {
   sources = [ "blc.cc" ]
 
   public = [ "blc.h" ]
 
-  public_deps = [ "//src/camera/lib/image_writer" ]
+  public_deps = [ "//src/camera/lib/image_utils:image_writer" ]
 }
 
 source_set("image_writer") {

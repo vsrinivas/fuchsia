@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_LIB_IMAGE_WRITER_COLOR_SOURCE_H_
-#define SRC_CAMERA_LIB_IMAGE_WRITER_COLOR_SOURCE_H_
+#ifndef SRC_CAMERA_LIB_IMAGE_UTILS_COLOR_SOURCE_H_
+#define SRC_CAMERA_LIB_IMAGE_UTILS_COLOR_SOURCE_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -27,4 +27,4 @@ class ColorSource {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_LIB_IMAGE_WRITER_COLOR_SOURCE_H_
+#endif  // SRC_CAMERA_LIB_IMAGE_UTILS_COLOR_SOURCE_H_

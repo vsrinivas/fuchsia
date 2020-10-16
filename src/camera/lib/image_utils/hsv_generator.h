@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_LIB_IMAGE_WRITER_HSV_GENERATOR_H_
-#define SRC_CAMERA_LIB_IMAGE_WRITER_HSV_GENERATOR_H_
+#ifndef SRC_CAMERA_LIB_IMAGE_UTILS_HSV_GENERATOR_H_
+#define SRC_CAMERA_LIB_IMAGE_UTILS_HSV_GENERATOR_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <stdint.h>
@@ -29,4 +29,4 @@ zx_status_t RgbaPack(fuchsia::sysmem::PixelFormatType format, uint8_t r, uint8_t
                      uint8_t a, uint32_t* out);
 }  // namespace camera
 
-#endif  // SRC_CAMERA_LIB_IMAGE_WRITER_HSV_GENERATOR_H_
+#endif  // SRC_CAMERA_LIB_IMAGE_UTILS_HSV_GENERATOR_H_

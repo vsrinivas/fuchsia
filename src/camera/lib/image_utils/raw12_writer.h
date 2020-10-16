@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_LIB_IMAGE_WRITER_RAW12_WRITER_H_
-#define SRC_CAMERA_LIB_IMAGE_WRITER_RAW12_WRITER_H_
+#ifndef SRC_CAMERA_LIB_IMAGE_UTILS_RAW12_WRITER_H_
+#define SRC_CAMERA_LIB_IMAGE_UTILS_RAW12_WRITER_H_
 
 #include <lib/fit/result.h>
 
-#include "src/camera/lib/image_writer/image_writer.h"
+#include "src/camera/lib/image_utils/image_writer.h"
 
 namespace camera {
 
@@ -86,4 +86,4 @@ class Raw12Writer : public ImageWriter {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_LIB_IMAGE_WRITER_RAW12_WRITER_H_
+#endif  // SRC_CAMERA_LIB_IMAGE_UTILS_RAW12_WRITER_H_

@@ -5,10 +5,9 @@
 executable("algorithms_test") {
   testonly = true
   sources = [ "blc_test.cc" ]
-
   deps = [
     "//src/camera/drivers/test_utils",
-    "//src/camera/lib/image_writer:algorithms",
+    "//src/camera/lib/image_utils:algorithms",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -25,9 +24,9 @@ executable("test") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/test_utils",
-    "//src/camera/lib/image_writer",
-    "//src/camera/lib/image_writer:hsv_color_source",
-    "//src/camera/lib/image_writer:image_format_rgba",
+    "//src/camera/lib/image_utils:hsv_color_source",
+    "//src/camera/lib/image_utils:image_format_rgba",
+    "//src/camera/lib/image_utils:image_writer",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
