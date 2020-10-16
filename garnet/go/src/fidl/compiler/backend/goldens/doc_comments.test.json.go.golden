@@ -22,7 +22,15 @@ var _ _bindings.Enum = MyStrictEnum(0)
 type MyStrictEnum uint32
 
 const (
+
+	// FOO member comment #1
+	//
+	// FOO member comment #3
 	MyStrictEnumFoo MyStrictEnum = 1
+
+	// BAR member comment #1
+	//
+	// BAR member comment #3
 	MyStrictEnumBar MyStrictEnum = 2
 )
 
@@ -66,7 +74,15 @@ var _ _bindings.Enum = MyFlexibleEnum(0)
 type MyFlexibleEnum uint32
 
 const (
+
+	// FOO member comment #1
+	//
+	// FOO member comment #3
 	MyFlexibleEnumFoo MyFlexibleEnum = 1
+
+	// BAR member comment #1
+	//
+	// BAR member comment #3
 	MyFlexibleEnumBar MyFlexibleEnum = 2
 
 	// MyFlexibleEnum_Unknown is the default unknown placeholder.

@@ -13,6 +13,11 @@ type {{ .Name }} {{ .Type }}
 
 const (
 	{{- range .Members }}
+	{{ if .DocComments -}}
+	{{range .DocComments}}
+	//{{ . }}
+	{{- end}}
+	{{ end -}}
 	{{ $.Name }}{{ .Name }} {{ $.Name }} = {{ .Value }}
 	{{- end }}
 
