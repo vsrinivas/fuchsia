@@ -9,6 +9,7 @@ group("tests") {
     "aml-ethernet-s912:tests",
     "asix-88179:tests",
     "asix-88772b:tests",
+    "dwmac:tests",
     "ethernet:tests",
     "ethertap:tests",
     "realtek-8111:tests",

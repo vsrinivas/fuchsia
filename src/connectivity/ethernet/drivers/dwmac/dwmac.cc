@@ -14,7 +14,6 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -30,6 +29,7 @@
 #include <hw/reg.h>
 
 #include "dw-gmac-dma.h"
+#include "src/connectivity/ethernet/drivers/dwmac/dwmac-bind.h"
 
 namespace eth {
 
@@ -437,8 +437,8 @@ zx_status_t DWMacDevice::GetMAC(zx_device_t* dev) {
     buffer[5] = static_cast<uint8_t>((hi >> 8) & 0xff);
   }
 
-  zxlogf(INFO, "dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x", buffer[0], buffer[1],
-         buffer[2], buffer[3], buffer[4], buffer[5]);
+  zxlogf(INFO, "dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x", buffer[0], buffer[1], buffer[2],
+         buffer[3], buffer[4], buffer[5]);
   memcpy(mac_, buffer, sizeof mac_);
   return ZX_OK;
 }
@@ -626,9 +626,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace eth
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(dwmac, eth::driver_ops, "designware_mac", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_DESIGNWARE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_MAC),
-ZIRCON_DRIVER_END(dwmac)
+ZIRCON_DRIVER(dwmac, eth::driver_ops, "designware_mac", "0.1")
