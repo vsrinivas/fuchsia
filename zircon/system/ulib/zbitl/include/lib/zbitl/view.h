@@ -120,6 +120,9 @@ class View {
     // Whether Traits::Create() is defined.
     static constexpr bool CanCreate() { return SfinaeCreate(0); }
 
+    // Whether the one-shot variation of Traits::Read() is defined.
+    static constexpr bool CanOneShotRead() { return SfinaeOneShotRead(0); }
+
     // Gives an 'example' value of a type convertible to storage& that can be
     // used within a decltype context.
     static storage_type& storage_declval() {
@@ -163,6 +166,16 @@ class View {
 
     // This overload is chosen only if SFINAE detected a missing Create method.
     static constexpr bool SfinaeCreate(...) { return false; }
+
+    // SFINAE check for one-shot Traits::Read method.
+    template <typename T = Traits,
+              typename = decltype(T::Read(storage_declval(), std::declval<payload_type>(), 0))>
+    static constexpr bool SfinaeOneShotRead(int ignored) {
+      return true;
+    }
+
+    // This overload is chosen only if SFINAE detected a missing a one-shot Read method.
+    static constexpr bool SfinaeOneShotRead(...) { return false; }
   };
 
   /// The header is represented by an opaque type that can be dereferenced as
@@ -348,8 +361,7 @@ class View {
               static_cast<void>(compute_crc32({reinterpret_cast<std::byte*>(&header_without_crc32),
                                                sizeof(header_without_crc32)}));
 
-              if (auto result =
-                      Traits::Read(view_->storage(), payload_, header_->length, compute_crc32);
+              if (auto result = view_->Read(payload_, header_->length, compute_crc32);
                   result.is_error()) {
                 Fail("cannot compute item CRC32", std::move(result.error_value()));
               } else {
@@ -595,7 +607,7 @@ class View {
           std::move(std::move(payload).error_value()),
       }};
     } else {
-      auto result = Traits::Read(storage(), payload.value(), length, write);
+      auto result = Read(payload.value(), length, write);
       if (result.is_error()) {
         return fitx::error{Error{
             "cannot read from storage",
@@ -606,9 +618,6 @@ class View {
       return std::move(result).take_value();
     }
   }
-
-  // Returns true if "copy to new storage" overloads below are available.
-  static constexpr bool CanCopyCreate() { return Traits::CanCreate(); }
 
   // Copy a range of the underlying storage into a freshly-created new piece of
   // storage (whatever that means for this storage type).  The Error return
@@ -723,6 +732,14 @@ class View {
     return fitx::ok(fitx::ok(std::move(new_storage)));
   }
 
+  // This is public mostly just for tests to assert on it.
+  template <typename CopyStorage = Storage>
+  static constexpr bool CanZeroCopy() {
+    // One-shot read does a single Write call with no extra copies for any type
+    // of receiver object.
+    return Traits::CanOneShotRead();
+  }
+
  private:
   struct Unused {};
   struct NoError {};
@@ -741,6 +758,20 @@ class View {
     ZX_DEBUG_ASSERT_MSG(!std::holds_alternative<Unused>(error_),
                         "Fail in Unused: missing zbitl::View::StartIteration() call?");
     error_ = std::move(error);
+  }
+
+  template <typename Callback>
+  auto Read(payload_type payload, uint32_t length, Callback&& callback)
+      -> fitx::result<typename Traits::error_type, decltype(callback(ByteView{}))> {
+    if constexpr (Traits::CanOneShotRead()) {
+      if (auto result = Traits::Read(storage(), payload, length); result.is_error()) {
+        return result.take_error();
+      } else {
+        return fitx::ok(callback(result.value()));
+      }
+    } else {
+      return Traits::Read(storage(), payload, length, std::forward<Callback>(callback));
+    }
   }
 
   template <typename SlopCheck, typename T = Traits,

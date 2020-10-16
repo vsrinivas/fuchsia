@@ -15,6 +15,7 @@ struct BasicStringViewTestTraits {
   using payload_type = std::basic_string_view<T>;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
+  static constexpr bool kExpectOneshotReads = true;
 
   struct Context {
     storage_type TakeStorage() const {

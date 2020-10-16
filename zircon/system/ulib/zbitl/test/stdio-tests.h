@@ -14,6 +14,8 @@ struct StdioTestTraits {
   using storage_type = FILE*;
   using payload_type = long int;
 
+  static constexpr bool kExpectOneshotReads = false;
+
   struct Context {
     ~Context() {
       if (storage_) {

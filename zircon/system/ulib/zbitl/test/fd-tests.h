@@ -15,6 +15,7 @@ struct FdTestTraits {
   using payload_type = off_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectOneshotReads = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }

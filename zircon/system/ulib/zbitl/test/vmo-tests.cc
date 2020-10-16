@@ -28,8 +28,6 @@ void ExpectVmoIsNotCloned(const zx::vmo& vmo) {
 
 template <typename TestTraits>
 void TestCloning() {
-  using Storage = typename TestTraits::storage_type;
-  static_assert(zbitl::View<Storage>::CanCopyCreate());
   using CreationTestTraits = typename TestTraits::creation_traits;
 
   files::ScopedTempDir dir;

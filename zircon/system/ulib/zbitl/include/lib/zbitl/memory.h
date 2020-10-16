@@ -46,13 +46,12 @@ class StorageTraits<fbl::Array<T>> {
     return fitx::ok(payload_type{reinterpret_cast<T*>(payload.data()), payload.size() / sizeof(T)});
   }
 
-  template <typename Callback>
-  static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
+                                                 uint32_t length) {
     auto payload_bytes = fbl::as_bytes(payload);
     ByteView bytes{payload_bytes.data(), payload_bytes.size()};
     ZX_DEBUG_ASSERT(bytes.size() == length);
-    return fitx::ok(callback(bytes));
+    return fitx::ok(bytes);
   }
 
   static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {

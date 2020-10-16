@@ -194,8 +194,7 @@ struct StorageTraits<zx::unowned_vmo> {
 };
 
 template <>
-class StorageTraits<MapUnownedVmo> {
- public:
+struct StorageTraits<MapUnownedVmo> {
   using Owned = StorageTraits<zx::vmo>;
 
   using error_type = Owned::error_type;
@@ -211,15 +210,8 @@ class StorageTraits<MapUnownedVmo> {
     return Owned::Payload(zbi.vmo(), offset, length);
   }
 
-  template <typename Callback>
-  static auto Read(MapUnownedVmo& zbi, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
-    if (auto mapped = DoRead(zbi, payload, length); mapped.is_error()) {
-      return mapped.take_error();
-    } else {
-      return fitx::ok(callback(mapped.value()));
-    }
-  }
+  static fitx::result<error_type, ByteView> Read(MapUnownedVmo& zbi, payload_type payload,
+                                                 uint32_t length);
 
   static auto Write(const MapUnownedVmo& zbi, uint32_t offset, ByteView data) {
     return Owned::Write(zbi.vmo(), offset, data);
@@ -249,10 +241,6 @@ class StorageTraits<MapUnownedVmo> {
     }
     return fitx::ok(std::nullopt);
   }
-
- private:
-  static fitx::result<error_type, ByteView> DoRead(MapUnownedVmo& zbi, payload_type payload,
-                                                   uint32_t length);
 };
 
 template <>

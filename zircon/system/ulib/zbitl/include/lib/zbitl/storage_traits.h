@@ -84,6 +84,8 @@ struct StorageTraits {
     return fitx::error<error_type>{};
   }
 
+  /// Referred to as the "buffered read".
+  ///
   /// This reads the payload indicated by a payload_type as returned by Payload
   /// and feeds it to the callback in chunks sized for the convenience of the
   /// storage backend.  The length is guaranteed to match that passed to
@@ -102,6 +104,21 @@ struct StorageTraits {
     return fitx::error<error_type>{};
   }
 
+  // Referred to as the "one-shot read".
+  //
+  // A specialization only provides this overload if the payload can be
+  // accessed directly in memory.  If this overload is provided, then the
+  // overload using the callback need not be provided.  The returned view is
+  // only guaranteed valid until the next use of the same Storage object.  So
+  // it could e.g. point into a cache that's repurposed by this or other calls
+  // made later using the same object.
+  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
+                                                 uint32_t length) {
+    return fitx::error<error_type>{};
+  }
+
+  // Referred to as the "buffered write".
+  //
   // A specialization defines this only if it supports mutation.  It might be
   // called to write whole or partial headers and/or payloads, but it will
   // never be called with an offset and size that would exceed the capacity
@@ -184,14 +201,10 @@ struct StorageTraits<std::basic_string_view<T>> {
     return fitx::ok(std::move(payload));
   }
 
-  template <typename Callback>
-  static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
+                                                 uint32_t length) {
     ZX_DEBUG_ASSERT(payload.size() == length);
-    auto result = callback(AsBytes(payload.data(), payload.size()));
-    static_assert(std::is_same_v<bool, decltype(result.is_error())>);
-    static_assert(std::is_same_v<bool, decltype(result.is_ok())>);
-    return fitx::ok(std::move(result));
+    return fitx::ok(AsBytes(payload.data(), payload.size()));
   }
 };
 
@@ -243,12 +256,11 @@ struct StorageTraits<std::span<T, Extent>> {
     return fitx::ok(payload_type{reinterpret_cast<T*>(payload.data()), payload.size() / sizeof(T)});
   }
 
-  template <typename Callback>
-  static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
+                                                 uint32_t length) {
     auto bytes = AsBytes(std::as_bytes(payload));
     ZX_DEBUG_ASSERT(bytes.size() == length);
-    return fitx::ok(callback(bytes));
+    return fitx::ok(bytes);
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>

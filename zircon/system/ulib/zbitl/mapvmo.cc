@@ -7,9 +7,9 @@
 
 namespace zbitl {
 
-fitx::result<zx_status_t, ByteView> StorageTraits<MapUnownedVmo>::DoRead(MapUnownedVmo& zbi,
-                                                                         uint64_t payload,
-                                                                         uint32_t length) {
+fitx::result<zx_status_t, ByteView> StorageTraits<MapUnownedVmo>::Read(MapUnownedVmo& zbi,
+                                                                       uint64_t payload,
+                                                                       uint32_t length) {
   if (length == 0) {
     return fitx::ok(ByteView{});
   }

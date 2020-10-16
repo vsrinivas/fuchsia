@@ -16,6 +16,7 @@ struct FblArrayTestTraits {
   using creation_traits = FblArrayTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
+  static constexpr bool kExpectOneshotReads = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }

@@ -84,6 +84,8 @@ constexpr auto Next = [](auto it) { return ++it; };
 //     for reading a payload of a given size into a string, where
 //     `payload_type` coincides with
 //     `zbitl::StorageTraits<storage_type>::payload_type`.
+//   * a static constexpr bool `kExpectOneshotReads` giving the expectation of
+//     whether whole payloads can be accessed in memory directly.
 //
 // If the storage type is default-constructible, the trait must have a static
 // constexpr Boolean member `kDefaultConstructedViewHasStorageError` indicating
@@ -312,8 +314,6 @@ void TestMutation(TestDataZbiType type) {
 
 template <typename TestTraits>
 void TestCopyCreation(TestDataZbiType type, bool with_header) {
-  using Storage = typename TestTraits::storage_type;
-  static_assert(zbitl::View<Storage>::CanCopyCreate());
   using CreationTraits = typename TestTraits::creation_traits;
 
   files::ScopedTempDir dir;
@@ -365,8 +365,6 @@ void TestCopyCreation(TestDataZbiType type, bool with_header) {
 // is done under-the-hood by the other copy-creation tests.
 template <typename TestTraits>
 void TestCopyCreationByByteRange(TestDataZbiType type) {
-  using Storage = typename TestTraits::storage_type;
-  static_assert(zbitl::View<Storage>::CanCopyCreate());
   using CreationTestTraits = typename TestTraits::creation_traits;
 
   files::ScopedTempDir dir;
@@ -407,8 +405,6 @@ void TestCopyCreationByByteRange(TestDataZbiType type) {
 
 template <typename TestTraits>
 void TestCopyCreationByIteratorRange(TestDataZbiType type) {
-  using Storage = typename TestTraits::storage_type;
-  static_assert(zbitl::View<Storage>::CanCopyCreate());
   using CreationTestTraits = typename TestTraits::creation_traits;
 
   files::ScopedTempDir dir;
@@ -702,6 +698,15 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
                error.error_value().item_offset);
 }
 
+template <typename SrcTestTraits, typename DestTestTraits>
+void TestZeroCopying() {
+  using SrcStorage = typename SrcTestTraits::storage_type;
+  using DestStorage = typename DestTestTraits::storage_type;
+
+  constexpr bool kCanZeroCopy = zbitl::View<SrcStorage>::template CanZeroCopy<DestStorage>();
+  static_assert(kCanZeroCopy == SrcTestTraits::kExpectOneshotReads);
+}
+
 #define TEST_COPYING_BY_TYPE_AND_OPTION(suite_name, SrcTestTraits, src_name, DestTestTraits,       \
                                         dest_name, type_name, type, with_header, with_header_name) \
   TEST(suite_name, type_name##Copy##src_name##to##dest_name##with_header_name) {                   \
@@ -724,6 +729,14 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     ASSERT_NO_FATAL_FAILURES(test(type));                                                         \
   }
 
+// The macro indirection ensures that the relevant expansions in TEST_COPYING
+// and those of its arguments happen as expected.
+#define TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name) \
+  TEST(suite_name, ZeroCopying##src_name##to##dest_name) {                                \
+    auto test = TestZeroCopying<SrcTestTraits, DestTestTraits>;                           \
+    ASSERT_NO_FATAL_FAILURES(test());                                                     \
+  }
+
 #define TEST_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)               \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \
                        TestDataZbiType::kOneItem)                                                  \
@@ -732,6 +745,7 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
                        MultipleSmallItemsZbi, TestDataZbiType::kMultipleSmallItems)                \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
-                       SecondItemOnPageBoundaryZbi, TestDataZbiType::kSecondItemOnPageBoundary)
+                       SecondItemOnPageBoundaryZbi, TestDataZbiType::kSecondItemOnPageBoundary)    \
+  TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_

@@ -17,6 +17,7 @@ struct VmoTestTraits {
   using creation_traits = VmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectOneshotReads = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
@@ -55,6 +56,7 @@ struct UnownedVmoTestTraits {
   using creation_traits = VmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectOneshotReads = false;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
@@ -93,6 +95,7 @@ struct MapOwnedVmoTestTraits {
   using creation_traits = MapOwnedVmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectOneshotReads = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
@@ -128,6 +131,7 @@ struct MapUnownedVmoTestTraits {
   using creation_traits = MapOwnedVmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectOneshotReads = true;
 
   struct Context {
     storage_type TakeStorage() { return std::move(storage_); }
