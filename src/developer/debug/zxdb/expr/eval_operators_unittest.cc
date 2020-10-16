@@ -58,7 +58,9 @@ class EvalOperators : public TestWithLoop {
     // The type of the output should be the same as the input for unary '-'.
     // TODO(brettw) the actual type pointer should be the same.
     EXPECT_EQ(sizeof(expected), out.value().data().size());
-    if (std::is_unsigned<decltype(expected)>::value) {
+    if (std::is_floating_point<decltype(expected)>::value) {
+      EXPECT_EQ(BaseType::kBaseTypeFloat, out.value().GetBaseType());
+    } else if (std::is_unsigned<decltype(expected)>::value) {
       EXPECT_EQ(BaseType::kBaseTypeUnsigned, out.value().GetBaseType());
     } else {
       EXPECT_EQ(BaseType::kBaseTypeSigned, out.value().GetBaseType());
@@ -69,6 +71,8 @@ class EvalOperators : public TestWithLoop {
   template <typename T>
   void DoUnaryMinusTypeTest() {
     DoUnaryMinusTest<T>(0);
+    DoUnaryMinusTest<T>(static_cast<T>(5));
+    DoUnaryMinusTest<T>(static_cast<T>(-5));
     DoUnaryMinusTest<T>(std::numeric_limits<T>::max());
     DoUnaryMinusTest<T>(std::numeric_limits<T>::lowest());
   }
@@ -444,6 +448,8 @@ TEST_F(EvalOperators, UnaryMinus) {
   DoUnaryMinusTypeTest<uint32_t>();
   DoUnaryMinusTypeTest<int64_t>();
   DoUnaryMinusTypeTest<uint64_t>();
+  DoUnaryMinusTypeTest<float>();
+  DoUnaryMinusTypeTest<double>();
 
   // Try an unsupported value (a 3-byte signed). This should throw an error and
   // compute an empty value.

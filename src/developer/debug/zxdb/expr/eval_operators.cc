@@ -821,6 +821,19 @@ void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken&
       break;                                                                               \
   }
 
+#define IMPLEMENT_UNARY_FLOAT_OP(c_op)                                                     \
+  switch (value.data().size()) {                                                           \
+    case sizeof(float):                                                                    \
+      result = ExprValue(c_op value.GetAs<float>());                                       \
+      break;                                                                               \
+    case sizeof(double):                                                                   \
+      result = ExprValue(c_op value.GetAs<double>());                                      \
+      break;                                                                               \
+    default:                                                                               \
+      result = Err("Unsupported size for unary operator '%s'.", op_token.value().c_str()); \
+      break;                                                                               \
+  }
+
   ErrOrValue result((ExprValue()));
   switch (op_token.type()) {
     // -
@@ -831,6 +844,9 @@ void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken&
           break;
         case MathRealm::kUnsigned:
           IMPLEMENT_UNARY_INTEGER_OP(-, uint8_t, uint16_t, uint32_t, uint64_t);
+          break;
+        case MathRealm::kFloat:
+          IMPLEMENT_UNARY_FLOAT_OP(-);
           break;
         default:
           result =
@@ -850,14 +866,7 @@ void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken&
           IMPLEMENT_UNARY_INTEGER_OP(!, uint8_t, uint16_t, uint32_t, uint64_t);
           break;
         case MathRealm::kFloat:
-          switch (value.data().size()) {
-            case sizeof(float):
-              result = ExprValue(!value.GetAs<float>());
-              break;
-            case sizeof(double):
-              result = ExprValue(!value.GetAs<double>());
-              break;
-          }
+          IMPLEMENT_UNARY_FLOAT_OP(!);
           break;
       }
       break;
