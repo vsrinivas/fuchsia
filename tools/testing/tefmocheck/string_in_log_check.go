@@ -195,5 +195,6 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// the actual root cause.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
 	ret = append(ret, &stringInLogCheck{String: "failed to resolve fuchsia-pkg://fuchsia.com/run_test_component#bin/run-test-component", Type: swarmingOutputType})
+	ret = append(ret, &stringInLogCheck{String: "Got no package for fuchsia-pkg://", Type: swarmingOutputType})
 	return ret
 }
