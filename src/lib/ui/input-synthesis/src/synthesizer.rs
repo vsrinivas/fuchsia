@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*},
+    crate::{inverse_keymap::InverseKeymap, keymaps},
     anyhow::{ensure, Error},
-    fidl_fuchsia_ui_input::{self, InputDeviceProxy, Touch},
+    fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
     std::{
         convert::TryFrom,
         thread,
@@ -13,14 +13,35 @@ use {
     },
 };
 
+// Abstracts over input injection services.
 pub(crate) trait Injector {
     fn make_touchscreen_device(
         &mut self,
         width: u32,
         height: u32,
-    ) -> Result<InputDeviceProxy, Error>;
-    fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error>;
-    fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error>;
+    ) -> Result<Box<dyn InputDevice>, Error>;
+    fn make_keyboard_device(&mut self) -> Result<Box<dyn InputDevice>, Error>;
+    fn make_media_buttons_device(&mut self) -> Result<Box<dyn InputDevice>, Error>;
+}
+
+// Abstracts over the various interactions that a user might have with an input device.
+// Note that the input-synthesis crate deliberately chooses not to "sub-type" input devices.
+// This avoids additional code complexity, and also the crate to support tests that
+// deliberately send events that do not match the expected event type for a device.
+pub(crate) trait InputDevice {
+    fn media_buttons(
+        &self,
+        volume_up: bool,
+        volume_down: bool,
+        mic_mute: bool,
+        reset: bool,
+        pause: bool,
+        time: u64,
+    ) -> Result<(), Error>;
+    fn key_press(&self, keyboard: KeyboardReport, time: u64) -> Result<(), Error>;
+    fn key_press_usage(&self, usage: Option<u32>, time: u64) -> Result<(), Error>;
+    fn tap(&self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error>;
+    fn multi_finger_tap(&self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
 }
 
 fn nanos_from_epoch() -> Result<u64, Error> {
@@ -53,17 +74,14 @@ pub(crate) fn media_button_event(
     pause: bool,
     injector: &mut dyn Injector,
 ) -> Result<(), Error> {
-    injector
-        .make_media_buttons_device()?
-        .dispatch_report(&mut media_buttons(
-            volume_up,
-            volume_down,
-            mic_mute,
-            reset,
-            pause,
-            nanos_from_epoch()?,
-        ))
-        .map_err(Into::into)
+    injector.make_media_buttons_device()?.media_buttons(
+        volume_up,
+        volume_down,
+        mic_mute,
+        reset,
+        pause,
+        nanos_from_epoch()?,
+    )
 }
 
 pub(crate) fn keyboard_event(
@@ -78,15 +96,11 @@ pub(crate) fn keyboard_event(
         duration,
         |_| {
             // Key pressed.
-            input_device
-                .dispatch_report(&mut key_press_usage(Some(usage), nanos_from_epoch()?))
-                .map_err(Into::into)
+            input_device.key_press_usage(Some(usage), nanos_from_epoch()?)
         },
         |_| {
             // Key released.
-            input_device
-                .dispatch_report(&mut key_press_usage(None, nanos_from_epoch()?))
-                .map_err(Into::into)
+            input_device.key_press_usage(None, nanos_from_epoch()?)
         },
     )
 }
@@ -105,9 +119,7 @@ pub(crate) fn text(
     let mut key_iter = key_sequence.into_iter().peekable();
 
     while let Some(keyboard) = key_iter.next() {
-        let result: Result<(), Error> = input_device
-            .dispatch_report(&mut key_press(keyboard, nanos_from_epoch()?))
-            .map_err(Into::into);
+        let result: Result<(), Error> = input_device.key_press(keyboard, nanos_from_epoch()?);
         result?;
 
         if key_iter.peek().is_some() {
@@ -135,13 +147,11 @@ pub(crate) fn tap_event(
         tap_duration,
         |_| {
             // Touch down.
-            input_device
-                .dispatch_report(&mut tap(Some((x, y)), nanos_from_epoch()?))
-                .map_err(Into::into)
+            input_device.tap(Some((x, y)), nanos_from_epoch()?)
         },
         |_| {
             // Touch up.
-            input_device.dispatch_report(&mut tap(None, nanos_from_epoch()?)).map_err(Into::into)
+            input_device.tap(None, nanos_from_epoch()?)
         },
     )
 }
@@ -162,15 +172,11 @@ pub(crate) fn multi_finger_tap_event(
         multi_finger_tap_duration,
         |_| {
             // Touch down.
-            input_device
-                .dispatch_report(&mut multi_finger_tap(Some(fingers.clone()), nanos_from_epoch()?))
-                .map_err(Into::into)
+            input_device.multi_finger_tap(Some(fingers.clone()), nanos_from_epoch()?)
         },
         |_| {
             // Touch up.
-            input_device
-                .dispatch_report(&mut multi_finger_tap(None, nanos_from_epoch()?))
-                .map_err(Into::into)
+            input_device.multi_finger_tap(None, nanos_from_epoch()?)
         },
     )
 }
@@ -252,9 +258,9 @@ pub(crate) fn multi_finger_swipe(
         swipe_event_delay,
         |i| {
             let time = nanos_from_epoch()?;
-            let mut report = match i {
+            match i {
                 // DOWN
-                0 => multi_finger_tap(
+                0 => input_device.multi_finger_tap(
                     Some(
                         start_fingers
                             .iter()
@@ -271,7 +277,7 @@ pub(crate) fn multi_finger_swipe(
                     time,
                 ),
                 // MOVE
-                i if i <= move_event_count => multi_finger_tap(
+                i if i <= move_event_count => input_device.multi_finger_tap(
                     Some(
                         start_fingers
                             .iter()
@@ -290,11 +296,9 @@ pub(crate) fn multi_finger_swipe(
                     time,
                 ),
                 // UP
-                i if i == (move_event_count + 1) => multi_finger_tap(None, time),
+                i if i == (move_event_count + 1) => input_device.multi_finger_tap(None, time),
                 i => panic!("unexpected loop iteration {}", i),
-            };
-
-            input_device.dispatch_report(&mut report).map_err(Into::into)
+            }
         },
         |_| Ok(()),
     )
@@ -309,8 +313,9 @@ mod tests {
             super::*,
             fidl::endpoints,
             fidl_fuchsia_ui_input::{
-                InputDeviceMarker, InputDeviceRequest, InputDeviceRequestStream, InputReport,
-                KeyboardReport, MediaButtonsReport, TouchscreenReport,
+                InputDeviceMarker, InputDeviceProxy as FidlInputDeviceProxy, InputDeviceRequest,
+                InputDeviceRequestStream, InputReport, KeyboardReport, MediaButtonsReport,
+                TouchscreenReport,
             },
             futures::stream::StreamExt,
         };
@@ -344,15 +349,15 @@ mod tests {
                 &mut self,
                 _width: u32,
                 _height: u32,
-            ) -> Result<InputDeviceProxy, Error> {
+            ) -> Result<Box<dyn InputDevice>, Error> {
                 self.make_device()
             }
 
-            fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error> {
+            fn make_keyboard_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
                 self.make_device()
             }
 
-            fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error> {
+            fn make_media_buttons_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
                 self.make_device()
             }
         }
@@ -381,11 +386,123 @@ mod tests {
                 }
             }
 
-            fn make_device(&mut self) -> Result<InputDeviceProxy, Error> {
+            fn make_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
                 let (proxy, event_stream) =
                     endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
                 self.event_stream = Some(event_stream);
-                Ok(proxy)
+                Ok(Box::new(FakeInputDevice::new(proxy)))
+            }
+        }
+
+        // Provides an `impl InputDevice` which forwards requests to a `FidlInputDeviceProxy`.
+        // Useful when a test wants to inspect the requests to an `InputDevice`.
+        struct FakeInputDevice {
+            fidl_proxy: FidlInputDeviceProxy,
+        }
+
+        impl InputDevice for FakeInputDevice {
+            fn media_buttons(
+                &self,
+                volume_up: bool,
+                volume_down: bool,
+                mic_mute: bool,
+                reset: bool,
+                pause: bool,
+                time: u64,
+            ) -> Result<(), Error> {
+                self.fidl_proxy
+                    .dispatch_report(&mut InputReport {
+                        event_time: time,
+                        keyboard: None,
+                        media_buttons: Some(Box::new(MediaButtonsReport {
+                            volume_up,
+                            volume_down,
+                            mic_mute,
+                            reset,
+                            pause,
+                        })),
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: None,
+                        sensor: None,
+                        trace_id: 0,
+                    })
+                    .map_err(Into::into)
+            }
+
+            fn key_press(&self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
+                self.fidl_proxy
+                    .dispatch_report(&mut InputReport {
+                        event_time: time,
+                        keyboard: Some(Box::new(keyboard)),
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: None,
+                        sensor: None,
+                        trace_id: 0,
+                    })
+                    .map_err(Into::into)
+            }
+
+            fn key_press_usage(&self, usage: Option<u32>, time: u64) -> Result<(), Error> {
+                self.key_press(
+                    KeyboardReport {
+                        pressed_keys: match usage {
+                            Some(usage) => vec![usage],
+                            None => vec![],
+                        },
+                    },
+                    time,
+                )
+                .map_err(Into::into)
+            }
+
+            fn tap(&self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
+                match pos {
+                    Some((x, y)) => self.multi_finger_tap(
+                        Some(vec![Touch {
+                            finger_id: 1,
+                            x: x as i32,
+                            y: y as i32,
+                            width: 0,
+                            height: 0,
+                        }]),
+                        time,
+                    ),
+                    None => self.multi_finger_tap(None, time),
+                }
+                .map_err(Into::into)
+            }
+
+            fn multi_finger_tap(
+                &self,
+                fingers: Option<Vec<Touch>>,
+                time: u64,
+            ) -> Result<(), Error> {
+                self.fidl_proxy
+                    .dispatch_report(&mut InputReport {
+                        event_time: time,
+                        keyboard: None,
+                        media_buttons: None,
+                        mouse: None,
+                        stylus: None,
+                        touchscreen: Some(Box::new(TouchscreenReport {
+                            touches: match fingers {
+                                Some(fingers) => fingers,
+                                None => vec![],
+                            },
+                        })),
+                        sensor: None,
+                        trace_id: 0,
+                    })
+                    .map_err(Into::into)
+            }
+        }
+
+        impl FakeInputDevice {
+            fn new(fidl_proxy: FidlInputDeviceProxy) -> Self {
+                Self { fidl_proxy }
             }
         }
 
@@ -675,12 +792,7 @@ mod tests {
     }
 
     mod device_registration {
-        use {
-            super::*,
-            fidl::endpoints,
-            fidl_fuchsia_ui_input::{InputDeviceMarker, InputDeviceRequestStream},
-            matches::assert_matches,
-        };
+        use {super::*, matches::assert_matches};
 
         #[derive(Debug)]
         enum DeviceType {
@@ -693,10 +805,6 @@ mod tests {
         // registered with the `Injector`.
         struct FakeInjector {
             device_types: Vec<DeviceType>,
-            // The injector needs to keep the `InputDeviceRequestStream`s around so that
-            // the synthesizer can inject input events to the devices. Otherwise,
-            // the zx::Channel is closed, and the FIDL call to inject the event will fail.
-            device_request_streams: Vec<InputDeviceRequestStream>,
         }
 
         impl Injector for FakeInjector {
@@ -704,29 +812,68 @@ mod tests {
                 &mut self,
                 _width: u32,
                 _height: u32,
-            ) -> Result<InputDeviceProxy, Error> {
+            ) -> Result<Box<dyn InputDevice>, Error> {
                 self.make_device(DeviceType::Touchscreen)
             }
 
-            fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error> {
+            fn make_keyboard_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
                 self.make_device(DeviceType::Keyboard)
             }
 
-            fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error> {
+            fn make_media_buttons_device(&mut self) -> Result<Box<dyn InputDevice>, Error> {
                 self.make_device(DeviceType::MediaButtons)
             }
         }
 
         impl FakeInjector {
             fn new() -> Self {
-                Self { device_types: vec![], device_request_streams: vec![] }
+                Self { device_types: vec![] }
             }
 
-            fn make_device(&mut self, device_type: DeviceType) -> Result<InputDeviceProxy, Error> {
-                let (proxy, stream) = endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+            fn make_device(
+                &mut self,
+                device_type: DeviceType,
+            ) -> Result<Box<dyn InputDevice>, Error> {
                 self.device_types.push(device_type);
-                self.device_request_streams.push(stream);
-                Ok(proxy)
+                Ok(Box::new(FakeInputDevice))
+            }
+        }
+
+        // Provides an `impl InputDevice` which always returns `Ok(())`. Useful when the
+        // events themselves are not important to the test.
+        struct FakeInputDevice;
+
+        impl InputDevice for FakeInputDevice {
+            fn media_buttons(
+                &self,
+                _volume_up: bool,
+                _volume_down: bool,
+                _mic_mute: bool,
+                _reset: bool,
+                _pause: bool,
+                _time: u64,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn key_press(&self, _keyboard: KeyboardReport, _time: u64) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn key_press_usage(&self, _usage: Option<u32>, _time: u64) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn tap(&self, _pos: Option<(u32, u32)>, _time: u64) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn multi_finger_tap(
+                &self,
+                _fingers: Option<Vec<Touch>>,
+                _time: u64,
+            ) -> Result<(), Error> {
+                Ok(())
             }
         }
 

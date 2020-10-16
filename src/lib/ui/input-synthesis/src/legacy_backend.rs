@@ -33,8 +33,8 @@ impl synthesizer::Injector for self::Injector {
         &mut self,
         width: u32,
         height: u32,
-    ) -> Result<InputDeviceProxy, Error> {
-        self.register_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
+    ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        self.make_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
             x: Axis {
                 range: Range { min: 0, max: width as i32 },
                 resolution: 1,
@@ -49,14 +49,14 @@ impl synthesizer::Injector for self::Injector {
         }))
     }
 
-    fn make_keyboard_device(&mut self) -> Result<InputDeviceProxy, Error> {
-        self.register_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
+    fn make_keyboard_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        self.make_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
             keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
         }))
     }
 
-    fn make_media_buttons_device(&mut self) -> Result<InputDeviceProxy, Error> {
-        self.register_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
+    fn make_media_buttons_device(&mut self) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
+        self.make_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
             buttons: fidl_fuchsia_ui_input::MIC_MUTE
                 | fidl_fuchsia_ui_input::VOLUME_DOWN
                 | fidl_fuchsia_ui_input::VOLUME_UP,
@@ -65,10 +65,10 @@ impl synthesizer::Injector for self::Injector {
 }
 
 impl Injector {
-    fn register_device(
+    fn make_device(
         &self,
         descriptor: UniformDeviceDescriptor,
-    ) -> Result<InputDeviceProxy, Error> {
+    ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
         let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;
         let mut device = DeviceDescriptor {
             device_info: None,
@@ -95,11 +95,64 @@ impl Injector {
         let (input_device_client, input_device_server) =
             endpoints::create_endpoints::<InputDeviceMarker>()?;
         registry.register_device(&mut device, input_device_server)?;
-        Ok(input_device_client.into_proxy()?)
+        Ok(Box::new(InputDevice::new(input_device_client.into_proxy()?)))
     }
 }
 
-pub(crate) fn media_buttons(
+// Provides a handle to an `impl synthesizer::InputDevice`, which works with input
+// pipelines that support the (legacy) `fuchsia.ui.input.InputDeviceRegistry` protocol.
+struct InputDevice {
+    fidl_proxy: InputDeviceProxy,
+}
+
+impl synthesizer::InputDevice for self::InputDevice {
+    fn media_buttons(
+        &self,
+        volume_up: bool,
+        volume_down: bool,
+        mic_mute: bool,
+        reset: bool,
+        pause: bool,
+        time: u64,
+    ) -> Result<(), Error> {
+        self.fidl_proxy
+            .dispatch_report(&mut self::media_buttons(
+                volume_up,
+                volume_down,
+                mic_mute,
+                reset,
+                pause,
+                time,
+            ))
+            .map_err(Into::into)
+    }
+
+    fn key_press(&self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
+        self.fidl_proxy.dispatch_report(&mut self::key_press(keyboard, time)).map_err(Into::into)
+    }
+
+    fn key_press_usage(&self, usage: Option<u32>, time: u64) -> Result<(), Error> {
+        self.fidl_proxy.dispatch_report(&mut self::key_press_usage(usage, time)).map_err(Into::into)
+    }
+
+    fn tap(&self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
+        self.fidl_proxy.dispatch_report(&mut self::tap(pos, time)).map_err(Into::into)
+    }
+
+    fn multi_finger_tap(&self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error> {
+        self.fidl_proxy
+            .dispatch_report(&mut self::multi_finger_tap(fingers, time))
+            .map_err(Into::into)
+    }
+}
+
+impl InputDevice {
+    fn new(fidl_proxy: InputDeviceProxy) -> Self {
+        Self { fidl_proxy }
+    }
+}
+
+fn media_buttons(
     volume_up: bool,
     volume_down: bool,
     mic_mute: bool,
@@ -125,7 +178,7 @@ pub(crate) fn media_buttons(
     }
 }
 
-pub(crate) fn key_press(keyboard: KeyboardReport, time: u64) -> InputReport {
+fn key_press(keyboard: KeyboardReport, time: u64) -> InputReport {
     InputReport {
         event_time: time,
         keyboard: Some(Box::new(keyboard)),
@@ -138,7 +191,7 @@ pub(crate) fn key_press(keyboard: KeyboardReport, time: u64) -> InputReport {
     }
 }
 
-pub(crate) fn key_press_usage(usage: Option<u32>, time: u64) -> InputReport {
+fn key_press_usage(usage: Option<u32>, time: u64) -> InputReport {
     key_press(
         KeyboardReport {
             pressed_keys: match usage {
@@ -150,7 +203,7 @@ pub(crate) fn key_press_usage(usage: Option<u32>, time: u64) -> InputReport {
     )
 }
 
-pub(crate) fn tap(pos: Option<(u32, u32)>, time: u64) -> InputReport {
+fn tap(pos: Option<(u32, u32)>, time: u64) -> InputReport {
     match pos {
         Some((x, y)) => multi_finger_tap(
             Some(vec![Touch { finger_id: 1, x: x as i32, y: y as i32, width: 0, height: 0 }]),
@@ -160,7 +213,7 @@ pub(crate) fn tap(pos: Option<(u32, u32)>, time: u64) -> InputReport {
     }
 }
 
-pub(crate) fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
+fn multi_finger_tap(fingers: Option<Vec<Touch>>, time: u64) -> InputReport {
     InputReport {
         event_time: time,
         keyboard: None,
