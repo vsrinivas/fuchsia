@@ -44,19 +44,32 @@ impl Service {
                     stream.try_next().await.context("error running keyboard service")?
                 {
                     match msg {
+                        ui_input::ImeServiceRequest::ViewFocusChanged {
+                            view_ref,
+                            responder,
+                            ..
+                        } => {
+                            keyboard3.lock().await.handle_focus_change(view_ref).await;
+                            responder.send()?;
+                        }
+                        ui_input::ImeServiceRequest::DispatchKey3 { event, responder, .. } => {
+                            let was_handled = keyboard3
+                                .lock()
+                                .await
+                                .handle_key_event(event)
+                                .await
+                                .context("error handling input3 keyboard event")?;
+                            responder
+                                .send(was_handled)
+                                .context("error responding to DispatchKey3")?;
+                        }
                         ui_input::ImeServiceRequest::DispatchKey { event, responder, .. } => {
                             let was_handled = keyboard2
                                 .lock()
                                 .await
                                 .handle(event)
                                 .await
-                                .context("error handling input2 keyboard event")?
-                                || keyboard3
-                                    .lock()
-                                    .await
-                                    .handle_key_event()
-                                    .await
-                                    .context("error handling input3 keyboard event")?;
+                                .context("error handling input2 keyboard event")?;
                             responder
                                 .send(was_handled)
                                 .context("error responding to DispatchKey")?;
