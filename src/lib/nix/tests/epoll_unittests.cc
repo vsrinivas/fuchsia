@@ -78,7 +78,8 @@ TEST(EpollTest, EpollEventData) {
   events[0].events = 0;
   events[0].data.u64 = 0;
   ASSERT_EQ(1, epoll_wait(epoll_fd, events, 1, 1));
-  ASSERT_EQ(expected, events[0].data.u64);
+  uint64_t observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
 
   char c;
   ASSERT_EQ(1, read(fds[0], &c, sizeof(c)));
@@ -111,7 +112,8 @@ TEST(EpollTest, EpollEventDataMultiple) {
   events[0].events = 0;
   events[0].data.u64 = 0;
   ASSERT_EQ(1, epoll_wait(epoll_fd, events, 1, 1));
-  ASSERT_EQ(expected, events[0].data.u64);
+  uint64_t observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
 
   char c;
   ASSERT_EQ(1, read(fds[0], &c, sizeof(c)));
@@ -124,7 +126,8 @@ TEST(EpollTest, EpollEventDataMultiple) {
   events[0].events = 0;
   events[0].data.u64 = 0;
   ASSERT_EQ(1, epoll_wait(epoll_fd, events, 1, 1));
-  ASSERT_EQ(expected, events[0].data.u64);
+  observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
 
   ASSERT_EQ(1, read(fds[0], &c, sizeof(c)));
 
@@ -195,7 +198,8 @@ TEST(EpollTest, EpollEventWriteMod) {
   events[1].events = 0;
   events[1].data.u64 = 0;
   ASSERT_EQ(1, epoll_wait(epoll_fd, events, 2, 1));
-  ASSERT_EQ(expected, events[0].data.u64);
+  uint64_t observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
 
   close(fds[0]);
   close(fds[1]);
@@ -231,7 +235,8 @@ TEST(EpollTest, EpollEventModWrite) {
   events[1].events = 0;
   events[1].data.u64 = 0;
   ASSERT_EQ(1, epoll_wait(epoll_fd, events, 2, 1));
-  ASSERT_EQ(expected, events[0].data.u64);
+  uint64_t observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
 
   close(fds[0]);
   close(fds[1]);
