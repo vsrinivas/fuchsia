@@ -5,10 +5,9 @@
 use {
     crate::{inverse_keymap::InverseKeymap, keymaps, legacy_backend::*, usages::Usages},
     anyhow::{ensure, Error},
-    fidl::endpoints::{self, ServerEnd},
     fidl_fuchsia_ui_input::{
-        self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
-        KeyboardDescriptor, MediaButtonsDescriptor, Range, Touch, TouchscreenDescriptor,
+        self, Axis, AxisScale, InputDeviceProxy, KeyboardDescriptor, MediaButtonsDescriptor, Range,
+        Touch, TouchscreenDescriptor,
     },
     std::{
         convert::TryFrom,
@@ -20,52 +19,17 @@ use {
 pub(crate) trait Injector {
     fn register_device(
         &mut self,
-        device: &mut DeviceDescriptor,
-        server: ServerEnd<InputDeviceMarker>,
-    ) -> Result<(), Error>;
+        descriptor: UniformDeviceDescriptor,
+    ) -> Result<InputDeviceProxy, Error>;
 }
 
 // Wraps `DeviceDescriptor` FIDL table fields for descriptors into a single Rust type,
 // allowing us to pass any of them to `register_device()`.
-enum UniformDeviceDescriptor {
+#[derive(Debug)]
+pub(crate) enum UniformDeviceDescriptor {
     Keyboard(KeyboardDescriptor),
     MediaButtons(MediaButtonsDescriptor),
     Touchscreen(TouchscreenDescriptor),
-}
-
-// Creates a device with the properties given in `descriptor`, and registers the newly
-// created device with the input pipeline associated with `injector`.
-fn register_device(
-    injector: &mut dyn Injector,
-    descriptor: UniformDeviceDescriptor,
-) -> Result<InputDeviceProxy, Error> {
-    let mut device = DeviceDescriptor {
-        device_info: None,
-        keyboard: None,
-        media_buttons: None,
-        mouse: None,
-        stylus: None,
-        touchscreen: None,
-        sensor: None,
-    };
-
-    match descriptor {
-        UniformDeviceDescriptor::Keyboard(descriptor) => {
-            device.keyboard = Some(Box::new(descriptor))
-        }
-        UniformDeviceDescriptor::Touchscreen(descriptor) => {
-            device.touchscreen = Some(Box::new(descriptor))
-        }
-        UniformDeviceDescriptor::MediaButtons(descriptor) => {
-            device.media_buttons = Some(Box::new(descriptor))
-        }
-    };
-
-    let (input_device_client, input_device_server) =
-        endpoints::create_endpoints::<InputDeviceMarker>()?;
-    injector.register_device(&mut device, input_device_server)?;
-
-    Ok(input_device_client.into_proxy()?)
 }
 
 fn make_touchscreen_device(
@@ -73,42 +37,33 @@ fn make_touchscreen_device(
     width: u32,
     height: u32,
 ) -> Result<InputDeviceProxy, Error> {
-    register_device(
-        injector,
-        UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
-            x: Axis {
-                range: Range { min: 0, max: width as i32 },
-                resolution: 1,
-                scale: AxisScale::Linear,
-            },
-            y: Axis {
-                range: Range { min: 0, max: height as i32 },
-                resolution: 1,
-                scale: AxisScale::Linear,
-            },
-            max_finger_id: 255,
-        }),
-    )
+    injector.register_device(UniformDeviceDescriptor::Touchscreen(TouchscreenDescriptor {
+        x: Axis {
+            range: Range { min: 0, max: width as i32 },
+            resolution: 1,
+            scale: AxisScale::Linear,
+        },
+        y: Axis {
+            range: Range { min: 0, max: height as i32 },
+            resolution: 1,
+            scale: AxisScale::Linear,
+        },
+        max_finger_id: 255,
+    }))
 }
 
 fn make_keyboard_device(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
-    register_device(
-        injector,
-        UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
-            keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
-        }),
-    )
+    injector.register_device(UniformDeviceDescriptor::Keyboard(KeyboardDescriptor {
+        keys: (Usages::HidUsageKeyA as u32..Usages::HidUsageKeyRightGui as u32).collect(),
+    }))
 }
 
 fn make_media_buttons_device(injector: &mut dyn Injector) -> Result<InputDeviceProxy, Error> {
-    register_device(
-        injector,
-        UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
-            buttons: fidl_fuchsia_ui_input::MIC_MUTE
-                | fidl_fuchsia_ui_input::VOLUME_DOWN
-                | fidl_fuchsia_ui_input::VOLUME_UP,
-        }),
-    )
+    injector.register_device(UniformDeviceDescriptor::MediaButtons(MediaButtonsDescriptor {
+        buttons: fidl_fuchsia_ui_input::MIC_MUTE
+            | fidl_fuchsia_ui_input::VOLUME_DOWN
+            | fidl_fuchsia_ui_input::VOLUME_UP,
+    }))
 }
 
 fn nanos_from_epoch() -> Result<u64, Error> {
@@ -389,14 +344,15 @@ pub(crate) fn multi_finger_swipe(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Context, fuchsia_async as fasync};
+    use {super::*, fuchsia_async as fasync};
 
     mod event_synthesis {
         use {
             super::*,
+            fidl::endpoints,
             fidl_fuchsia_ui_input::{
-                InputDeviceRequest, InputDeviceRequestStream, InputReport, KeyboardReport,
-                MediaButtonsReport, TouchscreenReport,
+                InputDeviceMarker, InputDeviceRequest, InputDeviceRequestStream, InputReport,
+                KeyboardReport, MediaButtonsReport, TouchscreenReport,
             },
             futures::stream::StreamExt,
         };
@@ -417,6 +373,10 @@ mod tests {
                 }
             }
         }
+
+        // An `impl Injector` which provides access to the `InputDeviceRequest`s sent to
+        // the device registered with the `Injector`. Assumes that only one device is
+        // registered.
         struct FakeInjector {
             event_stream: Option<InputDeviceRequestStream>,
         }
@@ -424,12 +384,12 @@ mod tests {
         impl Injector for FakeInjector {
             fn register_device(
                 &mut self,
-                _: &mut DeviceDescriptor,
-                server: ServerEnd<InputDeviceMarker>,
-            ) -> Result<(), Error> {
-                self.event_stream =
-                    Some(server.into_stream().context("converting server to stream")?);
-                Ok(())
+                _: UniformDeviceDescriptor,
+            ) -> Result<InputDeviceProxy, Error> {
+                let (proxy, event_stream) =
+                    endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+                self.event_stream = Some(event_stream);
+                Ok(proxy)
             }
         }
 
@@ -746,33 +706,36 @@ mod tests {
     mod device_registration {
         use {
             super::*,
-            fidl_fuchsia_ui_input::{DeviceDescriptor, InputDeviceMarker},
+            fidl::endpoints,
+            fidl_fuchsia_ui_input::{InputDeviceMarker, InputDeviceRequestStream},
             matches::assert_matches,
         };
 
+        // An `impl Injector` which provides access to the `UniformDeviceDescriptor`s
+        // which have been registered with the `Injector`.
         struct FakeInjector {
-            device_descriptors: Vec<DeviceDescriptor>,
-            // The injector needs to keep the `ServerEnd`s around so that the synthesizer can inject
-            // input events to the devices. Otherwise, the zx::Channel is closed, and the FIDL call
-            // to inject the event will fail.
-            device_handles: Vec<ServerEnd<InputDeviceMarker>>,
+            device_descriptors: Vec<UniformDeviceDescriptor>,
+            // The injector needs to keep the `InputDeviceRequestStream`s around so that
+            // the synthesizer can inject input events to the devices. Otherwise,
+            // the zx::Channel is closed, and the FIDL call to inject the event will fail.
+            device_request_streams: Vec<InputDeviceRequestStream>,
         }
 
         impl Injector for FakeInjector {
             fn register_device(
                 &mut self,
-                device: &mut DeviceDescriptor,
-                server: ServerEnd<InputDeviceMarker>,
-            ) -> Result<(), Error> {
-                self.device_descriptors.push(device.clone());
-                self.device_handles.push(server);
-                Ok(())
+                device: UniformDeviceDescriptor,
+            ) -> Result<InputDeviceProxy, Error> {
+                let (proxy, stream) = endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+                self.device_descriptors.push(device);
+                self.device_request_streams.push(stream);
+                Ok(proxy)
             }
         }
 
         impl FakeInjector {
             fn new() -> Self {
-                Self { device_descriptors: vec![], device_handles: vec![] }
+                Self { device_descriptors: vec![], device_request_streams: vec![] }
             }
         }
 
@@ -782,7 +745,7 @@ mod tests {
             media_button_event(false, false, false, false, false, &mut injector)?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { media_buttons: Some(..), .. }]
+                [UniformDeviceDescriptor::MediaButtons { .. }]
             );
             Ok(())
         }
@@ -793,7 +756,7 @@ mod tests {
             keyboard_event(40, Duration::from_millis(0), &mut injector)?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { keyboard: Some(..), .. }]
+                [UniformDeviceDescriptor::Keyboard { .. }]
             );
             Ok(())
         }
@@ -804,7 +767,7 @@ mod tests {
             text("A".to_string(), Duration::from_millis(0), &mut injector)?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { keyboard: Some(..), .. }]
+                [UniformDeviceDescriptor::Keyboard { .. }]
             );
             Ok(())
         }
@@ -815,7 +778,7 @@ mod tests {
             multi_finger_tap_event(vec![], 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { touchscreen: Some(..), .. }]
+                [UniformDeviceDescriptor::Touchscreen { .. }]
             );
             Ok(())
         }
@@ -826,7 +789,7 @@ mod tests {
             tap_event(0, 0, 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { touchscreen: Some(..), .. }]
+                [UniformDeviceDescriptor::Touchscreen { .. }]
             );
             Ok(())
         }
@@ -837,7 +800,7 @@ mod tests {
             swipe(0, 0, 1, 1, 1000, 1000, 1, Duration::from_millis(0), &mut injector)?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { touchscreen: Some(..), .. }]
+                [UniformDeviceDescriptor::Touchscreen { .. }]
             );
             Ok(())
         }
@@ -856,7 +819,7 @@ mod tests {
             )?;
             assert_matches!(
                 injector.device_descriptors.as_slice(),
-                [DeviceDescriptor { touchscreen: Some(..), .. }]
+                [UniformDeviceDescriptor::Touchscreen { .. }]
             );
             Ok(())
         }

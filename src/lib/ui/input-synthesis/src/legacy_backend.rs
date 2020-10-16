@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::synthesizer,
+    crate::synthesizer::{self, UniformDeviceDescriptor},
     anyhow::Error,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints,
     fidl_fuchsia_ui_input::{
-        self, DeviceDescriptor, InputDeviceMarker, InputDeviceRegistryMarker, InputReport,
-        KeyboardReport, MediaButtonsReport, Touch, TouchscreenReport,
+        self, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy, InputDeviceRegistryMarker,
+        InputReport, KeyboardReport, MediaButtonsReport, Touch, TouchscreenReport,
     },
     fuchsia_component as app,
 };
@@ -17,15 +17,38 @@ use {
 // pipelines that support the (legacy) `fuchsia.ui.input.InputDeviceRegistry` protocol.
 pub(crate) struct Injector;
 
-impl synthesizer::Injector for Injector {
+impl synthesizer::Injector for self::Injector {
     fn register_device(
         &mut self,
-        device: &mut DeviceDescriptor,
-        server: ServerEnd<InputDeviceMarker>,
-    ) -> Result<(), Error> {
+        descriptor: UniformDeviceDescriptor,
+    ) -> Result<InputDeviceProxy, Error> {
         let registry = app::client::connect_to_service::<InputDeviceRegistryMarker>()?;
-        registry.register_device(device, server)?;
-        Ok(())
+        let mut device = DeviceDescriptor {
+            device_info: None,
+            keyboard: None,
+            media_buttons: None,
+            mouse: None,
+            stylus: None,
+            touchscreen: None,
+            sensor: None,
+        };
+
+        match descriptor {
+            UniformDeviceDescriptor::Keyboard(descriptor) => {
+                device.keyboard = Some(Box::new(descriptor))
+            }
+            UniformDeviceDescriptor::Touchscreen(descriptor) => {
+                device.touchscreen = Some(Box::new(descriptor))
+            }
+            UniformDeviceDescriptor::MediaButtons(descriptor) => {
+                device.media_buttons = Some(Box::new(descriptor))
+            }
+        };
+
+        let (input_device_client, input_device_server) =
+            endpoints::create_endpoints::<InputDeviceMarker>()?;
+        registry.register_device(&mut device, input_device_server)?;
+        Ok(input_device_client.into_proxy()?)
     }
 }
 
