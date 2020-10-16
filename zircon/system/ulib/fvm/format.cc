@@ -50,18 +50,10 @@ constexpr uint64_t kSliceEntryReservedBits = 16;
 static_assert(kSliceEntryVPartitionBits + kSliceEntryVSliceBits + kSliceEntryReservedBits == 64,
               "Exceeding SliceEntry payload size.");
 
-// Returns the size in bytes of the partition table given the number of usable partitions.
-// See PartitionTableLength() which counts the total entries.
-constexpr size_t PartitionTableByteSizeForUsablePartitions(size_t usable_partitions) {
-  // TODO(fxb/59980): Partition table is 1-indexed, which means that the 0th entry is unused, hence
-  // the +1. Remove this once the table uses the 0th entry.
-  return PartitionTableLength(usable_partitions + 1);
-}
-
 // Returns how large one copy of the metadata is for the given table settings.
 constexpr size_t MetadataSizeForUsableEntries(size_t usable_partitions, size_t usable_slices) {
-  return kBlockSize +                                                    // Superblock
-         PartitionTableByteSizeForUsablePartitions(usable_partitions) +  // Partition table.
+  return kBlockSize +                                                        // Superblock
+         PartitionTableByteSizeForUsablePartitionCount(usable_partitions) +  // Partition table.
          AllocTableByteSizeForUsableSliceCount(usable_slices);
 }
 
@@ -118,7 +110,7 @@ Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_u
       .pslice_count = 0,  // Will be set properly below.
       .slice_size = slice_size,
       .fvm_partition_size = kBlockSize,  // Will be set properly below.
-      .vpartition_table_size = PartitionTableByteSizeForUsablePartitions(usable_partitions),
+      .vpartition_table_size = PartitionTableByteSizeForUsablePartitionCount(usable_partitions),
       .allocation_table_size = AllocTableByteSizeForUsableSliceCount(max_usable_slices),
       .generation = 0,
   };

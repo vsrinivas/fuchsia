@@ -259,7 +259,7 @@ zx_status_t VPartitionManager::Load() {
   //     return ZX_ERR_BAD_STATE;
   //
   // Currently the partition table must be a fixed size:
-  size_t kPartitionTableLength = PartitionTableLength(kMaxVPartitions);
+  size_t kPartitionTableLength = fvm::kMaxPartitionTableByteSize;
   if (sb.vpartition_table_size != kPartitionTableLength) {
     zxlogf(ERROR, "Bad vpartition table size %zu (expected %zu)", sb.vpartition_table_size,
            kPartitionTableLength);

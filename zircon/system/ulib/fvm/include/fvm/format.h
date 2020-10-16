@@ -102,12 +102,6 @@ static constexpr uint64_t kMaxVSlices = 1ull << (kSliceEntryVSliceBits - 1);
 static constexpr std::array<uint8_t, kGuidSize> kPlaceHolderInstanceGuid = {0};
 
 namespace internal {
-// Minimal safety checks for persisted data structures. Currently they are required to be trivial
-// and standard layout.
-template <typename T>
-struct is_persistable {
-  static constexpr bool value = std::is_standard_layout<T>::value;
-};
 
 // FVM block alignment properties for a given type.
 template <typename T>
@@ -115,6 +109,7 @@ struct block_alignment {
   static constexpr bool may_cross_boundary = (kBlockSize % sizeof(T)) != 0;
   static constexpr bool ends_at_boundary = (sizeof(T) % kBlockSize);
 };
+
 }  // namespace internal
 
 // Defines the type of superblocks of an FVM. The key difference is how the offset from the
@@ -272,8 +267,8 @@ struct Header {
   uint8_t reserved[0];
 };
 
-static_assert(internal::is_persistable<Header>::value && sizeof(Header) <= kBlockSize,
-              "fvm::Header must fit within one block, be trivial and match standard layout.");
+static_assert(std::is_standard_layout_v<Header> && sizeof(Header) <= kBlockSize,
+              "fvm::Header must fit within one block and match standard layout.");
 
 // Represent an entry in the FVM Partition table, which is fixed size contiguous flat buffer.
 struct VPartitionEntry {
@@ -342,7 +337,7 @@ struct VPartitionEntry {
 };
 
 static_assert(sizeof(VPartitionEntry) == 64, "Unchecked VPartitionEntry size change.");
-static_assert(internal::is_persistable<VPartitionEntry>::value,
+static_assert(std::is_standard_layout_v<VPartitionEntry>,
               "VPartitionEntry must be standard layout compilant and trivial.");
 static_assert(!internal::block_alignment<VPartitionEntry>::may_cross_boundary,
               "VPartitionEntry must not cross block boundary.");
@@ -390,18 +385,18 @@ struct SliceEntry {
 };
 
 static_assert(sizeof(SliceEntry) == 8, "Unchecked SliceEntry size change.");
-static_assert(internal::is_persistable<SliceEntry>::value,
-              "VSliceEntry must meet persistable constraints.");
+static_assert(std::is_standard_layout_v<SliceEntry>,
+              "VSliceEntry must be standard layout.");
 static_assert(!internal::block_alignment<SliceEntry>::may_cross_boundary,
               "VSliceEntry must not cross block boundary.");
 
-// Due to the way partitions are counted, the total partition entries (the input to this function)
-// is one larger than the number of usable partitions because the 0th entry is not used. This
-// function may generate a larger-than-needed partition table to ensure it's block-aligned.
+// Due to the way partitions are counted, the usable partitions (the input to this function) is one
+// smaller than the number table entries because the 0th entry is not used. This function may
+// generate a larger-than-needed partition table to ensure it's block-aligned.
 //
 // TODO(fxb/59980) Remove the unused 0th entry so we can actually use the full number passed in.
-constexpr size_t PartitionTableLength(size_t total_partition_entries) {
-  return fbl::round_up(sizeof(VPartitionEntry) * total_partition_entries, kBlockSize);
+constexpr size_t PartitionTableByteSizeForUsablePartitionCount(size_t usable_partitions) {
+  return fbl::round_up(sizeof(VPartitionEntry) * (usable_partitions + 1), kBlockSize);
 }
 
 constexpr size_t AllocTableByteSizeForUsableSliceCount(size_t slice_count) {
@@ -425,7 +420,8 @@ constexpr size_t SlicesToBlocks(size_t slice_size, size_t block_size, size_t sli
 // Limits on the maximum metadata sizes. These value are to prevent overallocating buffers if
 // the metadata is corrupt. The metadata size counts one copy of the metadata only (there will
 // actually be two copies at the beginning of the device.
-static constexpr uint64_t kMaxPartitionTableByteSize = PartitionTableLength(kMaxVPartitions);
+static constexpr uint64_t kMaxPartitionTableByteSize =
+    PartitionTableByteSizeForUsablePartitionCount(kMaxUsablePartitions);
 static constexpr uint64_t kMaxAllocationTableByteSize =
     fbl::round_up(sizeof(SliceEntry) * kMaxVSlices, fvm::kBlockSize);
 static constexpr uint64_t kMaxMetadataByteSize =
