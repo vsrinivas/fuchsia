@@ -674,10 +674,16 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     subpass_info.num_color_attachments = subpass.colorAttachmentCount;
     subpass_info.num_input_attachments = subpass.inputAttachmentCount;
     subpass_info.depth_stencil_attachment = *subpass.pDepthStencilAttachment;
-    memcpy(subpass_info.color_attachments, subpass.pColorAttachments,
-           subpass.colorAttachmentCount * sizeof(*subpass.pColorAttachments));
-    memcpy(subpass_info.input_attachments, subpass.pInputAttachments,
-           subpass.inputAttachmentCount * sizeof(*subpass.pInputAttachments));
+
+    // Avoid calling memcpy on nullptr if the number of attachments is 0.
+    if (subpass.colorAttachmentCount > 0) {
+      memcpy(subpass_info.color_attachments, subpass.pColorAttachments,
+             subpass.colorAttachmentCount * sizeof(*subpass.pColorAttachments));
+    }
+    if (subpass.inputAttachmentCount > 0) {
+      memcpy(subpass_info.input_attachments, subpass.pInputAttachments,
+             subpass.inputAttachmentCount * sizeof(*subpass.pInputAttachments));
+    }
 
     uint32_t samples = 0;
     for (uint32_t i = 0; i < subpass_info.num_color_attachments; i++) {
