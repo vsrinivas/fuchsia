@@ -514,12 +514,14 @@ static void spinlock_test() {
     return;
   }
 
-  // Hold the first lock, then create a thread and wait for it to acquire the lock.
   lock_pair_t pair;
-  pair.first.AcquireIrqSave(state);
   Thread* holder_thread =
       Thread::Create("hold_and_release", &hold_and_release, &pair, DEFAULT_PRIORITY);
   ASSERT(holder_thread != nullptr);
+
+  // Acquire the lock before resuming the thread.
+  pair.first.AcquireIrqSave(state);
+
   // Right now we have suspended IRQs and so we will not be moved off this cpu. To prevent any
   // poor decisions by the scheduler that could cause deadlock we set the affinity of the
   // holder_thread to not include our cpu.
