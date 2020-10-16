@@ -3422,6 +3422,8 @@ void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind) {
     return;
   }
 
+  // TODO(fxb/62115): The translation here is poor because the set of result codes
+  // available for an association response is too small.
   uint8_t reason;
   switch (ind->result_code) {
     case WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED:
