@@ -39,4 +39,8 @@ fuchsia_component("cpp-logs-test") {
 fuchsia_test("test-spec") {
   package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
   component = ":cpp-logs-test"
+  log_settings = {
+    # this test emits trace through error logs to ensure verbosity round-trips correctly
+    max_severity = "ERROR"
+  }
 }

@@ -1,12 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
-                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "bin/logs_integration_cpp_tests"
     },

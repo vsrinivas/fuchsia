@@ -167,8 +167,8 @@ std::string log_level(int32_t severity) {
   return "INVALID";
 }
 
-std::unique_ptr<run::Component> launch_observer(const fuchsia::sys::LauncherPtr& launcher,
-                                                async_dispatcher_t* dispatcher) {
+std::unique_ptr<run::Component> launch_archivist(const fuchsia::sys::LauncherPtr& launcher,
+                                                 async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info{
       .url = "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"};
   launch_info.arguments = {"--disable-log-connector"};
@@ -323,7 +323,7 @@ int main(int argc, const char** argv) {
         });
       });
 
-  std::unique_ptr<run::Component> observer_component = nullptr;
+  std::unique_ptr<run::Component> archivist_component = nullptr;
 
   if (run::should_run_in_sys(parse_result.launch_info.url)) {
     if (test_metadata.HasServices()) {
@@ -355,24 +355,40 @@ int main(int argc, const char** argv) {
     auto test_env_services = sys::testing::EnvironmentServices::CreateWithParentOverrides(
         parent_env, std::move(parent_overrides));
     auto services = test_metadata.TakeServices();
-    bool collect_isolated_logs = true;
+    bool collect_logs = true;
+    bool offer_collected_logs = true;
     for (auto& service : services) {
       test_env_services->AddServiceWithLaunchInfo(std::move(service.second), service.first);
       if (service.first == fuchsia::logger::LogSink::Name_) {
-        // don't add global log sink service if test component is injecting
-        // it.
-        collect_isolated_logs = false;
+        // don't add log sink service if test component is injecting it.
+        collect_logs = false;
+      }
+      if (service.first == fuchsia::logger::Log::Name_) {
+        // don't add log service if test component is injecting it.
+        offer_collected_logs = false;
       }
     }
-    if (collect_isolated_logs) {
+
+    if (collect_logs || offer_collected_logs) {
+      // launch the archivist if it'll be used
       fuchsia::sys::LauncherPtr launcher;
       parent_env->GetLauncher(launcher.NewRequest());
-      observer_component = launch_observer(launcher, loop.dispatcher());
-
+      archivist_component = launch_archivist(launcher, loop.dispatcher());
+    }
+    if (collect_logs) {
+      ZX_ASSERT(archivist_component != nullptr);
       test_env_services->AddService<fuchsia::logger::LogSink>(
-          [observer_svc = observer_component->svc()](
+          [archivist_svc = archivist_component->svc()](
               fidl::InterfaceRequest<fuchsia::logger::LogSink> request) {
-            observer_svc->Connect(std::move(request));
+            archivist_svc->Connect(std::move(request));
+          });
+    }
+    if (offer_collected_logs) {
+      ZX_ASSERT(archivist_component != nullptr);
+      test_env_services->AddService<fuchsia::logger::Log>(
+          [archivist_svc =
+               archivist_component->svc()](fidl::InterfaceRequest<fuchsia::logger::Log> request) {
+            archivist_svc->Connect(std::move(request));
           });
     }
 
@@ -396,10 +412,10 @@ int main(int argc, const char** argv) {
     enclosing_env = sys::testing::EnclosingEnvironment::Create(
         std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
 
-    if (collect_isolated_logs) {
-      ZX_ASSERT(observer_component != nullptr);
+    if (collect_logs) {
+      ZX_ASSERT(archivist_component != nullptr);
       // this will launch the service and also collect logs.
-      auto log_ptr = observer_component->svc()->Connect<fuchsia::logger::Log>();
+      auto log_ptr = archivist_component->svc()->Connect<fuchsia::logger::Log>();
 
       fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> log_listener;
       auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
@@ -463,7 +479,7 @@ int main(int argc, const char** argv) {
   // Wait and process all messages in the queue.
   loop.RunUntilIdle();
 
-  if (observer_component) {
+  if (archivist_component) {
     ZX_ASSERT(enclosing_env);
     ZX_ASSERT(log_collector);
     enclosing_env->Kill([&loop]() { loop.Quit(); });
@@ -474,13 +490,13 @@ int main(int argc, const char** argv) {
     // collect all logs
     log_collector->NotifyOnUnBind([&loop]() { loop.Quit(); });
 
-    auto observer_ptr =
-        observer_component->svc()->Connect<fuchsia::diagnostics::test::Controller>();
-    observer_ptr->Stop();
+    auto archivist_ptr =
+        archivist_component->svc()->Connect<fuchsia::diagnostics::test::Controller>();
+    archivist_ptr->Stop();
     loop.Run();
     loop.ResetQuit();
 
-    // now that observer is dead, make sure to collect its output
+    // now that archivist is dead, make sure to collect its output
     loop.RunUntilIdle();
   }
 
