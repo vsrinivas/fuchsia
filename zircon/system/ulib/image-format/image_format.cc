@@ -191,7 +191,8 @@ class AfbcFormats : public ImageFormatSet {
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT |
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPARSE_BIT |
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_YUV_BIT |
-      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_BCH_BIT;
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_BCH_BIT |
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT;
   bool IsSupported(const PixelFormat& pixel_format) const override {
     if (!pixel_format.has_format_modifier_value())
       return false;
@@ -215,24 +216,46 @@ class AfbcFormats : public ImageFormatSet {
     // See
     // https://android.googlesource.com/device/linaro/hikey/+/android-o-preview-3/gralloc960/alloc_device.cpp
     constexpr uint32_t kAfbcBodyAlignment = 1024u;
+    constexpr uint32_t kTiledAfbcBodyAlignment = 4096u;
 
     ZX_DEBUG_ASSERT(image_format.has_pixel_format());
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
     uint32_t block_width;
     uint32_t block_height;
+    uint32_t width_alignment;
+    uint32_t height_alignment;
+    bool tiled_header = image_format.pixel_format().format_modifier_value() &
+                        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT;
+
     switch (image_format.pixel_format().format_modifier_value() & ~kAfbcModifierMask) {
       case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
         block_width = 16;
         block_height = 16;
+        if (!tiled_header) {
+          width_alignment = block_width;
+          height_alignment = block_height;
+        } else {
+          width_alignment = 128;
+          height_alignment = 128;
+        }
         break;
 
       case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
         block_width = 32;
         block_height = 8;
+        if (!tiled_header) {
+          width_alignment = block_width;
+          height_alignment = block_height;
+        } else {
+          width_alignment = 256;
+          height_alignment = 64;
+        }
         break;
       default:
         return 0;
     }
+
+    uint32_t body_alignment = tiled_header ? kTiledAfbcBodyAlignment : kAfbcBodyAlignment;
 
     ZX_DEBUG_ASSERT(image_format.pixel_format().has_type());
     ZX_DEBUG_ASSERT(image_format.pixel_format().type() == PixelFormatType::R8G8B8A8 ||
@@ -242,10 +265,11 @@ class AfbcFormats : public ImageFormatSet {
 
     ZX_DEBUG_ASSERT(image_format.has_coded_width());
     ZX_DEBUG_ASSERT(image_format.has_coded_height());
-    uint64_t block_count = fbl::round_up(image_format.coded_width(), block_width) / block_width *
-                           fbl::round_up(image_format.coded_height(), block_height) / block_height;
+    uint64_t block_count =
+        fbl::round_up(image_format.coded_width(), width_alignment) / block_width *
+        fbl::round_up(image_format.coded_height(), height_alignment) / block_height;
     return block_count * block_width * block_height * kBytesPerPixel +
-           fbl::round_up(block_count * kBytesPerBlockHeader, kAfbcBodyAlignment);
+           fbl::round_up(block_count * kBytesPerBlockHeader, body_alignment);
   }
 
   uint64_t ImageFormatImageSize(const ImageFormat& image_format) const override {

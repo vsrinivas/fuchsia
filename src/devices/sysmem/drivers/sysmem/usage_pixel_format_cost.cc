@@ -121,6 +121,12 @@ fidl::BufferThenHeapAllocator<kBufferThenHeapAllocatorSize> allocator;
 
 const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
+  // Tiled headers enable more optimizations and are more efficient, but alignment requirements make
+  // them take up more RAM. They're still worthwhile for our usecases.
+  AddRgbaPixelFormat(allocator,
+                     llcpp::fuchsia::sysmem2::
+                         FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
+                     400.0, result);
   AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE, 500.0,
                      result);
   // 16X16 is better for the GPU, but 32X8 is better for the display. For simplicity value them the
@@ -131,6 +137,10 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
   AddRgbaPixelFormat(
       allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
       600.0, result);
+  AddRgbaPixelFormat(
+      allocator,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
+      900.0, result);
   AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16, 1000.0,
                      result);
   AddRgbaPixelFormat(allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8, 1000.0,

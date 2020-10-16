@@ -694,4 +694,21 @@ TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
 
   auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
   EXPECT_TRUE(optional_format);
+
+  sysmem_v1::PixelFormat tiled_format = {
+      .type = sysmem_v1::PixelFormatType::BGRA32,
+      .has_format_modifier = true,
+      .format_modifier.value =
+          sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
+  };
+
+  constraints.pixel_format = tiled_format;
+
+  optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  EXPECT_TRUE(optional_format);
+  auto& image_format = *optional_format;
+  constexpr uint32_t kMinHeaderOffset = 4096u;
+  constexpr uint32_t kMinWidth = 128;
+  constexpr uint32_t kMinHeight = 128;
+  EXPECT_EQ(kMinHeaderOffset + kMinWidth * kMinHeight * 4, ImageFormatImageSize(image_format));
 }

@@ -150,8 +150,11 @@ TEST(PixelFormatCost, AfbcWithFlags) {
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR,
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER,
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE,
+      llcpp::fuchsia::sysmem2::
+          FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
   };
   auto constraints =
       heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
