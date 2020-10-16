@@ -566,6 +566,7 @@ scope. You’ll encounter this pattern:
 forward_variables_from(invoker, "*", [ "visibility" ])
 forward_variables_from(invoker, [ "visibility" ])
 ```
+
 ### `exec_script()` {#exec-script}
 
 GN's built-in function
