@@ -2,18 +2,23 @@
     program: {
         binary: "bin/debug_serial",
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.hardware.serial.NewDeviceProxy" ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.boot.RootResource",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.boot.RootResource",
+                "fuchsia.logger.LogSink",
             ],
         },
     ],
     expose: [
         {
-            protocol: [ "/svc/fuchsia.hardware.serial.NewDeviceProxy" ],
+            protocol: [ "fuchsia.hardware.serial.NewDeviceProxy" ],
             from: "self",
         },
     ],

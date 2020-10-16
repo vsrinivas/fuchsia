@@ -2,15 +2,18 @@
     program: {
         binary: "test/integration-test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "gtest_runner" },
         {
-            protocol: [ "/svc/fuchsia.device.NameProvider" ],
+            protocol: [ "fuchsia.device.NameProvider" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

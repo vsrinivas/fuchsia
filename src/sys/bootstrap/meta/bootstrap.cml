@@ -58,12 +58,12 @@
     ],
     offer: [
         {
-            protocol: [ "/svc/fuchsia.sys.Loader" ],
+            protocol: [ "fuchsia.sys.Loader" ],
             from: "parent",
             to: [ "#console-launcher" ],
         },
         {
-            directory: "/boot",
+            directory: "boot",
             from: "parent",
             to: [
                 "#console-launcher",
@@ -75,10 +75,10 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.FactoryItems",
-                "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.kernel.RootJob",
-                "/svc/fuchsia.kernel.RootJobForInspect",
+                "fuchsia.boot.FactoryItems",
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.kernel.RootJobForInspect",
             ],
             from: "parent",
             to: [
@@ -87,12 +87,12 @@
             ],
         },
         {
-            protocol: [ "/svc/fuchsia.power.manager.DriverManagerRegistration" ],
+            protocol: [ "fuchsia.power.manager.DriverManagerRegistration" ],
             from: "#power_manager",
             to: [ "#driver_manager" ],
         },
         {
-            protocol: [ "/svc/fuchsia.kernel.Stats" ],
+            protocol: [ "fuchsia.kernel.Stats" ],
             from: "parent",
             to: [
                 "#console-launcher",
@@ -101,7 +101,7 @@
             ],
         },
         {
-            protocol: "/svc/fuchsia.boot.RootResource",
+            protocol: "fuchsia.boot.RootResource",
             from: "parent",
             to: [
                 "#console",
@@ -112,9 +112,9 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.boot.Items",
-                "/svc/fuchsia.process.Launcher",
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.process.Launcher",
             ],
             from: "parent",
             to: [
@@ -125,23 +125,23 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.process.Launcher",
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.process.Launcher",
             ],
             from: "parent",
             to: [ "#miscsvc" ],
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.boot.WriteOnlyLog",
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.WriteOnlyLog",
             ],
             from: "parent",
             to: [ "#device_name_provider" ],
         },
         {
-            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            protocol: [ "fuchsia.boot.WriteOnlyLog" ],
             from: "parent",
             to: [
                 "#console",
@@ -157,8 +157,8 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.tracing.provider.Registry",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: [
@@ -169,41 +169,41 @@
             ],
         },
         {
-            protocol: [ "/svc/fuchsia.security.resource.Vmex" ],
+            protocol: [ "fuchsia.security.resource.Vmex" ],
             from: "parent",
             to: [ "#fshost" ],
         },
         {
-            protocol: [ "/svc/fuchsia.scheduler.ProfileProvider" ],
+            protocol: [ "fuchsia.scheduler.ProfileProvider" ],
             from: "#driver_manager",
             to: [ "#fshost" ],
         },
         {
             // TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost
             // loader service!
-            protocol: "/svc/fuchsia.fshost.Loader",
+            protocol: "fuchsia.fshost.Loader",
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
         {
             protocol: [
-                "/svc/fuchsia.device.manager.Administrator",
-                "/svc/fuchsia.device.manager.BindDebugger",
-                "/svc/fuchsia.device.manager.DebugDumper",
-                "/svc/fuchsia.kernel.Counter",
-                "/svc/fuchsia.kernel.DebugBroker",
-                "/svc/fuchsia.kernel.MexecBroker",
-                "/svc/fuchsia.paver.Paver",
-                "/svc/fuchsia.scheduler.ProfileProvider",
-                "/svc/fuchsia.sysmem.Allocator",
-                "/svc/fuchsia.virtualconsole.SessionManager",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.kernel.Counter",
+                "fuchsia.kernel.DebugBroker",
+                "fuchsia.kernel.MexecBroker",
+                "fuchsia.paver.Paver",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
             to: [ "#console-launcher" ],
         },
         {
-            directory: "/dev",
+            directory: "dev",
             from: "#driver_manager",
             to: [
                 "#console-launcher",
@@ -214,7 +214,7 @@
             ],
         },
         {
-            directory: "/minfs",
+            directory: "minfs",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -223,7 +223,7 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/pkgfs",
+            directory: "pkgfs",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -232,13 +232,13 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/system-delayed",
+            directory: "system-delayed",
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
         {
-            directory: "/system",
+            directory: "system",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -247,7 +247,7 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/blob",
+            directory: "blob",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -256,7 +256,7 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/install",
+            directory: "install",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -265,19 +265,19 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/durable",
+            directory: "durable",
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
         {
-            directory: "/factory",
+            directory: "factory",
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
         {
-            directory: "/tmp",
+            directory: "tmp",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -286,7 +286,7 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/bin",
+            directory: "bin",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -295,21 +295,21 @@
             dependency: "weak_for_migration",
         },
         {
-            directory: "/volume",
+            directory: "volume",
             from: "#fshost",
             to: [ "#miscsvc" ],
         },
 
         // Offer the log services to the console
         {
-            protocol: [ "/svc/fuchsia.logger.Log" ],
+            protocol: [ "fuchsia.logger.Log" ],
             from: "#archivist",
             to: [ "#console" ],
         },
 
         // Offer power_manager's config data to it, so it can read its config
         {
-            directory: "/config/data",
+            directory: "config-data",
             from: "#fshost",
             to: [ "#power_manager" ],
             subdir: "power_manager",
@@ -318,16 +318,16 @@
 
         // Offer the kernel serial console to the driver_manager
         {
-            protocol: "/svc/fuchsia.hardware.pty.Device",
+            protocol: "fuchsia.hardware.pty.Device",
             from: "#console",
-            as: "/svc/console",
+            as: "console",
             to: [
                 "#console-launcher",
                 "#driver_manager",
             ],
         },
         {
-            protocol: "/svc/fuchsia.device.NameProvider",
+            protocol: "fuchsia.device.NameProvider",
             from: "#device_name_provider",
             to: [
                 "#console-launcher",
@@ -342,8 +342,8 @@
         // Offer the misc service to the driver_manager
         {
             protocol: [
-                "/svc/fuchsia.kernel.Counter",
-                "/svc/fuchsia.paver.Paver",
+                "fuchsia.kernel.Counter",
+                "fuchsia.paver.Paver",
             ],
             from: "#miscsvc",
             to: [ "#driver_manager" ],
@@ -354,7 +354,7 @@
 
         // Offer the pty service to the driver_manager
         {
-            protocol: "/svc/fuchsia.hardware.pty.Device",
+            protocol: "fuchsia.hardware.pty.Device",
             from: "#ptysvc",
             to: [
                 "#console-launcher",
@@ -364,7 +364,7 @@
 
         // driver_manager needs the v1 hub for the serial console
         {
-            directory: "/hub",
+            directory: "hub",
             from: "parent",
             to: [
                 "#console-launcher",
@@ -372,7 +372,7 @@
             ],
         },
         {
-            protocol: "/svc/fuchsia.sysinfo.SysInfo",
+            protocol: "fuchsia.sysinfo.SysInfo",
             from: "#sysinfo",
             to: [
                 "#console-launcher",
@@ -381,7 +381,7 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "#shutdown_shim",
             to: [
                 "#console-launcher",
@@ -392,7 +392,7 @@
 
         // Things shutdown_shim and power_manager need
         {
-            protocol: [ "/svc/fuchsia.sys2.SystemController" ],
+            protocol: [ "fuchsia.sys2.SystemController" ],
             from: "parent",
             to: [
                 "#power_manager",
@@ -400,24 +400,24 @@
             ],
         },
         {
-            protocol: [ "/svc/fuchsia.device.manager.SystemStateTransition" ],
+            protocol: [ "fuchsia.device.manager.SystemStateTransition" ],
             from: "#driver_manager",
             to: [ "#shutdown_shim" ],
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "/svc/fuchsia.hardware.power.statecontrol.Admin" ],
+            protocol: [ "fuchsia.hardware.power.statecontrol.Admin" ],
             from: "#power_manager",
             to: [ "#shutdown_shim" ],
         },
         {
-            protocol: [ "/svc/fuchsia.device.manager.Administrator" ],
+            protocol: [ "fuchsia.device.manager.Administrator" ],
             from: "#driver_manager",
             to: [ "#power_manager" ],
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "/svc/fuchsia.feedback.CrashReporter" ],
+            protocol: [ "fuchsia.feedback.CrashReporter" ],
             from: "parent",
             to: [ "#power_manager" ],
         },
@@ -425,20 +425,20 @@
         // Non-zircon services for svchost
         {
             protocol: [
-                "/svc/fuchsia.exception.Handler",
-                "/svc/fuchsia.net.NameLookup",
-                "/svc/fuchsia.net.stack.Log",
-                "/svc/fuchsia.net.stack.Stack",
-                "/svc/fuchsia.netstack.Netstack",
-                "/svc/fuchsia.pkg.PackageResolver",
-                "/svc/fuchsia.pkg.RepositoryManager",
-                "/svc/fuchsia.pkg.rewrite.Engine",
-                "/svc/fuchsia.posix.socket.Provider",
-                "/svc/fuchsia.process.Resolver",
-                "/svc/fuchsia.sys.Environment",
-                "/svc/fuchsia.sys.Launcher",
-                "/svc/fuchsia.tracing.controller.Controller",
-                "/svc/fuchsia.wlan.service.Wlan",
+                "fuchsia.exception.Handler",
+                "fuchsia.net.NameLookup",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.wlan.service.Wlan",
             ],
             from: "parent",
             to: [
@@ -447,7 +447,7 @@
             ],
         },
         {
-            protocol: "/svc/fuchsia.logger.Log",
+            protocol: "fuchsia.logger.Log",
             from: "#archivist",
             to: [
                 "#console-launcher",
@@ -455,7 +455,7 @@
             ],
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "#archivist",
             to: [
                 "#console-launcher",
@@ -465,9 +465,9 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.fshost.BlockWatcher",
-                "/svc/fuchsia.fshost.Filesystems",
-                "/svc/fuchsia.fshost.Registry",
+                "fuchsia.fshost.BlockWatcher",
+                "fuchsia.fshost.Filesystems",
+                "fuchsia.fshost.Registry",
             ],
             from: "#fshost",
             to: [
@@ -477,22 +477,22 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "/svc/fuchsia.fshost.Admin" ],
+            protocol: [ "fuchsia.fshost.Admin" ],
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
         {
-            directory: "/dev",
+            directory: "dev",
             from: "#driver_manager",
-            as: "/input",
+            as: "input",
             to: [ "#pwrbtn-monitor" ],
             subdir: "class/input",
         },
         {
             protocol: [
-                "/svc/fuchsia.fshost.BlockWatcher",
-                "/svc/fuchsia.fshost.Registry",
+                "fuchsia.fshost.BlockWatcher",
+                "fuchsia.fshost.Registry",
             ],
             from: "#fshost",
             to: [ "#miscsvc" ],
@@ -514,14 +514,14 @@
             event: "capability_ready",
             from: "parent",
             to: [ "#archivist" ],
-            filter: { path: "/diagnostics" },
+            filter: { path: "diagnostics" },
         },
 
         // Required services
         {
             protocol: [
-                "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.sys2.EventSource",
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.sys2.EventSource",
             ],
             from: "parent",
             to: [ "#archivist" ],
@@ -530,9 +530,9 @@
         // Weak services from appmgr and log-stats
         {
             protocol: [
-                "/svc/fuchsia.diagnostics.internal.LogStatsController",
-                "/svc/fuchsia.sys.internal.ComponentEventProvider",
-                "/svc/fuchsia.sys.internal.LogConnector",
+                "fuchsia.diagnostics.internal.LogStatsController",
+                "fuchsia.sys.internal.ComponentEventProvider",
+                "fuchsia.sys.internal.LogConnector",
             ],
             from: "parent",
             to: [ "#archivist" ],
@@ -541,9 +541,9 @@
 
         // Configuration
         {
-            directory: "/boot",
+            directory: "boot",
             from: "parent",
-            as: "/config/data",
+            as: "config-data",
             to: [ "#archivist" ],
             rights: [ "r*" ],
             subdir: "config/archivist",
@@ -555,11 +555,11 @@
         // This handle is used by component manager to resolve packages from the
         // base package set.
         {
-            directory: "/pkgfs-delayed",
+            directory: "pkgfs-delayed",
             from: "#fshost",
         },
         {
-            directory: "/dev",
+            directory: "dev",
             from: "#driver_manager",
         },
         {
@@ -567,91 +567,87 @@
             from: "#fshost",
         },
         {
-            directory: "/config/data",
+            directory: "factory",
             from: "#fshost",
         },
         {
-            directory: "/factory",
+            directory: "durable",
             from: "#fshost",
         },
         {
-            directory: "/durable",
+            directory: "minfs",
             from: "#fshost",
         },
         {
-            directory: "/minfs",
+            directory: "pkgfs",
             from: "#fshost",
         },
         {
-            directory: "/pkgfs",
+            directory: "system",
             from: "#fshost",
         },
         {
-            directory: "/system",
+            directory: "blob",
             from: "#fshost",
         },
         {
-            directory: "/blob",
+            directory: "tmp",
             from: "#fshost",
         },
         {
-            directory: "/tmp",
+            directory: "bin",
             from: "#fshost",
         },
         {
-            directory: "/bin",
-            from: "#fshost",
-        },
-        {
-            protocol: "/svc/fuchsia.device.NameProvider",
+            protocol: "fuchsia.device.NameProvider",
             from: "#device_name_provider",
         },
         {
             protocol: [
-                "/svc/fuchsia.device.manager.Administrator",
-                "/svc/fuchsia.device.manager.BindDebugger",
-                "/svc/fuchsia.device.manager.DebugDumper",
-                "/svc/fuchsia.kernel.DebugBroker",
-                "/svc/fuchsia.scheduler.ProfileProvider",
-                "/svc/fuchsia.tracing.kernel.Controller",
-                "/svc/fuchsia.tracing.kernel.Reader",
-                "/svc/fuchsia.virtualconsole.SessionManager",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.kernel.DebugBroker",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+                "fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
         },
         {
-            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "#shutdown_shim",
         },
         {
-            protocol: "/svc/fuchsia.hardware.pty.Device",
+            protocol: "fuchsia.hardware.pty.Device",
             from: "#ptysvc",
         },
         {
             protocol: [
-                "/svc/fuchsia.kernel.Counter",
-                "/svc/fuchsia.paver.Paver",
+                "fuchsia.kernel.Counter",
+                "fuchsia.paver.Paver",
             ],
             from: "#miscsvc",
         },
         {
-            protocol: "/svc/fuchsia.sysinfo.SysInfo",
+            protocol: "fuchsia.sysinfo.SysInfo",
             from: "#sysinfo",
         },
         {
             protocol: [
-                "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-                "/svc/fuchsia.thermal.Controller",
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.thermal.Controller",
             ],
             from: "#power_manager",
         },
         {
             protocol: [
-                "/svc/fuchsia.diagnostics.ArchiveAccessor",
-                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
             ],
             from: "#archivist",
         },

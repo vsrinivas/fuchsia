@@ -5,13 +5,14 @@
     use: [
         { runner: "elf" },
         {
-            directory: "/input",
+            directory: "input",
             rights: [ "rw*" ],
+            path: "/input",
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.hardware.power.statecontrol.Admin",
             ],
         },
     ],

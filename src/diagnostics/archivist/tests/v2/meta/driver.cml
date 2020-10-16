@@ -8,30 +8,33 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
             protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.diagnostics.ArchiveAccessor",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
             ],
         },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     offer: [
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [ "#coll" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

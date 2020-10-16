@@ -17,7 +17,6 @@ use {
     fuchsia_url::pkg_url::PkgUrl,
     futures::{channel::oneshot, lock::Mutex},
     std::{
-        convert::TryInto,
         ops::DerefMut,
         path::{Path, PathBuf},
         sync::Weak,
@@ -63,13 +62,10 @@ impl FuchsiaPkgResolver {
         let model = model_chan.deref_mut().try_recv().expect("model channel dropped");
         let model = model.and_then(|m| m.upgrade()).ok_or(ResolverError::model_not_available())?;
 
-        // TODO(fxbug.dev/56604): Switch to name-based by finding "pkgfs" instead and updating CMLs.
-        let (capability_path, realm) = routing::find_exposed_root_directory_capability(
-            &model.root_realm,
-            "/pkgfs".try_into().unwrap(),
-        )
-        .await
-        .map_err(|e| format_err!("failed to route pkgfs handle: {}", e))?;
+        let (capability_path, realm) =
+            routing::find_exposed_root_directory_capability(&model.root_realm, "pkgfs".into())
+                .await
+                .map_err(|e| format_err!("failed to route pkgfs handle: {}", e))?;
         let (pkgfs_proxy, pkgfs_server) = create_proxy::<DirectoryMarker>()?;
         let mut pkgfs_server = pkgfs_server.into_channel();
         realm
@@ -175,6 +171,7 @@ mod tests {
         super::*,
         crate::model::{
             moniker::AbsoluteMoniker,
+            rights,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
         cm_rust::*,
@@ -183,9 +180,9 @@ mod tests {
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::{DirectoryRequest, NodeMarker},
-        fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::prelude::*,
-        std::{path::Path, sync::Arc},
+        std::{convert::TryInto, path::Path, sync::Arc},
         vfs::{
             self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
             file::pcb::asynchronous::read_only_static, pseudo_directory,
@@ -304,12 +301,17 @@ mod tests {
         let components = vec![(
             "pkgfs",
             ComponentDeclBuilder::new()
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                .directory(DirectoryDecl {
+                    name: "pkgfs".into(),
                     source_path: "/pkgfs".try_into().unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                })
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source_path: "pkgfs".try_into().unwrap(),
                     source: ExposeSource::Self_,
-                    target_path: "/pkgfs".try_into().unwrap(),
+                    target_path: "pkgfs".try_into().unwrap(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::Connect),
+                    rights: None,
                     subdir: None,
                 }))
                 .build(),

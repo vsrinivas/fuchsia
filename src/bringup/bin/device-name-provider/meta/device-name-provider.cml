@@ -2,21 +2,25 @@
     program: {
         binary: "bin/device-name-provider",
     },
+    capabilities: [
+        { protocol: "fuchsia.device.NameProvider" },
+    ],
     use: [
         { runner: "elf" },
 
         // For ethernet and network device access.
         {
-            directory: "/dev",
+            directory: "dev",
             rights: [ "rw*" ],
+            path: "/dev",
         },
         {
-            protocol: [ "/svc/fuchsia.boot.Arguments" ],
+            protocol: [ "fuchsia.boot.Arguments" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.device.NameProvider",
+            protocol: "fuchsia.device.NameProvider",
             from: "self",
         },
     ],

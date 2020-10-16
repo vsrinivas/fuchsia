@@ -4,15 +4,15 @@
     },
     capabilities: [
         {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+        {
             protocol: [
                 "fuchsia.fonts.experimental.Provider",
                 "fuchsia.fonts.Provider",
             ],
-        },
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/diagnostics",
         },
     ],
     use: [
@@ -30,13 +30,6 @@
         },
     ],
     expose: [
-        {
-            protocol: [
-                "/svc/fuchsia.fonts.experimental.Provider",
-                "/svc/fuchsia.fonts.Provider",
-            ],
-            from: "self",
-        },
         {
             protocol: [
                 "fuchsia.fonts.experimental.Provider",

@@ -10,7 +10,18 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+        },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
         },
     ],
     use: [
@@ -21,11 +32,11 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.diagnostics.internal.LogStatsController",
-                "/svc/fuchsia.sys.internal.ComponentEventProvider",
-                "/svc/fuchsia.sys.internal.LogConnector",
-                "/svc/fuchsia.sys2.EventSource",
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.diagnostics.internal.LogStatsController",
+                "fuchsia.sys.internal.ComponentEventProvider",
+                "fuchsia.sys.internal.LogConnector",
+                "fuchsia.sys2.EventSource",
             ],
         },
         {
@@ -40,13 +51,8 @@
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
-            filter: { path: "/diagnostics" },
+            filter: { path: "diagnostics" },
         },
-
-        // V2 components' connections will be attributed through here. The
-        // archivist exposes LogSink, components use it and when
-        // component_manager routes the protocol it'll defer the binding to the
-        // archivist through capabiltiy requested for attribution.
         {
             event: "capability_requested",
             from: "framework",
@@ -57,32 +63,26 @@
             as: "/svc/fuchsia.sys2.EventStream",
         },
         {
-            directory: "/config/data",
+            directory: "config-data",
             rights: [ "r*" ],
+            path: "/config/data",
         },
     ],
     expose: [
         {
             protocol: [
-                "/svc/fuchsia.diagnostics.ArchiveAccessor",
-                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
             ],
             from: "self",
         },
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "self",
-        },
-
-        // Archivist's own diagnostics data.
-        {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
     ],
 }

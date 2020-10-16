@@ -52,8 +52,8 @@ pub async fn serve_event_source_sync(
                                 // Serve the event_stream over FIDL asynchronously
                                 serve_event_stream(event_stream, stream).await?;
                             }
-                            Err(error) => {
-                                info!("Error subscribing to events: {}", error);
+                            Err(e) => {
+                                info!("Error subscribing to events: {:?}", e);
                                 responder.send(&mut Err(fcomponent::Error::ResourceUnavailable))?;
                             }
                         };

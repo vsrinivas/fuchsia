@@ -4,177 +4,214 @@
         lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
     },
+    capabilities: [
+        // Device tree
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+
+        // Diagnostics directory for archivist
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/dev/diagnostics",
+        },
+
+        // Services proxied by svchost
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.device.NameProvider",
+                "fuchsia.kernel.Counter",
+                "fuchsia.kernel.DebugBroker",
+                "fuchsia.paver.Paver",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+                "fuchsia.virtualconsole.SessionManager",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
-            directory: "/bin",
+            directory: "bin",
             rights: [ "rx*" ],
+            path: "/bin",
         },
         {
-            directory: "/blob",
+            directory: "blob",
             rights: [ "rw*" ],
+            path: "/blob",
         },
         {
-            directory: "/boot",
+            directory: "boot",
             rights: [ "rx*" ],
+            path: "/boot",
         },
         {
-            directory: "/hub",
+            directory: "hub",
             rights: [ "rw*" ],
+            path: "/hub",
         },
         {
-            directory: "/minfs",
-            as: "/data",
+            directory: "minfs",
             rights: [ "rw*" ],
+            path: "/data",
         },
         {
-            directory: "/pkgfs",
+            directory: "pkgfs",
             rights: [ "rx*" ],
+            path: "/pkgfs",
         },
         {
-            directory: "/system",
+            directory: "system",
             rights: [ "rx*" ],
+            path: "/system",
         },
 
         // NOTE: /tmp needs admin rights because the bringup bots invoke a shell
         // script via zircon.system.autorun that mounts a volume under /tmp to
         // exfiltrate test results.
         {
-            directory: "/tmp",
+            directory: "tmp",
             rights: [
                 "admin",
                 "rw*",
             ],
+            path: "/tmp",
         },
 
         // TODO: this directory is unused and can likely be deleted
         {
-            directory: "/install",
+            directory: "install",
             rights: [ "rw*" ],
+            path: "/install",
         },
         {
-            directory: "/durable",
+            directory: "durable",
             rights: [ "rw*" ],
+            path: "/durable",
         },
         {
-            directory: "/factory",
+            directory: "factory",
             rights: [ "r*" ],
+            path: "/factory",
         },
         {
-            directory: "/system-delayed",
+            directory: "system-delayed",
             rights: [ "rx*" ],
+            path: "/system-delayed",
         },
         {
             protocol: [
-                "/svc/console",
+                "console",
 
                 // Services for serial console, not used by driver_manager or
                 // drivers.
 
                 // TODO(fxbug.dev/51234) Split serial console into separate component
                 // Amber control is thought to be used by serial console (fxbug.dev/50992)
-                "/svc/fuchsia.amber.Control",
+                "fuchsia.amber.Control",
 
                 // The following are non-Zircon services that some zircon tests assume they
                 // can reach, and thus are proxied through svchost. This should mirror the
                 // list in //src/bringup/bin/svchost/svchost.cc
 
                 // Services from bootsvc
-                "/svc/fuchsia.boot.Arguments",
-                "/svc/fuchsia.boot.FactoryItems",
-                "/svc/fuchsia.boot.Items",
-                "/svc/fuchsia.boot.ReadOnlyLog",
-                "/svc/fuchsia.boot.RootResource",
-                "/svc/fuchsia.boot.WriteOnlyLog",
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.FactoryItems",
+                "fuchsia.boot.Items",
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
 
                 // Used by a test (fxbug.dev/50992)
-                "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.device.NameProvider",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.device.NameProvider",
 
                 // Used by crashsvc to report exceptions (fxbug.dev/50992)
-                "/svc/fuchsia.exception.Handler",
+                "fuchsia.exception.Handler",
 
                 // These are services from fshost that driver_manager uses directly
-                "/svc/fuchsia.fshost.Admin",
+                "fuchsia.fshost.Admin",
 
                 // These are services from fshost that show up in svchost
-                "/svc/fuchsia.fshost.BlockWatcher",
-                "/svc/fuchsia.fshost.Filesystems",
-                "/svc/fuchsia.fshost.Loader",
-                "/svc/fuchsia.fshost.Registry",
-                "/svc/fuchsia.hardware.pci.Bus",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
-                "/svc/fuchsia.hardware.pty.Device",
-                "/svc/fuchsia.kernel.Counter",
-                "/svc/fuchsia.kernel.RootJob",
-                "/svc/fuchsia.kernel.RootJobForInspect",
-                "/svc/fuchsia.kernel.Stats",
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.net.NameLookup",
-                "/svc/fuchsia.net.stack.Log",
-                "/svc/fuchsia.net.stack.Stack",
-                "/svc/fuchsia.netstack.Netstack",
-                "/svc/fuchsia.paver.Paver",
-                "/svc/fuchsia.pkg.PackageResolver",
-                "/svc/fuchsia.pkg.RepositoryManager",
-                "/svc/fuchsia.pkg.rewrite.Engine",
-                "/svc/fuchsia.posix.socket.Provider",
+                "fuchsia.fshost.BlockWatcher",
+                "fuchsia.fshost.Filesystems",
+                "fuchsia.fshost.Loader",
+                "fuchsia.fshost.Registry",
+                "fuchsia.hardware.pci.Bus",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.kernel.Counter",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+                "fuchsia.net.NameLookup",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.paver.Paver",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.posix.socket.Provider",
 
                 // Service from power_manager
-                "/svc/fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.power.manager.DriverManagerRegistration",
 
-                // Builtin service
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.process.Resolver",
-                "/svc/fuchsia.sys.Environment",
-                "/svc/fuchsia.sys.Launcher",
+                // Builtin services
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
 
                 // Services from sysinfo
-                "/svc/fuchsia.sysinfo.SysInfo",
-                "/svc/fuchsia.tracing.controller.Controller",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.tracing.controller.Controller",
 
-                // Service from appmgr
-                "/svc/fuchsia.tracing.provider.Registry",
+                // Services from appmgr
+                "fuchsia.tracing.provider.Registry",
 
                 // Thought to be used by serial console only (fxbug.dev/50992)
-                "/svc/fuchsia.wlan.service.Wlan",
+                "fuchsia.wlan.service.Wlan",
             ],
         },
     ],
     expose: [
-        // Device tree
         {
-            directory: "/dev",
+            directory: "dev",
             from: "self",
-            rights: [ "rw*" ],
         },
-
-        // Diagnostics directory for archivist
         {
-            directory: "/dev/diagnostics",
+            directory: "diagnostics",
             from: "self",
-            as: "/diagnostics",
             to: "framework",
-            rights: [ "connect" ],
         },
-
-        // Services proxied by svchost
         {
             protocol: [
-                "/svc/fuchsia.device.manager.Administrator",
-                "/svc/fuchsia.device.manager.BindDebugger",
-                "/svc/fuchsia.device.manager.DebugDumper",
-                "/svc/fuchsia.device.manager.SystemStateTransition",
-                "/svc/fuchsia.device.NameProvider",
-                "/svc/fuchsia.kernel.Counter",
-                "/svc/fuchsia.kernel.DebugBroker",
-                "/svc/fuchsia.paver.Paver",
-                "/svc/fuchsia.scheduler.ProfileProvider",
-                "/svc/fuchsia.sysmem.Allocator",
-                "/svc/fuchsia.tracing.kernel.Controller",
-                "/svc/fuchsia.tracing.kernel.Reader",
-                "/svc/fuchsia.virtualconsole.SessionManager",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.device.NameProvider",
+                "fuchsia.kernel.Counter",
+                "fuchsia.kernel.DebugBroker",
+                "fuchsia.paver.Paver",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+                "fuchsia.virtualconsole.SessionManager",
             ],
             from: "self",
         },

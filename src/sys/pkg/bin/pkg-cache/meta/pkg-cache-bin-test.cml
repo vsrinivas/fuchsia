@@ -2,16 +2,20 @@
     program: {
         binary: "bin/pkg_cache_bin_test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
-            directory: "/tmp",
+            directory: "tmp",
             rights: [ "rw*" ],
+            path: "/tmp",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

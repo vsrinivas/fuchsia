@@ -2,16 +2,22 @@
     program: {
         binary: "bin/stub_inspect_component",
     },
+    capabilities: [
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
     ],
 }

@@ -12,22 +12,22 @@
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.boot.WriteOnlyLog",
+            protocol: "fuchsia.boot.WriteOnlyLog",
             from: "parent",
             to: [ "#driver" ],
         },
         {
-            protocol: "/svc/fuchsia.diagnostics.ArchiveAccessor",
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "#archivist",
             to: [ "#driver" ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "fuchsia.logger.LogSink",
             from: "#archivist",
             to: [ "#driver" ],
         },
         {
-            protocol: "/svc/fuchsia.sys2.EventSource",
+            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
             to: [ "#archivist" ],
         },
@@ -44,19 +44,19 @@
             event: "capability_ready",
             from: "framework",
             to: [ "#archivist" ],
-            filter: { path: "/diagnostics" },
+            filter: { path: "diagnostics" },
         },
         {
-            directory: "/config/data",
+            directory: "config-data",
             from: "parent",
-            as: "/config/data",
+            as: "config-data",
             to: [ "#archivist" ],
             subdir: "archivist",
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#driver",
         },
     ],

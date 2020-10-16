@@ -35,12 +35,5 @@
             ],
             from: "self",
         },
-        {
-            protocol: [
-                "/svc/fuchsia.logger.Log",
-                "/svc/fuchsia.logger.LogSink",
-            ],
-            from: "self",
-        },
     ],
 }

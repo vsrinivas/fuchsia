@@ -1,5 +1,18 @@
 {
-  "debug": false,
-  "maintain_utc_clock": true,
-  "use_builtin_process_launcher": true,
+    debug: false,
+    maintain_utc_clock: true,
+    use_builtin_process_launcher: true,
+    namespace_capabilities: [
+        {
+            directory: "boot",
+            path: "/boot",
+            rights: [ "rx*" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.FactoryItems",
+                "fuchsia.boot.Items",
+            ],
+        },
+    ],
 }

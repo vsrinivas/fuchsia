@@ -7,17 +7,31 @@
             "/pkg/data/config/archivist_config.json",
         ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+        },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.sys2.EventSource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
             ],
         },
         {
-            directory: "/config/data",
+            directory: "config-data",
             rights: [ "r*" ],
+            path: "/config/data",
         },
         {
             event: [
@@ -31,7 +45,7 @@
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
-            filter: { path: "/diagnostics" },
+            filter: { path: "diagnostics" },
         },
         {
             event: "capability_requested",
@@ -45,18 +59,17 @@
     ],
     expose: [
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "self",
         },
         {
-            protocol: [ "/svc/fuchsia.diagnostics.ArchiveAccessor" ],
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
             from: "self",
         },
         {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
     ],
 }

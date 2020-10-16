@@ -5,25 +5,34 @@
     program: {
         binary: "bin/log_stats",
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
+        },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.diagnostics.ArchiveAccessor",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
             ],
         },
     ],
     expose: [
         {
-            protocol: [ "/svc/fuchsia.diagnostics.internal.LogStatsController" ],
+            protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
             from: "self",
         },
         {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
     ],
 }

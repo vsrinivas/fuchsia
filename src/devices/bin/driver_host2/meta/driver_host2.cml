@@ -2,18 +2,21 @@
     program: {
         binary: "bin/driver_host2",
     },
+    capabilities: [
+        { protocol: "fuchsia.driver.framework.DriverHost" },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
             ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.driver.framework.DriverHost",
+            protocol: "fuchsia.driver.framework.DriverHost",
             from: "self",
         },
     ],

@@ -69,7 +69,7 @@
             event: "capability_ready",
             from: "parent",
             as: "diagnostics_ready",
-            filter: { path: "/diagnostics" },
+            filter: { path: "diagnostics" },
         },
         {
             event_stream: [

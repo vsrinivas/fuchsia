@@ -1,11 +1,11 @@
 {
     program: {
         binary: "bin/appmgr",
-        lifecycle: { stop_event: "notify" },
 
         // Run appmgr in a job with ZX_POL_AMBIENT_MARK_VMO_EXEC job policy, so that it can in turn
         // implement the v1 'deprecated-ambient-replace-as-executable' feature.
         job_policy_ambient_mark_vmo_exec: "true",
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {
@@ -18,50 +18,111 @@
                 "fuchsia.test.manager.Harness",
             ],
         },
+        {
+            directory: "hub",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+
+        // These protocols exposed by appmgr are services from the v1 component
+        // runtime being made available to the v2 component runtime. These all cause
+        // dependency cycles between the two runtimes. Cycles require trickier
+        // runtime logic to ensure correctness, are a general design smell, and may
+        // be disallowed in the future.
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.exception.Handler",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.net.NameLookup",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.overnet.Overnet",
+                "fuchsia.overnet.ServicePublisher",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.wlan.service.Wlan",
+            ],
+        },
+
+        // These protocols exposed by appmgr are implemented by appmgr.
+        {
+            protocol: "fuchsia.sys.internal.LogConnector",
+            from: "self",
+            path: "/appmgr_svc/fuchsia.sys.internal.LogConnector",
+        },
+        {
+            protocol: "fuchsia.sys.internal.ComponentEventProvider",
+            from: "self",
+            path: "/appmgr_svc/fuchsia.sys.internal.ComponentEventProvider",
+        },
     ],
     use: [
         { runner: "elf" },
         {
-            directory: "/blob",
+            directory: "blob",
             rights: [ "rw*" ],
+            path: "/blob",
         },
         {
-            directory: "/boot",
+            directory: "boot",
             rights: [ "rx*" ],
+            path: "/boot",
         },
         {
-            directory: "/dev",
+            directory: "dev",
             rights: [ "rw*" ],
+            path: "/dev",
         },
         {
-            directory: "/durable",
+            directory: "durable",
             rights: [ "rw*" ],
+            path: "/durable",
         },
         {
-            directory: "/factory",
+            directory: "factory",
             rights: [ "r*" ],
+            path: "/factory",
         },
         {
-            directory: "/minfs",
-            as: "/data",
+            directory: "minfs",
             rights: [ "rw*" ],
+            path: "/data",
         },
         {
-            directory: "/pkgfs",
+            directory: "pkgfs",
             rights: [ "rx*" ],
+            path: "/pkgfs",
         },
         {
-            directory: "/system",
+            directory: "system",
             rights: [ "rx*" ],
+            path: "/system",
         },
         {
-            directory: "/tmp",
+            directory: "tmp",
             rights: [ "rw*" ],
+            path: "/tmp",
         },
         {
-            directory: "/hub",
-            as: "/hub-v2",
+            directory: "hub",
             rights: [ "r*" ],
+            path: "/hub-v2",
         },
 
         // Services used by appmgr with the svc_for_sys prefix are passed through to
@@ -69,132 +130,132 @@
 
         // From bootsvc
         {
-            protocol: "/svc/fuchsia.boot.Arguments",
-            as: "/svc_for_sys/fuchsia.boot.Arguments",
+            protocol: "fuchsia.boot.Arguments",
+            path: "/svc_for_sys/fuchsia.boot.Arguments",
         },
         {
-            protocol: "/svc/fuchsia.boot.FactoryItems",
-            as: "/svc_for_sys/fuchsia.boot.FactoryItems",
+            protocol: "fuchsia.boot.FactoryItems",
+            path: "/svc_for_sys/fuchsia.boot.FactoryItems",
         },
         {
-            protocol: "/svc/fuchsia.boot.Items",
-            as: "/svc_for_sys/fuchsia.boot.Items",
+            protocol: "fuchsia.boot.Items",
+            path: "/svc_for_sys/fuchsia.boot.Items",
         },
         {
-            protocol: "/svc/fuchsia.boot.ReadOnlyLog",
-            as: "/svc_for_sys/fuchsia.boot.ReadOnlyLog",
+            protocol: "fuchsia.boot.ReadOnlyLog",
+            path: "/svc_for_sys/fuchsia.boot.ReadOnlyLog",
         },
         {
-            protocol: "/svc/fuchsia.kernel.RootJob",
-            as: "/svc_for_sys/fuchsia.kernel.RootJob",
+            protocol: "fuchsia.kernel.RootJob",
+            path: "/svc_for_sys/fuchsia.kernel.RootJob",
         },
         {
-            protocol: "/svc/fuchsia.kernel.RootJobForInspect",
-            as: "/svc_for_sys/fuchsia.kernel.RootJobForInspect",
+            protocol: "fuchsia.kernel.RootJobForInspect",
+            path: "/svc_for_sys/fuchsia.kernel.RootJobForInspect",
         },
         {
-            protocol: "/svc/fuchsia.boot.RootResource",
-            as: "/svc_for_sys/fuchsia.boot.RootResource",
+            protocol: "fuchsia.boot.RootResource",
+            path: "/svc_for_sys/fuchsia.boot.RootResource",
         },
         {
-            protocol: "/svc/fuchsia.security.resource.Vmex",
-            as: "/svc_for_sys/fuchsia.security.resource.Vmex",
+            protocol: "fuchsia.security.resource.Vmex",
+            path: "/svc_for_sys/fuchsia.security.resource.Vmex",
         },
         {
-            protocol: "/svc/fuchsia.boot.WriteOnlyLog",
-            as: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            path: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
         },
         {
-            protocol: "/svc/fuchsia.kernel.MmioResource",
-            as: "/svc_for_sys/fuchsia.kernel.MmioResource",
+            protocol: "fuchsia.kernel.MmioResource",
+            path: "/svc_for_sys/fuchsia.kernel.MmioResource",
         },
         {
-            protocol: "/svc/fuchsia.kernel.Stats",
-            as: "/svc_for_sys/fuchsia.kernel.Stats",
+            protocol: "fuchsia.kernel.Stats",
+            path: "/svc_for_sys/fuchsia.kernel.Stats",
         },
         {
-            protocol: "/svc/fuchsia.tracing.kernel.Controller",
-            as: "/svc_for_sys/fuchsia.tracing.kernel.Controller",
+            protocol: "fuchsia.tracing.kernel.Controller",
+            path: "/svc_for_sys/fuchsia.tracing.kernel.Controller",
         },
         {
-            protocol: "/svc/fuchsia.tracing.kernel.Reader",
-            as: "/svc_for_sys/fuchsia.tracing.kernel.Reader",
+            protocol: "fuchsia.tracing.kernel.Reader",
+            path: "/svc_for_sys/fuchsia.tracing.kernel.Reader",
         },
 
         // From ptysvc
         {
-            protocol: "/svc/fuchsia.hardware.pty.Device",
-            as: "/svc_for_sys/fuchsia.hardware.pty.Device",
+            protocol: "fuchsia.hardware.pty.Device",
+            path: "/svc_for_sys/fuchsia.hardware.pty.Device",
         },
 
         // From devcoordinator
         {
-            protocol: "/svc/fuchsia.device.NameProvider",
-            as: "/svc_for_sys/fuchsia.device.NameProvider",
+            protocol: "fuchsia.device.NameProvider",
+            path: "/svc_for_sys/fuchsia.device.NameProvider",
         },
         {
-            protocol: "/svc/fuchsia.device.manager.Administrator",
-            as: "/svc_for_sys/fuchsia.device.manager.Administrator",
+            protocol: "fuchsia.device.manager.Administrator",
+            path: "/svc_for_sys/fuchsia.device.manager.Administrator",
         },
         {
-            protocol: "/svc/fuchsia.device.manager.DebugDumper",
-            as: "/svc_for_sys/fuchsia.device.manager.DebugDumper",
+            protocol: "fuchsia.device.manager.DebugDumper",
+            path: "/svc_for_sys/fuchsia.device.manager.DebugDumper",
         },
         {
-            protocol: "/svc/fuchsia.device.manager.BindDebugger",
-            as: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
+            protocol: "fuchsia.device.manager.BindDebugger",
+            path: "/svc_for_sys/fuchsia.device.manager.BindDebugger",
         },
         {
-            protocol: "/svc/fuchsia.hardware.pci.Bus",
-            as: "/svc_for_sys/fuchsia.hardware.pci.Bus",
+            protocol: "fuchsia.hardware.pci.Bus",
+            path: "/svc_for_sys/fuchsia.hardware.pci.Bus",
         },
         {
-            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
-            as: "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin",
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin",
         },
         {
-            protocol: "/svc/fuchsia.kernel.Counter",
-            as: "/svc_for_sys/fuchsia.kernel.Counter",
+            protocol: "fuchsia.kernel.Counter",
+            path: "/svc_for_sys/fuchsia.kernel.Counter",
         },
         {
-            protocol: "/svc/fuchsia.kernel.DebugBroker",
-            as: "/svc_for_sys/fuchsia.kernel.DebugBroker",
+            protocol: "fuchsia.kernel.DebugBroker",
+            path: "/svc_for_sys/fuchsia.kernel.DebugBroker",
         },
         {
-            protocol: "/svc/fuchsia.paver.Paver",
-            as: "/svc_for_sys/fuchsia.paver.Paver",
+            protocol: "fuchsia.paver.Paver",
+            path: "/svc_for_sys/fuchsia.paver.Paver",
         },
         {
-            protocol: "/svc/fuchsia.scheduler.ProfileProvider",
-            as: "/svc_for_sys/fuchsia.scheduler.ProfileProvider",
+            protocol: "fuchsia.scheduler.ProfileProvider",
+            path: "/svc_for_sys/fuchsia.scheduler.ProfileProvider",
         },
         {
-            protocol: "/svc/fuchsia.virtualconsole.SessionManager",
-            as: "/svc_for_sys/fuchsia.virtualconsole.SessionManager",
+            protocol: "fuchsia.virtualconsole.SessionManager",
+            path: "/svc_for_sys/fuchsia.virtualconsole.SessionManager",
         },
 
         // From component_manager
         {
-            protocol: "/svc/fuchsia.process.Launcher",
-            as: "/svc_for_sys/fuchsia.process.Launcher",
+            protocol: "fuchsia.process.Launcher",
+            path: "/svc_for_sys/fuchsia.process.Launcher",
         },
         {
-            protocol: "/svc/fuchsia.time.Maintenance",
-            as: "/svc_for_sys/fuchsia.time.Maintenance",
+            protocol: "fuchsia.time.Maintenance",
+            path: "/svc_for_sys/fuchsia.time.Maintenance",
         },
 
         // From v2 components
         {
-            protocol: "/svc/fuchsia.fonts.Provider",
-            as: "/svc_for_sys/fuchsia.fonts.Provider",
+            protocol: "fuchsia.fonts.Provider",
+            path: "/svc_for_sys/fuchsia.fonts.Provider",
         },
         {
-            protocol: "/svc/fuchsia.developer.remotecontrol.RemoteControl",
-            as: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
+            protocol: "fuchsia.developer.remotecontrol.RemoteControl",
+            path: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
         },
         {
-            protocol: "/svc/fuchsia.hardware.serial.NewDeviceProxy",
-            as: "/svc_for_sys/fuchsia.hardware.serial.NewDeviceProxy",
+            protocol: "fuchsia.hardware.serial.NewDeviceProxy",
+            path: "/svc_for_sys/fuchsia.hardware.serial.NewDeviceProxy",
         },
         {
             protocol: "fuchsia.thermal.test.TemperatureLogger",
@@ -203,115 +264,101 @@
 
         // From archivist
         {
-            protocol: "/svc/fuchsia.diagnostics.ArchiveAccessor",
-            as: "/svc_for_sys/fuchsia.diagnostics.ArchiveAccessor",
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            path: "/svc_for_sys/fuchsia.diagnostics.ArchiveAccessor",
         },
         {
-            protocol: "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
-            as: "/svc_for_sys/fuchsia.diagnostics.FeedbackArchiveAccessor",
+            protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            path: "/svc_for_sys/fuchsia.diagnostics.FeedbackArchiveAccessor",
         },
         {
-            protocol: "/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-            as: "/svc_for_sys/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            protocol: "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            path: "/svc_for_sys/fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
         },
         {
-            protocol: "/svc/fuchsia.logger.Log",
-            as: "/svc_for_sys/fuchsia.logger.Log",
+            protocol: "fuchsia.logger.Log",
+            path: "/svc_for_sys/fuchsia.logger.Log",
         },
 
         // From sysinfo
         {
-            protocol: "/svc/fuchsia.sysinfo.SysInfo",
-            as: "/svc_for_sys/fuchsia.sysinfo.SysInfo",
+            protocol: "fuchsia.sysinfo.SysInfo",
+            path: "/svc_for_sys/fuchsia.sysinfo.SysInfo",
         },
 
         // From test_manager
         {
-            protocol: "/svc/fuchsia.test.manager.Harness",
-            as: "/svc_for_sys/fuchsia.test.manager.Harness",
+            protocol: "fuchsia.test.manager.Harness",
+            path: "/svc_for_sys/fuchsia.test.manager.Harness",
         },
 
         // From power_manager
         {
-            protocol: "/svc/fuchsia.thermal.Controller",
-            as: "/svc_for_sys/fuchsia.thermal.Controller",
+            protocol: "fuchsia.thermal.Controller",
+            path: "/svc_for_sys/fuchsia.thermal.Controller",
         },
         {
-            protocol: "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-            as: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            path: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
         },
 
         // These services are used by appmgr directly
         {
             protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
 
                 // For triggering reboot when sysmgr exits
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
-                "/svc/fuchsia.process.Launcher",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.process.Launcher",
             ],
         },
     ],
     expose: [
         {
-            directory: "/hub",
+            directory: "hub",
             from: "self",
-            rights: [ "rw*" ],
         },
 
         // Diagnostics directory used to expose data to Archivist.
         {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
-
-        // These services exposed by appmgr are services from the v1 component
-        // runtime being made available to the v2 component runtime. These all cause
-        // dependency cycles between the two runtimes. Cycles require trickier
-        // runtime logic to ensure correctness, are a general design smell, and may
-        // be disallowed in the future.
         {
             protocol: [
-                "/svc/fuchsia.cobalt.LoggerFactory",
-                "/svc/fuchsia.exception.Handler",
-                "/svc/fuchsia.feedback.CrashReporter",
-                "/svc/fuchsia.net.NameLookup",
-                "/svc/fuchsia.net.stack.Log",
-                "/svc/fuchsia.net.stack.Stack",
-                "/svc/fuchsia.netstack.Netstack",
-                "/svc/fuchsia.overnet.Overnet",
-                "/svc/fuchsia.overnet.ServicePublisher",
-                "/svc/fuchsia.pkg.PackageResolver",
-                "/svc/fuchsia.pkg.RepositoryManager",
-                "/svc/fuchsia.pkg.rewrite.Engine",
-                "/svc/fuchsia.posix.socket.Provider",
-                "/svc/fuchsia.power.manager.DriverManagerRegistration",
-                "/svc/fuchsia.process.Resolver",
-                "/svc/fuchsia.sys.Environment",
-                "/svc/fuchsia.sys.Launcher",
-                "/svc/fuchsia.sys.Loader",
-                "/svc/fuchsia.tracing.controller.Controller",
-                "/svc/fuchsia.tracing.provider.Registry",
-                "/svc/fuchsia.wlan.service.Wlan",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.exception.Handler",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.net.NameLookup",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.overnet.Overnet",
+                "fuchsia.overnet.ServicePublisher",
                 "fuchsia.pkg.FontResolver",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
                 "fuchsia.test.manager.Harness",
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.wlan.service.Wlan",
             ],
             from: "self",
         },
         {
-            protocol: "/appmgr_svc/fuchsia.sys.internal.LogConnector",
-            from: "self",
-            as: "/svc/fuchsia.sys.internal.LogConnector",
-        },
-        {
-            protocol: "/appmgr_svc/fuchsia.sys.internal.ComponentEventProvider",
-            from: "self",
-            as: "/svc/fuchsia.sys.internal.ComponentEventProvider",
-        },
-        {
-            protocol: "fuchsia.appmgr.Startup",
+            protocol: [
+                "fuchsia.appmgr.Startup",
+                "fuchsia.sys.internal.ComponentEventProvider",
+                "fuchsia.sys.internal.LogConnector",
+            ],
             from: "self",
         },
     ],

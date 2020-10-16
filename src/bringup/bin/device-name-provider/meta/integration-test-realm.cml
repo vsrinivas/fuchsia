@@ -12,14 +12,14 @@
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.device.NameProvider",
+            protocol: "fuchsia.device.NameProvider",
             from: "#device-name-provider",
             to: [ "#integration-test" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#integration-test",
             to: "parent",
         },

@@ -67,7 +67,7 @@ fn main() {
                     entries: Some(vec![fdata::DictionaryEntry {
                         key: "path".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str(
-                            "/diagnostics".to_string(),
+                            "diagnostics".to_string(),
                         ))),
                     }]),
                 }),

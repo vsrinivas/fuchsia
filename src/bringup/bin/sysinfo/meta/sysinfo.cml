@@ -2,18 +2,22 @@
     program: {
         binary: "bin/sysinfo",
     },
+    capabilities: [
+        { protocol: "fuchsia.sysinfo.SysInfo" },
+    ],
     use: [
         { runner: "elf" },
         {
-            directory: "/dev",
+            directory: "dev",
             rights: [ "rw*" ],
+            path: "/dev",
         },
-        { protocol: "/svc/fuchsia.boot.RootResource" },
-        { protocol: "/svc/fuchsia.boot.WriteOnlyLog" },
+        { protocol: "fuchsia.boot.RootResource" },
+        { protocol: "fuchsia.boot.WriteOnlyLog" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.sysinfo.SysInfo",
+            protocol: "fuchsia.sysinfo.SysInfo",
             from: "self",
         },
     ],

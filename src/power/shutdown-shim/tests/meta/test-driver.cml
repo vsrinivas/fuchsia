@@ -2,18 +2,21 @@
     program: {
         binary: "test/shutdown_shim_integration_test",
     },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
     use: [
         { runner: "rust_test_runner" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.test.shutdownshim.Tests",
+                "fuchsia.logger.LogSink",
+                "fuchsia.test.shutdownshim.Tests",
             ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "self",
         },
     ],

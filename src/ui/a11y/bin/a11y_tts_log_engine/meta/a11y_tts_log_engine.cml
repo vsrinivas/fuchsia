@@ -6,10 +6,9 @@
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.accessibility.tts.EngineEngineRegistry",
-                "/svc/fuchsia.logger.LogSink",
+                "fuchsia.accessibility.tts.EngineEngineRegistry",
+                "fuchsia.logger.LogSink",
             ],
-            from: "parent",
         },
     ],
 }

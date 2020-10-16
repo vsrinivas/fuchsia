@@ -10,6 +10,13 @@
             url: "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/echo_server.cm",
         },
     ],
+    capabilities: [
+        {
+            directory: "pkgfs",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -19,10 +26,8 @@
     ],
     expose: [
         {
-            // TODO(fxbug.dev/56604): Switch to name-based.
-            directory: "/pkgfs",
+            directory: "pkgfs",
             from: "self",
-            rights: [ "rx*" ],
         },
     ],
 }

@@ -2,29 +2,42 @@
     program: {
         binary: "bin/a11y_manager",
     },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.accessibility.ColorTransform",
+                "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.Manager",
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.accessibility.semantics.SemanticTree",
+                "fuchsia.accessibility.SettingsManager",
+                "fuchsia.accessibility.tts.EngineRegistry",
+                "fuchsia.accessibility.tts.TtsManager",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.settings.Accessibility",
-                "/svc/fuchsia.tracing.provider.Registry",
-                "/svc/fuchsia.ui.input.accessibility.PointerEventRegistry",
+                "fuchsia.logger.LogSink",
+                "fuchsia.settings.Accessibility",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.accessibility.PointerEventRegistry",
             ],
-            from: "parent",
         },
     ],
     expose: [
         {
             protocol: [
-                "/svc/fuchsia.accessibility.ColorTransform",
-                "/svc/fuchsia.accessibility.Magnifier",
-                "/svc/fuchsia.accessibility.Manager",
-                "/svc/fuchsia.accessibility.semantics.SemanticsManager",
-                "/svc/fuchsia.accessibility.semantics.SemanticTree",
-                "/svc/fuchsia.accessibility.SettingsManager",
-                "/svc/fuchsia.accessibility.tts.EngineRegistry",
-                "/svc/fuchsia.accessibility.tts.TtsManager",
+                "fuchsia.accessibility.ColorTransform",
+                "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.Manager",
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.accessibility.semantics.SemanticTree",
+                "fuchsia.accessibility.SettingsManager",
+                "fuchsia.accessibility.tts.EngineRegistry",
+                "fuchsia.accessibility.tts.TtsManager",
             ],
             from: "self",
         },

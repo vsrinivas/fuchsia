@@ -4,12 +4,18 @@
     },
     capabilities: [
         { protocol: "fuchsia.thermal.test.TemperatureLogger" },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
     ],
     use: [
         { runner: "elf" },
         {
-            directory: "/config/data",
+            directory: "config-data",
             rights: [ "r*" ],
+            path: "/config/data",
         },
         {
             directory: "dev-temperature",
@@ -23,10 +29,10 @@
         },
         {
             protocol: [
-                "/svc/fuchsia.device.Controller",
-                "/svc/fuchsia.hardware.temperature.Device",
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.tracing.provider.Registry",
+                "fuchsia.device.Controller",
+                "fuchsia.hardware.temperature.Device",
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
             ],
         },
     ],
@@ -36,10 +42,9 @@
             from: "self",
         },
         {
-            directory: "/diagnostics",
+            directory: "diagnostics",
             from: "self",
             to: "framework",
-            rights: [ "connect" ],
         },
     ],
 }

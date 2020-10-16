@@ -16,15 +16,18 @@
             "klog",
         ],
     },
+    capabilities: [
+        { protocol: "fuchsia.hardware.pty.Device" },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.boot.RootResource" },
-        { protocol: "/svc/fuchsia.boot.WriteOnlyLog" },
-        { protocol: "/svc/fuchsia.logger.Log" },
+        { protocol: "fuchsia.boot.RootResource" },
+        { protocol: "fuchsia.boot.WriteOnlyLog" },
+        { protocol: "fuchsia.logger.Log" },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.hardware.pty.Device",
+            protocol: "fuchsia.hardware.pty.Device",
             from: "self",
         },
     ],

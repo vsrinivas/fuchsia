@@ -13,41 +13,53 @@
             url: "fuchsia-pkg://fuchsia.com/pwrbtn-monitor-integration-test#meta/test-driver.cm",
         },
     ],
+    capabilities: [
+        {
+            directory: "input",
+            rights: [ "rw*" ],
+            path: "/input",
+        },
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.test.pwrbtn.Tests",
+            ],
+        },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
     ],
     offer: [
         {
-            directory: "/input",
-            from: "self",
-            to: [ "#pwrbtn-monitor" ],
-            rights: [ "rw*" ],
-        },
-        {
-            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            directory: "input",
             from: "self",
             to: [ "#pwrbtn-monitor" ],
         },
         {
-            protocol: [ "/svc/fuchsia.test.pwrbtn.Tests" ],
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "self",
+            to: [ "#pwrbtn-monitor" ],
+        },
+        {
+            protocol: "fuchsia.test.pwrbtn.Tests",
             from: "self",
             to: [ "#test-driver" ],
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [ "#test-driver" ],
         },
         {
-            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            protocol: "fuchsia.boot.WriteOnlyLog",
             from: "parent",
             to: [ "#pwrbtn-monitor" ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#test-driver",
         },
     ],

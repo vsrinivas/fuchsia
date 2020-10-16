@@ -32,27 +32,41 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.sys2.SystemController",
+                "fuchsia.test.shutdownshim.Tests",
+            ],
+        },
+        {
+            protocol: "black_hole-fuchsia.hardware.power.statecontrol.Admin",
+            path: "/black_hole/svc/fuchsia.hardware.power.statecontrol.Admin",
+        },
+    ],
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.logger.LogSink" },
+        { protocol: "fuchsia.logger.LogSink" },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     offer: [
         {
-            protocol: [ "/svc/fuchsia.test.shutdownshim.Tests" ],
+            protocol: [ "fuchsia.test.shutdownshim.Tests" ],
             from: "self",
             to: [ "#test-driver" ],
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [ "#test-driver" ],
         },
         {
-            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            protocol: [ "fuchsia.boot.WriteOnlyLog" ],
             from: "parent",
             to: [
                 "#shutdown-shim-statecontrol-missing",
@@ -65,9 +79,9 @@
         // everything
         {
             protocol: [
-                "/svc/fuchsia.device.manager.SystemStateTransition",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
-                "/svc/fuchsia.sys2.SystemController",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.sys2.SystemController",
             ],
             from: "self",
             to: [ "#shutdown-shim-statecontrol-present" ],
@@ -77,16 +91,16 @@
         // is black holed
         {
             protocol: [
-                "/svc/fuchsia.device.manager.SystemStateTransition",
-                "/svc/fuchsia.sys2.SystemController",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.sys2.SystemController",
             ],
             from: "self",
             to: [ "#shutdown-shim-statecontrol-missing" ],
         },
         {
-            protocol: "/black_hole/svc/fuchsia.hardware.power.statecontrol.Admin",
+            protocol: "black_hole-fuchsia.hardware.power.statecontrol.Admin",
             from: "self",
-            as: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            as: "fuchsia.hardware.power.statecontrol.Admin",
             to: [ "#shutdown-shim-statecontrol-missing" ],
         },
 
@@ -94,8 +108,8 @@
         // but everything else is present
         {
             protocol: [
-                "/svc/fuchsia.device.manager.SystemStateTransition",
-                "/svc/fuchsia.sys2.SystemController",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.sys2.SystemController",
             ],
             from: "self",
             to: [ "#shutdown-shim-statecontrol-not-present" ],
@@ -103,7 +117,7 @@
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.test.Suite",
+            protocol: "fuchsia.test.Suite",
             from: "#test-driver",
         },
     ],

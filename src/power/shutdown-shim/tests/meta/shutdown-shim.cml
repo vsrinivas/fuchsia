@@ -3,20 +3,23 @@
         binary: "bin/shutdown-shim",
         lifecycle: { stop_event: "notify" },
     },
+    capabilities: [
+        { protocol: "fuchsia.hardware.power.statecontrol.Admin" },
+    ],
     use: [
         { runner: "elf" },
         {
             protocol: [
-                "/svc/fuchsia.boot.WriteOnlyLog",
-                "/svc/fuchsia.device.manager.SystemStateTransition",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
-                "/svc/fuchsia.sys2.SystemController",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.sys2.SystemController",
             ],
         },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "self",
         },
     ],
