@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 
+#include "build_info.h"
 #include "dockyard_proxy.h"
 #include "sample_bundle.h"
 #include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
@@ -56,6 +57,14 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
                              now.time_since_epoch())
                              .count();
   request.set_device_time_ns(nanoseconds);
+
+  BuildInfoValue version = GetFuchsiaBuildVersion();
+  if (version.HasValue()) {
+    request.set_fuchsia_version(version.Value());
+  } else {
+    request.set_fuchsia_version("UNKNOWN");
+  }
+
   dockyard_proto::InitReply reply;
 
   grpc::ClientContext context;

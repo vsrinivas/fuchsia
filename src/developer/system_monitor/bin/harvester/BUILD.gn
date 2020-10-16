@@ -17,6 +17,8 @@ group("harvester") {
 
 source_set("lib") {
   sources = [
+    "build_info.cc",
+    "build_info.h",
     "dockyard_proxy.cc",
     "dockyard_proxy.h",
     "dockyard_proxy_grpc.cc",
@@ -59,6 +61,7 @@ source_set("lib") {
     "//src/developer/memory/metrics",
     "//src/developer/system_monitor/lib/dockyard:lib",
     "//src/developer/system_monitor/lib/dockyard:proto",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
@@ -109,6 +112,7 @@ executable("system_monitor_harvester_test") {
   testonly = true
 
   sources = [
+    "build_info_test.cc",
     "dockyard_proxy_fake.cc",
     "dockyard_proxy_fake.h",
     "dockyard_proxy_grpc_test.cc",

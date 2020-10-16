@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "build-info",
             "hub"
         ],
         "services": [
