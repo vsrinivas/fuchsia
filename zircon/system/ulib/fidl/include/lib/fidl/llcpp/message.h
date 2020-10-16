@@ -111,13 +111,17 @@ class OutgoingMessage final : public ::fidl::Result {
   uint32_t handle_capacity_;
 };
 
+namespace internal {
+
 // Class representing a FIDL message on the read path.
 // Each instantiation of the class should only be used for one message.
-class IncomingMessage final : public ::fidl::Result {
+class IncomingMessage : public ::fidl::Result {
  public:
   // Creates an object which can manage a FIDL message. Allocated memory is not owned by
   // the |IncomingMessage|, but handles are owned by it and cleaned up when the
   // |IncomingMessage| is destructed.
+  // If Decode has been called, the handles have been transferred to the allocated memory.
+  IncomingMessage();
   IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
                   zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual);
   explicit IncomingMessage(const fidl_incoming_msg_t* msg)
@@ -142,9 +146,10 @@ class IncomingMessage final : public ::fidl::Result {
   uint32_t handle_capacity() const { return handle_capacity_; }
   fidl_incoming_msg_t* message() { return &message_; }
 
-  // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
-  // when interfacing with low-level channel operations which consume the handles.
-  void ReleaseHandles() { message_.num_handles = 0; }
+ protected:
+  // Initialize the |IncomingMessage| from an |OutgoingMessage|. The handles within
+  // |OutgoingMessage| are transferred to the |IncomingMessage|.
+  void Init(OutgoingMessage& outgoing_message, zx_handle_t* handles, uint32_t handle_capacity);
 
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
@@ -160,16 +165,33 @@ class IncomingMessage final : public ::fidl::Result {
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type);
 
+  // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
+  // when interfacing with low-level channel operations which consume the handles.
+  void ReleaseHandles() { message_.num_handles = 0; }
+
   fidl_incoming_msg_t message_;
   uint32_t byte_capacity_;
   uint32_t handle_capacity_;
 };
 
+}  // namespace internal
+
+// This class owns a message of |FidlType| and encodes the message automatically upon construction.
 template <typename FidlType>
 using OwnedOutgoingMessage = typename FidlType::OwnedOutgoingMessage;
 
+// This class manages the handles within |FidlType| and encodes the message automatically upon
+// construction. Different from |OwnedOutgoingMessage|, it takes in a caller-allocated buffer and
+// uses that as the backing storage for the message. The buffer must outlive instances of this
+// class.
 template <typename FidlType>
 using UnownedOutgoingMessage = typename FidlType::UnownedOutgoingMessage;
+
+// This class manages the handles within |FidlType| and decodes the message automatically upon
+// construction. It always borrows external buffers for the backing storage of the message.
+// This class should mostly be used for tests.
+template <typename FidlType>
+using IncomingMessage = typename FidlType::IncomingMessage;
 
 }  // namespace fidl
 

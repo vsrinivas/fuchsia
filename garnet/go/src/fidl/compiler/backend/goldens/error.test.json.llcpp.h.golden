@@ -218,6 +218,39 @@ struct Example_foo_Response {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Example_foo_Response* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Example_foo_Response*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Example_foo_Response>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
@@ -310,6 +343,39 @@ class Example final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      fooResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<fooResponse*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<fooResponse>();
+        }
+      }
+    };
+
    private:
     void _InitHeader();
   };
@@ -400,6 +466,39 @@ class Example final {
       std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
           bytes_;
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      fooRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<fooRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<fooRequest>();
+        }
+      }
     };
 
    private:

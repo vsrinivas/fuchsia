@@ -292,6 +292,42 @@ class {{ .Name }} final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      {{ .Name }}Response* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<{{ .Name }}Response*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message and copying the
+      // handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      {{- if gt .ResponseMaxHandles 0 }}
+        zx_handle_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+      {{- else }}
+        Init(outgoing_message, nullptr, 0);
+      {{- end }}
+        if (ok()) {
+          Decode<{{ .Name }}Response>();
+        }
+      }
+    };
+
    private:
     void _InitHeader();
   };
@@ -436,6 +472,42 @@ class {{ .Name }} final {
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       {{- end }}
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      {{ .Name }}Request* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<{{ .Name }}Request*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message and copying the
+      // handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      {{- if gt .RequestMaxHandles 0 }}
+        zx_handle_t handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+      {{- else }}
+        Init(outgoing_message, nullptr, 0);
+      {{- end }}
+        if (ok()) {
+          Decode<{{ .Name }}Request>();
+        }
+      }
     };
 
    private:

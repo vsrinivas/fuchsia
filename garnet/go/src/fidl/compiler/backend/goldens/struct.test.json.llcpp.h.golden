@@ -99,6 +99,39 @@ struct Simple {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Simple* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Simple*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Simple>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_BasicStructTable;
@@ -161,6 +194,39 @@ struct BasicStruct {
     std::unique_ptr<::fidl::internal::AlignedBuffer<ZX_CHANNEL_MAX_MSG_BYTES>>
         bytes_;
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct BasicStruct* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct BasicStruct*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct BasicStruct>();
+      }
+    }
   };
 };
 

@@ -116,6 +116,39 @@ struct Padding7ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding7ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding7ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding7ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
@@ -177,6 +210,39 @@ struct Padding7ByteEnd {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding7ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding7ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding7ByteEnd>();
+      }
+    }
   };
 };
 
@@ -241,6 +307,39 @@ struct Padding6ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding6ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding6ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding6ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
@@ -302,6 +401,39 @@ struct Padding6ByteEnd {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding6ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding6ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding6ByteEnd>();
+      }
+    }
   };
 };
 
@@ -368,6 +500,39 @@ struct Padding5ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding5ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding5ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding5ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
@@ -432,6 +597,39 @@ struct Padding5ByteEnd {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding5ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding5ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding5ByteEnd>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
@@ -495,6 +693,39 @@ struct Padding4ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding4ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding4ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding4ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
@@ -556,6 +787,39 @@ struct Padding4ByteEnd {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding4ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding4ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding4ByteEnd>();
+      }
+    }
   };
 };
 
@@ -625,6 +889,39 @@ struct Padding4ByteAlignmentLength12 {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding4ByteAlignmentLength12* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding4ByteAlignmentLength12*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding4ByteAlignmentLength12>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
@@ -688,6 +985,39 @@ struct Padding3ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding3ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding3ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding3ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
@@ -749,6 +1079,39 @@ struct Padding3ByteEnd {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding3ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding3ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding3ByteEnd>();
+      }
+    }
   };
 };
 
@@ -813,6 +1176,39 @@ struct Padding2ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding2ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding2ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding2ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
@@ -874,6 +1270,39 @@ struct Padding2ByteEnd {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding2ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding2ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding2ByteEnd>();
+      }
+    }
   };
 };
 
@@ -941,6 +1370,39 @@ struct Padding2ByteAlignmentLength6 {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding2ByteAlignmentLength6* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding2ByteAlignmentLength6*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding2ByteAlignmentLength6>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
@@ -1004,6 +1466,39 @@ struct Padding1ByteMiddle {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding1ByteMiddle* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding1ByteMiddle*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding1ByteMiddle>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
@@ -1065,6 +1560,39 @@ struct Padding1ByteEnd {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Padding1ByteEnd* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Padding1ByteEnd*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Padding1ByteEnd>();
+      }
+    }
   };
 };
 

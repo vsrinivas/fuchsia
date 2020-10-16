@@ -443,6 +443,39 @@ struct SandwichUnionSize8Alignment4 {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct SandwichUnionSize8Alignment4* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct SandwichUnionSize8Alignment4*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct SandwichUnionSize8Alignment4>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t
@@ -508,6 +541,39 @@ struct SandwichUnionSize36Alignment4 {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct SandwichUnionSize36Alignment4* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct SandwichUnionSize36Alignment4*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct SandwichUnionSize36Alignment4>();
+      }
+    }
   };
 };
 
@@ -575,6 +641,39 @@ struct SandwichUnionSize12Alignment4 {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct SandwichUnionSize12Alignment4* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct SandwichUnionSize12Alignment4*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct SandwichUnionSize12Alignment4>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t
@@ -638,6 +737,39 @@ struct StructSize16Alignment8 {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct StructSize16Alignment8* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct StructSize16Alignment8*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct StructSize16Alignment8>();
+      }
+    }
   };
 };
 
@@ -704,6 +836,39 @@ struct SandwichUnionSize24Alignment8 {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct SandwichUnionSize24Alignment8* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct SandwichUnionSize24Alignment8*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct SandwichUnionSize24Alignment8>();
+      }
+    }
   };
 };
 

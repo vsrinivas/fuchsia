@@ -141,6 +141,42 @@ class Parent final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      GetChildResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetChildResponse*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        zx_handle_t
+            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles,
+             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+        if (ok()) {
+          Decode<GetChildResponse>();
+        }
+      }
+    };
+
    private:
     void _InitHeader();
   };
@@ -225,6 +261,39 @@ class Parent final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      GetChildRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetChildRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<GetChildRequest>();
+        }
+      }
     };
 
    private:
@@ -321,6 +390,42 @@ class Parent final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      GetChildRequestResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetChildRequestResponse*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        zx_handle_t
+            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles,
+             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+        if (ok()) {
+          Decode<GetChildRequestResponse>();
+        }
+      }
+    };
+
    private:
     void _InitHeader();
   };
@@ -406,6 +511,39 @@ class Parent final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      GetChildRequestRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetChildRequestRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<GetChildRequestRequest>();
+        }
+      }
     };
 
    private:
@@ -499,6 +637,42 @@ class Parent final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      TakeChildRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<TakeChildRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        zx_handle_t
+            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles,
+             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+        if (ok()) {
+          Decode<TakeChildRequest>();
+        }
+      }
     };
 
    private:
@@ -595,6 +769,42 @@ class Parent final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      TakeChildRequestRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<TakeChildRequestRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        zx_handle_t
+            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles,
+             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+        if (ok()) {
+          Decode<TakeChildRequestRequest>();
+        }
+      }
     };
 
    private:

@@ -2430,6 +2430,39 @@ struct StructWithNullableXUnion {
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct StructWithNullableXUnion* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct StructWithNullableXUnion*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct StructWithNullableXUnion>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_PizzaTable;
@@ -2490,6 +2523,39 @@ struct Pizza {
         bytes_;
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Pizza* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Pizza*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Pizza>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_PastaTable;
@@ -2547,6 +2613,39 @@ struct Pasta {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Pasta* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Pasta*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Pasta>();
+      }
+    }
   };
 };
 
@@ -2659,6 +2758,40 @@ class TestProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<StrictXUnionHenceResponseMayBeStackAllocatedResponse>();
+        }
+      }
+    };
+
    private:
     void _InitHeader();
   };
@@ -2762,6 +2895,40 @@ class TestProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            StrictXUnionHenceResponseMayBeStackAllocatedRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<StrictXUnionHenceResponseMayBeStackAllocatedRequest>();
+        }
+      }
+    };
+
    private:
     void _InitHeader(zx_txid_t _txid);
   };
@@ -2860,6 +3027,40 @@ class TestProtocol final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>();
+        }
+      }
     };
 
    private:
@@ -2963,6 +3164,40 @@ class TestProtocol final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>();
+        }
+      }
     };
 
    private:
@@ -3487,6 +3722,39 @@ struct NullableUnionStruct {
         bytes_;
     UnownedOutgoingMessage message_;
   };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct NullableUnionStruct* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct NullableUnionStruct*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct NullableUnionStruct>();
+      }
+    }
+  };
 };
 
 extern "C" const fidl_type_t fidl_test_json_EmptyTable;
@@ -3544,6 +3812,39 @@ struct Empty {
     FIDL_ALIGNDECL
     uint8_t bytes_[PrimarySize + MaxOutOfLine];
     UnownedOutgoingMessage message_;
+  };
+
+  class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    IncomingMessage(const IncomingMessage&) = delete;
+    IncomingMessage(IncomingMessage&&) = delete;
+    IncomingMessage* operator=(const IncomingMessage&) = delete;
+    IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+    struct Empty* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct Empty*>(bytes());
+    }
+
+    // These methods should only be used for testing purpose.
+    // They create an IncomingMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        UnownedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+    static IncomingMessage FromOutgoingWithRawHandleCopy(
+        OwnedOutgoingMessage* outgoing_message) {
+      return IncomingMessage(outgoing_message->GetOutgoingMessage());
+    }
+
+   private:
+    IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct Empty>();
+      }
+    }
   };
 };
 

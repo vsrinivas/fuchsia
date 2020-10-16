@@ -134,6 +134,39 @@ class SecondProtocol final {
       UnownedOutgoingMessage message_;
     };
 
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      MethodOnSecondRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<MethodOnSecondRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<MethodOnSecondRequest>();
+        }
+      }
+    };
+
    private:
     void _InitHeader(zx_txid_t _txid);
   };
@@ -346,6 +379,39 @@ class FirstProtocol final {
       FIDL_ALIGNDECL
       uint8_t bytes_[PrimarySize + MaxOutOfLine];
       UnownedOutgoingMessage message_;
+    };
+
+    class IncomingMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      IncomingMessage(const IncomingMessage&) = delete;
+      IncomingMessage(IncomingMessage&&) = delete;
+      IncomingMessage* operator=(const IncomingMessage&) = delete;
+      IncomingMessage* operator=(IncomingMessage&&) = delete;
+
+      MethodOnFirstRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<MethodOnFirstRequest*>(bytes());
+      }
+
+      // These methods should only be used for testing purpose.
+      // They create an IncomingMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          UnownedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static IncomingMessage FromOutgoingWithRawHandleCopy(
+          OwnedOutgoingMessage* outgoing_message) {
+        return IncomingMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      IncomingMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<MethodOnFirstRequest>();
+        }
+      }
     };
 
    private:

@@ -98,6 +98,10 @@ void OutgoingMessage::Call(const fidl_type_t* response_type, zx_handle_t channel
   return ::fidl::Result(status_, error_);
 }
 
+namespace internal {
+
+IncomingMessage::IncomingMessage() : ::fidl::Result(ZX_OK, nullptr) {}
+
 IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
                                  zx_handle_t* handles, uint32_t handle_capacity,
                                  uint32_t handle_actual)
@@ -119,9 +123,30 @@ IncomingMessage::~IncomingMessage() {
   }
 }
 
+void IncomingMessage::Init(OutgoingMessage& outgoing_message, zx_handle_t* handles,
+                           uint32_t handle_capacity) {
+  message_.bytes = outgoing_message.bytes();
+  message_.handles = handles;
+  message_.num_bytes = outgoing_message.byte_actual();
+  message_.num_handles = 0;
+  byte_capacity_ = outgoing_message.byte_capacity();
+  handle_capacity_ = handle_capacity;
+  if (outgoing_message.handle_actual() > handle_capacity_) {
+    SetResult(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall);
+  } else {
+    for (uint32_t i = 0; i < outgoing_message.handle_actual(); ++i) {
+      message_.handles[i] = outgoing_message.handles()[i];
+    }
+    message_.num_handles = outgoing_message.handle_actual();
+    outgoing_message.ReleaseHandles();
+  }
+}
+
 void IncomingMessage::Decode(const fidl_type_t* message_type) {
   status_ = fidl_decode(message_type, bytes(), byte_actual(), handles(), handle_actual(), &error_);
   ReleaseHandles();
 }
+
+}  // namespace internal
 
 }  // namespace fidl
