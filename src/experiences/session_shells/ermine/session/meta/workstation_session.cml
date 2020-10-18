@@ -12,40 +12,44 @@
             durability: "transient",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.session.ElementManager" },
+    ],
     use: [
         { runner: "elf" },
         {
-            directory: "/dev/class/input-report",
+            directory: "dev-input-report",
             rights: [ "r*" ],
+            path: "/dev/class/input-report",
         },
         {
-            protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
         {
             protocol: [
-                "/svc/fuchsia.logger.LogSink",
-                "/svc/fuchsia.sys.Launcher",
-                "/svc/fuchsia.ui.focus.FocusChainListenerRegistry",
-                "/svc/fuchsia.ui.input.ImeService",
-                "/svc/fuchsia.ui.input2.Keyboard",
-                "/svc/fuchsia.ui.input3.Keyboard",
-                "/svc/fuchsia.ui.scenic.Scenic",
-                "/svc/fuchsia.ui.shortcut.Manager",
-                "/svc/fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Launcher",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input2.Keyboard",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.views.ViewRefInstalled",
             ],
         },
     ],
     offer: [
         {
-            protocol: "/svc/fuchsia.session.ElementManager",
+            protocol: "fuchsia.session.ElementManager",
             from: "self",
             to: [ "#element_launchers" ],
         },
     ],
     expose: [
         {
-            protocol: [ "/svc/fuchsia.session.ElementManager" ],
+            protocol: "fuchsia.session.ElementManager",
             from: "self",
         },
     ],
