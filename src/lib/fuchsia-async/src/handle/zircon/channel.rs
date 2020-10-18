@@ -8,7 +8,7 @@ use std::io;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf};
+use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf, MessageBufEtc};
 use futures::ready;
 
 use crate::RWHandle;
@@ -68,6 +68,27 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
+    ///
+    /// Identical to `recv_etc_from` except takes separate bytes and handles
+    /// buffers rather than a single `MessageBufEtc`.
+    pub fn read_etc(
+        &self,
+        cx: &mut Context<'_>,
+        bytes: &mut Vec<u8>,
+        handles: &mut Vec<zx::HandleInfo>,
+    ) -> Poll<Result<(), zx::Status>> {
+        let clear_closed = ready!(self.0.poll_read(cx))?;
+
+        let res = self.0.get_ref().read_etc_split(bytes, handles);
+        if res == Err(zx::Status::SHOULD_WAIT) {
+            self.0.need_read(cx, clear_closed)?;
+            return Poll::Pending;
+        }
+        Poll::Ready(res)
+    }
+
+    /// Receives a message on the channel and registers this `Channel` as
+    /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
     pub fn recv_from(
         &self,
         cx: &mut Context<'_>,
@@ -75,6 +96,17 @@ impl Channel {
     ) -> Poll<Result<(), zx::Status>> {
         let (bytes, handles) = buf.split_mut();
         self.read(cx, bytes, handles)
+    }
+
+    /// Receives a message on the channel and registers this `Channel` as
+    /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
+    pub fn recv_etc_from(
+        &self,
+        cx: &mut Context<'_>,
+        buf: &mut MessageBufEtc,
+    ) -> Poll<Result<(), zx::Status>> {
+        let (bytes, handles) = buf.split_mut();
+        self.read_etc(cx, bytes, handles)
     }
 
     /// Creates a future that receive a message to be written to the buffer
@@ -86,9 +118,27 @@ impl Channel {
         RecvMsg { channel: self, buf }
     }
 
+    /// Creates a future that receive a message to be written to the buffer
+    /// provided.
+    ///
+    /// The returned future will return after a message has been received on
+    /// this socket and been placed into the buffer.
+    pub fn recv_etc_msg<'a>(&'a self, buf: &'a mut MessageBufEtc) -> RecvEtcMsg<'a> {
+        RecvEtcMsg { channel: self, buf }
+    }
+
     /// Writes a message into the channel.
     pub fn write(&self, bytes: &[u8], handles: &mut [zx::Handle]) -> Result<(), zx::Status> {
         self.0.get_ref().write(bytes, handles)
+    }
+
+    /// Writes a message into the channel.
+    pub fn write_etc(
+        &self,
+        bytes: &[u8],
+        handles: &mut [zx::HandleDisposition<'_>],
+    ) -> Result<(), zx::Status> {
+        self.0.get_ref().write_etc(bytes, handles)
     }
 
     /// Consumes self and returns the underlying zx::Channel
@@ -118,6 +168,23 @@ impl<'a> Future for RecvMsg<'a> {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         this.channel.recv_from(cx, this.buf)
+    }
+}
+/// A future used to receive a message from a channel.
+///
+/// This is created by the `Channel::recv_etc_msg` method.
+#[must_use = "futures do nothing unless polled"]
+pub struct RecvEtcMsg<'a> {
+    channel: &'a Channel,
+    buf: &'a mut MessageBufEtc,
+}
+
+impl<'a> Future for RecvEtcMsg<'a> {
+    type Output = Result<(), zx::Status>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = &mut *self;
+        this.channel.recv_etc_from(cx, this.buf)
     }
 }
 
@@ -153,6 +220,29 @@ mod tests {
     }
 
     #[test]
+    fn can_receive_etc() {
+        let mut exec = Executor::new().unwrap();
+        let bytes = &[0, 1, 2, 3];
+
+        let (tx, rx) = zx::Channel::create().unwrap();
+        let f_rx = Channel::from_channel(rx).unwrap();
+
+        let receiver = async move {
+            let mut buffer = MessageBufEtc::new();
+            f_rx.recv_etc_msg(&mut buffer).await.expect("failed to receive message");
+            assert_eq!(bytes, buffer.bytes());
+        };
+        pin_mut!(receiver);
+
+        assert!(exec.run_until_stalled(&mut receiver).is_pending());
+
+        let mut handles = Vec::new();
+        tx.write_etc(bytes, &mut handles).expect("failed to write message");
+
+        assert!(exec.run_until_stalled(&mut receiver).is_ready());
+    }
+
+    #[test]
     fn key_reuse() {
         let mut exec = Executor::new().unwrap();
         let (tx0, rx0) = zx::Channel::create().unwrap();
@@ -165,6 +255,25 @@ mod tests {
         let receiver = async move {
             let mut buffer = MessageBuf::new();
             f_rx1.recv_msg(&mut buffer).await.expect("failed to receive message");
+        };
+        pin_mut!(receiver);
+
+        assert!(exec.run_until_stalled(&mut receiver).is_pending());
+    }
+
+    #[test]
+    fn key_reuse_etc() {
+        let mut exec = Executor::new().unwrap();
+        let (tx0, rx0) = zx::Channel::create().unwrap();
+        let (_tx1, rx1) = zx::Channel::create().unwrap();
+        let f_rx0 = Channel::from_channel(rx0).unwrap();
+        mem::drop(tx0);
+        mem::drop(f_rx0);
+        let f_rx1 = Channel::from_channel(rx1).unwrap();
+        // f_rx0 and f_rx1 use the same key.
+        let receiver = async move {
+            let mut buffer = MessageBufEtc::new();
+            f_rx1.recv_etc_msg(&mut buffer).await.expect("failed to receive message");
         };
         pin_mut!(receiver);
 
