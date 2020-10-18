@@ -23,6 +23,7 @@
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace symbolizer {
@@ -87,6 +88,10 @@ void SymbolizerImpl::Reset() {
   modules_.clear();
   aux_modules_info_.clear();
   if (target_->GetState() == zxdb::Target::State::kRunning) {
+    // OnProcessExiting() will destroy the Process, ProcessSymbols but we still keep references
+    // to ModuleSymbols in TargetSymbols.
+    // We should be able to use target_->GetSymbols(). However, it returns a const pointer.
+    target_->GetProcess()->GetSymbols()->target_symbols()->RemoveAllModules();
     target_->OnProcessExiting(0);
   }
 }
