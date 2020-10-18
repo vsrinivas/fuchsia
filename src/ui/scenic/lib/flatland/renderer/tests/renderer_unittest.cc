@@ -346,7 +346,7 @@ TEST_F(NullRendererTest, DeregistrationTest) {
   DeregistrationTest(&renderer, sysmem_allocator_.get());
 }
 
-TEST_F(NullRendererTest, MultithreadingTest) {
+TEST_F(NullRendererTest, DISABLED_MultithreadingTest) {
   NullRenderer renderer;
   MultithreadingTest(&renderer);
 }
@@ -396,7 +396,7 @@ VK_TEST_F(VulkanRendererTest, DeregistrationTest) {
   DeregistrationTest(&renderer, sysmem_allocator_.get());
 }
 
-VK_TEST_F(VulkanRendererTest, MulithtreadingTest) {
+VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
