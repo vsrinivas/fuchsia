@@ -1,0 +1,66 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera.gym;
+
+const uint32 MAX_COMMAND_ITEMS = 64;
+
+/// CommandError is the return status for the transactions between the camera-gym CLI front end and
+/// the instance of camera-gym running.
+enum CommandError {
+    OUT_OF_RANGE = 1; // Argument value out of range
+};
+
+/// "clear" command shall clear the stored command list.
+struct ClearCommand {
+};
+
+/// "sleep-ms" command shall delay execution of the next command.
+struct SleepMsCommand {
+    uint32 delay; // How long to wait in milliseconds
+};
+
+/// "set-config" command shall call SetCurrentConfiguration for current camera.
+struct SetConfigCommand {
+    uint32 config_id; // Which configuration?
+    bool sync; // Wait until operation completes
+};
+
+/// "add-stream" command shall add the specified stream to the collage.
+struct AddStreamCommand {
+    uint32 stream_id; // Which stream?
+    bool sync; // Wait until operation completes
+};
+
+/// "set-crop" command shall set the crop region for the specified stream.
+struct SetCropCommand {
+    uint32 stream_id; // Which stream?
+    float32 x; // Crop region
+    float32 y; // Crop region
+    float32 width; // Crop region
+    float32 height; // Crop region
+    bool sync; // Wait until operation completes
+};
+
+/// "set-resolution" command shall set the output resolution for the specified stream.
+struct SetResolutionCommand {
+    uint32 stream_id; // Which stream?
+    uint32 width; // New resolution
+    uint32 height; // New resolution
+    bool sync; // Wait until operation completes
+};
+
+union Command {
+    1: ClearCommand clear;
+    2: SleepMsCommand sleep_ms;
+    3: SetConfigCommand set_config;
+    4: AddStreamCommand add_stream;
+    5: SetCropCommand set_crop;
+    6: SetResolutionCommand set_resolution;
+};
+
+[Discoverable]
+protocol Controller {
+    SendCommands(vector<Command>:MAX_COMMAND_ITEMS commands) -> () error CommandError;
+};

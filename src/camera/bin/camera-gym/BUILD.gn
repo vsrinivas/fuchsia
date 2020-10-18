@@ -61,7 +61,7 @@ source_set("lib") {
 }
 
 executable("bin") {
-  output_name = name
+  output_name = "camera-gym"
 
   sources = [ "main.cc" ]
 
@@ -99,11 +99,13 @@ if (internal_access) {
   }
 }
 
-package("${name}") {
+package("camera-gym-pkg") {
   deps = [
     ":bin",
     ":mute_icon",
   ]
+
+  package_name = "camera-gym"
 
   binaries = [
     {
@@ -130,12 +132,19 @@ package("${name}") {
 
   meta = [
     {
-      path = "${name}.cmx"
-      dest = "${name}.cmx"
+      path = "camera-gym.cmx"
+      dest = "camera-gym.cmx"
     },
     {
-      path = "${name}-manual.cmx"
-      dest = "${name}-manual.cmx"
+      path = "camera-gym-manual.cmx"
+      dest = "camera-gym-manual.cmx"
     },
+  ]
+}
+
+group("camera-gym") {
+  public_deps = [
+    ":camera-gym-pkg",
+    "fidl:controller",
   ]
 }
