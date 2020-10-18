@@ -42,7 +42,7 @@ pub trait Installer {
     /// indication via the Future.
     fn perform_install<'a>(
         &'a mut self,
-        install_plan: &'a Self::InstallPlan,
+        install_plan: &Self::InstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
     ) -> BoxFuture<'a, Result<(), Self::Error>>;
 

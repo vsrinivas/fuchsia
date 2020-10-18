@@ -10,7 +10,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.update.installer.Installer"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

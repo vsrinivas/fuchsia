@@ -3,18 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context as _, Error},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_update::{
         CheckOptions, Initiator, ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest,
         MonitorRequestStream,
     },
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
     fidl_fuchsia_update_ext::State,
-    fidl_fuchsia_update_installer::{InstallerMarker, RebootControllerMarker},
-    fidl_fuchsia_update_installer_ext::{self as installer, start_update, Options, StateId},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_component::client::{connect_to_service, AppBuilder},
     futures::prelude::*,
 };
 
@@ -101,53 +98,23 @@ async fn handle_check_now_cmd(
     Ok(())
 }
 
-async fn force_install(
-    update_pkg_url: String,
-    reboot: bool,
-    service_initiated: bool,
-) -> Result<(), Error> {
-    let pkgurl = PkgUrl::parse(&update_pkg_url).context("parsing update package url")?;
-
-    let options = Options {
-        initiator: if service_initiated {
-            installer::Initiator::Service
-        } else {
-            installer::Initiator::User
-        },
-        should_write_recovery: true,
-        allow_attach_to_existing_attempt: true,
-    };
-
-    let proxy = connect_to_service::<InstallerMarker>()
-        .context("connecting to fuchsia.update.installer")?;
-
-    let (reboot_controller, reboot_controller_server_end) =
-        fidl::endpoints::create_proxy::<RebootControllerMarker>()
-            .context("creating reboot controller")?;
-
-    let mut update_attempt =
-        start_update(&pkgurl, options, &proxy, Some(reboot_controller_server_end))
-            .await
-            .context("starting update")?;
-
-    println!("Installing an update.");
-    if !reboot {
-        reboot_controller.detach().context("notify installer do not reboot")?;
-    }
-    while let Some(state) = update_attempt.try_next().await.context("getting next state")? {
-        println!("State: {:?}", state);
-        if state.id() == StateId::WaitToReboot {
-            if reboot {
-                return Ok(());
-            }
-        } else if state.is_success() {
-            return Ok(());
-        } else if state.is_failure() {
-            anyhow::bail!("Encountered failure state");
-        }
-    }
-
-    Err(anyhow!("Installation ended unexpectedly"))
+async fn force_install(update_pkg_url: String, reboot: bool) -> Result<(), Error> {
+    AppBuilder::new("fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx")
+        .arg("--update")
+        .arg(update_pkg_url)
+        .arg("--initiator")
+        .arg("manual")
+        .arg("--reboot")
+        .arg(reboot.to_string())
+        .arg("--oneshot")
+        .arg("true")
+        .spawn(&fuchsia_component::client::launcher()?)
+        .context("spawning the system updater")?
+        .wait()
+        .await
+        .context("waiting for the system updater")?
+        .ok()
+        .context("system updater exited with error")
 }
 
 async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
@@ -164,7 +131,7 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
             handle_check_now_cmd(check_now, update_manager).await?;
         }
         args::Command::ForceInstall(args) => {
-            force_install(args.update_pkg_url, args.reboot, args.service_initiated).await?;
+            force_install(args.update_pkg_url, args.reboot).await?;
         }
     }
     Ok(())

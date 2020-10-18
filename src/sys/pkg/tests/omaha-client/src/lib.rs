@@ -14,8 +14,7 @@ use {
         State, UpdateInfo,
     },
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
-    fidl_fuchsia_update_installer::InstallerMarker,
-    fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
@@ -25,17 +24,12 @@ use {
     },
     fuchsia_pkg_testing::{get_inspect_hierarchy, make_packages_json},
     fuchsia_zircon::{self as zx, Status},
-    futures::{
-        channel::{mpsc, oneshot},
-        prelude::*,
-    },
+    futures::{channel::oneshot, prelude::*},
     matches::assert_matches,
-    mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
-    serde_json::json,
     std::{
         fs::{self, create_dir, File},
         path::PathBuf,
@@ -46,7 +40,6 @@ use {
 
 const OMAHA_CLIENT_CMX: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
-const SYSTEM_UPDATER_CMX: &str = "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx";
 
 struct Mounts {
     _test_dir: TempDir,
@@ -75,11 +68,6 @@ impl Mounts {
         fs::write(appid_path, appid).expect("write omaha_app_id");
     }
 
-    fn write_policy_config(&self, config: impl AsRef<[u8]>) {
-        let config_path = self.config_data.join("policy_config.json");
-        fs::write(config_path, config).expect("write policy_config.json");
-    }
-
     fn write_version(&self, version: impl AsRef<[u8]>) {
         let version_path = self.build_info.join("version");
         fs::write(version_path, version).expect("write version");
@@ -96,7 +84,6 @@ struct TestEnvBuilder {
     paver: MockPaverService,
     response: OmahaResponse,
     version: String,
-    installer: Option<MockUpdateInstallerService>,
 }
 
 impl TestEnvBuilder {
@@ -105,24 +92,19 @@ impl TestEnvBuilder {
             paver: MockPaverServiceBuilder::new().build(),
             response: OmahaResponse::NoUpdate,
             version: "0.1.2.3".to_string(),
-            installer: None,
         }
     }
 
     fn paver(self, paver: MockPaverService) -> Self {
-        Self { paver, ..self }
+        Self { paver, response: self.response, version: self.version }
     }
 
     fn response(self, response: OmahaResponse) -> Self {
-        Self { response, ..self }
+        Self { paver: self.paver, response, version: self.version }
     }
 
     fn version(self, version: impl Into<String>) -> Self {
-        Self { version: version.into(), ..self }
-    }
-
-    fn installer(self, installer: MockUpdateInstallerService) -> Self {
-        Self { installer: Some(installer), ..self }
+        Self { paver: self.paver, response: self.response, version: version.into() }
     }
 
     fn build(self) -> TestEnv {
@@ -137,12 +119,6 @@ impl TestEnvBuilder {
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
         mounts.write_version(self.version);
-        mounts.write_policy_config(
-            json!({
-                "startup_delay_seconds": 9999,
-            })
-            .to_string(),
-        );
 
         let paver = Arc::new(self.paver);
         fs.add_fidl_service(move |stream: PaverRequestStream| {
@@ -174,36 +150,9 @@ impl TestEnvBuilder {
         });
 
         let nested_environment_label = Self::make_nested_environment_label();
-
-        let (system_updater, env) = match self.installer {
-            Some(installer) => {
-                let installer = Arc::new(installer);
-                let installer_clone = Arc::clone(&installer);
-                fs.add_fidl_service(move |stream| {
-                    fasync::Task::spawn(Arc::clone(&installer_clone).run_service(stream)).detach()
-                });
-                let env = fs
-                    .create_nested_environment(&nested_environment_label)
-                    .expect("nested environment to create successfully");
-                (SystemUpdater::Mock(installer), env)
-            }
-            None => {
-                let mut system_updater = AppBuilder::new(SYSTEM_UPDATER_CMX);
-                fs.add_proxy_service_to::<InstallerMarker, _>(
-                    system_updater.directory_request().unwrap().clone(),
-                );
-
-                let env = fs
-                    .create_nested_environment(&nested_environment_label)
-                    .expect("nested environment to create successfully");
-                (
-                    SystemUpdater::Real(
-                        system_updater.spawn(env.launcher()).expect("system_updater to launch"),
-                    ),
-                    env,
-                )
-            }
-        };
+        let env = fs
+            .create_nested_environment(&nested_environment_label)
+            .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
 
         let omaha_client = AppBuilder::new(OMAHA_CLIENT_CMX)
@@ -234,7 +183,6 @@ impl TestEnvBuilder {
                     .expect("connect to channel control"),
             },
             _omaha_client: omaha_client,
-            _system_updater: system_updater,
             nested_environment_label,
         }
     }
@@ -247,35 +195,43 @@ impl TestEnvBuilder {
     }
 }
 
-enum SystemUpdater {
-    Real(App),
-    Mock(Arc<MockUpdateInstallerService>),
-}
-
 struct TestEnv {
     _env: NestedEnvironment,
     _mounts: Mounts,
     proxies: Proxies,
     _omaha_client: App,
-    _system_updater: SystemUpdater,
     nested_environment_label: String,
 }
 
 impl TestEnv {
     async fn check_now(&self) -> MonitorRequestStream {
-        let options = CheckOptions {
-            initiator: Some(Initiator::User),
-            allow_attaching_to_existing_update_check: Some(false),
-        };
-        let (client_end, stream) =
-            fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
-        self.proxies
-            .update_manager
-            .check_now(options, Some(client_end))
-            .await
-            .expect("make check_now call")
-            .expect("check started");
-        stream
+        for _ in 0..20u8 {
+            let options = CheckOptions {
+                initiator: Some(Initiator::User),
+                allow_attaching_to_existing_update_check: Some(false),
+            };
+            let (client_end, stream) =
+                fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
+            match self
+                .proxies
+                .update_manager
+                .check_now(options, Some(client_end))
+                .await
+                .expect("check_now")
+            {
+                Ok(()) => {
+                    return stream;
+                }
+                Err(CheckNotStartedReason::AlreadyInProgress) => {
+                    println!("Update already in progress, waiting 1s...");
+                    fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(1))).await;
+                }
+                Err(e) => {
+                    panic!("Unexpected check_now error: {:?}", e);
+                }
+            }
+        }
+        panic!("Timeout waiting to start update check");
     }
 
     async fn inspect_hierarchy(&self) -> NodeHierarchy {
@@ -477,102 +433,6 @@ async fn test_omaha_client_update() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_omaha_client_update_progress_with_mock_installer() {
-    let (mut sender, receiver) = mpsc::channel(0);
-    let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).installer(installer).build();
-
-    let mut stream = env.check_now().await;
-
-    expect_states(
-        &mut stream,
-        &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::InstallingUpdate(InstallingData {
-                update: update_info(),
-                installation_progress: progress(None),
-            }),
-        ],
-    )
-    .await;
-
-    // Send installer state and expect manager step in lockstep to make sure that event queue
-    // won't merge any progress.
-    sender.send(installer::State::Prepare).await.unwrap();
-    expect_states(
-        &mut stream,
-        &[State::InstallingUpdate(InstallingData {
-            update: update_info(),
-            installation_progress: progress(Some(0.0)),
-        })],
-    )
-    .await;
-
-    let installer_update_info = installer::UpdateInfo::builder().download_size(1000).build();
-    sender
-        .send(installer::State::Fetch(
-            installer::UpdateInfoAndProgress::new(
-                installer_update_info,
-                installer::Progress::none(),
-            )
-            .unwrap(),
-        ))
-        .await
-        .unwrap();
-    expect_states(
-        &mut stream,
-        &[State::InstallingUpdate(InstallingData {
-            update: update_info(),
-            installation_progress: progress(Some(0.0)),
-        })],
-    )
-    .await;
-
-    sender
-        .send(installer::State::Stage(
-            installer::UpdateInfoAndProgress::new(
-                installer_update_info,
-                installer::Progress::builder()
-                    .fraction_completed(0.5)
-                    .bytes_downloaded(500)
-                    .build(),
-            )
-            .unwrap(),
-        ))
-        .await
-        .unwrap();
-    expect_states(
-        &mut stream,
-        &[State::InstallingUpdate(InstallingData {
-            update: update_info(),
-            installation_progress: progress(Some(0.5)),
-        })],
-    )
-    .await;
-
-    sender
-        .send(installer::State::WaitToReboot(installer::UpdateInfoAndProgress::done(
-            installer_update_info,
-        )))
-        .await
-        .unwrap();
-    expect_states(
-        &mut stream,
-        &[
-            State::InstallingUpdate(InstallingData {
-                update: update_info(),
-                installation_progress: progress(Some(1.0)),
-            }),
-            State::WaitingForReboot(InstallingData {
-                update: update_info(),
-                installation_progress: progress(Some(1.0)),
-            }),
-        ],
-    )
-    .await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_error() {
     let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
 
@@ -766,7 +626,7 @@ async fn test_omaha_client_policy_config_inspect() {
         "root": contains {
             "policy_config": {
                 "periodic_interval": 60 * 60u64,
-                "startup_delay": 9999u64,
+                "startup_delay": 60u64,
                 "retry_delay": 5 * 60u64,
                 "allow_reboot_when_idle": true,
             }

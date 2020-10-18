@@ -81,7 +81,6 @@ merge_sysmgr_config("core_config") {
   deps = [
     "bin/pkg-cache:config",
     "bin/pkg-resolver:config",
-    "bin/system-updater:config",
   ]
 }
 

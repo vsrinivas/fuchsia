@@ -24,6 +24,7 @@ mod metrics;
 mod observer;
 mod policy;
 mod storage;
+mod temp_installer;
 mod timer;
 
 use configuration::{ChannelSource, ClientConfiguration};
@@ -79,7 +80,7 @@ fn main() -> Result<(), Error> {
         let http = FuchsiaHyperHttpRequest::new();
 
         // Installer
-        let installer = installer::FuchsiaInstaller::new();
+        let installer = temp_installer::FuchsiaInstaller::new()?;
 
         // Storage
         let stash = storage::Stash::new("omaha-client").await;

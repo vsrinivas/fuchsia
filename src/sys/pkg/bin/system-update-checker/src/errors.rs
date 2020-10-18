@@ -20,11 +20,11 @@ pub enum Error {
     #[error("system-updater component exited with failure")]
     SystemUpdaterFailed,
 
-    #[error("installation ended unexpectedly")]
-    InstallationEndedUnexpectedly,
-
     #[error("reboot FIDL returned error")]
-    RebootFailed(#[source] fidl::Error),
+    RebootFailed(#[source] zx::Status),
+
+    #[error("reading /pkgfs/system/data/static_packages")]
+    ReadStaticPackages(#[source] io::Error),
 
     #[error("update package")]
     UpdatePackage(#[from] UpdatePackage),

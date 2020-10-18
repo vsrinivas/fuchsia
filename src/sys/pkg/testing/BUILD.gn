@@ -7,7 +7,6 @@ group("tests") {
   public_deps = [
     "blobfs-ramdisk:tests",
     "host-target-testing:tests",
-    "mock-installer:tests",
     "mock-omaha-server:tests",
     "mock-paver:tests",
     "mock-reboot:tests",

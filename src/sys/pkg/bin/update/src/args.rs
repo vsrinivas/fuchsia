@@ -93,10 +93,6 @@ pub struct ForceInstall {
     /// fuchsia-pkg://fuchsia.com/update.
     #[argh(positional)]
     pub update_pkg_url: String,
-
-    /// the force install was initiated by a service, in the background.
-    #[argh(switch)]
-    pub service_initiated: bool,
 }
 
 #[cfg(test)]
@@ -204,7 +200,6 @@ mod tests {
                 cmd: Command::ForceInstall(ForceInstall {
                     update_pkg_url: "url".to_owned(),
                     reboot: true,
-                    service_initiated: false,
                 })
             }
         );
@@ -220,24 +215,6 @@ mod tests {
                 cmd: Command::ForceInstall(ForceInstall {
                     update_pkg_url: "url".to_owned(),
                     reboot: false,
-                    service_initiated: false,
-                })
-            }
-        );
-    }
-
-    #[test]
-    fn test_force_install_service_initiated() {
-        let update =
-            Update::from_args(&["update"], &["force-install", "--service-initiated", "url"])
-                .unwrap();
-        assert_eq!(
-            update,
-            Update {
-                cmd: Command::ForceInstall(ForceInstall {
-                    update_pkg_url: "url".to_owned(),
-                    reboot: true,
-                    service_initiated: true,
                 })
             }
         );

@@ -5,7 +5,6 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-import("//src/sys/pkg/sysmgr_config.gni")
 
 rustc_binary("bin") {
   name = "system_updater"
@@ -116,10 +115,6 @@ test_package("system-updater-tests") {
       environments = basic_envs
     },
   ]
-}
-
-sysmgr_config("config") {
-  source = "sysmgr.config"
 }
 
 group("tests") {
