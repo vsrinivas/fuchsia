@@ -15,7 +15,7 @@ namespace flatland {
 class MockBufferCollectionImporter : public BufferCollectionImporter {
  public:
   MOCK_METHOD3(ImportBufferCollection,
-               void(sysmem_util::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+               bool(sysmem_util::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
                     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>));
 
   MOCK_METHOD1(ReleaseBufferCollection, void(sysmem_util::GlobalBufferCollectionId));

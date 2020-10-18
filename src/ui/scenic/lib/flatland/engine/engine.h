@@ -21,7 +21,7 @@ class Engine final : public BufferCollectionImporter {
          const std::shared_ptr<UberStructSystem>& uber_struct_system);
 
   // |BufferCollectionImporter|
-  void ImportBufferCollection(
+  bool ImportBufferCollection(
       sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;

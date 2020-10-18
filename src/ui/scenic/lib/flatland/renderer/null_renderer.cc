@@ -9,21 +9,19 @@
 
 namespace flatland {
 
-bool NullRenderer::RegisterTextureCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token));
-}
-
 bool NullRenderer::RegisterRenderTargetCollection(
     sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token));
+  return ImportBufferCollection(collection_id, sysmem_allocator, std::move(token));
 }
 
-bool NullRenderer::RegisterCollection(
+void NullRenderer::DeregisterRenderTargetCollection(
+    sysmem_util::GlobalBufferCollectionId collection_id) {
+  ReleaseBufferCollection(collection_id);
+}
+
+bool NullRenderer::ImportBufferCollection(
     sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
@@ -56,7 +54,7 @@ bool NullRenderer::RegisterCollection(
   return true;
 }
 
-void NullRenderer::DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
+void NullRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
@@ -76,6 +74,43 @@ void NullRenderer::DeregisterCollection(sysmem_util::GlobalBufferCollectionId co
   // never validated, but there's no need to check as erasing a non-existent key is valid.
   collection_metadata_map_.erase(collection_id);
 }
+
+bool NullRenderer::ImportImage(const ImageMetadata& meta_data) {
+  auto buffer_metadata = Validate(meta_data.collection_id);
+  if (!buffer_metadata.has_value()) {
+    FX_LOGS(ERROR) << "CreateImage failed, collection_id " << meta_data.collection_id
+                   << " has not been allocated yet";
+    return false;
+  }
+
+  if (meta_data.vmo_idx >= buffer_metadata->vmo_count) {
+    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << meta_data.vmo_idx
+                   << " must be less than vmo_count " << buffer_metadata->vmo_count;
+    return false;
+  }
+
+  const auto& image_constraints = buffer_metadata->image_constraints;
+
+  if (meta_data.width < image_constraints.min_coded_width ||
+      meta_data.width > image_constraints.max_coded_width) {
+    FX_LOGS(ERROR) << "CreateImage failed, width " << meta_data.width
+                   << " is not within valid range [" << image_constraints.min_coded_width << ","
+                   << image_constraints.max_coded_width << "]";
+    return false;
+  }
+
+  if (meta_data.height < image_constraints.min_coded_height ||
+      meta_data.height > image_constraints.max_coded_height) {
+    FX_LOGS(ERROR) << "CreateImage failed, height " << meta_data.height
+                   << " is not within valid range [" << image_constraints.min_coded_height << ","
+                   << image_constraints.max_coded_height << "]";
+    return false;
+  }
+
+  return true;
+}
+
+void NullRenderer::ReleaseImage(GlobalImageId image_id) {}
 
 std::optional<BufferCollectionMetadata> NullRenderer::Validate(
     sysmem_util::GlobalBufferCollectionId collection_id) {

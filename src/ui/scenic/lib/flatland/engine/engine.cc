@@ -145,7 +145,7 @@ Engine::Engine(std::unique_ptr<fuchsia::hardware::display::ControllerSyncPtr> di
   FX_DCHECK(uber_struct_system_);
 }
 
-void Engine::ImportBufferCollection(
+bool Engine::ImportBufferCollection(
     sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
@@ -160,7 +160,7 @@ void Engine::ImportBufferCollection(
     std::unique_lock<std::mutex> lock(lock_);
     auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
                                                       std::move(sync_token), image_config);
-    FX_DCHECK(result);
+    return result;
   }
 }
 
@@ -377,7 +377,9 @@ sysmem_util::GlobalBufferCollectionId Engine::RegisterTargetCollection(
   FX_DCHECK(result);
 
   // Register the buffer collection with the display controller.
-  ImportBufferCollection(renderer_collection_id, sysmem_allocator, std::move(display_token));
+  result =
+      ImportBufferCollection(renderer_collection_id, sysmem_allocator, std::move(display_token));
+  FX_DCHECK(result);
 
   // Finally set the engine constraints.
   SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(engine_token), num_vmos,

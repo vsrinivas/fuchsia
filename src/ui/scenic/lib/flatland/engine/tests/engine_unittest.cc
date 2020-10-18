@@ -343,10 +343,10 @@ TEST_F(EngineTest, ImportImageErrorCases) {
   const uint64_t kDisplayImageId = 70;
   EXPECT_CALL(*mock_display_controller_.get(),
               ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
-      .WillRepeatedly(testing::Invoke([](fuchsia::hardware::display::ImageConfig image_config,
-                                         uint64_t collection_id, uint32_t index,
-                                         MockDisplayController::ImportImageCallback callback) {
-        callback(ZX_OK, /*display_image_id*/kDisplayImageId);
+      .WillOnce(testing::Invoke([](fuchsia::hardware::display::ImageConfig image_config,
+                                   uint64_t collection_id, uint32_t index,
+                                   MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_OK, /*display_image_id*/ kDisplayImageId);
       }));
   auto result = engine_->ImportImage(metadata);
   EXPECT_TRUE(result);
@@ -358,9 +358,9 @@ TEST_F(EngineTest, ImportImageErrorCases) {
   // Make sure that the engine returns false if the display controller returns an error
   EXPECT_CALL(*mock_display_controller_.get(),
               ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
-      .WillRepeatedly(testing::Invoke([](fuchsia::hardware::display::ImageConfig image_config,
-                                         uint64_t collection_id, uint32_t index,
-                                         MockDisplayController::ImportImageCallback callback) {
+      .WillOnce(testing::Invoke([](fuchsia::hardware::display::ImageConfig image_config,
+                                   uint64_t collection_id, uint32_t index,
+                                   MockDisplayController::ImportImageCallback callback) {
         callback(ZX_ERR_INVALID_ARGS, /*display_image_id*/ 0);
       }));
   result = engine_->ImportImage(metadata);

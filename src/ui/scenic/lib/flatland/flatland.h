@@ -25,7 +25,6 @@
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
@@ -50,7 +49,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   explicit Flatland(
       scheduling::SessionId session_id,
       const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-      const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
+      const std::shared_ptr<LinkSystem>& link_system,
       const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
       const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
       fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
@@ -148,10 +147,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A FlatlandPresenter shared between Flatland instances. Flatland uses this interface to get
   // PresentIds when publishing to the UberStructSystem.
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
-
-  // A Renderer shared between Flatland instances. Flatland registers buffer collections with the
-  // Renderer and references them by ID when submitting data in an UberStruct.
-  std::shared_ptr<Renderer> renderer_;
 
   // A link system shared between Flatland instances, so that links can be made between them.
   std::shared_ptr<LinkSystem> link_system_;
@@ -257,17 +252,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   std::unordered_map<BufferCollectionId, sysmem_util::GlobalBufferCollectionId>
       buffer_collection_ids_;
 
-  // The metadata associated with a particular buffer collection and the number of Images that
-  // currently reference that buffer collection.
-  struct BufferCollectionData {
-    std::optional<BufferCollectionMetadata> metadata;
-    size_t image_count = 0;
-  };
-
-  // A mapping from global buffer collection ID to the data associated with each
-  // collection.
-  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionData>
-      buffer_collections_;
+  // A mapping from global buffer collection ID to a size_t indicating how many images are currently
+  // using the given buffer. This count is used to determine in part when the buffer collection
+  // should be garbage collected.
+  std::unordered_map<sysmem_util::GlobalBufferCollectionId, size_t> buffer_usage_counts_;
 
   // The set of sysmem_util::GlobalBufferCollectionIds associated with released BufferCollectionIds
   // that have not yet been garbage collected.

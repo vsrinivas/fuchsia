@@ -6,7 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_IMAGE_DATA_H_
 
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
+#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 
 namespace flatland {

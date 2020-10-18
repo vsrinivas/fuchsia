@@ -10,10 +10,8 @@
 
 #include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
-#include "src/ui/scenic/lib/flatland/tests/mock_renderer.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -24,8 +22,6 @@ using flatland::FlatlandManager;
 using flatland::FlatlandPresenter;
 using flatland::LinkSystem;
 using flatland::MockFlatlandPresenter;
-using flatland::MockRenderer;
-using flatland::Renderer;
 using flatland::UberStructSystem;
 using fuchsia::ui::scenic::internal::Flatland;
 using fuchsia::ui::scenic::internal::Flatland_Present_Result;
@@ -111,10 +107,8 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
 
-    mock_renderer_ = new ::testing::StrictMock<MockRenderer>();
-    renderer_ = std::shared_ptr<Renderer>(mock_renderer_);
     manager_ = std::make_unique<FlatlandManager>(
-        flatland_presenter_, renderer_, uber_struct_system_, link_system_,
+        flatland_presenter_, uber_struct_system_, link_system_,
         std::vector<std::shared_ptr<flatland::BufferCollectionImporter>>());
   }
 
@@ -131,7 +125,6 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     EXPECT_TRUE(snapshot.empty());
 
     manager_.reset();
-    renderer_.reset();
     flatland_presenter_.reset();
 
     gtest::RealLoopFixture::TearDown();
@@ -151,14 +144,12 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
 
  protected:
   ::testing::StrictMock<MockFlatlandPresenter>* mock_flatland_presenter_;
-  ::testing::StrictMock<MockRenderer>* mock_renderer_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
 
   std::unique_ptr<FlatlandManager> manager_;
 
  private:
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
-  std::shared_ptr<Renderer> renderer_;
   const std::shared_ptr<LinkSystem> link_system_;
 
   // Storage for |mock_flatland_presenter_|.

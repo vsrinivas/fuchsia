@@ -16,7 +16,7 @@
 
 #include <glm/mat3x3.hpp>
 
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
+#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 

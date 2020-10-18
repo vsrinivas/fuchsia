@@ -15,15 +15,24 @@ namespace flatland {
 
 // A renderer implementation used for validation. It does everything a standard
 // renderer implementation does except for actually rendering.
-class NullRenderer : public Renderer {
+class NullRenderer final : public Renderer {
  public:
   ~NullRenderer() override = default;
 
-  // |Renderer|.
-  bool RegisterTextureCollection(
+  // |BufferCollectionImporter|
+  bool ImportBufferCollection(
       sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+
+  // |BufferCollectionImporter|
+  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+
+  // |BufferCollectionImporter|
+  bool ImportImage(const ImageMetadata& meta_data) override;
+
+  // |BufferCollectionImporter|
+  void ReleaseImage(GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(
@@ -32,7 +41,8 @@ class NullRenderer : public Renderer {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  void DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+  void DeregisterRenderTargetCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   std::optional<BufferCollectionMetadata> Validate(
@@ -44,10 +54,6 @@ class NullRenderer : public Renderer {
               const std::vector<zx::event>& release_fences = {}) override;
 
  private:
-  bool RegisterCollection(sysmem_util::GlobalBufferCollectionId collection_id,
-                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
-
   // This mutex is used to protect access to |collection_map_| and |collection_metadata_map_|.
   std::mutex lock_;
   std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;

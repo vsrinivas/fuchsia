@@ -8,7 +8,6 @@
 #include <unordered_map>
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
-#include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -21,11 +20,20 @@ class VkRenderer final : public Renderer {
   explicit VkRenderer(std::unique_ptr<escher::Escher> escher);
   ~VkRenderer() override;
 
-  // |Renderer|.
-  bool RegisterTextureCollection(
+  // |BufferCollectionImporter|
+  bool ImportBufferCollection(
       sysmem_util::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+
+  // |BufferCollectionImporter|
+  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+
+  // |BufferCollectionImporter|
+  bool ImportImage(const ImageMetadata& meta_data) override;
+
+  // |BufferCollectionImporter|
+  void ReleaseImage(GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(
@@ -34,7 +42,8 @@ class VkRenderer final : public Renderer {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  void DeregisterCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+  void DeregisterRenderTargetCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   std::optional<BufferCollectionMetadata> Validate(
@@ -49,12 +58,16 @@ class VkRenderer final : public Renderer {
   void WaitIdle();
 
  private:
+  // Generic helper function used by both |ImportBufferCollection| and |RegisterTextureCollection|.
   bool RegisterCollection(sysmem_util::GlobalBufferCollectionId collection_id,
                           fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                           vk::ImageUsageFlags usage);
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
+  escher::ImagePtr ExtractImage(escher::CommandBuffer* command_buffer, ImageMetadata metadata,
+                                vk::ImageUsageFlags usage, vk::ImageLayout layout);
+
   // ExtractRenderTarget() and ExtractTexture() are wrapper functions to ExtractImage()
   // that provide specific usage flags for color attachments and shader textures
   // respectively. All three functions are thread safe. Additionally, they only get
@@ -62,11 +75,11 @@ class VkRenderer final : public Renderer {
   escher::TexturePtr ExtractTexture(escher::CommandBuffer* command_buffer, ImageMetadata metadata);
   escher::ImagePtr ExtractRenderTarget(escher::CommandBuffer* command_buffer,
                                        ImageMetadata metadata);
-  escher::ImagePtr ExtractImage(escher::CommandBuffer* command_buffer, ImageMetadata metadata,
-                                vk::ImageUsageFlags usage, vk::ImageLayout layout);
 
-  // Vulkan rendering components.
+  // Escher is how we access Vulkan.
   std::unique_ptr<escher::Escher> escher_;
+
+  // Vulkan rendering component.
   escher::RectangleCompositor compositor_;
 
   // This mutex is used to protect access to |collection_map_|, |collection_metadata_map_|,

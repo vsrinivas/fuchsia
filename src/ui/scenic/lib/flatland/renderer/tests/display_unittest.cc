@@ -112,8 +112,8 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Register the collection with the renderer, which sets the vk constraints.
   auto renderer_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto result = renderer.RegisterTextureCollection(renderer_collection_id, sysmem_allocator_.get(),
-                                                   std::move(tokens.dup_token));
+  auto result = renderer.ImportBufferCollection(renderer_collection_id, sysmem_allocator_.get(),
+                                                std::move(tokens.dup_token));
   EXPECT_TRUE(result);
 
   // Validating should fail, because we've only set the renderer constraints.

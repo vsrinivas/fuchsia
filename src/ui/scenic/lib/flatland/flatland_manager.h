@@ -18,7 +18,6 @@
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
-#include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -28,7 +27,6 @@ class FlatlandManager {
  public:
   FlatlandManager(
       const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-      const std::shared_ptr<Renderer>& renderer,
       const std::shared_ptr<UberStructSystem>& uber_struct_system,
       const std::shared_ptr<LinkSystem>& link_system,
       const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
@@ -43,7 +41,6 @@ class FlatlandManager {
   void RemoveFlatlandInstance(scheduling::SessionId session_id);
 
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
-  std::shared_ptr<Renderer> renderer_;
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
   std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
