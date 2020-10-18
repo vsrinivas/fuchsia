@@ -32,8 +32,8 @@
 VmObject::GlobalList VmObject::all_vmos_ = {};
 fbl::DoublyLinkedList<VmObject::VmoCursor*> VmObject::all_vmos_cursors_ = {};
 
-VmObject::VmObject(fbl::RefPtr<vm_lock_t> lock_ptr)
-    : lock_(lock_ptr->lock), lock_ptr_(ktl::move(lock_ptr)) {
+VmObject::VmObject(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr)
+    : lock_(hierarchy_state_ptr->lock()), hierarchy_state_ptr_(ktl::move(hierarchy_state_ptr)) {
   LTRACEF("%p\n", this);
 }
 
@@ -287,7 +287,7 @@ void VmObject::DropChildLocked(VmObject* c) {
 
 void VmObject::RemoveChild(VmObject* o, Guard<Mutex>&& adopt) {
   canary_.Assert();
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+  DEBUG_ASSERT(adopt.wraps_lock(hierarchy_state_ptr_->lock().lock()));
   Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
 
   DropChildLocked(o);
@@ -296,7 +296,7 @@ void VmObject::RemoveChild(VmObject* o, Guard<Mutex>&& adopt) {
 }
 
 void VmObject::OnUserChildRemoved(Guard<Mutex>&& adopt) {
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+  DEBUG_ASSERT(adopt.wraps_lock(hierarchy_state_ptr_->lock().lock()));
 
   // The observer may call back into this object so we must release the shared lock to prevent any
   // self-deadlock. We explicitly release the lock prior to acquiring the child_observer_lock as
@@ -463,6 +463,26 @@ void VmObject::VmoCursor::AdvanceIf(const VmObject* h) {
     if (&*iter_ == h) {
       iter_++;
     }
+  }
+}
+
+void VmHierarchyState::DoDeferredDelete(fbl::RefPtr<VmObject> vmo) {
+  Guard<Mutex> guard{&lock_};
+  // If a parent has multiple children then it's possible for a given object to already be
+  // queued for deletion.
+  if (!vmo->GetContainableByTag<internal::DeferredDeleteTag>().InContainer()) {
+    delete_list_.push_front(ktl::move(vmo));
+  } else {
+    // We know a refptr is being held by the container (which we are holding the lock to), so can
+    // safely drop the vmo ref.
+    vmo.reset();
+  }
+  if (!running_delete_) {
+    running_delete_ = true;
+    while (!delete_list_.is_empty()) {
+      guard.CallUnlocked([ptr = delete_list_.pop_front()]() mutable { ptr.reset(); });
+    }
+    running_delete_ = false;
   }
 }
 

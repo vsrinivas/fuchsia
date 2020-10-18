@@ -66,7 +66,8 @@ class VmObjectPhysical final : public VmObject {
 
  private:
   // private constructor (use Create())
-  VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size, bool is_slice_);
+  VmObjectPhysical(fbl::RefPtr<VmHierarchyState> state, paddr_t base, uint64_t size,
+                   bool is_slice_);
 
   // private destructor, only called from refptr
   ~VmObjectPhysical() override;

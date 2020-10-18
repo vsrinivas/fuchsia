@@ -2064,8 +2064,8 @@ TEST(Pager, FailErrorCode) {
 }
 
 // Test that writing to a forked zero pager marker does not cause a kernel panic. This is a
-// regression test for fxbug.dev/53181. Note that although writing to page backed vmo is not strictly
-// supported and has no guaranteed semantics it is still currently allowed.
+// regression test for fxbug.dev/53181. Note that although writing to page backed vmo is not
+// strictly supported and has no guaranteed semantics it is still currently allowed.
 TEST(Pager, WritingZeroFork) {
   zx::pager pager;
   ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
@@ -2155,6 +2155,24 @@ TEST(Pager, ResizeBlockedPin) {
   // The pin request should have been implicitly unblocked from the resize, and should have
   // ultimately failed. pin_thread returns true if it got the correct failure result from pin.
   ASSERT_TRUE(pin_thread.Wait());
+}
+
+TEST(Pager, DeepHierarchy) {
+  zx::pager pager;
+  ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+
+  zx::port port;
+  ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+  zx::vmo vmo;
+  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+
+  for (int i = 0; i < 1000; i++) {
+    zx::vmo temp;
+    EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, ZX_PAGE_SIZE, &temp));
+    vmo = std::move(temp);
+  }
+  vmo.reset();
 }
 
 }  // namespace pager_tests

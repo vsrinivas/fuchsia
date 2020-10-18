@@ -175,8 +175,9 @@ class BatchPQRemove {
 };
 
 VmObjectPaged::VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
-                             fbl::RefPtr<vm_lock_t> root_lock, fbl::RefPtr<PageSource> page_source)
-    : VmObject(ktl::move(root_lock)),
+                             fbl::RefPtr<VmHierarchyState> hierarchy_state,
+                             fbl::RefPtr<PageSource> page_source)
+    : VmObject(ktl::move(hierarchy_state)),
       options_(options),
       size_(size),
       pmm_alloc_flags_(pmm_alloc_flags),
@@ -221,12 +222,35 @@ VmObjectPaged::~VmObjectPaged() {
     if (parent_) {
       LTRACEF("removing ourself from our parent %p\n", parent_.get());
       parent_->RemoveChild(this, guard.take());
+      // Avoid recursing destructors when we delete our parent by using the deferred deletion
+      // method. See common in parent else branch for why we can avoid this on a hidden parent.
+      if (!parent_->is_hidden()) {
+        hierarchy_state_ptr_->DoDeferredDelete(ktl::move(parent_));
+      }
     }
   } else {
     // Most of the hidden vmo's state should have already been cleaned up when it merged
     // itself into its child in ::RemoveChild.
     DEBUG_ASSERT(children_list_len_ == 0);
     DEBUG_ASSERT(page_list_.HasNoPages());
+    // Even though we are hidden we might have a parent. Unlike in the other branch of this if we
+    // do not need to perform any deferred deletion. The reason for this is that the deferred
+    // deletion mechanism is intended to resolve the scenario where there is a chain of 'one ref'
+    // parent pointers that will chain delete. However, with hidden parents we *know* that a hidden
+    // parent has two children (and hence at least one other ref to it) and so we cannot be in a
+    // one ref chain. Even if N threads all tried to remove children from the hierarchy at once,
+    // this would ultimately get serialized through the lock and the hierarchy would go from
+    //
+    //          [..]
+    //           /
+    //          A                             [..]
+    //         / \                             /
+    //        B   E           TO         B    A
+    //       / \                        /    / \.
+    //      C   D                      C    D   E
+    //
+    // And so each serialized deletion breaks of a discrete two VMO chain that can be safely
+    // finalized with one recursive step.
   }
 
   list_node_t list;
@@ -413,13 +437,13 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
   }
 
   fbl::AllocChecker ac;
-  auto lock = fbl::AdoptRef<vm_lock_t>(new (&ac) vm_lock_t);
+  auto state = fbl::MakeRefCountedChecked<VmHierarchyState>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, ktl::move(lock), nullptr));
+      new (&ac) VmObjectPaged(options, pmm_alloc_flags, size, ktl::move(state), nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -575,13 +599,13 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
   }
 
   fbl::AllocChecker ac;
-  auto lock = fbl::AdoptRef<vm_lock_t>(new (&ac) vm_lock_t);
+  auto state = fbl::AdoptRef<VmHierarchyState>(new (&ac) VmHierarchyState);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, PMM_ALLOC_FLAG_ANY, size, ktl::move(lock), ktl::move(src)));
+      new (&ac) VmObjectPaged(options, PMM_ALLOC_FLAG_ANY, size, ktl::move(state), ktl::move(src)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -704,7 +728,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
   // any vmos under any vmo lock.
   fbl::AllocChecker ac;
   auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, lock_ptr_, nullptr));
+      new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, hierarchy_state_ptr_, nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -782,7 +806,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
   // any vmos under any vmo lock.
   fbl::AllocChecker ac;
   auto vmo = fbl::AdoptRef<VmObjectPaged>(
-      new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, lock_ptr_, nullptr));
+      new (&ac) VmObjectPaged(options, pmm_alloc_flags_, size, hierarchy_state_ptr_, nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -794,7 +818,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     // The initial size is 0. It will be initialized as part of the atomic
     // insertion into the child tree.
     hidden_parent = fbl::AdoptRef<VmObjectPaged>(
-        new (&ac) VmObjectPaged(kHidden, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
+        new (&ac) VmObjectPaged(kHidden, pmm_alloc_flags_, 0, hierarchy_state_ptr_, nullptr));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -923,7 +947,7 @@ bool VmObjectPaged::OnChildAddedLocked() {
 }
 
 void VmObjectPaged::RemoveChild(VmObject* removed, Guard<Mutex>&& adopt) {
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+  DEBUG_ASSERT(adopt.wraps_lock(hierarchy_state_ptr_->lock().lock()));
 
   // This is scoped before guard to ensure the guard is dropped first, see comment where child_ref
   // is assigned for more details.
@@ -2072,7 +2096,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
+  DEBUG_ASSERT(adopt.wraps_lock(hierarchy_state_ptr_->lock().lock()));
   Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
   // Convince the static analysis that we now do actually hold lock_.
   AssertHeld(lock_);

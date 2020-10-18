@@ -214,7 +214,7 @@ class VmObjectPaged final : public VmObject {
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_t size,
-                fbl::RefPtr<vm_lock_t> root_lock, fbl::RefPtr<PageSource> page_source);
+                fbl::RefPtr<VmHierarchyState> root_state, fbl::RefPtr<PageSource> page_source);
 
   // Initializes the original parent state of the vmo. |offset| is the offset of
   // this vmo in |parent|.

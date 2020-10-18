@@ -431,4 +431,16 @@ TEST(VmoSliceTestCase, Pin) {
   EXPECT_OK(pmt.unpin());
 }
 
+TEST(VmoSliceTestCase, DeepHierarchy) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+
+  for (int i = 0; i < 1000; i++) {
+    zx::vmo temp;
+    EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, ZX_PAGE_SIZE, &temp));
+    vmo = std::move(temp);
+  }
+  vmo.reset();
+}
+
 }  // namespace
