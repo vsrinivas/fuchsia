@@ -6,42 +6,23 @@ import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
-# Generates some C++ bindings for a FIDL library.
-#
-# The parameters for this template are defined in //build/fidl/fidl.gni. The
-# relevant parameters in this template are:
-#   - name;
-#   - sources;
-template("fidl_cpp_codegen") {
-  if (defined(invoker.sources)) {
-    not_needed(invoker, [ "sources" ])
-  }
-  if (defined(invoker.public_deps)) {
-    not_needed(invoker, [ "public_deps" ])
-  }
+template("_fidl_cpp_codegen_impl") {
+  generation_target_name = "${target_name}_generate"
 
-  main_target_name = target_name
-  generation_target_name =
-      "${invoker.root_target}_${invoker.generator}_generate"
-
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
-
+  library_name = invoker.library_name
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
-  include_stem = string_replace(library_name, ".", "/") + "/" +
-                 invoker.generated_source_base
+  include_stem =
+      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
   file_stem = "$fidl_target_gen_dir/$include_stem"
 
-  fidl_target_name = invoker.root_target
+  fidl_target_name = invoker.fidl_target_name
   fidl_target_gen_dir =
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
-  generation_visibility = [ ":$main_target_name" ]
+  generation_visibility = [ ":$target_name" ]
   if (defined(invoker.fuzzers)) {
     foreach(fuzzer, invoker.fuzzers) {
       assert(
@@ -54,7 +35,7 @@ template("fidl_cpp_codegen") {
           protocol_suffix = "${protocol_suffix}_${method}"
         }
       }
-      generation_visibility += [ ":${main_target_name}${protocol_suffix}" ]
+      generation_visibility += [ ":${target_name}${protocol_suffix}" ]
     }
   }
 
@@ -92,31 +73,37 @@ template("fidl_cpp_codegen") {
   }
 }
 
-# Generates low-level C++ bindings for a library.
-template("fidl_llcpp_codegen") {
-  if (defined(invoker.sources)) {
-    not_needed(invoker, [ "sources" ])
+# Generates some C++ bindings for a FIDL library.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name;
+#   - sources;
+template("fidl_cpp_codegen") {
+  if (current_toolchain == fidl_toolchain) {
+    _fidl_cpp_codegen_impl(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    # Code generation only happens under the FIDL toolchain.
+    not_needed([ "target_name" ])
+    not_needed(invoker, "*")
   }
-  if (defined(invoker.public_deps)) {
-    not_needed(invoker, [ "public_deps" ])
-  }
+}
 
-  main_target_name = target_name
-  generation_target_name = "${invoker.root_target}_llcpp_generate"
+template("_fidl_llcpp_codegen_impl") {
+  generation_target_name = "${target_name}_generate"
+  generation_visibility = [ ":$target_name" ]
 
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
-
+  library_name = invoker.library_name
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
-  include_stem = string_replace(library_name, ".", "/") + "/" +
-                 invoker.generated_source_base
+  include_stem =
+      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
   file_stem = "$fidl_target_gen_dir/$include_stem"
 
-  fidl_target_name = invoker.root_target
+  fidl_target_name = invoker.fidl_target_name
   fidl_target_gen_dir =
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
@@ -124,7 +111,7 @@ template("fidl_llcpp_codegen") {
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [ ":$main_target_name" ]
+    visibility = generation_visibility
 
     tool = "//tools/fidl/fidlgen_llcpp"
 
@@ -157,44 +144,38 @@ template("fidl_llcpp_codegen") {
   }
 }
 
-template("fidl_cpp_library") {
-  not_needed(invoker, "*")
+# Generates low-level C++ bindings for a library.
+template("fidl_llcpp_codegen") {
+  if (current_toolchain == fidl_toolchain) {
+    _fidl_llcpp_codegen_impl(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    # Code generation only happens under the FIDL toolchain.
+    not_needed([ "target_name" ])
+    not_needed(invoker, "*")
+  }
+}
 
-  main_target_name = target_name
-  config_target_name = main_target_name + "__config"
+template("_fidl_cpp_library_impl") {
+  config_target_name = "${target_name}__config"
 
   generation_target_name =
-      "${invoker.root_target}_${invoker.generator}_generate"
+      "${invoker.fidl_target_name}${invoker.target_suffix}_generate"
 
-  generated_deps = []
-  if (defined(invoker.generated_deps_target_suffix)) {
-    foreach(dep, invoker.generated_deps_target_suffix) {
-      if (dep == "") {
-        dep = invoker.root_target
-      } else {
-        dep = "${invoker.root_target}_${dep}"
-      }
-      generated_deps += [ ":$dep" ]
-    }
-  }
-
-  library_name = target_name
-  if (defined(invoker.name)) {
-    library_name = invoker.name
-  }
-
+  library_name = invoker.library_name
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
-  include_stem = string_replace(library_name, ".", "/") + "/" +
-                 invoker.generated_source_base
+  include_stem =
+      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
   file_stem = "$fidl_target_gen_dir/$include_stem"
 
   config(config_target_name) {
     include_dirs = [ fidl_target_gen_dir ]
   }
 
-  source_set(main_target_name) {
+  source_set(target_name) {
     forward_variables_from(invoker,
                            [
                              "defines",
@@ -216,15 +197,20 @@ template("fidl_cpp_library") {
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ ":$config_target_name" ]
 
-    public_deps = generated_deps + [
-                    ":$generation_target_name($fidl_toolchain)",
-                    ":${invoker.root_target}($fidl_toolchain)",
-                    ":${invoker.root_target}_tables",
-                  ]
+    public_deps = [
+      ":$generation_target_name($fidl_toolchain)",
+      ":${invoker.fidl_target_name}($fidl_toolchain)",
+      ":${invoker.fidl_target_name}_tables",
+    ]
 
-    foreach(dep, invoker.library_public_deps) {
-      label = get_label_info(dep, "label_no_toolchain")
-      public_deps += [ "${label}${invoker.target_suffix}" ]
+    # Map FIDL library dependencies to generated library dependencies
+    # of the same type (identified by target_suffix).
+    not_needed(invoker, [ "target_suffix" ])
+    if (defined(invoker.public_deps)) {
+      foreach(dep, invoker.public_deps) {
+        label = get_label_info(dep, "label_no_toolchain")
+        public_deps += [ "${label}${invoker.target_suffix}" ]
+      }
     }
 
     public_deps += invoker.additional_public_deps
@@ -235,57 +221,171 @@ template("fidl_cpp_library") {
   }
 }
 
-template("fidl_cpp") {
-  assert(defined(invoker.generators), "Need a list of generator tuples")
-  not_needed(invoker,
-             [
-               "generators",
-               "llcpp_generators",
-             ])
+# Defines a C++ library target (source_set) generated from a FIDL library.
+#
+# FIDL library dependencies under `public_deps` will manifest as corresponding
+# library target dependencies.
+#
+# Parameters
+#
+#  library_name (required)
+#    Name of the FIDL library.
+#
+#  fidl_target_name (required)
+#    Name of the GN target corresponding to the FIDL library.
+#
+#  target_suffix (required)
+#    Must begin with an underscore. Identifies which kind of library
+#    (_hlcpp, _llcpp, ...).
+#
+#  header_only (optional)
+#    If true, the generated library only has a header.
+#
+#  source_only (optional)
+#    If true, the generated library only has a source file.
 
-  if (current_toolchain == fidl_toolchain) {
-    library_name = target_name
-    if (defined(invoker.name)) {
-      library_name = invoker.name
-    }
-
-    foreach(generator_settings, invoker.generators) {
-      if (defined(generator_settings.target_suffix)) {
-        lib_name = "${target_name}_${generator_settings.target_suffix}"
-      } else {
-        lib_name = target_name
-      }
-
-      fidl_cpp_codegen(lib_name) {
-        forward_variables_from(invoker, "*")
-        name = library_name
-        fidlgen_tool = generator_settings.fidlgen_tool
-        generator = generator_settings.fidlgen_generator
-        generated_source_base = generator_settings.output_stem
-        root_target = target_name
-      }
-    }
-
-    foreach(generator_settings, invoker.llcpp_generators) {
-      if (defined(generator_settings.target_suffix)) {
-        lib_name = "${target_name}_${generator_settings.target_suffix}"
-      } else {
-        lib_name = target_name
-      }
-
-      fidl_llcpp_codegen(lib_name) {
-        forward_variables_from(invoker, "*")
-        name = library_name
-        generated_source_base = generator_settings.output_stem
-        root_target = target_name
-      }
+template("fidl_cpp_library") {
+  if (current_toolchain != fidl_toolchain) {
+    _fidl_cpp_library_impl(target_name) {
+      forward_variables_from(invoker, "*")
     }
   } else {
-    library_name = target_name
-    if (defined(invoker.name)) {
-      library_name = invoker.name
+    # No-op under FIDL toolchain
+    not_needed([ "target_name" ])
+    not_needed(invoker, "*")
+  }
+}
+
+template("_fidl_cpp_fuzzer") {
+  fuzzer = invoker.fuzzer
+
+  assert(
+      defined(fuzzer.protocol),
+      "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
+
+  protocol_suffix = "_" + string_replace(fuzzer.protocol, ".", "_")
+
+  library_defines = [ "PROTOCOL${protocol_suffix}" ]
+  if (defined(invoker.defines)) {
+    library_defines += invoker.defines
+  }
+  if (defined(fuzzer.methods)) {
+    foreach(method, fuzzer.methods) {
+      library_defines += [ "METHOD_${method}" ]
+    }
+  } else {
+    library_defines += [ "ALL_METHODS" ]
+  }
+
+  target_suffix = "_libfuzzer"
+  fuzzer_lib_name = "${target_name}${target_suffix}${protocol_suffix}"
+
+  fidl_cpp_library(fuzzer_lib_name) {
+    library_name = invoker.library_name
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "public_deps",
+                             "fidl_target_name",
+                           ])
+    output_stem = "cpp/libfuzzer"
+    target_suffix = target_suffix
+    additional_public_deps = [ ":${invoker.fidl_target_name}_libfuzzer" ]
+    defines = library_defines
+    source_only = true
+  }
+}
+
+# Generates various C++ FIDL bindings: HLCPP, LLCPP, and fuzzers.
+#
+# Note:
+# - Under the FIDL toolchain, we would create targets that generate
+#   the HLCPP/LLCPP bindings.
+# - Under other toolchains, we would create library targets that
+#   reference the generated code.
+
+template("fidl_cpp_family") {
+  # Allow users to override the library name by specifying a
+  # "name" variable in the `fidl("my_lib")` template invocation.
+  # Otherwise, default to the `target_name` of the FIDL library.
+  #
+  # Note that library names will have implication on the generated
+  # include paths, hence should be separate from `target_name`.
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  # `target_name` becomes clobbered in template invocation scopes;
+  # back it up here.
+  fidl_target_name = target_name
+
+  # `sources` is only required to invoke `fidlc`;
+  # the bindings code generation consumes the JSON IR instead.
+  not_needed(invoker, [ "sources" ])
+
+  # Determine the C++ bindings dependencies based on Fuchsia/host.
+  # Additionally, an empty llcpp_public_deps indicates that the LLCPP
+  # bindings for this library is not needed.
+  llcpp_public_deps = []
+  if (is_fuchsia) {
+    not_needed(invoker, [ "host_llcpp" ])
+    hlcpp_public_deps = [ "//sdk/lib/fidl/cpp" ]
+    llcpp_public_deps = [
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/fidl-llcpp",
+      "//zircon/public/lib/fit",
+    ]
+  } else {
+    # On host.
+    hlcpp_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+    if (defined(invoker.host_llcpp) && invoker.host_llcpp) {
+      llcpp_public_deps = [
+        "//zircon/public/lib/fidl-llcpp",
+        "//zircon/public/lib/fit",
+      ]
+    } else {
+      # Do not generate LLCPP if not requested.
+      llcpp_public_deps = []
+    }
+  }
+
+  common_options = {
+    fidl_target_name = fidl_target_name
+    library_name = library_name
+    forward_variables_from(invoker, [ "testonly" ])
+  }
+
+  #
+  # HLCPP Bindings
+  #
+
+  # Define HLCPP target.
+  fidl_cpp_codegen("${target_name}_hlcpp") {
+    forward_variables_from(common_options, "*")
+    output_stem = "cpp/fidl"
+    fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
+  }
+  fidl_cpp_library("${target_name}_hlcpp") {
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "visibility",
+                           ])
+    forward_variables_from(common_options, "*")
+    output_stem = "cpp/fidl"
+    target_suffix = "_hlcpp"
+    additional_public_deps = hlcpp_public_deps
+  }
+  if (current_toolchain != fidl_toolchain) {
+    # Set up an alias from ":my_lib_hlcpp" to ":my_lib"
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      public_deps = [ ":${target_name}_hlcpp" ]
     }
 
+    # Set up an SDK item for this library
     if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
       # Instead of depending on the generated bindings, set up a dependency on
       # the original library.
@@ -294,81 +394,74 @@ template("fidl_cpp") {
         atom = ":$sdk_target_name($fidl_toolchain)"
       }
     }
+  }
 
-    foreach(generator_settings, invoker.generators + invoker.llcpp_generators) {
-      library_public_deps = []
-      if (defined(invoker.public_deps)) {
-        library_public_deps += invoker.public_deps
-      }
+  #
+  # LLCPP Bindings
+  #
 
-      if (defined(generator_settings.header_only)) {
-        header_only = generator_settings.header_only
-      } else {
-        header_only = false
-      }
-
-      if (defined(generator_settings.target_suffix)) {
-        target_suffix = "_${generator_settings.target_suffix}"
-      } else {
-        target_suffix = ""
-      }
-      lib_name = "${target_name}${target_suffix}"
-
-      fidl_cpp_library(lib_name) {
-        forward_variables_from(invoker, "*")
-        name = library_name
-        generator = generator_settings.fidlgen_generator
-        generated_source_base = generator_settings.output_stem
-        forward_variables_from(generator_settings,
-                               [ "generated_deps_target_suffix" ])
-        root_target = target_name
-        additional_public_deps = generator_settings.additional_public_deps
-      }
+  # Define LLCPP target, if requested.
+  if (llcpp_public_deps != []) {
+    fidl_llcpp_codegen("${target_name}_llcpp") {
+      forward_variables_from(common_options, "*")
+      output_stem = "llcpp/fidl"
     }
+    fidl_cpp_library("${target_name}_llcpp") {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      output_stem = "llcpp/fidl"
+      target_suffix = "_llcpp"
+      additional_public_deps = llcpp_public_deps
+    }
+  }
 
-    if (defined(invoker.fuzzers)) {
-      foreach(fuzzer, invoker.fuzzers) {
-        assert(
-            defined(fuzzer.protocol),
-            "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
+  #
+  # Fuzzers (also dependent on HLCPP)
+  #
 
-        protocol_suffix = "_" + string_replace(fuzzer.protocol, ".", "_")
+  # Define fuzzer targets.
+  fidl_cpp_codegen("${target_name}_libfuzzer") {
+    forward_variables_from(invoker, [ "fuzzers" ])
+    forward_variables_from(common_options, "*")
+    output_stem = "cpp/libfuzzer"
+    fidlgen_tool = "//tools/fidl/fidlgen_libfuzzer"
+  }
 
-        # Every loop of this foreach needs a fresh library_defines list. It is necessary to
-        # overwrite with an empty list first or else gn will report the following error:
-        #
-        # "This overwrites a previously-defined nonempty list with another nonempty list."
-        library_defines = []
-        library_defines = [ "PROTOCOL${protocol_suffix}" ]
-        if (defined(invoker.defines)) {
-          library_defines += invoker.defines
-        }
-        if (defined(fuzzer.methods)) {
-          foreach(method, fuzzer.methods) {
-            library_defines += [ "METHOD_${method}" ]
-          }
-        } else {
-          library_defines += [ "ALL_METHODS" ]
-        }
+  # Define fuzzer header library.
+  fidl_cpp_library("${target_name}_libfuzzer") {
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "visibility",
+                           ])
+    forward_variables_from(common_options, "*")
+    output_stem = "cpp/libfuzzer"
+    target_suffix = "_libfuzzer"
+    additional_public_deps = [
+      "//zircon/system/ulib/async-default",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
 
-        library_public_deps = []
-        if (defined(invoker.public_deps)) {
-          library_public_deps += invoker.public_deps
-        }
+      # The generated headers `#include` the hlcpp bindings headers
+      # generated by the clause above, so the generated target needs
+      # that bindings library target in its public_deps.
+      ":${fidl_target_name}_hlcpp",
+    ]
+    header_only = true
+  }
 
-        target_suffix = "_libfuzzer"
-        lib_name = "${target_name}${target_suffix}${protocol_suffix}"
-
-        fidl_cpp_library(lib_name) {
-          forward_variables_from(invoker, "*")
-          source_only = true
-          name = library_name
-          generator = "libfuzzer"
-          generated_source_base = "cpp/libfuzzer"
-          root_target = target_name
-          additional_public_deps = [ ":${target_name}_libfuzzer" ]
-          defines = library_defines
-        }
+  # Define fuzzer implementation libraries (one per fuzzed protocol).
+  # The source file is the same - different macro definitions
+  # are used to customize the fuzzing configuration.
+  if (defined(invoker.fuzzers)) {
+    foreach(fuzzer, invoker.fuzzers) {
+      _fidl_cpp_fuzzer(target_name) {
+        forward_variables_from(invoker, "*")
+        fidl_target_name = fidl_target_name
       }
     }
   }
