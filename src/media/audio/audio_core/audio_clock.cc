@@ -94,9 +94,9 @@ int32_t AudioClock::ClampPpm(SyncMode sync_mode, int32_t parts_per_million) {
 
 //
 // Based on policy separately defined above, synchronize two clocks. Returns the ppm value of any
-// micro-SRC that is needed. Error factor is a delta in frac_src frames, time units are dest frames.
+// micro-SRC that is needed. Error factor is a delta in frac_src frames, time is dest ref time.
 int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
-                                      Fixed frac_src_error, int64_t dest_frame) {
+                                      zx::duration src_pos_error, zx::time monotonic_time) {
   // The two clocks determine the sync mode.
   auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
 
@@ -129,16 +129,22 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
       feedback_control = &clock->microsrc_feedback_control_;
       break;
   }
-  feedback_control->TuneForError(dest_frame, frac_src_error.raw_value());
+  feedback_control->TuneForError(monotonic_time.get(), src_pos_error.get());
 
   // 'adjustment' is a zero-centric adjustment factor, relative to current rate.
   auto adjustment = feedback_control->Read();
   auto adjust_ppm = ClampPpm(sync_mode, round(adjustment * 1'000'000));
 
   if (adjust_ppm != clock->adjustment_ppm_) {
+    FX_LOGS(TRACE) << "For sync_mode " << static_cast<uint32_t>(sync_mode)
+                   << ", changed from (ppm) " << std::setw(5) << clock->adjustment_ppm_ << " to "
+                   << std::setw(5) << adjust_ppm << "; src_pos_err " << std::setw(6)
+                   << src_pos_error.get();
     clock->adjustment_ppm_ = adjust_ppm;
-    FX_LOGS(TRACE) << "For sync_mode " << static_cast<uint32_t>(sync_mode) << ", adjusted to "
-                   << std::setw(5) << adjust_ppm << " ppm; frac_err " << frac_src_error.raw_value();
+  } else {
+    FX_LOGS(TRACE) << "For sync_mode " << static_cast<uint32_t>(sync_mode)
+                   << ", adjustment_ppm_ still (ppm) " << std::setw(5) << clock->adjustment_ppm_
+                   << "; src_pos_err " << std::setw(6) << src_pos_error.get();
   }
 
   return (sync_mode == SyncMode::MicroSrc ? adjust_ppm : 0);
@@ -165,8 +171,8 @@ AudioClock::AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t
   FX_CHECK(rights == kRequiredRights)
       << "Rights: actual 0x" << std::hex << rights << ", expected 0x" << kRequiredRights;
 
-  // If we can read the clock now, we will always be able to. This check covers all error modes (bad
-  // handle, wrong object type, no RIGHT_READ, clock not running) short of actually adjusting it.
+  // If we can read the clock now, we will always be able to. This check covers all error modes
+  // except actual adjustment (bad handle, wrong object type, no RIGHT_READ, clock not running).
   zx_time_t now_unused;
   FX_CHECK(clock_.read(&now_unused) == ZX_OK) << "Submitted zx::clock could not be read";
 
@@ -214,10 +220,10 @@ zx::time AudioClock::Read() const {
   return ref_now;
 }
 
-void AudioClock::ResetRateAdjustment(int64_t time) {
-  microsrc_feedback_control_.Start(time);
+void AudioClock::ResetRateAdjustment(zx::time reset_time) {
+  microsrc_feedback_control_.Start(reset_time.get());
   if (adjustable_feedback_control_.has_value()) {
-    adjustable_feedback_control_->Start(time);
+    adjustable_feedback_control_->Start(reset_time.get());
   }
 }
 

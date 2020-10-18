@@ -25,7 +25,7 @@ TEST(SourceInfoTest, Defaults) {
   EXPECT_EQ(info.next_dest_frame, 0);
   EXPECT_EQ(info.next_frac_source_frame, 0);
   EXPECT_EQ(info.next_src_pos_modulo, 0ull);
-  EXPECT_EQ(info.frac_source_error, 0);
+  EXPECT_EQ(info.src_pos_error, zx::duration(0));
 
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_time(), 0);
@@ -53,7 +53,7 @@ TEST(SourceInfoTest, ResetPositions) {
   info.next_dest_frame = -97;
   info.next_frac_source_frame = Fixed(7);
   info.next_src_pos_modulo = 1u;
-  info.frac_source_error = Fixed::FromRaw(-777);
+  info.src_pos_error = zx::duration(-777);
 
   info.ResetPositions(100, bookkeeping);
 
@@ -62,7 +62,7 @@ TEST(SourceInfoTest, ResetPositions) {
   EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(1700));
   // Calculated from rate_modulo and deominator, starting at zero. (100*5)%7 = 3.
   EXPECT_EQ(info.next_src_pos_modulo, 3ull);
-  EXPECT_EQ(info.frac_source_error, 0);
+  EXPECT_EQ(info.src_pos_error, zx::duration(0));
 }
 
 // Bookkeeping::Reset clears its own struct but should not affect SourceInfo.
@@ -77,14 +77,14 @@ TEST(SourceInfoTest, UnaffectedByBookkeepingReset) {
   info.next_dest_frame = 13;
   info.next_frac_source_frame = Fixed(11);
   info.next_src_pos_modulo = 2;
-  info.frac_source_error = Fixed::FromRaw(-17);
+  info.src_pos_error = zx::duration(-17);
 
   bookkeeping.Reset();
 
   EXPECT_EQ(info.next_dest_frame, 13);
   EXPECT_EQ(info.next_frac_source_frame, Fixed(11));
   EXPECT_EQ(info.next_src_pos_modulo, 2ull);
-  EXPECT_EQ(info.frac_source_error, Fixed::FromRaw(-17));
+  EXPECT_EQ(info.src_pos_error, zx::duration(-17));
 }
 
 // From current values, AdvanceRunningPositions advances running positions for dest, frac_source and
@@ -101,13 +101,13 @@ TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
   info.next_dest_frame = 2;
   info.next_frac_source_frame = Fixed(3);
   info.next_src_pos_modulo = 1;
-  info.frac_source_error = Fixed::FromRaw(-17);
+  info.src_pos_error = zx::duration(-17);
 
   info.AdvanceRunningPositionsTo(11, bookkeeping);
 
   // These should be unchanged
   EXPECT_EQ(bookkeeping.src_pos_modulo, 3u);
-  EXPECT_EQ(info.frac_source_error, Fixed::FromRaw(-17));
+  EXPECT_EQ(info.src_pos_error, zx::duration(-17));
 
   // These should be updated
   //

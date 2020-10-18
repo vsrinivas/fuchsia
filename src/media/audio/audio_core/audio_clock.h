@@ -107,10 +107,10 @@ class AudioClock {
   //
   // The return value is the PPM value of any micro-SRC that should subsequently be applied.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
-                                   Fixed frac_src_error, int64_t dest_frame);
+                                   zx::duration src_pos_error, zx::time monotonic_time);
 
-  // Clear internal running state and restart the feedback loop at the given destination frame.
-  void ResetRateAdjustment(int64_t dest_frame);
+  // Clear internal running state and restart the feedback loop at the given time.
+  void ResetRateAdjustment(zx::time reset_time);
 
  private:
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
@@ -150,7 +150,7 @@ class AudioClock {
   Source source_;
   bool is_adjustable_;
   uint32_t domain_;
-  int32_t adjustment_ppm_;
+  int32_t adjustment_ppm_ = 0;
   bool controls_device_clock_;
 
   audio::clock::PidControl microsrc_feedback_control_;

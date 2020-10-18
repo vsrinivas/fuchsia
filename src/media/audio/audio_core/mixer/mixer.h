@@ -48,15 +48,15 @@ class Mixer {
         next_src_pos_modulo =
             (target_dest_frame * bookkeeping.rate_modulo) % bookkeeping.denominator;
       }
-      frac_source_error = Fixed(0);
+      src_pos_error = zx::duration(0);
     }
 
     // Only called by custom code when debugging, so can remain at INFO severity.
-    void DisplayPositions(std::string tag = "") {
-      FX_LOGS(INFO) << "0x" << std::hex << this << std::dec << " " << tag << ": next_dst "
-                    << next_dest_frame << ", next_frac_src " << next_frac_source_frame.raw_value()
-                    << ", next_src_pos_mod " << next_src_pos_modulo << ", frac_src_err "
-                    << frac_source_error.raw_value();
+    std::string PositionsToString(std::string tag = "") {
+      return tag + ": next_dst " + std::to_string(next_dest_frame) + ", next_frac_src " +
+             std::to_string(next_frac_source_frame.raw_value()) + ", next_src_pos_mod " +
+             std::to_string(next_src_pos_modulo) + ", src_pos_err " +
+             std::to_string(src_pos_error.get());
     }
 
     // From their current values, advance the long-running positions by a number of dest frames.
@@ -130,7 +130,7 @@ class Mixer {
     // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
     // next_frac_source_frame is reset to that clock-derived value, and this field is set to zero.
     // This field sets the direction and magnitude of any steps taken for clock reconciliation.
-    Fixed frac_source_error{0};
+    zx::duration src_pos_error{0};
 
     // This field is used to ensure that when a stream first starts, we establish the offset
     // between destination frame and source fractional frame using clock calculations. We want to

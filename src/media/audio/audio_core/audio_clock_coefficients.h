@@ -5,22 +5,24 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_COEFFICIENTS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CLOCK_COEFFICIENTS_H_
 
+#include <lib/zx/time.h>
+
 #include "src/media/audio/lib/clock/pid_control.h"
 
 namespace media::audio {
 
+// Constants related to clock PID-tuning
 //
-// Constants related to PID and clock-tuning
+// PID coefficients were determined empirically by the generally-accepted Ziegler-Nichols method:
+// determine a P factor (without I or D) leading to steady-state non-divergent oscillation, then
+// half it. Set I to ~(2P)/OscillationPeriod, and D to ~(P/8)*OscillationPeriod.
 //
-// These values were determined empirically based on one accepted rule-of-thumb for setting PID
-// factors (Ziegler-Nichols). First discover the P factor (without I or D factors) that leads to
-// steady-state non-divergent oscillation, then half that value. Set the I factor to approximately
-// (2P)/OscillationPeriod. Set the D factor to approximately (P/8)*OscillationPeriod.
+// Latest coefficient tuning: 2020-Oct-15.
 
 // Micro-SRC synchronization
 //
-constexpr double kMicroSrcOscillationPeriod = 3840;  // frames
-constexpr double kMicroSrcPFactor = -0.00000007611;
+constexpr double kMicroSrcOscillationPeriod = ZX_USEC(20000);
+constexpr double kMicroSrcPFactor = -0.00000007001;
 constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {
     .proportional_factor = kMicroSrcPFactor,
     .integral_factor = kMicroSrcPFactor * 2 / kMicroSrcOscillationPeriod,
