@@ -66,7 +66,7 @@ pub mod non_fuchsia_handles {
     use crate::invoke_for_handle_types;
 
     pub use fuchsia_async::emulated_handle::{
-        AsHandleRef, EmulatedHandleRef, Handle, HandleBased, HandleRef, HandleType, MessageBuf,
+        AsHandleRef, EmulatedHandleRef, Handle, HandleBased, HandleRef, MessageBuf, ObjectType,
         SocketOpts,
     };
 

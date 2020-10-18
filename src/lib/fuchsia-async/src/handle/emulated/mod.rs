@@ -7,6 +7,7 @@
 pub mod channel;
 pub mod socket;
 
+use bitflags::bitflags;
 use fuchsia_zircon_status as zx_status;
 use futures::task::noop_waker_ref;
 use slab::Slab;
@@ -20,15 +21,17 @@ use std::{
 /// Invalid handle value
 const INVALID_HANDLE: u32 = 0xffff_ffff;
 
-/// The type of a handle
-#[derive(Debug, PartialEq)]
-pub enum HandleType {
-    /// An invalid handle
-    Invalid,
-    /// A channel
-    Channel,
-    /// A socket
-    Socket,
+/// The type of an object.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ObjectType(u32);
+
+impl ObjectType {
+    /// No object.
+    pub const NONE: ObjectType = ObjectType(0);
+    /// A channel.
+    pub const CHANNEL: ObjectType = ObjectType(1);
+    /// A socket.
+    pub const SOCKET: ObjectType = ObjectType(2);
 }
 
 /// A borrowed reference to an underlying handle
@@ -62,16 +65,12 @@ pub trait AsHandleRef {
 /// An extension of `AsHandleRef` that adds non-Fuchsia-only operations.
 pub trait EmulatedHandleRef: AsHandleRef {
     /// Return the type of a handle.
-    fn handle_type(&self) -> HandleType {
+    fn object_type(&self) -> ObjectType {
         if self.is_invalid() {
-            HandleType::Invalid
+            ObjectType::NONE
         } else {
             let (_, _, ty, _) = unpack_handle(self.as_handle_ref().0);
-            match ty {
-                HdlType::Channel => HandleType::Channel,
-                HdlType::StreamSocket => HandleType::Socket,
-                HdlType::DatagramSocket => HandleType::Socket,
-            }
+            ty.object_type()
         }
     }
 
@@ -227,7 +226,8 @@ impl Channel {
     /// Create a channel, resulting in a pair of `Channel` objects representing both
     /// sides of the channel. Messages written into one maybe read from the opposite.
     pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-        let (shard, slot) = CHANNELS.new_handle_slot();
+        let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ;
+        let (shard, slot) = CHANNELS.new_handle_slot(rights);
         let left = pack_handle(shard, slot, HdlType::Channel, Side::Left);
         let right = pack_handle(shard, slot, HdlType::Channel, Side::Right);
         Ok((Channel(left), Channel(right)))
@@ -262,6 +262,47 @@ impl Channel {
                 if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
                     std::mem::swap(bytes, &mut msg.bytes);
                     std::mem::swap(handles, &mut msg.handles);
+                    Poll::Ready(Ok(()))
+                } else if obj.liveness.is_open() {
+                    *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
+                    Poll::Pending
+                } else {
+                    Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
+                }
+            } else {
+                unreachable!();
+            }
+        })
+    }
+
+    fn poll_read_etc(
+        &self,
+        cx: &mut Context<'_>,
+        bytes: &mut Vec<u8>,
+        handles: &mut Vec<HandleInfo>,
+    ) -> Poll<Result<(), zx_status::Status>> {
+        with_handle(self.0, |h, side| {
+            if let HdlRef::Channel(obj) = h {
+                if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
+                    std::mem::swap(bytes, &mut msg.bytes);
+                    if handles.capacity() < msg.handles.capacity() {
+                        handles.reserve(msg.handles.len() - handles.len());
+                    }
+                    handles.clear();
+                    for h in &mut msg.handles {
+                        let h_raw = h.raw_handle();
+                        let (_, _, ty, _) = unpack_handle(h_raw);
+                        let rights = with_handle(h_raw, |href, _| match href {
+                            HdlRef::Channel(h) => h.rights,
+                            HdlRef::StreamSocket(h) => h.rights,
+                            HdlRef::DatagramSocket(h) => h.rights,
+                        });
+                        handles.push(HandleInfo {
+                            handle: std::mem::replace(h, Handle::invalid()),
+                            object_type: ty.object_type(),
+                            rights: rights,
+                        })
+                    }
                     Poll::Ready(Ok(()))
                 } else if obj.liveness.is_open() {
                     *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
@@ -344,13 +385,15 @@ impl Socket {
     pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
         match sock_opts {
             SocketOpts::STREAM => {
-                let (shard, slot) = STREAM_SOCKETS.new_handle_slot();
+                let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ;
+                let (shard, slot) = STREAM_SOCKETS.new_handle_slot(rights);
                 let left = pack_handle(shard, slot, HdlType::StreamSocket, Side::Left);
                 let right = pack_handle(shard, slot, HdlType::StreamSocket, Side::Right);
                 Ok((Socket(left), Socket(right)))
             }
             SocketOpts::DATAGRAM => {
-                let (shard, slot) = DATAGRAM_SOCKETS.new_handle_slot();
+                let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ;
+                let (shard, slot) = DATAGRAM_SOCKETS.new_handle_slot(rights);
                 let left = pack_handle(shard, slot, HdlType::DatagramSocket, Side::Left);
                 let right = pack_handle(shard, slot, HdlType::DatagramSocket, Side::Right);
                 Ok((Socket(left), Socket(right)))
@@ -544,11 +587,136 @@ impl MessageBuf {
     }
 }
 
+/// A buffer for _receiving_ messages from a channel.
+///
+/// This differs from `MessageBuf` in that it holds `HandleInfo` with
+/// extended handle information.
+///
+/// A `MessageBufEtc` is essentially a byte buffer and a vector of handle
+/// infos, but move semantics for "taking" handles requires special handling.
+///
+/// Note that for sending messages to a channel, the caller manages the buffers,
+/// using a plain byte slice and `Vec<HandleDisposition>`.
+#[derive(Debug, Default)]
+pub struct MessageBufEtc {
+    bytes: Vec<u8>,
+    handle_infos: Vec<HandleInfo>,
+}
+
+impl MessageBufEtc {
+    /// Create a new, empty, message buffer.
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Create a new non-empty message buffer.
+    pub fn new_with(v: Vec<u8>, h: Vec<HandleInfo>) -> Self {
+        Self { bytes: v, handle_infos: h }
+    }
+
+    /// Splits apart the message buf into a vector of bytes and a vector of handle infos.
+    pub fn split_mut(&mut self) -> (&mut Vec<u8>, &mut Vec<HandleInfo>) {
+        (&mut self.bytes, &mut self.handle_infos)
+    }
+
+    /// Splits apart the message buf into a vector of bytes and a vector of handle infos.
+    pub fn split(self) -> (Vec<u8>, Vec<HandleInfo>) {
+        (self.bytes, self.handle_infos)
+    }
+
+    /// Ensure that the buffer has the capacity to hold at least `n_bytes` bytes.
+    pub fn ensure_capacity_bytes(&mut self, n_bytes: usize) {
+        ensure_capacity(&mut self.bytes, n_bytes);
+    }
+
+    /// Ensure that the buffer has the capacity to hold at least `n_handles` handle infos.
+    pub fn ensure_capacity_handle_infos(&mut self, n_handle_infos: usize) {
+        ensure_capacity(&mut self.handle_infos, n_handle_infos);
+    }
+
+    /// Ensure that at least n_bytes bytes are initialized (0 fill).
+    pub fn ensure_initialized_bytes(&mut self, n_bytes: usize) {
+        if n_bytes <= self.bytes.len() {
+            return;
+        }
+        self.bytes.resize(n_bytes, 0);
+    }
+
+    /// Get a reference to the bytes of the message buffer, as a `&[u8]` slice.
+    pub fn bytes(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
+
+    /// The number of handles in the message buffer. Note this counts the number
+    /// available when the message was received; `take_handle` does not affect
+    /// the count.
+    pub fn n_handle_infos(&self) -> usize {
+        self.handle_infos.len()
+    }
+
+    /// Take the handle at the specified index from the message buffer. If the
+    /// method is called again with the same index, it will return `None`, as
+    /// will happen if the index exceeds the number of handles available.
+    pub fn take_handle_info(&mut self, index: usize) -> Option<HandleInfo> {
+        self.handle_infos.get_mut(index).and_then(|handle_info| {
+            if handle_info.handle.is_invalid() {
+                None
+            } else {
+                Some(std::mem::replace(
+                    handle_info,
+                    HandleInfo {
+                        handle: Handle::invalid(),
+                        object_type: ObjectType::NONE,
+                        rights: Rights::NONE,
+                    },
+                ))
+            }
+        })
+    }
+
+    /// Clear the bytes and handles contained in the buf. This will drop any
+    /// contained handles, resulting in their resources being freed.
+    pub fn clear(&mut self) {
+        self.bytes.clear();
+        self.handle_infos.clear();
+    }
+}
+
 fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
     let len = vec.len();
     if size > len {
         vec.reserve(size - len);
     }
+}
+
+bitflags! {
+    /// Rights associated with a handle.
+    ///
+    /// See [rights](https://fuchsia.dev/fuchsia-src/concepts/kernel/rights) for more information.
+    #[repr(C)]
+    pub struct Rights: u32 {
+        /// No rights.
+        const NONE           = 0;
+        /// Duplicate right.
+        const DUPLICATE      = 1 << 0;
+        /// Transfer right.
+        const TRANSFER       = 1 << 1;
+        /// Read right.
+        const READ           = 1 << 2;
+        /// Write right.
+        const WRITE          = 1 << 3;
+    }
+}
+
+/// HandleInfo represents a handle with additional metadata.
+#[derive(Debug)]
+pub struct HandleInfo {
+    /// The handle.
+    pub handle: Handle,
+    /// The type of object referenced by the handle.
+    pub object_type: ObjectType,
+    /// The rights of the handle.
+    pub rights: Rights,
 }
 
 #[derive(Default)]
@@ -583,6 +751,16 @@ enum HdlType {
     Channel,
     StreamSocket,
     DatagramSocket,
+}
+
+impl HdlType {
+    fn object_type(&self) -> ObjectType {
+        match self {
+            HdlType::Channel => ObjectType::CHANNEL,
+            HdlType::StreamSocket => ObjectType::SOCKET,
+            HdlType::DatagramSocket => ObjectType::SOCKET,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -634,6 +812,7 @@ struct Hdl<T> {
     wakers: Wakers,
     liveness: Liveness,
     koid_left: u64,
+    rights: Rights,
 }
 
 enum HdlRef<'a> {
@@ -685,7 +864,7 @@ impl<T> Default for HandleTable<T> {
 }
 
 impl<T> HandleTable<T> {
-    fn new_handle_slot(&self) -> (usize, usize) {
+    fn new_handle_slot(&self, rights: Rights) -> (usize, usize) {
         let shard = self.next_shard.fetch_add(1, Ordering::Relaxed) & 15;
         let mut h = self.shards[shard].lock().unwrap();
         (
@@ -695,6 +874,7 @@ impl<T> HandleTable<T> {
                 wakers: Default::default(),
                 liveness: Liveness::Open,
                 koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
+                rights: rights,
             }),
         )
     }
@@ -872,13 +1052,13 @@ mod test {
 
     #[cfg(not(target_os = "fuchsia"))]
     #[test]
-    fn handle_type_is_correct() {
+    fn object_type_is_correct() {
         let (c1, c2) = Channel::create().unwrap();
         let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
-        assert_eq!(c1.into_handle().handle_type(), HandleType::Channel);
-        assert_eq!(c2.into_handle().handle_type(), HandleType::Channel);
-        assert_eq!(s1.into_handle().handle_type(), HandleType::Socket);
-        assert_eq!(s2.into_handle().handle_type(), HandleType::Socket);
+        assert_eq!(c1.into_handle().object_type(), ObjectType::CHANNEL);
+        assert_eq!(c2.into_handle().object_type(), ObjectType::CHANNEL);
+        assert_eq!(s1.into_handle().object_type(), ObjectType::SOCKET);
+        assert_eq!(s2.into_handle().object_type(), ObjectType::SOCKET);
     }
 
     #[cfg(not(target_os = "fuchsia"))]
