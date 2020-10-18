@@ -490,50 +490,7 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	return nil
 }
 
-func main() {
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
-
-A executable that checks if any component from a build has exceeded its allocated space limit.
-
-See //tools/size_checker for more details.`)
-		flag.PrintDefaults()
-	}
-	var buildDir string
-	flag.StringVar(&buildDir, "build-dir", "", `(required) the output directory of a Fuchsia build.`)
-	var fileSizeOutPath string
-	flag.StringVar(&fileSizeOutPath, "sizes-json-out", "", "If set, will write a json object to this path with schema { <name (str)>: <file size (int)> }.")
-	var showBudgetOnly bool
-	flag.BoolVar(&showBudgetOnly, "budget-only", false, "If set, only budgets and total sizes of components will be shown.")
-
-	flag.Parse()
-
-	if buildDir == "" {
-		flag.Usage()
-		os.Exit(2)
-	}
-
-	sizeCheckerJSON := filepath.Join(buildDir, SizeCheckerJSON)
-	sizeCheckerJSONData, err := ioutil.ReadFile(sizeCheckerJSON)
-	if err != nil {
-		log.Fatal(readError(sizeCheckerJSON, err))
-	}
-	var sizeLimits SizeLimits
-	if err := json.Unmarshal(sizeCheckerJSONData, &sizeLimits); err != nil {
-		log.Fatal(unmarshalError(sizeCheckerJSON, err))
-	}
-	// If there are no components, then there are no work to do. We are done.
-	if len(sizeLimits.Components) == 0 {
-		os.Exit(0)
-	}
-
-	outputSizes := parseSizeLimits(&sizeLimits, buildDir, PackageList, BlobsJSON)
-	if len(fileSizeOutPath) > 0 {
-		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
-			log.Fatal(err)
-		}
-	}
-
+func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, blobFsBudget int64) (bool, string) {
 	var overBudget = false
 	var totalSize int64 = 0
 	var totalBudget int64 = 0
@@ -586,15 +543,64 @@ See //tools/size_checker for more details.`)
 
 	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
 
-	blobFsBudget := parseBlobfsBudget(buildDir, FileSystemSizesJSON)
 	if totalBudget > blobFsBudget {
 		report.WriteString(
 			fmt.Sprintf("WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n", formatSize(totalBudget), formatSize(blobFsBudget)))
 	}
 
+	return overBudget, report.String()
+}
+
+func main() {
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
+
+A executable that checks if any component from a build has exceeded its allocated space limit.
+
+See //tools/size_checker for more details.`)
+		flag.PrintDefaults()
+	}
+	var buildDir string
+	flag.StringVar(&buildDir, "build-dir", "", `(required) the output directory of a Fuchsia build.`)
+	var fileSizeOutPath string
+	flag.StringVar(&fileSizeOutPath, "sizes-json-out", "", "If set, will write a json object to this path with schema { <name (str)>: <file size (int)> }.")
+	var showBudgetOnly bool
+	flag.BoolVar(&showBudgetOnly, "budget-only", false, "If set, only budgets and total sizes of components will be shown.")
+
+	flag.Parse()
+
+	if buildDir == "" {
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	sizeCheckerJSON := filepath.Join(buildDir, SizeCheckerJSON)
+	sizeCheckerJSONData, err := ioutil.ReadFile(sizeCheckerJSON)
+	if err != nil {
+		log.Fatal(readError(sizeCheckerJSON, err))
+	}
+	var sizeLimits SizeLimits
+	if err := json.Unmarshal(sizeCheckerJSONData, &sizeLimits); err != nil {
+		log.Fatal(unmarshalError(sizeCheckerJSON, err))
+	}
+	// If there are no components, then there are no work to do. We are done.
+	if len(sizeLimits.Components) == 0 {
+		os.Exit(0)
+	}
+
+	outputSizes := parseSizeLimits(&sizeLimits, buildDir, PackageList, BlobsJSON)
+	if len(fileSizeOutPath) > 0 {
+		if err := writeOutputSizes(outputSizes, fileSizeOutPath); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	blobFsBudget := parseBlobfsBudget(buildDir, FileSystemSizesJSON)
+	overBudget, report := generateReport(outputSizes, showBudgetOnly, blobFsBudget)
+
 	if overBudget {
-		log.Fatal(report.String())
+		log.Fatal(report)
 	} else {
-		log.Println(report.String())
+		log.Println(report)
 	}
 }

@@ -377,4 +377,14 @@ func Test_processInput(t *testing.T) {
 	if fooSize.Size != int64(2*singleBlobSize) {
 		t.Fatalf("Unexpected size for component foo: %v", fooSize)
 	}
+
+	// Both the budget-only and full report should report going over-budget.
+	budgetOnlyReportOverBudget, _ := generateReport(sizes, true, 0)
+	fullReportOverBudget, _ := generateReport(sizes, false, 0)
+	if !budgetOnlyReportOverBudget {
+		t.Fatalf("The budget-only report is expected to report going overbudget.")
+	}
+	if !fullReportOverBudget {
+		t.Fatalf("The full report is expected to report going overbudget.")
+	}
 }
