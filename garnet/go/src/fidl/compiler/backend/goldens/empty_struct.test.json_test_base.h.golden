@@ -12,8 +12,9 @@ class EmptyProtocol_TestBase : public EmptyProtocol {
  public:
   virtual ~EmptyProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Send(Empty e) override { NotImplemented_("Send"); }
-  void SendAndReceive(Empty e, SendAndReceiveCallback callback) override {
+  void Send(::fidl::test::json::Empty e) override { NotImplemented_("Send"); }
+  void SendAndReceive(::fidl::test::json::Empty e,
+                      SendAndReceiveCallback callback) override {
     NotImplemented_("SendAndReceive");
   }
 };

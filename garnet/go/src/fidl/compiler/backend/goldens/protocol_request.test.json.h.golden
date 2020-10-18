@@ -49,17 +49,19 @@ class Parent {
   using Sync_ = Parent_Sync;
   virtual ~Parent();
   using GetChildCallback =
-      fit::function<void(::fidl::InterfaceHandle<class Child>)>;
+      fit::function<void(::fidl::InterfaceHandle<class ::test::name::Child>)>;
 
   virtual void GetChild(GetChildCallback callback) = 0;
   using GetChildRequestCallback =
-      fit::function<void(::fidl::InterfaceRequest<Child>)>;
+      fit::function<void(::fidl::InterfaceRequest<::test::name::Child>)>;
 
   virtual void GetChildRequest(GetChildRequestCallback callback) = 0;
 
-  virtual void TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
+  virtual void TakeChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child> c) = 0;
 
-  virtual void TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
+  virtual void TakeChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) = 0;
 };
 
 class Parent_RequestDecoder {
@@ -91,13 +93,15 @@ class Parent_RequestDecoder {
         break;
       }
       case internal::kParent_TakeChild_Ordinal: {
-        TakeChild(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
+        TakeChild(::fidl::DecodeAs<
+                  ::fidl::InterfaceHandle<class ::test::name::Child>>(
             &request_decoder, 16));
         break;
       }
       case internal::kParent_TakeChildRequest_Ordinal: {
-        TakeChildRequest(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
-            &request_decoder, 16));
+        TakeChildRequest(
+            ::fidl::DecodeAs<::fidl::InterfaceRequest<::test::name::Child>>(
+                &request_decoder, 16));
         break;
       }
       default: {
@@ -109,8 +113,10 @@ class Parent_RequestDecoder {
   }
   virtual void GetChild() = 0;
   virtual void GetChildRequest() = 0;
-  virtual void TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
-  virtual void TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
+  virtual void TakeChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child> c) = 0;
+  virtual void TakeChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) = 0;
 };
 
 class Parent_RequestEncoder {
@@ -141,8 +147,9 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChild(::fidl::Encoder* _encoder,
-                                   ::fidl::InterfaceHandle<class Child>* c) {
+  static ::fidl::Message TakeChild(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceHandle<class ::test::name::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, c, 16);
@@ -156,8 +163,9 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChildRequest(::fidl::Encoder* _encoder,
-                                          ::fidl::InterfaceRequest<Child>* r) {
+  static ::fidl::Message TakeChildRequest(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::test::name::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, r, 16);
@@ -192,13 +200,15 @@ class Parent_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kParent_GetChild_Ordinal: {
-        GetChild(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
+        GetChild(::fidl::DecodeAs<
+                 ::fidl::InterfaceHandle<class ::test::name::Child>>(
             &response_decoder, 16));
         break;
       }
       case internal::kParent_GetChildRequest_Ordinal: {
-        GetChildRequest(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
-            &response_decoder, 16));
+        GetChildRequest(
+            ::fidl::DecodeAs<::fidl::InterfaceRequest<::test::name::Child>>(
+                &response_decoder, 16));
         break;
       }
       default: {
@@ -207,14 +217,17 @@ class Parent_ResponseDecoder {
     }
     return ZX_OK;
   }
-  virtual void GetChild(::fidl::InterfaceHandle<class Child> c) = 0;
-  virtual void GetChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
+  virtual void GetChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child> c) = 0;
+  virtual void GetChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) = 0;
 };
 
 class Parent_ResponseEncoder {
  public:
-  static ::fidl::Message GetChild(::fidl::Encoder* _encoder,
-                                  ::fidl::InterfaceHandle<class Child>* c) {
+  static ::fidl::Message GetChild(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceHandle<class ::test::name::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, c, 16);
@@ -226,8 +239,9 @@ class Parent_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder,
-                                         ::fidl::InterfaceRequest<Child>* r) {
+  static ::fidl::Message GetChildRequest(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::test::name::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, r, 16);
@@ -250,11 +264,14 @@ class Parent_Sync {
  public:
   using Proxy_ = Parent_SyncProxy;
   virtual ~Parent_Sync();
-  virtual zx_status_t GetChild(::fidl::InterfaceHandle<class Child>* out_c) = 0;
+  virtual zx_status_t GetChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child>* out_c) = 0;
   virtual zx_status_t GetChildRequest(
-      ::fidl::InterfaceRequest<Child>* out_r) = 0;
-  virtual zx_status_t TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
-  virtual zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
+      ::fidl::InterfaceRequest<::test::name::Child>* out_r) = 0;
+  virtual zx_status_t TakeChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child> c) = 0;
+  virtual zx_status_t TakeChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) = 0;
 };
 
 class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
@@ -265,8 +282,9 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   zx_status_t Dispatch_(::fidl::Message message) override;
   void GetChild(GetChildCallback callback) override;
   void GetChildRequest(GetChildRequestCallback callback) override;
-  void TakeChild(::fidl::InterfaceHandle<class Child> c) override;
-  void TakeChildRequest(::fidl::InterfaceRequest<Child> r) override;
+  void TakeChild(::fidl::InterfaceHandle<class ::test::name::Child> c) override;
+  void TakeChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) override;
 
  private:
   Parent_Proxy(const Parent_Proxy&) = delete;
@@ -293,10 +311,14 @@ class Parent_SyncProxy : public Parent_Sync {
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
-  zx_status_t GetChild(::fidl::InterfaceHandle<class Child>* out_c) override;
-  zx_status_t GetChildRequest(::fidl::InterfaceRequest<Child>* out_r) override;
-  zx_status_t TakeChild(::fidl::InterfaceHandle<class Child> c) override;
-  zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) override;
+  zx_status_t GetChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child>* out_c) override;
+  zx_status_t GetChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child>* out_r) override;
+  zx_status_t TakeChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child> c) override;
+  zx_status_t TakeChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

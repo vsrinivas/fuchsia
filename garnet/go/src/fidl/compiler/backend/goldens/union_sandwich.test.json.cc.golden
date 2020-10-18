@@ -612,7 +612,7 @@ UnionSize24Alignment8::UnionSize24Alignment8(UnionSize24Alignment8&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kVariant:
-      new (&variant_) class StructSize16Alignment8();
+      new (&variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
       variant_ = std::move(other.variant_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -627,7 +627,7 @@ UnionSize24Alignment8& UnionSize24Alignment8::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kVariant:
-        new (&variant_) class StructSize16Alignment8();
+        new (&variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
         variant_ = std::move(other.variant_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -638,7 +638,7 @@ UnionSize24Alignment8& UnionSize24Alignment8::operator=(
 }
 
 UnionSize24Alignment8 UnionSize24Alignment8::WithVariant(
-    class StructSize16Alignment8&& val) {
+    ::test::fidl::unionsandwich::StructSize16Alignment8&& val) {
   UnionSize24Alignment8 result;
   result.set_variant(std::move(val));
   return result;
@@ -652,9 +652,10 @@ void UnionSize24Alignment8::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (Which()) {
     case Tag::kVariant: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class StructSize16Alignment8,
-                                     ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<
+                         ::test::fidl::unionsandwich::StructSize16Alignment8,
+                         ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &variant_, envelope_offset);
       break;
     }
@@ -692,7 +693,9 @@ void UnionSize24Alignment8::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kVariant:
-      new (&value->variant_) class StructSize16Alignment8();
+      new (
+          &value
+               ->variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
       ::fidl::Decode(decoder, &value->variant_, envelope_offset);
       break;
     default:
@@ -707,7 +710,9 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kVariant:
-      new (&result->variant_) class StructSize16Alignment8();
+      new (
+          &result
+               ->variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
       return ::fidl::Clone(variant_, &result->variant_);
     default:
       return ZX_OK;
@@ -715,7 +720,7 @@ zx_status_t UnionSize24Alignment8::Clone(UnionSize24Alignment8* result) const {
 }
 
 UnionSize24Alignment8& UnionSize24Alignment8::set_variant(
-    class StructSize16Alignment8 value) {
+    ::test::fidl::unionsandwich::StructSize16Alignment8 value) {
   EnsureStorageInitialized(Tag::kVariant);
   variant_ = std::move(value);
   return *this;
@@ -741,7 +746,7 @@ void UnionSize24Alignment8::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kVariant:
-        new (&variant_) class StructSize16Alignment8();
+        new (&variant_)::test::fidl::unionsandwich::StructSize16Alignment8();
         break;
       default:
         break;

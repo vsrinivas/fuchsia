@@ -78,13 +78,11 @@ const (
 )
 
 type Type struct {
-	// Use Type.Decl when you want to _declare_ a class/struct, e.g. "class Foo { … }". If you need
-	// to reference a class by its name (e.g. "new Foo"), use the Type.Identifier() method instead.
-	// Identifier() will add a type qualifier to the class name so that the compiler will resolve
-	// the class, even if any locally non-type declarations are present (e.g. "enum Foo"). Google
-	// for "C++ elaborated type specifier" for more details.
-	Decl      string
-	FullDecl  string // Decl but with full type name
+	Decl string
+
+	// Decl but with full type name
+	FullDecl string
+
 	LLDecl    string
 	LLClass   string
 	LLPointer bool
@@ -112,20 +110,6 @@ type Type struct {
 
 func (t Type) IsPrimitiveType() bool {
 	return t.Kind == PrimitiveKind || t.Kind == BitsKind || t.Kind == EnumKind
-}
-
-func (t Type) Identifier() string {
-	// TODO(fxbug.dev/8084): The logic to determine whether the type qualifier is necessary in this method
-	// probably isn't correct in all cases due to the complexity of C++'s grammar rules, and could
-	// be improved.
-
-	// Don't prepend type qualifiers to fully-qualified class names, which will begin with "::"
-	// (e.g. "::fidl::namespace:ClassName"): they can't be hidden by local declarations.
-	if t.IsPrimitiveType() || strings.HasPrefix(t.Decl, "::") {
-		return t.Decl
-	}
-
-	return "class " + t.Decl
 }
 
 func (t *Type) compileProperties(c compiler) {

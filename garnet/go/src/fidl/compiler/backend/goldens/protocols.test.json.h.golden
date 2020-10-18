@@ -189,7 +189,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
       WithErrorSyntax_ResponseAsStruct_Result&&);
 
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      class WithErrorSyntax_ResponseAsStruct_Response&&);
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Response&&);
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -214,17 +214,18 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  class WithErrorSyntax_ResponseAsStruct_Response& response() {
+  ::test::name::WithErrorSyntax_ResponseAsStruct_Response& response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const class WithErrorSyntax_ResponseAsStruct_Response& response() const {
+  const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& response()
+      const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ResponseAsStruct_Result& set_response(
-      class WithErrorSyntax_ResponseAsStruct_Response value);
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -279,7 +280,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class WithErrorSyntax_ResponseAsStruct_Response response_;
+    ::test::name::WithErrorSyntax_ResponseAsStruct_Response response_;
     uint32_t err_;
   };
 };
@@ -340,7 +341,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
       WithErrorSyntax_ErrorAsPrimitive_Result&&);
 
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      class WithErrorSyntax_ErrorAsPrimitive_Response&&);
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&&);
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -365,17 +366,18 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  class WithErrorSyntax_ErrorAsPrimitive_Response& response() {
+  ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const class WithErrorSyntax_ErrorAsPrimitive_Response& response() const {
+  const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response()
+      const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ErrorAsPrimitive_Result& set_response(
-      class WithErrorSyntax_ErrorAsPrimitive_Response value);
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -426,7 +428,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class WithErrorSyntax_ErrorAsPrimitive_Response response_;
+    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response response_;
     uint32_t err_;
   };
 };
@@ -1401,8 +1403,8 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
       WithErrorSyntax_ErrorAsEnum_Result&&);
 
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
-      class WithErrorSyntax_ErrorAsEnum_Response&&);
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(ErrorEnun&&);
+      ::test::name::WithErrorSyntax_ErrorAsEnum_Response&&);
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::test::name::ErrorEnun&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -1424,30 +1426,30 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  class WithErrorSyntax_ErrorAsEnum_Response& response() {
+  ::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const class WithErrorSyntax_ErrorAsEnum_Response& response() const {
+  const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ErrorAsEnum_Result& set_response(
-      class WithErrorSyntax_ErrorAsEnum_Response value);
+      ::test::name::WithErrorSyntax_ErrorAsEnum_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  ErrorEnun& err() {
+  ::test::name::ErrorEnun& err() {
     EnsureStorageInitialized(Tag::kErr);
     return err_;
   }
 
-  const ErrorEnun& err() const {
+  const ::test::name::ErrorEnun& err() const {
     ZX_ASSERT(is_err());
     return err_;
   }
-  WithErrorSyntax_ErrorAsEnum_Result& set_err(ErrorEnun value);
+  WithErrorSyntax_ErrorAsEnum_Result& set_err(::test::name::ErrorEnun value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -1483,8 +1485,8 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class WithErrorSyntax_ErrorAsEnum_Response response_;
-    ErrorEnun err_;
+    ::test::name::WithErrorSyntax_ErrorAsEnum_Response response_;
+    ::test::name::ErrorEnun err_;
   };
 };
 
@@ -1505,16 +1507,16 @@ class WithErrorSyntax {
   using EventSender_ = WithErrorSyntax_EventSender;
   using Sync_ = WithErrorSyntax_Sync;
   virtual ~WithErrorSyntax();
-  using ResponseAsStructCallback =
-      fit::function<void(WithErrorSyntax_ResponseAsStruct_Result)>;
+  using ResponseAsStructCallback = fit::function<void(
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Result)>;
 
   virtual void ResponseAsStruct(ResponseAsStructCallback callback) = 0;
-  using ErrorAsPrimitiveCallback =
-      fit::function<void(WithErrorSyntax_ErrorAsPrimitive_Result)>;
+  using ErrorAsPrimitiveCallback = fit::function<void(
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result)>;
 
   virtual void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) = 0;
   using ErrorAsEnumCallback =
-      fit::function<void(WithErrorSyntax_ErrorAsEnum_Result)>;
+      fit::function<void(::test::name::WithErrorSyntax_ErrorAsEnum_Result)>;
 
   virtual void ErrorAsEnum(ErrorAsEnumCallback callback) = 0;
 };
@@ -1628,20 +1630,21 @@ class WithErrorSyntax_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
-        ResponseAsStruct(
-            ::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
-                &response_decoder, 16));
+        ResponseAsStruct(::fidl::DecodeAs<
+                         ::test::name::WithErrorSyntax_ResponseAsStruct_Result>(
+            &response_decoder, 16));
         break;
       }
       case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
-        ErrorAsPrimitive(
-            ::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
-                &response_decoder, 16));
+        ErrorAsPrimitive(::fidl::DecodeAs<
+                         ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>(
+            &response_decoder, 16));
         break;
       }
       case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
-        ErrorAsEnum(::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(
-            &response_decoder, 16));
+        ErrorAsEnum(
+            ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsEnum_Result>(
+                &response_decoder, 16));
         break;
       }
       default: {
@@ -1651,17 +1654,18 @@ class WithErrorSyntax_ResponseDecoder {
     return ZX_OK;
   }
   virtual void ResponseAsStruct(
-      WithErrorSyntax_ResponseAsStruct_Result result) = 0;
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Result result) = 0;
   virtual void ErrorAsPrimitive(
-      WithErrorSyntax_ErrorAsPrimitive_Result result) = 0;
-  virtual void ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result result) = 0;
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) = 0;
+  virtual void ErrorAsEnum(
+      ::test::name::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
 };
 
 class WithErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::Message ResponseAsStruct(
       ::fidl::Encoder* _encoder,
-      WithErrorSyntax_ResponseAsStruct_Result* result) {
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -1675,7 +1679,7 @@ class WithErrorSyntax_ResponseEncoder {
   }
   static ::fidl::Message ErrorAsPrimitive(
       ::fidl::Encoder* _encoder,
-      WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -1688,7 +1692,8 @@ class WithErrorSyntax_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::Message ErrorAsEnum(
-      ::fidl::Encoder* _encoder, WithErrorSyntax_ErrorAsEnum_Result* result) {
+      ::fidl::Encoder* _encoder,
+      ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -1712,11 +1717,11 @@ class WithErrorSyntax_Sync {
   using Proxy_ = WithErrorSyntax_SyncProxy;
   virtual ~WithErrorSyntax_Sync();
   virtual zx_status_t ResponseAsStruct(
-      WithErrorSyntax_ResponseAsStruct_Result* out_result) = 0;
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Result* out_result) = 0;
   virtual zx_status_t ErrorAsPrimitive(
-      WithErrorSyntax_ErrorAsPrimitive_Result* out_result) = 0;
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* out_result) = 0;
   virtual zx_status_t ErrorAsEnum(
-      WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
+      ::test::name::WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
 };
 
 class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
@@ -1756,11 +1761,13 @@ class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
   explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
   ~WithErrorSyntax_SyncProxy() override;
   zx_status_t ResponseAsStruct(
-      WithErrorSyntax_ResponseAsStruct_Result* out_result) override;
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Result* out_result)
+      override;
   zx_status_t ErrorAsPrimitive(
-      WithErrorSyntax_ErrorAsPrimitive_Result* out_result) override;
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* out_result)
+      override;
   zx_status_t ErrorAsEnum(
-      WithErrorSyntax_ErrorAsEnum_Result* out_result) override;
+      ::test::name::WithErrorSyntax_ErrorAsEnum_Result* out_result) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

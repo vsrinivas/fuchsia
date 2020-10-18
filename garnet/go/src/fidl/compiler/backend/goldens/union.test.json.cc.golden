@@ -1245,11 +1245,11 @@ StrictPizzaOrPasta::StrictPizzaOrPasta(StrictPizzaOrPasta&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_) class Pizza();
+      new (&pizza_)::fidl::test::json::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_) class Pasta();
+      new (&pasta_)::fidl::test::json::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1263,11 +1263,11 @@ StrictPizzaOrPasta& StrictPizzaOrPasta::operator=(StrictPizzaOrPasta&& other) {
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1277,12 +1277,14 @@ StrictPizzaOrPasta& StrictPizzaOrPasta::operator=(StrictPizzaOrPasta&& other) {
   return *this;
 }
 
-StrictPizzaOrPasta StrictPizzaOrPasta::WithPizza(class Pizza&& val) {
+StrictPizzaOrPasta StrictPizzaOrPasta::WithPizza(
+    ::fidl::test::json::Pizza&& val) {
   StrictPizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
-StrictPizzaOrPasta StrictPizzaOrPasta::WithPasta(class Pasta&& val) {
+StrictPizzaOrPasta StrictPizzaOrPasta::WithPasta(
+    ::fidl::test::json::Pasta&& val) {
   StrictPizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1296,14 +1298,16 @@ void StrictPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (Which()) {
     case Tag::kPizza: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pasta, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
     }
@@ -1340,11 +1344,11 @@ void StrictPizzaOrPasta::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_) class Pizza();
+      new (&value->pizza_)::fidl::test::json::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_) class Pasta();
+      new (&value->pasta_)::fidl::test::json::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1359,23 +1363,25 @@ zx_status_t StrictPizzaOrPasta::Clone(StrictPizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_) class Pizza();
+      new (&result->pizza_)::fidl::test::json::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_) class Pasta();
+      new (&result->pasta_)::fidl::test::json::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       return ZX_OK;
   }
 }
 
-StrictPizzaOrPasta& StrictPizzaOrPasta::set_pizza(class Pizza value) {
+StrictPizzaOrPasta& StrictPizzaOrPasta::set_pizza(
+    ::fidl::test::json::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
-StrictPizzaOrPasta& StrictPizzaOrPasta::set_pasta(class Pasta value) {
+StrictPizzaOrPasta& StrictPizzaOrPasta::set_pasta(
+    ::fidl::test::json::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1404,10 +1410,10 @@ void StrictPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         break;
       default:
         break;
@@ -1424,11 +1430,11 @@ PizzaOrPasta::~PizzaOrPasta() { Destroy(); }
 PizzaOrPasta::PizzaOrPasta(PizzaOrPasta&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_) class Pizza();
+      new (&pizza_)::fidl::test::json::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_) class Pasta();
+      new (&pasta_)::fidl::test::json::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1442,11 +1448,11 @@ PizzaOrPasta& PizzaOrPasta::operator=(PizzaOrPasta&& other) {
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1456,12 +1462,12 @@ PizzaOrPasta& PizzaOrPasta::operator=(PizzaOrPasta&& other) {
   return *this;
 }
 
-PizzaOrPasta PizzaOrPasta::WithPizza(class Pizza&& val) {
+PizzaOrPasta PizzaOrPasta::WithPizza(::fidl::test::json::Pizza&& val) {
   PizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
-PizzaOrPasta PizzaOrPasta::WithPasta(class Pasta&& val) {
+PizzaOrPasta PizzaOrPasta::WithPasta(::fidl::test::json::Pasta&& val) {
   PizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1475,14 +1481,16 @@ void PizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (Which()) {
     case Tag::kPizza: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pasta, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
     }
@@ -1519,11 +1527,11 @@ void PizzaOrPasta::Decode(::fidl::Decoder* decoder, PizzaOrPasta* value,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_) class Pizza();
+      new (&value->pizza_)::fidl::test::json::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_) class Pasta();
+      new (&value->pasta_)::fidl::test::json::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1538,23 +1546,23 @@ zx_status_t PizzaOrPasta::Clone(PizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_) class Pizza();
+      new (&result->pizza_)::fidl::test::json::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_) class Pasta();
+      new (&result->pasta_)::fidl::test::json::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       return ZX_OK;
   }
 }
 
-PizzaOrPasta& PizzaOrPasta::set_pizza(class Pizza value) {
+PizzaOrPasta& PizzaOrPasta::set_pizza(::fidl::test::json::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
-PizzaOrPasta& PizzaOrPasta::set_pasta(class Pasta value) {
+PizzaOrPasta& PizzaOrPasta::set_pasta(::fidl::test::json::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1583,10 +1591,10 @@ void PizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         break;
       default:
         break;
@@ -1605,11 +1613,11 @@ FlexiblePizzaOrPasta::FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_) class Pizza();
+      new (&pizza_)::fidl::test::json::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_) class Pasta();
+      new (&pasta_)::fidl::test::json::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1628,11 +1636,11 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1646,12 +1654,14 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(
   return *this;
 }
 
-FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPizza(class Pizza&& val) {
+FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPizza(
+    ::fidl::test::json::Pizza&& val) {
   FlexiblePizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
-FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPasta(class Pasta&& val) {
+FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPasta(
+    ::fidl::test::json::Pasta&& val) {
   FlexiblePizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1665,14 +1675,16 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (Which()) {
     case Tag::kPizza: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pasta, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
     }
@@ -1713,11 +1725,11 @@ void FlexiblePizzaOrPasta::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_) class Pizza();
+      new (&value->pizza_)::fidl::test::json::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_) class Pasta();
+      new (&value->pasta_)::fidl::test::json::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1734,10 +1746,10 @@ zx_status_t FlexiblePizzaOrPasta::Clone(FlexiblePizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_) class Pizza();
+      new (&result->pizza_)::fidl::test::json::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_) class Pasta();
+      new (&result->pasta_)::fidl::test::json::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
@@ -1746,13 +1758,15 @@ zx_status_t FlexiblePizzaOrPasta::Clone(FlexiblePizzaOrPasta* result) const {
   }
 }
 
-FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pizza(class Pizza value) {
+FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pizza(
+    ::fidl::test::json::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
-FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pasta(class Pasta value) {
+FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pasta(
+    ::fidl::test::json::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1790,10 +1804,10 @@ void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1813,11 +1827,11 @@ ExplicitPizzaOrPasta::ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&& other)
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
-      new (&pizza_) class Pizza();
+      new (&pizza_)::fidl::test::json::Pizza();
       pizza_ = std::move(other.pizza_);
       break;
     case Tag::kPasta:
-      new (&pasta_) class Pasta();
+      new (&pasta_)::fidl::test::json::Pasta();
       pasta_ = std::move(other.pasta_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1832,11 +1846,11 @@ ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         pizza_ = std::move(other.pizza_);
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1846,12 +1860,14 @@ ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::operator=(
   return *this;
 }
 
-ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPizza(class Pizza&& val) {
+ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPizza(
+    ::fidl::test::json::Pizza&& val) {
   ExplicitPizzaOrPasta result;
   result.set_pizza(std::move(val));
   return result;
 }
-ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPasta(class Pasta&& val) {
+ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPasta(
+    ::fidl::test::json::Pasta&& val) {
   ExplicitPizzaOrPasta result;
   result.set_pasta(std::move(val));
   return result;
@@ -1865,14 +1881,16 @@ void ExplicitPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
 
   switch (Which()) {
     case Tag::kPizza: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pizza, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pizza,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pizza_, envelope_offset);
       break;
     }
     case Tag::kPasta: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Pasta, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Pasta,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
     }
@@ -1909,11 +1927,11 @@ void ExplicitPizzaOrPasta::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kPizza:
-      new (&value->pizza_) class Pizza();
+      new (&value->pizza_)::fidl::test::json::Pizza();
       ::fidl::Decode(decoder, &value->pizza_, envelope_offset);
       break;
     case Tag::kPasta:
-      new (&value->pasta_) class Pasta();
+      new (&value->pasta_)::fidl::test::json::Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
@@ -1928,23 +1946,25 @@ zx_status_t ExplicitPizzaOrPasta::Clone(ExplicitPizzaOrPasta* result) const {
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kPizza:
-      new (&result->pizza_) class Pizza();
+      new (&result->pizza_)::fidl::test::json::Pizza();
       return ::fidl::Clone(pizza_, &result->pizza_);
     case Tag::kPasta:
-      new (&result->pasta_) class Pasta();
+      new (&result->pasta_)::fidl::test::json::Pasta();
       return ::fidl::Clone(pasta_, &result->pasta_);
     default:
       return ZX_OK;
   }
 }
 
-ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::set_pizza(class Pizza value) {
+ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::set_pizza(
+    ::fidl::test::json::Pizza value) {
   EnsureStorageInitialized(Tag::kPizza);
   pizza_ = std::move(value);
   return *this;
 }
 
-ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::set_pasta(class Pasta value) {
+ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::set_pasta(
+    ::fidl::test::json::Pasta value) {
   EnsureStorageInitialized(Tag::kPasta);
   pasta_ = std::move(value);
   return *this;
@@ -1973,10 +1993,10 @@ void ExplicitPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kPizza:
-        new (&pizza_) class Pizza();
+        new (&pizza_)::fidl::test::json::Pizza();
         break;
       case Tag::kPasta:
-        new (&pasta_) class Pasta();
+        new (&pasta_)::fidl::test::json::Pasta();
         break;
       default:
         break;
@@ -2263,7 +2283,8 @@ TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<StrictBoundedXUnion>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::fidl::test::json::StrictBoundedXUnion>(
+            &decoder, 16));
         return ZX_OK;
       },
       &fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable);
@@ -2295,7 +2316,8 @@ TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<OlderSimpleUnion>(&decoder, 16));
+        callback_(::fidl::DecodeAs<::fidl::test::json::OlderSimpleUnion>(
+            &decoder, 16));
         return ZX_OK;
       },
       &fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable);
@@ -2330,7 +2352,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(StrictBoundedXUnion xu) {
+  void operator()(::fidl::test::json::StrictBoundedXUnion xu) {
     ::fidl::Encoder _encoder(
         internal::
             kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
@@ -2351,7 +2373,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(OlderSimpleUnion xu) {
+  void operator()(::fidl::test::json::OlderSimpleUnion xu) {
     ::fidl::Encoder _encoder(
         internal::
             kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
@@ -2422,7 +2444,7 @@ TestProtocol_SyncProxy::~TestProtocol_SyncProxy() = default;
 
 zx_status_t
 TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
-    StrictBoundedXUnion* out_xu) {
+    ::fidl::test::json::StrictBoundedXUnion* out_xu) {
   ::fidl::Encoder _encoder(
       internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
@@ -2436,13 +2458,14 @@ TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_xu = ::fidl::DecodeAs<StrictBoundedXUnion>(&decoder_, 16);
+  *out_xu =
+      ::fidl::DecodeAs<::fidl::test::json::StrictBoundedXUnion>(&decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t
 TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-    OlderSimpleUnion* out_xu) {
+    ::fidl::test::json::OlderSimpleUnion* out_xu) {
   ::fidl::Encoder _encoder(
       internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
@@ -2456,7 +2479,8 @@ TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
       &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
-  *out_xu = ::fidl::DecodeAs<OlderSimpleUnion>(&decoder_, 16);
+  *out_xu =
+      ::fidl::DecodeAs<::fidl::test::json::OlderSimpleUnion>(&decoder_, 16);
   return ZX_OK;
 }
 
@@ -4102,7 +4126,7 @@ XUnionContainingEmptyStruct::XUnionContainingEmptyStruct(
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kEmpty:
-      new (&empty_) class Empty();
+      new (&empty_)::fidl::test::json::Empty();
       empty_ = std::move(other.empty_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -4121,7 +4145,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kEmpty:
-        new (&empty_) class Empty();
+        new (&empty_)::fidl::test::json::Empty();
         empty_ = std::move(other.empty_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -4136,7 +4160,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(
 }
 
 XUnionContainingEmptyStruct XUnionContainingEmptyStruct::WithEmpty(
-    class Empty&& val) {
+    ::fidl::test::json::Empty&& val) {
   XUnionContainingEmptyStruct result;
   result.set_empty(std::move(val));
   return result;
@@ -4151,8 +4175,9 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder,
 
   switch (Which()) {
     case Tag::kEmpty: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class Empty, ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<::fidl::test::json::Empty,
+                                                    ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &empty_, envelope_offset);
       break;
     }
@@ -4194,7 +4219,7 @@ void XUnionContainingEmptyStruct::Decode(::fidl::Decoder* decoder,
 
   switch (value->tag_) {
     case Tag::kEmpty:
-      new (&value->empty_) class Empty();
+      new (&value->empty_)::fidl::test::json::Empty();
       ::fidl::Decode(decoder, &value->empty_, envelope_offset);
       break;
     default:
@@ -4212,7 +4237,7 @@ zx_status_t XUnionContainingEmptyStruct::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kEmpty:
-      new (&result->empty_) class Empty();
+      new (&result->empty_)::fidl::test::json::Empty();
       return ::fidl::Clone(empty_, &result->empty_);
     default:
       new (&result->unknown_data_) decltype(unknown_data_);
@@ -4222,7 +4247,7 @@ zx_status_t XUnionContainingEmptyStruct::Clone(
 }
 
 XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(
-    class Empty value) {
+    ::fidl::test::json::Empty value) {
   EnsureStorageInitialized(Tag::kEmpty);
   empty_ = std::move(value);
   return *this;
@@ -4259,7 +4284,7 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kEmpty:
-        new (&empty_) class Empty();
+        new (&empty_)::fidl::test::json::Empty();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);

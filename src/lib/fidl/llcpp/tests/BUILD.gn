@@ -28,7 +28,7 @@ executable("fidl_llcpp_conformance_test_bin") {
 
   deps = [
     ":generated_conformance_test",
-    "//sdk/lib/fidl/cpp:fidl_test_llcpp",
+    "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
     "//third_party/googletest:gtest",

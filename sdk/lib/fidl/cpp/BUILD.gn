@@ -162,14 +162,6 @@ source_set("test_support") {
   public_deps = [ "//zircon/public/lib/async" ]
 }
 
-fidl("fidl_test") {
-  name = "fidl.test.misc"
-
-  testonly = true
-
-  sources = [ "fidl_test.test.fidl" ]
-}
-
 gidl_hlcpp_conformance("conformance_test_sources") {
   testonly = true
   inputs = conformance_suite_gidl_files
@@ -201,7 +193,7 @@ source_set("host_test_sources") {
 
   deps = [
     ":cpp_base",
-    ":fidl_test",
+    "test:fidl_test",
     ":test_util",
     "//third_party/googletest:gtest",
   ]
@@ -234,7 +226,8 @@ source_set("test_sources") {
 
   deps = [
     ":cpp",
-    ":fidl_test",
+    "test:fidl_test",
+    "test:collision_test",
     ":test_support",
     ":test_util",
     ":union_migration_test_fidl",

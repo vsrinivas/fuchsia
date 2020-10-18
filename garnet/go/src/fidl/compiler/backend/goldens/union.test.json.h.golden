@@ -673,8 +673,8 @@ class StrictPizzaOrPasta final {
   StrictPizzaOrPasta(StrictPizzaOrPasta&&);
   StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&&);
 
-  static StrictPizzaOrPasta WithPizza(class Pizza&&);
-  static StrictPizzaOrPasta WithPasta(class Pasta&&);
+  static StrictPizzaOrPasta WithPizza(::fidl::test::json::Pizza&&);
+  static StrictPizzaOrPasta WithPasta(::fidl::test::json::Pasta&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -696,29 +696,29 @@ class StrictPizzaOrPasta final {
 
   bool is_pizza() const { return tag_ == Tag::kPizza; }
 
-  class Pizza& pizza() {
+  ::fidl::test::json::Pizza& pizza() {
     EnsureStorageInitialized(Tag::kPizza);
     return pizza_;
   }
 
-  const class Pizza& pizza() const {
+  const ::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(is_pizza());
     return pizza_;
   }
-  StrictPizzaOrPasta& set_pizza(class Pizza value);
+  StrictPizzaOrPasta& set_pizza(::fidl::test::json::Pizza value);
 
   bool is_pasta() const { return tag_ == Tag::kPasta; }
 
-  class Pasta& pasta() {
+  ::fidl::test::json::Pasta& pasta() {
     EnsureStorageInitialized(Tag::kPasta);
     return pasta_;
   }
 
-  const class Pasta& pasta() const {
+  const ::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(is_pasta());
     return pasta_;
   }
-  StrictPizzaOrPasta& set_pasta(class Pasta value);
+  StrictPizzaOrPasta& set_pasta(::fidl::test::json::Pasta value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -734,8 +734,8 @@ class StrictPizzaOrPasta final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class Pizza pizza_;
-    class Pasta pasta_;
+    ::fidl::test::json::Pizza pizza_;
+    ::fidl::test::json::Pasta pasta_;
   };
 };
 
@@ -756,8 +756,8 @@ class PizzaOrPasta final {
   PizzaOrPasta(PizzaOrPasta&&);
   PizzaOrPasta& operator=(PizzaOrPasta&&);
 
-  static PizzaOrPasta WithPizza(class Pizza&&);
-  static PizzaOrPasta WithPasta(class Pasta&&);
+  static PizzaOrPasta WithPizza(::fidl::test::json::Pizza&&);
+  static PizzaOrPasta WithPasta(::fidl::test::json::Pasta&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -779,29 +779,29 @@ class PizzaOrPasta final {
 
   bool is_pizza() const { return tag_ == Tag::kPizza; }
 
-  class Pizza& pizza() {
+  ::fidl::test::json::Pizza& pizza() {
     EnsureStorageInitialized(Tag::kPizza);
     return pizza_;
   }
 
-  const class Pizza& pizza() const {
+  const ::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(is_pizza());
     return pizza_;
   }
-  PizzaOrPasta& set_pizza(class Pizza value);
+  PizzaOrPasta& set_pizza(::fidl::test::json::Pizza value);
 
   bool is_pasta() const { return tag_ == Tag::kPasta; }
 
-  class Pasta& pasta() {
+  ::fidl::test::json::Pasta& pasta() {
     EnsureStorageInitialized(Tag::kPasta);
     return pasta_;
   }
 
-  const class Pasta& pasta() const {
+  const ::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(is_pasta());
     return pasta_;
   }
-  PizzaOrPasta& set_pasta(class Pasta value);
+  PizzaOrPasta& set_pasta(::fidl::test::json::Pasta value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -817,8 +817,8 @@ class PizzaOrPasta final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class Pizza pizza_;
-    class Pasta pasta_;
+    ::fidl::test::json::Pizza pizza_;
+    ::fidl::test::json::Pasta pasta_;
   };
 };
 
@@ -839,8 +839,8 @@ class FlexiblePizzaOrPasta final {
   FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&&);
   FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&&);
 
-  static FlexiblePizzaOrPasta WithPizza(class Pizza&&);
-  static FlexiblePizzaOrPasta WithPasta(class Pasta&&);
+  static FlexiblePizzaOrPasta WithPizza(::fidl::test::json::Pizza&&);
+  static FlexiblePizzaOrPasta WithPasta(::fidl::test::json::Pasta&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
@@ -864,29 +864,29 @@ class FlexiblePizzaOrPasta final {
 
   bool is_pizza() const { return tag_ == Tag::kPizza; }
 
-  class Pizza& pizza() {
+  ::fidl::test::json::Pizza& pizza() {
     EnsureStorageInitialized(Tag::kPizza);
     return pizza_;
   }
 
-  const class Pizza& pizza() const {
+  const ::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(is_pizza());
     return pizza_;
   }
-  FlexiblePizzaOrPasta& set_pizza(class Pizza value);
+  FlexiblePizzaOrPasta& set_pizza(::fidl::test::json::Pizza value);
 
   bool is_pasta() const { return tag_ == Tag::kPasta; }
 
-  class Pasta& pasta() {
+  ::fidl::test::json::Pasta& pasta() {
     EnsureStorageInitialized(Tag::kPasta);
     return pasta_;
   }
 
-  const class Pasta& pasta() const {
+  const ::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(is_pasta());
     return pasta_;
   }
-  FlexiblePizzaOrPasta& set_pasta(class Pasta value);
+  FlexiblePizzaOrPasta& set_pasta(::fidl::test::json::Pasta value);
   FlexiblePizzaOrPasta& _experimental_set_unknown_data(
       fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
@@ -919,8 +919,8 @@ class FlexiblePizzaOrPasta final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class Pizza pizza_;
-    class Pasta pasta_;
+    ::fidl::test::json::Pizza pizza_;
+    ::fidl::test::json::Pasta pasta_;
     ::fidl::UnknownBytes unknown_data_;
   };
 };
@@ -942,8 +942,8 @@ class ExplicitPizzaOrPasta final {
   ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&&);
   ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&&);
 
-  static ExplicitPizzaOrPasta WithPizza(class Pizza&&);
-  static ExplicitPizzaOrPasta WithPasta(class Pasta&&);
+  static ExplicitPizzaOrPasta WithPizza(::fidl::test::json::Pizza&&);
+  static ExplicitPizzaOrPasta WithPasta(::fidl::test::json::Pasta&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -965,29 +965,29 @@ class ExplicitPizzaOrPasta final {
 
   bool is_pizza() const { return tag_ == Tag::kPizza; }
 
-  class Pizza& pizza() {
+  ::fidl::test::json::Pizza& pizza() {
     EnsureStorageInitialized(Tag::kPizza);
     return pizza_;
   }
 
-  const class Pizza& pizza() const {
+  const ::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(is_pizza());
     return pizza_;
   }
-  ExplicitPizzaOrPasta& set_pizza(class Pizza value);
+  ExplicitPizzaOrPasta& set_pizza(::fidl::test::json::Pizza value);
 
   bool is_pasta() const { return tag_ == Tag::kPasta; }
 
-  class Pasta& pasta() {
+  ::fidl::test::json::Pasta& pasta() {
     EnsureStorageInitialized(Tag::kPasta);
     return pasta_;
   }
 
-  const class Pasta& pasta() const {
+  const ::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(is_pasta());
     return pasta_;
   }
-  ExplicitPizzaOrPasta& set_pasta(class Pasta value);
+  ExplicitPizzaOrPasta& set_pasta(::fidl::test::json::Pasta value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -1003,8 +1003,8 @@ class ExplicitPizzaOrPasta final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class Pizza pizza_;
-    class Pasta pasta_;
+    ::fidl::test::json::Pizza pizza_;
+    ::fidl::test::json::Pasta pasta_;
   };
 };
 
@@ -1127,12 +1127,12 @@ class TestProtocol {
   using Sync_ = TestProtocol_Sync;
   virtual ~TestProtocol();
   using StrictXUnionHenceResponseMayBeStackAllocatedCallback =
-      fit::function<void(StrictBoundedXUnion)>;
+      fit::function<void(::fidl::test::json::StrictBoundedXUnion)>;
 
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
       StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) = 0;
   using FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback =
-      fit::function<void(OlderSimpleUnion)>;
+      fit::function<void(::fidl::test::json::OlderSimpleUnion)>;
 
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) = 0;
@@ -1238,13 +1238,15 @@ class TestProtocol_ResponseDecoder {
       case internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
         StrictXUnionHenceResponseMayBeStackAllocated(
-            ::fidl::DecodeAs<StrictBoundedXUnion>(&response_decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::json::StrictBoundedXUnion>(
+                &response_decoder, 16));
         break;
       }
       case internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
-            ::fidl::DecodeAs<OlderSimpleUnion>(&response_decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::json::OlderSimpleUnion>(
+                &response_decoder, 16));
         break;
       }
       default: {
@@ -1254,15 +1256,15 @@ class TestProtocol_ResponseDecoder {
     return ZX_OK;
   }
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictBoundedXUnion xu) = 0;
+      ::fidl::test::json::StrictBoundedXUnion xu) = 0;
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      OlderSimpleUnion xu) = 0;
+      ::fidl::test::json::OlderSimpleUnion xu) = 0;
 };
 
 class TestProtocol_ResponseEncoder {
  public:
   static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::Encoder* _encoder, StrictBoundedXUnion* xu) {
+      ::fidl::Encoder* _encoder, ::fidl::test::json::StrictBoundedXUnion* xu) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, xu, 16);
@@ -1277,7 +1279,7 @@ class TestProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::Encoder* _encoder, OlderSimpleUnion* xu) {
+      ::fidl::Encoder* _encoder, ::fidl::test::json::OlderSimpleUnion* xu) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, xu, 16);
@@ -1303,9 +1305,9 @@ class TestProtocol_Sync {
   using Proxy_ = TestProtocol_SyncProxy;
   virtual ~TestProtocol_Sync();
   virtual zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictBoundedXUnion* out_xu) = 0;
+      ::fidl::test::json::StrictBoundedXUnion* out_xu) = 0;
   virtual zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      OlderSimpleUnion* out_xu) = 0;
+      ::fidl::test::json::OlderSimpleUnion* out_xu) = 0;
 };
 
 class TestProtocol_Proxy final : public ::fidl::internal::Proxy,
@@ -1346,9 +1348,9 @@ class TestProtocol_SyncProxy : public TestProtocol_Sync {
   explicit TestProtocol_SyncProxy(::zx::channel channel);
   ~TestProtocol_SyncProxy() override;
   zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictBoundedXUnion* out_xu) override;
+      ::fidl::test::json::StrictBoundedXUnion* out_xu) override;
   zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      OlderSimpleUnion* out_xu) override;
+      ::fidl::test::json::OlderSimpleUnion* out_xu) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -2203,7 +2205,7 @@ class XUnionContainingEmptyStruct final {
   XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&);
   XUnionContainingEmptyStruct& operator=(XUnionContainingEmptyStruct&&);
 
-  static XUnionContainingEmptyStruct WithEmpty(class Empty&&);
+  static XUnionContainingEmptyStruct WithEmpty(::fidl::test::json::Empty&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
@@ -2226,16 +2228,16 @@ class XUnionContainingEmptyStruct final {
 
   bool is_empty() const { return tag_ == Tag::kEmpty; }
 
-  class Empty& empty() {
+  ::fidl::test::json::Empty& empty() {
     EnsureStorageInitialized(Tag::kEmpty);
     return empty_;
   }
 
-  const class Empty& empty() const {
+  const ::fidl::test::json::Empty& empty() const {
     ZX_ASSERT(is_empty());
     return empty_;
   }
-  XUnionContainingEmptyStruct& set_empty(class Empty value);
+  XUnionContainingEmptyStruct& set_empty(::fidl::test::json::Empty value);
   XUnionContainingEmptyStruct& _experimental_set_unknown_data(
       fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
@@ -2267,7 +2269,7 @@ class XUnionContainingEmptyStruct final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class Empty empty_;
+    ::fidl::test::json::Empty empty_;
     ::fidl::UnknownBytes unknown_data_;
   };
 };

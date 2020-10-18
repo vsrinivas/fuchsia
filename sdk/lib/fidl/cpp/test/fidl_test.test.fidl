@@ -132,10 +132,3 @@ struct VariousDefaults {
 protocol Echo {
     EchoString(string? value) -> (string? response);
 };
-
-protocol NameCollision {
-};
-
-protocol ReturnsCollision {
-    NameCollision() -> (NameCollision collision);
-};

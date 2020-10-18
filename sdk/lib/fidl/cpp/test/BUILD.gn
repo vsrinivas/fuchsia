@@ -38,3 +38,23 @@ fidl("frobinator") {
 
   sources = [ "frobinator.test.fidl" ]
 }
+
+fidl("fidl_test") {
+  name = "fidl.test.misc"
+
+  testonly = true
+
+  sources = [
+    "fidl_test.test.fidl"
+  ]
+}
+
+fidl("collision_test") {
+  name = "fidl.test.collision"
+
+  testonly = true
+
+  sources = [
+    "collision.test.fidl"
+  ]
+}

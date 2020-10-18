@@ -1,0 +1,22 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.collision;
+
+protocol NameCollision {
+};
+
+union UnionCollision {
+    1: uint32 foo;
+};
+
+union NullableUnionCollision {
+    1: uint32 foo;
+};
+
+protocol ReturnsCollision {
+    NameCollision() -> (NameCollision collision);
+    UnionCollision(UnionCollision collision) -> ();
+    NullableUnionCollision(NullableUnionCollision? collision) -> ();
+};

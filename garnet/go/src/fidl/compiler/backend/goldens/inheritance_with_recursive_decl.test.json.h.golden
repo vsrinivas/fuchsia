@@ -51,7 +51,8 @@ class Parent {
   using Sync_ = Parent_Sync;
   virtual ~Parent();
 
-  virtual void First(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual void First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 };
 
 class Parent_RequestDecoder {
@@ -75,7 +76,8 @@ class Parent_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kParent_First_Ordinal: {
-        First(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
+        First(::fidl::DecodeAs<
+              ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
             &request_decoder, 16));
         break;
       }
@@ -86,13 +88,15 @@ class Parent_RequestDecoder {
     }
     return status;
   }
-  virtual void First(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual void First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 };
 
 class Parent_RequestEncoder {
  public:
-  static ::fidl::Message First(::fidl::Encoder* _encoder,
-                               ::fidl::InterfaceRequest<Parent>* request) {
+  static ::fidl::Message First(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent>* request) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, request, 16);
@@ -147,7 +151,8 @@ class Parent_Sync {
  public:
   using Proxy_ = Parent_SyncProxy;
   virtual ~Parent_Sync();
-  virtual zx_status_t First(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual zx_status_t First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 };
 
 class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
@@ -156,7 +161,8 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   ~Parent_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::Message message) override;
-  void First(::fidl::InterfaceRequest<Parent> request) override;
+  void First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
 
  private:
   Parent_Proxy(const Parent_Proxy&) = delete;
@@ -183,7 +189,8 @@ class Parent_SyncProxy : public Parent_Sync {
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
-  zx_status_t First(::fidl::InterfaceRequest<Parent> request) override;
+  zx_status_t First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -200,9 +207,11 @@ class Child {
   using Sync_ = Child_Sync;
   virtual ~Child();
 
-  virtual void First(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual void First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 
-  virtual void Second(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual void Second(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 };
 
 class Child_RequestDecoder {
@@ -226,12 +235,14 @@ class Child_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::kChild_First_Ordinal: {
-        First(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
+        First(::fidl::DecodeAs<
+              ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
             &request_decoder, 16));
         break;
       }
       case internal::kChild_Second_Ordinal: {
-        Second(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
+        Second(::fidl::DecodeAs<
+               ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
             &request_decoder, 16));
         break;
       }
@@ -242,14 +253,17 @@ class Child_RequestDecoder {
     }
     return status;
   }
-  virtual void First(::fidl::InterfaceRequest<Parent> request) = 0;
-  virtual void Second(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual void First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual void Second(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 };
 
 class Child_RequestEncoder {
  public:
-  static ::fidl::Message First(::fidl::Encoder* _encoder,
-                               ::fidl::InterfaceRequest<Parent>* request) {
+  static ::fidl::Message First(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent>* request) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, request, 16);
@@ -263,8 +277,9 @@ class Child_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message Second(::fidl::Encoder* _encoder,
-                                ::fidl::InterfaceRequest<Parent>* request) {
+  static ::fidl::Message Second(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent>* request) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, request, 16);
@@ -319,8 +334,10 @@ class Child_Sync {
  public:
   using Proxy_ = Child_SyncProxy;
   virtual ~Child_Sync();
-  virtual zx_status_t First(::fidl::InterfaceRequest<Parent> request) = 0;
-  virtual zx_status_t Second(::fidl::InterfaceRequest<Parent> request) = 0;
+  virtual zx_status_t First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
+  virtual zx_status_t Second(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) = 0;
 };
 
 class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
@@ -329,8 +346,10 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
   ~Child_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::Message message) override;
-  void First(::fidl::InterfaceRequest<Parent> request) override;
-  void Second(::fidl::InterfaceRequest<Parent> request) override;
+  void First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
+  void Second(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
 
  private:
   Child_Proxy(const Child_Proxy&) = delete;
@@ -357,8 +376,10 @@ class Child_SyncProxy : public Child_Sync {
  public:
   explicit Child_SyncProxy(::zx::channel channel);
   ~Child_SyncProxy() override;
-  zx_status_t First(::fidl::InterfaceRequest<Parent> request) override;
-  zx_status_t Second(::fidl::InterfaceRequest<Parent> request) override;
+  zx_status_t First(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
+  zx_status_t Second(
+      ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

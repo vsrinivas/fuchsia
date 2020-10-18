@@ -345,7 +345,8 @@ class UnionSize24Alignment8 final {
   UnionSize24Alignment8(UnionSize24Alignment8&&);
   UnionSize24Alignment8& operator=(UnionSize24Alignment8&&);
 
-  static UnionSize24Alignment8 WithVariant(class StructSize16Alignment8&&);
+  static UnionSize24Alignment8 WithVariant(
+      ::test::fidl::unionsandwich::StructSize16Alignment8&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -366,16 +367,17 @@ class UnionSize24Alignment8 final {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
-  class StructSize16Alignment8& variant() {
+  ::test::fidl::unionsandwich::StructSize16Alignment8& variant() {
     EnsureStorageInitialized(Tag::kVariant);
     return variant_;
   }
 
-  const class StructSize16Alignment8& variant() const {
+  const ::test::fidl::unionsandwich::StructSize16Alignment8& variant() const {
     ZX_ASSERT(is_variant());
     return variant_;
   }
-  UnionSize24Alignment8& set_variant(class StructSize16Alignment8 value);
+  UnionSize24Alignment8& set_variant(
+      ::test::fidl::unionsandwich::StructSize16Alignment8 value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -391,7 +393,7 @@ class UnionSize24Alignment8 final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class StructSize16Alignment8 variant_;
+    ::test::fidl::unionsandwich::StructSize16Alignment8 variant_;
   };
 };
 

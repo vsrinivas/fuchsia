@@ -70,7 +70,7 @@ WithErrorSyntax_ResponseAsStruct_Result::
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_) class WithErrorSyntax_ResponseAsStruct_Response();
+      new (&response_)::test::name::WithErrorSyntax_ResponseAsStruct_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
@@ -89,7 +89,8 @@ WithErrorSyntax_ResponseAsStruct_Result::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_) class WithErrorSyntax_ResponseAsStruct_Response();
+        new (&response_)::test::name::
+            WithErrorSyntax_ResponseAsStruct_Response();
         response_ = std::move(other.response_);
         break;
       case Tag::kErr:
@@ -104,7 +105,7 @@ WithErrorSyntax_ResponseAsStruct_Result::operator=(
 
 WithErrorSyntax_ResponseAsStruct_Result
 WithErrorSyntax_ResponseAsStruct_Result::WithResponse(
-    class WithErrorSyntax_ResponseAsStruct_Response&& val) {
+    ::test::name::WithErrorSyntax_ResponseAsStruct_Response&& val) {
   WithErrorSyntax_ResponseAsStruct_Result result;
   result.set_response(std::move(val));
   return result;
@@ -127,8 +128,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* encoder,
     case Tag::kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<
-              class WithErrorSyntax_ResponseAsStruct_Response, ::fidl::Encoder>(
-              encoder));
+              ::test::name::WithErrorSyntax_ResponseAsStruct_Response,
+              ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
@@ -172,7 +173,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (&value->response_) class WithErrorSyntax_ResponseAsStruct_Response();
+      new (&value->response_)::test::name::
+          WithErrorSyntax_ResponseAsStruct_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
     case Tag::kErr:
@@ -191,8 +193,8 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (
-          &result->response_) class WithErrorSyntax_ResponseAsStruct_Response();
+      new (&result->response_)::test::name::
+          WithErrorSyntax_ResponseAsStruct_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
       return ::fidl::Clone(err_, &result->err_);
@@ -203,7 +205,7 @@ zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(
 
 WithErrorSyntax_ResponseAsStruct_Result&
 WithErrorSyntax_ResponseAsStruct_Result::set_response(
-    class WithErrorSyntax_ResponseAsStruct_Response value) {
+    ::test::name::WithErrorSyntax_ResponseAsStruct_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
@@ -239,7 +241,8 @@ void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_) class WithErrorSyntax_ResponseAsStruct_Response();
+        new (&response_)::test::name::
+            WithErrorSyntax_ResponseAsStruct_Response();
         break;
       case Tag::kErr:
         new (&err_) uint32_t();
@@ -305,7 +308,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
+      new (&response_)::test::name::WithErrorSyntax_ErrorAsPrimitive_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
@@ -324,7 +327,8 @@ WithErrorSyntax_ErrorAsPrimitive_Result::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
+        new (&response_)::test::name::
+            WithErrorSyntax_ErrorAsPrimitive_Response();
         response_ = std::move(other.response_);
         break;
       case Tag::kErr:
@@ -339,7 +343,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::operator=(
 
 WithErrorSyntax_ErrorAsPrimitive_Result
 WithErrorSyntax_ErrorAsPrimitive_Result::WithResponse(
-    class WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
+    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
   WithErrorSyntax_ErrorAsPrimitive_Result result;
   result.set_response(std::move(val));
   return result;
@@ -362,8 +366,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* encoder,
     case Tag::kResponse: {
       envelope_offset = encoder->Alloc(
           ::fidl::EncodingInlineSize<
-              class WithErrorSyntax_ErrorAsPrimitive_Response, ::fidl::Encoder>(
-              encoder));
+              ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response,
+              ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
@@ -407,7 +411,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (&value->response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
+      new (&value->response_)::test::name::
+          WithErrorSyntax_ErrorAsPrimitive_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
     case Tag::kErr:
@@ -426,8 +431,8 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (
-          &result->response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
+      new (&result->response_)::test::name::
+          WithErrorSyntax_ErrorAsPrimitive_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
       return ::fidl::Clone(err_, &result->err_);
@@ -438,7 +443,7 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(
 
 WithErrorSyntax_ErrorAsPrimitive_Result&
 WithErrorSyntax_ErrorAsPrimitive_Result::set_response(
-    class WithErrorSyntax_ErrorAsPrimitive_Response value) {
+    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
@@ -474,7 +479,8 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
+        new (&response_)::test::name::
+            WithErrorSyntax_ErrorAsPrimitive_Response();
         break;
       case Tag::kErr:
         new (&err_) uint32_t();
@@ -1618,11 +1624,11 @@ WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result(
     : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
-      new (&response_) class WithErrorSyntax_ErrorAsEnum_Response();
+      new (&response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
       response_ = std::move(other.response_);
       break;
     case Tag::kErr:
-      new (&err_) ErrorEnun();
+      new (&err_)::test::name::ErrorEnun();
       err_ = std::move(other.err_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1638,11 +1644,11 @@ WithErrorSyntax_ErrorAsEnum_Result::operator=(
     tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
-        new (&response_) class WithErrorSyntax_ErrorAsEnum_Response();
+        new (&response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
         response_ = std::move(other.response_);
         break;
       case Tag::kErr:
-        new (&err_) ErrorEnun();
+        new (&err_)::test::name::ErrorEnun();
         err_ = std::move(other.err_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
@@ -1654,13 +1660,13 @@ WithErrorSyntax_ErrorAsEnum_Result::operator=(
 
 WithErrorSyntax_ErrorAsEnum_Result
 WithErrorSyntax_ErrorAsEnum_Result::WithResponse(
-    class WithErrorSyntax_ErrorAsEnum_Response&& val) {
+    ::test::name::WithErrorSyntax_ErrorAsEnum_Response&& val) {
   WithErrorSyntax_ErrorAsEnum_Result result;
   result.set_response(std::move(val));
   return result;
 }
 WithErrorSyntax_ErrorAsEnum_Result WithErrorSyntax_ErrorAsEnum_Result::WithErr(
-    ErrorEnun&& val) {
+    ::test::name::ErrorEnun&& val) {
   WithErrorSyntax_ErrorAsEnum_Result result;
   result.set_err(std::move(val));
   return result;
@@ -1675,15 +1681,17 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* encoder,
 
   switch (Which()) {
     case Tag::kResponse: {
-      envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<class WithErrorSyntax_ErrorAsEnum_Response,
-                                     ::fidl::Encoder>(encoder));
+      envelope_offset =
+          encoder->Alloc(::fidl::EncodingInlineSize<
+                         ::test::name::WithErrorSyntax_ErrorAsEnum_Response,
+                         ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &response_, envelope_offset);
       break;
     }
     case Tag::kErr: {
       envelope_offset = encoder->Alloc(
-          ::fidl::EncodingInlineSize<ErrorEnun, ::fidl::Encoder>(encoder));
+          ::fidl::EncodingInlineSize<::test::name::ErrorEnun, ::fidl::Encoder>(
+              encoder));
       ::fidl::Encode(encoder, &err_, envelope_offset);
       break;
     }
@@ -1721,11 +1729,13 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(
 
   switch (value->tag_) {
     case Tag::kResponse:
-      new (&value->response_) class WithErrorSyntax_ErrorAsEnum_Response();
+      new (
+          &value
+               ->response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
       ::fidl::Decode(decoder, &value->response_, envelope_offset);
       break;
     case Tag::kErr:
-      new (&value->err_) ErrorEnun();
+      new (&value->err_)::test::name::ErrorEnun();
       ::fidl::Decode(decoder, &value->err_, envelope_offset);
       break;
     default:
@@ -1741,10 +1751,12 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(
     case Tag::Invalid:
       return ZX_OK;
     case Tag::kResponse:
-      new (&result->response_) class WithErrorSyntax_ErrorAsEnum_Response();
+      new (
+          &result
+               ->response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
       return ::fidl::Clone(response_, &result->response_);
     case Tag::kErr:
-      new (&result->err_) ErrorEnun();
+      new (&result->err_)::test::name::ErrorEnun();
       return ::fidl::Clone(err_, &result->err_);
     default:
       return ZX_OK;
@@ -1753,14 +1765,14 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(
 
 WithErrorSyntax_ErrorAsEnum_Result&
 WithErrorSyntax_ErrorAsEnum_Result::set_response(
-    class WithErrorSyntax_ErrorAsEnum_Response value) {
+    ::test::name::WithErrorSyntax_ErrorAsEnum_Response value) {
   EnsureStorageInitialized(Tag::kResponse);
   response_ = std::move(value);
   return *this;
 }
 
 WithErrorSyntax_ErrorAsEnum_Result& WithErrorSyntax_ErrorAsEnum_Result::set_err(
-    ErrorEnun value) {
+    ::test::name::ErrorEnun value) {
   EnsureStorageInitialized(Tag::kErr);
   err_ = std::move(value);
   return *this;
@@ -1790,10 +1802,10 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kResponse:
-        new (&response_) class WithErrorSyntax_ErrorAsEnum_Response();
+        new (&response_)::test::name::WithErrorSyntax_ErrorAsEnum_Response();
         break;
       case Tag::kErr:
-        new (&err_) ErrorEnun();
+        new (&err_)::test::name::ErrorEnun();
         break;
       default:
         break;
@@ -1885,7 +1897,8 @@ WithErrorSyntax_ResponseAsStruct_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(
+        callback_(::fidl::DecodeAs<
+                  ::test::name::WithErrorSyntax_ResponseAsStruct_Result>(
             &decoder, 16));
         return ZX_OK;
       },
@@ -1912,7 +1925,8 @@ WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(
+        callback_(::fidl::DecodeAs<
+                  ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>(
             &decoder, 16));
         return ZX_OK;
       },
@@ -1940,7 +1954,8 @@ WithErrorSyntax_ErrorAsEnum_ResponseHandler(
       [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(
-            ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(&decoder, 16));
+            ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsEnum_Result>(
+                &decoder, 16));
         return ZX_OK;
       },
       &test_name_WithErrorSyntaxErrorAsEnumResponseTable);
@@ -1970,7 +1985,8 @@ class WithErrorSyntax_ResponseAsStruct_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(WithErrorSyntax_ResponseAsStruct_Result result) {
+  void operator()(
+      ::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
     ::fidl::Encoder _encoder(
         internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
     response_.Send(
@@ -1988,7 +2004,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(WithErrorSyntax_ErrorAsPrimitive_Result result) {
+  void operator()(
+      ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
     ::fidl::Encoder _encoder(
         internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
     response_.Send(
@@ -2006,7 +2023,7 @@ class WithErrorSyntax_ErrorAsEnum_Responder final {
       ::fidl::internal::PendingResponse response)
       : response_(std::move(response)) {}
 
-  void operator()(WithErrorSyntax_ErrorAsEnum_Result result) {
+  void operator()(::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
     ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
     response_.Send(
         &test_name_WithErrorSyntaxErrorAsEnumResponseTable,
@@ -2074,7 +2091,7 @@ WithErrorSyntax_SyncProxy::WithErrorSyntax_SyncProxy(::zx::channel channel)
 WithErrorSyntax_SyncProxy::~WithErrorSyntax_SyncProxy() = default;
 
 zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
-    WithErrorSyntax_ResponseAsStruct_Result* out_result) {
+    ::test::name::WithErrorSyntax_ResponseAsStruct_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
@@ -2085,12 +2102,13 @@ zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result =
-      ::fidl::DecodeAs<WithErrorSyntax_ResponseAsStruct_Result>(&decoder_, 16);
+      ::fidl::DecodeAs<::test::name::WithErrorSyntax_ResponseAsStruct_Result>(
+          &decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
-    WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
+    ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
@@ -2101,12 +2119,13 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result =
-      ::fidl::DecodeAs<WithErrorSyntax_ErrorAsPrimitive_Result>(&decoder_, 16);
+      ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>(
+          &decoder_, 16);
   return ZX_OK;
 }
 
 zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
-    WithErrorSyntax_ErrorAsEnum_Result* out_result) {
+    ::test::name::WithErrorSyntax_ErrorAsEnum_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
@@ -2117,7 +2136,8 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result =
-      ::fidl::DecodeAs<WithErrorSyntax_ErrorAsEnum_Result>(&decoder_, 16);
+      ::fidl::DecodeAs<::test::name::WithErrorSyntax_ErrorAsEnum_Result>(
+          &decoder_, 16);
   return ZX_OK;
 }
 

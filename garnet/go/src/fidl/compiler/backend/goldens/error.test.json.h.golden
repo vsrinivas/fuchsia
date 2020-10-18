@@ -67,7 +67,8 @@ class Example_foo_Result final {
   Example_foo_Result(Example_foo_Result&&);
   Example_foo_Result& operator=(Example_foo_Result&&);
 
-  static Example_foo_Result WithResponse(class Example_foo_Response&&);
+  static Example_foo_Result WithResponse(
+      ::fidl::test::json::Example_foo_Response&&);
   static Example_foo_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -90,16 +91,17 @@ class Example_foo_Result final {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  class Example_foo_Response& response() {
+  ::fidl::test::json::Example_foo_Response& response() {
     EnsureStorageInitialized(Tag::kResponse);
     return response_;
   }
 
-  const class Example_foo_Response& response() const {
+  const ::fidl::test::json::Example_foo_Response& response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
-  Example_foo_Result& set_response(class Example_foo_Response value);
+  Example_foo_Result& set_response(
+      ::fidl::test::json::Example_foo_Response value);
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
@@ -147,7 +149,7 @@ class Example_foo_Result final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    class Example_foo_Response response_;
+    ::fidl::test::json::Example_foo_Response response_;
     uint32_t err_;
   };
 };
@@ -167,7 +169,8 @@ class Example {
   using EventSender_ = Example_EventSender;
   using Sync_ = Example_Sync;
   virtual ~Example();
-  using fooCallback = fit::function<void(Example_foo_Result)>;
+  using fooCallback =
+      fit::function<void(::fidl::test::json::Example_foo_Result)>;
 
   virtual void foo(::std::string s, fooCallback callback) = 0;
 };
@@ -243,7 +246,8 @@ class Example_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::kExample_foo_Ordinal: {
-        foo(::fidl::DecodeAs<Example_foo_Result>(&response_decoder, 16));
+        foo(::fidl::DecodeAs<::fidl::test::json::Example_foo_Result>(
+            &response_decoder, 16));
         break;
       }
       default: {
@@ -252,13 +256,13 @@ class Example_ResponseDecoder {
     }
     return ZX_OK;
   }
-  virtual void foo(Example_foo_Result result) = 0;
+  virtual void foo(::fidl::test::json::Example_foo_Result result) = 0;
 };
 
 class Example_ResponseEncoder {
  public:
   static ::fidl::Message foo(::fidl::Encoder* _encoder,
-                             Example_foo_Result* result) {
+                             ::fidl::test::json::Example_foo_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -280,7 +284,8 @@ class Example_Sync {
  public:
   using Proxy_ = Example_SyncProxy;
   virtual ~Example_Sync();
-  virtual zx_status_t foo(::std::string s, Example_foo_Result* out_result) = 0;
+  virtual zx_status_t foo(
+      ::std::string s, ::fidl::test::json::Example_foo_Result* out_result) = 0;
 };
 
 class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
@@ -316,7 +321,8 @@ class Example_SyncProxy : public Example_Sync {
  public:
   explicit Example_SyncProxy(::zx::channel channel);
   ~Example_SyncProxy() override;
-  zx_status_t foo(::std::string s, Example_foo_Result* out_result) override;
+  zx_status_t foo(::std::string s,
+                  ::fidl::test::json::Example_foo_Result* out_result) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

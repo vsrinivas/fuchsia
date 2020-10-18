@@ -17,10 +17,12 @@ class Parent_TestBase : public Parent {
   void GetChildRequest(GetChildRequestCallback callback) override {
     NotImplemented_("GetChildRequest");
   }
-  void TakeChild(::fidl::InterfaceHandle<class Child> c) override {
+  void TakeChild(
+      ::fidl::InterfaceHandle<class ::test::name::Child> c) override {
     NotImplemented_("TakeChild");
   }
-  void TakeChildRequest(::fidl::InterfaceRequest<Child> r) override {
+  void TakeChildRequest(
+      ::fidl::InterfaceRequest<::test::name::Child> r) override {
     NotImplemented_("TakeChildRequest");
   }
 };

@@ -224,14 +224,17 @@ class Protocol {
   using Sync_ = Protocol_Sync;
   virtual ~Protocol();
   using RequestStrictResponseFlexibleCallback =
-      fit::function<void(FlexibleFoo)>;
+      fit::function<void(::fidl::test::json::FlexibleFoo)>;
 
   virtual void RequestStrictResponseFlexible(
-      StrictFoo s, RequestStrictResponseFlexibleCallback callback) = 0;
-  using RequestFlexibleResponseStrictCallback = fit::function<void(StrictFoo)>;
+      ::fidl::test::json::StrictFoo s,
+      RequestStrictResponseFlexibleCallback callback) = 0;
+  using RequestFlexibleResponseStrictCallback =
+      fit::function<void(::fidl::test::json::StrictFoo)>;
 
   virtual void RequestFlexibleResponseStrict(
-      FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) = 0;
+      ::fidl::test::json::FlexibleFoo s,
+      RequestFlexibleResponseStrictCallback callback) = 0;
 };
 
 class Protocol_RequestDecoder {
@@ -256,12 +259,14 @@ class Protocol_RequestDecoder {
     switch (request.ordinal()) {
       case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
         RequestStrictResponseFlexible(
-            ::fidl::DecodeAs<StrictFoo>(&request_decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::json::StrictFoo>(&request_decoder,
+                                                            16));
         break;
       }
       case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
         RequestFlexibleResponseStrict(
-            ::fidl::DecodeAs<FlexibleFoo>(&request_decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::json::FlexibleFoo>(&request_decoder,
+                                                              16));
         break;
       }
       default: {
@@ -271,14 +276,16 @@ class Protocol_RequestDecoder {
     }
     return status;
   }
-  virtual void RequestStrictResponseFlexible(StrictFoo s) = 0;
-  virtual void RequestFlexibleResponseStrict(FlexibleFoo s) = 0;
+  virtual void RequestStrictResponseFlexible(
+      ::fidl::test::json::StrictFoo s) = 0;
+  virtual void RequestFlexibleResponseStrict(
+      ::fidl::test::json::FlexibleFoo s) = 0;
 };
 
 class Protocol_RequestEncoder {
  public:
   static ::fidl::Message RequestStrictResponseFlexible(
-      ::fidl::Encoder* _encoder, StrictFoo* s) {
+      ::fidl::Encoder* _encoder, ::fidl::test::json::StrictFoo* s) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
@@ -294,7 +301,7 @@ class Protocol_RequestEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::Message RequestFlexibleResponseStrict(
-      ::fidl::Encoder* _encoder, FlexibleFoo* s) {
+      ::fidl::Encoder* _encoder, ::fidl::test::json::FlexibleFoo* s) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
@@ -331,12 +338,14 @@ class Protocol_ResponseDecoder {
     switch (response.ordinal()) {
       case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
         RequestStrictResponseFlexible(
-            ::fidl::DecodeAs<FlexibleFoo>(&response_decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::json::FlexibleFoo>(&response_decoder,
+                                                              16));
         break;
       }
       case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
         RequestFlexibleResponseStrict(
-            ::fidl::DecodeAs<StrictFoo>(&response_decoder, 16));
+            ::fidl::DecodeAs<::fidl::test::json::StrictFoo>(&response_decoder,
+                                                            16));
         break;
       }
       default: {
@@ -345,14 +354,16 @@ class Protocol_ResponseDecoder {
     }
     return ZX_OK;
   }
-  virtual void RequestStrictResponseFlexible(FlexibleFoo f) = 0;
-  virtual void RequestFlexibleResponseStrict(StrictFoo f) = 0;
+  virtual void RequestStrictResponseFlexible(
+      ::fidl::test::json::FlexibleFoo f) = 0;
+  virtual void RequestFlexibleResponseStrict(
+      ::fidl::test::json::StrictFoo f) = 0;
 };
 
 class Protocol_ResponseEncoder {
  public:
   static ::fidl::Message RequestStrictResponseFlexible(
-      ::fidl::Encoder* _encoder, FlexibleFoo* f) {
+      ::fidl::Encoder* _encoder, ::fidl::test::json::FlexibleFoo* f) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, f, 16);
@@ -365,7 +376,7 @@ class Protocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
   static ::fidl::Message RequestFlexibleResponseStrict(
-      ::fidl::Encoder* _encoder, StrictFoo* f) {
+      ::fidl::Encoder* _encoder, ::fidl::test::json::StrictFoo* f) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, f, 16);
@@ -388,10 +399,12 @@ class Protocol_Sync {
  public:
   using Proxy_ = Protocol_SyncProxy;
   virtual ~Protocol_Sync();
-  virtual zx_status_t RequestStrictResponseFlexible(StrictFoo s,
-                                                    FlexibleFoo* out_f) = 0;
-  virtual zx_status_t RequestFlexibleResponseStrict(FlexibleFoo s,
-                                                    StrictFoo* out_f) = 0;
+  virtual zx_status_t RequestStrictResponseFlexible(
+      ::fidl::test::json::StrictFoo s,
+      ::fidl::test::json::FlexibleFoo* out_f) = 0;
+  virtual zx_status_t RequestFlexibleResponseStrict(
+      ::fidl::test::json::FlexibleFoo s,
+      ::fidl::test::json::StrictFoo* out_f) = 0;
 };
 
 class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
@@ -401,9 +414,11 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
 
   zx_status_t Dispatch_(::fidl::Message message) override;
   void RequestStrictResponseFlexible(
-      StrictFoo s, RequestStrictResponseFlexibleCallback callback) override;
+      ::fidl::test::json::StrictFoo s,
+      RequestStrictResponseFlexibleCallback callback) override;
   void RequestFlexibleResponseStrict(
-      FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) override;
+      ::fidl::test::json::FlexibleFoo s,
+      RequestFlexibleResponseStrictCallback callback) override;
 
  private:
   Protocol_Proxy(const Protocol_Proxy&) = delete;
@@ -430,10 +445,12 @@ class Protocol_SyncProxy : public Protocol_Sync {
  public:
   explicit Protocol_SyncProxy(::zx::channel channel);
   ~Protocol_SyncProxy() override;
-  zx_status_t RequestStrictResponseFlexible(StrictFoo s,
-                                            FlexibleFoo* out_f) override;
-  zx_status_t RequestFlexibleResponseStrict(FlexibleFoo s,
-                                            StrictFoo* out_f) override;
+  zx_status_t RequestStrictResponseFlexible(
+      ::fidl::test::json::StrictFoo s,
+      ::fidl::test::json::FlexibleFoo* out_f) override;
+  zx_status_t RequestFlexibleResponseStrict(
+      ::fidl::test::json::FlexibleFoo s,
+      ::fidl::test::json::StrictFoo* out_f) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;

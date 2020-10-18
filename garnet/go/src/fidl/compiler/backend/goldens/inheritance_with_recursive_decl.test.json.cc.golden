@@ -57,7 +57,8 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
   return status;
 }
 
-void Parent_Proxy::First(::fidl::InterfaceRequest<Parent> request) {
+void Parent_Proxy::First(
+    ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) {
   ::fidl::Encoder _encoder(internal::kParent_First_Ordinal);
   controller_->Send(&fidl_test_json_ParentFirstRequestTable,
                     Parent_RequestEncoder::First(&_encoder, &request), nullptr);
@@ -97,8 +98,9 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
   switch (ordinal) {
     case internal::kParent_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->First(
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
+      impl_->First(::fidl::DecodeAs<
+                   ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
+          &decoder, 16));
       break;
     }
     default: {
@@ -114,7 +116,8 @@ Parent_SyncProxy::Parent_SyncProxy(::zx::channel channel)
 
 Parent_SyncProxy::~Parent_SyncProxy() = default;
 
-zx_status_t Parent_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
+zx_status_t Parent_SyncProxy::First(
+    ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) {
   ::fidl::Encoder _encoder(internal::kParent_First_Ordinal);
   return proxy_.Send(&fidl_test_json_ParentFirstRequestTable,
                      Parent_RequestEncoder::First(&_encoder, &request));
@@ -177,12 +180,14 @@ zx_status_t Child_Proxy::Dispatch_(::fidl::Message message) {
   return status;
 }
 
-void Child_Proxy::First(::fidl::InterfaceRequest<Parent> request) {
+void Child_Proxy::First(
+    ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_First_Ordinal);
   controller_->Send(&fidl_test_json_ChildFirstRequestTable,
                     Child_RequestEncoder::First(&_encoder, &request), nullptr);
 }
-void Child_Proxy::Second(::fidl::InterfaceRequest<Parent> request) {
+void Child_Proxy::Second(
+    ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_Ordinal);
   controller_->Send(&fidl_test_json_ChildSecondRequestTable,
                     Child_RequestEncoder::Second(&_encoder, &request), nullptr);
@@ -222,14 +227,16 @@ zx_status_t Child_Stub::Dispatch_(::fidl::Message message,
   switch (ordinal) {
     case internal::kChild_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->First(
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
+      impl_->First(::fidl::DecodeAs<
+                   ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
+          &decoder, 16));
       break;
     }
     case internal::kChild_Second_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
-      impl_->Second(
-          ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
+      impl_->Second(::fidl::DecodeAs<
+                    ::fidl::InterfaceRequest<::fidl::test::json::Parent>>(
+          &decoder, 16));
       break;
     }
     default: {
@@ -245,13 +252,15 @@ Child_SyncProxy::Child_SyncProxy(::zx::channel channel)
 
 Child_SyncProxy::~Child_SyncProxy() = default;
 
-zx_status_t Child_SyncProxy::First(::fidl::InterfaceRequest<Parent> request) {
+zx_status_t Child_SyncProxy::First(
+    ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_First_Ordinal);
   return proxy_.Send(&fidl_test_json_ChildFirstRequestTable,
                      Child_RequestEncoder::First(&_encoder, &request));
 }
 
-zx_status_t Child_SyncProxy::Second(::fidl::InterfaceRequest<Parent> request) {
+zx_status_t Child_SyncProxy::Second(
+    ::fidl::InterfaceRequest<::fidl::test::json::Parent> request) {
   ::fidl::Encoder _encoder(internal::kChild_Second_Ordinal);
   return proxy_.Send(&fidl_test_json_ChildSecondRequestTable,
                      Child_RequestEncoder::Second(&_encoder, &request));
