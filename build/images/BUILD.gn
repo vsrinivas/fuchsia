@@ -226,10 +226,10 @@ generated_file(system_image_manifest_args) {
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "system_image_barrier" ]
   deps = [
-           ":base_packages",
-           ":meta_packages",
-         ] + board_system_image_deps + product_system_image_deps +
-         dev_system_image_deps
+    ":base_packages",
+    ":meta_packages",
+  ]
+  deps += [ "//build/input:system_image" ]
 }
 
 # The system_image "package" manifest is everything that appears in /system.
@@ -538,7 +538,7 @@ group("fuchsia_contents") {
     "//build/unification/future/images:fuchsia_kernel_cmdline",
     "//build/unification/zbi:kernel",
   ]
-  deps += product_bootfs_labels + board_bootfs_labels
+  deps += [ "//build/input:bootfs" ]
 }
 
 # The main bootable image, which requires `blob.blk` to appear on some

@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("bootfs") {
+  testonly = true
+  deps = [
+    "board:bootfs_labels",
+    "product:bootfs_labels",
+  ]
+}
+
 group("build_only") {
   testonly = true
   deps = [ "dev:build_only_deps" ]
+}
+
+group("system_image") {
+  testonly = true
+  deps = [
+    "board:system_image_deps",
+    "dev:system_image_deps",
+    "product:system_image_deps",
+  ]
 }

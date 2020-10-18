@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dev.gni")
+import("//build/board.gni")
 
-group("build_only_deps") {
+group("bootfs_labels") {
   testonly = true
-  deps = dev_build_only_deps
+  deps = board_bootfs_labels
 }
 
 group("system_image_deps") {
   testonly = true
-  deps = dev_system_image_deps
+  deps = board_system_image_deps
 }

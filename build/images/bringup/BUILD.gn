@@ -2,13 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/board.gni")
-import("//build/dev.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
-import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/zbi/zbi.gni")
 
@@ -22,8 +19,7 @@ generated_file("system_package.manifest_args") {
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "system_image_barrier" ]
   deps = [ "//build/images:packages" ]
-  deps += board_system_image_deps + product_system_image_deps +
-          dev_system_image_deps
+  deps += [ "//build/input:system_image" ]
 }
 
 generate_manifest("boot.manifest") {
@@ -69,7 +65,7 @@ zbi("bringup") {
     "//build/unification/future/images:fuchsia_kernel_cmdline",
     "//build/unification/zbi:kernel",
   ]
-  deps += product_bootfs_labels + board_bootfs_labels
+  deps += [ "//build/input:bootfs" ]
 
   metadata = {
     images = [
