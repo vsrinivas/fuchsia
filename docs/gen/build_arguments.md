@@ -535,7 +535,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:12
+From //build/images/manifest.gni:13
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -780,14 +780,14 @@ TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:18
+From //build/dart/dart_library.gni:19
 
 ### enable_dart_analysis
 Enable all dart analysis
 
 **Current value (from the default):** `true`
 
-From //build/dart/dart_library.gni:14
+From //build/dart/dart_library.gni:15
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
@@ -898,7 +898,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:18
+From //build/images/manifest.gni:19
 
 ### extra_package_labels
 
@@ -1145,7 +1145,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 **Current value (from the default):** `false`
 
-From //build/go/go_build.gni:20
+From //build/go/go_build.gni:21
 
 ### gocache_dir
   gocache_dir
@@ -1155,7 +1155,7 @@ From //build/go/go_build.gni:20
 
 **Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/fidling/.gocache"`
 
-From //build/go/go_build.gni:16
+From //build/go/go_build.gni:17
 
 ### goldfish_control_use_composite_device
 
@@ -1962,7 +1962,7 @@ From //build/images/args.gni:130
 
 **Current value (from the default):** `false`
 
-From //build/persist_logs.gni:13
+From //build/persist_logs.gni:14
 
 ### pkgfs_packages_allowlist
 
@@ -2144,7 +2144,7 @@ Path to rustc lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/rust/linux-x64/lib"`
 
-From //build/images/manifest.gni:15
+From //build/images/manifest.gni:16
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -2449,7 +2449,7 @@ parameter to true regardless of whether it is specified on a target.
 
 **Current value (from the default):** `false`
 
-From //build/config.gni:12
+From //build/config.gni:13
 
 ### syzkaller_dir
 Used by syz-ci to build with own syz-executor source.
@@ -2655,7 +2655,7 @@ debug archives in tar.bzip2 format into the .build-id directory
 
 **Current value (from the default):** `false`
 
-From //build/packages/prebuilt_package.gni:13
+From //build/packages/prebuilt_package.gni:14
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -2817,7 +2817,7 @@ Whether libraries under //vendor should be linted.
 
 **Current value (from the default):** `false`
 
-From //build/fidl/fidl_library.gni:13
+From //build/fidl/fidl_library.gni:14
 
 ### verify_system_package_entries
 Whether to check and enforce that contributions to the system image package
@@ -2938,7 +2938,7 @@ where `LEVEL` can be an integer or "max".
 
 **Current value (from the default):** `"zstd"`
 
-From //build/zbi/zbi.gni:12
+From //build/zbi/zbi.gni:13
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
