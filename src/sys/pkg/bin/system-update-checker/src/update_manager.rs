@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::apply::{apply_system_update, ApplyProgress, ApplyState};
+use crate::apply::apply_system_update;
 use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
@@ -14,22 +14,17 @@ use async_generator::GeneratorState;
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fidl_fuchsia_update::CheckNotStartedReason;
 use fidl_fuchsia_update_ext::{
-    CheckOptions, Initiator, InstallationErrorData, InstallationProgress, InstallingData, State,
-    UpdateInfo,
+    CheckOptions, Initiator, InstallationErrorData, InstallingData, State, UpdateInfo,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_hash::Hash;
 use fuchsia_inspect as finspect;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
-use futures::{
-    channel::{mpsc, oneshot},
-    future::BoxFuture,
-    pin_mut,
-    prelude::*,
-    select,
-    stream::BoxStream,
-};
+use futures::channel::{mpsc, oneshot};
+use futures::future::BoxFuture;
+use futures::prelude::*;
+use futures::{pin_mut, select};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -447,12 +442,12 @@ where
             }) => {
                 fx_log_info!("current system_image merkle: {}", current_system_image);
                 fx_log_info!("new system_image available: {}", latest_system_image);
-                let version_available = latest_system_image.to_string();
                 {
-                    co.yield_(StatusEvent::VersionAvailableKnown(version_available.clone())).await;
+                    co.yield_(StatusEvent::VersionAvailableKnown(latest_system_image.to_string()))
+                        .await;
                     co.yield_(StatusEvent::State(State::InstallingUpdate(InstallingData {
                         update: Some(UpdateInfo {
-                            version_available: Some(version_available.clone()),
+                            version_available: Some(latest_system_image.to_string()),
                             download_size: None,
                         }),
                         installation_progress: None,
@@ -462,86 +457,33 @@ where
 
                 self.last_update_storage.store(&latest_update_package);
 
-                match self
-                    .update_applier
-                    .apply(initiator)
-                    .await
-                    .context("apply_system_update failed")
+                if let Err(e) =
+                    self.update_applier.apply(initiator).await.context("apply_system_update failed")
                 {
-                    Ok(mut stream) => {
-                        let mut waiting_for_reboot = false;
-                        while let Some(result) = stream.next().await {
-                            match result {
-                                Ok(apply_state) => {
-                                    let state = match apply_state {
-                                        ApplyState::InstallingUpdate(ApplyProgress {
-                                            download_size,
-                                            fraction_completed,
-                                        }) => State::InstallingUpdate(InstallingData {
-                                            update: Some(UpdateInfo {
-                                                version_available: Some(version_available.clone()),
-                                                download_size,
-                                            }),
-                                            installation_progress: Some(InstallationProgress {
-                                                fraction_completed,
-                                            }),
-                                        }),
-                                        ApplyState::WaitingForReboot(ApplyProgress {
-                                            download_size,
-                                            fraction_completed,
-                                        }) => {
-                                            waiting_for_reboot = true;
-                                            State::WaitingForReboot(InstallingData {
-                                                update: Some(UpdateInfo {
-                                                    version_available: Some(
-                                                        version_available.clone(),
-                                                    ),
-                                                    download_size,
-                                                }),
-                                                installation_progress: Some(InstallationProgress {
-                                                    fraction_completed,
-                                                }),
-                                            })
-                                        }
-                                    };
-                                    co.yield_(StatusEvent::State(state)).await;
-                                }
-                                Err((ApplyProgress { download_size, fraction_completed }, e)) => {
-                                    // If we failed to unblock reboot, it will ends up here and we
-                                    // should not go back to InstallationError.
-                                    if !waiting_for_reboot {
-                                        co.yield_(StatusEvent::State(State::InstallationError(
-                                            InstallationErrorData {
-                                                update: Some(UpdateInfo {
-                                                    version_available: Some(version_available),
-                                                    download_size,
-                                                }),
-                                                installation_progress: Some(InstallationProgress {
-                                                    fraction_completed,
-                                                }),
-                                            },
-                                        )))
-                                        .await;
-                                    }
-                                    return Err(e);
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        co.yield_(StatusEvent::State(State::InstallationError(
-                            InstallationErrorData {
-                                update: Some(UpdateInfo {
-                                    version_available: Some(version_available),
-                                    download_size: None,
-                                }),
-                                installation_progress: None,
-                            },
-                        )))
-                        .await;
-                        return Err(e);
-                    }
-                }
+                    co.yield_(StatusEvent::State(State::InstallationError(
+                        InstallationErrorData {
+                            update: Some(UpdateInfo {
+                                version_available: Some(latest_system_image.to_string()),
+                                download_size: None,
+                            }),
+                            installation_progress: None,
+                        },
+                    )))
+                    .await;
+                    return Err(e);
+                };
+                // On success, system-updater will reboots the system when ready, so this code may
+                // or may not be run. The only way to leave WaitingForReboot state is to restart
+                // the component.
+                co.yield_(StatusEvent::State(State::WaitingForReboot(InstallingData {
+                    update: Some(UpdateInfo {
+                        version_available: Some(latest_system_image.to_string()),
+                        download_size: None,
+                    }),
+                    installation_progress: None,
+                })))
+                .await;
+                let () = future::pending().await;
             }
         }
         Ok(())
@@ -595,25 +537,13 @@ impl CurrentChannelUpdater for CurrentChannelManager {
 
 // For mocking
 pub trait UpdateApplier: Send + Sync + 'static {
-    fn apply<'a>(
-        &self,
-        initiator: Initiator,
-    ) -> BoxFuture<
-        'a,
-        Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error>,
-    >;
+    fn apply(&self, initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>>;
 }
 
 pub struct RealUpdateApplier;
 
 impl UpdateApplier for RealUpdateApplier {
-    fn apply<'a>(
-        &self,
-        initiator: Initiator,
-    ) -> BoxFuture<
-        'a,
-        Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error>,
-    > {
+    fn apply(&self, initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         apply_system_update(initiator).boxed()
     }
 }
@@ -771,24 +701,12 @@ pub(crate) mod tests {
     #[derive(Clone)]
     pub struct UnreachableUpdateApplier;
     impl UpdateApplier for UnreachableUpdateApplier {
-        fn apply<'a>(
-            &self,
-            _initiator: Initiator,
-        ) -> BoxFuture<
-            'a,
-            Result<
-                BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>,
-                anyhow::Error,
-            >,
-        > {
+        fn apply(&self, _initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             unreachable!();
         }
     }
 
-    type ApplyResultFactory = fn() -> Result<
-        BoxStream<'static, Result<ApplyState, (ApplyProgress, anyhow::Error)>>,
-        crate::errors::Error,
-    >;
+    type ApplyResultFactory = fn() -> Result<(), crate::errors::Error>;
 
     #[derive(Clone)]
     pub struct FakeUpdateApplier {
@@ -797,17 +715,7 @@ pub(crate) mod tests {
     }
     impl FakeUpdateApplier {
         pub fn new_success() -> Self {
-            Self {
-                result: || {
-                    Ok(futures::stream::iter(vec![
-                        Ok(ApplyState::InstallingUpdate(ApplyProgress::new(1000, 0.42))),
-                        Ok(ApplyState::WaitingForReboot(ApplyProgress::new(1000, 1.0))),
-                    ])
-                    .chain(futures::stream::pending())
-                    .boxed())
-                },
-                call_count: Arc::new(AtomicU64::new(0)),
-            }
+            Self { result: || Ok(()), call_count: Arc::new(AtomicU64::new(0)) }
         }
         pub fn new_error() -> Self {
             Self {
@@ -820,16 +728,7 @@ pub(crate) mod tests {
         }
     }
     impl UpdateApplier for FakeUpdateApplier {
-        fn apply<'a>(
-            &self,
-            _initiator: Initiator,
-        ) -> BoxFuture<
-            'a,
-            Result<
-                BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>,
-                anyhow::Error,
-            >,
-        > {
+        fn apply(&self, _initiator: Initiator) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             future::ready((self.result)().map_err(|e| e.into())).boxed()
         }
@@ -1053,39 +952,23 @@ pub(crate) mod tests {
         .await
         .spawn();
         let (callback, mut receiver) = FakeStateNotifier::new_callback_and_receiver();
+        let expected_installing_data = InstallingData {
+            update: Some(UpdateInfo {
+                version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                download_size: None,
+            }),
+            installation_progress: None,
+        };
 
         let options = CheckOptions::builder().initiator(Initiator::User).build();
         manager.try_start_update(options, Some(callback)).await.unwrap();
 
         assert_eq!(
-            next_n_states(&mut receiver, 4).await,
+            next_n_states(&mut receiver, 3).await,
             vec![
                 State::CheckingForUpdates,
-                State::InstallingUpdate(InstallingData {
-                    update: Some(UpdateInfo {
-                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
-                        download_size: None,
-                    }),
-                    installation_progress: None
-                }),
-                State::InstallingUpdate(InstallingData {
-                    update: Some(UpdateInfo {
-                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
-                        download_size: Some(1000),
-                    }),
-                    installation_progress: Some(InstallationProgress {
-                        fraction_completed: Some(0.42)
-                    })
-                }),
-                State::WaitingForReboot(InstallingData {
-                    update: Some(UpdateInfo {
-                        version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
-                        download_size: Some(1000),
-                    }),
-                    installation_progress: Some(InstallationProgress {
-                        fraction_completed: Some(1.0)
-                    })
-                }),
+                State::InstallingUpdate(expected_installing_data.clone()),
+                State::WaitingForReboot(expected_installing_data),
             ]
         );
 

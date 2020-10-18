@@ -14,16 +14,13 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
-    "//src/sys/pkg/lib/fuchsia-pkg-testing",
-    "//src/sys/pkg/testing/mock-installer",
     "//src/sys/pkg/testing/mock-paver",
-    "//src/sys/pkg/testing/mock-resolver",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
@@ -58,9 +55,6 @@ test_package("system-update-checker-integration-tests") {
       name = "system_update_checker_integration_test"
       dest = "system-update-checker-integration-test"
       environments = basic_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
     },
   ]
 }
