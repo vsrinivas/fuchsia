@@ -2,21 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_
 
-#include "src/ui/scenic/lib/display/util.h"
+#include <fuchsia/hardware/display/cpp/fidl.h>
+
 #include "src/ui/scenic/lib/flatland/link_system.h"
+#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 
 namespace flatland {
 
-class Engine {
+class Engine final : public BufferCollectionImporter {
  public:
-  Engine(const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& display_controller,
+  Engine(std::unique_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
          const std::shared_ptr<Renderer>& renderer, const std::shared_ptr<LinkSystem>& link_system,
          const std::shared_ptr<UberStructSystem>& uber_struct_system);
+
+  // |BufferCollectionImporter|
+  void ImportBufferCollection(
+      sysmem_util::GlobalBufferCollectionId collection_id,
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+
+  // |BufferCollectionImporter|
+  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+
+  // |BufferCollectionImporter|
+  bool ImportImage(const ImageMetadata& meta_data) override;
+
+  // |BufferCollectionImporter|
+  void ReleaseImage(GlobalImageId image_id) override;
 
   // TODO(fxbug.dev/59646): Add in parameters for scheduling, etc. Right now we're just making sure
   // the data is processed correctly.
@@ -61,9 +78,22 @@ class Engine {
   // This is done per-display, so the result is a vector of per-display render data.
   std::vector<RenderData> ComputeRenderData();
 
-  // The display controller is needed to create layers, import images, etc to the
-  // display hardware, to bypass rendering in software when applicable.
-  std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
+  // Returns the image id used by the display controller.
+  uint64_t InternalImageId(GlobalImageId image_id) const;
+
+  // This mutex protects access to |display_controller_| and |image_id_map_|.
+  //
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is a unique
+  // case since we are talking to a FIDL interface (display_controller_) through a lock.
+  // We either need lock-free threadsafe FIDL bindings, multiple channels to the display
+  // controller, or something else.
+  mutable std::mutex lock_;
+
+  // Handle to the display controller interface.
+  std::unique_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
+
+  // Maps the flatland global image id to the image id used by the display controller.
+  std::unordered_map<GlobalImageId, uint64_t> image_id_map_;
 
   // Software renderer used when render data cannot be directly composited to the display.
   std::shared_ptr<Renderer> renderer_;
@@ -78,4 +108,4 @@ class Engine {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_ENGINE_H_

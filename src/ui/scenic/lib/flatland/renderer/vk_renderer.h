@@ -9,7 +9,6 @@
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -19,9 +18,7 @@ namespace flatland {
 // by extension the Vulkan API.
 class VkRenderer final : public Renderer {
  public:
-  explicit VkRenderer(std::unique_ptr<escher::Escher> escher,
-                      const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>&
-                          display_controller = nullptr);
+  explicit VkRenderer(std::unique_ptr<escher::Escher> escher);
   ~VkRenderer() override;
 
   // |Renderer|.
@@ -70,7 +67,6 @@ class VkRenderer final : public Renderer {
 
   // Vulkan rendering components.
   std::unique_ptr<escher::Escher> escher_;
-  const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
   escher::RectangleCompositor compositor_;
 
   // This mutex is used to protect access to |collection_map_|, |collection_metadata_map_|,

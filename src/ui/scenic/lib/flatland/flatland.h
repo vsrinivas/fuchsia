@@ -24,6 +24,7 @@
 #include <glm/mat3x3.hpp>
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
+#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
@@ -32,8 +33,6 @@
 #include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
-
-#include "src/ui/scenic/lib/flatland/buffer_collection_importer.h"
 
 namespace flatland {
 

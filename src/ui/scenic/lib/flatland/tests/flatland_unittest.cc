@@ -440,6 +440,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_))
         .WillOnce(testing::Invoke([&global_image_id](const ImageMetadata& meta_data) {
           global_image_id = meta_data.identifier;
+          return true;
         }));
 
     flatland->CreateImage(image_id, collection_id, 0, std::move(properties));
@@ -453,12 +454,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
   ::testing::StrictMock<MockRenderer>* mock_renderer_;
   MockBufferCollectionImporter* mock_buffer_collection_importer_;
   std::shared_ptr<Renderer> renderer_;
+  std::shared_ptr<BufferCollectionImporter> buffer_collection_importer_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
+  std::shared_ptr<FlatlandPresenter> flatland_presenter_;
+  const std::shared_ptr<LinkSystem> link_system_;
 
  private:
-  std::shared_ptr<FlatlandPresenter> flatland_presenter_;
-  std::shared_ptr<BufferCollectionImporter> buffer_collection_importer_;
-  const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
 
   // Storage for |mock_flatland_presenter_|.
@@ -2925,7 +2926,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
   // The vmo index must be less than the vmo count.
   {
     ImageProperties properties;
-    flatland.CreateImage(1, kBufferCollectionId, 3, std::move(properties));
+    flatland.CreateImage(1, kBufferCollectionId, /*vmo_idx*/ 3, std::move(properties));
     PRESENT(flatland, false);
   }
 
@@ -2990,6 +2991,11 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     properties.set_width(kDefaultWidth);
     properties.set_height(kDefaultHeight);
 
+    // This is the first call in these series of test components that makes it down to
+    // the BufferCollectionImporter. We have to make sure it returns true here so that
+    // the test doesn't erroneously fail.
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_)).WillOnce(Return(true));
+
     flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
     PRESENT(flatland, true);
   }
@@ -2999,6 +3005,9 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     properties.set_width(kDefaultWidth);
     properties.set_height(kDefaultHeight);
 
+    // We shouldn't even make it to the BufferCollectionImporter here due to the duplicate
+    // ID causing CreateImage() to return early.
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_)).Times(0);
     flatland.CreateImage(kId, kBufferCollectionId, kDefaultVmoIndex, std::move(properties));
     PRESENT(flatland, false);
   }
@@ -3491,6 +3500,106 @@ TEST_F(FlatlandTest, ReleaseImageErrorCases) {
                       content_link.NewRequest());
 
   flatland.ReleaseImage(kLinkId);
+  PRESENT(flatland, false);
+}
+
+// If we have multiple BufferCollectionImporters, some of them may properly import
+// an image while others do not. We have to therefore make sure that if importer A
+// properly imports an image and then importer B fails, that Flatland automatically
+// releases the image from importer A.
+TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
+  // Create a second buffer collection importer.
+  auto local_mock_buffer_collection_importer = new MockBufferCollectionImporter();
+  auto local_buffer_collection_importer =
+      std::shared_ptr<BufferCollectionImporter>(local_mock_buffer_collection_importer);
+
+  // Create a flatland instance that has
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  auto session_id = scheduling::GetNextSessionId();
+  auto flatland = Flatland(session_id, flatland_presenter_, renderer_, link_system_,
+                           uber_struct_system_->AllocateQueueForSession(session_id),
+                           {buffer_collection_importer_, local_buffer_collection_importer},
+                           std::move(sysmem_allocator));
+
+  sysmem_util::GlobalBufferCollectionId global_collection_id;
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _))
+      .WillOnce(
+          testing::Invoke([&global_collection_id](
+                              sysmem_util::GlobalBufferCollectionId collection_id,
+                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+            global_collection_id = collection_id;
+            return true;
+          }));
+
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _)).Times(1);
+  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _)).Times(1);
+
+  const auto kCollectionId = 2;
+  flatland.RegisterBufferCollection(kCollectionId, CreateToken());
+
+  ImageProperties properties;
+  properties.set_width(100);
+  properties.set_height(200);
+
+  // Ensure all buffer constraints are valid for the desired image by generating constraints based
+  // on the image properties.
+  BufferCollectionMetadata metadata;
+  metadata.vmo_count = 1;
+  metadata.image_constraints.min_coded_width = properties.width();
+  metadata.image_constraints.max_coded_width = properties.width();
+  metadata.image_constraints.min_coded_height = properties.height();
+  metadata.image_constraints.max_coded_height = properties.height();
+  EXPECT_CALL(*mock_renderer_, Validate(global_collection_id)).WillOnce(Return(metadata));
+
+  // We have the first importer return true, signifying a successful import, and the second one
+  // returning false. This should trigger the first importer to call ReleaseImage().
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_)).WillOnce(Return(true));
+  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportImage(_)).WillOnce(Return(false));
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).WillOnce(Return());
+  flatland.CreateImage(/*image_id*/ 1, kCollectionId, /*vmo_idx*/ 0, std::move(properties));
+}
+
+// Test to make sure that if a buffer collection importer returns |false|
+// on |ImportImage()| that this is caught when we try to present.
+TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
+  Flatland flatland = CreateFlatland();
+
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _)).Times(1);
+
+  const auto kCollectionId = 3;
+  flatland.RegisterBufferCollection(kCollectionId, CreateToken());
+
+  // Create a proper properties struct.
+  ImageProperties properties;
+  properties.set_width(150);
+  properties.set_height(175);
+
+  // We need the mock renderer to return valid buffer metadata so that we can make it down
+  // to the importer later in the call to CreateImage().
+  BufferCollectionMetadata metadata;
+  metadata.vmo_count = 1;
+  metadata.image_constraints.min_coded_width = 100;
+  metadata.image_constraints.max_coded_width = 200;
+  metadata.image_constraints.min_coded_height = 100;
+  metadata.image_constraints.max_coded_height = 200;
+  EXPECT_CALL(*mock_renderer_, Validate(_)).WillOnce(Return(metadata));
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_)).WillOnce(Return(true));
+
+  // We've imported a proper image and we have the importer returning true, so
+  // PRESENT should return true.
+  flatland.CreateImage(/*image_id*/ 1, kCollectionId, /*vmo_idx*/ 0, std::move(properties));
+  PRESENT(flatland, true);
+
+  // We're using the same buffer collection so we don't need to validate, only import.
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_)).WillOnce(Return(false));
+
+  // Import again, but this time have the importer return false. Flatland should catch
+  // this and PRESENT should return false.
+  properties.set_width(150);
+  properties.set_height(175);
+  flatland.CreateImage(/*image_id*/ 2, kCollectionId, /*vmo_idx*/ 0, std::move(properties));
   PRESENT(flatland, false);
 }
 

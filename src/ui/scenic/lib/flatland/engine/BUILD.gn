@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("engine") {
+  sources = [
+    "engine.cc",
+    "engine.h",
+  ]
+
+  public_deps = [
+    "//src/ui/scenic/lib/display:display",
+    "//src/ui/scenic/lib/flatland",
+    "//src/ui/scenic/lib/flatland/renderer",
+  ]
+}

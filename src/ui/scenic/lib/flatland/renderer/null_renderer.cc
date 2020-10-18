@@ -9,10 +9,6 @@
 
 namespace flatland {
 
-NullRenderer::NullRenderer(
-    const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& display_controller)
-    : display_controller_(display_controller) {}
-
 bool NullRenderer::RegisterTextureCollection(
     sysmem_util::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
@@ -45,34 +41,11 @@ bool NullRenderer::RegisterCollection(
     return false;
   }
 
-  // Create a duped display token.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  if (display_controller_) {
-    // TODO(fxbug.dev/51213): See if this can become asynchronous.
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = token.BindSync();
-    zx_status_t status =
-        sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
-
-    // Reassign the channel to the non-sync interface handle.
-    token = sync_token.Unbind();
-  }
-
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
 
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Unable to register collection.";
     return false;
-  }
-
-  if (display_controller_) {
-    const fuchsia::hardware::display::ImageConfig& image_config = {
-        .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-    };
-
-    auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                                      std::move(display_token), image_config);
-    FX_DCHECK(result);
   }
 
   // Multiple threads may be attempting to read/write from |collection_map_| so we
@@ -94,11 +67,6 @@ void NullRenderer::DeregisterCollection(sysmem_util::GlobalBufferCollectionId co
   // If the collection is not in the map, then there's nothing to do.
   if (collection_itr == collection_map_.end()) {
     return;
-  }
-
-  // Release from the display as well.
-  if (display_controller_) {
-    (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   }
 
   // Erase the sysmem collection from the map.

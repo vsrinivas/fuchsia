@@ -10,11 +10,8 @@ config("glm_config") {
 
 source_set("flatland") {
   sources = [
-    "buffer_collection_importer.h",
     "default_flatland_presenter.cc",
     "default_flatland_presenter.h",
-    "engine.cc",
-    "engine.h",
     "flatland.cc",
     "flatland.h",
     "flatland_manager.cc",

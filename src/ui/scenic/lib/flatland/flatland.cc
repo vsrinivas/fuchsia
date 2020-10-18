@@ -704,19 +704,37 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionId collection_id,
     return;
   }
 
-  auto handle = transform_graph_.CreateTransform();
-  content_handles_[image_id] = handle;
-
-  auto& metadata = image_metadatas_[handle];
+  ImageMetadata metadata;
   metadata.identifier = GenerateUniqueImageId();
   metadata.collection_id = global_collection_id;
   metadata.vmo_idx = vmo_index;
   metadata.width = width;
   metadata.height = height;
 
-  for (auto& importer : buffer_collection_importers_) {
-    importer->ImportImage(metadata);
+  for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {
+    auto& importer = buffer_collection_importers_[i];
+    auto result = importer->ImportImage(metadata);
+    if (!result) {
+      // If this importer fails, we need to release the image from
+      // all of the importers that it passed on. Luckily we can do
+      // this right here instead of waiting for a fence since we know
+      // this image isn't being used by anything yet.
+      for (uint32_t j = 0; j < i; j++) {
+        buffer_collection_importers_[j]->ReleaseImage(metadata.identifier);
+      }
+
+      FX_LOGS(ERROR) << "Importer could not import image.";
+      ReportError();
+      return;
+    }
   }
+
+  // Now that we've successfully been able to import the image into the importers,
+  // we can now create a handle for it in the transform graph, and add the metadata
+  // to our map.
+  auto handle = transform_graph_.CreateTransform();
+  content_handles_[image_id] = handle;
+  image_metadatas_[handle] = metadata;
 
   // Increment the buffer's usage count.
   ++buffer_data.image_count;

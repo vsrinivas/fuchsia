@@ -100,10 +100,15 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
-  flatland::VkRenderer renderer(std::move(unique_escher), display_controller);
+  flatland::VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
   auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
+
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
+  zx_status_t status = tokens.local_token->Duplicate(std::numeric_limits<uint32_t>::max(),
+                                                     display_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
 
   // Register the collection with the renderer, which sets the vk constraints.
   auto renderer_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
@@ -113,6 +118,18 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Validating should fail, because we've only set the renderer constraints.
   auto buffer_metadata = renderer.Validate(renderer_collection_id);
+  EXPECT_FALSE(buffer_metadata.has_value());
+
+  // Set the display constraints on the display controller.
+  fuchsia::hardware::display::ImageConfig display_constraints = {
+      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
+  };
+  bool res = scenic_impl::ImportBufferCollection(renderer_collection_id, *display_controller.get(),
+                                                 std::move(display_token), display_constraints);
+  ASSERT_TRUE(res);
+
+  // Validating should fail again, because we've only set 2 out of the three constraints.
+  buffer_metadata = renderer.Validate(renderer_collection_id);
   EXPECT_FALSE(buffer_metadata.has_value());
 
   // Create a client-side handle to the buffer collection and set the client constraints.

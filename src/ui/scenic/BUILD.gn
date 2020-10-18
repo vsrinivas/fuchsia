@@ -54,7 +54,7 @@ group("fuzzers") {
 test_package("scenic_tests") {
   deps = [
     "lib/display/tests",
-    "lib/flatland/engine_tests:tests",
+    "lib/flatland/engine/tests",
     "lib/flatland/renderer/tests",
     "lib/flatland/tests",
     "lib/gfx/tests",

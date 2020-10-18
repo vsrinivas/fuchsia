@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_BUFFER_COLLECTION_IMPORTER_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_BUFFER_COLLECTION_IMPORTER_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_IMPORTER_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_IMPORTER_H_
 
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -28,8 +28,9 @@ class BufferCollectionImporter {
   // before the buffer collection itself is released.
   virtual void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) = 0;
 
-  // Has the service create an image for itself from the provided buffer collection.
-  virtual void ImportImage(const ImageMetadata& meta_data) = 0;
+  // Has the service create an image for itself from the provided buffer collection. Returns
+  // true upon a successful import and false otherwise.
+  virtual bool ImportImage(const ImageMetadata& meta_data) = 0;
 
   // Deregisters the provided image from the service.
   virtual void ReleaseImage(GlobalImageId image_id) = 0;
@@ -39,4 +40,4 @@ class BufferCollectionImporter {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_BUFFER_COLLECTION_IMPORTER_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_IMPORTER_H_

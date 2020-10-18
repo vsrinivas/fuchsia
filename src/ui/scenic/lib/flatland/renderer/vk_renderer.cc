@@ -27,12 +27,8 @@ TexturePtr CreateDepthTexture(Escher* escher, const ImagePtr& output_image) {
 
 namespace flatland {
 
-VkRenderer::VkRenderer(
-    std::unique_ptr<escher::Escher> escher,
-    const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& display_controller)
-    : escher_(std::move(escher)),
-      display_controller_(std::move(display_controller)),
-      compositor_(escher::RectangleCompositor(escher_.get())) {}
+VkRenderer::VkRenderer(std::unique_ptr<escher::Escher> escher)
+    : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_.get())) {}
 
 VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();
@@ -96,35 +92,12 @@ bool VkRenderer::RegisterCollection(
     token = sync_token.Unbind();
   }
 
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  if (display_controller_) {
-    // TODO(fxbug.dev/51213): See if this can become asynchronous.
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = token.BindSync();
-    zx_status_t status =
-        sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
-
-    // Reassign the channel to the non-sync interface handle.
-    token = sync_token.Unbind();
-  }
-
   // Create the sysmem buffer collection. We do this before creating the vulkan collection below,
   // since New() checks if the incoming token is of the wrong type/malicious.
   auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Unable to register collection.";
     return false;
-  }
-
-  // Create a duped display token.
-  if (display_controller_) {
-    const fuchsia::hardware::display::ImageConfig& image_config = {
-        .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-    };
-
-    auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                                      std::move(display_token), image_config);
-    FX_DCHECK(result);
   }
 
   // Create the vk_collection and set its constraints.
@@ -159,11 +132,6 @@ void VkRenderer::DeregisterCollection(sysmem_util::GlobalBufferCollectionId coll
   // If the collection is not in the map, then there's nothing to do.
   if (collection_itr == collection_map_.end()) {
     return;
-  }
-
-  // Release from the display as well.
-  if (display_controller_) {
-    (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   }
 
   // Erase the sysmem collection from the map.

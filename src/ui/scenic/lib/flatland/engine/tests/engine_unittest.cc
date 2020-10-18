@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/engine.h"
+#include "src/ui/scenic/lib/flatland/engine/engine.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-testing/test_loop.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -22,9 +21,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/lib/display/get_hardware_display_controller.h"
-#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
+#include "src/ui/scenic/lib/flatland/engine/tests/mock_display_controller.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
@@ -41,6 +39,7 @@ using ::testing::Return;
 
 using flatland::ImageMetadata;
 using flatland::LinkSystem;
+using flatland::MockDisplayController;
 using flatland::Renderer;
 using flatland::TransformGraph;
 using flatland::TransformHandle;
@@ -60,8 +59,7 @@ class EngineTest : public gtest::RealLoopFixture {
  public:
   EngineTest()
       : uber_struct_system_(std::make_shared<UberStructSystem>()),
-        link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())),
-        display_controller_objs_(scenic_impl::display::test::CreateMockDisplayController()) {}
+        link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())) {}
 
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
@@ -72,36 +70,46 @@ class EngineTest : public gtest::RealLoopFixture {
 
     async_set_default_dispatcher(dispatcher());
 
-    // TODO(fxbug.dev/59646): We want all of the flatland tests to be "headless" and not make use
-    // of the real display controller. This isn't fully possible at the moment since we need the
-    // real DC's functionality to register buffer collections. Once the new hardware independent
-    // display controller driver is ready, we can hook that up to the fidl interface pointer instead
-    // and keep the tests hardware agnostic.
-    executor_ = std::make_unique<async::Executor>(dispatcher());
-    display_manager_ = std::make_unique<scenic_impl::display::DisplayManager>([]() {});
-    auto hdc_promise = ui_display::GetHardwareDisplayController();
-    executor_->schedule_task(
-        hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
-          display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
-                                                         std::move(handles.value().dc_device));
+    renderer_ = std::make_shared<flatland::NullRenderer>();
 
-          // This global renderer will only be used with tests that have access to the
-          // real display controller.
-          renderer_ = std::make_shared<flatland::NullRenderer>(
-              display_manager_->default_display_controller());
-        }));
+    zx::channel device_channel_server;
+    zx::channel device_channel_client;
+    FX_CHECK(ZX_OK == zx::channel::create(0, &device_channel_server, &device_channel_client));
+    zx::channel controller_channel_server;
+    zx::channel controller_channel_client;
+    FX_CHECK(ZX_OK ==
+             zx::channel::create(0, &controller_channel_server, &controller_channel_client));
 
-    zx::duration timeout = zx::sec(5);
-    RunLoopWithTimeoutOrUntil([this] { return display_manager_->default_display() != nullptr; },
-                              timeout);
+    mock_display_controller_ = std::make_unique<flatland::MockDisplayController>();
+    mock_display_controller_->Bind(std::move(device_channel_server),
+                                   std::move(controller_channel_server));
+
+    auto unique_display_controller =
+        std::make_unique<fuchsia::hardware::display::ControllerSyncPtr>();
+    unique_display_controller->Bind(std::move(controller_channel_client));
+
+    engine_ = std::make_unique<flatland::Engine>(std::move(unique_display_controller), renderer_,
+                                                 link_system_, uber_struct_system_);
   }
 
   void TearDown() override {
-    executor_.reset();
-    display_manager_.reset();
     sysmem_allocator_ = nullptr;
     renderer_.reset();
+    engine_.reset();
+    mock_display_controller_.reset();
+
+    // Move the channel to a local variable which will go out of scope
+    // and close when this function returns.
+    auto local = local_.release();
+
     gtest::RealLoopFixture::TearDown();
+  }
+
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
+    zx::channel remote;
+    zx::channel::create(0, &local_, &remote);
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token{std::move(remote)};
+    return token;
   }
 
   class FakeFlatlandSession {
@@ -235,11 +243,13 @@ class EngineTest : public gtest::RealLoopFixture {
   // Systems that are populated with data from Flatland instances.
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
-  const scenic_impl::display::test::DisplayControllerObjects display_controller_objs_;
   std::shared_ptr<flatland::NullRenderer> renderer_;
-  std::unique_ptr<async::Executor> executor_;
-  std::unique_ptr<scenic_impl::display::DisplayManager> display_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  std::unique_ptr<flatland::Engine> engine_;
+  std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
+
+ private:
+  zx::channel local_;
 };
 
 }  // namespace
@@ -247,77 +257,150 @@ class EngineTest : public gtest::RealLoopFixture {
 namespace flatland {
 namespace test {
 
-// Test bad input to the engine |RegisterTargetCollectionFunction|.
-TEST_F(EngineTest, BadBufferRegistration) {
-  auto display_controller = display_manager_->default_display_controller();
-  if (!display_controller) {
-    return;
-  }
+TEST_F(EngineTest, ImportAndReleaseBufferCollectionTest) {
+  auto mock = mock_display_controller_.get();
+  // Set the mock display controller functions and wait for messages.
+  std::thread server([&mock]() mutable {
+    // Wait once for call to ImportBufferCollection, once for setting the
+    // constraints, and once for call to ReleaseBufferCollection
+    for (uint32_t i = 0; i < 3; i++) {
+      mock->WaitForMessage();
+    }
+  });
 
-  auto display = display_manager_->default_display();
-  if (!display) {
-    return;
-  }
+  const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 15;
 
-  ASSERT_TRUE(renderer_);
-  Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+             MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
+  EXPECT_CALL(*mock_display_controller_.get(),
+              SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t collection_id, fuchsia::hardware::display::ImageConfig config,
+             MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
+            callback(ZX_OK);
+          }));
+  engine_->ImportBufferCollection(kGlobalBufferCollectionId, nullptr, CreateToken());
 
-  const uint32_t kDisplayId = display->display_id();
-  const uint32_t kWidth = display->width_in_px();
-  const uint32_t kHeight = display->height_in_px();
-  const uint32_t kNumVmos = 2;
+  EXPECT_CALL(*mock_display_controller_, ReleaseBufferCollection(kGlobalBufferCollectionId))
+      .WillOnce(Return());
+  engine_->ReleaseBufferCollection(kGlobalBufferCollectionId);
 
-  // Try to register a buffer collection without first adding a display.
-  auto renderer_id = engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
-  EXPECT_EQ(renderer_id, sysmem_util::kInvalidId);
-
-  // Now add the display.
-  engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
-
-  // Try again with 0 vmos. This should also fail.
-  auto renderer_id_2 =
-      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, /*num_vmos*/ 0);
-  EXPECT_EQ(renderer_id_2, sysmem_util::kInvalidId);
-
-  // Now use a positive vmo number, this should work.
-  auto renderer_id_3 =
-      engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
-  EXPECT_NE(renderer_id_3, sysmem_util::kInvalidId);
+  server.join();
 }
 
-// Test to make sure we can register framebuffers to the renderer and display
-// via the engine. Requires the use of the real display controller.
-TEST_F(EngineTest, BufferRegistrationTest) {
-  auto display_controller = display_manager_->default_display_controller();
-  if (!display_controller) {
-    return;
-  }
+TEST_F(EngineTest, ImportImageErrorCases) {
+  const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 30;
+  const flatland::GlobalImageId kImageId = 50;
+  const uint32_t kVmoCount = 2;
+  const uint32_t kVmoIdx = 1;
+  const uint32_t kMaxWidth = 100;
+  const uint32_t kMaxHeight = 200;
+  uint32_t num_times_import_image_called = 0;
 
-  auto display = display_manager_->default_display();
-  ASSERT_TRUE(display_controller);
-  if (!display) {
-    return;
-  }
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+             MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
 
-  const uint32_t kDisplayId = display->display_id();
-  const uint32_t kWidth = display->width_in_px();
-  const uint32_t kHeight = display->height_in_px();
-  const uint32_t kNumVmos = 2;
+  EXPECT_CALL(*mock_display_controller_.get(),
+              SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t collection_id, fuchsia::hardware::display::ImageConfig config,
+             MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
+            callback(ZX_OK);
+          }));
 
-  ASSERT_TRUE(renderer_);
-  Engine engine(display_controller, renderer_, link_system_, uber_struct_system_);
-  engine.AddDisplay(kDisplayId, TransformHandle(), glm::uvec2(kWidth, kHeight));
-  auto renderer_id = engine.RegisterTargetCollection(sysmem_allocator_.get(), kDisplayId, kNumVmos);
-  EXPECT_NE(renderer_id, sysmem_util::kInvalidId);
+  // Set the mock display controller functions and wait for messages.
+  auto mock = mock_display_controller_.get();
+  std::thread server([&mock]() mutable {
+    // Wait once for call to ImportBufferCollection, once for setting
+    // the buffer collection constraints, a single valid call to
+    // ImportImage() 1 invalid call to ImportImage(), and a single
+    // call to ReleaseImage(). Although there are more than three
+    // invalid calls to ImportImage() below, only 3 of them make it
+    // all the way to the display controller, which is why we only
+    // have to wait 3 times.
+    for (uint32_t i = 0; i < 5; i++) {
+      mock->WaitForMessage();
+    }
+  });
 
-  // We can check the result of buffer registration by the engine through the renderer.
-  // We should see the same number of vmos we told the engine to create, as well as each
-  // vmo being the same width and height in pixels as the display.
-  auto result = renderer_->Validate(renderer_id);
-  EXPECT_TRUE(result.has_value());
-  EXPECT_EQ(result->vmo_count, kNumVmos);
-  EXPECT_EQ(result->image_constraints.required_min_coded_width, kWidth);
-  EXPECT_EQ(result->image_constraints.required_min_coded_height, kHeight);
+  engine_->ImportBufferCollection(kGlobalBufferCollectionId, nullptr, CreateToken());
+
+  ImageMetadata metadata = {
+      .collection_id = kGlobalBufferCollectionId,
+      .identifier = kImageId,
+      .vmo_idx = kVmoIdx,
+      .width = 20,
+      .height = 30,
+  };
+
+  // Make sure that the engine returns true if the display controller returns true.
+  const uint64_t kDisplayImageId = 70;
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
+      .WillRepeatedly(testing::Invoke([](fuchsia::hardware::display::ImageConfig image_config,
+                                         uint64_t collection_id, uint32_t index,
+                                         MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_OK, /*display_image_id*/kDisplayImageId);
+      }));
+  auto result = engine_->ImportImage(metadata);
+  EXPECT_TRUE(result);
+
+  // Make sure we can release the image properly.
+  EXPECT_CALL(*mock_display_controller_, ReleaseImage(kDisplayImageId)).WillOnce(Return());
+  engine_->ReleaseImage(metadata.identifier);
+
+  // Make sure that the engine returns false if the display controller returns an error
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
+      .WillRepeatedly(testing::Invoke([](fuchsia::hardware::display::ImageConfig image_config,
+                                         uint64_t collection_id, uint32_t index,
+                                         MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_ERR_INVALID_ARGS, /*display_image_id*/ 0);
+      }));
+  result = engine_->ImportImage(metadata);
+  EXPECT_FALSE(result);
+
+  // Collection ID can't be invalid. This shouldn't reach the display controller.
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
+      .Times(0);
+  auto copy_metadata = metadata;
+  copy_metadata.collection_id = sysmem_util::kInvalidId;
+  result = engine_->ImportImage(copy_metadata);
+  EXPECT_FALSE(result);
+
+  // Image Id can't be 0. This shouldn't reach the display controller.
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
+      .Times(0);
+  copy_metadata = metadata;
+  copy_metadata.identifier = 0;
+  result = engine_->ImportImage(copy_metadata);
+  EXPECT_FALSE(result);
+
+  // Width can't be 0. This shouldn't reach the display controller.
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
+      .Times(0);
+  copy_metadata = metadata;
+  copy_metadata.width = 0;
+  result = engine_->ImportImage(copy_metadata);
+  EXPECT_FALSE(result);
+
+  // Height can't be 0. This shouldn't reach the display controller.
+  EXPECT_CALL(*mock_display_controller_.get(), ImportImage(_, _, 0, _)).Times(0);
+  copy_metadata = metadata;
+  copy_metadata.height = 0;
+  result = engine_->ImportImage(copy_metadata);
+  EXPECT_FALSE(result);
+
+  server.join();
 }
 
 // When compositing directly to a hardware display layer, the display controller
@@ -382,86 +465,65 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   // Submit the UberStruct.
   child_session.PushUberStruct(std::move(child_struct));
 
-  auto display_controller = display_controller_objs_.interface_ptr;
-  auto& mock = display_controller_objs_.mock;
-
   uint64_t display_id = 1;
   glm::uvec2 resolution(1024, 768);
 
   // We will end up with 2 source frames, 2 destination frames, and two layers beind sent to the
   // display.
-  bool set_display_layers_called = false;
-  uint32_t set_layer_called_count = 0;
-  fuchsia::hardware::display::Frame sources[2];
-  fuchsia::hardware::display::Frame destinations[2];
-  uint64_t layer_ids[2];
+  fuchsia::hardware::display::Frame sources[2] = {
+      {.x_pos = 0u, .y_pos = 0u, .width = 512, .height = 1024u},
+      {.x_pos = 0u, .y_pos = 0u, .width = 128u, .height = 256u}};
+
+  fuchsia::hardware::display::Frame destinations[2] = {
+      {.x_pos = 5u, .y_pos = 7u, .width = 30, .height = 40u},
+      {.x_pos = 9u, .y_pos = 13u, .width = 10u, .height = 20u}};
+
+  // Setup the EXPECT_CALLs for gmock.
+  uint64_t layer_id = 1;
+  EXPECT_CALL(*mock_display_controller_.get(), CreateLayer(_))
+      .WillRepeatedly(testing::Invoke([&](MockDisplayController::CreateLayerCallback callback) {
+        callback(ZX_OK, layer_id++);
+      }));
+
+  std::vector<uint64_t> layers = {1u, 2u};
+  EXPECT_CALL(*mock_display_controller_.get(), SetDisplayLayers(display_id, layers)).Times(1);
+
+  // Unfortunately, |fuchsia::hardware::display::Frame| doesn't have an equality operator, so
+  // we can't just pass in the values we're expecting into the function as parameters. We can
+  // still use fidl::Equals inside the function body, however.
+  EXPECT_CALL(*mock_display_controller_.get(), SetLayerPrimaryPosition(layers[0], _, _, _))
+      .WillOnce(
+          testing::Invoke([&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
+                              fuchsia::hardware::display::Frame src_frame,
+                              fuchsia::hardware::display::Frame dest_frame) {
+            EXPECT_TRUE(fidl::Equals(src_frame, sources[0]));
+            EXPECT_TRUE(fidl::Equals(dest_frame, destinations[0]));
+          }));
+
+  EXPECT_CALL(*mock_display_controller_.get(), SetLayerPrimaryPosition(layers[1], _, _, _))
+      .WillOnce(
+          testing::Invoke([&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
+                              fuchsia::hardware::display::Frame src_frame,
+                              fuchsia::hardware::display::Frame dest_frame) {
+            EXPECT_TRUE(fidl::Equals(src_frame, sources[1]));
+            EXPECT_TRUE(fidl::Equals(dest_frame, destinations[1]));
+          }));
 
   // Set the mock display controller functions and wait for messages.
-  std::thread server([&display_id, &set_display_layers_called, &set_layer_called_count, &layer_ids,
-                      &sources, &destinations, &mock]() mutable {
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-    mock->set_set_display_layers_fn([&](uint64_t in_display_id, ::std::vector<uint64_t> layer_ids) {
-      EXPECT_EQ(display_id, in_display_id);
-      set_display_layers_called = true;
-      EXPECT_EQ(layer_ids[0], 1u);
-      EXPECT_EQ(layer_ids[1], 2u);
-
-      // This function should be called before we call the SetLayerPrimaryPosition function.
-      EXPECT_EQ(set_layer_called_count, 0u);
-    });
-
-    mock->set_layer_primary_position_fn(
-        [&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
-            fuchsia::hardware::display::Frame src, fuchsia::hardware::display::Frame dst) {
-          layer_ids[set_layer_called_count] = layer_id;
-          sources[set_layer_called_count] = src;
-          destinations[set_layer_called_count] = dst;
-          set_layer_called_count++;
-        });
-
+  auto mock = mock_display_controller_.get();
+  std::thread server([&mock]() mutable {
     // Since we have 2 rectangles with images, we have to wait for 2 calls to initialize layers,
     // 1 call to set the layers on the display, and 2 calls to set the layer primary positions.
-    // This all happens when we call engine.RenderFrame() below.
+    // This all happens when we call engine_->RenderFrame() below.
     for (uint32_t i = 0; i < 5; i++) {
       mock->WaitForMessage();
     }
   });
 
-  // Create an engine. Since this test doesn't make use of the real display controller. Create
-  // a local version of the renderer that uses the fake display controller and pass that into
-  // the engine.
-  auto renderer = std::make_shared<NullRenderer>(display_controller);
-  Engine engine(display_controller, renderer, link_system_, uber_struct_system_);
-
-  engine.AddDisplay(display_id, parent_root_handle, resolution);
-  engine.RenderFrame();
+  engine_->AddDisplay(display_id, parent_root_handle, resolution);
+  engine_->RenderFrame();
 
   server.join();
-
-  EXPECT_EQ(set_layer_called_count, 2u);
-  EXPECT_EQ(layer_ids[0], 1u);
-  EXPECT_EQ(layer_ids[1], 2u);
-
-  EXPECT_EQ(sources[0].x_pos, 0u);
-  EXPECT_EQ(sources[0].y_pos, 0u);
-  EXPECT_EQ(sources[0].width, 512u);
-  EXPECT_EQ(sources[0].height, 1024u);
-
-  EXPECT_EQ(destinations[0].x_pos, 5u);
-  EXPECT_EQ(destinations[0].y_pos, 7u);
-  EXPECT_EQ(destinations[0].width, 30u);
-  EXPECT_EQ(destinations[0].height, 40u);
-
-  EXPECT_EQ(sources[1].x_pos, 0u);
-  EXPECT_EQ(sources[1].y_pos, 0u);
-  EXPECT_EQ(sources[1].width, 128u);
-  EXPECT_EQ(sources[1].height, 256u);
-
-  EXPECT_EQ(destinations[1].x_pos, 9u);
-  EXPECT_EQ(destinations[1].y_pos, 13u);
-  EXPECT_EQ(destinations[1].width, 10u);
-  EXPECT_EQ(destinations[1].height, 20u);
 }
 
 }  // namespace test

@@ -11,16 +11,17 @@ group("tests") {
 executable("unittests") {
   output_name = "flatland_engine_unittests"
   testonly = true
-  sources = [ "engine_unittest.cc" ]
+  sources = [
+    "engine_unittest.cc",
+    "mock_display_controller.h",
+  ]
 
   deps = [
     "//garnet/public/lib/gtest:gtest",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/ui/lib/display:hdcp_client",
     "//src/ui/scenic/lib/display/tests:mocks",
-    "//src/ui/scenic/lib/flatland",
-    "//src/ui/scenic/lib/flatland/renderer",
+    "//src/ui/scenic/lib/flatland/engine",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//third_party/googletest:gmock",
   ]

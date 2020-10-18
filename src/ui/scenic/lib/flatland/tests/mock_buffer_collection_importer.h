@@ -7,7 +7,7 @@
 
 #include <gmock/gmock.h>
 
-#include "src/ui/scenic/lib/flatland/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
 
 namespace flatland {
 
@@ -20,7 +20,7 @@ class MockBufferCollectionImporter : public BufferCollectionImporter {
 
   MOCK_METHOD1(ReleaseBufferCollection, void(sysmem_util::GlobalBufferCollectionId));
 
-  MOCK_METHOD1(ImportImage, void(const ImageMetadata&));
+  MOCK_METHOD1(ImportImage, bool(const ImageMetadata&));
 
   MOCK_METHOD1(ReleaseImage, void(GlobalImageId));
 };
