@@ -241,6 +241,15 @@ impl BiosParameterBlock {
             return Err(Error::new(ErrorKind::Other, FatfsError::UnknownVersion));
         }
 
+        if self
+            .reserved_sectors()
+            .checked_add(self.sectors_per_all_fats())
+            .and_then(|e| e.checked_add(self.root_dir_sectors()))
+            .is_none()
+        {
+            return Err(Error::new(ErrorKind::Other, FatfsError::TooManyReservedSectors));
+        }
+
         if self.total_sectors() <= self.first_data_sector() {
             return Err(Error::new(ErrorKind::Other, FatfsError::TotalSectorsTooSmall));
         }
