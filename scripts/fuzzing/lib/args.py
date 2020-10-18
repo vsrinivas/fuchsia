@@ -189,13 +189,15 @@ class ArgParser(argparse.ArgumentParser):
 
         e2e_test_parser = self._add_parser('e2etest')
         e2e_test_parser.description = [
-            'Run the end-to-end test for this tool using the named fuzzer. This requires the',
-            'fuzzer to have already been built and deployed to a running device.'
+            'Run the end-to-end test for this tool. If a fuzzer is named, it',
+            'will be run. If none is specified, several example fuzzers will be',
+            'used. This requires the fuzzer(s) to have already been built and',
+            'deployed to a running device.'
         ]
         e2e_test_parser._add_flag(
             '-l', '--local', help=['Exclude corpus elements from Clusterfuzz.'])
         e2e_test_parser._add_verbose_flag()
-        e2e_test_parser._add_name_argument(required=True)
+        e2e_test_parser._add_name_argument(required=False)
         e2e_test_parser.help = 'Run the end-to-end test for this tool.'
         e2e_test_parser.set_defaults(command=command.run_e2e_test)
 

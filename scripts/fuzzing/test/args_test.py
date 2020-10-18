@@ -577,10 +577,12 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParseHelp(
             ['help', 'e2etest'], [
                 '',
-                'Usage: fx fuzz e2etest [OPTIONS] NAME',
+                'Usage: fx fuzz e2etest [OPTIONS] [NAME]',
                 '',
-                'Run the end-to-end test for this tool using the named fuzzer. This requires the',
-                'fuzzer to have already been built and deployed to a running device.',
+                'Run the end-to-end test for this tool. If a fuzzer is named, it',
+                'will be run. If none is specified, several example fuzzers will be',
+                'used. This requires the fuzzer(s) to have already been built and',
+                'deployed to a running device.',
                 '',
                 'Arguments:',
                 '  NAME                Fuzzer name to match.  This can be part of the package',

@@ -180,11 +180,12 @@ def run_unittests(args, factory):
 
 
 def run_e2e_test(args, factory):
-    """Runs the end-to-end test against a (resolved) fuzzer."""
-    # Use Factory.create_fuzzer to resolve the fuzzer name, prompting the user
-    # if needed.
-    fuzzer = factory.create_fuzzer(args)
-    sys.argv[sys.argv.index(args.name)] = str(fuzzer)
+    """Runs the end-to-end test against a (resolved) fuzzer, if specified."""
+    if args.name:
+        # Use Factory.create_fuzzer to resolve the fuzzer name, prompting the
+        # user if needed.
+        fuzzer = factory.create_fuzzer(args)
+        sys.argv[sys.argv.index(args.name)] = str(fuzzer)
     _run_tests('test_e2e.py', factory)
 
 

@@ -46,6 +46,10 @@ class CorpusTest(TestCaseWithFuzzer):
         self.assertScpTo(
             corpus_element, self.ns.data_abspath(self.corpus.nspaths[0]))
 
+    def test_reset(self):
+        self.corpus.reset()
+        self.assertSsh('rm', '-rf', self.ns.data_abspath('corpus'))
+
     def test_add_from_gcs(self):
         # Note: this takes advantage of the fact that the FakeCLI always returns
         # the same name for temp_dir().

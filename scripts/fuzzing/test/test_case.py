@@ -38,10 +38,14 @@ class TestCaseWithIO(unittest.TestCase):
 
     # Unit test assertions
 
-    def _assert_io_equals(self, io, lines, n=-1):
+    def _dump_io(self, io):
         io.seek(0)
-        self.assertEqual(io.read().split('\n')[:n], list(lines))
+        data = io.read()
         io.truncate(0)
+        return data
+
+    def _assert_io_equals(self, io, lines, n=-1):
+        self.assertEqual(self._dump_io(io).split('\n')[:n], list(lines))
 
     def assertOut(self, lines, n=-1):
         """Checks that 'n' lines of stdout match 'lines'.
@@ -60,6 +64,12 @@ class TestCaseWithIO(unittest.TestCase):
         resets stderr.
         """
         self._assert_io_equals(self._stderr, lines, n)
+
+    def assertOutContains(self, *strings):
+        """Check that all 'strings' are contained in the stdout. Resets stdout."""
+        output = self._dump_io(self._stdout)
+        for s in strings:
+            self.assertIn(s, output)
 
 
 class TestCaseWithFactory(TestCaseWithIO):

@@ -80,6 +80,11 @@ class Corpus(object):
         else:
             self._nspaths = [data]
 
+    def reset(self):
+        """Remove any elements from the live corpus."""
+        self.ns.remove(self.ns.data('corpus'), recursive=True)
+        self._nspaths = None
+
     def add_from_host(self, pathname):
         """Copies elements from a host directory to the corpus on a device."""
         self.fuzzer.require_stopped()
