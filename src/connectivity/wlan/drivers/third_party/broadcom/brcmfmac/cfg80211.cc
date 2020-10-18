@@ -1675,6 +1675,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   // operation is still expected to complete.
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
     err = ZX_ERR_BAD_STATE;
+    BRCMF_WARN("Connection not possible. Another connection attempt in progress.");
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
     goto done;
   }
@@ -1836,17 +1837,6 @@ static void cfg80211_signal_ind(net_device* ndev) {
     // If client is not connected, stop the timer
     cfg->signal_report_timer->Stop();
   }
-}
-
-static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
-                                          brcmf_connect_status_t connect_status);
-
-static void brcmf_connect_timeout_worker(WorkItem* work) {
-  struct brcmf_cfg80211_info* cfg =
-      containerof(work, struct brcmf_cfg80211_info, connect_timeout_work);
-  struct net_device* ndev = cfg_to_ndev(cfg);
-
-  brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT);
 }
 
 static void brcmf_connect_timeout(struct brcmf_cfg80211_info* cfg) {
@@ -4659,6 +4649,7 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
         break;
 
       default:
+        BRCMF_WARN("Unsuccessful connect status: %s", brcmf_get_connect_status_str(connect_status));
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
         break;
     }
@@ -5135,6 +5126,14 @@ init_priv_mem_out:
   brcmf_deinit_cfg_mem(cfg);
 
   return ZX_ERR_NO_MEMORY;
+}
+
+static void brcmf_connect_timeout_worker(WorkItem* work) {
+  struct brcmf_cfg80211_info* cfg =
+      containerof(work, struct brcmf_cfg80211_info, connect_timeout_work);
+  struct net_device* ndev = cfg_to_ndev(cfg);
+
+  brcmf_bss_connect_done(cfg, ndev, BRCMF_CONNECT_STATUS_CONNECTING_TIMEOUT);
 }
 
 static zx_status_t brcmf_init_cfg(struct brcmf_cfg80211_info* cfg) {
