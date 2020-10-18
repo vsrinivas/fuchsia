@@ -17,9 +17,8 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
-#include "src/ui/scenic/lib/flatland/tests/mock_buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/renderer/mocks/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
-#include "src/ui/scenic/lib/flatland/tests/mock_renderer.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -32,7 +31,6 @@ using BufferCollectionId = flatland::Flatland::BufferCollectionId;
 using ContentId = flatland::Flatland::ContentId;
 using TransformId = flatland::Flatland::TransformId;
 using flatland::BufferCollectionImporter;
-using flatland::BufferCollectionMetadata;
 using flatland::Flatland;
 using flatland::FlatlandPresenter;
 using flatland::GlobalMatrixVector;
@@ -413,18 +411,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
     flatland->RegisterBufferCollection(collection_id, CreateToken());
     EXPECT_NE(global_collection_id, sysmem_util::kInvalidId);
 
-    // Ensure all buffer constraints are valid for the desired image by generating constraints based
-    // on the image properties.
-    BufferCollectionMetadata metadata;
-    metadata.vmo_count = 1;
-
     FX_DCHECK(properties.has_width());
-    metadata.image_constraints.min_coded_width = properties.width();
-    metadata.image_constraints.max_coded_width = properties.width();
-
     FX_DCHECK(properties.has_height());
-    metadata.image_constraints.min_coded_height = properties.height();
-    metadata.image_constraints.max_coded_height = properties.height();
 
     flatland::GlobalImageId global_image_id;
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportImage(_))
@@ -3386,7 +3374,7 @@ TEST_F(FlatlandTest, DeregisterCollectionCompletesAfterFlatlandDestruction) {
   buffer_collection_importer_.reset();
 
   // Signal the release fences, which triggers the deregistration call, even though the Flatland
-  // instance and Renderer associated with the call have been cleaned up.
+  // instance and BufferCollectionImporter associated with the call have been cleaned up.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
       .Times(1);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(global_image_id)).Times(1);

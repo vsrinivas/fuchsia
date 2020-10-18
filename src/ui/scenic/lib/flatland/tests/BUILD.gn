@@ -19,9 +19,7 @@ executable("unittests") {
     "global_topology_data_unittest.cc",
     "hanging_get_helper_unittest.cc",
     "link_system_unittest.cc",
-    "mock_buffer_collection_importer.h",
     "mock_flatland_presenter.h",
-    "mock_renderer.h",
     "transform_graph_unittest.cc",
     "uber_struct_system_unittest.cc",
   ]
@@ -31,7 +29,7 @@ executable("unittests") {
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/flatland",
-    "//src/ui/scenic/lib/flatland/renderer",
+    "//src/ui/scenic/lib/flatland/renderer/mocks",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gmock",

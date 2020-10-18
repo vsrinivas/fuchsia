@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_TESTS_MOCK_RENDERER_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_TESTS_MOCK_RENDERER_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_MOCKS_MOCK_RENDERER_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_MOCKS_MOCK_RENDERER_H_
 
 #include <gmock/gmock.h>
 
@@ -27,4 +27,4 @@ class MockRenderer : public Renderer {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_TESTS_MOCK_RENDERER_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_MOCKS_MOCK_RENDERER_H_
