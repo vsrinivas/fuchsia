@@ -8,6 +8,8 @@
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 
+#include "vulkan/vulkan.hpp"
+
 namespace escher {
 
 const ResourceTypeInfo Sampler::kTypeInfo("Sampler", ResourceType::kResource,
@@ -53,12 +55,22 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
     }
 
     // If the chroma filter is not supported by the device, we would like to
-    // make it fall back to eNearest for YUV images only, while still keeping
-    // the choice of filter in VkSamplerCreateInfo for non-YUV images.
+    // make it fall back to eNearest for YUV images.
     if (filter == vk::Filter::eLinear &&
         !(format_properties.optimalTilingFeatures &
           vk::FormatFeatureFlagBits::eSampledImageYcbcrConversionLinearFilter)) {
+      FX_LOGS(INFO) << "The Vulkan physical device doesn't support linear filter on YCbCr images. "
+                    << "Set YCbCr chroma filter to eNearest as a fallback.";
       ycbcr_create_info.chromaFilter = vk::Filter::eNearest;
+      // We would like to keep the choice of filter in VkSamplerCreateInfo for
+      // non-YUV images if it is supported by the device, otherwise we also make
+      // it fall back to eNearest.
+      if (!(format_properties.optimalTilingFeatures &
+            vk::FormatFeatureFlagBits::eSampledImageYcbcrConversionSeparateReconstructionFilter)) {
+        FX_LOGS(INFO) << "The Vulkan physical device cannot use separated reconstruction filters "
+                      << "for non-YUV images. Set non-YUV filters to eNearest.";
+        filter = vk::Filter::eNearest;
+      }
     } else {
       ycbcr_create_info.chromaFilter = filter;
     }
