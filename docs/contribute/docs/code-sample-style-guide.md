@@ -1,46 +1,43 @@
 # Code sample style guidelines {:#overview}
 
-This document describes best practices for incorporating
-code samples in documentation.
+This document describes how to incorportate code samples in documentation, 
+and specific style guidelines for code samples. This includes:
 
-Code samples are a way to disambiguate documentation because code samples
-can provide a clear model for how developers can create and format their code.
+  *  [Code sample best practices](#code-sample-best-practices)
+  *  [Code sample checklist](#code-sample-checklist)
+  *  [Code sample style guide](#code-sample-guide)
 
-If you are including a code sample in your documentation, refer to the
-following to ensure code sample clarity:
+For information on general documentation standards, including file types, locations, and general
+tone, see the [Fuchsia documentation standards][doc-standard].
+For specific guidance on word choice, style, and structure, see the
+[Fuchsia documentation style guide][style-guide].
 
-  * [Write comprehesively](#write-comprehensively)
-  * [Be obvious](#be-obvious)
-  * [Specify what success looks like](#specify-success)
-  * [Review code sample checklist](#review-checklist)
-  * [Apply code sample guidelines](#apply-code-sample-guidelines)
 
-For information on general documentation standards for [fuchsia.dev](https://fuchsia.dev/),
-see [Documentation standards](/docs/contribute/docs/documentation_standards.md).
+## Code sample best practices {:#code-sample-best-practices}
 
-## Write comprehensively {:#write-comprehensively}
+When creating a code sample for a part of Fuchsia that you are deeply familiar with,
+consider how a new user would read the sample and try to anticipate their needs. 
+Think about the process from end-to-end and include prerequisite steps to completing the process
+and specify what success looks like.
 
-When documenting a scenario that you are deeply familiar with, you might overlook
-information that is necessary to the process but no longer present in your
-day-to-day workflow.
+For example, consider all of the prerequisite information needed before starting to use
+the code sample. Make sure you're not overlooking information that is necessary to use the
+sample but no longer present in your day-to-day workflow.
 
 This might be because you have done these steps so many times that these steps
 no longer stand out as necessary to the procedure. It also might be because this
-requisite information only needed to be completed once and as a result, you
-can't recall those steps at the time of writing documentation.
+prerequisite information only needed to be completed once and as a result, you
+can't recall those steps at the time of writing documentation. If possible, try running
+your sample from the very beginning, and verify that you have all of the prerequisite
+information documented.
 
-When incorporating code samples, think about the process from end-to-end
-and include prerequisite steps to completing the process.
+Likewise, it's important to let the user know when they have successfully completed
+a given procedure correctly. To increase user confidence in your sample, make sure you
+specify what the user's code should look like and how the user can confirm that they
+have completed running your sample successfully.
 
-## Specify what success looks like {:#specify-success}
 
-As a user, when you’re unfamiliar with a new process, it’s difficult to know if
-you are completing a given procedure correctly.
-
-To increase user confidence, specify what the user's code should look like and
-how the user can confirm that they have completed tge process successfully.
-
-## Review code sample checklist {:#before-submit}
+## Code sample checklist {:#code-sample-checklist}
 
 If you are including a code sample in your documentation, review the following
 list before submitting your contribution, to ensure code sample clarity:
@@ -77,7 +74,7 @@ list before submitting your contribution, to ensure code sample clarity:
 *   **Describe the steps needed to test the process** and show what successful
     terminal output looks like.
 
-## Apply code sample guidelines {:#apply-code-sample-guidelines}
+## Code sample style guide {:#code-sample-guide}
 
 The following are actionable best practices for creating easily understandable
 code samples in documentation.
@@ -236,3 +233,7 @@ following steps:
 </ol>
   </article>
 </section>
+
+[doc-standard]: /docs/contribute/docs/documentation-standards.md
+[style-guide]: /docs/contribute/docs/documentation-style-guide.md
+[fuchsia]: https://fuchsia.dev/

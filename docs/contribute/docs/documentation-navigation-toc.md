@@ -1,13 +1,12 @@
-# Change table of contents navigation
+# Updating site navigation and TOC files
 
 The table of contents is the list of documents that is displayed on the left
 side of every page on fuchsia.dev. It is represented by a hierarchical set of
 `_toc.yaml` files. The top level `_toc.yaml` file is
 [`_toc.yaml`](https://fuchsia.googlesource.com/fuchsia/+show/master/docs/_toc.yaml).
 
-If you add a new document or if you want to change how existing documents are
-organized in the source documentation section of
-[fuchsia.dev](/docs), you need to change the navigation table of contents, defined in
+If you add a new document to fuchsia.dev, or if you move existing documentation within the site,
+you need to change the site navigation, defined in
 `_toc.yaml` files. These files are located in the same directory of
 the documentation file or in a parent directory.
 

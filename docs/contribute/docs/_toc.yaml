@@ -1,16 +1,14 @@
 # Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
 # before making changes to this file, and add a member of the fuchsia.dev
-# team as reviewer.
+# team as a reviewer.
 toc:
-- title: "Documentation standards"
-  path: /docs/contribute/docs/documentation_standards.md
-- title: "General style guidelines"
-  path: /docs/contribute/docs/documentation_style_guide.md
-- title: "Code sample style guidelines"
-  path: /docs/contribute/docs/code_sample_style_guide.md
-- title: "Documentation types"
-  path: /docs/contribute/docs/documentation_types.md
-- title: "Documentation comments"
-  path: /docs/contribute/docs/documentation_comments.md
-- title: "Website navigation files"
-  path: /docs/contribute/docs/documentation_navigation_toc.md
+- title: "General documentation standards"
+  path: /docs/contribute/docs/documentation-standards.md
+- title: "Documentation style guide"
+  path: /docs/contribute/docs/documentation-style-guide.md
+- title: "Document types"
+  path: /docs/contribute/docs/documentation-types.md
+- title: "Site navigation and TOC files"
+  path: /docs/contribute/docs/documentation-navigation-toc.md
+- title: "Code sample style guide"
+  path: /docs/contribute/docs/code-sample-style-guide.md
