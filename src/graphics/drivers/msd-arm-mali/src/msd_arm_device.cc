@@ -173,9 +173,21 @@ void MsdArmDevice::Destroy() {
 
 bool MsdArmDevice::Init(void* device_handle) {
   DLOG("Init");
-  platform_device_ = magma::PlatformDevice::Create(device_handle);
-  if (!platform_device_)
+  auto platform_device = magma::PlatformDevice::Create(device_handle);
+  if (!platform_device)
     return DRETF(false, "Failed to initialize device");
+  auto bus_mapper =
+      magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
+  if (!bus_mapper)
+    return DRETF(false, "Failed to create bus mapper");
+  return Init(std::move(platform_device), std::move(bus_mapper));
+}
+
+bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
+                        std::unique_ptr<magma::PlatformBusMapper> bus_mapper) {
+  DLOG("Init platform_device");
+  platform_device_ = std::move(platform_device);
+  bus_mapper_ = std::move(bus_mapper);
 
   std::unique_ptr<magma::PlatformMmio> mmio = platform_device_->CpuMapMmio(
       kMmioIndexRegisters, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
@@ -211,10 +223,6 @@ bool MsdArmDevice::Init(void* device_handle) {
   if (!default_profile_) {
     return DRETF(0, "Failed to get normal priority");
   }
-
-  bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
-  if (!bus_mapper_)
-    return DRETF(false, "Failed to create bus mapper");
 
   if (!InitializeInterrupts())
     return false;

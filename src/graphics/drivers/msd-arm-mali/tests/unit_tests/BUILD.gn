@@ -24,6 +24,7 @@ source_set("tests_not_requiring_hardware") {
   testonly = true
 
   sources = [
+    "non_hardware_test_device.cc",
     "test_address_manager.cc",
     "test_address_space.cc",
     "test_buffer.cc",
@@ -35,6 +36,8 @@ source_set("tests_not_requiring_hardware") {
 
   deps = [
     ":test_deps",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/fdio",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
   ]
 }

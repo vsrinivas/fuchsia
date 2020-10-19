@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/msd_arm_mali_nonhardware_tests"
     },
@@ -8,6 +15,7 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]
     }

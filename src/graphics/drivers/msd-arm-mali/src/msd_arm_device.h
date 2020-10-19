@@ -50,6 +50,9 @@ class MsdArmDevice : public msd_device_t,
   }
 
   bool Init(void* device_handle);
+  bool Init(std::unique_ptr<magma::PlatformDevice> platform_device,
+            std::unique_ptr<magma::PlatformBusMapper> bus_mapper);
+
   std::shared_ptr<MsdArmConnection> Open(msd_client_id_t client_id);
 
   struct DumpState {
@@ -143,6 +146,7 @@ class MsdArmDevice : public msd_device_t,
   DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
   friend class TestMsdArmDevice;
+  friend class TestNonHardwareMsdArmDevice;
 
   class DumpRequest;
   class PerfCounterSampleCompletedRequest;
