@@ -29,8 +29,9 @@ group("common") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/svc",
     "//src/lib/listnode",
     "//src/storage/deprecated-fs-fidl-handler",
     "//src/ui/input/lib/hid-input-report",
@@ -49,6 +50,7 @@ group("common") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/statusor",
+    "//zircon/system/ulib/svc",
   ]
 }
 

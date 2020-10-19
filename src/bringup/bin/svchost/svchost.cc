@@ -292,18 +292,6 @@ void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir, const char* const* 
   }
 }
 
-// TODO(edcoyne): remove this and make virtcon talk virtual filesystems too.
-void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir, const char* name,
-                           zx::unowned_channel forwarding_channel) {
-  dir->AddEntry(
-      name, fbl::MakeRefCounted<fs::Service>(
-                [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
-                  const auto request_handle = request.release();
-                  return forwarding_channel->write(0, name, static_cast<uint32_t>(strlen(name)),
-                                                   &request_handle, 1);
-                }));
-}
-
 int main(int argc, char** argv) {
   bool require_system = false;
   if (argc > 1) {
@@ -381,8 +369,8 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
 
   if (virtcon_proxy_channel.is_valid()) {
-    publish_proxy_service(outgoing.svc_dir(), llcpp::fuchsia::virtualconsole::SessionManager::Name,
-                          zx::unowned_channel(virtcon_proxy_channel));
+    publish_service(outgoing.svc_dir(), llcpp::fuchsia::virtualconsole::SessionManager::Name,
+                    zx::unowned_channel(virtcon_proxy_channel));
   }
 
   thrd_t thread;

@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <fuchsia/virtualconsole/c/fidl.h>
+#include <fuchsia/virtualconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -14,6 +14,8 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
+#include <lib/svc/dir.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/paths.h>
 #include <lib/zx/channel.h>
 #include <poll.h>
@@ -36,6 +38,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
+#include <fs/service.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "keyboard.h"
@@ -240,95 +243,38 @@ static void start_shell(async_dispatcher_t* dispatcher, bool make_active, const 
   }
 }
 
-static zx_status_t new_vc_cb(void* void_dispatcher, zx_handle_t session, fidl_txn_t* txn) {
-  async_dispatcher_t* dispatcher = static_cast<async_dispatcher_t*>(void_dispatcher);
-  zx::channel session_channel(session);
+class VirtconImpl final : public llcpp::fuchsia::virtualconsole::SessionManager::Interface {
+ public:
+  VirtconImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  bool make_active = !(keep_log && g_active_vc && g_active_vc == g_log_vc && g_active_vc);
-  vc_t* vc = nullptr;
-  if (remote_session_create(&vc, std::move(session_channel), make_active,
-                            &color_schemes[kDefaultColorScheme]) < 0) {
+  zx_status_t Bind(zx::channel request) {
+    auto result = fidl::BindServer(dispatcher_, std::move(request), this);
+    if (!result.is_ok()) {
+      return result.error();
+    }
     return ZX_OK;
   }
 
-  vc->pty_wait->Begin(dispatcher);
-
-  return fuchsia_virtualconsole_SessionManagerCreateSession_reply(txn, ZX_OK);
-}
-
-static zx_status_t has_primary_cb(void*, fidl_txn_t* txn) {
-  return fuchsia_virtualconsole_SessionManagerHasPrimaryConnected_reply(txn, is_primary_bound());
-}
-
-static void fidl_message_cb(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
-                            const zx_packet_signal_t* signal) {
-  if ((signal->observed & ZX_CHANNEL_PEER_CLOSED) && !(signal->observed & ZX_CHANNEL_READABLE)) {
-    zx_handle_close(wait->object());
-    delete wait;
-    return;
-  }
-
-  status = fs::ReadMessage(wait->object(),
-                           [dispatcher](fidl_incoming_msg_t* message, fs::FidlConnection* txn) {
-                             static constexpr fuchsia_virtualconsole_SessionManager_ops_t kOps{
-                                 .CreateSession = new_vc_cb,
-                                 .HasPrimaryConnected = has_primary_cb,
-                             };
-
-                             return fuchsia_virtualconsole_SessionManager_dispatch(
-                                 dispatcher, reinterpret_cast<fidl_txn_t*>(txn), message, &kOps);
-                           });
-
-  if (status != ZX_OK) {
-    printf("Failed to dispatch fidl message from client: %s\n", zx_status_get_string(status));
-    zx_handle_close(wait->object());
-    delete wait;
-    return;
-  }
-
-  status = wait->Begin(dispatcher);
-  if (status != ZX_OK) {
-    printf("Failed to reinitialize fidl_message_cb: %s\n", zx_status_get_string(status));
-    zx_handle_close(wait->object());
-    delete wait;
-    return;
-  }
-}
-
-static void fidl_connection_cb(async_dispatcher_t* dispatcher, async::Wait* wait,
-                               zx_status_t status, const zx_packet_signal_t* signal) {
-  constexpr size_t kBufferSize = 256;
-  char buffer[kBufferSize];
-
-  uint32_t bytes_read, handles_read;
-  zx_handle_t client_raw;
-  status = zx_channel_read(wait->object(), 0, buffer, &client_raw, kBufferSize, 1, &bytes_read,
-                           &handles_read);
-  if (status != ZX_OK) {
-    printf("Failed to read from channel: %s\n", zx_status_get_string(status));
-    return;
-  }
-
-  if (handles_read < 1) {
-    printf("Fidl connection with no channel.\n");
-    return;
-  }
-  zx::channel client(client_raw);
-
-  if (fbl::StringPiece(fuchsia_virtualconsole_SessionManager_Name) ==
-      fbl::StringPiece(buffer, bytes_read)) {
-    // This fidl_wait is freed on error in fidl_message_cb.
-    async::Wait* fidl_wait = new async::Wait(
-        client.release(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, fidl_message_cb);
-    status = fidl_wait->Begin(dispatcher);
-    if (status != ZX_OK) {
-      printf("Error starting fidl_wait: %d\n", status);
+  void CreateSession(::zx::channel session, CreateSessionCompleter::Sync& completer) override {
+    bool make_active = !(keep_log && g_active_vc && g_active_vc == g_log_vc && g_active_vc);
+    vc_t* vc = nullptr;
+    if (remote_session_create(&vc, std::move(session), make_active,
+                              &color_schemes[kDefaultColorScheme]) < 0) {
+      completer.Reply(ZX_OK);
+      return;
     }
-  } else {
-    printf("Unsupported fidl interface: %.*s\n", bytes_read, buffer);
+
+    vc->pty_wait->Begin(dispatcher_);
+    completer.Reply(ZX_OK);
   }
-  wait->Begin(dispatcher);
-}
+
+  void HasPrimaryConnected(HasPrimaryConnectedCompleter::Sync& completer) override {
+    completer.Reply(is_primary_bound());
+  }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+};
 
 int main(int argc, char** argv) {
   // NOTE: devmgr has getenv_bool. when more options are added, consider
@@ -372,19 +318,26 @@ int main(int argc, char** argv) {
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
-  if (log_start(loop.dispatcher()) < 0) {
+  VirtconImpl virtcon_server = VirtconImpl(loop.dispatcher());
+
+  svc::Outgoing outgoing(loop.dispatcher());
+  zx_status_t status = outgoing.ServeFromStartupInfo();
+  if (status != ZX_OK) {
+    printf("vc: outgoing.ServeFromStartupInfo() = %s\n", zx_status_get_string(status));
     return -1;
   }
+  status = outgoing.svc_dir()->AddEntry(
+      llcpp::fuchsia::virtualconsole::SessionManager::Name,
+      fbl::MakeRefCounted<fs::Service>([&virtcon_server](zx::channel request) mutable {
+        zx_status_t status = virtcon_server.Bind(std::move(request));
+        if (status != ZX_OK) {
+          printf("vc: error binding new server: %d\n", status);
+        }
+        return status;
+      }));
 
-  async::Wait new_vc_wait;
-  {
-    zx_handle_t startup_handle = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-    if (startup_handle != ZX_HANDLE_INVALID) {
-      new_vc_wait.set_object(startup_handle);
-      new_vc_wait.set_trigger(ZX_CHANNEL_READABLE);
-      new_vc_wait.set_handler(fidl_connection_cb);
-      new_vc_wait.Begin(loop.dispatcher());
-    }
+  if (log_start(loop.dispatcher()) < 0) {
+    return -1;
   }
 
   bool repeat_keys = true;
@@ -396,7 +349,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  zx_status_t status = setup_keyboard_watcher(loop.dispatcher(), handle_key_press, repeat_keys);
+  status = setup_keyboard_watcher(loop.dispatcher(), handle_key_press, repeat_keys);
   if (status != ZX_OK) {
     printf("vc: setup_keyboard_watcher failed with %d\n", status);
   }

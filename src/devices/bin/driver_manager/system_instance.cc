@@ -295,9 +295,27 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   }
 
   zx::channel virtcon_client;
-  status = zx::channel::create(0, &virtcon_client, &virtcon_fidl_);
-  if (status != ZX_OK) {
-    return status;
+  {
+    zx::channel virtcon_client_remote;
+    status = zx::channel::create(0, &virtcon_client, &virtcon_client_remote);
+    if (status != ZX_OK) {
+      printf("Unable to create virtcon channel.\n");
+      return status;
+    }
+
+    zx::channel virtcon_svc;
+    status = zx::channel::create(0, &virtcon_svc, &virtcon_fidl_);
+    if (status != ZX_OK) {
+      printf("Unable to create virtcon channel.\n");
+      return status;
+    }
+
+    // XXX: Investigate how virtcon_svc leaves scope and gets closed.
+    status = fdio_service_connect_at(virtcon_svc.get(), "svc", virtcon_client_remote.release());
+    if (status != ZX_OK) {
+      printf("Unable to connect to virtcon channel.\n");
+      return status;
+    }
   }
 
   zx::channel devcoordinator_svc;
@@ -536,7 +554,7 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
     uint32_t types[2];
 
     handles[handle_count] = virtcon_fidl_.release();
-    types[handle_count] = PA_HND(PA_USER0, 0);
+    types[handle_count] = PA_DIRECTORY_REQUEST;
     ++handle_count;
 
     zx::debuglog debuglog;
