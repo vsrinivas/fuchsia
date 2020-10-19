@@ -90,3 +90,72 @@ struct TestStrictXUnionInStruct {
 struct TestFlexibleXUnionInStruct {
     SampleXUnion xu;
 };
+
+// TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
+[BindingsDenylist = "hlcpp, llcpp"]
+resource struct FidlvizDemo {
+    uint8 f1;
+    int8 f2;
+    uint16 f3;
+    uint32 f4;
+    uint64 f5;
+    uint8 f6;
+    uint8 f7;
+    uint16 f8;
+    float32 f9;
+    float64 f10;
+    bool f11;
+    bool f12;
+    string f13;
+    string? f14;
+    string f15;
+    handle? f16;
+    handle f17;
+    array<uint8>:3 f18;
+    vector<float64> f19;
+    vector<uint8>? f20;
+    vector<uint8> f21;
+    FidlvizBits f22;
+    FidlvizEnum f23;
+    FidlvizStruct1 f24;
+    FidlvizStruct2 f25;
+    FidlvizStruct1? f26;
+    FidlvizStruct2? f27;
+    FidlvizTable f28;
+    FidlvizTable f29;
+    FidlvizUnion? f30;
+    FidlvizUnion f31;
+};
+
+bits FidlvizBits : uint8 {
+    A = 1;
+    B = 2;
+    C = 4;
+};
+
+enum FidlvizEnum : uint8 {
+    A = 42;
+};
+
+struct FidlvizStruct1 {
+};
+
+struct FidlvizStruct2 {
+    uint64 x;
+};
+
+table FidlvizTable {
+    1: bool f1;
+    2: reserved;
+    3: bool f3;
+};
+
+union FidlvizUnion {
+    1: reserved;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: reserved;
+    6: reserved;
+    7: string f7;
+};
