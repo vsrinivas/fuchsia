@@ -22,6 +22,7 @@ func TestStringInLogCheck(t *testing.T) {
 	}
 	c := stringInLogCheck{
 		String:                         killerString,
+		OnlyOnStates:                   []string{},
 		ExceptString:                   exceptString,
 		ExceptBlocks:                   []*logBlock{exceptBlock, exceptBlock2},
 		ExceptSuccessfulSwarmingResult: true,
@@ -36,6 +37,7 @@ func TestStringInLogCheck(t *testing.T) {
 	for _, tc := range []struct {
 		name                string
 		testingOutputs      TestingOutputs
+		states              []string
 		swarmingResultState string
 		shouldMatch         bool
 	}{
@@ -98,11 +100,28 @@ func TestStringInLogCheck(t *testing.T) {
 				)),
 			},
 			shouldMatch: true,
+		}, {
+			name: "should match if swaring task state is in expected states",
+			testingOutputs: TestingOutputs{
+				SerialLog: []byte(killerString),
+			},
+			states:              []string{"STATE_1", "STATE_2"},
+			swarmingResultState: "STATE_1",
+			shouldMatch:         true,
+		}, {
+			name: "should not match if swaring task state is not in expected states",
+			testingOutputs: TestingOutputs{
+				SerialLog: []byte(killerString),
+			},
+			states:              []string{"STATE_1", "STATE_2"},
+			swarmingResultState: "NO_STATE",
+			shouldMatch:         false,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// It accesses this field for DebugText().
 			tc.testingOutputs.SwarmingSummary = &SwarmingTaskSummary{Results: &SwarmingRpcsTaskResult{TaskId: "abc", State: tc.swarmingResultState}}
+			c.OnlyOnStates = tc.states
 			if c.Check(&tc.testingOutputs) != tc.shouldMatch {
 				t.Errorf("c.Check(%q) returned %v, expected %v", string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
 			}

@@ -20,6 +20,8 @@ import (
 // stringInLogCheck checks if String is found in the log named LogName.
 type stringInLogCheck struct {
 	String string
+	// OnlyOnStates will cause Check() to return false if the swarming task state doesn't match with one of these states.
+	OnlyOnStates []string
 	// ExceptString will cause Check() to return false if present.
 	ExceptString string
 	// ExceptBlocks will cause Check() to return false if the string is only within these blocks.
@@ -33,6 +35,16 @@ type stringInLogCheck struct {
 func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 	c.swarmingResult = to.SwarmingSummary.Results
 	if c.ExceptSuccessfulSwarmingResult && !c.swarmingResult.Failure && c.swarmingResult.State == "COMPLETED" {
+		return false
+	}
+	matchedState := false
+	for _, state := range c.OnlyOnStates {
+		if c.swarmingResult.State == state {
+			matchedState = true
+			break
+		}
+	}
+	if len(c.OnlyOnStates) != 0 && !matchedState {
 		return false
 	}
 	var toCheck []byte
@@ -188,6 +200,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg), Type: swarmingOutputType})
 	// For fxbug.dev/56651.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg), Type: swarmingOutputType})
+	// For fxbug.dev/61419.
+	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
+	ret = append(ret, &stringInLogCheck{String: ".cmx canceled due to timeout.", Type: swarmingOutputType, OnlyOnStates: []string{"TIMED_OUT"}})
 	// For fxbug.dev/52719.
 	// Kernel panics and other low-level errors often cause crashes that
 	// manifest as SSH failures, so this check must come after all
