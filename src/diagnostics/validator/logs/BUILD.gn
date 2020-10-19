@@ -24,7 +24,7 @@ validator_deps = [
   "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
   "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
   "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-  "//src/diagnostics/log-validator/fidl:validate-rustc",
+  "//src/diagnostics/validator/logs/fidl:validate-rustc",
   "//src/lib/diagnostics/stream/rust",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",

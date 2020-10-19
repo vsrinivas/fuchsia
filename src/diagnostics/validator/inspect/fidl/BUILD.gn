@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(fxrev.dev/438295) delete once topaz migrated
 import("//build/fidl/fidl.gni")
+
 fidl("validate") {
   name = "test.inspect.validate"
 
-  sources = [ "//src/diagnostics/validator/inspect/fidl/validate.test.fidl" ]
+  sources = [ "validate.test.fidl" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.inspect:fuchsia.inspect" ]
 }

@@ -15,7 +15,7 @@ executable("inspect_validator_cpp_puppet_bin") {
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/diagnostics/inspect_validator/fidl:validate",
+    "//src/diagnostics/validator/inspect/fidl:validate",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -28,7 +28,7 @@ executable("inspect_validator_cpp_puppet_bin") {
 test_package("inspect_validator_test_cpp") {
   deps = [
     ":inspect_validator_cpp_puppet_bin",
-    "//src/diagnostics/inspect_validator:validator_bin",
+    "//src/diagnostics/validator/inspect:validator_bin",
   ]
   meta = [
     {

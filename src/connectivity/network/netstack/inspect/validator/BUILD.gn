@@ -13,7 +13,7 @@ go_binary("puppet") {
 
   deps = [
     "//src/connectivity/network/netstack:netstack_lib",
-    "//src/diagnostics/inspect_validator/fidl:validate($go_toolchain)",
+    "//src/diagnostics/validator/inspect/fidl:validate($go_toolchain)",
     "//src/lib/component",
   ]
 }
@@ -21,7 +21,7 @@ go_binary("puppet") {
 test_package("inspect-validator-test-go") {
   deps = [
     ":puppet",
-    "//src/diagnostics/inspect_validator:validator_bin",
+    "//src/diagnostics/validator/inspect:validator_bin",
   ]
 
   meta = [

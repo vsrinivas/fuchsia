@@ -14,7 +14,7 @@ rustc_binary("log_validator_rust_puppet_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//src/diagnostics/log-validator/fidl:validate-rustc",
+    "//src/diagnostics/validator/logs/fidl:validate-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/stream/rust",
     "//src/lib/fidl/rust/fidl",
@@ -33,7 +33,7 @@ rustc_binary("log_validator_rust_puppet_bin") {
 test_package("log-validator-test-rust") {
   deps = [
     ":log_validator_rust_puppet_bin",
-    "//src/diagnostics/log-validator:log-validator-bin",
+    "//src/diagnostics/validator/logs:log-validator-bin",
   ]
   meta = [
     {

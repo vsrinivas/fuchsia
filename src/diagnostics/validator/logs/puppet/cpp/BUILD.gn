@@ -18,7 +18,8 @@ executable("log_validator_cpp_puppet_bin") {
     "//sdk/lib/syslog/cpp:cpp",
     "//sdk/lib/syslog/streams/cpp:streams",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//src/diagnostics/log-validator/fidl:validate",
+    "//src/diagnostics/validator/logs/fidl:validate",
+    "//src/lib/fsl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -28,7 +29,7 @@ executable("log_validator_cpp_puppet_bin") {
 test_package("log-validator-test-cpp") {
   deps = [
     ":log_validator_cpp_puppet_bin",
-    "//src/diagnostics/log-validator:log-validator-bin",
+    "//src/diagnostics/validator/logs:log-validator-bin",
   ]
   meta = [
     {

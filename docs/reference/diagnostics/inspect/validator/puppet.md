@@ -13,12 +13,12 @@ The Puppet includes these parts:
 * Building an integration test that includes the Puppet and Validator programs.
 
 This doc focuses on the Inspect Validator Rust Puppet located at
-[//src/diagnostics/inspect_validator/lib/rust/src/main.rs](/src/diagnostics/inspect_validator/lib/rust/src/main.rs).
+[//src/diagnostics/validator/inspect/lib/rust/src/main.rs](/src/diagnostics/validator/inspect/lib/rust/src/main.rs).
 
 ## FIDL design
 
 The FIDL protocol for Inspect Validator is defined in
-[//src/diagnostics/inspect_validator/fidl/validate.test.fidl](/src/diagnostics/inspect_validator/fidl/validate.test.fidl).
+[//src/diagnostics/validator/inspect/fidl/validate.test.fidl](/src/diagnostics/validator/inspect/fidl/validate.test.fidl).
 The FIDL protocol corresponds closely to the functions in the
 [Inspect library API](/docs/development/diagnostics/inspect/README.md)
 which defines actions to be applied to any Inspect API implementation. The FIDL
@@ -62,28 +62,28 @@ fully hermetic.
 
 ### Dependencies and names
 
-[Validator's BUILD.gn file](/src/diagnostics/inspect_validator/BUILD.gn#21)
+[Validator's BUILD.gn file](/src/diagnostics/validator/inspect/BUILD.gn#21)
 defines a `validator_bin` target which is used by the
-[Rust puppet's BUILD.gn file](/src/diagnostics/inspect_validator/lib/rust/BUILD.gn#33)
+[Rust puppet's BUILD.gn file](/src/diagnostics/validator/inspect/lib/rust/BUILD.gn#33)
 as a dependency to the `test_package()` named `inspect_validator_test_rust`
 which is the test that exercises the Rust puppet.
 
 The Rust puppet itself is
-[built as a standard rustc_binary](/src/diagnostics/inspect_validator/lib/rust/BUILD.gn#10).
+[built as a standard rustc_binary](/src/diagnostics/validator/inspect/lib/rust/BUILD.gn#10).
 That build rule produces two names, `inspect_validator_rust_puppet_bin` which
 is included in the deps of the `test_package()` rule, and
 `inspect_validator_rust_puppet` which is included in the binaries of the
 `test_package()`.
 
 The `validator_bin` target from the
-[Validator's Build.gn file](/src/diagnostics/inspect_validator/BUILD.gn#21)
+[Validator's Build.gn file](/src/diagnostics/validator/inspect/BUILD.gn#21)
 has a name of `validator` which is referred to in the `tests` of the
 `test_package()`.
 
 ### CQ/CI
 
 Putting `inspect_validator_test_rust` in the `deps` of `group("tests")` in its
-[BUILD.gn](/src/diagnostics/inspect_validator/lib/rust/BUILD.gn#59)
+[BUILD.gn](/src/diagnostics/validator/inspect/lib/rust/BUILD.gn#59)
 makes it easy to include `inspect_validator/lib/rust:tests` in the `deps` of
 `group("tests")` of [src/diagnostics/BUILD.gn](/src/diagnostics/BUILD.gn).
 This will be picked up by the build system and cause the Inspect Validator Rust
@@ -91,13 +91,13 @@ Puppet test to be run in CQ and CI.
 
 ### Meta .cmx files
 
-There are the following CMX files in [//src/diagnostics/inspect_validator/lib/rust/meta](/src/diagnostics/inspect_validator/lib/rust/meta):
+There are the following CMX files in [//src/diagnostics/validator/inspect/lib/rust/meta](/src/diagnostics/validator/inspect/lib/rust/meta):
 
-* [inspect_validator_rust_puppet.cmx](/src/diagnostics/inspect_validator/lib/rust/meta/inspect_validator_rust_puppet.cmx)
+* [inspect_validator_rust_puppet.cmx](/src/diagnostics/validator/inspect/lib/rust/meta/inspect_validator_rust_puppet.cmx)
 
   Lets the puppet binary run and use the logger. It's referred to in the
 `meta` section of `test_package("inspect_validator_test_rust")`.
-* [validator.cmx](/src/diagnostics/inspect_validator/lib/rust/meta/validator.cmx)
+* [validator.cmx](/src/diagnostics/validator/inspect/lib/rust/meta/validator.cmx)
 
   This CMX file is implicitly referred to by the `tests: name: "validator"` that you specified in `test_package()`.
     * `sandbox: services` specifies the services that the Validator needs to run.
@@ -109,4 +109,4 @@ There are the following CMX files in [//src/diagnostics/inspect_validator/lib/ru
 ## Running Validator
 
 For information on how to run the Validator against a puppet, see
-[Inspect Validator](/src/diagnostics/inspect_validator/README.md).
+[Inspect Validator](/src/diagnostics/validator/inspect/README.md).

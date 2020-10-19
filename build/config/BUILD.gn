@@ -732,7 +732,7 @@ config("Wno-conversion") {
     "//src/devices/usb/drivers/usb-hub/*",
     "//src/devices/usb/lib/usb/*",
     "//src/diagnostics/dlog/*",
-    "//src/diagnostics/inspect_validator/lib/cpp/*",
+    "//src/diagnostics/validator/inspect/lib/cpp/*",
     "//src/graphics/display/drivers/*",
     "//src/graphics/display/drivers/display/*",
     "//src/graphics/display/drivers/ssd1306/*",

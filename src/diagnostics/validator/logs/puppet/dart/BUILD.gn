@@ -18,7 +18,7 @@ dart_app("log-validator-dart-puppet") {
         "//sdk/fidl/fuchsia.diagnostics.stream",
         "//sdk/fidl/fuchsia.mem",
         "//src/diagnostics/lib/streams/dart:fuchsia_diagnostic_streams",
-        "//src/diagnostics/log-validator/fidl:validate",
+        "//src/diagnostics/validator/logs/fidl:validate",
         "//topaz/public/dart/fidl",
         "//topaz/public/dart/fuchsia_logger",
         "//topaz/public/dart/fuchsia_services",
@@ -38,7 +38,7 @@ dart_app("log-validator-dart-puppet") {
 test_package("log-validator-test-dart") {
   public_deps = [
     ":log-validator-dart-puppet",
-    "//src/diagnostics/log-validator:log-validator-bin",
+    "//src/diagnostics/validator/logs:log-validator-bin",
   ]
 
   tests = [

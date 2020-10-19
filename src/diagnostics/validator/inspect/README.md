@@ -7,18 +7,18 @@ the resulting VMOs for correctness and memory efficiency.
 
 ## Building
 
-To add this project to your build, append `--with //src/diagnostics/inspect_validator:tests`
+To add this project to your build, append `--with //src/diagnostics/validator/inspect:tests`
 to the `fx set` invocation.
 
 For example:
 
 ```
-fx set core.chromebook-x64 --with '//topaz/bundles:buildbot' --with //src/diagnostics/inspect_validator:tests
+fx set core.chromebook-x64 --with '//topaz/bundles:buildbot' --with //src/diagnostics/validator/inspect:tests
 ```
 
-The Rust puppet is `--with //src/diagnostics/inspect_validator/lib/rust:tests`.
+The Rust puppet is `--with //src/diagnostics/validator/inspect/lib/rust:tests`.
 
-The C++puppet is `--with //src/diagnostics/inspect_validator/lib/cpp:tests`.
+The C++puppet is `--with //src/diagnostics/validator/inspect/lib/cpp:tests`.
 
 ## Running
 
@@ -30,7 +30,7 @@ Also valid: "--output text" or "--output json" (defaults to json).
 ## Testing
 To run unit tests:
 ```
---with //src/diagnostics/inspect_validator:tests
+--with //src/diagnostics/validator/inspect:tests
 fx run-test inspect_validator_tests
 ```
 ```
@@ -39,7 +39,7 @@ fx build && fx shell run_test_component fuchsia-pkg://fuchsia.com/inspect_valida
 
 To run an integration test to evaluate the Rust Inspect library:
 ```
---with //src/diagnostics/inspect_validator/lib/rust:tests
+--with //src/diagnostics/validator/inspect/lib/rust:tests
 fx run-test inspect_validator_test_rust
 ```
 ```
@@ -48,7 +48,7 @@ fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#m
 
 To manually run one or more puppets by specifying their URLs (in this case, the Rust puppet):
 ```
---with //src/diagnostics/inspect_validator
+--with //src/diagnostics/validator/inspect
 fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator#meta/validator.cmx --url fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/inspect_validator_rust_puppet.cmx
 ```
 
@@ -58,6 +58,3 @@ The test entrypoint is located in `src/client.rs`. It connects to and controls
 one or more "puppet" programs located under lib/(language) such as
 lib/rust/src/main.rs. Since Dart is not currently supported in //src, its
 puppet will be located at //topaz/public/dart/fuchsia_inspect/test/validator_puppet.
-
-
-

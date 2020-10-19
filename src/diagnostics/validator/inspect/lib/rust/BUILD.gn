@@ -15,7 +15,7 @@ rustc_binary("inspect_validator_rust_puppet_bin") {
   deps = [
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/diagnostics/inspect_validator/fidl:validate-rustc",
+    "//src/diagnostics/validator/inspect/fidl:validate-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -37,7 +37,7 @@ rustc_binary("inspect_validator_rust_puppet_bin") {
 test_package("inspect_validator_test_rust") {
   deps = [
     ":inspect_validator_rust_puppet_bin",
-    "//src/diagnostics/inspect_validator:validator_bin",
+    "//src/diagnostics/validator/inspect:validator_bin",
   ]
   meta = [
     {

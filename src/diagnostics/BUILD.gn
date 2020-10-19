@@ -18,15 +18,12 @@ group("tests") {
   deps = [
     "archivist:tests",
     "config:tests",
-    "inspect_validator:tests",
-    "inspect_validator/lib/cpp:tests",
-    "inspect_validator/lib/rust:tests",
     "iquery:tests",
     "lib:tests",
     "log-stats:tests",
-    "log-validator:tests",
     "tool:host_tests",
     "triage:tests",
+    "validator:tests",
     "wasm:tests",
 
     # This is included to make sure changes to fuchsia_async (or elsewhere)
