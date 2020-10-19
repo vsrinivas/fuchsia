@@ -4,7 +4,7 @@
 group("cts") {
   deps = [
     "//cts/build:tests",
-    "//cts/tests/hello_world:tests",
+    "//cts/examples/hello_world:tests",
   ]
   testonly = true
 }

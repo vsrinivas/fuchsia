@@ -8,7 +8,7 @@ import("//cts/build/cts.gni")
 # TODO(johnshamoon): Add documentation to describe what this example is doing
 # and how a developer could use these templates to add their own CTS tests.
 cts_source_set("my-cts-source-set") {
-  sources = [ "//cts/tests/hello_world/hello_world_util.h" ]
+  sources = [ "hello_world_util.h" ]
   testonly = true
 }
 
@@ -17,7 +17,7 @@ cts_executable("my-cts-test") {
     ":my-cts-source-set",
     "//zircon/public/lib/zxtest",
   ]
-  sources = [ "//cts/tests/hello_world/hello_world_cts.cc" ]
+  sources = [ "hello_world_cts.cc" ]
   testonly = true
 }
 
