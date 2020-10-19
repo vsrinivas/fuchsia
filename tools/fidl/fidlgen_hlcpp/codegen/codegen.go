@@ -80,6 +80,7 @@ func (gen *FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, cl
 		return err
 	}
 	tree.PrimaryHeader = relStem + ".h"
+	tree.IncludeStem = config.IncludeStem
 
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"

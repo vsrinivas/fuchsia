@@ -10,8 +10,9 @@ const testBaseTemplate = `
 
 #pragma once
 
+{{ $root := . -}}
 {{ range .Headers -}}
-#include <{{ . }}>
+#include <{{ . }}/{{ $root.IncludeStem }}.h>
 {{ end -}}
 
 #include <{{ .PrimaryHeader }}>

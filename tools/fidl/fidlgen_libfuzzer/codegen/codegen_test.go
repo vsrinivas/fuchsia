@@ -72,7 +72,7 @@ func TestCodegenHeader(t *testing.T) {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(*testDataFlag, filename)
 			tree := cpp.CompileLibFuzzer(fidl)
-			prepareTree(fidl.Name, &tree)
+			prepareTree(fidl.Name, "cpp/libfuzzer", &tree)
 			want := typestest.GetGolden(*testDataFlag, example(filename).goldenHeader())
 			buf := closeableBytesBuffer{}
 			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)
@@ -99,7 +99,7 @@ func TestCodegenSource(t *testing.T) {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(*testDataFlag, filename)
 			tree := cpp.CompileLibFuzzer(fidl)
-			prepareTree(fidl.Name, &tree)
+			prepareTree(fidl.Name, "cpp/libfuzzer", &tree)
 			want := typestest.GetGolden(*testDataFlag, example(filename).goldenSource())
 			buf := closeableBytesBuffer{}
 			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)

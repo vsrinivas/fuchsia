@@ -62,7 +62,7 @@ func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree cpp.Root) error {
 // GenerateFidl generates all files required for the C++ libfuzzer code.
 func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, clangFormatPath string) error {
 	tree := cpp.CompileLibFuzzer(fidl)
-	prepareTree(fidl.Name, &tree)
+	prepareTree(fidl.Name, config.IncludeStem, &tree)
 
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"
@@ -116,10 +116,11 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config, cla
 	return nil
 }
 
-func prepareTree(name types.EncodedLibraryIdentifier, tree *cpp.Root) {
+func prepareTree(name types.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
-	tree.PrimaryHeader = pkgPath + "/cpp/libfuzzer.h"
-	tree.Headers = []string{pkgPath + "/cpp/fidl.h"}
+	tree.PrimaryHeader = pkgPath + "/" + includeStem + ".h"
+	tree.IncludeStem = includeStem
+	tree.Headers = []string{pkgPath}
 }
 
 func protocols(decls []cpp.Decl) []*cpp.Protocol {

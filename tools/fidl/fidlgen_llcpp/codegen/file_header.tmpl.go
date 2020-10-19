@@ -42,10 +42,11 @@ const fileHeaderTmpl = `
 {{ end -}}
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
-{{ if .LLHeaders -}}
+{{ if .Headers -}}
 {{ "" }}
-{{ range .LLHeaders -}}
-#include <{{ . }}>
+{{ $root := . -}}
+{{ range .Headers -}}
+#include <{{ . }}/{{ $root.IncludeStem }}.h>
 {{ end -}}
 {{ end -}}
 

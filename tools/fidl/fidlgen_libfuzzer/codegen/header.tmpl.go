@@ -14,12 +14,13 @@ const tmplHeader = `
 #include "lib/fidl/cpp/internal/header.h"
 
 {{ range .Headers -}}
-#include <{{ . }}>
+#include <{{ . }}/cpp/fidl.h>
 {{- end }}
-{{ if .LFHeaders -}}
+{{ if .FuzzerHeaders -}}
 {{ "" }}
-{{ range .LFHeaders -}}
-#include <{{ . }}>
+{{ $root := . -}}
+{{ range .FuzzerHeaders -}}
+#include <{{ . }}/{{ $root.IncludeStem }}.h>
 {{ end -}}
 {{ end -}}
 

@@ -60,6 +60,8 @@ template("_fidl_cpp_codegen_impl") {
       rebase_path(file_stem, root_build_dir),
       "--include-base",
       rebase_path(fidl_target_gen_dir, root_build_dir),
+      "--include-stem",
+      invoker.output_stem,
       "--clang-format-path",
       rebase_path(
           "//prebuilt/third_party/clang/$host_platform/bin/clang-format"),
@@ -131,6 +133,8 @@ template("_fidl_llcpp_codegen_impl") {
       rebase_path("$file_stem.cc", root_build_dir),
       "--include-base",
       rebase_path(fidl_target_gen_dir, root_build_dir),
+      "--include-stem",
+      invoker.output_stem,
       "--clang-format-path",
       rebase_path(
           "//prebuilt/third_party/clang/$host_platform/bin/clang-format"),

@@ -11,4 +11,7 @@ type Config struct {
 
 	// The directory to which C and C++ includes should be relative.
 	IncludeBase string
+
+	// The path suffix after the library path when referencing includes.
+	IncludeStem string
 }

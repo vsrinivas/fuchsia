@@ -12,8 +12,9 @@ const headerTemplate = `
 
 #include "lib/fidl/cpp/internal/header.h"
 
+{{ $root := . -}}
 {{ range .Headers -}}
-#include <{{ . }}>
+#include <{{ . }}/{{ $root.IncludeStem }}.h>
 {{ end -}}
 
 {{- range .Library }}

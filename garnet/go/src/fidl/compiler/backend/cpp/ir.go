@@ -478,9 +478,9 @@ type Parameter struct {
 
 type Root struct {
 	PrimaryHeader   string
+	IncludeStem     string
 	Headers         []string
-	LLHeaders       []string
-	LFHeaders       []string
+	FuzzerHeaders   []string
 	HandleTypes     []string
 	Library         types.LibraryIdentifier
 	LibraryReversed types.LibraryIdentifier
@@ -1602,9 +1602,8 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 			continue
 		}
 		libraryIdent := types.ParseLibraryName(l.Name)
-		root.Headers = append(root.Headers, fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent)))
-		root.LFHeaders = append(root.LFHeaders, fmt.Sprintf("%s/cpp/libfuzzer.h", formatLibraryPath(libraryIdent)))
-		root.LLHeaders = append(root.LLHeaders, fmt.Sprintf("%s/llcpp/fidl.h", formatLibraryPath(libraryIdent)))
+		root.Headers = append(root.Headers, formatLibraryPath(libraryIdent))
+		root.FuzzerHeaders = append(root.FuzzerHeaders, formatLibraryPath(libraryIdent))
 	}
 
 	// zx::channel is always referenced by the protocols in llcpp bindings API

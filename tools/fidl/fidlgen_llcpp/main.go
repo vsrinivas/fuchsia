@@ -22,6 +22,7 @@ type flagsDef struct {
 	header          *string
 	source          *string
 	includeBase     *string
+	includeStem     *string
 	clangFormatPath *string
 }
 
@@ -35,6 +36,9 @@ var flags = flagsDef{
 	includeBase: flag.String("include-base", "",
 		"[optional] the directory relative to which includes will be computed. "+
 			"If omitted, assumes #include <fidl/library/name/llcpp/fidl.h>"),
+	includeStem: flag.String("include-stem", "llcpp/fidl",
+		"[optional] the suffix after library path when referencing includes. "+
+			"Includes will be of the form <my/library/{include-stem}.h>. "),
 	clangFormatPath: flag.String("clang-format-path", "",
 		"path to the clang-format tool."),
 }
@@ -44,7 +48,7 @@ func (f flagsDef) valid() bool {
 	return *f.jsonPath != "" && *f.header != "" && *f.source != ""
 }
 
-func calcPrimaryHeader(fidl types.Root, headerPath string) (string, error) {
+func calcPrimaryHeader(fidl types.Root, headerPath string, includeStem string) (string, error) {
 	if *flags.includeBase != "" {
 		absoluteIncludeBase, err := filepath.Abs(*flags.includeBase)
 		if err != nil {
@@ -66,8 +70,7 @@ func calcPrimaryHeader(fidl types.Root, headerPath string) (string, error) {
 	for _, part := range fidl.Name.Parts() {
 		parts = append(parts, string(part))
 	}
-	parts = append(parts, "llcpp", "fidl.h")
-	return filepath.Join(parts...), nil
+	return fmt.Sprintf("%s/%s.h", filepath.Join(parts...), includeStem), nil
 }
 
 func main() {
@@ -93,11 +96,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	primaryHeader, err := calcPrimaryHeader(fidl, headerPath)
+	primaryHeader, err := calcPrimaryHeader(fidl, headerPath, *flags.includeStem)
 	if err != nil {
 		log.Fatal(err)
 	}
 	tree.PrimaryHeader = primaryHeader
+	tree.IncludeStem = *flags.includeStem
 
 	generator := codegen.NewGenerator()
 	if err := generator.GenerateHeader(tree, headerPath, *flags.clangFormatPath); err != nil {
