@@ -3,7 +3,7 @@
 Reviewed on: 2020-03-11
 
 Test runners help integrate various test frameworks with the [Test Runner
-Framework][ftf].
+Framework][trf].
 
 A test runner implements [`fuchsia.component.runner.ComponentRunner`][fidl-component-runner]
 to run an underlying test program. It integrates a test framework with
@@ -28,7 +28,7 @@ Look for instructions in test runner's respective subdirectories.
 
 Look for instructions in test runner's respective subdirectories.
 
-[ftf]: /docs/concepts/testing/test_runner_framework.md
+[trf]: /docs/concepts/testing/test_runner_framework.md
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
 [fidl-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 

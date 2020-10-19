@@ -189,7 +189,7 @@ list would be preferred and you will see a warning when running the test.
 
 ## Running test cases in parallel
 
-  [Test Runner Framework][ftf] makes it easy to run test cases in parallel by
+  [Test Runner Framework][trf] makes it easy to run test cases in parallel by
   standardizing the option across various test runtimes. [Test runners][test-runner]
   decide the default value for how many tests can run in parallel but developers can
   override it using `BUILD.gn`.
@@ -287,5 +287,5 @@ demonstrated above.
 [syslogs]: /docs/development/diagnostics/logs/README.md
 [test-packages]: /docs/development/components/build.md#test-packages
 [legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity
-[ftf]: test_runner_framework.md
+[trf]: test_runner_framework.md
 [test-runner]: test_runner_framework.md#test-runner

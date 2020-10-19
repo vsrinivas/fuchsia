@@ -32,7 +32,7 @@ pub fn usage() -> String {
 
 const NUM_THREADS: usize = 2;
 
-/// This is a prototype used with ftf to launch v2 tests.
+/// This is a prototype used with TRF to launch v2 tests.
 /// This is a temporary workaround till we get around using actual component manager.
 /// We will start test as root component and using hub v2 attach its "expose/svc" directory to this
 /// managers out/svc(v1 version) directory.

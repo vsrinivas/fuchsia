@@ -46,7 +46,7 @@ The lamb was sure to go
 	testCase(t, stdout, "[]")
 }
 
-func TestParseFtfTest(t *testing.T) {
+func TestParseTrfTest(t *testing.T) {
 	stdout := `
 Running test 'fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm'
 [RUNNING]	tests::two_plus_two

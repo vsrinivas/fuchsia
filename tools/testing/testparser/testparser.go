@@ -18,7 +18,7 @@ func Parse(stdout []byte) []TestCaseResult {
 	res := []*regexp.Regexp{
 		ctsTestPreamblePattern,
 		dartSystemTestPreamblePattern,
-		ftfTestPreamblePattern,
+		trfTestPreamblePattern,
 		googleTestPreamblePattern,
 		goTestPreamblePattern,
 		rustTestPreamblePattern,
@@ -32,8 +32,8 @@ func Parse(stdout []byte) []TestCaseResult {
 		cases = parseVulkanCtsTest(remainingLines)
 	case dartSystemTestPreamblePattern:
 		cases = parseDartSystemTest(remainingLines)
-	case ftfTestPreamblePattern:
-		cases = parseFtfTest(lines)
+	case trfTestPreamblePattern:
+		cases = parseTrfTest(lines)
 	case googleTestPreamblePattern:
 		cases = parseGoogleTest(remainingLines)
 	case goTestPreamblePattern:

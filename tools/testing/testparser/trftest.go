@@ -9,15 +9,16 @@ import (
 )
 
 var (
-	ftfTestPreamblePattern = regexp.MustCompile(`^Running test 'fuchsia-pkg:\/\/.*$`)
-	ftfTestCasePattern     = regexp.MustCompile(`^\[(PASSED|FAILED|INCONCLUSIVE|TIMED OUT|ERROR|SKIPPED)\]\t(.*)$`)
+	trfTestPreamblePattern = regexp.MustCompile(`^Running test 'fuchsia-pkg:\/\/.*$`)
+	trfTestCasePattern     = regexp.MustCompile(`^\[(PASSED|FAILED|INCONCLUSIVE|TIMED OUT|ERROR|SKIPPED)\]\t(.*)$`)
 )
 
-func parseFtfTest(lines [][]byte) []TestCaseResult {
+// Parse tests run by the Test Runner Framework (TRF)
+func parseTrfTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
 	for _, line := range lines {
 		line := string(line)
-		m := ftfTestCasePattern.FindStringSubmatch(line)
+		m := trfTestCasePattern.FindStringSubmatch(line)
 		if m == nil {
 			continue
 		}

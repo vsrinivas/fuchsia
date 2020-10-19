@@ -242,7 +242,7 @@ not `echo_resp`.
 
 ## Test does not start {#troubleshoot-test}
 
-A Components v2 test is written using the [Test Runner Framework][doc-ftf].
+A Components v2 test is written using the [Test Runner Framework][doc-trf].
 Sometimes, if one of the test components is configured incorrectly, this can
 result in the test failing to run.
 
@@ -263,7 +263,7 @@ Misconfigurations can happen in a few ways:
 ### The test failed to expose `fuchsia.test.Suite` to test manager {#troubleshoot-test-root}
 
 This happens when the test root fails to expose `fuchsia.test.Suite` from the
-[test root][doc-ftf-root]. The simple fix is to add an `expose` declaration:
+[test root][doc-trf-root]. The simple fix is to add an `expose` declaration:
 
 ```json5
 // test_root.cml
@@ -278,7 +278,7 @@ expose: [
 
 ### The test driver failed to expose `fuchsia.test.Suite` to the root {#troubleshoot-test-routing}
 
-If the [test driver][doc-ftf-driver] and [test root][doc-ftf-root] are
+If the [test driver][doc-trf-driver] and [test root][doc-trf-root] are
 different components, the test driver must also expose `fuchsia.test.Suite` to
 its parent, the test root.
 
@@ -305,8 +305,8 @@ If this is the problem, you can expect to see an error like this in the logs:
 
 ### The test driver does not use a test runner {#troubleshoot-test-runner}
 
-The [test driver][doc-ftf-driver] must use the appropriate [test
-runner][doc-ftf-runner] corresponding to the language and test framework the
+The [test driver][doc-trf-driver] must use the appropriate [test
+runner][doc-trf-runner] corresponding to the language and test framework the
 test is written with. For example, the driver of a Rust test needs the
 following declaration:
 
@@ -318,7 +318,7 @@ use: [
 ```
 
 
-Also, if the test driver is a child of the [test root][ftf-test-root], you need
+Also, if the test driver is a child of the [test root][trf-test-root], you need
 to offer it to the driver:
 
 ```json5
@@ -333,10 +333,10 @@ offer: [
 
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-epitaphs]: /docs/reference/fidl/language/wire-format/README.md#epitaphs
-[doc-ftf-driver]: /docs/concepts/testing/test_runner_framework.md#test-roles
-[doc-ftf-root]: /docs/concepts/testing/test_runner_framework.md#tests-as-components
-[doc-ftf-runner]: /docs/concepts/testing/test_runner_framework.md#test-runners
-[doc-ftf]: /docs/concepts/testing/test_runner_framework.md
+[doc-trf-driver]: /docs/concepts/testing/test_runner_framework.md#test-roles
+[doc-trf-root]: /docs/concepts/testing/test_runner_framework.md#tests-as-components
+[doc-trf-runner]: /docs/concepts/testing/test_runner_framework.md#test-runners
+[doc-trf]: /docs/concepts/testing/test_runner_framework.md
 [doc-intro]: /docs/concepts/components/v2/introduction.md
 [doc-logs]: /docs/concepts/diagnostics/logs/README.md
 [doc-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
