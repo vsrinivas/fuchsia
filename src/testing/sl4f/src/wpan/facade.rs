@@ -135,7 +135,7 @@ impl WpanFacade {
         Ok(router_id)
     }
 
-    /// Returns the connectivity state from the DeviceTest proxy service
+    /// Returns the connectivity state from the DeviceTest proxy service.
     pub async fn get_ncp_state(&self) -> Result<ConnectivityState, Error> {
         let device_state = match self.device.read().as_ref() {
             Some(device) => device.watch_device_state().await?.connectivity_state,
@@ -145,6 +145,19 @@ impl WpanFacade {
             Some(connectivity_state) => Ok(WpanFacade::to_connectivity_state(connectivity_state)),
             None => bail!("Device state is not defined!"),
         }
+    }
+
+    /// Returns true if the connectivity state is commissioned.
+    pub async fn get_is_commissioned(&self) -> Result<bool, Error> {
+        let ncp_state = self.get_ncp_state().await?;
+        let is_commissioned = match ncp_state {
+            ConnectivityState::Attached
+            | ConnectivityState::Attaching
+            | ConnectivityState::Isolated
+            | ConnectivityState::Ready => true,
+            _ => false,
+        };
+        Ok(is_commissioned)
     }
 
     fn to_connectivity_state(connectivity_state: lowpan_ConnectivityState) -> ConnectivityState {
@@ -294,5 +307,11 @@ mod tests {
     async fn test_get_ncp_state() {
         let facade = MOCK_TESTER.create_facade_and_serve();
         MockTester::assert_wpan_fn(facade.0.get_ncp_state(), facade.1).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_is_commissioned() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_is_commissioned(), facade.1).await;
     }
 }

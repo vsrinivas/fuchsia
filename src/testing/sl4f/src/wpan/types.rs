@@ -1,9 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+ 
 /// Supported Wpan commands.
 pub enum WpanMethod {
+    GetIsCommissioned,
     GetNcpChannel,
     GetNcpMacAddress,
     GetNcpRssi,
@@ -14,13 +15,14 @@ pub enum WpanMethod {
     GetThreadRouterId,
     GetWeaveNodeId,
     InitializeProxies,
-}
-
-impl std::str::FromStr for WpanMethod {
+ }
+  
+ impl std::str::FromStr for WpanMethod {
     type Err = anyhow::Error;
-
+  
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
+            "GetIsCommissioned" => Ok(WpanMethod::GetIsCommissioned),
             "GetNcpChannel" => Ok(WpanMethod::GetNcpChannel),
             "GetNcpMacAddress" => Ok(WpanMethod::GetNcpMacAddress),
             "GetNcpRssi" => Ok(WpanMethod::GetNcpRssi),
@@ -34,4 +36,4 @@ impl std::str::FromStr for WpanMethod {
             _ => return Err(format_err!("invalid Wpan FIDL method: {}", method)),
         }
     }
-}
+ } 
