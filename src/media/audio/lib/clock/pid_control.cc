@@ -9,7 +9,7 @@
 namespace media::audio::clock {
 
 // Reset the PID controller; set the initial result & time
-void PidControl::Start(int64_t start_time) {
+void PidControl::Start(zx::time start_time) {
   tune_time_ = start_time;
   total_pid_contribution_ = 0.0;
   current_error_ = accum_error_ = 0.0;
@@ -18,13 +18,13 @@ void PidControl::Start(int64_t start_time) {
 double PidControl::Read() const { return total_pid_contribution_; }
 
 // Factor in the most current error reading
-void PidControl::TuneForError(int64_t time, double error) {
+void PidControl::TuneForError(zx::time time, double error) {
   FX_DCHECK(time >= tune_time_) << "Time for result-tuning is earlier than previous result ("
-                                << time << " < " << tune_time_ << ")";
+                                << time.get() << " < " << tune_time_.get() << ")";
   // TODO(fxbug.dev/47778): normalize to 10ns units rather than 1ns, if accum_error_ becomes so
   // large that lost precision impacts accuracy (as a double, accum_error_ has 54 bits of
   // precision).
-  auto duration = time - tune_time_;
+  auto duration = (time - tune_time_).get();
   tune_time_ = time;
 
   delta_error_ = (error - current_error_) / duration;

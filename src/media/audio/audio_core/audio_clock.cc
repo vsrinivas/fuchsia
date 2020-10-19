@@ -129,7 +129,7 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
       feedback_control = &clock->microsrc_feedback_control_;
       break;
   }
-  feedback_control->TuneForError(monotonic_time.get(), src_pos_error.get());
+  feedback_control->TuneForError(monotonic_time, src_pos_error.get());
 
   // 'adjustment' is a zero-centric adjustment factor, relative to current rate.
   auto adjustment = feedback_control->Read();
@@ -221,9 +221,9 @@ zx::time AudioClock::Read() const {
 }
 
 void AudioClock::ResetRateAdjustment(zx::time reset_time) {
-  microsrc_feedback_control_.Start(reset_time.get());
+  microsrc_feedback_control_.Start(reset_time);
   if (adjustable_feedback_control_.has_value()) {
-    adjustable_feedback_control_->Start(reset_time.get());
+    adjustable_feedback_control_->Start(reset_time);
   }
 }
 

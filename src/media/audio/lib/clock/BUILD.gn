@@ -30,7 +30,10 @@ source_set("pid") {
     "pid_control.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

@@ -5,9 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_CLOCK_PID_CONTROL_H_
 #define SRC_MEDIA_AUDIO_LIB_CLOCK_PID_CONTROL_H_
 
-#include <zircon/time.h>
-
-#include <array>
+#include <lib/zx/time.h>
 
 namespace media::audio::clock {
 
@@ -34,14 +32,14 @@ class PidControl {
       : proportional_factor_(vals.proportional_factor),
         integral_factor_(vals.integral_factor),
         derivative_factor_(vals.derivative_factor) {
-    Start(0);
+    Start(zx::time{0});
   }
   PidControl() : PidControl(Coefficients{}) {}
 
-  void Start(int64_t start_time);
+  void Start(zx::time start_time);
 
   double Read() const;
-  void TuneForError(int64_t time, double error);
+  void TuneForError(zx::time time, double error);
 
   void DisplayCoefficients();
 
@@ -55,7 +53,7 @@ class PidControl {
   double deriv_contrib_;
   double total_pid_contribution_;
 
-  int64_t tune_time_;
+  zx::time tune_time_;
   double current_error_;
   double accum_error_;
   double delta_error_;
