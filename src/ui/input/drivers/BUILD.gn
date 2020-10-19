@@ -28,6 +28,7 @@ group("tests") {
     "cypress:tests",
     "ft8201:tests",
     "goodix:tests",
+    "gt6853:tests",
     "hid:tests",
     "hid-buttons:tests",
     "hid-input-report:hid-input-report-test",

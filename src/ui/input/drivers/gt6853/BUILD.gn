@@ -1,0 +1,87 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
+group("common") {
+  public_deps = [
+    ":gt6853-bind",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.hidbus",
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/ui/input/lib/input-report-reader",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/hid",
+  ]
+}
+
+bind_rules("gt6853-bind") {
+  rules = "gt6853.bind"
+  output = "gt6853-bind.h"
+  tests = "gt6853-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_module("gt6853") {
+  output_name = "gt6853"
+  sources = [ "gt6853.cc" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  deps = [ ":common" ]
+}
+
+test("gt6853-test") {
+  output_name = "gt6853-test"
+  configs += [ "//build/config:all_source" ]
+  sources = [
+    "gt6853-test.cc",
+    "gt6853.cc",
+  ]
+  deps = [
+    ":common",
+    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
+    "//src/devices/i2c/testing/fake-i2c",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("gt6853-test-package") {
+  package_name = "gt6853-test"
+  executable_path = "test/gt6853-test"
+  deps = [ ":gt6853-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":gt6853-bind_test",
+    ":gt6853-test-package",
+  ]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "gt6853",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOODIX",
+      "fuchsia.BIND_PLATFORM_DEV_DID": "1"
+    }
+  },
+  {
+    "name": "gt6853-abort",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOODIX",
+      "fuchsia.BIND_PLATFORM_DEV_DID": "1"
+    }
+  }
+]

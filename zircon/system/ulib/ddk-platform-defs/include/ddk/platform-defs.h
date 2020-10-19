@@ -349,6 +349,10 @@ __BEGIN_CDECLS
 // Sensirion
 #define PDEV_VID_SENSIRION           0x1B
 #define PDEV_DID_SENSIRION_SHTV3      0x01
+
+// Goodix
+#define PDEV_VID_GOODIX              0x1C
+#define PDEV_DID_GOODIX_GT6853        0x01
 // clang-format on
 
 __END_CDECLS

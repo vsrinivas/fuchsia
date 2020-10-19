@@ -38,6 +38,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   SILERGY = 25,
   FOCALTECH = 26,
   SENSIRION = 27,
+  GOODIX = 28,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
