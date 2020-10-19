@@ -25,6 +25,7 @@ Checks: >
 
   performance-*,
   readability-*,
+  -readability-function-cognitive-complexity,
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration,
   -readability-magic-numbers,
