@@ -60,8 +60,13 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // denied.
   virtual void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback);
 
-  // clears existing a11y focus.
+  // Clears existing a11y focus.
   virtual void ClearA11yFocus();
+
+  // Removes current highlights (if any), and highlights node specified by identifier
+  // |{currently_focused_view,
+  // focused_node_in_view_map_[currently_focused_view_]}|.
+  virtual void UpdateHighlights();
 
   static constexpr char kCurrentlyFocusedKoidInspectNodeName[] = "currently_focused_koid";
   static constexpr char kCurrentlyFocusedNodeIdInspectNodeName[] = "currently_focused_node_id";
@@ -76,10 +81,6 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
 
   // Helper function to update inspect info.
   void UpdateInspectProperties();
-
-  // Removes current highlights (if any), and highlights node specified by identifier |{koid,
-  // node_id}|.
-  void UpdateHighlights();
 
   // Map for storing node_id which is in a11y focus for every viewref_koid.
   // By default, root-node(node_id = 0) is set for a view in a11y focus.

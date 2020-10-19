@@ -78,6 +78,7 @@ TEST_F(RecoverA11YFocusActionTest, FocusIsStillValid) {
   ASSERT_TRUE(focus);
   ASSERT_EQ(focus->view_ref_koid, semantic_provider_.koid());
   ASSERT_EQ(focus->node_id, 0u);
+  EXPECT_TRUE(a11y_focus_manager_ptr_->IsUpdateHighlightsCalled());
 }
 
 TEST_F(RecoverA11YFocusActionTest, FocusNoLongerExists) {

@@ -15,7 +15,13 @@ RecoverA11YFocusAction::RecoverA11YFocusAction(ActionContext* action_context,
 RecoverA11YFocusAction::~RecoverA11YFocusAction() = default;
 
 void RecoverA11YFocusAction::Run(ActionData process_data) {
-  auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
+  auto a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
+  if (!a11y_focus_manager) {
+    FX_LOGS(ERROR) << "RecoverA11yFocusAction::Run: Null focus manager.";
+    return;
+  }
+
+  auto a11y_focus = a11y_focus_manager->GetA11yFocus();
   if (!a11y_focus) {
     return;
   }
@@ -26,13 +32,18 @@ void RecoverA11YFocusAction::Run(ActionData process_data) {
                                                                      a11y_focus->node_id);
 
   if (focussed_node) {
+    // If the semantic tree has been updated, it's possible that the bounding
+    // box of the currently focused node has changed. Therefore, we should
+    // redraw highlights.
+    a11y_focus_manager->UpdateHighlights();
+
     // the node still exists, we can stop here.
     return;
   }
 
   // This focus no longer exists. Clears its old value and waits for a new user interaction (which
   // will set the focus automatically once they try to select sommething).
-  screen_reader_context_->GetA11yFocusManager()->ClearA11yFocus();
+  a11y_focus_manager->ClearA11yFocus();
 }
 
 }  // namespace a11y
