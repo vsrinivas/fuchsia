@@ -206,14 +206,50 @@ pub(crate) fn has_complete_packet(buffer: &VecDeque<u8>) -> Result<(), ParseErro
     )
 }
 
-/// Write a packet from the provided `Iterator`. `out_buffer` is always consumed and
+/// Copy all valid HCI packets from `buffer` onto the back of `read_packets` using `out_buffer` as
+/// the backing storage for the first packet consumed. This function returns a ParseError if there
+/// is not at least one packet present in `read_packets` when the function returns. If this function
+/// returns `Ok(())`, `read_packets` is guaranteed to have at least one packet.
+///
+/// All valid HCI packets that are copied into `read_packets` are removed from `buffer`. Any
+/// partial packets will remain in `buffer`.
+///
+/// The use of `out_buffer` as a backing storage is an optimization in the common case where there
+/// is only one complete HCI packet in `buffer`. This function makes no guarantees about whether
+/// additional allocations will occur when there are multiple complete packets in `buffer`.
+pub(super) fn consume_packets(
+    buffer: &mut VecDeque<u8>,
+    out_buffer: Vec<u8>,
+    read_packets: &mut VecDeque<IncomingPacket>,
+) -> Result<(), ParseError> {
+    // At least 1 packet must be ready for parsing from the `buffer`
+    // if read_packets is empty. If the expected packet is not available,
+    // return early with a ParseError.
+    if read_packets.is_empty() {
+        read_packets.push_back(consume_next_packet(buffer, out_buffer)?);
+    }
+
+    // Check for additional packets that might be ready in the `buffer`. Incomplete
+    // packets are not an error here because we have at least one packet ready.
+    //
+    // If there are multiple packets ready to be consumed, we will allocate
+    // additional Vectors. There is an opportunity to optimize out this allocation
+    // in the hot path by using preallocated buffers or an arena.
+    while let Ok(pkt) = consume_next_packet(buffer, Vec::new()) {
+        read_packets.push_back(pkt);
+    }
+
+    Ok(())
+}
+
+/// Write a packet from the provided `VecDeque`. `out_buffer` is always consumed and
 /// is used as the backing allocation for the returned `IncomingPacket` if a packet
 /// is available.
 ///
 /// If a complete packet is returned, the bytes in `buffer` containing the packet will be consumed.
 /// If there is not a complete packet at the head of `buffer`, `buffer` will not be modified
 /// by this function.
-pub(super) fn consume_next_packet(
+fn consume_next_packet(
     buffer: &mut VecDeque<u8>,
     mut out_buffer: Vec<u8>,
 ) -> Result<IncomingPacket, ParseError> {
@@ -391,5 +427,122 @@ mod tests {
         );
         // accumulation buffer has remaining data
         assert_eq!(Vec::from(buffer), vec![0x07, 0x08]);
+    }
+
+    #[test]
+    fn consume_packets_data_too_short() {
+        // Tests the 2 cases when the buffer does not contain a complete packet
+        // Case 1) read_packets is empty and an Err is returned
+        // Case 2) read_packets is not empty and Ok is returned
+
+        let buffer_ = vec![];
+        let mut buffer = VecDeque::from_iter(buffer_.clone());
+        let out = vec![];
+        let mut read_packets = VecDeque::new();
+        assert_eq!(
+            consume_packets(&mut buffer, out, &mut read_packets),
+            Err(ParseError::PayloadTooShort)
+        );
+        assert!(buffer.is_empty());
+        assert!(read_packets.is_empty());
+
+        // read_packets is no longer empty
+        read_packets.push_back(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]));
+
+        let buffer_ = vec![];
+        let mut buffer = VecDeque::from_iter(buffer_.clone());
+        let out = vec![];
+        assert_eq!(consume_packets(&mut buffer, out, &mut read_packets), Ok(()));
+        assert!(buffer.is_empty());
+        assert_eq!(read_packets.len(), 1);
+    }
+
+    #[test]
+    fn consume_packets_valid_data() {
+        // Tests the 2 cases when the buffer contains a complete packet
+        // Case 1) read_packets is empty before the call and contains 1 packet after
+        // Case 1) read_packets is not empty before the call and contains 2 packets after
+
+        let buffer_ = vec![0x04, 0x02, 0x03, 0x04, 0x05, 0x06];
+        let mut buffer = VecDeque::from_iter(buffer_);
+        let out = vec![];
+        let mut read_packets = VecDeque::new();
+        assert_eq!(consume_packets(&mut buffer, out, &mut read_packets), Ok(()));
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]))
+        );
+
+        let buffer_ = vec![0x04, 0x02, 0x03, 0xff, 0xff, 0xff];
+        let mut buffer = VecDeque::from_iter(buffer_);
+        let out = vec![];
+        let mut read_packets = VecDeque::new();
+        // read_packets is no longer empty
+        read_packets.push_back(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]));
+
+        assert_eq!(consume_packets(&mut buffer, out, &mut read_packets), Ok(()));
+        assert_eq!(read_packets.len(), 2);
+        // First packet popped is the one that was already in read_packets.
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]))
+        );
+        // Second packet popped is the one that was added by the call to consume_packets.
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0xff, 0xff, 0xff]))
+        );
+    }
+
+    #[test]
+    fn consume_packets_multiple_raw_packets() {
+        // Tests the 2 cases when the buffer contains multiple complete packets
+        // Case 1) read_packets is empty before the call and contains 2 packet2 after
+        // Case 1) read_packets is not empty before the call and contains 3 packets after
+
+        let buffer_ = vec![
+            0x04, 0x02, 0x03, 0x04, 0x05, 0x06, // First raw packet
+            0x04, 0x02, 0x03, 0x07, 0x08, 0x09, // Second raw packet
+        ];
+        let mut buffer = VecDeque::from_iter(buffer_);
+        let out = vec![];
+        let mut read_packets = VecDeque::new();
+        assert_eq!(consume_packets(&mut buffer, out, &mut read_packets), Ok(()));
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]))
+        );
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0x07, 0x08, 0x09]))
+        );
+
+        let buffer_ = vec![
+            0x04, 0x02, 0x03, 0xaa, 0xaa, 0xaa, // First raw packet
+            0x04, 0x02, 0x03, 0xff, 0xff, 0xff, // Second raw packet
+        ];
+        let mut buffer = VecDeque::from_iter(buffer_);
+        let out = vec![];
+        let mut read_packets = VecDeque::new();
+        // read_packets is no longer empty
+        read_packets.push_back(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]));
+
+        assert_eq!(consume_packets(&mut buffer, out, &mut read_packets), Ok(()));
+        assert_eq!(read_packets.len(), 3);
+        // First packet popped is the one that was already in read_packets.
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0x04, 0x05, 0x06]))
+        );
+        // Second packet popped is the first one that was added by the call to consume_packets.
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0xaa, 0xaa, 0xaa]))
+        );
+        // Third packet popped is the second one that was added by the call to consume_packets.
+        assert_eq!(
+            read_packets.pop_front(),
+            Some(IncomingPacket::Event(vec![0x02, 0x03, 0xff, 0xff, 0xff]))
+        );
     }
 }

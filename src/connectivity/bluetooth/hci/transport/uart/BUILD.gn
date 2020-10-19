@@ -14,20 +14,39 @@ driver_module("bt-transport-uart") {
     "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
-  sources = [ "bt-transport-uart.c" ]
   deps = [
+    ":common",
+    "//src/devices/lib/driver",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "bt-transport-uart.cc",
+    "bt-transport-uart.h",
+  ]
+
+  public_deps = [
     "//sdk/banjo/ddk.protocol.bt.hci",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
-    "//src/devices/lib/driver",
+    "//src/connectivity/bluetooth/hci/lib:bt-hci",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
 }

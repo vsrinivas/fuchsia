@@ -10,7 +10,6 @@ use {
     std::{
         collections::VecDeque,
         pin::Pin,
-        sync::Arc,
         task::{Context, Poll},
     },
 };
@@ -26,9 +25,7 @@ use crate::{
     },
 };
 
-use self::parser::{
-    consume_next_packet, encode_outgoing_packet, AclHeader, ParseError, UartHeader,
-};
+use self::parser::{consume_packets, encode_outgoing_packet, AclHeader, ParseError, UartHeader};
 
 pub(crate) mod parse_util;
 pub(crate) mod parser;
@@ -75,11 +72,11 @@ pub struct SerialReadState {
 }
 
 impl SerialReadState {
-    /// Return an arc-wrapped instance of `SerialReadState`. It is arc-wrapped because this object
-    /// must be _always_ be Clone + Send + Sync.
-    pub fn new(serial_ptr: *mut serial_impl_async_protocol_t) -> Arc<Mutex<SerialReadState>> {
+    /// SerialReadState should always be stored inside a heap-allocated Mutex so this function does
+    /// that nesting for the convenience of the caller.
+    pub fn new(serial_ptr: *mut serial_impl_async_protocol_t) -> Box<Mutex<SerialReadState>> {
         let event = zx::Event::create().expect("new event object");
-        Arc::new(Mutex::new(SerialReadState {
+        Box::new(Mutex::new(SerialReadState {
             accumulation_buffer: VecDeque::with_capacity(ACL_BUFFER_INITIAL_CAPACITY),
             event,
             signaled_ready: false,
@@ -92,14 +89,8 @@ impl SerialReadState {
         self.accumulation_buffer.extend(buffer.iter());
     }
 
-    // TODO (belgum): This will stall out if the following sequence of events occurs:
-    // There is a currently unhandled packet in the accumulation buffer. A new complete packet is
-    // read into the buffer. The first packet is handled. No futher data is read off the serial line
-    // after the first packet is processed.
-    // At this point, a signal will not be generated for the second packet that was accumulated in
-    // the buffer until new data is read off the serial line to trigger a check for a new packet.
     pub fn check_for_next_packet(&mut self) -> Result<(), ()> {
-        // Skip check if a packet is queued to be handled by `Worker`.
+        // Skip check if at least one packet is queued to be handled by `Worker`.
         //
         // This early return accomplishes two goals:
         //   1) Do not signal the worker thread again before the thread is able to handle
@@ -169,6 +160,12 @@ impl HwTransportBuilder for UartBuilder {
 ///
 /// It requires a valid `Serial` object that should be created by the consumer of the library
 /// and passed in through the public FFI exposed by the library.
+// Memory Safety: the callbacks `write_async` and `read_async` contain raw pointers to
+// data contained within the `Uart` struct. Specifically, `write_event` and `read_state`,
+// respectively. Memory safety is guaranteed by the Drop implementation of Uart which cancels the
+// callbacks before dropping the data pointed to by the raw pointers that the callbacks have access
+// to. The serial_impl_async protocol guarantees that once the cancel_all call completes, the
+// callbacks will never be called again by the serial driver.
 pub struct Uart {
     serial: Serial,
     terminated: bool,
@@ -177,15 +174,18 @@ pub struct Uart {
     // but to avoid any surprising behavior, the future is dropped before the event
     // it depends on.
     write_signal: fasync::OnSignals<'static>,
-    write_event: Arc<zx::Event>,
+    write_event: Box<zx::Event>,
     write_in_progress: bool,
     write_buffer: Vec<u8>,
     write_async: Box<WriteAsyncFn>,
 
     read_signal: fasync::OnSignals<'static>,
-    read_state: Arc<Mutex<SerialReadState>>,
+    read_state: Box<Mutex<SerialReadState>>,
     read_in_progress: bool,
     read_async: Box<ReadAsyncFn>,
+    // Parsed incoming packet data. Each inner Vec is guaranteed to contain
+    // the data for a complete packet.
+    read_packets: VecDeque<IncomingPacket>,
 }
 
 impl Uart {
@@ -194,9 +194,9 @@ impl Uart {
     }
 
     pub fn new(serial: Serial) -> Uart {
-        let write_event = Arc::new(zx::Event::create().expect("zx event creation to succeed"));
-        let write_event_clone = write_event.clone();
-        let write_signal = fasync::OnSignals::new(&*write_event_clone, serial_signals());
+        let write_event = Box::new(zx::Event::create().expect("zx event creation to succeed"));
+        let write_signal =
+            fasync::OnSignals::new(&*write_event, serial_signals()).extend_lifetime();
 
         let read_state = SerialReadState::new(serial.as_ptr());
         let read_signal = {
@@ -209,7 +209,7 @@ impl Uart {
             serial,
             terminated: false,
             write_event,
-            write_signal: write_signal.extend_lifetime(),
+            write_signal,
             write_in_progress: false,
             write_buffer: Vec::with_capacity(ACL_BUFFER_INITIAL_CAPACITY),
             write_async: Box::new(serial_write_async),
@@ -217,6 +217,7 @@ impl Uart {
             read_state,
             read_in_progress: false,
             read_async: Box::new(serial_read_async),
+            read_packets: VecDeque::new(),
         }
     }
 
@@ -229,7 +230,7 @@ impl Uart {
     fn start_read(&mut self) -> Result<(), zx::Status> {
         self.read_signal = clear_and_create_signal_fut(&self.read_state.lock().event)?;
         self.read_in_progress = true;
-        (self.read_async)(self.serial.as_ptr(), self.read_state.clone());
+        (self.read_async)(self.serial.as_ptr(), &self.read_state);
         Ok(())
     }
 }
@@ -249,6 +250,13 @@ impl Stream for Uart {
                 self.terminated = true;
                 return Poll::Ready(None);
             }
+        }
+
+        // There is at least one packet that is already processed and ready to consume.
+        // Therefore, a new IncomingPacketToken can be minted without polling the read signal or
+        // querying the read state.
+        if !self.read_packets.is_empty() {
+            return Poll::Ready(Some(IncomingPacketToken::mint()));
         }
 
         match self.read_signal.poll_unpin(cx) {
@@ -299,7 +307,7 @@ impl<'a> Sink<OutgoingPacket<'a>> for Uart {
     fn start_send(mut self: Pin<&mut Self>, item: OutgoingPacket<'_>) -> Result<(), Self::Error> {
         encode_outgoing_packet(item, &mut self.write_buffer);
         self.write_in_progress = true;
-        (self.write_async)(&self.serial, &self.write_buffer, self.write_event.clone());
+        (self.write_async)(&self.serial, &self.write_buffer, &self.write_event);
         Ok(())
     }
 
@@ -344,9 +352,18 @@ impl HwTransport for Uart {
     ) -> IncomingPacket {
         buffer.clear();
         let mut state = self.read_state.lock();
-        match consume_next_packet(&mut state.accumulation_buffer, buffer) {
-            Ok(pkt) => {
-                state.signaled_ready = false;
+
+        match consume_packets(&mut state.accumulation_buffer, buffer, &mut self.read_packets) {
+            Ok(()) => {
+                let packet = self
+                    .read_packets
+                    .pop_front()
+                    .expect("consume_packets guarantees at least one packet to be present");
+                // Set signaled_ready to false only when there are no more packets ready to be
+                // consumed.
+                if self.read_packets.is_empty() {
+                    state.signaled_ready = false;
+                }
                 trace_instant!("Transport::packet_nonce_end", fuchsia_trace::Scope::Thread,
                     "id" => state.packet_count);
                 // End of trace flow that began in `check_for_next_packet`
@@ -354,7 +371,7 @@ impl HwTransport for Uart {
                 // there is never more than a single active Transport::rx_packet flow event at any
                 // given point in time.
                 trace_flow_end!("Transport::rx_packet", state.packet_count);
-                pkt
+                packet
             }
             Err(e) => {
                 // Grab the first 4 bytes in the accumulation buffer for debugging purposes.
@@ -371,7 +388,17 @@ impl HwTransport for Uart {
             }
         }
     }
-    unsafe fn unbind(&mut self) {
+    fn unbind(&mut self) {
+        self.serial.cancel_all();
+    }
+}
+
+impl Drop for Uart {
+    fn drop(&mut self) {
+        // Memory Safety: Pending serial read and write callbacks must be canceled before `Uart` and
+        // its fields can be cleaned up. In particular, *const pointers to `write_event` and
+        // `read_state` are referenced from the callbacks, so all pending callbacks must be canceled
+        // before they can be safely deallocated.
         self.serial.cancel_all();
     }
 }
@@ -384,8 +411,8 @@ mod tests {
         std::sync::atomic::{AtomicUsize, Ordering},
     };
 
-    async fn create_new_signal() -> (Arc<zx::Event>, fasync::OnSignals<'static>) {
-        let event = Arc::new(zx::Event::create().unwrap());
+    async fn create_new_signal() -> (Box<zx::Event>, fasync::OnSignals<'static>) {
+        let event = Box::new(zx::Event::create().unwrap());
         event.signal_handle(zx::Signals::NONE, serial_signals()).unwrap();
         // Check that bits _are_ set here
         fasync::OnSignals::new(&*event, serial_signals()).await.unwrap();
@@ -442,6 +469,27 @@ mod tests {
         });
         let token = transport.next().await.unwrap();
         assert_eq!(transport.take_incoming(token, vec![]), expected);
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn stream_await_ready_with_two_packets_returns_values() {
+        let expected = IncomingPacket::Event(vec![2, 3, 4, 5, 6]);
+        let expected_ = expected.clone();
+        let expected_2 = IncomingPacket::Event(vec![0x0e, 0x04, 0x01, 0x0c, 0x20, 0x00]);
+        let expected_2_ = expected_2.clone();
+        let mut transport = Uart::new(unsafe { Serial::fake() });
+        transport.read_async = Box::new(move |_, read_state| {
+            read_state.lock().event.signal_handle(zx::Signals::NONE, IO_COMPLETE).unwrap();
+            read_state.lock().accumulation_buffer.push_back(IncomingPacketIndicator::Event as u8);
+            read_state.lock().accumulation_buffer.extend(expected_.clone().inner());
+            read_state.lock().accumulation_buffer.push_back(IncomingPacketIndicator::Event as u8);
+            read_state.lock().accumulation_buffer.extend(expected_2_.clone().inner());
+        });
+        let token = transport.next().await.unwrap();
+        assert_eq!(transport.take_incoming(token, vec![]), expected);
+
+        let token = transport.next().await.unwrap();
+        assert_eq!(transport.take_incoming(token, vec![]), expected_2);
     }
 
     #[fasync::run_until_stalled(test)]
