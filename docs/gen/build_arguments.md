@@ -2368,21 +2368,21 @@ Enables using the parsing built into spvc instead spirv-cross
 
 **Current value (from the default):** `false`
 
-From [//third_party/shaderc/shaderc_features.gni:17](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#17)
+From [//third_party/shaderc/shaderc_features.gni:17](https://fuchsia.googlesource.com/third_party/shaderc/+/4162bb13b426dab68ebe411ea7ef05f6343bea95/shaderc_features.gni#17)
 
 ### shaderc_spvc_disable_context_logging
 Disables logging to messages in context struct
 
 **Current value (from the default):** `false`
 
-From [//third_party/shaderc/shaderc_features.gni:23](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#23)
+From [//third_party/shaderc/shaderc_features.gni:23](https://fuchsia.googlesource.com/third_party/shaderc/+/4162bb13b426dab68ebe411ea7ef05f6343bea95/shaderc_features.gni#23)
 
 ### shaderc_spvc_enable_direct_logging
 Enables logging directly out to the terminal
 
 **Current value (from the default):** `false`
 
-From [//third_party/shaderc/shaderc_features.gni:20](https://fuchsia.googlesource.com/third_party/shaderc/+/ae50f26a6453fd8f8cd148fbd62a6ae9a94d4472/shaderc_features.gni#20)
+From [//third_party/shaderc/shaderc_features.gni:20](https://fuchsia.googlesource.com/third_party/shaderc/+/4162bb13b426dab68ebe411ea7ef05f6343bea95/shaderc_features.gni#20)
 
 ### size_checker_input
 The input to the size checker.
