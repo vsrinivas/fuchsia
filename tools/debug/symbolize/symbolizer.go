@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -45,6 +46,7 @@ type LLVMSymbolizer struct {
 	path            string
 	stdin           io.WriteCloser
 	stdout          io.ReadCloser
+	stderr          io.ReadCloser
 	symbolizer      *exec.Cmd
 	input           chan llvmSymboArgs
 	cache           cache.Cache
@@ -91,7 +93,8 @@ func (s *LLVMSymbolizer) restartIfNeeded() bool {
 	restarted := false
 	if s.restartCounter == s.restartInterval-1 {
 		if err := restartSymbolizer(s); err != nil {
-			panic("restarting llvm-symbolizer failed: " + fmt.Sprintf("%v", err))
+			b, _ := ioutil.ReadAll(s.stderr)
+			panic(fmt.Sprintf("restarting llvm-symbolizer failed: %v\n%s", err, string(b)))
 		}
 		restarted = true
 	}
@@ -174,6 +177,9 @@ func (s *LLVMSymbolizer) start() error {
 		return err
 	}
 	if s.stdout, err = s.symbolizer.StdoutPipe(); err != nil {
+		return err
+	}
+	if s.stderr, err = s.symbolizer.StderrPipe(); err != nil {
 		return err
 	}
 	if err = s.symbolizer.Start(); err != nil {
