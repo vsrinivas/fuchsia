@@ -160,6 +160,7 @@ template("dart_tool") {
     forward_variables_from(invoker,
                            [
                              "disable_analysis",
+                             "disable_metadata_entry",
                              "testonly",
                              "visibility",
                            ])

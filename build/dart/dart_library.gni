@@ -97,6 +97,9 @@ declare_args() {
 #     looking for the analysis_options.yaml in the package root. It is not common
 #     that this value needs to be set but can be useful for generated code.
 #
+#   disable_metadata_entry (optional)
+#     Prevents metedata entry from being written to the dart_packag_config json file.
+#
 # Example of usage:
 #
 #   dart_library("baz") {
@@ -274,7 +277,15 @@ if (current_toolchain == dart_toolchain) {
     _dart_package_config_target_name = "${target_name}_dart_package"
     _packages_path = "$target_gen_dir/${target_name}_package_config.json"
     dart_package_config(_dart_package_config_target_name) {
-      deps = dart_deps + [ ":$_publish_metadata_target_name" ]
+      # Do not publish the metadata to the dart_package_config json file if the
+      # disable_metadata_entry flag is enabled in the dart_tool. The reason this is here
+      # is to avoid entries that may have identical rootUris as fxb/58781 has highlighted.
+      if (!defined(invoker.disable_metadata_entry) ||
+          !invoker.disable_metadata_entry) {
+        deps = dart_deps + [ ":$_publish_metadata_target_name" ]
+      } else {
+        deps = dart_deps
+      }
       outputs = [ _packages_path ]
       forward_variables_from(invoker, [ "testonly" ])
     }
@@ -503,10 +514,8 @@ if (current_toolchain == dart_toolchain) {
 
     _full_target_label = get_label_info(":$target_name", "label_no_toolchain")
 
-    # TODO(fxbug.dev/58781): Check against `//third_party/dart-pkg/pub`
-    # once Flutter package_config.json files can be properly parsed.
     _is_third_party_lib =
-        string_replace(_full_target_label, "//third_party/dart-pkg", "") !=
+        string_replace(_full_target_label, "//third_party/dart-pkg/pub", "") !=
         _full_target_label
 
     group(target_name) {

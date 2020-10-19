@@ -64,6 +64,7 @@ dart_tool("fuchsia_builder") {
   main_dart = "bin/fuchsia_builder.dart"
 
   disable_analysis = true
+  disable_metadata_entry = true
 
   deps = [ ":flutter_tools" ]
 }
@@ -72,6 +73,7 @@ dart_tool("fuchsia_asset_builder") {
   main_dart = "bin/fuchsia_asset_builder.dart"
 
   disable_analysis = true
+  disable_metadata_entry = true
 
   deps = [
     ":flutter_tools",
@@ -83,6 +85,7 @@ dart_tool("fuchsia_tester") {
   main_dart = "bin/fuchsia_tester.dart"
 
   disable_analysis = true
+  disable_metadata_entry = true
 
   deps = [ ":flutter_tools" ]
 
@@ -94,6 +97,7 @@ dart_tool("fuchsia_attach") {
   main_dart = "bin/fuchsia_attach.dart"
 
   disable_analysis = true
+  disable_metadata_entry = true
 
   deps = [ ":flutter_tools" ]
 
