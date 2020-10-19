@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 #
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -159,7 +159,7 @@ def write_toml_file(
         fout.write("\n[features]\n")
         # Filter 'default' feature out to avoid generating a duplicated entry.
         features = filter(lambda x: x != "default", features)
-        fout.write("default = %s\n" % json.dumps(features))
+        fout.write("default = %s\n" % json.dumps(list(features)))
         for feature in features:
             fout.write("%s = []\n" % feature)
 
@@ -247,14 +247,14 @@ def main():
     # Map from crate name to FeatureSpec. We don't include the version because we don't directly
     # depend on more than one version of the same crate.
     def collect_features(deps):
-        for dep, info in deps.iteritems():
-            if isinstance(info, str) or isinstance(info, unicode):
+        for dep, info in deps.items():
+            if isinstance(info, str):
                 continue
             project.third_party_features[dep] = FeatureSpec(
                 info.get("features", []), info.get("default-features", True))
 
     collect_features(cargo_toml["dependencies"])
-    for target_info in cargo_toml["target"].itervalues():
+    for target_info in cargo_toml["target"].values():
         collect_features(target_info.get("dependencies", {}))
 
     host_binaries = []

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 #
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -59,7 +59,7 @@ def main():
     write_if_changed(args.output, fake_project_json)
 
     depfile = generate_depfile(args.output, args.root_build_dir)
-    with open(args.depfile, "wb") as outfile:
+    with open(args.depfile, "w") as outfile:
         outfile.write(depfile)
     return 0
 
