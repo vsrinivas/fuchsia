@@ -101,21 +101,6 @@ def main():
         '--tag', help='Add a go build tag', default=[], action='append')
     parser.add_argument(
         '--cgo', help='Whether to enable CGo', action='store_true')
-    parser.add_argument(
-        '--source_list_path',
-        help='The list of sources that were listed as deps of the go binary',
-        default=[])
-    parser.add_argument(
-        '--verify_depfile_script',
-        help='The script to use to verify source listings',
-        default='')
-    parser.add_argument(
-        '--gn_target_name', help='The name of the gn target', default='')
-    parser.add_argument(
-        '--check_sources',
-        help=
-        'Whether or not to verify the sources in the gn targets match the generated depfile',
-        action='store_true')
     args = parser.parse_args()
 
     try:
@@ -160,30 +145,38 @@ def main():
 
         # Create a GOPATH for the packages dependency tree.
         for dst, src in sorted(get_sources(args.go_dep_files).items()):
-            # Determine if the package should be mapped recursively or only the
-            # package source itself should be mapped.
-            #
-            # There are cases (e.g for fidl generated source) where a single
-            # source is directly mapped instead of a formal Go package path.
-            # This is incorrect but happened to work, so people started to
-            # depend on that. In this case, we use the recurse mode, which
-            # happens to do what is needed; map the file directly as a symlink.
-            recurse = dst.endswith('.go')
-            # - src can have a '/...' suffix like with
-            #   'github.com/google/go-cmp/...'.
-            # - dst have the suffix when defining a package.
-            # - src can only have the suffix if dst has it too.
-            assert dst.endswith('/...') >= src.endswith('/...'), (dst, src)
+            # Determine if the src path should
+            # - be mapped as-is which, if src is a directory, includes all subdirectories
+            # - have its contents enumerated and mapped directly
+            map_directly = False
+
             if dst.endswith('/...'):
+                # When a directory and all its subdirectories must be made available, map
+                # the directory directly.
+                map_directly = True
+
+                # - src can have a '/...' suffix like with 'github.com/google/go-cmp/...'.
+                #   - This means all subpackages are being symlinked to the GOPATH.
+                # - dst have the suffix when defining a package.
+                # - src can only have the suffix if dst has it too.
+                assert dst.endswith('/...') >= src.endswith('/...'), (dst, src)
                 dst = dst[:-4]
-                recurse = True
                 if src.endswith('/...'):
                     src = src[:-4]
+            elif os.path.isfile(src):
+                # When sources are explicitly listed in the BUILD.gn file, each `src` will
+                # be a path to a file that must be mapped directly.
+                map_directly = True
+                # Paths with /.../ in the middle designate go packages that include
+                # subpackages, but also explicitly list all their source files.
+                # The construction of these paths is done in the
+                # godepfile tool, so we remove these sentinel values here.
+                dst = dst.replace('/.../', '/')
+
             dstdir = os.path.join(gopath_src, dst)
 
-            if recurse:
-                # Map the whole directory, which implicitly makes Go subpackages
-                # (subdirectories) available.
+            if map_directly:
+                # Make a symlink to the src directory or file.
                 parent = os.path.dirname(dstdir)
                 if not os.path.exists(parent):
                     os.makedirs(parent)
@@ -214,11 +207,12 @@ def main():
 
     ldflags = cflags[:]
     if args.current_os == 'linux':
-        ldflags.extend([
-            '-rtlib=compiler-rt',
-            '-stdlib=libc++',
-            '-unwindlib=',
-        ])
+        ldflags.extend(
+            [
+                '-rtlib=compiler-rt',
+                '-stdlib=libc++',
+                '-unwindlib=',
+            ])
 
     cflags += ['-isystem' + dir for dir in args.include_dir]
     ldflags += ['-L' + dir for dir in args.lib_dir]
@@ -346,25 +340,6 @@ def main():
             godepfile_args += [args.package]
             with open(args.depfile, 'wb') as into:
                 subprocess.check_call(godepfile_args, env=env, stdout=into)
-
-            if args.check_sources:
-                try:
-                    with open(args.source_list_path, 'r') as file:
-                        sources = file.readlines()
-                        verify_args = [
-                            args.verify_depfile_script,
-                            '-t',
-                            args.gn_target_name,
-                            '-d',
-                            args.depfile,
-                        ] + sources
-                        subprocess.check_call(verify_args, env=env)
-                except FileNotFoundError:
-                    # TODO(fxbug.dev/58776): This will be an error when source listings are enforced.
-                    print(
-                        'Could not find source list file: ' +
-                        args.source_list_path)
-                    return 1
 
     return retcode
 

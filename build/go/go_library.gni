@@ -28,6 +28,11 @@ import("//build/python/python_action.gni")
 #     List of source files, relative to source_dir.
 #     TODO(fxbug.dev/3037): make this attribute required.
 #
+#   allow_globbing (optional)
+#     Allows a library to include all its sources without listing them.
+#     This limits what the GN dependency graph keeps track of and should
+#     only be used by third-party libraries. Defaults to false.
+#
 #   deps (optional)
 #     List of labels for Go libraries this target depends on.
 #
@@ -66,21 +71,12 @@ template("go_library") {
     ]
   }
 
-  go_sources = []
-  if (defined(invoker.sources)) {
-    go_sources = invoker.sources
-  }
-
   python_action(target_name) {
     script = "//build/go/gen_library_metadata.py"
 
     library_file = "$target_gen_dir/$target_name.go_deps"
 
     outputs = [ library_file ]
-
-    metadata = {
-      go_source_list = rebase_path(go_sources)
-    }
 
     deps = []
     dependent_libraries = []
@@ -103,13 +99,16 @@ template("go_library") {
     args = name_args + [
              "--source-dir",
              rebase_path(source_dir),
-             "--sources",
-           ] + go_sources +
-           [
              "--output",
              rebase_path(library_file),
              "--deps",
            ] + rebase_path(dependent_libraries)
+
+    if (defined(invoker.sources)) {
+      args += [ "--sources" ] + invoker.sources
+    } else if (!defined(invoker.allow_globbing) || invoker.allow_globbing) {
+      args += [ "--allow-globbing" ]
+    }
 
     if (defined(invoker.metadata)) {
       metadata = invoker.metadata

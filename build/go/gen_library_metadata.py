@@ -62,7 +62,13 @@ def main():
         '--source-dir',
         help='Path to the library\'s source directory',
         required=True)
-    parser.add_argument('--sources', help='List of source files', nargs='*')
+    sources_group = parser.add_mutually_exclusive_group(required=True)
+    sources_group.add_argument(
+        '--sources', help='List of source files', nargs='*')
+    sources_group.add_argument(
+        '--allow-globbing',
+        action='store_true',
+        help='Allow globbing the entire source directory')
     parser.add_argument(
         '--output', help='Path to the file to generate', required=True)
     parser.add_argument(
@@ -82,7 +88,7 @@ def main():
                 Source(
                     os.path.join(name, source),
                     os.path.join(args.source_dir, source), args.output))
-    else:
+    elif args.allow_globbing:
         current_sources.append(Source(name, args.source_dir, args.output))
     result = get_sources(args.deps, extra_sources=current_sources)
     with open(args.output, 'w') as output_file:
