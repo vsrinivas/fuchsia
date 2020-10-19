@@ -169,8 +169,8 @@ zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
   }
 
   // Setup ECAM trap for a single bus.
-  status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase, kPciEcamSize, 0,
-                                 &ecam_handler_, dispatcher);
+  status =
+      guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase, kPciEcamSize, 0, &ecam_handler_);
   if (status != ZX_OK) {
     return status;
   }
@@ -178,7 +178,7 @@ zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
 #if __x86_64__
   // Setup PIO trap.
   status = guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase, kPciConfigPortSize, 0,
-                                 &port_handler_, dispatcher);
+                                 &port_handler_);
   if (status != ZX_OK) {
     return status;
   }
