@@ -177,46 +177,47 @@ static void init_request_thread(unsigned int level) { pmm_node.InitRequestThread
 LK_INIT_HOOK(pmm, init_request_thread, LK_INIT_LEVEL_THREADING)
 
 static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
-  bool is_panic = flags & CMD_FLAG_PANIC;
-
-  if (argc < 2) {
-    printf("not enough arguments\n");
-  usage:
+  const bool is_panic = flags & CMD_FLAG_PANIC;
+  auto usage = [cmd_name = argv[0].str, is_panic]() -> int {
     printf("usage:\n");
-    printf("%s dump                              : dump pmm info \n", argv[0].str);
+    printf("%s dump                              : dump pmm info \n", cmd_name);
     if (!is_panic) {
-      printf("%s free                              : periodically dump free mem count\n",
-             argv[0].str);
+      printf("%s free                              : periodically dump free mem count\n", cmd_name);
       printf(
           "%s oom [<rate>]                      : leak memory until oom is triggered,\n"
           "                                        optionally specify the rate at which to leak "
           "(in MB per second)\n",
-          argv[0].str);
+          cmd_name);
       printf(
           "%s oom hard                          : leak memory aggressively and keep on leaking\n",
-          argv[0].str);
+          cmd_name);
       printf("%s mem_avail_state info              : dump memory availability state info\n",
-             argv[0].str);
+             cmd_name);
       printf(
           "%s mem_avail_state <state> [<nsecs>] : allocate memory to go to memstate <state>, hold "
           "the state for <nsecs> (default 10s) \n"
           "                                        only works if going to <state> from current "
           "state requires allocating memory,\n"
           "                                        can't free up pre-allocated memory\n",
-          argv[0].str);
+          cmd_name);
       printf("%s drop_user_pt                      : drop all user hardware page tables\n",
-             argv[0].str);
+             cmd_name);
       printf("%s checker status                    : prints the status of the pmm checker\n",
-             argv[0].str);
+             cmd_name);
       printf(
           "%s checker enable [<size>]           : enables the pmm checker with optional fill "
           "size\n",
-          argv[0].str);
-      printf("%s checker disable                   : disables the pmm checker\n", argv[0].str);
+          cmd_name);
+      printf("%s checker disable                   : disables the pmm checker\n", cmd_name);
       printf("%s checker check                     : forces a check of all free pages in the pmm\n",
-             argv[0].str);
+             cmd_name);
     }
     return ZX_ERR_INTERNAL;
+  };
+
+  if (argc < 2) {
+    printf("not enough arguments\n");
+    return usage();
   }
 
   if (!strcmp(argv[1].str, "dump")) {
@@ -224,7 +225,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (is_panic) {
     // No other operations will work during a panic.
     printf("Only the \"arenas\" command is available during a panic.\n");
-    goto usage;
+    return usage();
   } else if (!strcmp(argv[1].str, "free")) {
     static bool show_mem = false;
     static Timer timer;
@@ -242,7 +243,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
   } else if (!strcmp(argv[1].str, "oom")) {
     if (argc > 3) {
-      goto usage;
+      return usage();
     }
 
     uint64_t rate = 0;
@@ -301,7 +302,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
   } else if (!strcmp(argv[1].str, "mem_avail_state")) {
     if (argc < 3) {
-      goto usage;
+      return usage();
     }
     if (!strcmp(argv[2].str, "info")) {
       pmm_node.DumpMemAvailState();
@@ -310,7 +311,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       if (state > pmm_node.DebugMaxMemAvailState()) {
         printf("Invalid memstate %u. Specify a value between 0 and %u.\n", state,
                pmm_node.DebugMaxMemAvailState());
-        goto usage;
+        return usage();
       }
       uint64_t pages_to_alloc, pages_to_free = 0;
       list_node list = LIST_INITIAL_VALUE(list);
@@ -337,7 +338,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     VmAspace::DropAllUserPageTables();
   } else if (!strcmp(argv[1].str, "checker")) {
     if (argc < 3 || argc > 4) {
-      goto usage;
+      return usage();
     }
     if (!strcmp(argv[2].str, "status")) {
       pmm_checker_print_status();
@@ -366,11 +367,11 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       pmm_checker_check_all_free_pages();
       printf("done\n");
     } else {
-      goto usage;
+      return usage();
     }
   } else {
     printf("unknown command\n");
-    goto usage;
+    return usage();
   }
 
   return ZX_OK;
