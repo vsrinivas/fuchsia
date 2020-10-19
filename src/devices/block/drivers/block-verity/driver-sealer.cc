@@ -51,7 +51,7 @@ zx_status_t DriverSealer::StartSealing(void* cookie, sealer_callback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { block_op_vmo_.reset(); });
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t address;
-  if ((rc = zx::vmar::root_self()->map(0, block_op_vmo_, 0, kVmoSize, flags, &address)) != ZX_OK) {
+  if ((rc = zx::vmar::root_self()->map(flags, 0, block_op_vmo_, 0, kVmoSize, &address)) != ZX_OK) {
     zxlogf(ERROR, "zx::vmar::map failed: %s", zx_status_get_string(rc));
     return rc;
   }

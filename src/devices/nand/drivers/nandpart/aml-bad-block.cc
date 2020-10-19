@@ -70,15 +70,15 @@ zx_status_t AmlBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out) {
   // Map them.
   constexpr uint32_t kPermissions = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t vaddr_table;
-  status = zx::vmar::root_self()->map(0, data_vmo, 0, table_len, kPermissions, &vaddr_table);
+  status = zx::vmar::root_self()->map(kPermissions, 0, data_vmo, 0, table_len, &vaddr_table);
   if (status != ZX_OK) {
     zxlogf(ERROR, "nandpart: Failed to map VMO for bad block table");
     return status;
   }
 
   uintptr_t vaddr_oob;
-  status = zx::vmar::root_self()->map(0, oob_vmo, 0, sizeof(OobMetadata) * bbt_page_count,
-                                      kPermissions, &vaddr_oob);
+  status = zx::vmar::root_self()->map(kPermissions, 0, oob_vmo, 0,
+                                      sizeof(OobMetadata) * bbt_page_count, &vaddr_oob);
   if (status != ZX_OK) {
     zxlogf(ERROR, "nandpart: Failed to map VMO for oob metadata");
     return status;

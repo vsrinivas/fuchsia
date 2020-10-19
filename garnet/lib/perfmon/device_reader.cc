@@ -57,7 +57,7 @@ bool DeviceReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   }
 
   uintptr_t addr;
-  zx_status_t status = vmar_.map(0, vmo, 0, buffer_size_, ZX_VM_PERM_READ, &addr);
+  zx_status_t status = vmar_.map(ZX_VM_PERM_READ, 0, vmo, 0, buffer_size_, &addr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << name << ": Unable to map buffer vmo: " << status;
     return false;

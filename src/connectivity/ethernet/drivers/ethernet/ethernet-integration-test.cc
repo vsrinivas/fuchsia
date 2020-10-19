@@ -349,7 +349,7 @@ class EthernetClient {
       return status;
     }
 
-    status = zx::vmar::root_self()->map(0, buf_, 0, vmo_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, buf_, 0, vmo_size_,
                                         &mapped_);
     if (status != ZX_OK) {
       fprintf(stderr, "failed to map vmo: %s\n", mxstrerror(status));

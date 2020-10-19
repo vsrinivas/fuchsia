@@ -152,8 +152,8 @@ uint32_t YuvBaseView::AddImage() {
   const zx::vmo& image_vmo = buffer_collection_info.buffers[0].vmo;
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   FX_CHECK(image_vmo_bytes > 0);
-  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      0, image_vmo, 0, image_vmo_bytes,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
 

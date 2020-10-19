@@ -46,7 +46,7 @@ static zx::status<zx::vmo> GenerateBootfs(std::vector<BootfsDirectoryEntry> conf
 
   uintptr_t mapped = 0;
   status =
-      zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &mapped);
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, vmo_size, &mapped);
   if (status != ZX_OK) {
     return zx::error(status);
   }

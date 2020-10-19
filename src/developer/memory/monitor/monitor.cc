@@ -151,7 +151,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     }
     prealloc_vmo_.get_size(&prealloc_size_);
     uintptr_t prealloc_addr = 0;
-    status = zx::vmar::root_self()->map(0, prealloc_vmo_, 0, prealloc_size_, ZX_VM_PERM_READ,
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, prealloc_vmo_, 0, prealloc_size_,
                                         &prealloc_addr);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "zx::vmar::map() returns " << zx_status_get_string(status);

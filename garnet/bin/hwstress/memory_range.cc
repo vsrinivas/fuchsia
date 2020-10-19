@@ -35,8 +35,9 @@ zx::status<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, Cach
   // Map the VMOs into memory.
   zx_vaddr_t addr;
   status = zx::vmar::root_self()->map(
+      /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
       /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/size,
-      /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE), &addr);
+      &addr);
   if (status != ZX_OK) {
     return zx::error(status);
   }

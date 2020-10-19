@@ -115,8 +115,8 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
   zx::vmo data_vmo(op->rw.data_vmo);
   uintptr_t data_buf;
   zx_status_t status =
-      zx::vmar::root_self()->map(0, data_vmo, op->rw.offset_data_vmo, op->rw.length * kPageSize,
-                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &data_buf);
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, data_vmo,
+                                 op->rw.offset_data_vmo, op->rw.length * kPageSize, &data_buf);
   __UNUSED auto unused = data_vmo.release();
   if (status != ZX_OK) {
     completion_cb(cookie, status, op);
@@ -126,8 +126,8 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
       [&]() { zx::vmar::root_self()->unmap(data_buf, op->rw.length * kPageSize); });
   uintptr_t oob_buf;
   zx::vmo oob_vmo(op->rw.oob_vmo);
-  status = zx::vmar::root_self()->map(0, oob_vmo, op->rw.offset_oob_vmo, op->rw.length * kOobSize,
-                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &oob_buf);
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, oob_vmo,
+                                      op->rw.offset_oob_vmo, op->rw.length * kOobSize, &oob_buf);
   __UNUSED auto __ = oob_vmo.release();
   if (status != ZX_OK) {
     completion_cb(cookie, status, op);

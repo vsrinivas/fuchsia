@@ -364,7 +364,7 @@ TEST_F(VirtioWlTest, HandleSend) {
   // Verify data transfer using shared memory.
   uintptr_t addr;
   ASSERT_EQ(
-      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, PAGE_SIZE, &addr),
       ZX_OK);
   EXPECT_EQ(*reinterpret_cast<uint8_t*>(addr), 0xaa);
   ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
@@ -406,7 +406,7 @@ TEST_F(VirtioWlTest, Recv) {
   ASSERT_EQ(zx::vmo::create(PAGE_SIZE, 0, &vmo), ZX_OK);
   uintptr_t addr;
   ASSERT_EQ(
-      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, PAGE_SIZE, &addr),
       ZX_OK);
   memset(reinterpret_cast<void*>(addr), 0xaa, PAGE_SIZE);
   ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);

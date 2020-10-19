@@ -14,7 +14,7 @@ zx_status_t PhysMem::Init(zx::vmo vmo) {
     return status;
   }
 
-  return zx::vmar::root_self()->map(0, vmo_, 0, vmo_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  return zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0, vmo_size_,
                                     &addr_);
 }
 

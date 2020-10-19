@@ -738,8 +738,8 @@ zx_status_t Osd::SetupRdma() {
     return status;
   }
 
-  status = zx::vmar::root_self()->map(0, rdma_vmo_, 0, kRdmaRegionSize,
-                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                      0, rdma_vmo_, 0, kRdmaRegionSize,
                                       reinterpret_cast<zx_vaddr_t*>(&rdma_vbuf_));
 
   // At this point, we have a table initialized.

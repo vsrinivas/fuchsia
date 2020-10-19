@@ -230,8 +230,9 @@ zx_status_t SetupBlockFifo(const std::string& path, BlockDevice* device) {
 
   // Map the VMO into memory.
   status = zx::vmar::root_self()->map(
+      /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
       /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/device->vmo_size,
-      /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE), &device->vmo_addr);
+      &device->vmo_addr);
   if (status != ZX_OK) {
     fprintf(stderr, "Error: VMO could not be mapped into memory: %s", zx_status_get_string(status));
     return status;

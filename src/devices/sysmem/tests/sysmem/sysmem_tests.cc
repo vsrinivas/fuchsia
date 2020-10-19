@@ -284,8 +284,8 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
   ZX_ASSERT(status == ZX_OK);
 
   uintptr_t map_addr_raw;
-  status = child_vmar_.map(0, secure_vmo_, 0, ZX_PAGE_SIZE,
-                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE,
+  status = child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE,
+                           0, secure_vmo_, 0, ZX_PAGE_SIZE,
                            &map_addr_raw);
   ZX_ASSERT(status == ZX_OK);
   map_addr_ = reinterpret_cast<uint8_t*>(map_addr_raw);

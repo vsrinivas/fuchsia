@@ -61,8 +61,8 @@ zx_status_t BlockVerifier::PrepareAsync(void* cookie, BlockVerifierCallback call
     auto cleanup = fbl::MakeAutoCall([this]() { integrity_block_vmo_.reset(); });
     constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
     uintptr_t address;
-    if ((rc = zx::vmar::root_self()->map(0, integrity_block_vmo_, 0,
-                                         GetIntegritySectionSizeInBytes(), flags, &address)) !=
+    if ((rc = zx::vmar::root_self()->map(flags, 0, integrity_block_vmo_, 0,
+                                         GetIntegritySectionSizeInBytes(), &address)) !=
         ZX_OK) {
       return rc;
     }

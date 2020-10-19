@@ -64,7 +64,7 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
   if (do_write) {
     while (state->KeepRunning()) {
       ASSERT_OK(zx::vmar::root_self()->map(
-          0, vmo, 0, copy_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, &mapped_addr));
+          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, 0, vmo, 0, copy_size, &mapped_addr));
       if (user_memcpy) {
         std::memcpy(reinterpret_cast<void*>(mapped_addr), buffer.data(), copy_size);
       } else {
@@ -76,7 +76,7 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
   } else {  // read
     while (state->KeepRunning()) {
       ASSERT_OK(zx::vmar::root_self()->map(
-          0, vmo, 0, copy_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, &mapped_addr));
+          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, 0, vmo, 0, copy_size, &mapped_addr));
       if (user_memcpy) {
         std::memcpy(buffer.data(), reinterpret_cast<void*>(mapped_addr), copy_size);
       } else {
@@ -119,7 +119,7 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, bool do_map)
   while (state->KeepRunning()) {
     zx_vaddr_t addr = 0;
     if (do_map) {
-      ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, copy_size, ZX_VM_MAP_RANGE | ZX_VM_PERM_READ,
+      ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_MAP_RANGE | ZX_VM_PERM_READ, 0, vmo, 0, copy_size,
                                            &addr));
       state->NextStep();
     }

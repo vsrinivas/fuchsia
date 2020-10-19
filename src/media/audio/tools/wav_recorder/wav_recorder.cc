@@ -260,7 +260,7 @@ void WavRecorder::SetupPayloadBuffer() {
 
   uintptr_t tmp;
   status =
-      zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_, ZX_VM_PERM_READ, &tmp);
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, payload_buf_vmo_, 0, payload_buf_size_, &tmp);
   CLI_CHECK_OK(status, "Failed to map " << payload_buf_size_ << "-byte payload buffer");
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
 }

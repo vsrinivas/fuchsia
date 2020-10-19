@@ -55,7 +55,7 @@ bool CodecBuffer::Map() {
   // expected to stay within CodecBuffer::base() to CodecBuffer::base() + vmo_usable_size.
   uint64_t adjusted_vmo_offset = fbl::round_down(vmo_offset(), ZX_PAGE_SIZE);
   size_t len = fbl::round_up(vmo_offset() + size(), ZX_PAGE_SIZE) - adjusted_vmo_offset;
-  zx_status_t res = zx::vmar::root_self()->map(0, vmo(), adjusted_vmo_offset, len, flags, &tmp);
+  zx_status_t res = zx::vmar::root_self()->map(flags, 0, vmo(), adjusted_vmo_offset, len, &tmp);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to map %zu byte buffer vmo (res %d)", size(), res);
     return false;

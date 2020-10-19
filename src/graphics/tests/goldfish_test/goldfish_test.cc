@@ -324,8 +324,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible) {
 
   // Test if the vmo is mappable.
   zx_vaddr_t addr;
-  EXPECT_EQ(zx::vmar::root_self()->map(/*vmar_offset*/ 0, vmo, /*vmo_offset*/ 0, vmo_size,
-                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+  EXPECT_EQ(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, /*vmar_offset*/ 0, vmo,
+                                       /*vmo_offset*/ 0, vmo_size, &addr),
             ZX_OK);
 
   // Test if write and read works correctly.
@@ -413,8 +413,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisibleBuffer) {
 
   // Test if the vmo is mappable.
   zx_vaddr_t addr;
-  EXPECT_EQ(zx::vmar::root_self()->map(/*vmar_offset*/ 0, vmo, /*vmo_offset*/ 0, vmo_size,
-                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+  EXPECT_EQ(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, /*vmar_offset*/ 0, vmo,
+                                       /*vmo_offset*/ 0, vmo_size, &addr),
             ZX_OK);
 
   // Test if write and read works correctly.

@@ -224,8 +224,8 @@ VK_TEST_F(MemoryTest, ImageReadWriteTest) {
     const zx::vmo& image_vmo = client_collection_info.buffers[0].vmo;
     auto image_vmo_bytes = client_collection_info.settings.buffer_settings.size_bytes;
     ASSERT_TRUE(image_vmo_bytes > 0);
-    auto status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                             ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+    auto status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                             0, image_vmo, 0, image_vmo_bytes,
                                              reinterpret_cast<uintptr_t*>(&vmo_host));
     EXPECT_EQ(status, ZX_OK);
     memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));

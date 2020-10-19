@@ -55,7 +55,7 @@ zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length, bool force_int
   for (size_t offset = 0; offset < length; offset += chunk_size) {
     uintptr_t addr;
     size_t len = std::min(chunk_size, length - offset);
-    status = vmar.map(offset, vmo, 0, len, flags, &addr);
+    status = vmar.map(flags, offset, vmo, 0, len, &addr);
     if (status != ZX_OK) {
       return status;
     }

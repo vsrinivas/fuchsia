@@ -39,7 +39,7 @@ std::pair<zx::vmo, std::shared_ptr<HostData>> AllocateMemory(size_t size) {
 HostData::HostData(const zx::vmo& vmo, off_t offset, size_t size) : size_(size) {
   static const uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE;
   uintptr_t ptr;
-  zx_status_t status = zx::vmar::root_self()->map(0, vmo, offset, size, flags, &ptr);
+  zx_status_t status = zx::vmar::root_self()->map(flags, 0, vmo, offset, size, &ptr);
   ZX_ASSERT_MSG(status == ZX_OK, "map failed: status=%d", status);
   ptr_ = reinterpret_cast<void*>(ptr);
 }

@@ -153,7 +153,7 @@ void GuestEthernet::SetIOBuffer(zx::vmo vmo, SetIOBufferCallback callback) {
     return;
   }
   status = zx::vmar::root_self()->map(
-      0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, vmo_size,
       &io_addr_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map io buffer";

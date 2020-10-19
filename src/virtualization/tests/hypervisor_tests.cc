@@ -142,7 +142,7 @@ static zx_status_t get_interrupt_controller_info(
 // execution. If |start| and |end| are null, no code is copied.
 static void setup(test_t* test, const char* start, const char* end) {
   ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
-  ASSERT_EQ(zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kHostMapFlags, &test->host_addr),
+  ASSERT_EQ(zx::vmar::root_self()->map(kHostMapFlags, 0, test->vmo, 0, VMO_SIZE, &test->host_addr),
             ZX_OK);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
@@ -161,7 +161,7 @@ static void setup(test_t* test, const char* start, const char* end) {
   ASSERT_EQ(status, ZX_OK);
 
   zx_gpaddr_t guest_addr;
-  ASSERT_EQ(test->vmar.map(0, test->vmo, 0, VMO_SIZE, kGuestMapFlags, &guest_addr), ZX_OK);
+  ASSERT_EQ(test->vmar.map(kGuestMapFlags, 0, test->vmo, 0, VMO_SIZE, &guest_addr), ZX_OK);
   ASSERT_EQ(test->guest.set_trap(ZX_GUEST_TRAP_MEM, EXIT_TEST_ADDR, PAGE_SIZE, zx::port(), 0),
             ZX_OK);
 

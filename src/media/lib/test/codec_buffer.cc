@@ -47,7 +47,7 @@ bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start,
   }
   uintptr_t tmp;
   zx_status_t status =
-      zx::vmar::root_self()->map(0, vmo, vmo_usable_start, vmo_usable_size, options, &tmp);
+      zx::vmar::root_self()->map(options, 0, vmo, vmo_usable_start, vmo_usable_size, &tmp);
   if (status != ZX_OK) {
     FX_PLOGS(WARNING, status) << "CodecBuffer::CreateFromVmoInternal failed to map VMO";
     return false;

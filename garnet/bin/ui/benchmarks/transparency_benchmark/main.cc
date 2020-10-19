@@ -71,8 +71,8 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
 
     uint8_t* vmo_base;
-    status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                        ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                        0, image_vmo, 0, image_vmo_bytes,
                                         reinterpret_cast<uintptr_t*>(&vmo_base));
 
     SetBgra8Pixels(vmo_base, image_info);

@@ -154,8 +154,8 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   zx_status_t status = zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
   EXPECT_EQ(ZX_OK, status);
   uint8_t* vmo_base;
-  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      0, image_vmo, 0, image_vmo_bytes,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
   EXPECT_EQ(ZX_OK, status);
 
@@ -515,8 +515,8 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   int expected_color_index[num_quaternions] = {0, 0, 1, 1, 2, 3, 4, 5};
 
   uintptr_t ptr;
-  status = zx::vmar::root_self()->map(0, pose_buffer_vmo, 0, kVmoSize,
-                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,  0, pose_buffer_vmo, 0,
+                                      kVmoSize, &ptr);
   FX_CHECK(status == ZX_OK);
 
   auto pose_buffer_ptr = reinterpret_cast<escher::hmd::Pose*>(ptr);
@@ -1341,8 +1341,8 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   EXPECT_GT(image_vmo_bytes, 0u);
 
-  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      0, image_vmo, 0, image_vmo_bytes,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
   const uint32_t num_pixels = kShapeWidth * kShapeHeight;
@@ -1991,8 +1991,8 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   EXPECT_GT(image_vmo_bytes, 0u);
 
-  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      0, image_vmo, 0, image_vmo_bytes,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
   const uint32_t num_pixels = kShapeWidth * kShapeHeight;
@@ -2134,8 +2134,8 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   EXPECT_GT(image_vmo_bytes, 0u);
 
-  status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
-                                      ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                      0, image_vmo, 0, image_vmo_bytes,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
   const uint32_t num_pixels = kShapeWidth * kShapeHeight;

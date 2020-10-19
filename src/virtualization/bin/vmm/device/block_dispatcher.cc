@@ -128,7 +128,7 @@ void CreateVmoBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
       return;
     }
     uintptr_t addr;
-    status = zx::vmar::root_self()->map(0, buffer->vmo, 0, buffer->size, vmo_flags, &addr);
+    status = zx::vmar::root_self()->map(vmo_flags, 0, buffer->vmo, 0, buffer->size, &addr);
     FX_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
     auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
                                                      buffer->size, addr);
@@ -245,7 +245,7 @@ void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDi
 
   uintptr_t addr;
   status = zx::vmar::root_self()->map(
-      0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, &addr);
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, vmo_size, &addr);
   FX_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
 
   auto disp = std::make_unique<VolatileWriteBlockDispatcher>(std::move(base), std::move(vmo),

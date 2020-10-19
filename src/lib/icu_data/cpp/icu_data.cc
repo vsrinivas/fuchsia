@@ -42,7 +42,7 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 
   uintptr_t data = 0u;
   zx_status_t status = zx::vmar::root_self()->map(
-      0, icu_data.vmo(), 0, static_cast<size_t>(data_size), ZX_VM_PERM_READ, &data);
+      ZX_VM_PERM_READ, 0, icu_data.vmo(), 0, static_cast<size_t>(data_size), &data);
   if (status == ZX_OK) {
     *size_out = static_cast<size_t>(data_size);
     return data;

@@ -55,8 +55,9 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
     ZX_ASSERT(vmo_.get_size(&vmo_size) == ZX_OK);
     // Map the VMO into memory.
     zx_status_t status = zx::vmar::root_self()->map(
+        /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
         /*vmar_offset=*/0, vmo_, /*vmo_offset=*/0, vmo_size,
-        /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE), &vmo_addr_);
+        &vmo_addr_);
     ZX_ASSERT(status == ZX_OK);
     callback(ZX_OK, std::make_unique<fuchsia::hardware::block::VmoId>(kVmoId));
   }

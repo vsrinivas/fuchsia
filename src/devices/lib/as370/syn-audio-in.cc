@@ -229,7 +229,7 @@ zx_status_t SynAudioInDevice::GetBuffer(size_t size, zx::vmo* buffer) {
     dma_buffer_size_[i] = static_cast<uint32_t>(buffer_size);
 
     constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-    auto status = root->map(0, dma_buffer_[i], 0, dma_buffer_size_[i], flags, &dma_base_[i]);
+    auto status = root->map(flags, 0, dma_buffer_[i], 0, dma_buffer_size_[i], &dma_base_[i]);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s vmar mapping failed %d", __FILE__, status);
       return status;
@@ -249,7 +249,7 @@ zx_status_t SynAudioInDevice::GetBuffer(size_t size, zx::vmo* buffer) {
   ring_buffer_.get_size(&buffer_size);
   ring_buffer_size_ = static_cast<uint32_t>(buffer_size);
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  status = root->map(0, ring_buffer_, 0, ring_buffer_size_, flags, &ring_buffer_base_);
+  status = root->map(flags, 0, ring_buffer_, 0, ring_buffer_size_, &ring_buffer_base_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s vmar mapping failed %d", __FILE__, status);
     return status;

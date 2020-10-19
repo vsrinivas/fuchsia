@@ -51,10 +51,10 @@ InStreamPeeker::InStreamPeeker(async::Loop* fidl_loop, thrd_t fidl_thread,
   const zx_vm_option_t kMapOptions =
       ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE;
   uintptr_t ptr;
-  status = ring_vmar_.map(0, ring_vmo_, 0, vmo_size_bytes_, kMapOptions, &ptr);
+  status = ring_vmar_.map(kMapOptions, 0, ring_vmo_, 0, vmo_size_bytes_, &ptr);
   ZX_ASSERT(status == ZX_OK);
   ZX_ASSERT(reinterpret_cast<uint8_t*>(ptr) == ring_base_);
-  status = ring_vmar_.map(vmo_size_bytes_, ring_vmo_, 0, vmo_size_bytes_, kMapOptions, &ptr);
+  status = ring_vmar_.map(kMapOptions, vmo_size_bytes_, ring_vmo_, 0, vmo_size_bytes_, &ptr);
   ZX_ASSERT(status == ZX_OK);
   ZX_ASSERT(reinterpret_cast<uint8_t*>(ptr) == ring_base_ + vmo_size_bytes_);
 

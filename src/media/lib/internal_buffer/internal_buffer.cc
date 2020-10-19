@@ -249,7 +249,7 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
     }
 
     status = zx::vmar::root_self()->map(
-        /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, real_size_, map_options, &virt_base);
+        map_options, /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, real_size_, &virt_base);
     if (status != ZX_OK) {
       LOG(ERROR, "zx::vmar::root_self()->map() failed - status: %d", status);
       return status;

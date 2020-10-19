@@ -57,7 +57,7 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
 
   uintptr_t io_addr;
   status = zx::vmar::root_self()->map(
-      0, vmo, 0, kVmoSize, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, kVmoSize,
       &io_addr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map vmo: " << status;

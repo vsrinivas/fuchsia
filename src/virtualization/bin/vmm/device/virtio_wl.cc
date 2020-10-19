@@ -46,7 +46,7 @@ class Memory : public VirtioWl::Vfd {
     // Map memory into VMAR. |addr| is guaranteed to be page-aligned and
     // non-zero on success.
     zx_gpaddr_t addr;
-    status = vmar->map(0, vmo, 0, size, map_flags, &addr);
+    status = vmar->map(map_flags, 0, vmo, 0, size, &addr);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to map VMO into guest VMAR: " << status;
       return nullptr;

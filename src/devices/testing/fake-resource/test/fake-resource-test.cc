@@ -162,7 +162,7 @@ TEST_F(FakeResource, VmoTest) {
   ASSERT_OK(zx::vmo::create_physical(child, 0, PAGE_SIZE, &vmo));
   ASSERT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
   ASSERT_OK(
-      zx::vmar::root_self()->map(0, vmo, 0, MAP_LEN, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr));
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, MAP_LEN, &vaddr));
 
   // Perform some operations on the fake physical VMO we created to make sure
   // nothing was screwed up in the chain.

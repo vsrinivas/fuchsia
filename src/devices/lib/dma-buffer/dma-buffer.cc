@@ -63,7 +63,7 @@ class BufferFactoryImpl : public BufferFactory {
     }
     void* virt;
     zx_paddr_t phys;
-    status = zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size,
                                         reinterpret_cast<zx_vaddr_t*>(&virt));
     if (status != ZX_OK) {
       return status;
@@ -98,7 +98,7 @@ class BufferFactoryImpl : public BufferFactory {
     void* virt;
     std::vector<zx_paddr_t> phys;
     phys.resize(size / ZX_PAGE_SIZE);
-    status = zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+    status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size,
                                         reinterpret_cast<zx_vaddr_t*>(&virt));
     if (status != ZX_OK) {
       return status;

@@ -30,7 +30,7 @@ zx_status_t GpuScanout::SetFlushTarget(zx::vmo vmo, uint64_t size, uint32_t widt
   target_height_ = height;
   target_stride_ = stride;
   zx_status_t status = zx::vmar::root_self()->map(
-      0, target_vmo_, 0, target_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &target_vmo_addr_);
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, target_vmo_, 0, target_size_, &target_vmo_addr_);
   if (status != ZX_OK) {
     return status;
   }

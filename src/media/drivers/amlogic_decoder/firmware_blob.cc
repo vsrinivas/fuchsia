@@ -24,7 +24,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
     return status;
   }
 
-  zx::vmar::root_self()->map(0, vmo_, 0, fw_size_, ZX_VM_PERM_READ, &ptr_);
+  zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, vmo_, 0, fw_size_, &ptr_);
   enum {
     kSignatureSize = 256,
     kPackageHeaderSize = 256,

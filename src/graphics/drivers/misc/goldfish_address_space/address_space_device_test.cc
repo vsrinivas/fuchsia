@@ -76,7 +76,7 @@ class VmoMapping {
 
   void map() {
     if (!ptr_) {
-      zx::vmar::root_self()->map(0, vmo_, offset_, size_, perm_,
+      zx::vmar::root_self()->map(perm_, 0, vmo_, offset_, size_,
                                  reinterpret_cast<uintptr_t*>(&ptr_));
     }
   }
