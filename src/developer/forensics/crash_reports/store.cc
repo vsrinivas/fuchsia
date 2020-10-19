@@ -146,12 +146,12 @@ Store::Store(std::shared_ptr<InfoContext> info, const std::string& root_dir, Sto
 
 void Store::RebuildMetadata() {
   // Rebuild the store's metadata by iterating through each reports filed and determining its
-  // Uid, size, location in the filesystem, and program shortname. Additionally, determine what the
-  // id of the next report filed should be incrementing the maximum report id found by 1.
+  // CrashId, size, location in the filesystem, and program shortname. Additionally, determine what
+  // the id of the next report filed should be incrementing the maximum report id found by 1.
   for (const auto& program_shortname : GetDirectoryContents(root_dir_)) {
     const auto report_ids = GetDirectoryContents(files::JoinPath(root_dir_, program_shortname));
     for (const auto& id_str : report_ids) {
-      const Uid id = std::stoull(id_str);
+      const CrashId id = std::stoull(id_str);
       const std::string dir = JoinPaths({root_dir_, program_shortname, id_str});
 
       // Get the size of the files in the report.
@@ -173,16 +173,16 @@ void Store::RebuildMetadata() {
     }
   }
 
-  for (auto& [_, uids] : reports_for_program_) {
-    std::sort(uids.begin(), uids.end());
+  for (auto& [_, crash_ids] : reports_for_program_) {
+    std::sort(crash_ids.begin(), crash_ids.end());
 
     // The next ID will be the largest ID in the store + 1.
-    next_id_ = std::max(uids.back() + 1, next_id_);
+    next_id_ = std::max(crash_ids.back() + 1, next_id_);
   }
 }
 
-std::optional<Store::Uid> Store::Add(const Report report,
-                                     std::vector<Uid>* garbage_collected_reports) {
+std::optional<CrashId> Store::Add(const Report report,
+                                  std::vector<CrashId>* garbage_collected_reports) {
   for (const auto& key : kReservedAttachmentNames) {
     if (report.Attachments().find(key) != report.Attachments().end()) {
       FX_LOGS(ERROR) << "Attachment is using reserved key: " << key;
@@ -190,7 +190,7 @@ std::optional<Store::Uid> Store::Add(const Report report,
     }
   }
 
-  const Uid id = next_id_++;
+  const CrashId id = next_id_++;
   const std::string dir = JoinPaths({root_dir_, report.ProgramShortname(), std::to_string(id)});
 
   auto cleanup_on_error = fit::defer([dir] { DeletePath(dir); });
@@ -254,7 +254,7 @@ std::optional<Store::Uid> Store::Add(const Report report,
   return id;
 }
 
-std::optional<Report> Store::Get(const Store::Uid& id) {
+std::optional<Report> Store::Get(const CrashId id) {
   if (!Contains(id)) {
     return std::nullopt;
   }
@@ -302,31 +302,31 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
                 std::move(attachments), std::move(snapshot_uuid), std::move(minidump));
 }
 
-std::vector<Store::Uid> Store::GetAllUids() const {
-  std::vector<Uid> uids;
+std::vector<CrashId> Store::GetAllCrashIds() const {
+  std::vector<CrashId> crash_ids;
   for (const auto& [id, _] : id_to_metadata_) {
-    uids.push_back(id);
+    crash_ids.push_back(id);
   }
-  return uids;
+  return crash_ids;
 }
 
-bool Store::Contains(const Uid& id) const {
-  return id_to_metadata_.find(id) != id_to_metadata_.end();
+bool Store::Contains(CrashId crash_id) const {
+  return id_to_metadata_.find(crash_id) != id_to_metadata_.end();
 }
 
-bool Store::Remove(const Uid& id) {
-  if (!Contains(id)) {
+bool Store::Remove(CrashId crash_id) {
+  if (!Contains(crash_id)) {
     return false;
   }
 
   //  The report is stored under /tmp/store/<program shortname>/$id.
   //  We first delete /tmp/store/<program shortname>/$id and then if $id was the only report for
   // <program shortname>, we also delete /tmp/store/<program name>.
-  if (!DeletePath(id_to_metadata_.at(id).dir)) {
-    FX_LOGS(ERROR) << "Failed to delete report at " << id_to_metadata_.at(id).dir;
+  if (!DeletePath(id_to_metadata_.at(crash_id).dir)) {
+    FX_LOGS(ERROR) << "Failed to delete report at " << id_to_metadata_.at(crash_id).dir;
   }
 
-  const std::string program_shortname = id_to_metadata_.at(id).program_shortname;
+  const std::string program_shortname = id_to_metadata_.at(crash_id).program_shortname;
   const std::string program_path = files::JoinPath(root_dir_, program_shortname);
 
   const std::vector<std::string> dir_contents = GetDirectoryContents(program_path);
@@ -334,15 +334,15 @@ bool Store::Remove(const Uid& id) {
     FX_LOGS(ERROR) << "Failed to delete " << program_path;
   }
 
-  // |id| should no longer be associated with |program_shortname|.
-  auto& uids = reports_for_program_[program_shortname];
-  uids.erase(std::find(uids.begin(), uids.end(), id));
-  if (uids.empty()) {
+  // |crash_id| should no longer be associated with |program_shortname|.
+  auto& crash_ids = reports_for_program_[program_shortname];
+  crash_ids.erase(std::find(crash_ids.begin(), crash_ids.end(), crash_id));
+  if (crash_ids.empty()) {
     reports_for_program_.erase(program_shortname);
   }
 
-  current_size_ -= id_to_metadata_[id].size;
-  id_to_metadata_.erase(id);
+  current_size_ -= id_to_metadata_[crash_id].size;
+  id_to_metadata_.erase(crash_id);
 
   return true;
 }
@@ -359,7 +359,7 @@ void Store::RemoveAll() {
 }
 
 bool Store::MakeFreeSpace(const StorageSize required_space,
-                          std::vector<Uid>* garbage_collected_reports) {
+                          std::vector<CrashId>* garbage_collected_reports) {
   if (required_space > max_size_) {
     return false;
   }
@@ -375,21 +375,21 @@ bool Store::MakeFreeSpace(const StorageSize required_space,
     // The report that will be removed from the store is determined by
     // 1) finding the program(s) with the most reports and then
     // 2) finding the oldest report amongst them.
-    for (const auto& [program_shortname, uids] : reports_for_program_) {
-      if (uids.size() > reports_for_program_[remove_from].size()) {
+    for (const auto& [program_shortname, crash_ids] : reports_for_program_) {
+      if (crash_ids.size() > reports_for_program_[remove_from].size()) {
         // We found a program with more reports.
         remove_from = program_shortname;
-      } else if (uids.size() == reports_for_program_[remove_from].size() &&
-                 uids.front() < reports_for_program_[remove_from].front()) {
+      } else if (crash_ids.size() == reports_for_program_[remove_from].size() &&
+                 crash_ids.front() < reports_for_program_[remove_from].front()) {
         // We found a program with as many reports, but an older report.
         remove_from = program_shortname;
       }
     }
 
-    const Uid uid = reports_for_program_[remove_from].front();
-    if (Remove(uid)) {
+    const CrashId crash_id = reports_for_program_[remove_from].front();
+    if (Remove(crash_id)) {
       ++num_garbage_collected;
-      garbage_collected_reports->push_back(uid);
+      garbage_collected_reports->push_back(crash_id);
     }
   }
   info_.LogGarbageCollection(num_garbage_collected);

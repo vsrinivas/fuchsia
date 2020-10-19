@@ -226,11 +226,11 @@ class QueueTest : public UnitTestFixture {
   }
 
   std::unique_ptr<Queue> queue_;
-  std::vector<Store::Uid> expected_queue_contents_;
+  std::vector<CrashId> expected_queue_contents_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
 
  private:
-  void AddExpectedReport(const Store::Uid& uuid) {
+  void AddExpectedReport(const CrashId& uuid) {
     // Add a report to the back of the expected queue contents if and only if it is expected
     // to be in the queue after processing.
     if (state_ != QueueOps::SetStateToUpload) {
@@ -247,7 +247,7 @@ class QueueTest : public UnitTestFixture {
       expected_queue_contents_.clear();
       return old_size;
     } else if (state_ == QueueOps::SetStateToUpload) {
-      std::vector<Store::Uid> new_queue_contents;
+      std::vector<CrashId> new_queue_contents;
       for (const auto& uuid : expected_queue_contents_) {
         // We expect the reports we failed to upload to still be pending.
         if (!(*next_upload_attempt_result_)) {

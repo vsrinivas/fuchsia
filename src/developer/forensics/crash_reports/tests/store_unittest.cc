@@ -53,17 +53,17 @@ class StoreTest : public UnitTestFixture {
     store_ = std::make_unique<Store>(info_context_, tmp_dir_.path(), max_size);
   }
 
-  std::optional<Store::Uid> Add(const std::string& program_shortname,
-                                std::vector<Store::Uid>* garbage_collected_reports) {
+  std::optional<CrashId> Add(const std::string& program_shortname,
+                             std::vector<CrashId>* garbage_collected_reports) {
     return Add(program_shortname, {}, {}, "", std::nullopt, garbage_collected_reports);
   }
 
-  std::optional<Store::Uid> Add(const std::string& program_shortname,
-                                const std::map<std::string, std::string>& annotations,
-                                const std::map<std::string, std::string>& attachments,
-                                const std::string& snapshot_uuid,
-                                const std::optional<std::string>& minidump,
-                                std::vector<Store::Uid>* garbage_collected_reports) {
+  std::optional<CrashId> Add(const std::string& program_shortname,
+                             const std::map<std::string, std::string>& annotations,
+                             const std::map<std::string, std::string>& attachments,
+                             const std::string& snapshot_uuid,
+                             const std::optional<std::string>& minidump,
+                             std::vector<CrashId>* garbage_collected_reports) {
     std::map<std::string, SizedData> attachments_data;
     for (const auto& [k, v] : attachments) {
       attachments_data.emplace(k, MakeSizedData(v));
@@ -80,7 +80,7 @@ class StoreTest : public UnitTestFixture {
     return store_->Add(std::move(report), garbage_collected_reports);
   }
 
-  bool Get(const Store::Uid& id, std::string* program_shortname,
+  bool Get(const CrashId& id, std::string* program_shortname,
            std::map<std::string, std::string>* annotations,
            std::map<std::string, std::string>* attachments, std::string* snapshot_uuid,
            std::optional<std::string>* minidump) {
@@ -104,7 +104,7 @@ class StoreTest : public UnitTestFixture {
     return true;
   }
 
-  bool Read(const std::string& program_shortname, const Store::Uid& id,
+  bool Read(const std::string& program_shortname, const CrashId& id,
             std::map<std::string, std::string>* annotations_out,
             std::map<std::string, std::string>* attachments_out,
             std::optional<std::string>* snapshot_uuid_out,
@@ -203,7 +203,7 @@ TEST_F(StoreTest, Succeed_Add) {
   const std::string expected_snapshot_uuid = "snapshot_uuid";
   const std::string expected_minidump = "mindump";
 
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> garbage_collected_reports;
   const auto id = Add(expected_program_shortname, expected_annotations, expected_attachments,
                       expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
   EXPECT_TRUE(id.has_value());
@@ -245,7 +245,7 @@ TEST_F(StoreTest, Succeed_Get) {
 
   const std::string expected_minidump = "mindump";
 
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> garbage_collected_reports;
   const auto id = Add(expected_program_shortname, expected_annotations, expected_attachments,
                       expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
   ASSERT_TRUE(id.has_value());
@@ -269,7 +269,7 @@ TEST_F(StoreTest, Succeed_Get) {
 }
 
 TEST_F(StoreTest, Fail_ReservedAttachmentKey) {
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> garbage_collected_reports;
   EXPECT_FALSE(Add("program_shortname", /*annotations=*/{},
                    /*attachments=*/{{"annotations.json", ""}},
                    /*snapshot_uuid=*/"",
@@ -289,7 +289,7 @@ TEST_F(StoreTest, Fail_ReservedAttachmentKey) {
 }
 
 TEST_F(StoreTest, Succeed_Remove) {
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> garbage_collected_reports;
   const auto id = Add("program_shortname", /*annotations=*/{}, /*attachments=*/{},
                       /*snapshot_uuid=*/"",
                       /*minidump=*/std::nullopt, &garbage_collected_reports);
@@ -319,7 +319,7 @@ TEST_F(StoreTest, Succeed_GarbageCollection) {
 
   // We set up the store so it can hold four reports at most.
   MakeNewStore(4 * StorageSize::Bytes(2u /*the empty annotations.json*/));
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> garbage_collected_reports;
 
   const auto id1 = Add("program_name1", &garbage_collected_reports);
   const auto id2 = Add("program_name2", &garbage_collected_reports);
@@ -348,12 +348,12 @@ TEST_F(StoreTest, Succeed_GarbageCollection) {
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id2.value()}));
   EXPECT_FALSE(store_->Contains(id2.value()));
 
-  EXPECT_THAT(store_->GetAllUids(), UnorderedElementsAreArray({
-                                        id5.value(),
-                                        id6.value(),
-                                        id7.value(),
-                                        id8.value(),
-                                    }));
+  EXPECT_THAT(store_->GetAllCrashIds(), UnorderedElementsAreArray({
+                                            id5.value(),
+                                            id6.value(),
+                                            id7.value(),
+                                            id8.value(),
+                                        }));
   EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({
                                           "program_name2",
                                           "program_name3",
@@ -380,8 +380,8 @@ TEST_F(StoreTest, Succeed_RebuildsMetadata) {
 
   const std::string expected_minidump = "mindump";
 
-  std::vector<Store::Uid> ids;
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> ids;
+  std::vector<CrashId> garbage_collected_reports;
   for (size_t i = 0; i < 5u; ++i) {
     const auto id = Add(expected_program_shortname, expected_annotations, expected_attachments,
                         expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
@@ -419,8 +419,8 @@ TEST_F(StoreTest, Succeed_RebuildsMetadata) {
 }
 
 TEST_F(StoreTest, Succeed_RebuildCleansEmptyDirectories) {
-  std::vector<Store::Uid> ids;
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> ids;
+  std::vector<CrashId> garbage_collected_reports;
   for (size_t i = 0; i < 5u; ++i) {
     const auto id = Add("program_shortname", /*annotations=*/{}, /*attachments=*/{},
                         /*snapshot_uuid=*/"snapshot_uuid",
@@ -447,7 +447,7 @@ TEST_F(StoreTest, Check_InspectTree) {
                                               4u /*the empty annotations.json*/);
   MakeNewStore(size);
 
-  std::vector<Store::Uid> garbage_collected_reports;
+  std::vector<CrashId> garbage_collected_reports;
   Add("program_name1", /*annotations=*/{}, /*attachments=*/{}, snapshot_uuid, minidump,
       &garbage_collected_reports);
   EXPECT_TRUE(garbage_collected_reports.empty());

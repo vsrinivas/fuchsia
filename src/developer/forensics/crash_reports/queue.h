@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/crash_id.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
@@ -44,8 +45,8 @@ class Queue {
 
   uint64_t Size() const { return pending_reports_.size(); }
   bool IsEmpty() const { return pending_reports_.empty(); }
-  bool Contains(const Store::Uid& uuid) const;
-  const Store::Uid& LatestReport() { return pending_reports_.back(); }
+  bool Contains(CrashId crash_id) const;
+  CrashId LatestReport() { return pending_reports_.back(); }
 
  private:
   // How the queue should handle processing existing pending reports and new reports.
@@ -66,14 +67,14 @@ class Queue {
   // Attempts to upload a report.
   //
   // Returns false if the report needs to be processed again.
-  bool Upload(const Store::Uid& local_report_id);
+  bool Upload(CrashId local_report_id);
 
   // Make a request to the crash server to attempt to upload a report.
   //
   // Returns false if the upload failed.
   bool Upload(const Report& report, std::string* server_report_id);
 
-  void GarbageCollect(const Store::Uid& local_report_id);
+  void GarbageCollect(CrashId local_report_id);
 
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
@@ -97,11 +98,11 @@ class Queue {
 
   State state_ = State::LeaveAsPending;
 
-  std::vector<Store::Uid> pending_reports_;
+  std::vector<CrashId> pending_reports_;
 
   // Number of upload attempts within the current instance of the component. These get reset across
   // restarts and reboots.
-  std::unordered_map<Store::Uid, uint64_t> upload_attempts_;
+  std::unordered_map<CrashId, uint64_t> upload_attempts_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };

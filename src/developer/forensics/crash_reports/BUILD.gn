@@ -57,6 +57,10 @@ source_set("constants") {
   visibility = [ "//src/developer/forensics/crash_reports/*" ]
 }
 
+source_set("crash_id") {
+  sources = [ "crash_id.h" ]
+}
+
 source_set("crash_register") {
   sources = [
     "crash_register.cc",
@@ -205,6 +209,7 @@ source_set("queue") {
   ]
 
   public_deps = [
+    ":crash_id",
     ":crash_server",
     ":settings",
     ":store",
@@ -329,6 +334,7 @@ source_set("store") {
   ]
 
   public_deps = [
+    ":crash_id",
     ":report",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:storage_size",
