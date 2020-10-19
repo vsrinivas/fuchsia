@@ -94,7 +94,7 @@ void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line,
   if (condition)
     std::cerr << " Check failed: " << condition << ".";
 
-  std::cerr << std::endl << msg;
+  std::cerr << msg << std::endl;
   std::cerr.flush();
 }
 
