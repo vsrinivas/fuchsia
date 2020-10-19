@@ -141,19 +141,41 @@ async fn launch_time_service(launcher: &LauncherProxy, url: &str) -> Result<clie
     Ok(app)
 }
 
-// The test will set this timezone to be the "system" timezone.
-// TODO(fxb/47043): Use another value for the time zone, e.g. "America/Los_Angeles".
+/// Gets a timezone formatter for the givne pattern, and the supplied timezone name.  Patterns are
+/// described at: http://userguide.icu-project.org/formatparse/datetime
+fn formatter_for_timezone(pattern: &str, timezone: &str) -> udat::UDateFormat {
+    let locale = uloc::ULoc::try_from("Etc/Unknown").unwrap();
+    // Example: "2020-2-26-14", hour 14 of February 26.
+    let pattern = ustring::UChar::try_from(pattern).unwrap();
+
+    udat::UDateFormat::new_with_pattern(
+        &locale,
+        &ustring::UChar::try_from(timezone).unwrap(),
+        &pattern,
+    )
+    .unwrap()
+}
+
+// The timezones used in tests.
 static TIMEZONE_NAME: &str = "America/Los_Angeles";
 static TIMEZONE_NAME_2: &str = "America/New_York";
+
+// Example: "2020-2-26-14", hour 14 of February 26.
+static PARTIAL_TIMESTAMP_FORMAT: &str = "yyyy-M-d-H";
+// Formats time with the most detail. Example: "2020-10-19T05:41:22.204-04:00".
+static FULL_TIMESTAMP_FORMAT: &str = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
 /// Polls the echo server until either the local and remote time match, or a timeout
 /// occurs.
 async fn loop_until_matching_time(
+    timezone_name: &str,
     fmt: &udat::UDateFormat,
+    detailed_format: &udat::UDateFormat,
     echo: &fidl_fidl_examples_echo::EchoProxy,
 ) -> Result<(), Error> {
     const MAX_ATTEMPTS: usize = 10;
     let sleep = zx::Duration::from_millis(1000);
+    let utc_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, "UTC");
 
     // Multiple attempts in case the test is run close to the turn of the hour.
     for attempt in 1..=MAX_ATTEMPTS {
@@ -162,16 +184,27 @@ async fn loop_until_matching_time(
             .echo_string(Some("Gimme some time!"))
             .await
             .with_context(|| "echo_string failed")?;
-        let date_time = fmt.format(ucal::get_now())?;
+        let now = ucal::get_now();
+        let date_time = fmt.format(now)?;
         let vm_time = out.unwrap();
         if date_time == vm_time {
             break;
         }
         if (date_time != vm_time) && attempt == MAX_ATTEMPTS {
             return Err(anyhow::anyhow!(
-                "dart VM says the time is {:?}, but the test fixture says it should be: {:?}",
+                "dart VM time and test fixture time mismatch:\n\t\
+                dart VM says the time is:               {:?}\n\t\
+                `-- the test fixture says it should be: {:?}\n\t\
+                expected test fixture timezone:         {}\n\t\
+                the test fixutre local time is:         {}\n\t\
+                test fixture says UTC time is:          {}\n\t\
+                test fixture timestamp is:              {} sec since epoch",
                 vm_time,
-                date_time
+                date_time,
+                timezone_name,
+                detailed_format.format(now)?,
+                utc_format.format(now)?,
+                now / 1000.0,
             ));
         }
         fasync::Timer::new(sleep.after_now()).await;
@@ -185,16 +218,9 @@ async fn loop_until_matching_time(
 pub async fn check_reported_time_with_update(server_url: &str) -> Result<(), Error> {
     let _icu_data_loader = icu_data::Loader::new().with_context(|| "could not load ICU data")?;
     let _setter = ScopedTimezone::try_new(TIMEZONE_NAME).await.unwrap();
-    let locale = uloc::ULoc::try_from("Etc/Unknown").unwrap();
-    // Example: "2020-2-26-14", hour 14 of February 26.
-    let pattern = ustring::UChar::try_from("yyyy-M-d-H").unwrap();
 
-    let formatter = udat::UDateFormat::new_with_pattern(
-        &locale,
-        &ustring::UChar::try_from(TIMEZONE_NAME).unwrap(),
-        &pattern,
-    )
-    .unwrap();
+    let formatter = formatter_for_timezone(PARTIAL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
+    let detailed_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, TIMEZONE_NAME);
 
     let launcher = client::launcher().context("Failed to get the launcher")?;
     let app = launch_time_service(&launcher, server_url)
@@ -205,7 +231,7 @@ pub async fn check_reported_time_with_update(server_url: &str) -> Result<(), Err
         .connect_to_service::<fecho::EchoMarker>()
         .context("Failed to connect to echo service")?;
 
-    loop_until_matching_time(&formatter, &echo)
+    loop_until_matching_time(TIMEZONE_NAME, &formatter, &detailed_format, &echo)
         .await
         .expect("local and remote times should match eventually");
 
@@ -213,14 +239,10 @@ pub async fn check_reported_time_with_update(server_url: &str) -> Result<(), Err
         // Change the time zone again, and verify that the dart VM has seen the change
         // too.
         let _setter = ScopedTimezone::try_new(TIMEZONE_NAME_2).await.unwrap();
-        let formatter = udat::UDateFormat::new_with_pattern(
-            &locale,
-            &ustring::UChar::try_from(TIMEZONE_NAME_2).unwrap(),
-            &pattern,
-        )
-        .unwrap();
+        let formatter = formatter_for_timezone(PARTIAL_TIMESTAMP_FORMAT, TIMEZONE_NAME_2);
+        let detailed_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, TIMEZONE_NAME_2);
 
-        loop_until_matching_time(&formatter, &echo)
+        loop_until_matching_time(TIMEZONE_NAME_2, &formatter, &detailed_format, &echo)
             .await
             .expect("local and remote times should match eventually");
     }
