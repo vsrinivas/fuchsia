@@ -621,9 +621,9 @@ if (current_toolchain == dart_toolchain) {
       # Path to Dart manifest files for third-party dependencies.
       third_party_pubspecs = []
       if (defined(invoker.deps)) {
-        sorted_deps =
-            exec_script("//build/dart/sdk/sort_deps.py", invoker.deps, "scope")
-        foreach(dep, sorted_deps.local) {
+        local_deps = filter_exclude(invoker.deps, [ "//third_party/*" ])
+        third_party_deps = filter_include(invoker.deps, [ "//third_party/*" ])
+        foreach(dep, local_deps) {
           full_label = get_label_info(dep, "label_no_toolchain")
           sdk_dep = "${full_label}_sdk"
           sdk_deps += [ sdk_dep ]
@@ -632,7 +632,7 @@ if (current_toolchain == dart_toolchain) {
           name = get_label_info(sdk_dep, "name")
           sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
         }
-        foreach(dep, sorted_deps.third_party) {
+        foreach(dep, third_party_deps) {
           path = get_label_info(dep, "dir")
           third_party_pubspecs += [ rebase_path("$path/pubspec.yaml") ]
         }

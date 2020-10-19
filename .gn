@@ -44,7 +44,6 @@ exec_script_whitelist = [
   "//build/config/clang/clang.gni",
   "//build/config/mac/mac_sdk.gni",
   "//build/config/sanitizers/BUILD.gn",
-  "//build/dart/dart_library.gni",
   "//build/toolchain/concurrent_jobs.gni",
   "//build/toolchain/zircon/zircon_toolchain.gni",
   "//build/unification/lib/zircon_runtime_library.gni",
