@@ -960,25 +960,20 @@ void BootManager::SetConfigurationUnbootable(Configuration configuration,
   completer.Reply(ZX_OK);
 }
 
-void BootManager::SetActiveConfigurationHealthy(
-    SetActiveConfigurationHealthyCompleter::Sync& completer) {
-  LOG("Setting active configuration as healthy\n");
+void BootManager::SetConfigurationHealthy(Configuration configuration,
+                                          SetConfigurationHealthyCompleter::Sync& completer) {
+  LOG("Setting configuration %d as healthy\n", static_cast<uint32_t>(configuration));
 
-  std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
-  if (!config) {
-    ERROR("No configuration bootable. Cannot mark as successful boot.\n");
-    completer.Reply(ZX_ERR_BAD_STATE);
-    return;
-  }
-
-  if (auto status = abr_client_->MarkSlotSuccessful(*ConfigurationToSlotIndex(*config));
-      status.is_error()) {
-    ERROR("Failed to set configuration: %d healthy\n", static_cast<uint32_t>(*config));
+  auto slot_index = ConfigurationToSlotIndex(configuration);
+  auto status =
+      slot_index ? abr_client_->MarkSlotSuccessful(*slot_index) : zx::error(ZX_ERR_INVALID_ARGS);
+  if (status.is_error()) {
+    ERROR("Failed to set configuration: %d healthy\n", static_cast<uint32_t>(configuration));
     completer.Reply(status.error_value());
     return;
   }
 
-  LOG("Set active configuration as healthy\n");
+  LOG("Set %d configuration as healthy\n", static_cast<uint32_t>(configuration));
 
   completer.Reply(ZX_OK);
 }

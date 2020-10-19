@@ -67,9 +67,6 @@ test_package("mark-active-configuration-healthy-tests") {
       name = "mark_active_configuration_healthy_test"
       dest = "mark-active-configuration-healthy-test"
       environments = basic_envs
-      log_settings = {
-        max_severity = "ERROR"
-      }
     },
   ]
 }

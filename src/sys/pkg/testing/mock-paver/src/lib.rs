@@ -37,7 +37,7 @@ pub enum PaverEvent {
     QueryActiveConfiguration,
     QueryCurrentConfiguration,
     QueryConfigurationStatus { configuration: paver::Configuration },
-    SetActiveConfigurationHealthy,
+    SetConfigurationHealthy { configuration: paver::Configuration },
     SetConfigurationActive { configuration: paver::Configuration },
     SetConfigurationUnbootable { configuration: paver::Configuration },
     BootManagerFlush,
@@ -309,15 +309,15 @@ impl MockPaverService {
                     let mut result = Ok(config_status);
                     responder.send(&mut result).expect("paver response to send");
                 }
-                paver::BootManagerRequest::SetActiveConfigurationHealthy { responder } => {
-                    let event = PaverEvent::SetActiveConfigurationHealthy;
+                paver::BootManagerRequest::SetConfigurationHealthy { configuration, responder } => {
+                    let event = PaverEvent::SetConfigurationHealthy { configuration };
                     let status = (*self.call_hook)(&event);
                     self.push_event(event);
-                    // Return an error if the active config is recovery.
+                    // Return an error if the given configuration is `Recovery`.
                     let status = if status == Status::OK
-                        && self.active_config == paver::Configuration::Recovery
+                        && configuration == paver::Configuration::Recovery
                     {
-                        Status::BAD_STATE
+                        Status::INVALID_ARGS
                     } else {
                         status
                     };
@@ -547,13 +547,32 @@ pub mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    pub async fn test_set_active_healthy_when_recovery() -> Result<(), Error> {
-        let paver = MockPaverForTest::new(|p| p.active_config(paver::Configuration::Recovery));
+    pub async fn test_set_config_a_healthy() -> Result<(), Error> {
+        let paver = MockPaverForTest::new(|p| p);
         assert_eq!(
-            Status::BAD_STATE.into_raw(),
-            paver.boot_manager.set_active_configuration_healthy().await?
+            Status::OK.into_raw(),
+            paver.boot_manager.set_configuration_healthy(paver::Configuration::A).await?
         );
-        assert_eq!(paver.paver.take_events(), vec![PaverEvent::SetActiveConfigurationHealthy]);
+        assert_eq!(
+            paver.paver.take_events(),
+            vec![PaverEvent::SetConfigurationHealthy { configuration: paver::Configuration::A }]
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_set_recovery_config_healthy() -> Result<(), Error> {
+        let paver = MockPaverForTest::new(|p| p);
+        assert_eq!(
+            Status::INVALID_ARGS.into_raw(),
+            paver.boot_manager.set_configuration_healthy(paver::Configuration::Recovery).await?
+        );
+        assert_eq!(
+            paver.paver.take_events(),
+            vec![PaverEvent::SetConfigurationHealthy {
+                configuration: paver::Configuration::Recovery
+            }]
+        );
         Ok(())
     }
 }

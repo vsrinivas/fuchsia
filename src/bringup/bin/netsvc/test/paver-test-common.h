@@ -39,7 +39,7 @@ enum class Command {
   kQueryConfigurationStatus,
   kSetConfigurationActive,
   kSetConfigurationUnbootable,
-  kSetActiveConfigurationHealthy,
+  kSetConfigurationHealthy,
   kReadAsset,
   kWriteAsset,
   kWriteFirmware,
@@ -179,9 +179,9 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     completer.Reply(status);
   }
 
-  void SetActiveConfigurationHealthy(
-      SetActiveConfigurationHealthyCompleter::Sync& completer) override {
-    AppendCommand(Command::kSetActiveConfigurationHealthy);
+  void SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration configuration,
+                               SetConfigurationHealthyCompleter::Sync& completer) override {
+    AppendCommand(Command::kSetConfigurationHealthy);
     completer.Reply(ZX_OK);
   }
 

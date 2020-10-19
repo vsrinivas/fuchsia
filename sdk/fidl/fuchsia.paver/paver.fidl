@@ -253,13 +253,27 @@ protocol BootManager {
     /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via `configuration`.
     SetConfigurationUnbootable(Configuration configuration) -> (zx.status status);
 
-    /// Updates persistent metadata identifying that active configuration is stable. Used to signal
-    /// "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    /// boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    /// configuration is currently unbootable.
+    /// Updates persistent metadata to mark a [`fuchsia.paver/Configuration`]
+    /// as successful.
     ///
-    /// If the configuration is already marked healthy, no action is taken.
-    SetActiveConfigurationHealthy() -> (zx.status status);
+    /// This function is typically used by the OS update system after having
+    /// confirmed that the configuration works as intended and the "rollback to
+    /// previous slot" logic is not needed anymore.
+    ///
+    /// Compatibility between the newly successful configuration and the other
+    /// configuration is unknown. Even if the other configuration was
+    /// successful at one point, it may no longer be. This function adds a
+    /// success mark to the given configuration but also removes any success
+    /// mark on the other.
+    ///
+    /// If `configuration` is unbootable or is
+    /// [`fuchsia.paver/Configuration.RECOVERY`], `response` will be
+    /// `ZX_ERR_INVALID_ARGS`.
+    ///
+    /// + request `configuration` the `Configuration` to mark as healthy. Must
+    ///   not be `RECOVERY`.
+    /// - response `status` a zx_status value indicating success or failure.
+    SetConfigurationHealthy(Configuration configuration) -> (zx.status status);
 
     /// Flush all previously buffered writes to persistent storage.
     Flush() -> (zx.status status);

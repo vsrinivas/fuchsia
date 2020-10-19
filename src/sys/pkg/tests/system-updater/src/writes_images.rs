@@ -212,8 +212,8 @@ async fn writes_to_both_configs_if_abr_not_supported() {
 }
 
 #[fasync::run_singlethreaded(test)]
-// If we can't ensure that the current partition == the active partition and the active partition is
-// healthy, system-updater makes progress
+// If we can't ensure that the current partition == the active partition and the current partition
+// is healthy, system-updater makes progress
 async fn updates_even_if_cant_set_active_partition_healthy() {
     let current_config = paver::Configuration::A;
     let active_config = paver::Configuration::B;
@@ -222,7 +222,7 @@ async fn updates_even_if_cant_set_active_partition_healthy() {
         .paver_service(|builder| {
             builder
                 .call_hook(|event| match event {
-                    PaverEvent::SetActiveConfigurationHealthy => Status::INTERNAL,
+                    PaverEvent::SetConfigurationHealthy { .. } => Status::INTERNAL,
                     _ => Status::OK,
                 })
                 .current_config(current_config)
@@ -274,7 +274,7 @@ async fn updates_even_if_cant_set_active_partition_healthy() {
             Paver(PaverEvent::QueryActiveConfiguration),
             Paver(PaverEvent::QueryConfigurationStatus { configuration: current_config }),
             Paver(PaverEvent::SetConfigurationActive { configuration: current_config }),
-            Paver(PaverEvent::SetActiveConfigurationHealthy),
+            Paver(PaverEvent::SetConfigurationHealthy { configuration: current_config }),
             Paver(PaverEvent::BootManagerFlush),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
@@ -751,8 +751,9 @@ async fn assert_resets_active_when_active_not_equal_to_current(
             // They don't match, so get the status of current, set current to active.
             Paver(PaverEvent::QueryConfigurationStatus { configuration: current_config }),
             Paver(PaverEvent::SetConfigurationActive { configuration: current_config }),
-            // Depending on the original health status of the current partition, set active healthy
-            Paver(PaverEvent::SetActiveConfigurationHealthy),
+            // Depending on the original health status of the current partition, set current
+            // healthy.
+            Paver(PaverEvent::SetConfigurationHealthy { configuration: current_config }),
             // Set the old active unbootable and flush
             Paver(PaverEvent::SetConfigurationUnbootable { configuration: active_config }),
             Paver(PaverEvent::BootManagerFlush),
@@ -773,7 +774,8 @@ async fn assert_resets_active_when_active_not_equal_to_current(
     );
 }
 
-// When current is not equal to active but current is not healthy, system-updater should not set active to healthy.
+// When current is not equal to active but current is not healthy, system-updater should not set
+// current to healthy.
 async fn assert_resets_active_with_unhealthy_current_partition(
     current_config: paver::Configuration,
     active_config: paver::Configuration,
@@ -814,8 +816,9 @@ async fn assert_resets_active_with_unhealthy_current_partition(
             // They don't match, so get the status of current, set current to active.
             Paver(PaverEvent::QueryConfigurationStatus { configuration: current_config }),
             Paver(PaverEvent::SetConfigurationActive { configuration: current_config }),
-            // The current partition was not originally healthy, so we shouldn't set active healthy now.
-            // If it was healthy, we'd expect to see `Paver(PaverEvent::SetActiveConfigurationHealthy)`,
+            // The current partition was not originally healthy, so we shouldn't set it healthy now.
+            // If it was healthy, we'd expect to see `Paver(PaverEvent::SetConfigurationHealthy {
+            //   configuration: current_config })`,
 
             // Set the old active unbootable and flush
             Paver(PaverEvent::SetConfigurationUnbootable { configuration: active_config }),

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::format_err,
+    anyhow::{format_err, Context},
     fidl_fuchsia_paver::{Configuration, PaverMarker},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -14,7 +14,7 @@ use {
 /// and stops decrementing the boot counter.
 pub async fn set_active_configuration_healthy() {
     if let Err(err) = set_active_configuration_healthy_impl().await {
-        fx_log_err!("error marking active configuration successful: {}", err);
+        fx_log_err!("error marking active configuration successful: {:#}", err);
     }
 }
 
@@ -23,47 +23,71 @@ async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
 
     let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
 
-    paver.find_boot_manager(boot_manager_server_end)?;
+    paver
+        .find_boot_manager(boot_manager_server_end)
+        .context("transport error while calling find_boot_manager()")?;
 
-    match boot_manager.set_active_configuration_healthy().await.map(Status::from_raw) {
-        Ok(Status::OK) => (),
-        Ok(status) => {
-            return Err(format_err!(
-                "set_active_configuration_healthy failed with status {:?}",
-                status
-            ));
-        }
+    // TODO(51480): This should use the "current" configuration, not active, when they differ.
+    let active_config = match boot_manager
+        .query_active_configuration()
+        .await
+        .map(|res| res.map_err(Status::from_raw))
+    {
+        Ok(Ok(active_config)) => active_config,
         Err(fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. }) => {
             fx_log_info!("ABR not supported");
             return Ok(());
         }
-        Err(status) => {
-            return Err(format_err!(
-                "set_active_configuration_healthy failed with transport status {:?}",
-                status
-            ));
+        Ok(Err(Status::NOT_SUPPORTED)) => {
+            fx_log_info!("no partition is active; we're in recovery");
+            return Ok(());
+        }
+        Err(e) => {
+            return Err(e).context("transport error while calling query_active_configuration()")
+        }
+        Ok(Err(e)) => {
+            return Err(e).context("paver error while calling query_active_configuration()")
         }
     };
 
-    // Find out the inactive partition and mark it as unbootable.
     // Note: at this point, we know that ABR is supported.
-    let active_config = boot_manager
-        .query_active_configuration()
-        .await?
-        .map_err(|status| Status::from_raw(status))?;
+    boot_manager
+        .set_configuration_healthy(active_config)
+        .await
+        .map(Status::ok)
+        .with_context(|| {
+            format!("transport error while calling set_configuration_healthy({:?})", active_config)
+        })?
+        .with_context(|| {
+            format!("paver error while calling set_configuration_healthy({:?})", active_config)
+        })?;
+
+    // Find out the inactive partition and mark it as unbootable.
     let inactive_config = match active_config {
         Configuration::A => Configuration::B,
         Configuration::B => Configuration::A,
         Configuration::Recovery => return Err(format_err!("Recovery should not be active")),
     };
-    Status::ok(boot_manager.set_configuration_unbootable(inactive_config).await?)?;
+    boot_manager
+        .set_configuration_unbootable(inactive_config)
+        .await
+        .map(Status::ok)
+        .with_context(|| {
+            format!(
+                "transport error while calling set_configuration_unbootable({:?})",
+                inactive_config
+            )
+        })?
+        .with_context(|| {
+            format!("paver error while calling set_configuration_unbootable({:?})", inactive_config)
+        })?;
 
-    match boot_manager.flush().await.map(Status::from_raw) {
-        Ok(_) => (),
-        Err(err) => {
-            return Err(format_err!("failed to flush {:?}", err));
-        }
-    };
+    boot_manager
+        .flush()
+        .await
+        .map(Status::ok)
+        .context("transport error while calling flush()")?
+        .context("paver error while calling flush()")?;
 
     Ok(())
 }

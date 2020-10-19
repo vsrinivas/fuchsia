@@ -293,14 +293,21 @@ async fn paver_query_configuration_status(
     }
 }
 
-async fn paver_set_active_configuration_healthy(
+async fn paver_set_current_configuration_healthy(
     boot_manager: &BootManagerProxy,
+    configuration: CurrentConfiguration,
 ) -> Result<(), Error> {
+    let configuration = if let Some(configuration) = configuration.to_configuration() {
+        configuration
+    } else {
+        fx_log_info!("ABR not supported, not setting current configuration to healthy");
+        return Ok(());
+    };
     let status = boot_manager
-        .set_active_configuration_healthy()
+        .set_configuration_healthy(configuration)
         .await
-        .context("while performing set_active_configuration_healthy call")?;
-    Status::ok(status).context("set_active_configuration_healthy responded with")?;
+        .context("while performing set_configuration_healthy call")?;
+    Status::ok(status).context("set_configuration_healthy responded with")?;
     Ok(())
 }
 
@@ -370,7 +377,7 @@ pub async fn ensure_current_partition_active(
                 // current configuration active, but not healthy.
                 // That will result in the next boot going into that partition and running the
                 // health check, which will set its health status appropriately.
-                let () = paver_set_active_configuration_healthy(boot_manager)
+                let () = paver_set_current_configuration_healthy(boot_manager, current)
                     .await
                     .context("while setting current partition healthy")?;
             }
@@ -647,13 +654,18 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn set_active_configuration_healthy_makes_call() {
+    async fn set_configuration_healthy_makes_call() {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let boot_manager = paver.spawn_boot_manager_service();
 
-        paver_set_active_configuration_healthy(&boot_manager).await.unwrap();
+        paver_set_current_configuration_healthy(&boot_manager, CurrentConfiguration::A)
+            .await
+            .unwrap();
 
-        assert_eq!(paver.take_events(), vec![PaverEvent::SetActiveConfigurationHealthy]);
+        assert_eq!(
+            paver.take_events(),
+            vec![PaverEvent::SetConfigurationHealthy { configuration: Configuration::A }]
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -733,7 +745,7 @@ mod tests {
                 PaverEvent::QueryActiveConfiguration,
                 PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
                 PaverEvent::SetConfigurationActive { configuration: Configuration::A },
-                PaverEvent::SetActiveConfigurationHealthy,
+                PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
                 PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
                 PaverEvent::BootManagerFlush,
             ]

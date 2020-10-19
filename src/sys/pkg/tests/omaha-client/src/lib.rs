@@ -5,7 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
-    fidl_fuchsia_paver::PaverRequestStream,
+    fidl_fuchsia_paver::{Configuration, PaverRequestStream},
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
         CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData,
@@ -275,17 +275,16 @@ impl MockCache {
     }
 }
 
-// Test will hang if omaha-client does not call set_active_configuration_healthy on the paver
-// service.
+// Test will hang if omaha-client does not call set_configuration_healthy on the paver service.
 #[fasync::run_singlethreaded(test)]
-async fn test_calls_set_active_configuration_healthy() {
+async fn test_calls_set_configuration_healthy() {
     let (send, recv) = oneshot::channel();
     let send = Mutex::new(Some(send));
     let paver = MockPaverServiceBuilder::new()
         .call_hook(move |event| {
             match event {
-                PaverEvent::SetActiveConfigurationHealthy => {
-                    send.lock().take().unwrap().send(()).unwrap();
+                PaverEvent::SetConfigurationHealthy { configuration } => {
+                    send.lock().take().unwrap().send(*configuration).unwrap();
                 }
                 _ => {}
             }
@@ -295,19 +294,18 @@ async fn test_calls_set_active_configuration_healthy() {
     let _env = TestEnvBuilder::new().paver(paver).build();
 
     // wait for the call hook to notify `send`.
-    let () = recv.await.unwrap();
+    assert_matches!(recv.await, Ok(Configuration::A));
 }
 
-// Test will hang if omaha-client does not call set_active_configuration_healthy on the paver
-// service.
+// Test will hang if omaha-client does not call set_configuration_healthy on the paver service.
 #[fasync::run_singlethreaded(test)]
-async fn test_update_manager_checknow_works_after_set_active_configuration_healthy_fails() {
+async fn test_update_manager_checknow_works_after_set_configuration_healthy_fails() {
     let (send, recv) = oneshot::channel();
     let send = Mutex::new(Some(send));
     let paver = MockPaverServiceBuilder::new()
         .call_hook(move |event| match event {
-            PaverEvent::SetActiveConfigurationHealthy => {
-                send.lock().take().unwrap().send(()).unwrap();
+            PaverEvent::SetConfigurationHealthy { configuration } => {
+                send.lock().take().unwrap().send(*configuration).unwrap();
                 Status::INTERNAL
             }
             _ => Status::OK,
@@ -316,7 +314,7 @@ async fn test_update_manager_checknow_works_after_set_active_configuration_healt
     let env = TestEnvBuilder::new().paver(paver).build();
 
     // wait for the call hook to notify `send`.
-    let () = recv.await.unwrap();
+    assert_matches!(recv.await, Ok(Configuration::A));
 
     let mut stream = env.check_now().await;
     assert_matches!(stream.next().await, Some(_));

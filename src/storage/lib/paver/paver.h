@@ -214,8 +214,8 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
   void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
                                   SetConfigurationUnbootableCompleter::Sync& completer) override;
 
-  void SetActiveConfigurationHealthy(
-      SetActiveConfigurationHealthyCompleter::Sync& completer) override;
+  void SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration configuration,
+                               SetConfigurationHealthyCompleter::Sync& completer) override;
 
   void Flush(FlushCompleter::Sync& completer) override {
     completer.Reply(abr_client_->Flush().status_value());

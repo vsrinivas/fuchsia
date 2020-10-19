@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 use {
-    fidl_fuchsia_paver::PaverRequestStream,
+    fidl_fuchsia_paver::{Configuration, PaverRequestStream},
     fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, State},
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_async as fasync,
@@ -108,21 +108,24 @@ impl TestEnv {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_calls_paver_service() {
-    let mut env = TestEnv::new(|p| p);
+    let env = TestEnv::new(|p| p);
     assert_eq!(
-        env.proxies.paver_events.next().await,
-        Some(PaverEvent::SetActiveConfigurationHealthy)
+        env.proxies.paver_events.take(2).collect::<Vec<PaverEvent>>().await,
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::SetConfigurationHealthy { configuration: Configuration::A }
+        ]
     );
 }
 
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_channel_provider_get_current_works_after_paver_service_fails() {
-    let mut env = TestEnv::new(|p| p.call_hook(|_| Status::INTERNAL));
+    let env = TestEnv::new(|p| p.call_hook(|_| Status::INTERNAL));
 
     assert_eq!(
-        env.proxies.paver_events.next().await,
-        Some(PaverEvent::SetActiveConfigurationHealthy)
+        env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
+        vec![PaverEvent::QueryActiveConfiguration]
     );
 
     assert_eq!(
@@ -134,11 +137,11 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_update_manager_check_now_works_after_paver_service_fails() {
-    let mut env = TestEnv::new(|p| p.call_hook(|_| Status::INTERNAL));
+    let env = TestEnv::new(|p| p.call_hook(|_| Status::INTERNAL));
 
     assert_eq!(
-        env.proxies.paver_events.next().await,
-        Some(PaverEvent::SetActiveConfigurationHealthy)
+        env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
+        vec![PaverEvent::QueryActiveConfiguration]
     );
 
     let (client_end, request_stream) =

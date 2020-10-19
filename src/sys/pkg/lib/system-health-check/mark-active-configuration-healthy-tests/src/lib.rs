@@ -32,7 +32,7 @@ impl TestEnv {
     fn new(paver_init: impl FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder) -> Self {
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
-        
+
         let paver_service = Arc::new(paver_init(MockPaverServiceBuilder::new()).build());
         let paver_service_clone = paver_service.clone();
         fs.add_fidl_service(move |stream: PaverRequestStream| {
@@ -74,10 +74,10 @@ async fn test_calls_set_configuration_unbootable_config_a_active() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
-            PaverEvent::SetActiveConfigurationHealthy,
             PaverEvent::QueryActiveConfiguration,
+            PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
             PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
-            PaverEvent::BootManagerFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 }
@@ -91,10 +91,10 @@ async fn test_calls_set_configuration_unbootable_config_b_active() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
-            PaverEvent::SetActiveConfigurationHealthy,
             PaverEvent::QueryActiveConfiguration,
+            PaverEvent::SetConfigurationHealthy { configuration: Configuration::B },
             PaverEvent::SetConfigurationUnbootable { configuration: Configuration::A },
-            PaverEvent::BootManagerFlush,
+            PaverEvent::BootManagerFlush
         ]
     );
 }
@@ -108,9 +108,9 @@ async fn test_does_not_change_metadata_when_device_does_not_support_abr() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_calls_exclusively_set_active_configuration_healthy_when_device_in_recovery() {
+async fn test_does_not_change_metadata_when_device_in_recovery() {
     let env = TestEnv::new(|p| p.active_config(Configuration::Recovery));
     assert_eq!(env.paver_service.take_events(), Vec::new());
     env.run_partition_marker().await;
-    assert_eq!(env.paver_service.take_events(), vec![PaverEvent::SetActiveConfigurationHealthy]);
+    assert_eq!(env.paver_service.take_events(), vec![PaverEvent::QueryActiveConfiguration]);
 }

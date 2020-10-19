@@ -798,22 +798,22 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotA) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
   AbrData abr_data = kAbrData;
-  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[0].priority = kAbrMaxPriority;
+  abr_data.slot_data[0].tries_remaining = 0;
+  abr_data.slot_data[0].successful_boot = 1;
+  abr_data.slot_data[1].priority = 0;
+  abr_data.slot_data[1].tries_remaining = 0;
   abr_data.slot_data[1].successful_boot = 0;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
-  abr_data.slot_data[1].tries_remaining = 0;
-  abr_data.slot_data[1].successful_boot = 1;
-  ComputeCrc(&abr_data);
-
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetActiveConfigurationHealthy();
+    auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -828,20 +828,128 @@ TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
   ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
-TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthyBothPriorityZero) {
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotB) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
   AbrData abr_data = kAbrData;
-  abr_data.slot_data[1].tries_remaining = 3;
-  abr_data.slot_data[1].successful_boot = 0;
-  abr_data.slot_data[1].priority = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ComputeCrc(&abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  {
+    auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::B);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  {
+    auto result = boot_manager_->Flush();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotR) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  AbrData abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
-  auto result = boot_manager_->SetActiveConfigurationHealthy();
+  auto result =
+      boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::RECOVERY);
   ASSERT_OK(result.status());
-  ASSERT_NE(result->status, ZX_OK);
+  ASSERT_EQ(result->status, ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].priority = kAbrMaxPriority;
+  abr_data.slot_data[0].tries_remaining = 3;
+  abr_data.slot_data[0].successful_boot = 0;
+  abr_data.slot_data[1].priority = kAbrMaxPriority - 1;
+  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[1].successful_boot = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slot_data[0].tries_remaining = 0;
+  abr_data.slot_data[0].successful_boot = 1;
+  abr_data.slot_data[1].tries_remaining = kAbrMaxTriesRemaining;
+  ComputeCrc(&abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  {
+    auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::A);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  {
+    auto result = boot_manager_->Flush();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyOtherHealthy) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].priority = kAbrMaxPriority - 1;
+  abr_data.slot_data[0].tries_remaining = 0;
+  abr_data.slot_data[0].successful_boot = 1;
+  abr_data.slot_data[1].priority = kAbrMaxPriority;
+  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[1].successful_boot = 0;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  abr_data.slot_data[0].tries_remaining = kAbrMaxTriesRemaining;
+  abr_data.slot_data[0].successful_boot = 0;
+  abr_data.slot_data[1].tries_remaining = 0;
+  abr_data.slot_data[1].successful_boot = 1;
+  ComputeCrc(&abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  {
+    auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::B);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  {
+    auto result = boot_manager_->Flush();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceSkipBlockTest, SetUnbootableConfigurationHealthy) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  AbrData abr_data = kAbrData;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::A);
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->status, ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
@@ -864,7 +972,7 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
   }
 
   {
-    auto result = boot_manager_->SetActiveConfigurationHealthy();
+    auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -1032,7 +1140,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
   }
 
   {
-    auto result = boot_manager_->SetActiveConfigurationHealthy();
+    auto result = boot_manager_->SetConfigurationHealthy(::llcpp::fuchsia::paver::Configuration::B);
     ASSERT_OK(result.status());
   }
 
