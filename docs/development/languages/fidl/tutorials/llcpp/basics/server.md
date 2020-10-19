@@ -148,7 +148,8 @@ The implementation contains the following elements:
 * The class subclasses the [generated protocol class][bindings-iface] and
   overrides its pure virtual methods corresponding to the protocol methods.
 * It contains an optional reference to a `ServerBindingRef` in order to be able to
-  send events to the client. It gets set later in the `main()` function.
+  send events to the client. It gets set later in the class's `Bind()` function.
+* The `Bind` method binds the implementation to a given `request`.
 * The method for `EchoString` replies with the request value by using the
   completer.
 * The method for `SendString` uses the `binding_` member (if defined) to send
@@ -186,7 +187,7 @@ This complete process is described in further detail in the
 ### Initialize the event loop
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,36" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,31" %}
 ```
 
 The event loop is used to asynchronously listen for incoming connections and requests from the
@@ -195,62 +196,48 @@ binding the server implementation to a channel.
 
 At the end of the main function, the code runs the loop to completion.
 
-### Obtain the component's startup handle
+### Serve component's service directory
 
-The startup handle is a handle provided
-to every process by the system. Components can serve capabilities (e.g. FIDL protocols) on this
-handle in order to provide them to other components.
-
-The code first obtains a `zx_handle_t` of the handle, then serves the service directory to it
-using the dispatcher.
+The `svc::Outgoing` class serves the service directory ("/svc/") for a given component.
+This directory is where the outgoing FIDL protocols are installed so that they can
+be provided to other components. The `ServeFromStartupInfo()` function sets up the service
+directory with the startup handle. The startup handle is a handle provided
+to every component by the system, so that they can serve capabilities (e.g. FIDL protocols)
+to other components.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="7,8,9,10,11,12,13,14,15,16,17" %}
 ```
 
 ### Serve the protocol {#server-handler}
 
-The server then registers the Echo protocol using `svc_dir_add_service`.
+The server then registers the Echo protocol using `ougoing.svc_dir()->AddEntry()`.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="25,26,27,28,29,30,31,32" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="19,20,21,22,23,24,25,26,27,28" %}
 ```
 
-Translated to english, the call to `svc_dir_add_service` is saying
-"handle all incoming requests to `dir` asking to connect to
-`fuchsia.examples.Echo` by calling the `connect` function, passing it the
-additional `context`."
+The call to `AddEntry` installs a handler for the FIDL's protocol name
+(`llcpp::fuchsia::examples::Echo::Name` which is the string `"fuchsia.examples.Echo"`).
+The handler will call the lambda function that we created, and this lambda function
+will call `server.Bind()` with the `zx::channel` that represents a request from a client.
 
-The additonal context that is provided to the `connect` handler consists of:
+When a client requests access to `/svc/fuchsia.examples.Echo`, this function
+will be called with a channel that represents the request. This channel is bound to our
+server via the `Bind()` function, and future requests from this client will call.
 
-* The async loop's dispatcher, which is used to listen for incoming `Echo` requests.
-* A reference to an instance of the server implementation `EchoImpl`. This is passed in from
-  `main()`, so that the class lives for entirety of the component's lifetime.
-
-The `ConnectRequestContext` struct and the `connect` handler are defined as follows:
-
-```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="handler" %}
-```
-
-The handler takes as arguments:
-
-* Additional context as a `void *`, which in this case will be a `ConnectRequestContext`
-* The service name that the client is trying to connect to, which will be `"fuchsia.examples.Echo"`.
-* The handle the client is asking for the server to be connected to.
-
-When the handler is called (i.e. when a client has requested to connect to the `Echo` protocol), it
+When the handler is called (i.e. when a client has requested to connect to the `/svc/fuchsia.examples.Echo` protocol), it
 binds the incoming channel to our `Echo` implementation, which will start listening for `Echo`
-requests on that channel and dispatch them to the `EchoImpl` instance. This call to
-`fidl::BindServer` returns a `fidl::ServerBindingRef`, which is then passed to the `EchoImpl`
-instance in order to be able to send events back to the client.
+requests on that channel and dispatch them to the `EchoImpl` instance. `EchoImpl`'s call to
+`fidl::BindServer` returns a `fidl::ServerBindingRef`, which is then stored so the
+instance can be able to send events back to the client.
 
 ### Add new dependencies {#deps}
 
 This new code requires the following additional dependencies:
 
 * `"//zircon/system/ulib/async-loop:async-loop-cpp"` and `"//zircon/system/ulib/async-loop:async-loop-default"`, which contain the async loop code.
-* `"//sdk/lib/fdio"` and `"//sdk/lib/svc"`: These are libraries used to interact with
+* `"//sdk/lib/fdio"` and `"//zircon/system/ulib/svc"`: These are libraries used to interact with
   the components environment (e.g. for serving protocols).
 * `"//zircon/public/lib/fidl"`: The LLCPP runtime, which contains utility code for
   using the FIDL bindings, such as the `BindServer` function.

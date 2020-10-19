@@ -33,5 +33,6 @@ int main(int argc, const char** argv) {
   for (int i = 3; i < argc; i++) {
     capability_names.push_back(std::string(argv[i]));
   }
-  return LaunchComponents(std::string(argv[1]), std::string(argv[2]), std::move(capability_names));
+  return static_cast<int>(
+      LaunchComponents(std::string(argv[1]), std::string(argv[2]), std::move(capability_names)));
 }
