@@ -741,7 +741,7 @@ struct Thread {
   cpu_num_t LastCpuLocked() const;
 
   // Return true if thread has been signaled.
-  bool IsSignaled() { return signals_ != 0; }
+  bool IsSignaled() { return signals() != 0; }
   bool IsIdle() const { return !!(flags_ & THREAD_FLAG_IDLE); }
 
   // Returns true if this Thread's user state has been saved.
@@ -937,7 +937,7 @@ struct Thread {
   // Access to the entire flags_ value, for diagnostics.
   unsigned int flags() const { return flags_; }
 
-  unsigned int signals() const { return signals_; }
+  unsigned int signals() const { return signals_.load(ktl::memory_order_relaxed); }
 
   bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
 
@@ -1030,7 +1030,7 @@ struct Thread {
   // active bits
   enum thread_state state_;
   unsigned int flags_;
-  unsigned int signals_;
+  ktl::atomic<unsigned int> signals_;
 
   SchedulerState scheduler_state_;
 

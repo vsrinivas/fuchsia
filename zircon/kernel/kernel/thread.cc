@@ -323,7 +323,7 @@ void Thread::Resume() {
     }
 
     // Clear the suspend signal in case there is a pending suspend
-    signals_ &= ~THREAD_SIGNAL_SUSPEND;
+    signals_.fetch_and(~THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
     if (state_ == THREAD_INITIAL || state_ == THREAD_SUSPENDED) {
       // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
@@ -362,7 +362,7 @@ zx_status_t Thread::Suspend() {
     return ZX_ERR_BAD_STATE;
   }
 
-  signals_ |= THREAD_SIGNAL_SUSPEND;
+  signals_.fetch_or(THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
   bool local_resched = false;
   switch (state_) {
@@ -423,7 +423,7 @@ zx_status_t Thread::Suspend() {
 void Thread::Current::SignalPolicyException() {
   Thread* t = Thread::Current::Get();
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-  t->signals_ |= THREAD_SIGNAL_POLICY_EXCEPTION;
+  t->signals_.fetch_or(THREAD_SIGNAL_POLICY_EXCEPTION, ktl::memory_order_relaxed);
 }
 
 void Thread::EraseFromListsLocked() {
@@ -616,11 +616,7 @@ void Thread::Kill() {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   // deliver a signal to the thread.
-  // NOTE: it's not important to do this atomically, since we're inside
-  // the thread lock, but go ahead and flush it out to memory to avoid the amount
-  // of races if another thread is looking at this.
-  signals_ |= THREAD_SIGNAL_KILL;
-  arch::ThreadMemoryBarrier();
+  signals_.fetch_or(THREAD_SIGNAL_KILL, ktl::memory_order_relaxed);
 
   bool local_resched = false;
 
@@ -749,7 +745,7 @@ bool Thread::CheckKillSignal() {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
 
-  if (signals_ & THREAD_SIGNAL_KILL) {
+  if (signals() & THREAD_SIGNAL_KILL) {
     // Ensure we don't recurse into thread_exit.
     DEBUG_ASSERT(state_ != THREAD_DEATH);
     return true;
@@ -783,9 +779,9 @@ void Thread::Current::DoSuspend() {
 
     // Make sure the suspend signal wasn't cleared while we were running the
     // callback.
-    if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
+    if (current_thread->signals() & THREAD_SIGNAL_SUSPEND) {
       current_thread->state_ = THREAD_SUSPENDED;
-      current_thread->signals_ &= ~THREAD_SIGNAL_SUSPEND;
+      current_thread->signals_.fetch_and(~THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
       // directly invoke the context switch, since we've already manipulated this thread's state
       Scheduler::RescheduleInternal();
@@ -854,7 +850,7 @@ ScopedThreadExceptionContext::~ScopedThreadExceptionContext() {
 // check for any pending signals and handle them
 void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* gregs) {
   Thread* current_thread = Thread::Current::Get();
-  if (likely(current_thread->signals_ == 0)) {
+  if (likely(current_thread->signals() == 0)) {
     return;
   }
 
@@ -881,8 +877,9 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
   }
 
   // Report any policy exceptions raised by syscalls.
-  if (has_user_thread && (current_thread->signals_ & THREAD_SIGNAL_POLICY_EXCEPTION)) {
-    current_thread->signals_ &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
+  unsigned int signals = current_thread->signals();
+  if (has_user_thread && (signals & THREAD_SIGNAL_POLICY_EXCEPTION)) {
+    current_thread->signals_.fetch_and(~THREAD_SIGNAL_POLICY_EXCEPTION, ktl::memory_order_relaxed);
     guard.Release();
 
     zx_status_t status = arch_dispatch_user_policy_exception();
@@ -892,7 +889,7 @@ void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* greg
     return;
   }
 
-  if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
+  if (signals & THREAD_SIGNAL_SUSPEND) {
     DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
     // This thread has been asked to suspend.  If it has a user mode component we need to save the
     // user register state prior to calling |thread_do_suspend| so that a debugger may access it
@@ -1070,8 +1067,8 @@ zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, Interruptible in
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
   // if we've been killed and going in interruptible, abort here
-  if (interruptible == Interruptible::Yes && unlikely((current_thread->signals_))) {
-    if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
+  if (interruptible == Interruptible::Yes && unlikely((current_thread->signals()))) {
+    if (current_thread->signals() & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
     } else {
       return ZX_ERR_INTERNAL_INTR_RETRY;
