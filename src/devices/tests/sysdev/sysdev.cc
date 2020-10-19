@@ -60,7 +60,7 @@ zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, con
   uintptr_t payload_addr = 0;
   if (payload_len > 0) {
     zx_status_t status =
-        zx::vmar::root_self()->map(0, payload, 0, payload_len, ZX_VM_PERM_READ, &payload_addr);
+        zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, payload, 0, payload_len, &payload_addr);
     if (status != ZX_OK) {
       return status;
     }

@@ -712,7 +712,7 @@ TEST(SocketTest, ReadIntoBadBuffer) {
   zx_vaddr_t addr;
 
   // Note, no options means the buffer is not writable.
-  ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, kSize, 0, &addr));
+  ASSERT_OK(zx::vmar::root_self()->map(0, 0, vmo, 0, kSize, &addr));
 
   size_t actual = 99;
   void* buffer = reinterpret_cast<void*>(addr);
@@ -747,7 +747,7 @@ TEST(SocketTest, WriteFromBadBuffer) {
   zx_vaddr_t addr;
 
   // Note, no options means the buffer is not readable.
-  ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, kSize, 0, &addr));
+  ASSERT_OK(zx::vmar::root_self()->map(0, 0, vmo, 0, kSize, &addr));
 
   void* buffer = reinterpret_cast<void*>(addr);
   ASSERT_NE(nullptr, buffer);

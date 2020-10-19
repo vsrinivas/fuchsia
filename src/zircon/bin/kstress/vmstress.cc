@@ -220,8 +220,8 @@ int SingleVmoTestInstance::vmo_thread() {
         }
         // map it somewhere
         Printf("m");
-        status = zx::vmar::root_self()->map(0, vmo_, 0, vmo_size_,
-                                            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, ptrs_ + idx);
+        status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
+                                            vmo_size_, ptrs_ + idx);
         CheckVmoThreadError(status, "failed to map range");
         break;
       case 20 ... 34:
@@ -701,8 +701,8 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
   }
 
   uintptr_t ptr;
-  zx::vmar::root_self()->map(0, vmo, 0, page_count * ZX_PAGE_SIZE,
-                             ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
+  zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                             page_count * ZX_PAGE_SIZE, &ptr);
 
   uint32_t vmo_id = next_vmo_id_.fetch_add(1);
   // The chance that an individual instance lives this long is vanishingly small, and it
@@ -1212,7 +1212,7 @@ class MultiVmoTestInstance : public TestInstance {
               // Currently fault prevention isn't enforced in mappings and so we must be *very*
               // careful to not map in outside the actual range of the vmo.
               if (op_off + op_size <= vmo_size &&
-                  zx::vmar::root_self()->map(0, vmo, op_off, op_size, options, &addr) == ZX_OK) {
+                  zx::vmar::root_self()->map(options, 0, vmo, op_off, op_size, &addr) == ZX_OK) {
                 unmap_mapping();
                 mapping = fbl::Span<uint8_t>{reinterpret_cast<uint8_t*>(addr), op_size};
               }

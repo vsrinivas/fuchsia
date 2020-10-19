@@ -275,7 +275,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
       stack_vmo.set_property(ZX_PROP_NAME, kStackVmoName, sizeof(kStackVmoName) - 1);
       zx_vaddr_t stack_base;
       status =
-          vmar.map(0, stack_vmo, 0, stack_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &stack_base);
+          vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0, stack_size, &stack_base);
       check(log, status, "zx_vmar_map failed for child stack");
       sp = compute_initial_stack_pointer(stack_base, stack_size);
     }

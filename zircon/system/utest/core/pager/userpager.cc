@@ -53,7 +53,7 @@ bool Vmo::CheckVmo(uint64_t offset, uint64_t len, const void* expected) {
     return false;
   }
 
-  if ((status = zx::vmar::root_self()->map(0, tmp_vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, tmp_vmo, 0, len,
                                            &buf)) != ZX_OK) {
     fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return false;
@@ -99,7 +99,7 @@ std::unique_ptr<Vmo> Vmo::Clone() {
   }
 
   zx_vaddr_t addr;
-  if ((status = zx::vmar::root_self()->map(0, clone, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone, 0, size_,
                                            &addr)) != ZX_OK) {
     fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return nullptr;
@@ -139,7 +139,7 @@ bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
   }
 
   zx_vaddr_t addr;
-  if ((status = zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size,
                                            &addr)) != ZX_OK) {
     fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return false;
@@ -183,8 +183,8 @@ bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
 
   zx_vaddr_t addr;
   if ((status = zx::vmar::root_self()->map(
-           vmo->base_addr_ - info.base, new_vmo, 0, vmo->size_,
-           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE, &addr)) != ZX_OK) {
+           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE,
+           vmo->base_addr_ - info.base, new_vmo, 0, vmo->size_, &addr)) != ZX_OK) {
     fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return false;
   }

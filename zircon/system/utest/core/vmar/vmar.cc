@@ -622,7 +622,7 @@ TEST(Vmar, VmarMapRangeOffsetTest) {
             ZX_OK);
   ASSERT_EQ(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo), ZX_OK);
   uintptr_t mapping;
-  EXPECT_EQ(vmar.map(0, vmo, 0x2000, 0x1000, ZX_VM_MAP_RANGE, &mapping), ZX_OK);
+  EXPECT_EQ(vmar.map(ZX_VM_MAP_RANGE, 0, vmo, 0x2000, 0x1000, &mapping), ZX_OK);
 }
 
 // Attempt overmapping with FLAG_SPECIFIC to ensure it fails
@@ -2097,7 +2097,7 @@ TEST(Vmar, ConcurrentUnmapReadMemory) {
     // being no references to the underlying VmObject in the kernel.
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
-    ASSERT_EQ(child_vmar.map(0, vmo, 0, ZX_PAGE_SIZE, ZX_VM_SPECIFIC | ZX_VM_PERM_READ, &temp),
+    ASSERT_EQ(child_vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ, 0, vmo, 0, ZX_PAGE_SIZE, &temp),
               ZX_OK);
     ASSERT_EQ(child_vmar.unmap(addr, ZX_PAGE_SIZE), ZX_OK);
   }

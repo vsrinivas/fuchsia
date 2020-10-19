@@ -31,7 +31,7 @@ void* SharedVmo::Map() {
     std::call_once(mapping_once_flag_, [this] {
       // If an error occurs, then |mapping_| will remain 0.
       zx_status_t status =
-          zx::vmar::root_self()->map(0, vmo_, 0u, vmo_size_, map_flags_, &mapping_);
+          zx::vmar::root_self()->map(map_flags_, 0, vmo_, 0u, vmo_size_, &mapping_);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to map vmo: vmo_size=" << vmo_size_
                        << ", map_flags=" << map_flags_ << ", status=" << status;

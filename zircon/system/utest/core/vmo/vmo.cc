@@ -216,7 +216,7 @@ TEST(VmoTestCase, MapRead) {
   uintptr_t vaddr;
   // Map in the first page
   EXPECT_OK(
-      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr));
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, PAGE_SIZE, &vaddr));
 
   // Read from the second page of the vmo to mapping.
   // This should succeed and not deadlock in the kernel.
@@ -232,10 +232,10 @@ TEST(VmoTestCase, ParallelRead) {
 
   uintptr_t vaddr1, vaddr2;
   // Map the bottom half of both in.
-  EXPECT_OK(zx::vmar::root_self()->map(0, vmo1, 0, PAGE_SIZE * (kNumPages / 2),
-                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr1));
-  EXPECT_OK(zx::vmar::root_self()->map(0, vmo2, 0, PAGE_SIZE * (kNumPages / 2),
-                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &vaddr2));
+  EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo1, 0,
+                                       PAGE_SIZE * (kNumPages / 2), &vaddr1));
+  EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo2, 0,
+                                       PAGE_SIZE * (kNumPages / 2), &vaddr2));
 
   // Spin up a thread to read from one of the vmos, whilst we read from the other
   auto vmo_read_closure = [&vmo1, &vaddr2] {
@@ -1082,11 +1082,11 @@ TEST(VmoTestCase, PhysicalSlice) {
 
   // Map both VMOs in so we can access them.
   uintptr_t parent_vaddr;
-  EXPECT_OK(zx::vmar::root_self()->map(0, phys.vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, phys.vmo, 0, size,
                                        &parent_vaddr));
   uintptr_t slice_vaddr;
-  EXPECT_OK(zx::vmar::root_self()->map(0, slice_vmo, 0, size / 2,
-                                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &slice_vaddr));
+  EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, slice_vmo, 0,
+                                       size / 2, &slice_vaddr));
 
   // Just do some tests using the first byte of each page
   char *parent_private_test = (char *)parent_vaddr;

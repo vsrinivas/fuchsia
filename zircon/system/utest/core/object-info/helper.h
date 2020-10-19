@@ -227,7 +227,7 @@ void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
 
   // Map the first page of the VMAR.
   uintptr_t vmo_addr;
-  ASSERT_OK(vmar.map(0, vmo, 0, PAGE_SIZE, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, PAGE_SIZE,
                      &vmo_addr));
 
   // Once mapped, we need to destroy it before closing the handle.

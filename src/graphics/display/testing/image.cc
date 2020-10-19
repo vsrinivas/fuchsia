@@ -209,7 +209,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   uint32_t stride_pixels = minimum_row_bytes / ZX_PIXEL_FORMAT_BYTES(format);
   uintptr_t addr;
   uint32_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  if (zx::vmar::root_self()->map(0, vmo, 0, buffer_size, perms, &addr) != ZX_OK) {
+  if (zx::vmar::root_self()->map(perms, 0, vmo, 0, buffer_size, &addr) != ZX_OK) {
     printf("Failed to map vmar\n");
     return nullptr;
   }

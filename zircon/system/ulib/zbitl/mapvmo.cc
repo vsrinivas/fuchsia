@@ -45,8 +45,8 @@ fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo
   const uint64_t offset_in_mapping = payload % ZX_PAGE_SIZE;
 
   if (zx_status_t status =
-          zbi.vmar().map(0, zbi.vmo(), previous_page_boundary, size,
-                         ZX_VM_PERM_READ | (write ? ZX_VM_PERM_WRITE : 0), &zbi.mapping_.address_);
+          zbi.vmar().map(ZX_VM_PERM_READ | (write ? ZX_VM_PERM_WRITE : 0), 0, zbi.vmo(),
+                         previous_page_boundary, size, &zbi.mapping_.address_);
       status != ZX_OK) {
     return fitx::error{status};
   }

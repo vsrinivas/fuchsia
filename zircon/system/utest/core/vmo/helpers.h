@@ -85,7 +85,7 @@ class Mapping {
 
   zx_status_t Init(const zx::vmo& vmo, size_t len) {
     zx_status_t status =
-        zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr_);
+        zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr_);
     len_ = len;
     return status;
   }

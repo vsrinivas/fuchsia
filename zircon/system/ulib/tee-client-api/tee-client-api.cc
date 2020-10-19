@@ -853,7 +853,7 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context* context, TEEC_SharedMemory* 
 
   uintptr_t mapped_addr;
   status =
-      zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &mapped_addr);
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &mapped_addr);
   if (status != ZX_OK) {
     return ConvertStatusToResult(status);
   }

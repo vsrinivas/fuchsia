@@ -88,7 +88,7 @@ static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* 
       size_t window = (chunk + PAGE_SIZE - 1) & -PAGE_SIZE;
       uintptr_t start = 0;
       status =
-          current_vmar->map(0, vmo, offset, window, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &start);
+          current_vmar->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, offset, window, &start);
       if (status != ZX_OK) {
         return status;
       }

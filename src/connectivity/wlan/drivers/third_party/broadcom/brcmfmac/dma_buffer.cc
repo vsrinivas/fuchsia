@@ -141,7 +141,7 @@ zx_status_t DmaBuffer::Unmap() {
 
 zx_status_t DmaBuffer::Map(const zx::vmar& vmar, uint32_t vmar_options, uintptr_t* out_address) {
   zx_status_t status = ZX_OK;
-  if ((status = vmar.map(0, vmo_, 0, size_, vmar_options, out_address)) != ZX_OK) {
+  if ((status = vmar.map(vmar_options, 0, vmo_, 0, size_, out_address)) != ZX_OK) {
     BRCMF_ERR("Failed to map, vmar_options=0x%08x: %s", vmar_options, zx_status_get_string(status));
     return status;
   }

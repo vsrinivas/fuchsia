@@ -47,7 +47,7 @@ zx::vmo ExtractBootfs(const zx::debuglog& log, const zx::vmar& vmar_self, const 
   zx_status_t status = zx::vmo::create(payload_size, 0, &bootfs_vmo);
   check(log, status, "cannot create BOOTFS VMO (%u bytes)", payload_size);
   uintptr_t bootfs_payload;
-  status = vmar_self.map(0, bootfs_vmo, 0, payload_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+  status = vmar_self.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, bootfs_vmo, 0, payload_size,
                          &bootfs_payload);
   check(log, status, "cannot map BOOTFS VMO (%u bytes)", payload_size);
   status = zbi_vmo.read(reinterpret_cast<void*>(bootfs_payload), payload_offset, payload_size);

@@ -779,7 +779,7 @@ zx_status_t UsbAudioStream::OnGetBufferLocked(dispatcher::Channel* channel,
   if (is_input())
     map_flags |= ZX_VM_PERM_WRITE;
 
-  resp.result = zx::vmar::root_self()->map(0, ring_buffer_vmo_, 0, ring_buffer_size_, map_flags,
+  resp.result = zx::vmar::root_self()->map(map_flags, 0, ring_buffer_vmo_, 0, ring_buffer_size_,
                                            reinterpret_cast<uintptr_t*>(&ring_buffer_virt_));
   if (resp.result != ZX_OK) {
     LOG(ERROR, "Failed to map ring buffer (size %u, res %d)\n", ring_buffer_size_, resp.result);

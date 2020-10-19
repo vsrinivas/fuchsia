@@ -466,8 +466,8 @@ TEST(Pager, VmarMapRangeTest) {
   // Map the vmo. This shouldn't block or generate any new page requests.
   uint64_t ptr;
   TestThread t([vmo, &ptr]() -> bool {
-    ZX_ASSERT(zx::vmar::root_self()->map(0, vmo->vmo(), 0, 2 * ZX_PAGE_SIZE,
-                                         ZX_VM_PERM_READ | ZX_VM_MAP_RANGE, &ptr) == ZX_OK);
+    ZX_ASSERT(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_MAP_RANGE, 0, vmo->vmo(), 0,
+                                         2 * ZX_PAGE_SIZE, &ptr) == ZX_OK);
     return true;
   });
 
@@ -988,8 +988,8 @@ TEST(Pager, CloneResizeCloneHazard) {
                                            0, kSize, &clone_vmo));
 
   uintptr_t ptr_rw;
-  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(0, clone_vmo, 0, kSize,
-                                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr_rw));
+  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone_vmo, 0,
+                                              kSize, &ptr_rw));
 
   auto int_arr = reinterpret_cast<int*>(ptr_rw);
   EXPECT_EQ(int_arr[1], 0);
@@ -1017,8 +1017,8 @@ TEST(Pager, CloneResizeParentOK) {
   ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, kSize, &clone_vmo));
 
   uintptr_t ptr_rw;
-  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(0, clone_vmo, 0, kSize,
-                                              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr_rw));
+  EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone_vmo, 0,
+                                              kSize, &ptr_rw));
 
   auto int_arr = reinterpret_cast<int*>(ptr_rw);
   EXPECT_EQ(int_arr[1], 0);
@@ -1066,7 +1066,7 @@ TEST(Pager, CloneShrinkGrowParent) {
                                              config.vmo_size, &clone_vmo));
 
     uintptr_t ptr_ro;
-    EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(0, clone_vmo, 0, config.clone_size, ZX_VM_PERM_READ,
+    EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, clone_vmo, 0, config.clone_size,
                                                 &ptr_ro));
 
     auto ptr = reinterpret_cast<int*>(ptr_ro + config.clone_test_offset);
@@ -2029,7 +2029,7 @@ TEST(Pager, FailErrorCode) {
         return false;
       }
 
-      if (zx::vmar::root_self()->map(0, tmp_vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+      if (zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, tmp_vmo, 0, len,
                                      &buf) != ZX_OK) {
         return false;
       }

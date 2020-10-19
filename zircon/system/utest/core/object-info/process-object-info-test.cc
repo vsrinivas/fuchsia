@@ -154,7 +154,7 @@ class ProcessFixture : public zxtest::Test {
         m.flags |= ZX_VM_PERM_EXECUTE;
       }
 
-      ASSERT_OK(sub_vmar.map(0, vmo, i * PAGE_SIZE, PAGE_SIZE, m.flags, &m.base),
+      ASSERT_OK(sub_vmar.map(m.flags, 0, vmo, i * PAGE_SIZE, PAGE_SIZE, &m.base),
                 "zx::vmar::map [%zd]", i);
     }
 

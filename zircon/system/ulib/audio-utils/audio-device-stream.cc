@@ -326,7 +326,7 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
   // Map the VMO into our address space
   // TODO(johngro) : How do I specify the cache policy for this mapping?
   uint32_t flags = input() ? ZX_VM_PERM_READ : ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  res = zx::vmar::root_self()->map(0u, rb_vmo_, 0u, rb_sz_, flags,
+  res = zx::vmar::root_self()->map(flags, 0u, rb_vmo_, 0u, rb_sz_,
                                    reinterpret_cast<uintptr_t*>(&rb_virt_));
 
   if (res != ZX_OK) {

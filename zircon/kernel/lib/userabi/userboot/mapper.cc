@@ -21,7 +21,7 @@ zx_status_t Mapper::Map(zx_vm_option_t options, const zx::vmo& vmo, uint64_t off
   uint64_t mapping_offset = offset - remainder;
   size_t mapping_size = ZX_PAGE_ALIGN(remainder + size);
 
-  zx_status_t status = vmar_->map(0u, vmo, mapping_offset, mapping_size, options, &start_);
+  zx_status_t status = vmar_->map(options, 0u, vmo, mapping_offset, mapping_size, &start_);
   if (status != ZX_OK) {
     return status;
   }

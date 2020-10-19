@@ -49,7 +49,7 @@ zx_status_t Parser::Init(zx::unowned_vmo vmo) {
   }
   zx_vaddr_t addr = 0;
   status =
-      zx::vmar::root_self()->map(0, *vmo, 0, sizeof(hdr) + hdr.dirsize, ZX_VM_PERM_READ, &addr);
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, *vmo, 0, sizeof(hdr) + hdr.dirsize, &addr);
   if (status != ZX_OK) {
     printf("Parser::Init: couldn't map directory: %d\n", status);
     return status;

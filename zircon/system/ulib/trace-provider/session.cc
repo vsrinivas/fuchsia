@@ -82,8 +82,8 @@ void Session::InitializeEngine(async_dispatcher_t* dispatcher,
   }
 
   uintptr_t buffer_ptr;
-  status = zx::vmar::root_self()->map(0u, buffer, 0u, buffer_num_bytes,
-                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &buffer_ptr);
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0u, buffer, 0u,
+                                      buffer_num_bytes, &buffer_ptr);
   if (status != ZX_OK) {
     fprintf(stderr, "Session: error mapping buffer, status=%d(%s)\n", status,
             zx_status_get_string(status));

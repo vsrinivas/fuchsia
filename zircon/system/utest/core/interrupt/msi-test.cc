@@ -33,7 +33,7 @@ zx::status<std::pair<zx::vmo, void*>> GetMsiTestVmo(zx::unowned_bti bti) {
     return zx::error(status);
   }
 
-  if ((zx::vmar::root_self()->map(0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr)) !=
+  if ((zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, vmo_size, &ptr)) !=
       ZX_OK) {
     return zx::error(status);
   }

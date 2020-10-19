@@ -52,7 +52,7 @@ TEST(MexecTest, ChainLoadChild) {
   zx::vmar root_vmar(zx_vmar_root_self());
 
   uintptr_t zbi_base;
-  ASSERT_OK(root_vmar.map(0, zbi_vmo, 0, zbi_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &zbi_base));
+  ASSERT_OK(root_vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, zbi_vmo, 0, zbi_size, &zbi_base));
 
   zbi::Zbi zbi(reinterpret_cast<uint8_t*>(zbi_base), zbi_size);
   ASSERT_EQ(zbi.Check(nullptr), ZBI_RESULT_OK);

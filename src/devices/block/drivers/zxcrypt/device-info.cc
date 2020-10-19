@@ -82,7 +82,7 @@ zx_status_t DeviceInfo::Reserve(size_t size) {
 
   constexpr uint32_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   uintptr_t address;
-  if ((rc = zx::vmar::root_self()->map(0, vmo, 0, size, flags, &address)) != ZX_OK) {
+  if ((rc = zx::vmar::root_self()->map(flags, 0, vmo, 0, size, &address)) != ZX_OK) {
     zxlogf(ERROR, "zx::vmar::map failed: %s", zx_status_get_string(rc));
     return rc;
   }
