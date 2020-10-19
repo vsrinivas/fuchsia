@@ -2630,7 +2630,7 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
 
   // Handle any Rx frame related error injection (if enabled).
   err_inj_.HandleRxFrameErrorInjection(buf->data());
-  brmcf_sim_rx_frame(simdev_, std::move(buf));
+  brcmf_sim_rx_frame(simdev_, std::move(buf));
 }
 
 void SimFirmware::convert_chanspec_to_channel(uint16_t chanspec, wlan_channel_t* channel) {

@@ -162,7 +162,7 @@ void brcmf_sim_rx_event(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_
 }
 
 // Handle a simulator frame
-void brmcf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer) {
+void brcmf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer) {
   brcmf_netbuf* netbuf = nullptr;
   zx_status_t status = brcmf_sim_create_netbuf(simdev, std::move(buffer), &netbuf);
   if (status == ZX_OK) {

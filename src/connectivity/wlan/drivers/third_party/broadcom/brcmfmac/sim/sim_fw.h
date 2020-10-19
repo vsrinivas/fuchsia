@@ -187,7 +187,7 @@ class SimFirmware {
     std::unique_ptr<uint8_t[]> data;
     uint32_t len;
     // this is just to remember the coming netbuf's allocated_size, this, if the usage of
-    // brmcf_netbuf is removed, this can be removed as well.
+    // brcmf_netbuf is removed, this can be removed as well.
     uint32_t allocated_size_of_buf_in;
   };
 
