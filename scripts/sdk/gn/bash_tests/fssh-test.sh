@@ -74,6 +74,8 @@ readonly EXPECTED_HELP="Usage: fssh.sh [args]
     Uses additional private key when using ssh to access the device.
   [--sshconfig <sshconfig file>]
     Use the specified sshconfig file instead of fssh's version.
+  [-q|--quiet]
+    Suppress non-error output from fssh.sh (but not from the remote command).
 
 All positional arguments are passed through to SSH to be executed on the device."
 
@@ -97,7 +99,7 @@ TEST_fssh() {
 }
 
 TEST_fssh_by_ip() {
-   set_up_device_finder
+  set_up_device_finder
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-ip fe80::d098:513f:9cfb:eb53%hardcoded
@@ -124,7 +126,7 @@ TEST_fssh_by_name() {
 
 TEST_fssh_name_not_found() {
   echo 2 > "${MOCKED_DEVICE_FINDER}.mock_status"
-  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" >  "${MOCKED_DEVICE_FINDER}.stderr"
+  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" > "${MOCKED_DEVICE_FINDER}.stderr"
 
   # Run command.
   BT_EXPECT_FAIL  "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name name-not-found
@@ -136,11 +138,13 @@ TEST_fssh_with_ip_prop() {
 
   BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
 
-  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh"
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" > "out.txt"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "out.txt" "Using device address 192.1.1.2"
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "192.1.1.2")
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
@@ -149,12 +153,32 @@ TEST_fssh_with_name_prop() {
 
   BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
 
-  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh"
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" > "out.txt"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "out.txt" "Using device name coffee-coffee-coffee-coffee"
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state"
   expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee")
   gn-test-check-mock-args "${expected_args[@]}"
+}
+
+TEST_fssh_with_ip_prop_quiet() {
+  set_up_device_finder
+  echo "my-super-cool-device" > "${SSH_MOCK_PATH}/ssh.mock_stdout"
+
+  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" "-q" "hostname" > "out.txt"
+
+  # Make sure output only contains content from stdout of the remote command.
+  BT_EXPECT_FILE_CONTAINS "out.txt" "my-super-cool-device"
+
+  # Verify that ssh was run correctly.
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state"
+
+  gn-test-check-mock-args _ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" "192.1.1.2" "hostname"
 }
 
 TEST_fssh_with_all_props() {
@@ -163,11 +187,14 @@ TEST_fssh_with_all_props() {
   BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
   BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
 
-  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh"
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" > "out.txt"
+
+  # Preference is given to device-ip.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "out.txt" "Using device address 192.1.1.2"
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "192.1.1.2")
   gn-test-check-mock-args "${expected_args[@]}"
 }
 

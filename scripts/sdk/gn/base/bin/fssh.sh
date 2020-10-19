@@ -29,6 +29,8 @@ function usage {
   echo "    Uses additional private key when using ssh to access the device."
   echo "  [--sshconfig <sshconfig file>]"
   echo "    Use the specified sshconfig file instead of fssh's version."
+  echo "  [-q|--quiet]"
+  echo "    Suppress non-error output from fssh.sh (but not from the remote command)."
   echo
   echo "All positional arguments are passed through to SSH to be executed on the device."
 }
@@ -38,42 +40,47 @@ DEVICE_NAME_FILTER=""
 DEVICE_IP_ADDR=""
 POSITIONAL=()
 SSHCONFIG_FILE=""
+QUIET=""
 
 # Parse command line
 while (( "$#" )); do
 case $1 in
-    --device-name)
-      shift
-      DEVICE_NAME_FILTER="${1}"
-    ;;
-    --device-ip)
-      shift
-      DEVICE_IP_ADDR="${1}"
-    ;;
-    --private-key)
-      shift
-      PRIVATE_KEY_FILE="${1}"
-    ;;
-    --sshconfig)
-      shift
-      SSHCONFIG_FILE="${1}"
-    ;;
-    --help)
+  --device-name)
+    shift
+    DEVICE_NAME_FILTER="${1}"
+  ;;
+  --device-ip)
+    shift
+    DEVICE_IP_ADDR="${1}"
+  ;;
+  --private-key)
+    shift
+    PRIVATE_KEY_FILE="${1}"
+  ;;
+  --sshconfig)
+    shift
+    SSHCONFIG_FILE="${1}"
+  ;;
+  --help)
+    usage
+    exit 1
+  ;;
+  -q|--quiet)
+    QUIET="1"
+  ;;
+
+  -*)
+    if [[ "${#POSITIONAL[@]}" -eq 0 ]]; then
+      echo "Unknown option ${1}"
       usage
       exit 1
-    ;;
-    -*)
-      if [[ "${#POSITIONAL[@]}" -eq 0 ]]; then
-        echo "Unknown option ${1}"
-        usage
-        exit 1
-      else
-        POSITIONAL+=("${1}")
-      fi
-    ;;
-    *)
+    else
       POSITIONAL+=("${1}")
-    ;;
+    fi
+  ;;
+  *)
+    POSITIONAL+=("${1}")
+  ;;
 esac
 shift
 done
@@ -82,13 +89,17 @@ if [[ "${DEVICE_IP_ADDR}" == "" && "${DEVICE_NAME_FILTER}" == "" ]]; then
   # No device specified on the command line, so use the default IP, then the
   # default name if configured.
   DEVICE_IP_ADDR="$(get-fuchsia-property device-ip)"
-  if [[ -z "${DEVICE_IP_ADDR}" ]]; then
-    DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
-    if [[ -n "${DEVICE_NAME_FILTER}" ]]; then
-      echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig.sh to use another device."
+  if [[ -n "${DEVICE_IP_ADDR}" ]]; then
+    if [[ -z "${QUIET}" ]]; then
+      echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig.sh to use another device."
     fi
   else
-    echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig.sh to use another device."
+    DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+    if [[ -n "${DEVICE_NAME_FILTER}" ]]; then
+      if [[ -z "${QUIET}" ]]; then
+        echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig.sh to use another device."
+      fi
+    fi
   fi
 elif [[ "${DEVICE_IP_ADDR}" != "" && "${DEVICE_NAME_FILTER}" != "" ]]; then
   fx-error "Cannot use both --device-name and --device-ip".
