@@ -10,10 +10,6 @@ if (zx == "/") {
   zx_fidl_trace_level = fidl_trace_level
 }
 
-declare_args() {
-  fidl_write_v1_wireformat = false
-}
-
 config("fidl-tracing-config") {
   defines = [ "FIDL_TRACE_LEVEL=$zx_fidl_trace_level" ]
 }
@@ -57,9 +53,6 @@ zx_library("fidl_base") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zircon",
   ]
-  if (fidl_write_v1_wireformat) {
-    defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
-  }
 
   all_dependent_configs = [ ":fidl-tracing-config" ]
 }
