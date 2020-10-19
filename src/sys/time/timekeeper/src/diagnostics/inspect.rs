@@ -18,6 +18,7 @@ use {
     },
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::FutureExt,
+    inspect_writable::{InspectWritable, InspectWritableNode},
     lazy_static::lazy_static,
     log::warn,
     parking_lot::Mutex,
@@ -41,6 +42,7 @@ fn utc_time() -> i64 {
 }
 
 /// A representation of a point in time as measured by all pertinent clocks.
+#[derive(InspectWritable)]
 pub struct TimeSet {
     /// The kernel ZX_CLOCK_MONOTONIC time, in ns.
     monotonic: i64,
@@ -59,18 +61,10 @@ impl TimeSet {
             clock_utc: clock.read().map(zx::Time::into_nanos).unwrap_or(FAILED_TIME),
         }
     }
-
-    /// Writes the contents of the `TimeSet` to the supplied node using the inspect record_* methods
-    /// TODO(jsankey): This method could be placed in a trait (`Recordable`?) and generated with a
-    /// procedural macro.
-    pub fn record(self, node: &Node) {
-        node.record_int("monotonic", self.monotonic);
-        node.record_int("kernel_utc", self.kernel_utc);
-        node.record_int("clock_utc", self.clock_utc);
-    }
 }
 
 /// A representation of a single update to the UTC zx::Clock.
+#[derive(InspectWritable)]
 pub struct ClockDetails {
     /// The monotonic time at which the details were retrieved. Note this is the time the Rust
     /// object was created, which may not exactly match the time its contents were supplied by
@@ -108,56 +102,6 @@ impl From<zx::ClockDetails> for ClockDetails {
             rate_ppm: rate_ppm as u32,
             error_bounds: details.error_bounds,
         }
-    }
-}
-
-/// An inspect `Node` and properties used to export the contents of a `ClockDetails`.
-/// TODO(jsankey): Auto generate this struct and the impl from a procedural macro.
-struct ClockDetailsNode {
-    /// The monotonic time at which the details were retrieved. Note this is the time the Rust
-    /// object was created, which may not exactly match the time its contents were supplied by
-    /// the kernel.
-    _retrieval_monotonic: IntProperty,
-    /// The generation counter as documented in the zx::Clock.
-    _generation_counter: UintProperty,
-    /// The monotonic time from the monotonic-UTC correspondence pair, in ns.
-    _monotonic_offset: IntProperty,
-    /// The UTC time from the monotonic-UTC correspondence pair, in ns.
-    _utc_offset: IntProperty,
-    /// The ratio between UTC tick rate and monotonic tick rate in parts per million, where
-    /// a value above one million means UTC is ticking faster than monotonic.
-    _rate_ppm: UintProperty,
-    /// The error bounds as documented in the zx::Clock.
-    _error_bounds: UintProperty,
-    /// The inspect Node these fields are exported to.
-    _node: Node,
-}
-
-impl ClockDetailsNode {
-    /// Constructs a new `ClockDetails` using the inspect create_* methods (meaning the properties
-    /// are bound to the lifetime of the `ClockDetailsNode`) with fields set to the supplied
-    /// `ClockDetails`.
-    pub fn create(node: Node, data: ClockDetails) -> Self {
-        ClockDetailsNode {
-            _retrieval_monotonic: node.create_int("retrieval_monotonic", data.retrieval_monotonic),
-            _generation_counter: node
-                .create_uint("generation_counter", data.generation_counter as u64),
-            _monotonic_offset: node.create_int("monotonic_offset", data.monotonic_offset),
-            _utc_offset: node.create_int("utc_offset", data.utc_offset),
-            _rate_ppm: node.create_uint("rate_ppm", data.rate_ppm as u64),
-            _error_bounds: node.create_uint("error_bounds", data.error_bounds),
-            _node: node,
-        }
-    }
-
-    /// Sets the `ClockDetailsNode` inspect fields to the contents of the supplied `ClockDetails`.
-    pub fn update(&self, data: ClockDetails) {
-        self._retrieval_monotonic.set(data.retrieval_monotonic);
-        self._generation_counter.set(data.generation_counter as u64);
-        self._monotonic_offset.set(data.monotonic_offset);
-        self._utc_offset.set(data.utc_offset);
-        self._rate_ppm.set(data.rate_ppm as u64);
-        self._error_bounds.set(data.error_bounds);
     }
 }
 
@@ -261,7 +205,7 @@ pub struct InspectDiagnostics {
     /// Details of interactions with the real time clock.
     rtc: Mutex<Option<RealTimeClockNode>>,
     /// The details of the most recent update to the UTC zx::Clock.
-    last_update: Mutex<Option<ClockDetailsNode>>,
+    last_update: Mutex<Option<<ClockDetails as InspectWritable>::NodeType>>,
     /// The UTC clock that provides the `clock_utc` component of `TimeSet` data.
     clock: Arc<zx::Clock>,
     /// The inspect node used to export the contents of this `InspectDiagnostics`.
@@ -332,14 +276,12 @@ impl InspectDiagnostics {
             self.health.lock().set_ok();
             match self.clock.get_details() {
                 Ok(details) => {
+                    let details_struct: ClockDetails = details.into();
                     let mut lock = self.last_update.lock();
                     if let Some(last_update) = &*lock {
-                        last_update.update(details.into());
+                        last_update.update(&details_struct);
                     } else {
-                        lock.replace(ClockDetailsNode::create(
-                            self.node.create_child("last_update"),
-                            details.into(),
-                        ));
+                        lock.replace(details_struct.create(self.node.create_child("last_update")));
                     }
                 }
                 Err(err) => {
