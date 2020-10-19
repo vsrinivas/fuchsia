@@ -113,6 +113,7 @@ void vc_attach_gfx(vc_t* vc);
 void vc_free(vc_t* vc);
 void vc_flush(vc_t* vc);
 void vc_flush_all(vc_t* vc);
+void vc_device_init(const gfx_font* font, const keychar_t* keymap);
 
 // called to re-draw the status bar after
 // status-worthy vc or global state has changed
@@ -163,7 +164,7 @@ int log_start(async_dispatcher_t* dispatcher);
 zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out);
 void log_delete_vc(vc_t* vc);
 
-bool vc_display_init(async_dispatcher_t* dispatcher);
+bool vc_display_init(async_dispatcher_t* dispatcher, bool hide_on_boot);
 bool vc_sysmem_connect(void);
 void vc_attach_to_main_display(vc_t* vc);
 bool is_primary_bound();

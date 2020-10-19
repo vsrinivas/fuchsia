@@ -23,6 +23,9 @@
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
 
+const gfx_font* g_font = &gfx_font_9x16;
+const keychar_t* g_keymap = qwerty_map;
+
 static zx_status_t vc_setup(vc_t* vc, const color_scheme_t* color_scheme) {
   // calculate how many rows/columns we have
   vc->rows = DEFAULT_HEIGHT / vc->charh;
@@ -401,19 +404,7 @@ void vc_set_fullscreen(vc_t* vc, bool fullscreen) {
   vc_render(vc);
 }
 
-const gfx_font* vc_get_font() {
-  char* fname = getenv("virtcon.font");
-  if (fname) {
-    if (!strcmp(fname, "9x16")) {
-      return &gfx_font_9x16;
-    } else if (!strcmp(fname, "18x32")) {
-      return &gfx_font_18x32;
-    } else {
-      printf("gfxconsole: no such font '%s'\n", fname);
-    }
-  }
-  return &gfx_font_9x16;
-}
+const gfx_font* vc_get_font() { return g_font; }
 
 void vc_attach_gfx(vc_t* vc) {
   if (vc->graphics == nullptr) {
@@ -514,18 +505,7 @@ zx_status_t vc_alloc(vc_t** out, const color_scheme_t* color_scheme) {
   }
   vc->fd = -1;
 
-  vc->keymap = qwerty_map;
-  char* keys = getenv("virtcon.keymap");
-  if (keys) {
-    if (!strcmp(keys, "qwerty")) {
-      vc->keymap = qwerty_map;
-    } else if (!strcmp(keys, "dvorak")) {
-      vc->keymap = dvorak_map;
-    } else {
-      printf("gfxconsole: no such keymap '%s'\n", keys);
-    }
-  }
-
+  vc->keymap = g_keymap;
   vc->font = vc_get_font();
   vc->charw = vc->font->width;
   vc->charh = vc->font->height;
@@ -568,4 +548,9 @@ void vc_flush_all(vc_t* vc) {
   if (g_vc_owns_display && vc_graphics_enabled(vc)) {
     vc_gfx_invalidate_all(vc->graphics, vc);
   }
+}
+
+void vc_device_init(const gfx_font* font, const keychar_t* keymap) {
+  g_font = font;
+  g_keymap = keymap;
 }

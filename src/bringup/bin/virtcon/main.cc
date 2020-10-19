@@ -41,6 +41,7 @@
 #include <fs/service.h>
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
+#include "args.h"
 #include "keyboard.h"
 #include "src/lib/listnode/listnode.h"
 #include "vc.h"
@@ -277,42 +278,41 @@ class VirtconImpl final : public llcpp::fuchsia::virtualconsole::SessionManager:
 };
 
 int main(int argc, char** argv) {
-  // NOTE: devmgr has getenv_bool. when more options are added, consider
-  // sharing that.
-  const char* value = getenv("virtcon.keep-log-visible");
-  if (value == NULL ||
-      ((strcmp(value, "0") == 0) || (strcmp(value, "false") == 0) || (strcmp(value, "off") == 0))) {
-    keep_log = false;
-  } else {
-    keep_log = true;
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      return 1;
+    }
+    status = fdio_service_connect("/svc/fuchsia.boot.Arguments", remote.release());
+    if (status != ZX_OK) {
+      return 1;
+    }
+    boot_args = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local));
   }
 
-  const char* cmd = NULL;
-  int shells = 0;
-  while (argc > 1) {
-    if (!strcmp(argv[1], "--run")) {
-      if (argc > 2) {
-        argc--;
-        argv++;
-        cmd = argv[1];
-        if (shells < 1)
-          shells = 1;
-        printf("CMD: %s\n", cmd);
-      }
-    } else if (!strcmp(argv[1], "--shells")) {
-      if (argc > 2) {
-        argc--;
-        argv++;
-        shells = atoi(argv[1]);
-      }
-    }
-    argc--;
-    argv++;
+  Arguments args;
+  zx_status_t status = ParseArgs(boot_args, &args);
+  if (status != ZX_OK) {
+    printf("vc: failed to get boot arguments\n");
+    return -1;
   }
+
+  if (args.disable) {
+    printf("vc: virtcon disabled\n");
+    return 0;
+  }
+
+  if (!args.command.empty()) {
+    printf("vc: CMD: %s\n", args.command.c_str());
+  }
+
+  vc_device_init(args.font, args.keymap);
 
   char* colorvar = getenv("virtcon.colorscheme");
   const color_scheme_t* color_scheme = string_to_color_scheme(colorvar);
-  if (cmd != NULL) {
+  if (args.command.c_str() != NULL) {
     color_scheme = &color_schemes[kSpecialColorScheme];
   }
 
@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
   VirtconImpl virtcon_server = VirtconImpl(loop.dispatcher());
 
   svc::Outgoing outgoing(loop.dispatcher());
-  zx_status_t status = outgoing.ServeFromStartupInfo();
+  status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
     printf("vc: outgoing.ServeFromStartupInfo() = %s\n", zx_status_get_string(status));
     return -1;
@@ -340,16 +340,11 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  bool repeat_keys = true;
-  {
-    char* flag = getenv("virtcon.keyrepeat");
-    if (flag && (!strcmp(flag, "0") || !strcmp(flag, "false"))) {
-      printf("vc: Key repeat disabled\n");
-      repeat_keys = false;
-    }
+  if (!args.repeat_keys) {
+    printf("vc: Key repeat disabled\n");
   }
 
-  status = setup_keyboard_watcher(loop.dispatcher(), handle_key_press, repeat_keys);
+  status = setup_keyboard_watcher(loop.dispatcher(), handle_key_press, args.repeat_keys);
   if (status != ZX_OK) {
     printf("vc: setup_keyboard_watcher failed with %d\n", status);
   }
@@ -358,17 +353,19 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  if (!vc_display_init(loop.dispatcher())) {
+  if (!vc_display_init(loop.dispatcher(), args.hide_on_boot)) {
     return -1;
   }
 
   setenv("TERM", "xterm", 1);
 
-  for (int i = 0; i < shells; ++i) {
-    if (i == 0)
-      start_shell(loop.dispatcher(), !keep_log, cmd, color_scheme);
-    else
-      start_shell(loop.dispatcher(), false, NULL, color_scheme);
+  for (size_t i = 0; i < args.shells; ++i) {
+    if (i == 0) {
+      const char* command = args.command.empty() ? nullptr : args.command.c_str();
+      start_shell(loop.dispatcher(), !args.keep_log_visible, command, args.color_scheme);
+    } else {
+      start_shell(loop.dispatcher(), false, nullptr, args.color_scheme);
+    }
   }
 
   status = loop.Run();

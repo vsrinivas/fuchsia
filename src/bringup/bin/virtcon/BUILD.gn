@@ -9,6 +9,7 @@ import("//build/test/test_package.gni")
 
 # This can't be a source_set() because the test compiles with a #define.
 common_sources = [
+  "args.cc",
   "keyboard-vt100.cc",
   "keyboard.cc",
   "textcon.cc",
@@ -22,6 +23,7 @@ group("common") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.display.controller",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
@@ -114,9 +116,27 @@ test("virtual-console-test-integration") {
   ]
 }
 
+test("virtual-console-args-test") {
+  sources = [
+    "args-test.cc",
+    "args.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
 test_package("test") {
   package_name = "virtual-console-test"
   deps = [
+    ":virtual-console-args-test",
     ":virtual-console-test-display",
     ":virtual-console-test-integration",
     ":virtual-console-test-text",
@@ -132,6 +152,10 @@ test_package("test") {
     },
     {
       name = "virtual-console-test-display"
+      environments = basic_envs
+    },
+    {
+      name = "virtual-console-args-test"
       environments = basic_envs
     },
   ]

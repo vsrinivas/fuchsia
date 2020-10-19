@@ -47,6 +47,7 @@ static uint64_t next_buffer_collection_id = 1;
 
 static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
 static bool primary_bound = false;
+static bool g_hide_on_boot = false;
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
@@ -604,8 +605,7 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
 
   zx_handle_close(dc_wait.object());
 
-  status = vc_set_mode(getenv("virtcon.hide-on-boot") == nullptr ? fhd::VirtconMode::FALLBACK
-                                                                 : fhd::VirtconMode::INACTIVE);
+  status = vc_set_mode(g_hide_on_boot ? fhd::VirtconMode::INACTIVE : fhd::VirtconMode::FALLBACK);
   if (status != ZX_OK) {
     printf("vc: Failed to set initial ownership %d\n", status);
     vc_find_display_controller();
@@ -726,7 +726,8 @@ static void vc_find_display_controller() {
   }
 }
 
-bool vc_display_init(async_dispatcher_t* dispatcher) {
+bool vc_display_init(async_dispatcher_t* dispatcher, bool hide_on_boot) {
+  g_hide_on_boot = hide_on_boot;
   fbl::unique_fd fd(open(kDisplayControllerDir, O_DIRECTORY | O_RDONLY));
   if (!fd) {
     return false;
