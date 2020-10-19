@@ -139,6 +139,9 @@ impl Router {
                     };
                     responder.send(was_handled).context("error sending response")?;
                 }
+                ui_shortcut::ManagerRequest::HandleFocusChange { .. } => {
+                    unimplemented!();
+                }
             }
         }
         Ok(())

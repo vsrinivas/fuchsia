@@ -6,6 +6,7 @@ library fuchsia.ui.shortcut;
 
 using fuchsia.ui.input2;
 using fuchsia.ui.input3;
+using fuchsia.ui.focus;
 
 /// Shortcuts manager handles keyboard events, detects shortcut activations,
 /// notifies clients.
@@ -24,6 +25,6 @@ protocol Manager {
     /// Returns true if shortcut was matched and client handled it, false otherwise.
     HandleKey3Event(fuchsia.ui.input3.KeyEvent event) -> (bool was_handled);
 
-    // TODO: implement when the design is approved.
-    // HandleFocusChange(FocusChain focus) -> ();
+    // Notify Shortcut manager service when the focused chain changes.
+    HandleFocusChange(fuchsia.ui.focus.FocusChain focus_chain) -> ();
 };
