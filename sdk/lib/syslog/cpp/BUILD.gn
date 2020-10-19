@@ -151,9 +151,9 @@ sdk_source_set("backend") {
   }
 }
 
+# TODO(fxbug.dev/62157) switch to test() template when host tests fixed
 executable("logging_cpp_unittests") {
   testonly = true
-
   sources = [
     "log_settings_unittest.cc",
     "logging_unittest.cc",
@@ -176,7 +176,6 @@ executable("logging_cpp_unittests") {
 
 executable("logging_cpp_unittests_structured") {
   testonly = true
-
   sources = [ "log_structure_unittest.cc" ]
 
   deps = [
@@ -200,5 +199,14 @@ test_package("logging-cpp-tests") {
     {
       name = "logging_cpp_unittests_structured"
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":logging-cpp-tests",
+    # TODO(fxbug.dev/62157) uncomment when fixed for host
+    # ":logging_cpp_unittests($host_toolchain)",
   ]
 }

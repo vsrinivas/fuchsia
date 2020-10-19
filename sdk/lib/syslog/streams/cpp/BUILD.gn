@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/sdk_source_set.gni")
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -33,7 +34,7 @@ sdk_source_set("streams-encoder") {
   deps = []
 }
 
-executable("streams-encoder-test") {
+test("streams-encoder-test") {
   testonly = true
   sources = [ "streams_encoder_unittest.cc" ]
   deps = [

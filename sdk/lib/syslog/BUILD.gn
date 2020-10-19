@@ -6,7 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    "fdio:tests",
-    "syslog:tests",
+    "cpp:tests",
+    "streams/cpp:tests",
   ]
 }
