@@ -6,11 +6,8 @@ use {
     crate::{inverse_keymap::InverseKeymap, keymaps},
     anyhow::{ensure, Error},
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
-    std::{
-        convert::TryFrom,
-        thread,
-        time::{Duration, SystemTime},
-    },
+    fuchsia_zircon as zx,
+    std::{convert::TryFrom, thread, time::Duration},
 };
 
 // Abstracts over input injection services (which are provided by input device registries).
@@ -44,11 +41,8 @@ pub(crate) trait InputDevice {
     fn multi_finger_tap(&self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
 }
 
-fn nanos_from_epoch() -> Result<u64, Error> {
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .map(|duration| duration.as_nanos() as u64)
-        .map_err(Into::into)
+fn monotonic_nanos() -> Result<u64, Error> {
+    u64::try_from(zx::Time::get(zx::ClockId::Monotonic).into_nanos()).map_err(Into::into)
 }
 
 fn repeat_with_delay(
@@ -80,7 +74,7 @@ pub(crate) fn media_button_event(
         mic_mute,
         reset,
         pause,
-        nanos_from_epoch()?,
+        monotonic_nanos()?,
     )
 }
 
@@ -96,11 +90,11 @@ pub(crate) fn keyboard_event(
         duration,
         |_| {
             // Key pressed.
-            input_device.key_press_usage(Some(usage), nanos_from_epoch()?)
+            input_device.key_press_usage(Some(usage), monotonic_nanos()?)
         },
         |_| {
             // Key released.
-            input_device.key_press_usage(None, nanos_from_epoch()?)
+            input_device.key_press_usage(None, monotonic_nanos()?)
         },
     )
 }
@@ -119,7 +113,7 @@ pub(crate) fn text(
     let mut key_iter = key_sequence.into_iter().peekable();
 
     while let Some(keyboard) = key_iter.next() {
-        let result: Result<(), Error> = input_device.key_press(keyboard, nanos_from_epoch()?);
+        let result: Result<(), Error> = input_device.key_press(keyboard, monotonic_nanos()?);
         result?;
 
         if key_iter.peek().is_some() {
@@ -147,11 +141,11 @@ pub(crate) fn tap_event(
         tap_duration,
         |_| {
             // Touch down.
-            input_device.tap(Some((x, y)), nanos_from_epoch()?)
+            input_device.tap(Some((x, y)), monotonic_nanos()?)
         },
         |_| {
             // Touch up.
-            input_device.tap(None, nanos_from_epoch()?)
+            input_device.tap(None, monotonic_nanos()?)
         },
     )
 }
@@ -172,11 +166,11 @@ pub(crate) fn multi_finger_tap_event(
         multi_finger_tap_duration,
         |_| {
             // Touch down.
-            input_device.multi_finger_tap(Some(fingers.clone()), nanos_from_epoch()?)
+            input_device.multi_finger_tap(Some(fingers.clone()), monotonic_nanos()?)
         },
         |_| {
             // Touch up.
-            input_device.multi_finger_tap(None, nanos_from_epoch()?)
+            input_device.multi_finger_tap(None, monotonic_nanos()?)
         },
     )
 }
@@ -257,7 +251,7 @@ pub(crate) fn multi_finger_swipe(
         move_event_count + 2, // +2 to account for DOWN and UP events
         swipe_event_delay,
         |i| {
-            let time = nanos_from_epoch()?;
+            let time = monotonic_nanos()?;
             match i {
                 // DOWN
                 0 => input_device.multi_finger_tap(
@@ -311,6 +305,7 @@ mod tests {
     mod event_synthesis {
         use {
             super::*,
+            anyhow::Context as _,
             fidl::endpoints,
             fidl_fuchsia_ui_input::{
                 InputDeviceMarker, InputDeviceProxy as FidlInputDeviceProxy, InputDeviceRequest,
@@ -322,6 +317,7 @@ mod tests {
 
         // Like `InputReport`, but with the `Box`-ed items inlined.
         struct InlineInputReport {
+            event_time: u64,
             keyboard: Option<KeyboardReport>,
             media_buttons: Option<MediaButtonsReport>,
             touchscreen: Option<TouchscreenReport>,
@@ -330,6 +326,7 @@ mod tests {
         impl InlineInputReport {
             fn new(input_report: InputReport) -> Self {
                 Self {
+                    event_time: input_report.event_time,
                     keyboard: input_report.keyboard.map(|boxed| *boxed),
                     media_buttons: input_report.media_buttons.map(|boxed| *boxed),
                     touchscreen: input_report.touchscreen.map(|boxed| *boxed),
@@ -786,6 +783,50 @@ mod tests {
                     })),
                     Ok(Some(TouchscreenReport { touches: vec![] })),
                 ]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn events_use_monotonic_time() -> Result<(), Error> {
+            let mut fake_event_listener = FakeInputDeviceRegistry::new();
+            let synthesis_start_time = monotonic_nanos()?;
+            media_button_event(true, false, true, false, true, &mut fake_event_listener)?;
+
+            let synthesis_end_time = monotonic_nanos()?;
+            let fidl_result = fake_event_listener
+                .get_events()
+                .await
+                .into_iter()
+                .nth(0)
+                .expect("received 0 events");
+            let timestamp =
+                fidl_result.map_err(anyhow::Error::msg).context("fidl call")?.event_time;
+
+            // Note well: neither condition is sufficient on its own, to verify that
+            // `synthesizer` has used the correct clock. For example:
+            //
+            // * `timestamp >= synthesis_start_time` would be true for a `UNIX_EPOCH` clock
+            //   with the correct time, since the elapsed time from 1970-01-01T00:00:00+00:00
+            //   to now is (much) larger than the elapsed time from boot to `synthesis_start_time`
+            // * `timestamp <= synthesis_end_time` would be true for a `UNIX_EPOCH` clock
+            //   has been recently set to 0, because `synthesis_end_time` is highly unlikely to
+            //   be near 0 (as it is monotonic from boot)
+            //
+            // By bracketing between monotonic clock reads before and after the event generation,
+            // this test avoids the hazards above. The test also avoids the hazard of using a
+            // fixed offset from the start time (which could flake on a slow builder).
+            assert!(
+                timestamp >= synthesis_start_time,
+                "timestamp={} should be >= start={}",
+                timestamp,
+                synthesis_start_time
+            );
+            assert!(
+                timestamp <= synthesis_end_time,
+                "timestamp={} should be <= end={}",
+                timestamp,
+                synthesis_end_time
             );
             Ok(())
         }
