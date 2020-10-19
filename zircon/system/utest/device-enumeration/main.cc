@@ -308,7 +308,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:21/nelson-usb-phy",
       "nelson-audio-i2s-out",
-      "nelson-audio-in",
+      "sys/platform/05:05:13/nelson-audio-pdm-in",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
@@ -535,8 +535,8 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       // "class/cpu-ctrl/000",
       // "class/cpu-ctrl/001",
 
-      // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxbug.dev/58584 is
-      // fixed.
+      // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxbug.dev/58584
+      // is fixed.
       "dwc2/dwc2/usb-peripheral/function-000",
   };
 

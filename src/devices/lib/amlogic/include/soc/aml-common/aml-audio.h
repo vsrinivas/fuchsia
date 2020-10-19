@@ -50,6 +50,15 @@ struct AmlConfig {
   uint8_t mix_mask;
 };
 
+struct AmlPdmConfig {
+  char manufacturer[kMaxAmlConfigString];
+  char product_name[kMaxAmlConfigString];
+  uint8_t number_of_channels;  // Total number of channels in the ring buffer.
+  AmlVersion version;
+  uint32_t sysClockDivFactor;
+  uint32_t dClockDivFactor;
+};
+
 }  // namespace metadata
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_AUDIO_H_

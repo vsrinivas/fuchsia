@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_NELSON_PDM_INPUT_AUDIO_STREAM_IN_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_NELSON_PDM_INPUT_AUDIO_STREAM_IN_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_G12_PDM_AUDIO_STREAM_IN_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_AML_G12_PDM_AUDIO_STREAM_IN_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -17,14 +17,12 @@
 
 #include <audio-proto/audio-proto.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/platform/device.h>
 #include <soc/aml-common/aml-pdm-audio.h>
 
 namespace audio {
-namespace nelson {
 
-class NelsonAudioStreamIn : public SimpleAudioStream {
+class AudioStreamIn : public SimpleAudioStream {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -39,16 +37,11 @@ class NelsonAudioStreamIn : public SimpleAudioStream {
   void RingBufferShutdown() TA_REQ(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 
-  enum {
-    kHifiPllClk,
-    kClockCount,
-  };
-
  private:
-  friend class fbl::RefPtr<NelsonAudioStreamIn>;
+  friend class fbl::RefPtr<AudioStreamIn>;
   friend class SimpleAudioStream;
 
-  explicit NelsonAudioStreamIn(zx_device_t* parent);
+  explicit AudioStreamIn(zx_device_t* parent);
 
   zx_status_t AddFormats() TA_REQ(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
@@ -57,18 +50,15 @@ class NelsonAudioStreamIn : public SimpleAudioStream {
 
   zx::duration notification_rate_ = {};
   uint32_t frames_per_second_ = 0;
-  async::TaskClosureMethod<NelsonAudioStreamIn, &NelsonAudioStreamIn::ProcessRingNotification>
-      notify_timer_ __TA_GUARDED(domain_token()){this};
-
-  ddk::PDev pdev_ TA_GUARDED(domain_token());
+  async::TaskClosureMethod<AudioStreamIn, &AudioStreamIn::ProcessRingNotification> notify_timer_
+      __TA_GUARDED(domain_token()){this};
 
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
   std::unique_ptr<AmlPdmDevice> lib_;
-  ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_token());
   zx::bti bti_;
+  metadata::AmlPdmConfig metadata_ = {};
 };
-}  // namespace nelson
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_NELSON_PDM_INPUT_AUDIO_STREAM_IN_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_AML_G12_PDM_AUDIO_STREAM_IN_H_

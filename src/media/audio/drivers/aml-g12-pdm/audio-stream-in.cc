@@ -9,42 +9,33 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 
-// TODO(andresoportus): Refactor astro, sherlock and nelson into an AMLogic drivers.
+#include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm-bind.h"
 
-namespace {
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_APLL_CLOCK,
-  FRAGMENT_COUNT,
-};
-}  // namespace
 namespace audio {
-namespace nelson {
 
-// Expects 2 mics.
-constexpr size_t kNumberOfChannels = 2;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
 
-NelsonAudioStreamIn::NelsonAudioStreamIn(zx_device_t* parent)
+AudioStreamIn::AudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {}
 
-zx_status_t NelsonAudioStreamIn::Create(void* ctx, zx_device_t* parent) {
-  auto stream = audio::SimpleAudioStream::Create<NelsonAudioStreamIn>(parent);
+zx_status_t AudioStreamIn::Create(void* ctx, zx_device_t* parent) {
+  auto stream = audio::SimpleAudioStream::Create<AudioStreamIn>(parent);
   if (stream == nullptr) {
+    zxlogf(ERROR, "%s Could not create aml-g12-pdm driver", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
-
+  __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   return ZX_OK;
 }
 
-zx_status_t NelsonAudioStreamIn::Init() {
+zx_status_t AudioStreamIn::Init() {
   auto status = InitPDev();
   if (status != ZX_OK) {
     return status;
@@ -64,11 +55,10 @@ zx_status_t NelsonAudioStreamIn::Init() {
   cur_gain_state_.can_mute = false;
   cur_gain_state_.can_agc = false;
 
-  snprintf(device_name_, sizeof(device_name_), "nelson-audio-in");
-  snprintf(mfr_name_, sizeof(mfr_name_), "unknown");
-  snprintf(prod_name_, sizeof(prod_name_), "nelson");
-
+  strncpy(mfr_name_, metadata_.manufacturer, sizeof(mfr_name_));
+  strncpy(prod_name_, metadata_.product_name, sizeof(prod_name_));
   unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
+  snprintf(device_name_, sizeof(device_name_), "%s-audio-pdm-in", prod_name_);
 
   // TODO(mpuryear): change this to the domain of the clock received from the board driver
   clock_domain_ = 0;
@@ -76,79 +66,71 @@ zx_status_t NelsonAudioStreamIn::Init() {
   return ZX_OK;
 }
 
-zx_status_t NelsonAudioStreamIn::InitPDev() {
-  composite_protocol_t composite = {};
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
+zx_status_t AudioStreamIn::InitPDev() {
+  size_t actual = 0;
+  auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
+                                    sizeof(metadata::AmlPdmConfig), &actual);
+  if (status != ZX_OK || sizeof(metadata::AmlPdmConfig) != actual) {
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual = 0;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s could not get fragments", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
+  pdev_protocol_t pdev;
+  status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
+  if (status) {
+    zxlogf(ERROR, "%s get pdev protocol failed %d", __FILE__, status);
+    return status;
   }
 
-  pdev_ = fragments[FRAGMENT_PDEV];
-  if (!pdev_.is_valid()) {
+  ddk::PDev pdev2(&pdev);
+  if (!pdev2.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  status = pdev_.GetBti(0, &bti_);
+  status = pdev2.GetBti(0, &bti_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not obtain bti %d", __FUNCTION__, status);
     return status;
   }
 
-  clks_[kHifiPllClk] = fragments[FRAGMENT_APLL_CLOCK];
-  if (!clks_[kHifiPllClk].is_valid()) {
-    zxlogf(ERROR, "%s could not get clk", __FILE__);
-    return status;
-  }
-
-  // HIFI_PLL = 1.536GHz = 125 * 4 * 64 * 48000.
-  clks_[kHifiPllClk].SetRate(125 * 4 * 64 * 48'000);
-  clks_[kHifiPllClk].Enable();
-
   std::optional<ddk::MmioBuffer> mmio0, mmio1;
-  status = pdev_.MapMmio(0, &mmio0);
+  status = pdev2.MapMmio(0, &mmio0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
     return status;
   }
-  status = pdev_.MapMmio(1, &mmio1);
+  status = pdev2.MapMmio(1, &mmio1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
     return status;
   }
 
-  lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 7, 499, TODDR_B,
-                              metadata::AmlVersion::kS905D3G);
+  lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL,
+                              metadata_.sysClockDivFactor - 1, metadata_.dClockDivFactor - 1,
+                              TODDR_B, metadata_.version);
   if (lib_ == nullptr) {
     zxlogf(ERROR, "%s failed to create audio device", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;
   }
 
   // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
-  constexpr size_t kRingBufferSize =
-      fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, ZX_PAGE_SIZE);
+  size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
+      kMaxSampleRate * 2 * metadata_.number_of_channels, ZX_PAGE_SIZE);
   // Initialize the ring buffer
   InitBuffer(kRingBufferSize);
 
   lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
 
-  lib_->ConfigPdmIn((1 << kNumberOfChannels) - 1);  // First kNumberOfChannels channels.
+  // Enable first metadata_.number_of_channels channels.
+  lib_->ConfigPdmIn(static_cast<uint8_t>((1 << metadata_.number_of_channels) - 1));
 
   lib_->Sync();
 
   return ZX_OK;
 }
 
-zx_status_t NelsonAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
+zx_status_t AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = lib_->fifo_depth();
   external_delay_nsec_ = 0;
 
@@ -158,17 +140,19 @@ zx_status_t NelsonAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq
   return ZX_OK;
 }
 
-zx_status_t NelsonAudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
-                                           uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
+zx_status_t AudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
+                                     uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
   uint32_t rb_frames = static_cast<uint32_t>(pinned_ring_buffer_.region(0).size) / frame_size_;
 
   if (req.min_ring_buffer_frames > rb_frames) {
+    zxlogf(ERROR, "%s out of range min rin buffer frames", __FUNCTION__);
     return ZX_ERR_OUT_OF_RANGE;
   }
   zx_status_t status;
   constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
   status = ring_buffer_vmo_.duplicate(rights, out_buffer);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to duplicate vmo", __FUNCTION__);
     return status;
   }
 
@@ -178,9 +162,9 @@ zx_status_t NelsonAudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferRe
   return status;
 }
 
-void NelsonAudioStreamIn::RingBufferShutdown() { lib_->Shutdown(); }
+void AudioStreamIn::RingBufferShutdown() { lib_->Shutdown(); }
 
-zx_status_t NelsonAudioStreamIn::Start(uint64_t* out_start_time) {
+zx_status_t AudioStreamIn::Start(uint64_t* out_start_time) {
   *out_start_time = lib_->Start();
 
   uint32_t notifs = LoadNotificationsPerRing();
@@ -197,7 +181,7 @@ zx_status_t NelsonAudioStreamIn::Start(uint64_t* out_start_time) {
 }
 
 // Timer handler for sending out position notifications.
-void NelsonAudioStreamIn::ProcessRingNotification() {
+void AudioStreamIn::ProcessRingNotification() {
   ScopedToken t(domain_token());
   ZX_ASSERT(notification_rate_ != zx::duration());
 
@@ -210,16 +194,16 @@ void NelsonAudioStreamIn::ProcessRingNotification() {
   NotifyPosition(resp);
 }
 
-void NelsonAudioStreamIn::ShutdownHook() { lib_->Shutdown(); }
+void AudioStreamIn::ShutdownHook() { lib_->Shutdown(); }
 
-zx_status_t NelsonAudioStreamIn::Stop() {
+zx_status_t AudioStreamIn::Stop() {
   notify_timer_.Cancel();
   notification_rate_ = {};
   lib_->Stop();
   return ZX_OK;
 }
 
-zx_status_t NelsonAudioStreamIn::AddFormats() {
+zx_status_t AudioStreamIn::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
@@ -228,8 +212,8 @@ zx_status_t NelsonAudioStreamIn::AddFormats() {
   }
 
   audio_stream_format_range_t range = {};
-  range.min_channels = kNumberOfChannels;
-  range.max_channels = kNumberOfChannels;
+  range.min_channels = metadata_.number_of_channels;
+  range.max_channels = metadata_.number_of_channels;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   range.min_frames_per_second = kMinSampleRate;
   range.max_frames_per_second = kMaxSampleRate;
@@ -240,7 +224,7 @@ zx_status_t NelsonAudioStreamIn::AddFormats() {
   return ZX_OK;
 }
 
-zx_status_t NelsonAudioStreamIn::InitBuffer(size_t size) {
+zx_status_t AudioStreamIn::InitBuffer(size_t size) {
   zx_status_t status;
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
@@ -264,18 +248,10 @@ zx_status_t NelsonAudioStreamIn::InitBuffer(size_t size) {
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = NelsonAudioStreamIn::Create;
+  ops.bind = AudioStreamIn::Create;
   return ops;
 }();
 
-}  // namespace nelson
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(nelson_audio_in, audio::nelson::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D3),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_PDM),
-ZIRCON_DRIVER_END(nelson_audio_in)
-    // clang-format on
+ZIRCON_DRIVER(aml_g12_pdm, audio::driver_ops, "zircon", "0.1")

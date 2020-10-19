@@ -147,16 +147,6 @@ zx_status_t Nelson::AudioInit() {
       },
   };
 
-  pbus_dev_t dev_in = {};
-  dev_in.name = "nelson-audio-in";
-  dev_in.vid = PDEV_VID_AMLOGIC;
-  dev_in.pid = PDEV_PID_AMLOGIC_S905D3;
-  dev_in.did = PDEV_DID_AMLOGIC_PDM;
-  dev_in.mmio_list = mmios_in;
-  dev_in.mmio_count = countof(mmios_in);
-  dev_in.bti_list = btis_in;
-  dev_in.bti_count = countof(btis_in);
-
   // TDM pin assignments.
   gpio_impl_.SetAltFunction(S905D2_GPIOA(1), S905D2_GPIOA_1_TDMB_SCLK_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(2), S905D2_GPIOA_2_TDMB_FS_FN);
@@ -294,10 +284,39 @@ zx_status_t Nelson::AudioInit() {
   }
 
   // Input device.
-  status = pbus_.DeviceAdd(&dev_in);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
-    return status;
+  {
+    metadata::AmlPdmConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "nelson");
+    metadata.number_of_channels = 2;
+    metadata.version = metadata::AmlVersion::kS905D3G;
+    metadata.sysClockDivFactor = 4;
+    metadata.dClockDivFactor = 250;
+    pbus_metadata_t pdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &metadata,
+            .data_size = sizeof(metadata),
+        },
+    };
+
+    pbus_dev_t dev_in = {};
+    dev_in.name = "nelson-audio-pdm-in";
+    dev_in.vid = PDEV_VID_AMLOGIC;
+    dev_in.pid = PDEV_PID_AMLOGIC_S905D3;
+    dev_in.did = PDEV_DID_AMLOGIC_PDM;
+    dev_in.mmio_list = mmios_in;
+    dev_in.mmio_count = countof(mmios_in);
+    dev_in.bti_list = btis_in;
+    dev_in.bti_count = countof(btis_in);
+    dev_in.metadata_list = pdm_metadata;
+    dev_in.metadata_count = countof(pdm_metadata);
+
+    status = pbus_.DeviceAdd(&dev_in);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
+      return status;
+    }
   }
   return ZX_OK;
 }
