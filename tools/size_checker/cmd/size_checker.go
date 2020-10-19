@@ -484,8 +484,12 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(&sizes); err != nil {
-		log.Fatal("failed to encode sizes: ", err)
+	simpleSizes := make(map[string]int64)
+	for name, cs := range sizes {
+		simpleSizes[name] = cs.Size
+	}
+	if err := encoder.Encode(&simpleSizes); err != nil {
+		log.Fatal("failed to encode simpleSizes: ", err)
 	}
 	return nil
 }

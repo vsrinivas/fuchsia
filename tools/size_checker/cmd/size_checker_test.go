@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -386,5 +387,44 @@ func Test_processInput(t *testing.T) {
 	}
 	if !fullReportOverBudget {
 		t.Fatalf("The full report is expected to report going overbudget.")
+	}
+}
+
+func Test_writeOutputSizes(t *testing.T) {
+	// Ensure that the output conforms to the schema
+	// documented here:
+	// https://chromium.googlesource.com/infra/gerrit-plugins/binary-size/+/master/README.md
+	sizes := map[string]*ComponentSize{
+		"a": {
+			Size:   1,
+			Budget: 1,
+			nodes:  []*Node{newNode("a node")},
+		},
+		"b": {
+			Size:   2,
+			Budget: 2,
+			nodes:  []*Node{newNode("b node")},
+		},
+	}
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("ioutil.TempDir() failed: %v", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Error(err)
+		}
+	}()
+	outPath := filepath.Join(tmpDir, "sizes.json")
+	if err := writeOutputSizes(sizes, outPath); err != nil {
+		t.Fatalf("writeOutputSizes failed: %v", err)
+	}
+	wroteBytes, err := ioutil.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("ioutil.ReadFile() failed; %v", err)
+	}
+	var unmarshalled map[string]int64
+	if err := json.Unmarshal(wroteBytes, &unmarshalled); err != nil {
+		t.Errorf("json.Unmarshal() failed: %v", err)
 	}
 }
