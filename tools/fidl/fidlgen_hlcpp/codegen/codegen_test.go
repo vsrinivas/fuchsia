@@ -62,6 +62,7 @@ func TestCodegenHeader(t *testing.T) {
 		t.Run(filename, func(t *testing.T) {
 			tree := cpp.CompileHL(typestest.GetExample(*testDataFlag, filename))
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			tree.IncludeStem = "cpp/fidl"
 			want := typestest.GetGolden(*testDataFlag, example(filename).header())
 			buf := closeableBytesBuffer{}
 			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)
@@ -82,6 +83,7 @@ func TestCodegenSource(t *testing.T) {
 		t.Run(filename, func(t *testing.T) {
 			tree := cpp.CompileHL(typestest.GetExample(*testDataFlag, filename))
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			tree.IncludeStem = "cpp/fidl"
 			want := typestest.GetGolden(*testDataFlag, example(filename).source())
 			buf := closeableBytesBuffer{}
 			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)
@@ -103,6 +105,7 @@ func TestCodegenTestHeader(t *testing.T) {
 		t.Run(filename, func(t *testing.T) {
 			tree := cpp.CompileHL(typestest.GetExample(*testDataFlag, filename))
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			tree.IncludeStem = "cpp/fidl"
 			want := typestest.GetGolden(*testDataFlag, example(filename).testHeader())
 			buf := closeableBytesBuffer{}
 			formatterPipe, err := cpp.NewClangFormatter(clangFormat).FormatPipe(&buf)
